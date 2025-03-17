@@ -161,7 +161,7 @@ end
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %[[VAL_6:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_14:.*]]) : i32 = (%[[VAL_11]]) to (%[[VAL_12]]) inclusive step (%[[VAL_13]]) {
 ! CHECK:                 %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFcombined_parallel_worksharing_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 fir.store %[[VAL_14]] to %[[VAL_7]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_14]] to %[[VAL_7]]#1 : i32, !fir.ref<i32>
 ! CHECK:                 fir.call @_QPsub4(%[[VAL_9]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
@@ -326,7 +326,7 @@ end subroutine
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %[[VAL_19:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_37:.*]]) : i32 = (%[[VAL_34]]) to (%[[VAL_35]]) inclusive step (%[[VAL_36]]) {
 ! CHECK:             %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFcommon_2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 fir.store %[[VAL_37]] to %[[VAL_20]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_37]] to %[[VAL_20]]#1 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_38:.*]] = fir.load %[[VAL_31]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_40:.*]] = arith.addi %[[VAL_38]], %[[VAL_39]] : i32

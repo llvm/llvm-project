@@ -12,7 +12,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Serialization/ASTReader.h"
-#include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <queue>
 
@@ -206,9 +206,9 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), *Diags, LangOpts,
                   SourceMgr, HeaderInfo, ModuleLoader);
 
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache = new InMemoryModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
-  ASTReader Reader(PP, *ModuleCache, /*ASTContext=*/nullptr,
+  ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
                    PCHOperations.getRawReader(), {});
 
   // We don't need any listener here. By default it will use a validator

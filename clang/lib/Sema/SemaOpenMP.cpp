@@ -6626,6 +6626,7 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
       case OMPC_reverse_offload:
       case OMPC_dynamic_allocators:
       case OMPC_atomic_default_mem_order:
+      case OMPC_self_maps:
       case OMPC_device_type:
       case OMPC_match:
       case OMPC_when:
@@ -6835,22 +6836,21 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
                     ->getCanonicalDecl() == CanonPVD) {
           // OpenMP  [2.15.3.7, linear Clause, Restrictions]
           // A list-item cannot appear in more than one linear clause.
-          if (LinearArgs.count(CanonPVD) > 0) {
+          if (auto It = LinearArgs.find(CanonPVD); It != LinearArgs.end()) {
             Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
                 << getOpenMPClauseName(OMPC_linear)
                 << getOpenMPClauseName(OMPC_linear) << E->getSourceRange();
-            Diag(LinearArgs[CanonPVD]->getExprLoc(),
-                 diag::note_omp_explicit_dsa)
+            Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
                 << getOpenMPClauseName(OMPC_linear);
             continue;
           }
           // Each argument can appear in at most one uniform or linear clause.
-          if (UniformedArgs.count(CanonPVD) > 0) {
+          if (auto It = UniformedArgs.find(CanonPVD);
+              It != UniformedArgs.end()) {
             Diag(E->getExprLoc(), diag::err_omp_wrong_dsa)
                 << getOpenMPClauseName(OMPC_linear)
                 << getOpenMPClauseName(OMPC_uniform) << E->getSourceRange();
-            Diag(UniformedArgs[CanonPVD]->getExprLoc(),
-                 diag::note_omp_explicit_dsa)
+            Diag(It->second->getExprLoc(), diag::note_omp_explicit_dsa)
                 << getOpenMPClauseName(OMPC_uniform);
             continue;
           }
@@ -15537,6 +15537,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
@@ -16192,6 +16193,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_self_maps:
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
@@ -16664,6 +16666,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
@@ -16870,6 +16873,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
     break;
   case OMPC_dynamic_allocators:
     Res = ActOnOpenMPDynamicAllocatorsClause(StartLoc, EndLoc);
+    break;
+  case OMPC_self_maps:
+    Res = ActOnOpenMPSelfMapsClause(StartLoc, EndLoc);
     break;
   case OMPC_destroy:
     Res = ActOnOpenMPDestroyClause(/*InteropVar=*/nullptr, StartLoc,
@@ -17079,6 +17085,11 @@ OMPClause *
 SemaOpenMP::ActOnOpenMPDynamicAllocatorsClause(SourceLocation StartLoc,
                                                SourceLocation EndLoc) {
   return new (getASTContext()) OMPDynamicAllocatorsClause(StartLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
+                                                 SourceLocation EndLoc) {
+  return new (getASTContext()) OMPSelfMapsClause(StartLoc, EndLoc);
 }
 
 StmtResult
@@ -17553,6 +17564,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_order:
@@ -21961,7 +21973,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPMapClause(
   OpenMPMapModifierKind Modifiers[] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown};
   SourceLocation ModifiersLoc[NumberOfOMPMapClauseModifiers];
 
   if (IteratorModifier && !IteratorModifier->getType()->isSpecificBuiltinType(

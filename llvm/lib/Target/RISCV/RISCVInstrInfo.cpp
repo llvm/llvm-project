@@ -953,14 +953,23 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, bool Imm) {
+unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, RISCVCC::CondCode CC,
+                            bool Imm) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
   case RISCVCC::COND_EQ:
-    return Imm ? RISCV::CV_BEQIMM : RISCV::BEQ;
+    if (!Imm)
+      return RISCV::BEQ;
+    if (STI.hasVendorXCVbi())
+      return RISCV::CV_BEQIMM;
+    llvm_unreachable("Unknown branch immediate!");
   case RISCVCC::COND_NE:
-    return Imm ? RISCV::CV_BNEIMM : RISCV::BNE;
+    if (!Imm)
+      return RISCV::BNE;
+    if (STI.hasVendorXCVbi())
+      return RISCV::CV_BNEIMM;
+    llvm_unreachable("Unknown branch immediate!");
   case RISCVCC::COND_LT:
     return RISCV::BLT;
   case RISCVCC::COND_GE:
@@ -974,7 +983,7 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, bool Imm) {
 
 const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC,
                                              bool Imm) const {
-  return get(RISCVCC::getBrCond(CC, Imm));
+  return get(RISCVCC::getBrCond(STI, CC, Imm));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1649,6 +1658,14 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   switch (MI.getOpcode()) {
   default:
+    break;
+  case RISCV::ADD:
+    if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0 &&
+        MI.getOperand(2).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+    if (MI.getOperand(2).isReg() && MI.getOperand(2).getReg() == RISCV::X0 &&
+        MI.getOperand(1).isReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     break;
   case RISCV::ADDI:
     // Operand 1 can be a frameindex but callers expect registers
@@ -2359,7 +2376,7 @@ static void
 genShXAddAddShift(MachineInstr &Root, unsigned AddOpIdx,
                   SmallVectorImpl<MachineInstr *> &InsInstrs,
                   SmallVectorImpl<MachineInstr *> &DelInstrs,
-                  DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+                  DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -2418,7 +2435,7 @@ void RISCVInstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineRegisterInfo &MRI = Root.getMF()->getRegInfo();
   switch (Pattern) {
   default:
@@ -2748,6 +2765,42 @@ MachineInstr *RISCVInstrInfo::emitLdStWithAddr(MachineInstr &MemI,
       .addImm(AM.Displacement)
       .setMemRefs(MemI.memoperands())
       .setMIFlags(MemI.getFlags());
+}
+
+// TODO: At the moment, MIPS introduced paring of instructions operating with
+// word or double word. This should be extended with more instructions when more
+// vendors support load/store pairing.
+bool RISCVInstrInfo::isPairableLdStInstOpc(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case RISCV::SW:
+  case RISCV::SD:
+  case RISCV::LD:
+  case RISCV::LW:
+    return true;
+  }
+}
+
+bool RISCVInstrInfo::isLdStSafeToPair(const MachineInstr &LdSt,
+                                      const TargetRegisterInfo *TRI) {
+  // If this is a volatile load/store, don't mess with it.
+  if (LdSt.hasOrderedMemoryRef() || LdSt.getNumExplicitOperands() != 3)
+    return false;
+
+  if (LdSt.getOperand(1).isFI())
+    return true;
+
+  assert(LdSt.getOperand(1).isReg() && "Expected a reg operand.");
+  // Can't cluster if the instruction modifies the base register
+  // or it is update form. e.g. ld x5,8(x5)
+  if (LdSt.modifiesRegister(LdSt.getOperand(1).getReg(), TRI))
+    return false;
+
+  if (!LdSt.getOperand(2).isImm())
+    return false;
+
+  return true;
 }
 
 bool RISCVInstrInfo::getMemOperandsWithOffsetWidth(
@@ -4107,7 +4160,6 @@ bool RISCV::hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2) {
 
 std::optional<unsigned>
 RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
-  // TODO: Handle Zvbb instructions
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -4119,6 +4171,9 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   // 12.4. Vector Single-Width Scaling Shift Instructions
   case RISCV::VSSRL_VX:
   case RISCV::VSSRA_VX:
+  // Zvbb
+  case RISCV::VROL_VX:
+  case RISCV::VROR_VX:
     // Only the low lg2(SEW) bits of the shift-amount value are used.
     return Log2SEW;
 
@@ -4128,6 +4183,8 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   // 12.5. Vector Narrowing Fixed-Point Clip Instructions
   case RISCV::VNCLIPU_WX:
   case RISCV::VNCLIP_WX:
+  // Zvbb
+  case RISCV::VWSLL_VX:
     // Only the low lg2(2*SEW) bits of the shift-amount value are used.
     return Log2SEW + 1;
 
@@ -4213,6 +4270,8 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
   case RISCV::VSMUL_VX:
   // 16.1. Integer Scalar Move Instructions
   case RISCV::VMV_S_X:
+  // Zvbb
+  case RISCV::VANDN_VX:
     return 1U << Log2SEW;
   }
 }

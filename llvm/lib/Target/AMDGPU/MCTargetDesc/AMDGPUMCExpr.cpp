@@ -95,11 +95,11 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
   }
 }
 
-bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
-                                      const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
+                                      const MCAssembler *Asm) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -124,11 +124,11 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
-                                        const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
+                                        const MCAssembler *Asm) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -151,11 +151,10 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
-                                   const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -172,11 +171,11 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
-                                     const MCFixup *Fixup) const {
+bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
+                                     const MCAssembler *Asm) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -216,25 +215,24 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
 }
 
 bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAssembler *Asm,
-                                             const MCFixup *Fixup) const {
+                                             const MCAssembler *Asm) const {
   std::optional<int64_t> Total;
   switch (Kind) {
   default:
     break;
   case AGVK_ExtraSGPRs:
-    return evaluateExtraSGPRs(Res, Asm, Fixup);
+    return evaluateExtraSGPRs(Res, Asm);
   case AGVK_AlignTo:
-    return evaluateAlignTo(Res, Asm, Fixup);
+    return evaluateAlignTo(Res, Asm);
   case AGVK_TotalNumVGPRs:
-    return evaluateTotalNumVGPR(Res, Asm, Fixup);
+    return evaluateTotalNumVGPR(Res, Asm);
   case AGVK_Occupancy:
-    return evaluateOccupancy(Res, Asm, Fixup);
+    return evaluateOccupancy(Res, Asm);
   }
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
-    if (!Arg->evaluateAsRelocatable(ArgRes, Asm, Fixup) || !ArgRes.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(ArgRes, Asm) || !ArgRes.isAbsolute())
       return false;
 
     if (!Total.has_value())

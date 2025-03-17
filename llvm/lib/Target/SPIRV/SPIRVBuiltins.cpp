@@ -2116,8 +2116,11 @@ static bool generateSelectInst(const SPIRV::IncomingCall *Call,
 static bool generateConstructInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
-  return buildOpFromWrapper(MIRBuilder, SPIRV::OpCompositeConstruct, Call,
-                            GR->getSPIRVTypeID(Call->ReturnType));
+  createContinuedInstructions(MIRBuilder, SPIRV::OpCompositeConstruct, 3,
+                              SPIRV::OpCompositeConstructContinuedINTEL,
+                              Call->Arguments, Call->ReturnRegister,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+  return true;
 }
 
 static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
@@ -2230,11 +2233,10 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
     return true;
   }
   case SPIRV::OpSpecConstantComposite: {
-    auto MIB = MIRBuilder.buildInstr(Opcode)
-                   .addDef(Call->ReturnRegister)
-                   .addUse(GR->getSPIRVTypeID(Call->ReturnType));
-    for (unsigned i = 0; i < Call->Arguments.size(); i++)
-      MIB.addUse(Call->Arguments[i]);
+    createContinuedInstructions(MIRBuilder, Opcode, 3,
+                                SPIRV::OpSpecConstantCompositeContinuedINTEL,
+                                Call->Arguments, Call->ReturnRegister,
+                                GR->getSPIRVTypeID(Call->ReturnType));
     return true;
   }
   default:

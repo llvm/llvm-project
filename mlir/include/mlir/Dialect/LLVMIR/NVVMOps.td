@@ -2930,6 +2930,208 @@ def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05 LdSt Shape Attr
+//===----------------------------------------------------------------------===//
+
+def Tcgen05LdStShape16x64b: I32EnumAttrCase<"SHAPE_16X64B", 0, "shape_16x64b">;
+def Tcgen05LdStShape16x128b: I32EnumAttrCase<"SHAPE_16X128B", 1, "shape_16x128b">;
+def Tcgen05LdStShape16x256b: I32EnumAttrCase<"SHAPE_16X256B", 2, "shape_16x256b">;
+def Tcgen05LdStShape32x32b: I32EnumAttrCase<"SHAPE_32X32B", 3, "shape_32x32b">;
+def Tcgen05LdStShape16x32bx2: I32EnumAttrCase<"SHAPE_16X32BX2", 4, "shape_16x32bx2">;
+
+def Tcgen05LdStShape: I32EnumAttr<
+  "Tcgen05LdStShape",
+  "",
+  [Tcgen05LdStShape16x64b, Tcgen05LdStShape16x128b, Tcgen05LdStShape16x256b,
+   Tcgen05LdStShape32x32b, Tcgen05LdStShape16x32bx2]
+> {
+  let cppNamespace = "::mlir::NVVM";
+  let genSpecializedAttr = 0;
+}
+
+def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst_shape"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld"> {
+  let summary = "tensor memory load instructions";
+  let arguments = (ins
+    // Attributes
+    UnitAttr:$pack,
+    Tcgen05LdStShapeAttr:$shape,
+    // Arguments
+    LLVM_PointerTensor:$tmemAddr,
+    Optional<I64>:$offset
+  );
+
+  let results = (outs AnyTypeOf<[I32, VectorOfLengthAndType<
+                                  [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$res);
+
+  let assemblyFormat = [{
+    $tmemAddr (`,` $offset^)? (`pack` $pack^)? attr-dict `:` type($res)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.ld` asynchronously loads data from the Tensor Memory at
+    the location specified by the 32-bit address operand `tmemAddr` into the
+    destination register `res`, collectively across all threads of the warps.
+
+    The `shape` and the `num` attribute together determines the total
+    dimension of the data which is loaded from the Tensor Memory. The `shape`
+    attribute indicates the base dimension of data to be accessed as described
+    in the Data Movement Shape. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data
+    that is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `tmemAddr`
+    and the base address of the second access is specified by
+    `tmemAddr + offset`, where `offset` is an immediate argument.
+
+    The unit attribute `pack` can be used to pack two 16-bit
+    elements from adjacent columns into a single 32-bit element during the load.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes
+    |=====================================================================|
+    | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
+    |=====================================================================|
+    | x1             |          1                 |    2       |    4     |
+    | x2             |          2                 |    4       |    8     |
+    | x4             |          4                 |    8       |    16    |
+    | x8             |          8                 |    16      |    32    |
+    | x16            |          16                |    32      |    64    |
+    | x32            |          32                |    64      |    128   |
+    | x64            |          64                |    128     |    NA    |
+    | x128           |          128               |    NA      |    NA    |
+    |=====================================================================|
+
+    Example:
+    ```mlir
+      nvvm.tcgen05.ld %tmemAddr, %offset pack {
+        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
+      } : <2xi32>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
+    auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
+
+    unsigned num = $_resultType->isVectorTy()
+                       ? llvm::cast<llvm::VectorType>($_resultType)
+                             ->getElementCount()
+                             .getFixedValue()
+                       : 1;
+
+    auto ID = getTcgen05LdIntrinsicID($shape, num);
+    if (ID == llvm::Intrinsic::not_intrinsic)
+      llvm::report_fatal_error("unknow intrinsic signature for tcgen05.ld");
+
+    if ($offset)
+      $res = createIntrinsicCall(builder, ID, {$tmemAddr, $offset, Pack});
+    else
+      $res = createIntrinsicCall(builder, ID, {$tmemAddr, Pack});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.st Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
+  let summary = "tensor memory store instructions";
+  let arguments = (ins
+    // Attributes
+    UnitAttr:$unpack,
+    Tcgen05LdStShapeAttr:$shape,
+    // Arguments
+    LLVM_PointerTensor:$tmemAddr,
+    AnyTypeOf<[I32, VectorOfLengthAndType<
+                      [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$val,
+    Optional<I64>:$offset
+  );
+
+  let assemblyFormat = [{
+    $tmemAddr `,` $val (`,` $offset^)? (`unpack` $unpack^)? attr-dict `:` type($val)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.st` asynchronously stores data from the source register `r`
+    into the Tensor Memory at the location specified by the 32-bit address operand
+    `tmemAddr`, collectively across all threads of the warps.
+
+    The `shape` and the `num` attribute together determines the total dimension of
+    the data which is stored to the Tensor Memory. The `shape` indicates the base
+    dimension of data to be accessed. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data that
+    is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `tmemAddr`
+    and the base address of the second access is specified by
+    `tmemAddr + offset`, where `offset` is an immediate argument.
+
+    The unit attribute `unpack` can be used to unpack a 32-bit element
+    in the register into two 16-bit elements and store them in adjacent columns.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes
+    |=====================================================================|
+    | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
+    |=====================================================================|
+    | x1             |          1                 |    2       |    4     |
+    | x2             |          2                 |    4       |    8     |
+    | x4             |          4                 |    8       |    16    |
+    | x8             |          8                 |    16      |    32    |
+    | x16            |          16                |    32      |    64    |
+    | x32            |          32                |    64      |    128   |
+    | x64            |          64                |    128     |    NA    |
+    | x128           |          128               |    NA      |    NA    |
+    |=====================================================================|
+
+    Example:
+    ```mlir
+      nvvm.tcgen05.st %tmemAddr, %val, %offset unpack {
+        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
+      } : <2xi32>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
+  }];
+
+  string llvmBuilder = [{
+    llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
+    auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
+
+    auto valTy = $val->getType();
+    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
+                                             ->getElementCount()
+                                             .getFixedValue()
+                                       : 1;
+
+    auto ID = getTcgen05StIntrinsicID($shape, num);
+    if (ID == llvm::Intrinsic::not_intrinsic)
+      llvm::report_fatal_error("unknow intrinsic signature for tcgen05.st");
+
+    if ($offset)
+      createIntrinsicCall(builder, ID, {$tmemAddr, $offset, $val, Unpack});
+    else
+      createIntrinsicCall(builder, ID, {$tmemAddr, $val, Unpack});
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 

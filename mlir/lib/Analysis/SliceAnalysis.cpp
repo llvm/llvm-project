@@ -107,7 +107,7 @@ static void getBackwardSliceImpl(Operation *op,
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         assert(parentOp->getNumRegions() == 1 &&
-               parentOp->getRegion(0).getBlocks().size() == 1);
+               llvm::hasSingleElement(parentOp->getRegion(0).getBlocks()));
         getBackwardSliceImpl(parentOp, backwardSlice, options);
       }
     } else {

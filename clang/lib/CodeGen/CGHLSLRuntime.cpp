@@ -40,6 +40,8 @@ using namespace CodeGen;
 using namespace clang::hlsl;
 using namespace llvm;
 
+using llvm::hlsl::CBufferRowSizeInBytes;
+
 static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
                                  unsigned Slot, unsigned Space);
 
@@ -70,7 +72,7 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
 
 llvm::Type *
 CGHLSLRuntime::convertHLSLSpecificType(const Type *T,
-                                       SmallVector<unsigned> *Packoffsets) {
+                                       SmallVector<int32_t> *Packoffsets) {
   assert(T->isHLSLSpecificType() && "Not an HLSL specific type!");
 
   // Check if the target has a specific translation for this type first.
@@ -85,16 +87,11 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
-// Returns true if the type is an HLSL resource class
-static bool isResourceRecordType(const clang::Type *Ty) {
-  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
-}
-
 // Returns true if the type is an HLSL resource class or an array of them
 static bool isResourceRecordTypeOrArrayOf(const clang::Type *Ty) {
   while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual();
-  return isResourceRecordType(Ty);
+  return Ty->isHLSLResourceRecord();
 }
 
 // Emits constant global variables for buffer constants declarations
@@ -179,21 +176,50 @@ createBufferHandleType(const HLSLBufferDecl *BufDecl) {
   return cast<HLSLAttributedResourceType>(QT.getTypePtr());
 }
 
+// Iterates over all declarations in the HLSL buffer and based on the
+// packoffset or register(c#) annotations it fills outs the Layout
+// vector with the user-specified layout offsets.
+// The buffer offsets can be specified 2 ways:
+// 1. declarations in cbuffer {} block can have a packoffset annotation
+//    (translates to HLSLPackOffsetAttr)
+// 2. default constant buffer declarations at global scope can have
+//    register(c#) annotations (translates to HLSLResourceBindingAttr with
+//    RegisterType::C)
+// It is not guaranteed that all declarations in a buffer have an annotation.
+// For those where it is not specified a -1 value is added to the Layout
+// vector. In the final layout these declarations will be placed at the end
+// of the HLSL buffer after all of the elements with specified offset.
 static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
-                                 SmallVector<unsigned> &Layout) {
+                                 SmallVector<int32_t> &Layout) {
   assert(Layout.empty() && "expected empty vector for layout");
   assert(BufDecl->hasValidPackoffset());
 
-  for (Decl *D : BufDecl->decls()) {
+  for (Decl *D : BufDecl->buffer_decls()) {
     if (isa<CXXRecordDecl, EmptyDecl>(D) || isa<FunctionDecl>(D)) {
       continue;
     }
     VarDecl *VD = dyn_cast<VarDecl>(D);
     if (!VD || VD->getType().getAddressSpace() != LangAS::hlsl_constant)
       continue;
-    assert(VD->hasAttr<HLSLPackOffsetAttr>() &&
-           "expected packoffset attribute on every declaration");
-    size_t Offset = VD->getAttr<HLSLPackOffsetAttr>()->getOffsetInBytes();
+
+    if (!VD->hasAttrs()) {
+      Layout.push_back(-1);
+      continue;
+    }
+
+    int32_t Offset = -1;
+    for (auto *Attr : VD->getAttrs()) {
+      if (auto *POA = dyn_cast<HLSLPackOffsetAttr>(Attr)) {
+        Offset = POA->getOffsetInBytes();
+        break;
+      }
+      auto *RBA = dyn_cast<HLSLResourceBindingAttr>(Attr);
+      if (RBA &&
+          RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
+        Offset = RBA->getSlotNumber() * CBufferRowSizeInBytes;
+        break;
+      }
+    }
     Layout.push_back(Offset);
   }
 }
@@ -212,7 +238,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
     return;
 
   // create global variable for the constant buffer
-  SmallVector<unsigned> Layout;
+  SmallVector<int32_t> Layout;
   if (BufDecl->hasValidPackoffset())
     fillPackoffsetLayout(BufDecl, Layout);
 
@@ -263,135 +289,6 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
-}
-
-void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                                llvm::hlsl::ResourceClass RC,
-                                                llvm::hlsl::ResourceKind RK,
-                                                bool IsROV,
-                                                llvm::hlsl::ElementType ET,
-                                                BufferResBinding &Binding) {
-  llvm::Module &M = CGM.getModule();
-
-  NamedMDNode *ResourceMD = nullptr;
-  switch (RC) {
-  case llvm::hlsl::ResourceClass::UAV:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.uavs");
-    break;
-  case llvm::hlsl::ResourceClass::SRV:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.srvs");
-    break;
-  case llvm::hlsl::ResourceClass::CBuffer:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.cbufs");
-    break;
-  default:
-    assert(false && "Unsupported buffer type!");
-    return;
-  }
-  assert(ResourceMD != nullptr &&
-         "ResourceMD must have been set by the switch above.");
-
-  llvm::hlsl::FrontendResource Res(
-      GV, RK, ET, IsROV, Binding.Reg.value_or(UINT_MAX), Binding.Space);
-  ResourceMD->addOperand(Res.getMetadata());
-}
-
-static llvm::hlsl::ElementType
-calculateElementType(const ASTContext &Context, const clang::Type *ResourceTy) {
-  using llvm::hlsl::ElementType;
-
-  // TODO: We may need to update this when we add things like ByteAddressBuffer
-  // that don't have a template parameter (or, indeed, an element type).
-  const auto *TST = ResourceTy->getAs<TemplateSpecializationType>();
-  assert(TST && "Resource types must be template specializations");
-  ArrayRef<TemplateArgument> Args = TST->template_arguments();
-  assert(!Args.empty() && "Resource has no element type");
-
-  // At this point we have a resource with an element type, so we can assume
-  // that it's valid or we would have diagnosed the error earlier.
-  QualType ElTy = Args[0].getAsType();
-
-  // We should either have a basic type or a vector of a basic type.
-  if (const auto *VecTy = ElTy->getAs<clang::VectorType>())
-    ElTy = VecTy->getElementType();
-
-  if (ElTy->isSignedIntegerType()) {
-    switch (Context.getTypeSize(ElTy)) {
-    case 16:
-      return ElementType::I16;
-    case 32:
-      return ElementType::I32;
-    case 64:
-      return ElementType::I64;
-    }
-  } else if (ElTy->isUnsignedIntegerType()) {
-    switch (Context.getTypeSize(ElTy)) {
-    case 16:
-      return ElementType::U16;
-    case 32:
-      return ElementType::U32;
-    case 64:
-      return ElementType::U64;
-    }
-  } else if (ElTy->isSpecificBuiltinType(BuiltinType::Half))
-    return ElementType::F16;
-  else if (ElTy->isSpecificBuiltinType(BuiltinType::Float))
-    return ElementType::F32;
-  else if (ElTy->isSpecificBuiltinType(BuiltinType::Double))
-    return ElementType::F64;
-
-  // TODO: We need to handle unorm/snorm float types here once we support them
-  llvm_unreachable("Invalid element type for resource");
-}
-
-void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
-  const Type *Ty = D->getType()->getPointeeOrArrayElementType();
-  if (!Ty)
-    return;
-  const auto *RD = Ty->getAsCXXRecordDecl();
-  if (!RD)
-    return;
-  // the resource related attributes are on the handle member
-  // inside the record decl
-  for (auto *FD : RD->fields()) {
-    const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
-    const HLSLAttributedResourceType *AttrResType =
-        dyn_cast<HLSLAttributedResourceType>(FD->getType().getTypePtr());
-    if (!HLSLResAttr || !AttrResType)
-      continue;
-
-    llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
-    if (RC == llvm::hlsl::ResourceClass::UAV ||
-        RC == llvm::hlsl::ResourceClass::SRV)
-      // UAVs and SRVs have already been converted to use LLVM target types,
-      // we can disable generating of these resource annotations. This will
-      // enable progress on structured buffers with user defined types this
-      // resource annotations code does not handle and it crashes.
-      // This whole function is going to be removed as soon as cbuffers are
-      // converted to target types (llvm/llvm-project #114126).
-      return;
-
-    bool IsROV = AttrResType->getAttrs().IsROV;
-    llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
-    llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
-
-    BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
-    addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
-  }
-}
-
-CGHLSLRuntime::BufferResBinding::BufferResBinding(
-    HLSLResourceBindingAttr *Binding) {
-  if (Binding) {
-    llvm::APInt RegInt(64, 0);
-    Binding->getSlot().substr(1).getAsInteger(10, RegInt);
-    Reg = RegInt.getLimitedValue();
-    llvm::APInt SpaceInt(64, 0);
-    Binding->getSpace().substr(5).getAsInteger(10, SpaceInt);
-    Space = SpaceInt.getLimitedValue();
-  } else {
-    Space = 0;
-  }
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
@@ -658,7 +555,7 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
     // on?
     return;
 
-  if (!isResourceRecordType(VD->getType().getTypePtr()))
+  if (!VD->getType().getTypePtr()->isHLSLResourceRecord())
     // FIXME: Only simple declarations of resources are supported for now.
     // Arrays of resources or resources in user defined classes are
     // not implemented yet.

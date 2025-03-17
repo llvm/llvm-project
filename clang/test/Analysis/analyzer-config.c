@@ -37,7 +37,6 @@
 // CHECK-NEXT: core.CallAndMessage:NilReceiver = true
 // CHECK-NEXT: core.CallAndMessage:ParameterCount = true
 // CHECK-NEXT: core.CallAndMessage:UndefReceiver = true
-// CHECK-NEXT: core.NullDereference:SuppressAddressSpaces = true
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
@@ -80,6 +79,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:RegionChanges = false
 // CHECK-NEXT: display-checker-name = true
 // CHECK-NEXT: display-ctu-progress = false
+// CHECK-NEXT: dump-entry-point-stats-to-csv = ""
 // CHECK-NEXT: eagerly-assume = true
 // CHECK-NEXT: elide-constructors = true
 // CHECK-NEXT: expand-macros = false
@@ -126,6 +126,7 @@
 // CHECK-NEXT: stable-report-filename = false
 // CHECK-NEXT: support-symbolic-integer-casts = false
 // CHECK-NEXT: suppress-c++-stdlib = true
+// CHECK-NEXT: suppress-dereferences-from-any-address-space = true
 // CHECK-NEXT: suppress-inlined-defensive-checks = true
 // CHECK-NEXT: suppress-null-return-paths = true
 // CHECK-NEXT: track-conditions = true

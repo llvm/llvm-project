@@ -328,10 +328,10 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 32
   %load1 = load i16, ptr addrspace(1) %in
   %load2 = load i16, ptr addrspace(1) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   store <2 x i16> %build1, ptr addrspace(1) %out
-  %build2 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build2 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build3 = insertelement <2 x i16> %build2, i16 %load2, i32 1
   %gep2 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 32
   store <2 x i16> %build3, ptr addrspace(1) %gep2
@@ -447,7 +447,7 @@ define amdgpu_kernel void @flat_scratch_load(float %a, float %b, <8 x i32> %desc
   %val = call <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 9, float %a, float %b, <8 x i32> %desc, <4 x i32> <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 0>, i1 false, i32 0, i32 0)
   %val0 = extractelement <2 x float> %val, i32 0
   %valadd = fadd float %load, %val0
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %valadd, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %valadd, float poison, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -505,7 +505,7 @@ define amdgpu_kernel void @flat_scratch_load_clause(float %a, float %b, <8 x i32
   %load0 = load float, ptr addrspace(5) %alloca
   %load1 = load float, ptr addrspace(5) %alloca2
   %valadd = fadd float %load0, %load1
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %valadd, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float %valadd, float poison, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

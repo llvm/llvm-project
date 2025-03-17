@@ -2606,7 +2606,9 @@ typedef struct {
 typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
   unsigned nowait : 1;
   unsigned re_record : 1;
-  unsigned reserved : 30;
+  unsigned graph_reset : 1; /* 1==discard taskgraph record, 0==use taskgraph
+                               record */
+  unsigned reserved : 29;
 } kmp_taskgraph_flags_t;
 
 /// Represents a TDG node
@@ -2650,7 +2652,7 @@ typedef struct kmp_tdg_info {
 extern int __kmp_tdg_dot;
 extern kmp_int32 __kmp_max_tdgs;
 extern kmp_tdg_info_t **__kmp_global_tdgs;
-extern kmp_int32 __kmp_curr_tdg_idx;
+extern kmp_tdg_info_t *__kmp_curr_tdg;
 extern kmp_int32 __kmp_successors_size;
 extern std::atomic<kmp_int32> __kmp_tdg_task_id;
 extern kmp_int32 __kmp_num_tdg;
@@ -2790,6 +2792,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPX_TASKGRAPH
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
+  kmp_int32 td_tdg_task_id; // local task id in its TDG
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata

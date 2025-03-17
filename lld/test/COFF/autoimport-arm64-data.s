@@ -19,7 +19,7 @@
 
 # Runtime pseudo reloc list header consisting of 0x0, 0x0, 0x1.
 # First runtime pseudo reloc, with import from 0x2070,
-# applied at 0x3000, with a size of 32 bits.
+# applied at 0x3000, with a size of 64 bits.
 # CONTENTS: Contents of section .rdata:
 # CONTENTS:  140002000 00000000 00000000 01000000 70200000
 # CONTENTS:  140002010 00300000 40000000

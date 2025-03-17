@@ -346,8 +346,7 @@ end subroutine
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFc_loc_1Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:           %[[VAL_4:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_4]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:           %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_3]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:           %[[VAL_6:.*]] = fir.box_addr %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.array<*:f32>>) -> i64
 ! CHECK:           fir.store %[[VAL_7]] to %[[VAL_5]] : !fir.ref<i64>
@@ -367,8 +366,7 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFc_loc_2Ex"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>)
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:           %[[VAL_5:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:           %[[VAL_6:.*]] = fir.coordinate_of %[[VAL_4]], %[[VAL_5]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:           %[[VAL_6:.*]] = fir.coordinate_of %[[VAL_4]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:           %[[VAL_7:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<*:f32>>>) -> !fir.ptr<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ptr<!fir.array<*:f32>>) -> i64
 ! CHECK:           fir.store %[[VAL_8]] to %[[VAL_6]] : !fir.ref<i64>

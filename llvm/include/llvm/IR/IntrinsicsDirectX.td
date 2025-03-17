@@ -34,7 +34,7 @@ def int_dx_resource_load_typedbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],
                             [llvm_any_ty, llvm_i32_ty], [IntrReadMem]>;
 def int_dx_resource_store_typedbuffer
-    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty],
+    : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_any_ty],
                             [IntrWriteMem]>;
 def int_dx_resource_load_rawbuffer
     : DefaultAttrsIntrinsic<[llvm_any_ty, llvm_i1_ty],

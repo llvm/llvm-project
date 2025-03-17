@@ -28,13 +28,13 @@ add_lldb_tool(lldb-dap
   FifoFiles.cpp
   FunctionBreakpoint.cpp
   InstructionBreakpoint.cpp
-  IOStream.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
+  Transport.cpp
   Watchpoint.cpp
 
   Handler/ResponseHandler.cpp
@@ -73,6 +73,10 @@ add_lldb_tool(lldb-dap
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
+  
+  Protocol/ProtocolBase.cpp
+  Protocol/ProtocolTypes.cpp
+  Protocol/ProtocolRequests.cpp
 
   LINK_LIBS
     liblldb

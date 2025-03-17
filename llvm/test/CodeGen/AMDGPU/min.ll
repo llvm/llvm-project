@@ -3476,7 +3476,6 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_lt_u64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
@@ -3584,7 +3583,6 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_le_u64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
@@ -3692,7 +3690,6 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5
@@ -3800,7 +3797,6 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_le_i64_e64 s6, s[2:3], s[4:5]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX11-NEXT:    s_cselect_b32 s3, s3, s5

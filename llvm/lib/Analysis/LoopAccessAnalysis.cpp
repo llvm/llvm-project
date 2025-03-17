@@ -1362,8 +1362,10 @@ void AccessAnalysis::processMemAccesses() {
 
     bool SetHasWrite = false;
 
-    // Map of pointers to last access encountered.
-    typedef DenseMap<const Value*, MemAccessInfo> UnderlyingObjToAccessMap;
+    // Map of (pointer to underlying objects, accessed address space) to last
+    // access encountered.
+    typedef DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>
+        UnderlyingObjToAccessMap;
     UnderlyingObjToAccessMap ObjToLastAccess;
 
     // Set of access to check after all writes have been processed.
@@ -1443,8 +1445,10 @@ void AccessAnalysis::processMemAccesses() {
                     UnderlyingObj->getType()->getPointerAddressSpace()))
               continue;
 
-            auto [It, Inserted] =
-                ObjToLastAccess.try_emplace(UnderlyingObj, Access);
+            auto [It, Inserted] = ObjToLastAccess.try_emplace(
+                {UnderlyingObj,
+                 cast<PointerType>(Ptr->getType())->getAddressSpace()},
+                Access);
             if (!Inserted) {
               DepCands.unionSets(Access, It->second);
               It->second = Access;
@@ -2283,8 +2287,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
           (AIIsWrite ? AI : std::next(AI));
       while (OI != AE) {
         // Check every accessing instruction pair in program order.
-        for (std::vector<unsigned>::iterator I1 = Accesses[*AI].begin(),
-             I1E = Accesses[*AI].end(); I1 != I1E; ++I1)
+        auto &Acc = Accesses[*AI];
+        for (std::vector<unsigned>::iterator I1 = Acc.begin(), I1E = Acc.end();
+             I1 != I1E; ++I1)
           // Scan all accesses of another equivalence class, but only the next
           // accesses of the same equivalent class.
           for (std::vector<unsigned>::iterator

@@ -48,12 +48,12 @@ class TestRegistersUnavailable(GDBRemoteTestBase):
             "register read --all",
             patterns=[
                 "(?sm)^general purpose registers:\n"
-                "^\s+rdx = 0x5555555555555555\n"
+                "^\\s+rdx = 0x5555555555555555\n"
                 ".*"
                 "^3 registers were unavailable.\n"
                 "\n"
                 "^supplementary registers:\n"
-                "^\s+edx = 0x55555555\n"
+                "^\\s+edx = 0x55555555\n"
                 ".*"
                 "^12 registers were unavailable."
             ],

@@ -1054,84 +1054,82 @@ rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
 void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s called",
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
-  {
-    // Put the packet data into the buffer in a thread safe fashion
-    PThreadMutex::Locker locker(m_mutex);
 
-    std::string data;
-    // See if we have any left over data from a previous call to this
-    // function?
-    if (!m_rx_partial_data.empty()) {
-      // We do, so lets start with that data
-      data.swap(m_rx_partial_data);
-    }
-    // Append the new incoming data
-    data += new_data;
+  // Put the packet data into the buffer in a thread safe fashion
+  PThreadMutex::Locker locker(m_mutex);
 
-    // Parse up the packets into gdb remote packets
-    size_t idx = 0;
-    const size_t data_size = data.size();
+  std::string data;
+  // See if we have any left over data from a previous call to this
+  // function?
+  if (!m_rx_partial_data.empty()) {
+    // We do, so lets start with that data
+    data.swap(m_rx_partial_data);
+  }
+  // Append the new incoming data
+  data += new_data;
 
-    while (idx < data_size) {
-      // end_idx must be one past the last valid packet byte. Start
-      // it off with an invalid value that is the same as the current
-      // index.
-      size_t end_idx = idx;
+  // Parse up the packets into gdb remote packets
+  size_t idx = 0;
+  const size_t data_size = data.size();
 
-      switch (data[idx]) {
-      case '+':            // Look for ack
-      case '-':            // Look for cancel
-      case '\x03':         // ^C to halt target
-        end_idx = idx + 1; // The command is one byte long...
-        break;
+  while (idx < data_size) {
+    // end_idx must be one past the last valid packet byte. Start
+    // it off with an invalid value that is the same as the current
+    // index.
+    size_t end_idx = idx;
 
-      case '$':
-        // Look for a standard gdb packet?
-        end_idx = data.find('#', idx + 1);
-        if (end_idx == std::string::npos || end_idx + 3 > data_size) {
-          end_idx = std::string::npos;
-        } else {
-          // Add two for the checksum bytes and 1 to point to the
-          // byte just past the end of this packet
-          end_idx += 3;
-        }
-        break;
+    switch (data[idx]) {
+    case '+':            // Look for ack
+    case '-':            // Look for cancel
+    case '\x03':         // ^C to halt target
+      end_idx = idx + 1; // The command is one byte long...
+      break;
 
-      default:
-        break;
-      }
-
-      if (end_idx == std::string::npos) {
-        // Not all data may be here for the packet yet, save it for
-        // next time through this function.
-        m_rx_partial_data += data.substr(idx);
-        // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
-        // later[%u, npos):
-        // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-        // __FUNCTION__, idx, m_rx_partial_data.c_str());
-        idx = end_idx;
-      } else if (idx < end_idx) {
-        m_packets_recvd++;
-        // Hack to get rid of initial '+' ACK???
-        if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
-          // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
-          // ACK away....[%u, npos):
-          // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-          // __FUNCTION__, idx);
-        } else {
-          // We have a valid packet...
-          m_rx_packets.push_back(data.substr(idx, end_idx - idx));
-          DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
-                           m_rx_packets.back().c_str());
-        }
-        idx = end_idx;
+    case '$':
+      // Look for a standard gdb packet?
+      end_idx = data.find('#', idx + 1);
+      if (end_idx == std::string::npos || end_idx + 3 > data_size) {
+        end_idx = std::string::npos;
       } else {
-        DNBLogThreadedIf(LOG_RNB_MAX,
-                         "%8d RNBRemote::%s tossing junk byte at %c",
-                         (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-                         __FUNCTION__, data[idx]);
-        idx = idx + 1;
+        // Add two for the checksum bytes and 1 to point to the
+        // byte just past the end of this packet
+        end_idx += 3;
       }
+      break;
+
+    default:
+      break;
+    }
+
+    if (end_idx == std::string::npos) {
+      // Not all data may be here for the packet yet, save it for
+      // next time through this function.
+      m_rx_partial_data += data.substr(idx);
+      // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
+      // later[%u, npos):
+      // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+      // __FUNCTION__, idx, m_rx_partial_data.c_str());
+      idx = end_idx;
+    } else if (idx < end_idx) {
+      m_packets_recvd++;
+      // Hack to get rid of initial '+' ACK???
+      if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
+        // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
+        // ACK away....[%u, npos):
+        // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+        // __FUNCTION__, idx);
+      } else {
+        // We have a valid packet...
+        m_rx_packets.push_back(data.substr(idx, end_idx - idx));
+        DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
+                         m_rx_packets.back().c_str());
+      }
+      idx = end_idx;
+    } else {
+      DNBLogThreadedIf(LOG_RNB_MAX, "%8d RNBRemote::%s tossing junk byte at %c",
+                       (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+                       __FUNCTION__, data[idx]);
+      idx = idx + 1;
     }
   }
 

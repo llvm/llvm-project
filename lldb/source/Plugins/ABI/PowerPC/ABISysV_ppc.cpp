@@ -395,7 +395,8 @@ bool ABISysV_ppc::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_size)
       return false;
     bool is_signed;
@@ -459,7 +460,7 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
-          compiler_type.GetBitSize(frame_sp.get());
+          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
       if (!bit_width) {
         error = Status::FromErrorString("can't get type size");
         return error;
@@ -524,7 +525,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
       // Extract the register context so we can read arguments from registers
 
       std::optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(&thread);
+          llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -571,7 +572,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         std::optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(&thread);
+            llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
           RegisterValue f1_value;
@@ -605,7 +606,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
     std::optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(&thread);
+        llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *altivec_reg = reg_ctx->GetRegisterInfoByName("v2", 0);
       if (altivec_reg) {
@@ -655,7 +656,8 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
   if (!reg_ctx_sp)
     return return_valobj_sp;
 
-  std::optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(return_compiler_type.GetBitSize(&thread));
   if (!bit_width)
     return return_valobj_sp;
   if (return_compiler_type.IsAggregateType()) {
@@ -698,7 +700,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
         std::optional<uint64_t> field_bit_width =
-            field_compiler_type.GetBitSize(&thread);
+            llvm::expectedToOptional(field_compiler_type.GetBitSize(&thread));
         if (!field_bit_width)
           return return_valobj_sp;
 

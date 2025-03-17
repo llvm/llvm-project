@@ -127,7 +127,7 @@ class Lint : public InstVisitor<Lint> {
 
 public:
   Module *Mod;
-  Triple TT;
+  const Triple &TT;
   const DataLayout *DL;
   AliasAnalysis *AA;
   AssumptionCache *AC;
@@ -139,8 +139,8 @@ public:
 
   Lint(Module *Mod, const DataLayout *DL, AliasAnalysis *AA,
        AssumptionCache *AC, DominatorTree *DT, TargetLibraryInfo *TLI)
-      : Mod(Mod), TT(Triple::normalize(Mod->getTargetTriple())), DL(DL), AA(AA),
-        AC(AC), DT(DT), TLI(TLI), MessagesStr(Messages) {}
+      : Mod(Mod), TT(Mod->getTargetTriple()), DL(DL), AA(AA), AC(AC), DT(DT),
+        TLI(TLI), MessagesStr(Messages) {}
 
   void WriteValues(ArrayRef<const Value *> Vs) {
     for (const Value *V : Vs) {

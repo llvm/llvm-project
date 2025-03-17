@@ -132,6 +132,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::STRICT_FLDEXP: R = SoftenFloatRes_ExpOp(N); break;
     case ISD::FFREXP:        R = SoftenFloatRes_FFREXP(N); break;
     case ISD::FSINCOS:       R = SoftenFloatRes_FSINCOS(N); break;
+    case ISD::FMODF:         R = SoftenFloatRes_FMODF(N); break;
     case ISD::STRICT_FREM:
     case ISD::FREM:        R = SoftenFloatRes_FREM(N); break;
     case ISD::STRICT_FRINT:
@@ -771,13 +772,16 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
 
   SDLoc DL(N);
 
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   TargetLowering::MakeLibCallOptions CallOptions;
   SDValue Ops[2] = {GetSoftenedFloat(N->getOperand(0)), StackSlot};
   EVT OpsVT[2] = {VT0, StackSlot.getValueType()};
+  Type *CallOpsTypeOverrides[2] = {nullptr, PointerTy};
 
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but we only really need to handle the 0th one for softening anyway.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
@@ -791,30 +795,42 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   return ReturnVal;
 }
 
-SDValue
-DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
-                                                       RTLIB::Libcall LC) {
+SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
+    SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   EVT VT = N->getValueType(0);
+
+  assert(VT == N->getValueType(1) &&
+         "expected both return values to have the same type");
 
   if (!TLI.getLibcallName(LC))
     return SDValue();
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  SDValue FirstResultSlot = DAG.CreateStackTemporary(NVT);
-  SDValue SecondResultSlot = DAG.CreateStackTemporary(NVT);
 
   SDLoc DL(N);
 
-  TargetLowering::MakeLibCallOptions CallOptions;
-  std::array Ops{GetSoftenedFloat(N->getOperand(0)), FirstResultSlot,
-                 SecondResultSlot};
-  std::array OpsVT{VT, FirstResultSlot.getValueType(),
-                   SecondResultSlot.getValueType()};
+  SmallVector<SDValue, 3> Ops = {GetSoftenedFloat(N->getOperand(0))};
+  SmallVector<EVT, 3> OpsVT = {VT};
 
+  std::array<SDValue, 2> StackSlots;
+  SmallVector<Type *, 3> CallOpsTypeOverrides = {nullptr};
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ++ResNum) {
+    if (ResNum == CallRetResNo)
+      continue;
+    SDValue StackSlot = DAG.CreateStackTemporary(NVT);
+    Ops.push_back(StackSlot);
+    OpsVT.push_back(StackSlot.getValueType());
+    StackSlots[ResNum] = StackSlot;
+    CallOpsTypeOverrides.push_back(PointerTy);
+  }
+
+  TargetLowering::MakeLibCallOptions CallOptions;
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but since both returns have the same type it should be okay.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
@@ -825,8 +841,14 @@ DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
     return DAG.getLoad(NVT, DL, Chain, StackSlot, PtrInfo);
   };
-  SetSoftenedFloat(SDValue(N, 0), CreateStackLoad(FirstResultSlot));
-  SetSoftenedFloat(SDValue(N, 1), CreateStackLoad(SecondResultSlot));
+
+  for (auto [ResNum, SlackSlot] : enumerate(StackSlots)) {
+    if (CallRetResNo == ResNum) {
+      SetSoftenedFloat(SDValue(N, ResNum), ReturnVal);
+      continue;
+    }
+    SetSoftenedFloat(SDValue(N, ResNum), CreateStackLoad(SlackSlot));
+  }
 
   return SDValue();
 }
@@ -834,6 +856,11 @@ DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N,
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
   return SoftenFloatRes_UnaryWithTwoFPResults(
       N, RTLIB::getSINCOS(N->getValueType(0)));
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_FMODF(SDNode *N) {
+  return SoftenFloatRes_UnaryWithTwoFPResults(
+      N, RTLIB::getMODF(N->getValueType(0)), /*CallRetResNo=*/0);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {

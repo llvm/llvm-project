@@ -48,7 +48,7 @@ define amdgpu_kernel void @float4_inselt_undef(ptr addrspace(1) %out, i32 %sel) 
 ; GCN-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCN-NEXT:    s_endpgm
 entry:
-  %v = insertelement <4 x float> undef, float 1.000000e+00, i32 %sel
+  %v = insertelement <4 x float> poison, float 1.000000e+00, i32 %sel
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }

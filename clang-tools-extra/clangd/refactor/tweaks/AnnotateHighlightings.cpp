@@ -51,7 +51,8 @@ Expected<Tweak::Effect> AnnotateHighlightings::apply(const Selection &Inputs) {
         *Inputs.AST, /*IncludeInactiveRegionTokens=*/true);
   } else {
     // Store the existing scopes.
-    const auto &BackupScopes = Inputs.AST->getASTContext().getTraversalScope();
+    const std::vector<Decl *> BackupScopes =
+        Inputs.AST->getASTContext().getTraversalScope();
     // Narrow the traversal scope to the selected node.
     Inputs.AST->getASTContext().setTraversalScope(
         {const_cast<Decl *>(CommonDecl)});
