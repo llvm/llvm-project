@@ -4032,6 +4032,38 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
+.. _FunctionDeclarationsWithKeywords:
+
+**FunctionDeclarationsWithKeywords** (``List of FunctionDeclarationWithKeywordes``) :versionbadge:`clang-format 21` :ref:`¶ <FunctionDeclarationsWithKeywords>`
+  Allows to format function-like macros with keyworded parameters according
+  to the BinPackParameters setting, treating keywords as parameter
+  sepratators.
+
+  Q_PROPERTY is an example of such a macro:
+
+  .. code-block:: c++
+
+    Q_PROPERTY(int name READ name WRITE setName NOTIFY nameChanged)
+
+  With ``BinPackParameters``  set to ``OnePerLine`` (or
+  ``AlwaysOnePerLine``) and
+
+  .. code-block:: yaml
+
+    FunctionDeclarationsWithKeywords:
+    - Name: "Q_PROPERTY"
+      Keywords: ['READ', 'WRITE', 'MEMBER', 'RESET', 'NOTIFY']
+
+  the line above will be split on these keywords:
+
+  .. code-block:: c++
+
+    Q_PROPERTY(
+        int name
+        READ name
+        WRITE setName
+        NOTIFY nameChanged)
+
 .. _IfMacros:
 
 **IfMacros** (``List of Strings``) :versionbadge:`clang-format 13` :ref:`¶ <IfMacros>`

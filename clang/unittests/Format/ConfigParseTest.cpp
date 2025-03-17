@@ -1105,6 +1105,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SDS_Leave);
   CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
               FormatStyle::SDS_Never);
+
+  Style.FunctionDeclarationsWithKeywords.clear();
+  std::vector<FormatStyle::FunctionDeclarationWithKeywords> ExpectedFunctions =
+      {{"MACRO_A", {"PARAM1", "KEYWORD", "KW_2"}}, {"macro", {"mKW1", "mKW2"}}};
+  CHECK_PARSE("FunctionDeclarationsWithKeywords:\n"
+              "  - Name: MACRO_A\n"
+              "    Keywords: ['PARAM1', 'KEYWORD', 'KW_2']\n"
+              "  - Name: macro\n"
+              "    Keywords: [ \"mKW1\", \"mKW2\" ]\n",
+              FunctionDeclarationsWithKeywords, ExpectedFunctions);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
