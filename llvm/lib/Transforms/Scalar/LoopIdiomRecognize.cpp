@@ -135,18 +135,13 @@ static cl::opt<bool, true>
                       cl::location(DisableLIRP::Strlen), cl::init(false),
                       cl::ReallyHidden);
 
-/// Some target libraries have a significant call overhead for `wcslen`,
-/// which can degrade performance when the input string is not long enough
-/// to justify the cost. To avoid unnecessary performance penalties,
-/// we disable it by default.
 bool DisableLIRP::Wcslen;
-static cl::opt<bool, true> EnableLIRPWcslen(
-    "enable-loop-idiom-wcslen",
-    cl::desc("Proceed with loop idiom recognize pass, "
-             "enable conversion of loop(s) to wcslen."),
-    cl::location(DisableLIRP::Wcslen), cl::init(true),
-    cl::callback([](const bool &) { DisableLIRP::Wcslen = false; }),
-    cl::ReallyHidden);
+static cl::opt<bool, true>
+    EnableLIRPWcslen("disable-loop-idiom-wcslen",
+                     cl::desc("Proceed with loop idiom recognize pass, "
+                              "enable conversion of loop(s) to wcslen."),
+                     cl::location(DisableLIRP::Wcslen), cl::init(false),
+                     cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
