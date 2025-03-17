@@ -178,7 +178,7 @@ def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
 
 def FeatureStdExtZilsd
     : RISCVExtension<1, 0,
-                     "'Zilsd' (Load/Store pair instructions)">;
+                     "Load/Store Pair Instructions">;
 def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
@@ -410,7 +410,7 @@ def FeatureStdExtZcf
 
 def FeatureStdExtZclsd
     : RISCVExtension<1, 0,
-                     "Compressed Load/Store pair instructions",
+                     "Compressed Load/Store Pair Instructions",
                      [FeatureStdExtZilsd,FeatureStdExtZca]>;     
 def HasStdExtZclsd : Predicate<"Subtarget->hasStdExtZclsd() && !Subtarget->hasStdExtZcf()">,
                     AssemblerPredicate<(all_of FeatureStdExtZclsd),
