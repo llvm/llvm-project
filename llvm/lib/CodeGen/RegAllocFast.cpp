@@ -391,7 +391,7 @@ private:
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
 
-  bool isInlineAsmBrSpill(const MachineInstr &MI) const;
+  bool mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const;
 
   void dumpState() const;
 };
@@ -493,17 +493,18 @@ static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
   return IndexA < IndexB;
 }
 
-bool RegAllocFastImpl::isInlineAsmBrSpill(const MachineInstr &MI) const {
+/// Returns true if \p MI is a spill of a live-in physical register in a block
+/// targeted by an INLINEASM_BR. Such spills must precede reloads of live-in
+/// virtual registers, so that we do not reload from an uninitialized stack
+/// slot.
+bool RegAllocFastImpl::mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const {
   int FI;
   auto *MBB = MI.getParent();
   if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
-      MFI->isSpillSlotObjectIndex(FI)) {
+      MFI->isSpillSlotObjectIndex(FI))
     for (const auto &Op : MI.operands())
-      if (Op.isReg() && any_of(MBB->liveins(), [&](const auto &RegP) {
-            return Op.getReg() == RegP.PhysReg;
-          }))
+      if (Op.isReg() && MBB->isLiveIn(Op.getReg()))
         return true;
-  }
   return false;
 }
 
@@ -665,7 +666,7 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     }
 
     // Skip prologues and inlineasm_br spills to place reloads afterwards.
-    if (!TII->isBasicBlockPrologue(*I) && !isInlineAsmBrSpill(*I))
+    if (!TII->isBasicBlockPrologue(*I) && !mayBeSpillFromInlineAsmBr(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -752,7 +753,7 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
       assert(LRI != LiveVirtRegs.end() && "datastructures in sync");
       MachineBasicBlock::iterator ReloadBefore =
           std::next((MachineBasicBlock::iterator)MI.getIterator());
-      while (isInlineAsmBrSpill(*ReloadBefore))
+      while (mayBeSpillFromInlineAsmBr(*ReloadBefore))
         ++ReloadBefore;
       reload(ReloadBefore, VirtReg, LRI->PhysReg);
 
