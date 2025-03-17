@@ -668,6 +668,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasSameSign())
     OS << " samesign";
 
+  if (getFlags().hasInBounds())
+    OS << " inbounds";
+
   if (getFlags().hasNonNeg())
     OS << " nneg";
 

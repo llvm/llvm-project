@@ -415,12 +415,15 @@ public:
     Unpredictable = 1 << 13,
     // Compare instructions which may carry the samesign flag.
     SameSign = 1 << 14,
+    // Pointer arithmetic instructions that remain in bounds, e.g., implementing
+    // an inbounds GEP.
+    InBounds = 1 << 15,
 
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
-                            NonNeg | NoNaNs | NoInfs | SameSign,
+                            NonNeg | NoNaNs | NoInfs | SameSign | InBounds,
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
                     AllowContract | ApproximateFuncs | AllowReassociation,
   };
@@ -455,6 +458,7 @@ public:
   void setAllowReassociation(bool b) { setFlag<AllowReassociation>(b); }
   void setNoFPExcept(bool b) { setFlag<NoFPExcept>(b); }
   void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
+  void setInBounds(bool b) { setFlag<InBounds>(b); }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
@@ -472,6 +476,7 @@ public:
   bool hasAllowReassociation() const { return Flags & AllowReassociation; }
   bool hasNoFPExcept() const { return Flags & NoFPExcept; }
   bool hasUnpredictable() const { return Flags & Unpredictable; }
+  bool hasInBounds() const { return Flags & InBounds; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -481,7 +486,7 @@ public:
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::SameSign);
+                             SDNodeFlags::InBounds);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
