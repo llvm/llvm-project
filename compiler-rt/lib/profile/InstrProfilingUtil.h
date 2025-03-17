@@ -33,9 +33,9 @@ int lprofUnlockFileHandle(FILE *F);
 FILE *lprofOpenFileEx(const char *Filename);
 
 enum MemoryStatus {
-  MS_INVALID = 0x1, // Addr is not a valid address
-  MS_MMAP = 0x2,    // Addr was mmap'ed
-  MS_MALLOC = 0x4   // Addr was malloc'ed
+  MS_INVALID, // Addr is not a valid address
+  MS_MMAP,    // Addr was mmap'ed
+  MS_MALLOC   // Addr was malloc'ed
 };
 typedef struct {
   void *Addr;
