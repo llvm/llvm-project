@@ -1,4 +1,4 @@
-//===-- Unittests for asinhf16---------------------------------------------===//
+//===-- Unittests for asinhf16 --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,10 +21,10 @@ TEST_F(LlvmLibcAsinhf16Test, SpecialNumbers) {
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::asinhf16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::asinhf16(0.0f));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asinhf16(zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::asinhf16(-0.0f));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::asinhf16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::asinhf16(inf));
