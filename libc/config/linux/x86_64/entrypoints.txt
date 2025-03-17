@@ -411,7 +411,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
-    libc.src.math.asinhf16
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
@@ -654,6 +653,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
     libc.src.math.asinf16
+    libc.src.math.asinhf16
     libc.src.math.acosf16
     libc.src.math.acoshf16
     libc.src.math.canonicalizef16
