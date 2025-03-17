@@ -1416,7 +1416,7 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   // value from the comparison instruction.
   auto tryFoldCndMaskCmp =
       [&](MachineOperand *SrcOp, std::optional<int64_t> SrcImm,
-          unsigned CmpOpcodes[4], AMDGPU::OpName CmpValName) -> bool {
+          ArrayRef<unsigned> CmpOpcodes, AMDGPU::OpName CmpValName) -> bool {
     // We'll try to process only register operands with known values.
     if (!SrcImm || !SrcOp->isReg())
       return false;
@@ -1432,8 +1432,10 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
 
     unsigned CmpOpc = PredI->getOpcode();
 
-    if (CmpOpc != CmpOpcodes[0] && CmpOpc != CmpOpcodes[1] &&
-        CmpOpc != CmpOpcodes[2] && CmpOpc != CmpOpcodes[3])
+    // Check if the comparison instruction is one of the expected ones.
+    const auto *CmpOpcI = find_if(
+        CmpOpcodes, [CmpOpc](unsigned Opcode) { return Opcode == CmpOpc; });
+    if (CmpOpcI == CmpOpcodes.end())
       return false;
 
     // Check if the immediate value of the source operand matches the immediate
@@ -1467,18 +1469,21 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (!Src1->isIdenticalTo(*Src0)) {
     // Try to fold with not-equal comparisons
-    unsigned NECmpOpcodes[4] = {
+    unsigned NECmpOpcodes[] = {
         AMDGPU::V_CMP_NEQ_F32_e64, AMDGPU::V_CMP_LG_F32_e64,
-        AMDGPU::V_CMP_NE_I32_e64, AMDGPU::V_CMP_NE_U32_e64};
+        AMDGPU::V_CMP_NE_I32_e64,  AMDGPU::V_CMP_NE_U32_e64,
+        AMDGPU::V_CMP_NE_U16_e64,  AMDGPU::V_CMP_NE_I16_e64,
+        AMDGPU::V_CMP_NEQ_F16_e64, AMDGPU::V_CMP_LG_F16_e64};
 
     std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(*Src0);
     if (tryFoldCndMaskCmp(Src0, Src0Imm, NECmpOpcodes, AMDGPU::OpName::src1))
       return true;
 
     // Try to fold with equal comparisons
-    unsigned EQCmpOpcodes[4] = {
-        AMDGPU::V_CMP_EQ_F32_e64, AMDGPU::V_CMP_EQ_F64_e64,
-        AMDGPU::V_CMP_EQ_I32_e64, AMDGPU::V_CMP_EQ_U32_e64};
+    unsigned EQCmpOpcodes[] = {
+        AMDGPU::V_CMP_EQ_F32_e64, AMDGPU::V_CMP_EQ_I32_e64,
+        AMDGPU::V_CMP_EQ_U32_e64, AMDGPU::V_CMP_EQ_U16_e64,
+        AMDGPU::V_CMP_EQ_I16_e64, AMDGPU::V_CMP_EQ_F16_e64};
 
     std::optional<int64_t> Src1Imm = getImmOrMaterializedImm(*Src1);
     if (tryFoldCndMaskCmp(Src1, Src1Imm, EQCmpOpcodes, AMDGPU::OpName::src0))

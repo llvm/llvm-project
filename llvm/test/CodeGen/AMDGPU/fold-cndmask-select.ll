@@ -2,6 +2,29 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck %s -check-prefix=GFX9
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030  < %s | FileCheck %s -check-prefix=GFX10
 
+define bfloat @bf16_oeq_v_i(bfloat %arg, bfloat %arg1) {
+; GFX9-LABEL: bf16_oeq_v_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
+; GFX9-NEXT:    s_mov_b32 s4, 0x42420000
+; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, s4, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: bf16_oeq_v_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
+; GFX10-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0x42420000, v2
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq bfloat %arg, 0xR4242
+  %select = select i1 %fcmp, bfloat %arg, bfloat %arg1
+  ret bfloat %select
+}
+
 define float @f32_oeq_v_i(float %arg, float %arg1) {
 ; GFX9-LABEL: f32_oeq_v_i:
 ; GFX9:       ; %bb.0: ; %bb
@@ -86,6 +109,90 @@ bb:
   ret float %select
 }
 
+define half @f16_oeq_v_i(half %arg, half %arg1) {
+; GFX9-LABEL: f16_oeq_v_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x5140
+; GFX9-NEXT:    v_cmp_neq_f16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f16_oeq_v_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_neq_f16_e32 vcc_lo, 0x5140, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x5140, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq half %arg, 42.0
+  %select = select i1 %fcmp, half 42.0, half %arg1
+  ret half %select
+}
+
+define half @f16_oeq_i_v(half %arg, half %arg1) {
+; GFX9-LABEL: f16_oeq_i_v:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x5140
+; GFX9-NEXT:    v_cmp_neq_f16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f16_oeq_i_v:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_neq_f16_e32 vcc_lo, 0x5140, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x5140, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq half 42.0, %arg
+  %select = select i1 %fcmp, half 42.0, half %arg1
+  ret half %select
+}
+
+define half @f16_one_v_i(half %arg, half %arg1) {
+; GFX9-LABEL: f16_one_v_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x5140
+; GFX9-NEXT:    v_cmp_lg_f16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f16_one_v_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lg_f16_e32 vcc_lo, 0x5140, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x5140, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp one half %arg, 42.0
+  %select = select i1 %fcmp, half %arg1, half 42.0
+  ret half %select
+}
+
+define half @f16_one_i_v(half %arg, half %arg1) {
+; GFX9-LABEL: f16_one_i_v:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x5140
+; GFX9-NEXT:    v_cmp_lg_f16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f16_one_i_v:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_lg_f16_e32 vcc_lo, 0x5140, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x5140, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp one half %arg, 42.0
+  %select = select i1 %fcmp, half %arg1, half 42.0
+  ret half %select
+}
+
 define i32 @i32_eq_v_i(i32 %arg, i32 %arg1) {
 ; GFX9-LABEL: i32_eq_v_i:
 ; GFX9:       ; %bb.0: ; %bb
@@ -168,4 +275,88 @@ bb:
   %icmp = icmp ne i32 424242, %arg
   %select = select i1 %icmp, i32 %arg1, i32 424242
   ret i32 %select
+}
+
+define i16 @i16_eq_v_i(i16 %arg, i16 %arg1) {
+; GFX9-LABEL: i16_eq_v_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x1092
+; GFX9-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_eq_v_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %icmp = icmp eq i16 %arg, 4242
+  %select = select i1 %icmp, i16 4242, i16 %arg1
+  ret i16 %select
+}
+
+define i16 @i16_eq_i_v(i16 %arg, i16 %arg1) {
+; GFX9-LABEL: i16_eq_i_v:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x1092
+; GFX9-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_eq_i_v:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %icmp = icmp eq i16 4242, %arg
+  %select = select i1 %icmp, i16 4242, i16 %arg1
+  ret i16 %select
+}
+
+define i16 @i16_ne_v_i(i16 %arg, i16 %arg1) {
+; GFX9-LABEL: i16_ne_v_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x1092
+; GFX9-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_ne_v_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %icmp = icmp ne i16 %arg, 4242
+  %select = select i1 %icmp, i16 %arg1, i16 4242
+  ret i16 %select
+}
+
+define i16 @i16_ne_i_v(i16 %arg, i16 %arg1) {
+; GFX9-LABEL: i16_ne_i_v:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x1092
+; GFX9-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_ne_i_v:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %icmp = icmp ne i16 4242, %arg
+  %select = select i1 %icmp, i16 %arg1, i16 4242
+  ret i16 %select
 }
