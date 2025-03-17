@@ -19,41 +19,8 @@
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
-  // Benchmark ranges::contains_subrange where we find our target starting at 25% of the elements
-  {
-    auto bm = []<class Container>(std::string name) {
-      benchmark::RegisterBenchmark(
-          name,
-          [](auto& st) {
-            std::size_t const size = st.range(0);
-            using ValueType        = typename Container::value_type;
-            ValueType x            = Generate<ValueType>::random();
-            ValueType y            = random_different_from({x});
-            Container c(size, x);
-            Container subrange(size / 10, y); // subrange of length 10% of the full range
-
-            // At 25% of the range, put the subrange we're going to find
-            std::ranges::copy(subrange, std::next(c.begin(), c.size() / 4));
-
-            for (auto _ : st) {
-              benchmark::DoNotOptimize(c);
-              benchmark::DoNotOptimize(subrange);
-              auto result = std::ranges::contains_subrange(c, subrange);
-              benchmark::DoNotOptimize(result);
-            }
-          })
-          ->Arg(16)
-          ->Arg(32)
-          ->Arg(50) // non power-of-two
-          ->Arg(8192)
-          ->Arg(1 << 20);
-    };
-    bm.operator()<std::vector<int>>("rng::contains_subrange(vector<int>) (bail 25%)");
-    bm.operator()<std::deque<int>>("rng::contains_subrange(deque<int>) (bail 25%)");
-    bm.operator()<std::list<int>>("rng::contains_subrange(list<int>) (bail 25%)");
-  }
-
-  // Benchmark ranges::contains_subrange where we never find our target
+  // Benchmark ranges::contains_subrange where we never find our target, which is the
+  // worst case.
   {
     auto bm = []<class Container>(std::string name) {
       benchmark::RegisterBenchmark(

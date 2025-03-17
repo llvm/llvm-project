@@ -39,62 +39,8 @@ int main(int argc, char** argv) {
     return !std::ranges::none_of(first, last, pred);
   };
 
-  // Benchmark {std,ranges}::{any_of,all_of,none_of} where we bail out early
-  // (after visiting 25% of the elements).
-  {
-    auto bm = []<class Container>(std::string name, auto any_of) {
-      benchmark::RegisterBenchmark(
-          name,
-          [any_of](auto& st) {
-            std::size_t const size = st.range(0);
-            using ValueType        = typename Container::value_type;
-            ValueType x            = Generate<ValueType>::random();
-            ValueType y            = random_different_from({x});
-            Container c(size, x);
-            *std::next(c.begin(), size / 4) = y; // bail out after the first 25% elements
-
-            for (auto _ : st) {
-              benchmark::DoNotOptimize(c);
-              auto result = any_of(c.begin(), c.end(), [&](auto element) {
-                benchmark::DoNotOptimize(element);
-                return element == y;
-              });
-              benchmark::DoNotOptimize(result);
-            }
-          })
-          ->Arg(8)
-          ->Arg(32)
-          ->Arg(50) // non power-of-two
-          ->Arg(8192)
-          ->Arg(32768);
-    };
-
-    // any_of
-    bm.operator()<std::vector<int>>("std::any_of(vector<int>) (bail 25%)", std_any_of);
-    bm.operator()<std::deque<int>>("std::any_of(deque<int>) (bail 25%)", std_any_of);
-    bm.operator()<std::list<int>>("std::any_of(list<int>) (bail 25%)", std_any_of);
-    bm.operator()<std::vector<int>>("rng::any_of(vector<int>) (bail 25%)", std::ranges::any_of);
-    bm.operator()<std::deque<int>>("rng::any_of(deque<int>) (bail 25%)", std::ranges::any_of);
-    bm.operator()<std::list<int>>("rng::any_of(list<int>) (bail 25%)", std::ranges::any_of);
-
-    // all_of
-    bm.operator()<std::vector<int>>("std::all_of(vector<int>) (bail 25%)", std_all_of);
-    bm.operator()<std::deque<int>>("std::all_of(deque<int>) (bail 25%)", std_all_of);
-    bm.operator()<std::list<int>>("std::all_of(list<int>) (bail 25%)", std_all_of);
-    bm.operator()<std::vector<int>>("rng::all_of(vector<int>) (bail 25%)", ranges_all_of);
-    bm.operator()<std::deque<int>>("rng::all_of(deque<int>) (bail 25%)", ranges_all_of);
-    bm.operator()<std::list<int>>("rng::all_of(list<int>) (bail 25%)", ranges_all_of);
-
-    // none_of
-    bm.operator()<std::vector<int>>("std::none_of(vector<int>) (bail 25%)", std_none_of);
-    bm.operator()<std::deque<int>>("std::none_of(deque<int>) (bail 25%)", std_none_of);
-    bm.operator()<std::list<int>>("std::none_of(list<int>) (bail 25%)", std_none_of);
-    bm.operator()<std::vector<int>>("rng::none_of(vector<int>) (bail 25%)", ranges_none_of);
-    bm.operator()<std::deque<int>>("rng::none_of(deque<int>) (bail 25%)", ranges_none_of);
-    bm.operator()<std::list<int>>("rng::none_of(list<int>) (bail 25%)", ranges_none_of);
-  }
-
-  // Benchmark {std,ranges}::{any_of,all_of,none_of} where we process the whole sequence.
+  // Benchmark {std,ranges}::{any_of,all_of,none_of} where we process the whole sequence,
+  // which is the worst case.
   {
     auto bm = []<class Container>(std::string name, auto any_of) {
       benchmark::RegisterBenchmark(

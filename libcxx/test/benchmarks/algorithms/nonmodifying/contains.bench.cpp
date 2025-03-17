@@ -19,40 +19,8 @@
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
-  // Benchmark ranges::contains where we bail out early (after visiting 25% of the elements).
-  {
-    auto bm = []<class Container>(std::string name) {
-      benchmark::RegisterBenchmark(
-          name,
-          [](auto& st) {
-            std::size_t const size = st.range(0);
-            using ValueType        = typename Container::value_type;
-            ValueType x            = Generate<ValueType>::random();
-            ValueType y            = random_different_from({x});
-            Container c(size, x);
-            *std::next(c.begin(), size / 4) = y; // bail out after checking 25% of values
-            auto first                      = c.begin();
-            auto last                       = c.end();
-
-            for (auto _ : st) {
-              benchmark::DoNotOptimize(c);
-              benchmark::DoNotOptimize(y);
-              auto result = std::ranges::contains(first, last, y);
-              benchmark::DoNotOptimize(result);
-            }
-          })
-          ->Arg(8)
-          ->Arg(32)
-          ->Arg(50) // non power-of-two
-          ->Arg(8192)
-          ->Arg(1 << 20);
-    };
-    bm.operator()<std::vector<int>>("rng::contains(vector<int>) (bail 25%)");
-    bm.operator()<std::deque<int>>("rng::contains(deque<int>) (bail 25%)");
-    bm.operator()<std::list<int>>("rng::contains(list<int>) (bail 25%)");
-  }
-
-  // Benchmark ranges::contains where we process the whole sequence.
+  // Benchmark ranges::contains where we process the whole sequence, which is the
+  // worst case.
   {
     auto bm = []<class Container>(std::string name) {
       benchmark::RegisterBenchmark(
