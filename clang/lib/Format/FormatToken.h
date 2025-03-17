@@ -84,6 +84,7 @@ namespace format {
   TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
+  TYPE(FunctionParameterKeyword)                                               \
   TYPE(FunctionTypeLParen)                                                     \
   /* The colons as part of a C11 _Generic selection */                         \
   TYPE(GenericSelectionColon)                                                  \
