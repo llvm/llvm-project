@@ -708,6 +708,7 @@ module std [system] {
     }
     module ranges_remove {
       header "__algorithm/ranges_remove.h"
+      export std.ranges.subrange // return type
     }
     module ranges_replace_copy_if {
       header "__algorithm/ranges_replace_copy_if.h"
@@ -732,7 +733,7 @@ module std [system] {
     }
     module ranges_rotate_copy {
       header "__algorithm/ranges_rotate_copy.h"
-      export std.algorithm.in_out_result
+      export std.ranges.subrange // return type
     }
     module ranges_rotate                          { header "__algorithm/ranges_rotate.h" }
     module ranges_sample                          { header "__algorithm/ranges_sample.h" }

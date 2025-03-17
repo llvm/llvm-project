@@ -13,6 +13,26 @@ int intfunc() { return 42; }
 // CHECK: define{{.*}} i32 @intfunc()
 // CHECK:   ret i32 42
 
+int scopes() {
+  {
+    {
+      return 99;
+    }
+  }
+}
+// CHECK: define{{.*}} i32 @scopes() {
+// CHECK:     br label %[[LABEL1:.*]]
+// CHECK:     [[LABEL1]]:
+// CHECK:       br label %[[LABEL2:.*]]
+// CHECK:     [[LABEL2]]:
+// CHECK:       ret i32 99
+// CHECK:     [[LABEL3:.*]]:
+// CHECK:       br label %[[LABEL4:.*]]
+// CHECK:     [[LABEL4]]:
+// CHECK:       call void @llvm.trap()
+// CHECK:       unreachable
+// CHECK: }
+
 long longfunc() { return 42l; }
 // CHECK: define{{.*}} i64 @longfunc() {
 // CHECK:   ret i64 42
