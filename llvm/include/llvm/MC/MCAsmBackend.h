@@ -96,7 +96,6 @@ public:
   virtual bool shouldForceRelocation(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target,
-                                     const uint64_t Value,
                                      const MCSubtargetInfo *STI) {
     return false;
   }

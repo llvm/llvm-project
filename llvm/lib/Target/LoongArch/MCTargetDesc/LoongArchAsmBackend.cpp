@@ -251,7 +251,6 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
                                                 const MCValue &Target,
-                                                const uint64_t,
                                                 const MCSubtargetInfo *STI) {
   switch (Fixup.getTargetKind()) {
   default:
