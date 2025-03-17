@@ -37,7 +37,10 @@ llvm_config.use_default_substitutions()
 tools = [
     ToolSubst(
         "%test_debuginfo",
-        command=os.path.join(
+        command="LLVM_LIBS_DIR="
+        + config.llvm_libs_dir
+        + " "
+        + os.path.join(
             config.cross_project_tests_src_root,
             "debuginfo-tests",
             "llgdb-tests",
