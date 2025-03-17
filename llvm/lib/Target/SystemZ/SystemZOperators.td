@@ -315,6 +315,12 @@ def z_vaccc             : SDNode<"SystemZISD::VACCC", SDT_ZTernary>;
 def z_vscbi             : SDNode<"SystemZISD::VSCBI", SDTIntBinOp>;
 def z_vsbi              : SDNode<"SystemZISD::VSBI", SDT_ZTernary>;
 def z_vsbcbi            : SDNode<"SystemZISD::VSBCBI", SDT_ZTernary>;
+def z_vmah              : SDNode<"SystemZISD::VMAH", SDT_ZTernary>;
+def z_vmalh             : SDNode<"SystemZISD::VMALH", SDT_ZTernary>;
+def z_vme               : SDNode<"SystemZISD::VME", SDT_ZBinaryConv>;
+def z_vmle              : SDNode<"SystemZISD::VMLE", SDT_ZBinaryConv>;
+def z_vmo               : SDNode<"SystemZISD::VMO", SDT_ZBinaryConv>;
+def z_vmlo              : SDNode<"SystemZISD::VMLO", SDT_ZBinaryConv>;
 
 def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -348,6 +354,8 @@ def z_splat             : SDNode<"SystemZISD::SPLAT", SDT_ZVecBinaryInt>;
 def z_merge_high        : SDNode<"SystemZISD::MERGE_HIGH", SDT_ZVecBinary>;
 def z_merge_low         : SDNode<"SystemZISD::MERGE_LOW", SDT_ZVecBinary>;
 def z_shl_double        : SDNode<"SystemZISD::SHL_DOUBLE", SDT_ZVecTernaryInt>;
+def z_shl_double_bit    : SDNode<"SystemZISD::SHL_DOUBLE_BIT", SDT_ZVecTernaryInt>;
+def z_shr_double_bit    : SDNode<"SystemZISD::SHR_DOUBLE_BIT", SDT_ZVecTernaryInt>;
 def z_permute_dwords    : SDNode<"SystemZISD::PERMUTE_DWORDS",
                                  SDT_ZVecTernaryInt>;
 def z_permute           : SDNode<"SystemZISD::PERMUTE", SDT_ZVecTernary>;
@@ -814,8 +822,9 @@ def or_as_revinserti8 : PatFrag<(ops node:$src1, node:$src2),
 def z_inegabs : PatFrag<(ops node:$src), (ineg (abs node:$src))>;
 
 // Integer multiply-and-add
-def z_muladd : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                       (add (mul node:$src1, node:$src2), node:$src3)>;
+class z_muladd<SDPatternOperator mulop>
+  : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+            (add (mulop node:$src1, node:$src2), node:$src3)>;
 
 // Alternatives to match operations with or without an overflow CC result.
 def z_sadd : PatFrags<(ops node:$src1, node:$src2),
@@ -1050,6 +1059,13 @@ def z_vneg : PatFrag<(ops node:$x), (sub immAllZerosV, node:$x)>;
 
 // Bitwise negation on vectors.
 def z_vnot : PatFrag<(ops node:$x), (xor node:$x, immAllOnesV)>;
+
+// In-register element-wise zero extension from i1 on vectors.
+def vsplat_imm_eq_1 : PatFrag<(ops), (build_vector), [{
+  APInt Imm;
+  return ISD::isConstantSplatVector(N, Imm) && Imm == 1;
+}]>;
+def z_vzext1 : PatFrag<(ops node:$x), (and node:$x, vsplat_imm_eq_1)>;
 
 // Signed "integer greater than zero" on vectors.
 def z_vicmph_zero : PatFrag<(ops node:$x), (z_vicmph node:$x, immAllZerosV)>;
