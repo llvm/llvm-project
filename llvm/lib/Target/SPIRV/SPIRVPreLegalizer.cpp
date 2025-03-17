@@ -268,7 +268,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           ToErase.push_back(AssignMI);
         MRI->replaceRegWith(Def, Source);
       } else {
-        GR->assignSPIRVTypeToVReg(AssignedPtrType, Def, MF);
+        if (!GR->getSPIRVTypeForVReg(Def, &MF))
+          GR->assignSPIRVTypeToVReg(AssignedPtrType, Def, MF);
         MIB.buildBitcast(Def, Source);
       }
     }
@@ -442,13 +443,11 @@ void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
 
   if (!isTypeFoldingSupported(Def->getOpcode())) {
     // No need to generate SPIRV::ASSIGN_TYPE pseudo-instruction
-    if (!GR->getSPIRVTypeForVReg(Reg, &MRI.getMF())) {
-      if (!MRI.getRegClassOrNull(Reg))
-        MRI.setRegClass(Reg, GR->getRegClass(SpvType));
-      if (!MRI.getType(Reg).isValid())
-        MRI.setType(Reg, GR->getRegType(SpvType));
-      GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
-    }
+    if (!MRI.getRegClassOrNull(Reg))
+      MRI.setRegClass(Reg, GR->getRegClass(SpvType));
+    if (!MRI.getType(Reg).isValid())
+      MRI.setType(Reg, GR->getRegType(SpvType));
+    GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
     return;
   }
 

@@ -645,18 +645,20 @@ SPIRVGlobalRegistry::buildConstantSampler(Register ResReg, unsigned AddrMode,
       ResReg.isValid()
           ? ResReg
           : MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-  const MachineInstr *NewMI =
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
-            .addDef(Sampler)
-            .addUse(getSPIRVTypeID(getOrCreateOpTypeSampler(MIRBuilder)))
-            .addImm(AddrMode)
-            .addImm(Param)
-            .addImm(FilerMode);
-      });
-  // TODO: this is a constant and it needs a usual control flow of add()/find()
-  // as other constants
-  return NewMI->getOperand(0).getReg();
+  SPIRVType *TypeSampler = getOrCreateOpTypeSampler(MIRBuilder);
+  Register TypeSamplerReg = getSPIRVTypeID(TypeSampler);
+  // We cannot use createOpType() logic here, because of the
+  // GlobalISel/IRTranslator.cpp check for a tail call that expects that
+  // MIRBuilder.getInsertPt() has a previous instruction. If this constant is
+  // inserted as a result of "__translate_sampler_initializer()" this would
+  // break this IRTranslator assumption.
+  MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
+      .addDef(Sampler)
+      .addUse(TypeSamplerReg)
+      .addImm(AddrMode)
+      .addImm(Param)
+      .addImm(FilerMode);
+  return Sampler;
 }
 
 Register SPIRVGlobalRegistry::buildGlobalVariable(
