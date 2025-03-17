@@ -29,7 +29,7 @@
 // CHECK-NEXT:     zihintntl            1.0       'Zihintntl' (Non-Temporal Locality Hints)
 // CHECK-NEXT:     zihintpause          2.0       'Zihintpause' (Pause Hint)
 // CHECK-NEXT:     zihpm                2.0       'Zihpm' (Hardware Performance Counters)
-// CHECK-NEXT:     zilsd                1.0       'zilsd' (Load/Store Pair Instructions)
+// CHECK-NEXT:     zilsd                1.0       'Zilsd' (Load/Store Pair Instructions)
 // CHECK-NEXT:     zimop                1.0       'Zimop' (May-Be-Operations)
 // CHECK-NEXT:     zmmul                1.0       'Zmmul' (Integer Multiplication)
 // CHECK-NEXT:     za128rs              1.0       'Za128rs' (Reservation Set Size of at Most 128 Bytes)
