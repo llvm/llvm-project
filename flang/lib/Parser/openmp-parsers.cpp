@@ -1237,7 +1237,7 @@ TYPE_PARSER(sourced(construct<OmpSimpleStandaloneDirective>(first(
 TYPE_PARSER(sourced(construct<OpenMPSimpleStandaloneConstruct>(
     Parser<OmpSimpleStandaloneDirective>{}, Parser<OmpClauseList>{})))
 
-// 14.1 Interop construct
+// OMP 5.2 14.1 Interop construct
 TYPE_PARSER(sourced(construct<OpenMPInteropConstruct>(
     verbatim("INTEROP"_tok), sourced(Parser<OmpClauseList>{}))))
 

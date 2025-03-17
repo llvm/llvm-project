@@ -5671,7 +5671,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               if (llvm::is_contained(objectSymbolList, objectSymbol)) {
                 context_.Say(
                     GetContext().directiveSource,
-                    "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
+                    "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
               } else {
                 objectSymbolList.insert(objectSymbol);
               }
@@ -5687,7 +5687,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               if (llvm::is_contained(objectSymbolList, objectSymbol)) {
                 context_.Say(
                     GetContext().directiveSource,
-                    "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
+                    "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
               } else {
                 objectSymbolList.insert(objectSymbol);
               }
@@ -5700,7 +5700,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               if (llvm::is_contained(objectSymbolList, objectSymbol)) {
                 context_.Say(
                     GetContext().directiveSource,
-                    "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
+                    "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
               } else {
                 objectSymbolList.insert(objectSymbol);
               }
@@ -5716,7 +5716,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   if (isDependClauseOccured && !targetSyncCount) {
     context_.Say(
         GetContext().directiveSource,
-        "A depend clause can only appear on the directive if the interop-type includes targetsync"_err_en_US);
+        "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
   }
 }
 

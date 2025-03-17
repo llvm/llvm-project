@@ -2183,7 +2183,7 @@ public:
   void Unparse(const OmpInitClause &x) {
     using Modifier = OmpInitClause::Modifier;
     auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
-    bool isTypeStart = true;
+    bool isTypeStart{true};
     for (const Modifier &m : *modifiers) {
       if (auto *interopPreferenceMod{
               std::get_if<parser::OmpInteropPreference>(&m.u)}) {

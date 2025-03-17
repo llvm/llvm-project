@@ -8,7 +8,7 @@
 SUBROUTINE test_interop_01()
   USE omp_lib
   INTEGER(OMP_INTEROP_KIND) :: obj
-  !ERROR: Each interop-var may be speciﬁed for at most one action-clause of each interop construct.
+  !ERROR: Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct.
   !$OMP INTEROP INIT(TARGETSYNC,TARGET: obj) USE(obj)
   PRINT *, 'pass'
 END SUBROUTINE test_interop_01
@@ -24,7 +24,7 @@ END SUBROUTINE test_interop_02
 SUBROUTINE test_interop_03()
   USE omp_lib
   INTEGER(OMP_INTEROP_KIND) :: obj
-  !ERROR: A depend clause can only appear on the directive if the interop-type includes targetsync
+  !ERROR: A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC
   !$OMP INTEROP INIT(TARGET: obj) DEPEND(INOUT: obj)
   PRINT *, 'pass'
 END SUBROUTINE test_interop_03
