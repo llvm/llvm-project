@@ -131,6 +131,8 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
 bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                            const MCFixup *Fixup) const {
+  if (!Asm)
+    return false;
   // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X))) special cases.
   if (isGpOff()) {
     const MCExpr *SubExpr =
@@ -146,73 +148,9 @@ bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
-
-  if (Res.getRefKind() != MCSymbolRefExpr::VK_None)
-    return false;
-
-  // evaluateAsAbsolute() and evaluateAsValue() require that we evaluate the
-  // %hi/%lo/etc. here. Fixup is a null pointer when either of these is the
-  // caller.
-  if (Res.isAbsolute() && Fixup == nullptr) {
-    int64_t AbsVal = Res.getConstant();
-    switch (Kind) {
-    case MEK_None:
-    case MEK_Special:
-      llvm_unreachable("MEK_None and MEK_Special are invalid");
-    case MEK_DTPREL:
-      // MEK_DTPREL is used for marking TLS DIEExpr only
-      // and contains a regular sub-expression.
-      return getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup);
-    case MEK_DTPREL_HI:
-    case MEK_DTPREL_LO:
-    case MEK_GOT:
-    case MEK_GOTTPREL:
-    case MEK_GOT_CALL:
-    case MEK_GOT_DISP:
-    case MEK_GOT_HI16:
-    case MEK_GOT_LO16:
-    case MEK_GOT_OFST:
-    case MEK_GOT_PAGE:
-    case MEK_GPREL:
-    case MEK_PCREL_HI16:
-    case MEK_PCREL_LO16:
-    case MEK_TLSGD:
-    case MEK_TLSLDM:
-    case MEK_TPREL_HI:
-    case MEK_TPREL_LO:
-      return false;
-    case MEK_LO:
-    case MEK_CALL_LO16:
-      AbsVal = SignExtend64<16>(AbsVal);
-      break;
-    case MEK_CALL_HI16:
-    case MEK_HI:
-      AbsVal = SignExtend64<16>((AbsVal + 0x8000) >> 16);
-      break;
-    case MEK_HIGHER:
-      AbsVal = SignExtend64<16>((AbsVal + 0x80008000LL) >> 32);
-      break;
-    case MEK_HIGHEST:
-      AbsVal = SignExtend64<16>((AbsVal + 0x800080008000LL) >> 48);
-      break;
-    case MEK_NEG:
-      AbsVal = -AbsVal;
-      break;
-    }
-    Res = MCValue::get(AbsVal);
-    return true;
-  }
-
-  // We want to defer it for relocatable expressions since the constant is
-  // applied to the whole symbol value.
-  //
-  // The value of getKind() that is given to MCValue is only intended to aid
-  // debugging when inspecting MCValue objects. It shouldn't be relied upon
-  // for decision making.
   Res =
       MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
-  return true;
+  return !Res.getSymB();
 }
 
 void MipsMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
