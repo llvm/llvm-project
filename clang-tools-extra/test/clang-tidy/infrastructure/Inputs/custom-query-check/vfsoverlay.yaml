@@ -1,0 +1,44 @@
+version: 0
+roots:
+  - name: OUT_DIR
+    type: directory
+    contents:
+      - name: .clang-tidy
+        type: file
+        external-contents: INPUT_DIR/root-clang-tidy.yml
+      - name: main.cpp
+        type: file
+        external-contents: MAIN_FILE
+      - name: subdir
+        type: directory
+        contents:
+          - name: main.cpp
+            type: file
+            external-contents: MAIN_FILE
+      - name: subdir-override
+        type: directory
+        contents:
+          - name: main.cpp
+            type: file
+            external-contents: MAIN_FILE
+          - name: .clang-tidy
+            type: file
+            external-contents: INPUT_DIR/override-clang-tidy.yml
+      - name: subdir-empty
+        type: directory
+        contents:
+          - name: main.cpp
+            type: file
+            external-contents: MAIN_FILE
+          - name: .clang-tidy
+            type: file
+            external-contents: INPUT_DIR/empty-clang-tidy.yml
+      - name: subdir-append
+        type: directory
+        contents:
+          - name: main.cpp
+            type: file
+            external-contents: MAIN_FILE
+          - name: .clang-tidy
+            type: file
+            external-contents: INPUT_DIR/append-clang-tidy.yml
