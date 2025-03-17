@@ -1160,9 +1160,11 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   return MadeChange;
 }
 
-bool VPlanTransforms::simplifyBranchConditionForVFAndUF(
-    VPlan &Plan, ElementCount BestVF, unsigned BestUF,
-    PredicatedScalarEvolution &PSE) {
+/// Try to simplify the branch condition of \p Plan. This may restrict the
+/// resulting plan to \p BestVF and \p BestUF.
+static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                              unsigned BestUF,
+                                              PredicatedScalarEvolution &PSE) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
@@ -1212,7 +1214,7 @@ bool VPlanTransforms::simplifyBranchConditionForVFAndUF(
 
     VPBlockUtils::connectBlocks(Preheader, Header);
     VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
-    simplifyRecipes(Plan, *CanIVTy);
+    VPlanTransforms::simplifyRecipes(Plan, *CanIVTy);
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
