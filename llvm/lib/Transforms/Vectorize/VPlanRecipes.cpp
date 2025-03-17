@@ -672,8 +672,21 @@ Value *VPInstruction::generate(VPTransformState &State) {
          RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
          RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
         !PhiR->isInLoop()) {
-      ReducedPartRdx =
-          createReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
+      // TODO: Support in-order reductions based on the recurrence descriptor.
+      // All ops in the reduction inherit fast-math-flags from the recurrence
+      // descriptor.
+      IRBuilderBase::FastMathFlagGuard FMFG(Builder);
+      Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+        ReducedPartRdx =
+            createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
+      else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+        ReducedPartRdx =
+            createFindLastIVReduction(Builder, ReducedPartRdx, RdxDesc);
+      else
+        ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
+
       // If the reduction can be performed in a smaller type, we need to extend
       // the reduction to the wider type before we branch to the original loop.
       if (PhiTy != RdxDesc.getRecurrenceType())
@@ -2306,7 +2319,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     NextInChain = NewRed;
   } else {
     PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
-    NewRed = createReduction(State.Builder, RdxDesc, NewVecOp);
+    NewRed = createSimpleReduction(State.Builder, NewVecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
                                    NewRed, PrevInChain);
@@ -3332,15 +3345,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    auto *IVR = getParent()
-                    ->getPlan()
-                    ->getVectorLoopRegion()
-                    ->getEntryBasicBlock()
-                    ->front()
-                    .getVPSingleValue();
-    PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
-    NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
-                                    CanonicalIV->getIterator());
+    IRBuilder<>::InsertPointGuard Guard(State.Builder);
+    if (State.Builder.GetInsertPoint() !=
+        State.Builder.GetInsertBlock()->getFirstNonPHIIt())
+      State.Builder.SetInsertPoint(
+          State.Builder.GetInsertBlock()->getFirstNonPHIIt());
+    NewPointerPhi = State.Builder.CreatePHI(ScStValueType, 2, "pointer.phi");
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
     NewPointerPhi->setDebugLoc(getDebugLoc());
   } else {
@@ -3364,14 +3374,15 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   if (CurrentPart == 0) {
     // The recipe represents the first part of the pointer induction. Create the
     // GEP to increment the phi across all unrolled parts.
-    unsigned UF = CurrentPart == 0 ? getParent()->getPlan()->getUF() : 1;
     Value *NumUnrolledElems =
-        State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, UF));
+        State.get(&getParent()->getPlan()->getVFxUF(), true);
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
-        InductionLoc);
+        State.Builder.CreateMul(
+            ScalarStepValue,
+            State.Builder.CreateTrunc(NumUnrolledElems, PhiType)),
+        "ptr.ind", InductionLoc);
 
     NewPointerPhi->addIncoming(InductionGEP, VectorPH);
   }

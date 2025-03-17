@@ -96,16 +96,19 @@ PGOCtxProfileReader::readProfile(PGOCtxProfileBlockIDs Kind) {
   std::optional<ctx_profile::GUID> Guid;
   std::optional<SmallVector<uint64_t, 16>> Counters;
   std::optional<uint32_t> CallsiteIndex;
+  std::optional<uint64_t> TotalEntryCount;
 
   SmallVector<uint64_t, 1> RecordValues;
 
   const bool ExpectIndex = Kind == PGOCtxProfileBlockIDs::ContextNodeBlockID;
+  const bool IsRoot = Kind == PGOCtxProfileBlockIDs::ContextRootBlockID;
   // We don't prescribe the order in which the records come in, and we are ok
   // if other unsupported records appear. We seek in the current subblock until
   // we get all we know.
   auto GotAllWeNeed = [&]() {
     return Guid.has_value() && Counters.has_value() &&
-           (!ExpectIndex || CallsiteIndex.has_value());
+           (!ExpectIndex || CallsiteIndex.has_value()) &&
+           (!IsRoot || TotalEntryCount.has_value());
   };
   while (!GotAllWeNeed()) {
     RecordValues.clear();
@@ -127,12 +130,20 @@ PGOCtxProfileReader::readProfile(PGOCtxProfileBlockIDs Kind) {
         return wrongValue("Empty counters. At least the entry counter (one "
                           "value) was expected");
       break;
-    case PGOCtxProfileRecords::CalleeIndex:
+    case PGOCtxProfileRecords::CallsiteIndex:
       if (!ExpectIndex)
         return wrongValue("The root context should not have a callee index");
       if (RecordValues.size() != 1)
         return wrongValue("The callee index should have exactly one value");
       CallsiteIndex = RecordValues[0];
+      break;
+    case PGOCtxProfileRecords::TotalRootEntryCount:
+      if (!IsRoot)
+        return wrongValue("Non-root has a total entry count record");
+      if (RecordValues.size() != 1)
+        return wrongValue(
+            "The root total entry count record should have exactly one value");
+      TotalEntryCount = RecordValues[0];
       break;
     default:
       // OK if we see records we do not understand, like records (profile
@@ -141,7 +152,7 @@ PGOCtxProfileReader::readProfile(PGOCtxProfileBlockIDs Kind) {
     }
   }
 
-  PGOCtxProfContext Ret(*Guid, std::move(*Counters));
+  PGOCtxProfContext Ret(*Guid, std::move(*Counters), TotalEntryCount);
 
   while (canEnterBlockWithID(PGOCtxProfileBlockIDs::ContextNodeBlockID)) {
     EXPECT_OR_RET(SC, readProfile(PGOCtxProfileBlockIDs::ContextNodeBlockID));
@@ -278,7 +289,8 @@ void toYaml(yaml::Output &Out,
 
 void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
             const SmallVectorImpl<uint64_t> &Counters,
-            const PGOCtxProfContext::CallsiteMapTy &Callsites) {
+            const PGOCtxProfContext::CallsiteMapTy &Callsites,
+            std::optional<uint64_t> TotalRootEntryCount = std::nullopt) {
   yaml::EmptyContext Empty;
   Out.beginMapping();
   void *SaveInfo = nullptr;
@@ -287,6 +299,11 @@ void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
     Out.preflightKey("Guid", /*Required=*/true, /*SameAsDefault=*/false,
                      UseDefault, SaveInfo);
     yaml::yamlize(Out, Guid, true, Empty);
+    Out.postflightKey(nullptr);
+  }
+  if (TotalRootEntryCount) {
+    Out.preflightKey("TotalRootEntryCount", true, false, UseDefault, SaveInfo);
+    yaml::yamlize(Out, *TotalRootEntryCount, true, Empty);
     Out.postflightKey(nullptr);
   }
   {
@@ -308,8 +325,13 @@ void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
   }
   Out.endMapping();
 }
+
 void toYaml(yaml::Output &Out, const PGOCtxProfContext &Ctx) {
-  toYaml(Out, Ctx.guid(), Ctx.counters(), Ctx.callsites());
+  if (Ctx.isRoot())
+    toYaml(Out, Ctx.guid(), Ctx.counters(), Ctx.callsites(),
+           Ctx.getTotalRootEntryCount());
+  else
+    toYaml(Out, Ctx.guid(), Ctx.counters(), Ctx.callsites());
 }
 
 } // namespace

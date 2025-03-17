@@ -17928,10 +17928,12 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   return {};
 }
 
-bool Expr::EvaluateCharRangeAsString(std::string &Result,
-                                     const Expr *SizeExpression,
-                                     const Expr *PtrExpression, ASTContext &Ctx,
-                                     EvalResult &Status) const {
+template <typename T>
+static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
+                                          const Expr *SizeExpression,
+                                          const Expr *PtrExpression,
+                                          ASTContext &Ctx,
+                                          Expr::EvalResult &Status) {
   LValue String;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
   Info.InConstantContext = true;
@@ -17943,6 +17945,13 @@ bool Expr::EvaluateCharRangeAsString(std::string &Result,
 
   uint64_t Size = SizeValue.getZExtValue();
 
+  // FIXME: better protect against invalid or excessive sizes
+  if constexpr (std::is_same_v<APValue, T>)
+    Result = APValue(APValue::UninitArray{}, Size, Size);
+  else {
+    if (Size < Result.max_size())
+      Result.reserve(Size);
+  }
   if (!::EvaluatePointer(PtrExpression, String, Info))
     return false;
 
@@ -17953,18 +17962,38 @@ bool Expr::EvaluateCharRangeAsString(std::string &Result,
                                         Char))
       return false;
 
-    APSInt C = Char.getInt();
-    Result.push_back(static_cast<char>(C.getExtValue()));
+    if constexpr (std::is_same_v<APValue, T>) {
+      Result.getArrayInitializedElt(I) = std::move(Char);
+    } else {
+      APSInt C = Char.getInt();
+
+      assert(C.getBitWidth() <= 8 &&
+             "string element not representable in char");
+
+      Result.push_back(static_cast<char>(C.getExtValue()));
+    }
+
     if (!HandleLValueArrayAdjustment(Info, PtrExpression, String, CharTy, 1))
       return false;
   }
-  if (!Scope.destroy())
-    return false;
 
-  if (!CheckMemoryLeaks(Info))
-    return false;
+  return Scope.destroy() && CheckMemoryLeaks(Info);
+}
 
-  return true;
+bool Expr::EvaluateCharRangeAsString(std::string &Result,
+                                     const Expr *SizeExpression,
+                                     const Expr *PtrExpression, ASTContext &Ctx,
+                                     EvalResult &Status) const {
+  return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
+                                       PtrExpression, Ctx, Status);
+}
+
+bool Expr::EvaluateCharRangeAsString(APValue &Result,
+                                     const Expr *SizeExpression,
+                                     const Expr *PtrExpression, ASTContext &Ctx,
+                                     EvalResult &Status) const {
+  return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
+                                       PtrExpression, Ctx, Status);
 }
 
 bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {

@@ -507,7 +507,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     OS << "goto ";
 
   OS << "(";
-  VisitStringLiteral(Node->getAsmString());
+  Visit(Node->getAsmStringExpr());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
@@ -524,7 +524,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getOutputConstraintLiteral(i));
+    Visit(Node->getOutputConstraintExpr(i));
     OS << " (";
     Visit(Node->getOutputExpr(i));
     OS << ")";
@@ -545,7 +545,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getInputConstraintLiteral(i));
+    Visit(Node->getInputConstraintExpr(i));
     OS << " (";
     Visit(Node->getInputExpr(i));
     OS << ")";
@@ -559,7 +559,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     if (i != 0)
       OS << ", ";
 
-    VisitStringLiteral(Node->getClobberStringLiteral(i));
+    Visit(Node->getClobberExpr(i));
   }
 
   // Labels

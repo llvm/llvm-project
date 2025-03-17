@@ -300,7 +300,7 @@ public:
 // We provide some helper classes that allow bounds checking when accessing a unique_ptr<T[]>.
 // There are a few cases where bounds checking can be implemented:
 //
-// 1. When an array cookie (see [1]) exists at the beginning of the array allocation, we are
+// 1. When an array cookie exists at the beginning of the array allocation, we are
 //    able to reuse that cookie to extract the size of the array and perform bounds checking.
 //    An array cookie is a size inserted at the beginning of the allocation by the compiler.
 //    That size is inserted implicitly when doing `new T[n]` in some cases (as of writing this
