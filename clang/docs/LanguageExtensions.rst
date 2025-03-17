@@ -1972,6 +1972,8 @@ producing an object with the following member functions
   constexpr size_t size() const;
 
 such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
+This mechanism follow the same rules as ``static_assert`` messages in
+C++26, see ``[dcl.pre]/p12``.
 
 Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
 
