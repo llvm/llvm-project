@@ -74,7 +74,11 @@ static_assert(__builtin_structured_binding_size(P1) == 0);
 
 
 static_assert(is_destructurable<S0>);
+static_assert(is_destructurable<const S0>);
+static_assert(is_destructurable<volatile S0>);
+static_assert(!is_destructurable<S0&>);
 static_assert(is_destructurable<S1>);
+static_assert(!is_destructurable<S1&>);
 static_assert(!is_destructurable<SE1>);
 static_assert(!is_destructurable<int>);
 static_assert(!is_destructurable<int[]>);
@@ -121,6 +125,12 @@ struct tuple_size<TSizeError> {
 };
 
 static_assert(__builtin_structured_binding_size(T0) == 0);
+
+static_assert(is_destructurable<const T0>);
+static_assert(is_destructurable<volatile T0>);
+static_assert(!is_destructurable<T0&>);
+
+
 static_assert(__builtin_structured_binding_size(T1) == 1);
 static_assert(__builtin_structured_binding_size(T42) == 42);
 static_assert(__builtin_structured_binding_size(TSizeError) == 42);

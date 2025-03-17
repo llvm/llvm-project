@@ -1665,6 +1665,12 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
                                                            SourceLocation Loc) {
   const ASTContext &Ctx = getASTContext();
   assert(!T->isDependentType());
+
+  Qualifiers Quals;
+  QualType Unqual = Context.getUnqualifiedArrayType(T, Quals);
+  Quals.removeCVRQualifiers();
+  T = Context.getQualifiedType(Unqual, Quals);
+
   if (auto *CAT = Ctx.getAsConstantArrayType(T))
     return CAT->getSize().getZExtValue();
   if (auto *VT = T->getAs<VectorType>())
