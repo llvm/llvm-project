@@ -37,10 +37,10 @@ define void @test_dmxvi8gerx4(ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r5)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <256 x i1>, ptr %vpp, align 32
-  %1 = load <16 x i8>, ptr %vcp, align 32
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4(<256 x i1> %0, <16 x i8> %1)
-  store <1024 x i1> %2, ptr %resp, align 64
+  %v1 = load <256 x i1>, ptr %vpp, align 32
+  %v2 = load <16 x i8>, ptr %vcp, align 32
+  %call = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4(<256 x i1> %v1, <16 x i8> %v2)
+  store <1024 x i1> %call, ptr %resp, align 64
   ret void
 }
 
@@ -87,11 +87,11 @@ define void @test_dmxvi8gerx4pp(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:  stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:  blr
 entry:
-  %0 = load <1024 x i1>, ptr %vop, align 64
-  %1 = load <256 x i1>, ptr %vpp, align 32
-  %2 = load <16 x i8>, ptr %vcp, align 32
-  %3 = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4pp(<1024 x i1> %0, <256 x i1> %1, <16 x i8> %2)
-  store <1024 x i1> %3, ptr %resp, align 64
+  %v.dmr = load <1024 x i1>, ptr %vop, align 64
+  %v1 = load <256 x i1>, ptr %vpp, align 32
+  %v2 = load <16 x i8>, ptr %vcp, align 32
+  %call = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4pp(<1024 x i1> %v.dmr, <256 x i1> %v1, <16 x i8> %v2)
+  store <1024 x i1> %call, ptr %resp, align 64
   ret void
 }
 
@@ -138,11 +138,11 @@ define void @test_dmxvi8gerx4spp(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:     stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:     blr
 entry:
-  %0 = load <1024 x i1>, ptr %vop, align 64
-  %1 = load <256 x i1>, ptr %vpp, align 32
-  %2 = load <16 x i8>, ptr %vcp, align 32
-  %3 = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4spp(<1024 x i1> %0, <256 x i1> %1, <16 x i8> %2)
-  store <1024 x i1> %3, ptr %resp, align 64
+  %v.dmr = load <1024 x i1>, ptr %vop, align 64
+  %v1 = load <256 x i1>, ptr %vpp, align 32
+  %v2 = load <16 x i8>, ptr %vcp, align 32
+  %call = tail call <1024 x i1> @llvm.ppc.mma.dmxvi8gerx4spp(<1024 x i1> %v.dmr, <256 x i1> %v1, <16 x i8> %v2)
+  store <1024 x i1> %call, ptr %resp, align 64
   ret void
 }
 
@@ -160,7 +160,7 @@ define void @test_pmdmxvi8gerx4pp(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    lxv vs0, 0(r5)
 ; CHECK-NEXT:    lxv v2, 16(r4)
-; CHECK-NEXT:    pmdmxvi8gerx4pp dmr0, vsp34, vs0, 0, 0, 0
+; CHECK-NEXT:    pmdmxvi8gerx4pp dmr0, vsp34, vs0, 42, 7, 9
 ; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r6)
 ; CHECK-NEXT:    stxvp vsp36, 64(r6)
@@ -180,7 +180,7 @@ define void @test_pmdmxvi8gerx4pp(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:    lxv v3, 16(r4)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r5)
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
-; CHECK-BE-NEXT:    pmdmxvi8gerx4pp dmr0, vsp34, vs0, 0, 0, 0
+; CHECK-BE-NEXT:    pmdmxvi8gerx4pp dmr0, vsp34, vs0, 42, 7, 9
 ; CHECK-BE-NEXT:    dmxxextfdmr512 wacc_hi0, vsp34, vsp36, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r6)
 ; CHECK-BE-NEXT:    stxvp vsp34, 64(r6)
@@ -189,11 +189,11 @@ define void @test_pmdmxvi8gerx4pp(ptr %vop, ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <1024 x i1>, ptr %vop, align 64
-  %1 = load <256 x i1>, ptr %vpp, align 32
-  %2 = load <16 x i8>, ptr %vcp, align 32
-  %3 = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4pp(<1024 x i1> %0, <256 x i1> %1, <16 x i8> %2, i32 0, i32 0, i32 0)
-  store <1024 x i1> %3, ptr %resp, align 64
+  %v.dmr = load <1024 x i1>, ptr %vop, align 64
+  %v1 = load <256 x i1>, ptr %vpp, align 32
+  %v2 = load <16 x i8>, ptr %vcp, align 32
+  %call = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4pp(<1024 x i1> %v.dmr, <256 x i1> %v1, <16 x i8> %v2, i32 42, i32 7, i32 9)
+  store <1024 x i1> %call, ptr %resp, align 64
   ret void
 }
 
@@ -205,7 +205,7 @@ define void @test_pmdmxvi8gerx4(ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-NEXT:    lxv v3, 0(r3)
 ; CHECK-NEXT:    lxv vs0, 0(r4)
 ; CHECK-NEXT:    lxv v2, 16(r3)
-; CHECK-NEXT:    pmdmxvi8gerx4 dmr0, vsp34, vs0, 0, 0, 0
+; CHECK-NEXT:    pmdmxvi8gerx4 dmr0, vsp34, vs0, 55, 5, 10
 ; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r5)
 ; CHECK-NEXT:    stxvp vsp36, 64(r5)
@@ -219,7 +219,7 @@ define void @test_pmdmxvi8gerx4(ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:     lxv v3, 16(r3)
 ; CHECK-BE-NEXT:     lxv vs0, 0(r4)
 ; CHECK-BE-NEXT:     lxv v2, 0(r3)
-; CHECK-BE-NEXT:     pmdmxvi8gerx4 dmr0, vsp34, vs0, 0, 0, 0
+; CHECK-BE-NEXT:     pmdmxvi8gerx4 dmr0, vsp34, vs0, 55, 5, 10
 ; CHECK-BE-NEXT:     dmxxextfdmr512 wacc_hi0, vsp34, vsp36, 1
 ; CHECK-BE-NEXT:     stxvp vsp36, 96(r5)
 ; CHECK-BE-NEXT:     stxvp vsp34, 64(r5)
@@ -228,10 +228,10 @@ define void @test_pmdmxvi8gerx4(ptr %vpp, ptr %vcp, ptr %resp) {
 ; CHECK-BE-NEXT:     stxvp vsp34, 0(r5)
 ; CHECK-BE-NEXT:     blr
 entry:
-  %0 = load <256 x i1>, ptr %vpp, align 32
-  %1 = load <16 x i8>, ptr %vcp, align 32
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4(<256 x i1> %0, <16 x i8> %1,  i32 0, i32 0, i32 0)
-  store <1024 x i1> %2, ptr %resp, align 64
+  %v1 = load <256 x i1>, ptr %vpp, align 32
+  %v2 = load <16 x i8>, ptr %vcp, align 32
+  %call = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4(<256 x i1> %v1, <16 x i8> %v2,  i32 55, i32 5, i32 10)
+  store <1024 x i1> %call, ptr %resp, align 64
   ret void
 }
 
@@ -249,7 +249,7 @@ define dso_local void @test_pmdmxvi8gerx4spp(ptr %vop, ptr %vpp, ptr %vcp, ptr %
 ; CHECK-NEXT:    lxv v3, 0(r4)
 ; CHECK-NEXT:    lxv vs0, 0(r5)
 ; CHECK-NEXT:    lxv v2, 16(r4)
-; CHECK-NEXT:    pmdmxvi8gerx4spp dmr0, vsp34, vs0, 0, 0, 0
+; CHECK-NEXT:    pmdmxvi8gerx4spp dmr0, vsp34, vs0, 100, 6, 12
 ; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r6)
 ; CHECK-NEXT:    stxvp vsp36, 64(r6)
@@ -269,7 +269,7 @@ define dso_local void @test_pmdmxvi8gerx4spp(ptr %vop, ptr %vpp, ptr %vcp, ptr %
 ; CHECK-BE-NEXT:    lxv v3, 16(r4)
 ; CHECK-BE-NEXT:    lxv vs0, 0(r5)
 ; CHECK-BE-NEXT:    lxv v2, 0(r4)
-; CHECK-BE-NEXT:    pmdmxvi8gerx4spp dmr0, vsp34, vs0, 0, 0, 0
+; CHECK-BE-NEXT:    pmdmxvi8gerx4spp dmr0, vsp34, vs0, 100, 6, 12
 ; CHECK-BE-NEXT:    dmxxextfdmr512 wacc_hi0, vsp34, vsp36, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r6)
 ; CHECK-BE-NEXT:    stxvp vsp34, 64(r6)
@@ -278,10 +278,10 @@ define dso_local void @test_pmdmxvi8gerx4spp(ptr %vop, ptr %vpp, ptr %vcp, ptr %
 ; CHECK-BE-NEXT:    stxvp vsp34, 0(r6)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <1024 x i1>, ptr %vop, align 64
-  %1 = load <256 x i1>, ptr %vpp, align 32
-  %2 = load <16 x i8>, ptr %vcp, align 32
-  %3 = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4spp(<1024 x i1> %0, <256 x i1> %1, <16 x i8> %2, i32 0, i32 0, i32 0)
-  store <1024 x i1> %3, ptr %resp, align 64
+  %v.dmr = load <1024 x i1>, ptr %vop, align 64
+  %v1 = load <256 x i1>, ptr %vpp, align 32
+  %v2 = load <16 x i8>, ptr %vcp, align 32
+  %call = tail call <1024 x i1> @llvm.ppc.mma.pmdmxvi8gerx4spp(<1024 x i1> %v.dmr, <256 x i1> %v1, <16 x i8> %v2, i32 100, i32 6, i32 12)
+  store <1024 x i1> %call, ptr %resp, align 64
   ret void
 }

@@ -206,6 +206,7 @@ let Predicates = [IsISAFuture] in {
   def DMSETDMRZ : XForm_AT3<31, 2, 177, (outs dmr:$AT), (ins),
                             "dmsetdmrz $AT", NoItinerary,
                             [(set v1024i1:$AT, (int_ppc_mma_dmsetdmrz))]>;
+}
 
 // MMA+ accumulating/non-accumulating instructions.
 
@@ -255,7 +256,7 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
 
   def : Pat<(v1024i1 (int_ppc_mma_pmdmxvi8gerx4spp v1024i1:$ATi, v256i1:$XAp, v16i8:$XB,
                                                Msk8Imm:$XMSK, Msk4Imm:$YMSK,
-                                               Msk2Imm:$PMSK)),
+                                               Msk4Imm:$PMSK)),
             (PMDMXVI8GERX4SPP $ATi, $XAp, RCCp.BToVSRC, Msk8Imm:$XMSK,
-                           Msk4Imm:$YMSK, Msk2Imm:$PMSK)>;
+                           Msk4Imm:$YMSK, Msk4Imm:$PMSK)>;
 }
