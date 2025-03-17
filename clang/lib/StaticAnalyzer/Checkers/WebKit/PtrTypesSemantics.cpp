@@ -425,7 +425,7 @@ bool isPtrConversion(const FunctionDecl *F) {
 }
 
 bool isTrivialBuiltinFunction(const FunctionDecl *F) {
-  if (!F)
+  if (!F || !F->getDeclName().isIdentifier())
     return false;
   auto Name = F->getName();
   return Name.starts_with("__builtin") || Name == "__libcpp_verbose_abort" ||
