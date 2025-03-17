@@ -271,9 +271,9 @@ without differentiation based on offload kind.
     ``<arch><sub>-<vendor>-<sys>``, or
     ``<arch><sub>-<vendor>-<sys>-<env>``
 
-    However, in order to standardize outputs for tools that consume bitcode
-    bundles, the bundler only accepts target triples with the 4-field target
-    triple:
+    However, in order to standardize outputs for tools that consume bitcode bundles
+    and to parse target ID containing dashes, the bundler only accepts target
+    triples in the 4-field format:
 
     ``<arch><sub>-<vendor>-<sys>-<env>``
 
