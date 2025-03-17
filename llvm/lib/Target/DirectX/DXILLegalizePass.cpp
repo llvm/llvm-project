@@ -29,7 +29,7 @@
 using namespace llvm;
 namespace {
 
-static bool fixI8TruncUseChain(Instruction &I,
+static void fixI8TruncUseChain(Instruction &I,
                                std::stack<Instruction *> &ToRemove,
                                std::map<Value *, Value *> &ReplacedValues) {
 
@@ -96,11 +96,9 @@ static bool fixI8TruncUseChain(Instruction &I,
       Cast->replaceAllUsesWith(ReplacedValues[Cast->getOperand(0)]);
     }
   }
-
-  return !ToRemove.empty();
 }
 
-static bool
+static void
 downcastI64toI32InsertExtractElements(Instruction &I,
                                       std::stack<Instruction *> &ToRemove,
                                       std::map<Value *, Value *> &) {
@@ -137,8 +135,6 @@ downcastI64toI32InsertExtractElements(Instruction &I,
       ToRemove.push(Insert);
     }
   }
-
-  return !ToRemove.empty();
 }
 
 class DXILLegalizationPipeline {
@@ -149,12 +145,13 @@ public:
   bool runLegalizationPipeline(Function &F) {
     std::stack<Instruction *> ToRemove;
     std::map<Value *, Value *> ReplacedValues;
-    bool MadeChanges = false;
     for (auto &I : instructions(F)) {
       for (auto &LegalizationFn : LegalizationPipeline) {
-        MadeChanges |= LegalizationFn(I, ToRemove, ReplacedValues);
+        LegalizationFn(I, ToRemove, ReplacedValues);
       }
     }
+    bool MadeChanges = !ToRemove.empty();
+
     while (!ToRemove.empty()) {
       Instruction *I = ToRemove.top();
       I->eraseFromParent();
@@ -165,7 +162,7 @@ public:
   }
 
 private:
-  std::vector<std::function<bool(Instruction &, std::stack<Instruction *> &,
+  std::vector<std::function<void(Instruction &, std::stack<Instruction *> &,
                                  std::map<Value *, Value *> &)>>
       LegalizationPipeline;
 
