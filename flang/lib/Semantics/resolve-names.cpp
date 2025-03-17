@@ -1638,11 +1638,8 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPAtomicConstruct &x) {
-    return common::visit(common::visitors{[&](const auto &u) -> bool {
-      AddOmpSourceRange(u.source);
-      return true;
-    }},
-        x.u);
+    AddOmpSourceRange(x.source);
+    return true;
   }
   void Post(const parser::OpenMPAtomicConstruct &) {
     messageHandler().set_currStmtSource(std::nullopt);

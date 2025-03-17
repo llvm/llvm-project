@@ -782,5 +782,21 @@ inline bool checkForSymbolMatch(
   }
   return false;
 }
+
+/// If the top-level operation (ignoring parentheses) is either an
+/// evaluate::FunctionRef, or a specialization of evaluate::Operation,
+/// then return the list of arguments (wrapped in SomeExpr). Otherwise,
+/// return the "expr" but with top-level parentheses stripped.
+std::vector<SomeExpr> GetOpenMPTopLevelArguments(const SomeExpr &expr);
+
+/// Both "expr" and "x" have the form of SomeType(SomeKind(...)[1]).
+/// Check if "expr" is
+///   SomeType(SomeKind(Type(
+///     Convert
+///       SomeKind(...)[2])))
+/// where SomeKind(...) [1] and [2] are equal, and the Convert preserves
+/// TypeCategory.
+bool IsSameOrResizeOf(const SomeExpr &expr, const SomeExpr &x);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

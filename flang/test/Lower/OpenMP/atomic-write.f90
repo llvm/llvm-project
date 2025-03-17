@@ -44,9 +44,9 @@ end program OmpAtomicWrite
 !CHECK-LABEL: func.func @_QPatomic_write_pointer() {
 !CHECK:    %[[X_REF:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "x", uniq_name = "_QFatomic_write_pointerEx"}
 !CHECK:    %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFatomic_write_pointerEx"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
-!CHECK:    %[[C1:.*]] = arith.constant 1 : i32
 !CHECK:    %[[X_ADDR_BOX:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !CHECK:    %[[X_POINTEE_ADDR:.*]] = fir.box_addr %[[X_ADDR_BOX]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+!CHECK:    %[[C1:.*]] = arith.constant 1 : i32
 !CHECK:    omp.atomic.write %[[X_POINTEE_ADDR]] = %[[C1]]   : !fir.ptr<i32>, i32
 !CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 !CHECK:    %[[X_ADDR_BOX:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>

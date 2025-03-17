@@ -2588,455 +2588,183 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 //===----------------------------------------------------------------------===//
 // Code generation for atomic operations
 //===----------------------------------------------------------------------===//
+static fir::FirOpBuilder::InsertPoint
+getInsertionPointBefore(mlir::Operation *op) {
+  return fir::FirOpBuilder::InsertPoint(op->getBlock(),
+                                        mlir::Block::iterator(op));
+}
 
-/// Populates \p hint and \p memoryOrder with appropriate clause information
-/// if present on atomic construct.
-static void genOmpAtomicHintAndMemoryOrderClauses(
-    lower::AbstractConverter &converter,
-    const parser::OmpAtomicClauseList &clauseList, mlir::IntegerAttr &hint,
-    mlir::omp::ClauseMemoryOrderKindAttr &memoryOrder) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  for (const parser::OmpAtomicClause &clause : clauseList.v) {
-    common::visit(
-        common::visitors{
-            [&](const parser::OmpMemoryOrderClause &s) {
-              auto kind = common::visit(
-                  common::visitors{
-                      [&](const parser::OmpClause::AcqRel &) {
-                        return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
-                      },
-                      [&](const parser::OmpClause::Acquire &) {
-                        return mlir::omp::ClauseMemoryOrderKind::Acquire;
-                      },
-                      [&](const parser::OmpClause::Relaxed &) {
-                        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
-                      },
-                      [&](const parser::OmpClause::Release &) {
-                        return mlir::omp::ClauseMemoryOrderKind::Release;
-                      },
-                      [&](const parser::OmpClause::SeqCst &) {
-                        return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
-                      },
-                      [&](auto &&) -> mlir::omp::ClauseMemoryOrderKind {
-                        llvm_unreachable("Unexpected clause");
-                      },
-                  },
-                  s.v.u);
-              memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-                  firOpBuilder.getContext(), kind);
-            },
-            [&](const parser::OmpHintClause &s) {
-              const auto *expr = semantics::GetExpr(s.v);
-              uint64_t hintExprValue = *evaluate::ToInt64(*expr);
-              hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
-            },
-            [&](const parser::OmpFailClause &) {},
-        },
-        clause.u);
+static fir::FirOpBuilder::InsertPoint
+getInsertionPointAfter(mlir::Operation *op) {
+  return fir::FirOpBuilder::InsertPoint(op->getBlock(),
+                                        ++mlir::Block::iterator(op));
+}
+
+static mlir::IntegerAttr getAtomicHint(lower::AbstractConverter &converter,
+                                       const List<Clause> &clauses) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  for (const Clause &clause : clauses) {
+    if (clause.id != llvm::omp::Clause::OMPC_hint)
+      continue;
+    auto &hint = std::get<clause::Hint>(clause.u);
+    auto maybeVal = evaluate::ToInt64(hint.v);
+    CHECK(maybeVal);
+    return builder.getI64IntegerAttr(*maybeVal);
   }
+  return nullptr;
 }
 
-static void processOmpAtomicTODO(mlir::Type elementType, mlir::Location loc) {
-  if (!elementType)
-    return;
-  assert(fir::isa_trivial(fir::unwrapRefType(elementType)) &&
-         "is supported type for omp atomic");
-}
+static mlir::omp::ClauseMemoryOrderKindAttr
+getAtomicMemoryOrder(lower::AbstractConverter &converter,
+                     semantics::SemanticsContext &semaCtx,
+                     const List<Clause> &clauses) {
+  std::optional<mlir::omp::ClauseMemoryOrderKind> kind;
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
 
-/// Used to generate atomic.read operation which is created in existing
-/// location set by builder.
-static void genAtomicCaptureStatement(
-    lower::AbstractConverter &converter, mlir::Value fromAddress,
-    mlir::Value toAddress,
-    const parser::OmpAtomicClauseList *leftHandClauseList,
-    const parser::OmpAtomicClauseList *rightHandClauseList,
-    mlir::Type elementType, mlir::Location loc) {
-  // Generate `atomic.read` operation for atomic assigment statements
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  processOmpAtomicTODO(elementType, loc);
-
-  // If no hint clause is specified, the effect is as if
-  // hint(omp_sync_hint_none) had been specified.
-  mlir::IntegerAttr hint = nullptr;
-
-  mlir::omp::ClauseMemoryOrderKindAttr memoryOrder = nullptr;
-  if (leftHandClauseList)
-    genOmpAtomicHintAndMemoryOrderClauses(converter, *leftHandClauseList, hint,
-                                          memoryOrder);
-  if (rightHandClauseList)
-    genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList, hint,
-                                          memoryOrder);
-  firOpBuilder.create<mlir::omp::AtomicReadOp>(loc, fromAddress, toAddress,
-                                               mlir::TypeAttr::get(elementType),
-                                               hint, memoryOrder);
-}
-
-/// Used to generate atomic.write operation which is created in existing
-/// location set by builder.
-static void genAtomicWriteStatement(
-    lower::AbstractConverter &converter, mlir::Value lhsAddr,
-    mlir::Value rhsExpr, const parser::OmpAtomicClauseList *leftHandClauseList,
-    const parser::OmpAtomicClauseList *rightHandClauseList, mlir::Location loc,
-    mlir::Value *evaluatedExprValue = nullptr) {
-  // Generate `atomic.write` operation for atomic assignment statements
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
-  // Create a conversion outside the capture block.
-  auto insertionPoint = firOpBuilder.saveInsertionPoint();
-  firOpBuilder.setInsertionPointAfter(rhsExpr.getDefiningOp());
-  rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
-  firOpBuilder.restoreInsertionPoint(insertionPoint);
-
-  processOmpAtomicTODO(varType, loc);
-
-  // If no hint clause is specified, the effect is as if
-  // hint(omp_sync_hint_none) had been specified.
-  mlir::IntegerAttr hint = nullptr;
-  mlir::omp::ClauseMemoryOrderKindAttr memoryOrder = nullptr;
-  if (leftHandClauseList)
-    genOmpAtomicHintAndMemoryOrderClauses(converter, *leftHandClauseList, hint,
-                                          memoryOrder);
-  if (rightHandClauseList)
-    genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList, hint,
-                                          memoryOrder);
-  firOpBuilder.create<mlir::omp::AtomicWriteOp>(loc, lhsAddr, rhsExpr, hint,
-                                                memoryOrder);
-}
-
-/// Used to generate atomic.update operation which is created in existing
-/// location set by builder.
-static void genAtomicUpdateStatement(
-    lower::AbstractConverter &converter, mlir::Value lhsAddr,
-    mlir::Type varType, const parser::Variable &assignmentStmtVariable,
-    const parser::Expr &assignmentStmtExpr,
-    const parser::OmpAtomicClauseList *leftHandClauseList,
-    const parser::OmpAtomicClauseList *rightHandClauseList, mlir::Location loc,
-    mlir::Operation *atomicCaptureOp = nullptr) {
-  // Generate `atomic.update` operation for atomic assignment statements
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
-
-  //  Create the omp.atomic.update or acc.atomic.update operation
-  //
-  //  func.func @_QPsb() {
-  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
-  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
-  //    %2 = fir.load %1 : !fir.ref<i32>
-  //    omp.atomic.update   %0 : !fir.ref<i32> {
-  //    ^bb0(%arg0: i32):
-  //      %3 = arith.addi %arg0, %2 : i32
-  //      omp.yield(%3 : i32)
-  //    }
-  //    return
-  //  }
-
-  auto getArgExpression =
-      [](std::list<parser::ActualArgSpec>::const_iterator it) {
-        const auto &arg{std::get<parser::ActualArg>((*it).t)};
-        const auto *parserExpr{
-            std::get_if<common::Indirection<parser::Expr>>(&arg.u)};
-        return parserExpr;
-      };
-
-  // Lower any non atomic sub-expression before the atomic operation, and
-  // map its lowered value to the semantic representation.
-  lower::ExprToValueMap exprValueOverrides;
-  // Max and min intrinsics can have a list of Args. Hence we need a list
-  // of nonAtomicSubExprs to hoist. Currently, only the load is hoisted.
-  llvm::SmallVector<const lower::SomeExpr *> nonAtomicSubExprs;
-  common::visit(
-      common::visitors{
-          [&](const common::Indirection<parser::FunctionReference> &funcRef)
-              -> void {
-            const auto &args{std::get<std::list<parser::ActualArgSpec>>(
-                funcRef.value().v.t)};
-            std::list<parser::ActualArgSpec>::const_iterator beginIt =
-                args.begin();
-            std::list<parser::ActualArgSpec>::const_iterator endIt = args.end();
-            const auto *exprFirst{getArgExpression(beginIt)};
-            if (exprFirst && exprFirst->value().source ==
-                                 assignmentStmtVariable.GetSource()) {
-              // Add everything except the first
-              beginIt++;
-            } else {
-              // Add everything except the last
-              endIt--;
-            }
-            std::list<parser::ActualArgSpec>::const_iterator it;
-            for (it = beginIt; it != endIt; it++) {
-              const common::Indirection<parser::Expr> *expr =
-                  getArgExpression(it);
-              if (expr)
-                nonAtomicSubExprs.push_back(semantics::GetExpr(*expr));
-            }
-          },
-          [&](const auto &op) -> void {
-            using T = std::decay_t<decltype(op)>;
-            if constexpr (std::is_base_of<parser::Expr::IntrinsicBinary,
-                                          T>::value) {
-              const auto &exprLeft{std::get<0>(op.t)};
-              const auto &exprRight{std::get<1>(op.t)};
-              if (exprLeft.value().source == assignmentStmtVariable.GetSource())
-                nonAtomicSubExprs.push_back(semantics::GetExpr(exprRight));
-              else
-                nonAtomicSubExprs.push_back(semantics::GetExpr(exprLeft));
-            }
-          },
-      },
-      assignmentStmtExpr.u);
-  lower::StatementContext nonAtomicStmtCtx;
-  if (!nonAtomicSubExprs.empty()) {
-    // Generate non atomic part before all the atomic operations.
-    auto insertionPoint = firOpBuilder.saveInsertionPoint();
-    if (atomicCaptureOp)
-      firOpBuilder.setInsertionPoint(atomicCaptureOp);
-    mlir::Value nonAtomicVal;
-    for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
-      nonAtomicVal = fir::getBase(converter.genExprValue(
-          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
-      exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
+  for (const Clause &clause : clauses) {
+    switch (clause.id) {
+    case llvm::omp::Clause::OMPC_acq_rel:
+      kind = mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+      break;
+    case llvm::omp::Clause::OMPC_acquire:
+      kind = mlir::omp::ClauseMemoryOrderKind::Acquire;
+      break;
+    case llvm::omp::Clause::OMPC_relaxed:
+      kind = mlir::omp::ClauseMemoryOrderKind::Relaxed;
+      break;
+    case llvm::omp::Clause::OMPC_release:
+      kind = mlir::omp::ClauseMemoryOrderKind::Release;
+      break;
+    case llvm::omp::Clause::OMPC_seq_cst:
+      kind = mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+      break;
+    default:
+      break;
     }
-    if (atomicCaptureOp)
-      firOpBuilder.restoreInsertionPoint(insertionPoint);
   }
 
-  mlir::Operation *atomicUpdateOp = nullptr;
-  // If no hint clause is specified, the effect is as if
-  // hint(omp_sync_hint_none) had been specified.
-  mlir::IntegerAttr hint = nullptr;
-  mlir::omp::ClauseMemoryOrderKindAttr memoryOrder = nullptr;
-  if (leftHandClauseList)
-    genOmpAtomicHintAndMemoryOrderClauses(converter, *leftHandClauseList, hint,
-                                          memoryOrder);
-  if (rightHandClauseList)
-    genOmpAtomicHintAndMemoryOrderClauses(converter, *rightHandClauseList, hint,
-                                          memoryOrder);
-  atomicUpdateOp = firOpBuilder.create<mlir::omp::AtomicUpdateOp>(
-      currentLocation, lhsAddr, hint, memoryOrder);
-
-  processOmpAtomicTODO(varType, loc);
-
-  llvm::SmallVector<mlir::Type> varTys = {varType};
-  llvm::SmallVector<mlir::Location> locs = {currentLocation};
-  firOpBuilder.createBlock(&atomicUpdateOp->getRegion(0), {}, varTys, locs);
-  mlir::Value val =
-      fir::getBase(atomicUpdateOp->getRegion(0).front().getArgument(0));
-
-  exprValueOverrides.try_emplace(semantics::GetExpr(assignmentStmtVariable),
-                                 val);
-  {
-    // statement context inside the atomic block.
-    converter.overrideExprValues(&exprValueOverrides);
-    lower::StatementContext atomicStmtCtx;
-    mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
-        *semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
-    mlir::Value convertResult =
-        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
-    firOpBuilder.create<mlir::omp::YieldOp>(currentLocation, convertResult);
-    converter.resetExprOverrides();
+  // Starting with 5.1, if no memory-order clause is present, the effect
+  // is as if "relaxed" was present.
+  if (!kind) {
+    if (version <= 50)
+      return nullptr;
+    kind = mlir::omp::ClauseMemoryOrderKind::Relaxed;
   }
-  firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  return mlir::omp::ClauseMemoryOrderKindAttr::get(builder.getContext(), *kind);
 }
 
-/// Processes an atomic construct with write clause.
-static void genAtomicWrite(lower::AbstractConverter &converter,
-                           const parser::OmpAtomicWrite &atomicWrite,
-                           mlir::Location loc) {
-  const parser::OmpAtomicClauseList *rightHandClauseList = nullptr;
-  const parser::OmpAtomicClauseList *leftHandClauseList = nullptr;
-  // Get the address of atomic read operands.
-  rightHandClauseList = &std::get<2>(atomicWrite.t);
-  leftHandClauseList = &std::get<0>(atomicWrite.t);
+static mlir::Operation * //
+genAtomicRead(lower::AbstractConverter &converter, mlir::Location loc,
+              lower::StatementContext &stmtCtx, mlir::Value atomAddr,
+              const semantics::SomeExpr &atom, const semantics::SomeExpr &expr,
+              mlir::IntegerAttr hint,
+              mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+              fir::FirOpBuilder::InsertPoint atomicAt,
+              fir::FirOpBuilder::InsertPoint prepareAt) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
+  builder.restoreInsertionPoint(prepareAt);
 
-  const parser::AssignmentStmt &stmt =
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicWrite.t)
-          .statement;
-  const evaluate::Assignment &assign = *stmt.typedAssignment->v;
-  lower::StatementContext stmtCtx;
-  // Get the value and address of atomic write operands.
-  mlir::Value rhsExpr =
-      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx));
-  mlir::Value lhsAddr =
-      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
-  genAtomicWriteStatement(converter, lhsAddr, rhsExpr, leftHandClauseList,
-                          rightHandClauseList, loc);
+  mlir::Value toAddr = fir::getBase(converter.genExprAddr(expr, stmtCtx, &loc));
+  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
+
+  builder.restoreInsertionPoint(atomicAt);
+  mlir::Operation *op = builder.create<mlir::omp::AtomicReadOp>(
+      loc, atomAddr, toAddr, mlir::TypeAttr::get(atomType), hint, memOrder);
+  builder.restoreInsertionPoint(saved);
+  return op;
 }
 
-/// Processes an atomic construct with read clause.
-static void genAtomicRead(lower::AbstractConverter &converter,
-                          const parser::OmpAtomicRead &atomicRead,
-                          mlir::Location loc) {
-  const parser::OmpAtomicClauseList *rightHandClauseList = nullptr;
-  const parser::OmpAtomicClauseList *leftHandClauseList = nullptr;
-  // Get the address of atomic read operands.
-  rightHandClauseList = &std::get<2>(atomicRead.t);
-  leftHandClauseList = &std::get<0>(atomicRead.t);
+static mlir::Operation * //
+genAtomicWrite(lower::AbstractConverter &converter, mlir::Location loc,
+               lower::StatementContext &stmtCtx, mlir::Value atomAddr,
+               const semantics::SomeExpr &atom, const semantics::SomeExpr &expr,
+               mlir::IntegerAttr hint,
+               mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+               fir::FirOpBuilder::InsertPoint atomicAt,
+               fir::FirOpBuilder::InsertPoint prepareAt) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
+  builder.restoreInsertionPoint(prepareAt);
 
-  const auto &assignmentStmtExpr = std::get<parser::Expr>(
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicRead.t)
-          .statement.t);
-  const auto &assignmentStmtVariable = std::get<parser::Variable>(
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicRead.t)
-          .statement.t);
+  mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx, &loc));
+  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
+  mlir::Value converted = builder.createConvert(loc, atomType, value);
 
-  lower::StatementContext stmtCtx;
-  const semantics::SomeExpr &fromExpr = *semantics::GetExpr(assignmentStmtExpr);
-  mlir::Type elementType = converter.genType(fromExpr);
-  mlir::Value fromAddress =
-      fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
-  mlir::Value toAddress = fir::getBase(converter.genExprAddr(
-      *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  genAtomicCaptureStatement(converter, fromAddress, toAddress,
-                            leftHandClauseList, rightHandClauseList,
-                            elementType, loc);
+  builder.restoreInsertionPoint(atomicAt);
+  mlir::Operation *op = builder.create<mlir::omp::AtomicWriteOp>(
+      loc, atomAddr, converted, hint, memOrder);
+  builder.restoreInsertionPoint(saved);
+  return op;
 }
 
-/// Processes an atomic construct with update clause.
-static void genAtomicUpdate(lower::AbstractConverter &converter,
-                            const parser::OmpAtomicUpdate &atomicUpdate,
-                            mlir::Location loc) {
-  const parser::OmpAtomicClauseList *rightHandClauseList = nullptr;
-  const parser::OmpAtomicClauseList *leftHandClauseList = nullptr;
-  // Get the address of atomic read operands.
-  rightHandClauseList = &std::get<2>(atomicUpdate.t);
-  leftHandClauseList = &std::get<0>(atomicUpdate.t);
+static mlir::Operation *
+genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
+                lower::StatementContext &stmtCtx, mlir::Value atomAddr,
+                const semantics::SomeExpr &atom,
+                const semantics::SomeExpr &expr, mlir::IntegerAttr hint,
+                mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+                fir::FirOpBuilder::InsertPoint atomicAt,
+                fir::FirOpBuilder::InsertPoint prepareAt) {
+  lower::ExprToValueMap overrides;
+  lower::StatementContext naCtx;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertPoint saved = builder.saveInsertionPoint();
+  builder.restoreInsertionPoint(prepareAt);
 
-  const auto &assignmentStmtExpr = std::get<parser::Expr>(
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicUpdate.t)
-          .statement.t);
-  const auto &assignmentStmtVariable = std::get<parser::Variable>(
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicUpdate.t)
-          .statement.t);
+  mlir::Type atomType = fir::unwrapRefType(atomAddr.getType());
 
-  lower::StatementContext stmtCtx;
-  mlir::Value lhsAddr = fir::getBase(converter.genExprAddr(
-      *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
-  genAtomicUpdateStatement(converter, lhsAddr, varType, assignmentStmtVariable,
-                           assignmentStmtExpr, leftHandClauseList,
-                           rightHandClauseList, loc);
-}
-
-/// Processes an atomic construct with no clause - which implies update clause.
-static void genOmpAtomic(lower::AbstractConverter &converter,
-                         const parser::OmpAtomic &atomicConstruct,
-                         mlir::Location loc) {
-  const parser::OmpAtomicClauseList &atomicClauseList =
-      std::get<parser::OmpAtomicClauseList>(atomicConstruct.t);
-  const auto &assignmentStmtExpr = std::get<parser::Expr>(
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicConstruct.t)
-          .statement.t);
-  const auto &assignmentStmtVariable = std::get<parser::Variable>(
-      std::get<parser::Statement<parser::AssignmentStmt>>(atomicConstruct.t)
-          .statement.t);
-  lower::StatementContext stmtCtx;
-  mlir::Value lhsAddr = fir::getBase(converter.genExprAddr(
-      *semantics::GetExpr(assignmentStmtVariable), stmtCtx));
-  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
-  // If atomic-clause is not present on the construct, the behaviour is as if
-  // the update clause is specified (for both OpenMP and OpenACC).
-  genAtomicUpdateStatement(converter, lhsAddr, varType, assignmentStmtVariable,
-                           assignmentStmtExpr, &atomicClauseList, nullptr, loc);
-}
-
-/// Processes an atomic construct with capture clause.
-static void genAtomicCapture(lower::AbstractConverter &converter,
-                             const parser::OmpAtomicCapture &atomicCapture,
-                             mlir::Location loc) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  const parser::AssignmentStmt &stmt1 =
-      std::get<parser::OmpAtomicCapture::Stmt1>(atomicCapture.t).v.statement;
-  const evaluate::Assignment &assign1 = *stmt1.typedAssignment->v;
-  const auto &stmt1Var{std::get<parser::Variable>(stmt1.t)};
-  const auto &stmt1Expr{std::get<parser::Expr>(stmt1.t)};
-  const parser::AssignmentStmt &stmt2 =
-      std::get<parser::OmpAtomicCapture::Stmt2>(atomicCapture.t).v.statement;
-  const evaluate::Assignment &assign2 = *stmt2.typedAssignment->v;
-  const auto &stmt2Var{std::get<parser::Variable>(stmt2.t)};
-  const auto &stmt2Expr{std::get<parser::Expr>(stmt2.t)};
-
-  // Pre-evaluate expressions to be used in the various operations inside
-  // `atomic.capture` since it is not desirable to have anything other than
-  // a `atomic.read`, `atomic.write`, or `atomic.update` operation
-  // inside `atomic.capture`
-  lower::StatementContext stmtCtx;
-  // LHS evaluations are common to all combinations of `atomic.capture`
-  mlir::Value stmt1LHSArg =
-      fir::getBase(converter.genExprAddr(assign1.lhs, stmtCtx));
-  mlir::Value stmt2LHSArg =
-      fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
-
-  // Type information used in generation of `atomic.update` operation
-  mlir::Type stmt1VarType =
-      fir::getBase(converter.genExprValue(assign1.lhs, stmtCtx)).getType();
-  mlir::Type stmt2VarType =
-      fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
-
-  mlir::Operation *atomicCaptureOp = nullptr;
-  mlir::IntegerAttr hint = nullptr;
-  mlir::omp::ClauseMemoryOrderKindAttr memoryOrder = nullptr;
-  const parser::OmpAtomicClauseList &rightHandClauseList =
-      std::get<2>(atomicCapture.t);
-  const parser::OmpAtomicClauseList &leftHandClauseList =
-      std::get<0>(atomicCapture.t);
-  genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
-                                        memoryOrder);
-  genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
-                                        memoryOrder);
-  atomicCaptureOp =
-      firOpBuilder.create<mlir::omp::AtomicCaptureOp>(loc, hint, memoryOrder);
-
-  firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
-  mlir::Block &block = atomicCaptureOp->getRegion(0).back();
-  firOpBuilder.setInsertionPointToStart(&block);
-  if (semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (semantics::checkForSymbolMatch(stmt2)) {
-      // Atomic capture construct is of the form [capture-stmt, update-stmt]
-      const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt1Expr);
-      mlir::Type elementType = converter.genType(fromExpr);
-      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
-                                /*leftHandClauseList=*/nullptr,
-                                /*rightHandClauseList=*/nullptr, elementType,
-                                loc);
-      genAtomicUpdateStatement(
-          converter, stmt2LHSArg, stmt2VarType, stmt2Var, stmt2Expr,
-          /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
-    } else {
-      // Atomic capture construct is of the form [capture-stmt, write-stmt]
-      firOpBuilder.setInsertionPoint(atomicCaptureOp);
-      mlir::Value stmt2RHSArg =
-          fir::getBase(converter.genExprValue(assign2.rhs, stmtCtx));
-      firOpBuilder.setInsertionPointToStart(&block);
-      const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt1Expr);
-      mlir::Type elementType = converter.genType(fromExpr);
-      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
-                                /*leftHandClauseList=*/nullptr,
-                                /*rightHandClauseList=*/nullptr, elementType,
-                                loc);
-      genAtomicWriteStatement(converter, stmt2LHSArg, stmt2RHSArg,
-                              /*leftHandClauseList=*/nullptr,
-                              /*rightHandClauseList=*/nullptr, loc);
+  std::vector<SomeExpr> args{semantics::GetOpenMPTopLevelArguments(expr)};
+  assert(!args.empty() && "Update operation without arguments");
+  for (auto &arg : args) {
+    if (!semantics::IsSameOrResizeOf(arg, atom)) {
+      mlir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
+      overrides.try_emplace(&arg, val);
     }
-  } else {
-    // Atomic capture construct is of the form [update-stmt, capture-stmt]
-    const semantics::SomeExpr &fromExpr = *semantics::GetExpr(stmt2Expr);
-    mlir::Type elementType = converter.genType(fromExpr);
-    genAtomicUpdateStatement(
-        converter, stmt1LHSArg, stmt1VarType, stmt1Var, stmt1Expr,
-        /*leftHandClauseList=*/nullptr,
-        /*rightHandClauseList=*/nullptr, loc, atomicCaptureOp);
-    genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg,
-                              /*leftHandClauseList=*/nullptr,
-                              /*rightHandClauseList=*/nullptr, elementType,
-                              loc);
   }
-  firOpBuilder.setInsertionPointToEnd(&block);
-  firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
-  firOpBuilder.setInsertionPointToStart(&block);
+
+  builder.restoreInsertionPoint(atomicAt);
+  auto updateOp =
+      builder.create<mlir::omp::AtomicUpdateOp>(loc, atomAddr, hint, memOrder);
+
+  mlir::Region &region = updateOp->getRegion(0);
+  mlir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});
+  mlir::Value localAtom = fir::getBase(block->getArgument(0));
+  overrides.try_emplace(&atom, localAtom);
+
+  converter.overrideExprValues(&overrides);
+  mlir::Value updated =
+      fir::getBase(converter.genExprValue(expr, stmtCtx, &loc));
+  mlir::Value converted = builder.createConvert(loc, atomType, updated);
+  builder.create<mlir::omp::YieldOp>(loc, converted);
+  converter.resetExprOverrides();
+
+  builder.restoreInsertionPoint(saved);
+  return updateOp;
+}
+
+static mlir::Operation *
+genAtomicOperation(lower::AbstractConverter &converter, mlir::Location loc,
+                   lower::StatementContext &stmtCtx, int action,
+                   mlir::Value atomAddr, const semantics::SomeExpr &atom,
+                   const semantics::SomeExpr &expr, mlir::IntegerAttr hint,
+                   mlir::omp::ClauseMemoryOrderKindAttr memOrder,
+                   fir::FirOpBuilder::InsertPoint atomicAt,
+                   fir::FirOpBuilder::InsertPoint prepareAt) {
+  switch (action) {
+  case parser::OpenMPAtomicConstruct::Analysis::Read:
+    return genAtomicRead(converter, loc, stmtCtx, atomAddr, atom, expr, hint,
+                         memOrder, atomicAt, prepareAt);
+  case parser::OpenMPAtomicConstruct::Analysis::Write:
+    return genAtomicWrite(converter, loc, stmtCtx, atomAddr, atom, expr, hint,
+                          memOrder, atomicAt, prepareAt);
+  case parser::OpenMPAtomicConstruct::Analysis::Update:
+    return genAtomicUpdate(converter, loc, stmtCtx, atomAddr, atom, expr, hint,
+                           memOrder, atomicAt, prepareAt);
+  default:
+    return nullptr;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3911,10 +3639,6 @@ genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       standaloneConstruct.u);
 }
 
-//===----------------------------------------------------------------------===//
-// OpenMPConstruct visitors
-//===----------------------------------------------------------------------===//
-
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -3922,38 +3646,140 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
 }
 
+//===----------------------------------------------------------------------===//
+// OpenMPConstruct visitors
+//===----------------------------------------------------------------------===//
+
+[[maybe_unused]] static void
+dumpAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
+  auto whatStr = [](int k) {
+    std::string txt = "?";
+    switch (k & parser::OpenMPAtomicConstruct::Analysis::Action) {
+    case parser::OpenMPAtomicConstruct::Analysis::None:
+      txt = "None";
+      break;
+    case parser::OpenMPAtomicConstruct::Analysis::Read:
+      txt = "Read";
+      break;
+    case parser::OpenMPAtomicConstruct::Analysis::Write:
+      txt = "Write";
+      break;
+    case parser::OpenMPAtomicConstruct::Analysis::Update:
+      txt = "Update";
+      break;
+    }
+    switch (k & parser::OpenMPAtomicConstruct::Analysis::Condition) {
+    case parser::OpenMPAtomicConstruct::Analysis::IfTrue:
+      txt += " | IfTrue";
+      break;
+    case parser::OpenMPAtomicConstruct::Analysis::IfFalse:
+      txt += " | IfFalse";
+      break;
+    }
+    return txt;
+  };
+
+  auto exprStr = [&](const parser::TypedExpr &expr) {
+    if (auto *maybe = expr.get()) {
+      if (maybe->v)
+        return maybe->v->AsFortran();
+    }
+    return "<null>"s;
+  };
+
+  const SomeExpr &atom = *analysis.atom.get()->v;
+
+  llvm::errs() << "Analysis {\n";
+  llvm::errs() << "  atom: " << atom.AsFortran() << "\n";
+  llvm::errs() << "  cond: " << exprStr(analysis.cond) << "\n";
+  llvm::errs() << "  op0 {\n";
+  llvm::errs() << "    what: " << whatStr(analysis.op0.what) << "\n";
+  llvm::errs() << "    expr: " << exprStr(analysis.op0.expr) << "\n";
+  llvm::errs() << "  }\n";
+  llvm::errs() << "  op1 {\n";
+  llvm::errs() << "    what: " << whatStr(analysis.op1.what) << "\n";
+  llvm::errs() << "    expr: " << exprStr(analysis.op1.expr) << "\n";
+  llvm::errs() << "  }\n";
+  llvm::errs() << "}\n";
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPAtomicConstruct &atomicConstruct) {
-  Fortran::common::visit(
-      common::visitors{
-          [&](const parser::OmpAtomicRead &atomicRead) {
-            mlir::Location loc = converter.genLocation(atomicRead.source);
-            genAtomicRead(converter, atomicRead, loc);
-          },
-          [&](const parser::OmpAtomicWrite &atomicWrite) {
-            mlir::Location loc = converter.genLocation(atomicWrite.source);
-            genAtomicWrite(converter, atomicWrite, loc);
-          },
-          [&](const parser::OmpAtomic &atomicConstruct) {
-            mlir::Location loc = converter.genLocation(atomicConstruct.source);
-            genOmpAtomic(converter, atomicConstruct, loc);
-          },
-          [&](const parser::OmpAtomicUpdate &atomicUpdate) {
-            mlir::Location loc = converter.genLocation(atomicUpdate.source);
-            genAtomicUpdate(converter, atomicUpdate, loc);
-          },
-          [&](const parser::OmpAtomicCapture &atomicCapture) {
-            mlir::Location loc = converter.genLocation(atomicCapture.source);
-            genAtomicCapture(converter, atomicCapture, loc);
-          },
-          [&](const parser::OmpAtomicCompare &atomicCompare) {
-            mlir::Location loc = converter.genLocation(atomicCompare.source);
-            TODO(loc, "OpenMP atomic compare");
-          },
-      },
-      atomicConstruct.u);
+                   const parser::OpenMPAtomicConstruct &construct) {
+  auto get = [](const parser::TypedExpr &expr) -> const semantics::SomeExpr * {
+    if (auto *maybe = expr.get(); maybe && maybe->v) {
+      return &*maybe->v;
+    } else {
+      return nullptr;
+    }
+  };
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto &dirSpec = std::get<parser::OmpDirectiveSpecification>(construct.t);
+  List<Clause> clauses = makeClauses(dirSpec.Clauses(), semaCtx);
+  lower::StatementContext stmtCtx;
+
+  const parser::OpenMPAtomicConstruct::Analysis &analysis = construct.analysis;
+  const semantics::SomeExpr &atom = *get(analysis.atom);
+  mlir::Location loc = converter.genLocation(construct.source);
+  mlir::Value atomAddr =
+      fir::getBase(converter.genExprAddr(atom, stmtCtx, &loc));
+  mlir::IntegerAttr hint = getAtomicHint(converter, clauses);
+  mlir::omp::ClauseMemoryOrderKindAttr memOrder =
+      getAtomicMemoryOrder(converter, semaCtx, clauses);
+
+  if (auto *cond = get(analysis.cond)) {
+    (void)cond;
+    TODO(loc, "OpenMP ATOMIC COMPARE");
+  } else {
+    int action0 = analysis.op0.what & analysis.Action;
+    int action1 = analysis.op1.what & analysis.Action;
+    mlir::Operation *captureOp = nullptr;
+    fir::FirOpBuilder::InsertPoint atomicAt;
+    fir::FirOpBuilder::InsertPoint prepareAt = builder.saveInsertionPoint();
+
+    if (construct.IsCapture()) {
+      // Capturing operation.
+      assert(action0 != analysis.None && action1 != analysis.None &&
+             "Expexcing two actions");
+      captureOp =
+          builder.create<mlir::omp::AtomicCaptureOp>(loc, hint, memOrder);
+      // Set the non-atomic insertion point to before the atomic.capture.
+      prepareAt = getInsertionPointBefore(captureOp);
+
+      mlir::Block *block = builder.createBlock(&captureOp->getRegion(0));
+      builder.setInsertionPointToEnd(block);
+      // Set the atomic insertion point to before the terminator inside
+      // atomic.capture.
+      mlir::Operation *term = builder.create<mlir::omp::TerminatorOp>(loc);
+      atomicAt = getInsertionPointBefore(term);
+      hint = nullptr;
+      memOrder = nullptr;
+    } else {
+      // Non-capturing operation.
+      assert(action0 != analysis.None && action1 == analysis.None &&
+             "Expexcing single action");
+      assert(!(analysis.op0.what & analysis.Condition));
+      atomicAt = prepareAt;
+    }
+
+    mlir::Operation *firstOp = genAtomicOperation(
+        converter, loc, stmtCtx, analysis.op0.what, atomAddr, atom,
+        *get(analysis.op0.expr), hint, memOrder, atomicAt, prepareAt);
+    assert(firstOp && "Should have created an atomic operation");
+    atomicAt = getInsertionPointAfter(firstOp);
+
+    mlir::Operation *secondOp = genAtomicOperation(
+        converter, loc, stmtCtx, analysis.op1.what, atomAddr, atom,
+        *get(analysis.op1.expr), hint, memOrder, atomicAt, prepareAt);
+
+    if (secondOp) {
+      builder.setInsertionPointAfter(secondOp);
+    } else {
+      builder.setInsertionPointAfter(firstOp);
+    }
+  }
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
