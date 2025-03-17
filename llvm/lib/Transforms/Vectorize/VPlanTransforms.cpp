@@ -1007,29 +1007,37 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
 
 /// Return true if \p Cond is known to be true for given \p BestVF and \p
 /// BestUF.
-static bool isConditionKnown(VPValue *Cond, VPlan &Plan, ElementCount BestVF,
-                             unsigned BestUF, ScalarEvolution &SE) {
+static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
+                                      ElementCount BestVF, unsigned BestUF,
+                                      ScalarEvolution &SE) {
   using namespace llvm::VPlanPatternMatch;
   if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
-    return any_of(Cond->getDefiningRecipe()->operands(),
-                  [&Plan, BestVF, BestUF, &SE](VPValue *C) {
-                    return isConditionKnown(C, Plan, BestVF, BestUF, SE);
-                  });
+    return any_of(Cond->getDefiningRecipe()->operands(), [&Plan, BestVF, BestUF,
+                                                          &SE](VPValue *C) {
+      return isConditionTrueViaVFAndUF(C, Plan, BestVF, BestUF, SE);
+    });
 
-  VPValue *TripCount = Plan.getTripCount();
   auto *CanIV = Plan.getCanonicalIV();
-  if (!match(Cond, m_Binary<Instruction::ICmp>(m_Specific(CanIV),
-                                               m_VPValue(TripCount))) ||
+  if (!match(Cond, m_Binary<Instruction::ICmp>(
+                       m_Specific(CanIV->getBackedgeValue()),
+                       m_Specific(&Plan.getVectorTripCount()))) ||
       cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
           CmpInst::ICMP_EQ)
     return false;
 
-  const SCEV *TripCountSCEV = vputils::getSCEVExprForVPValue(TripCount, SE);
-  assert(!isa<SCEVCouldNotCompute>(TripCountSCEV) &&
+  // The compare checks CanIV + VFxUF == vector trip count. The vector trip
+  // count is not conveniently available as SCEV so far, so we compare directly
+  // against the original trip count. This is stricter than necessary, as we
+  // will only return true if the trip count == vector trip count.
+  // TODO: Use SCEV for vector trip count once available, to cover cases where
+  // vector trip count == UF * VF, but original trip count != UF * VF.
+  const SCEV *TripCount =
+      vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(TripCount) &&
          "Trip count SCEV must be computable");
   ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
-  const SCEV *C = SE.getElementCount(TripCountSCEV->getType(), NumElements);
-  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCountSCEV, C);
+  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
+  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCount, C);
 }
 
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -1040,30 +1048,32 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
-  // Try to simplify the branch condition if TC <= VF * UF when preparing to
-  // execute the plan for the main vector loop. We only do this if the
-  // terminator is:
-  //  1. BranchOnCount, or
-  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
-  using namespace llvm::VPlanPatternMatch;
   VPValue *Cond;
-  if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
-      !match(Term, m_BranchOnCond(
-                       m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))) &&
-      (!match(Term, m_BranchOnCond(m_VPValue(Cond))) ||
-       isConditionKnown(Cond, Plan, BestVF, BestUF, *PSE.getSE())))
-    return;
-
   ScalarEvolution &SE = *PSE.getSE();
-  const SCEV *TripCount =
-      vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
-  assert(!isa<SCEVCouldNotCompute>(TripCount) &&
-         "Trip count SCEV must be computable");
-  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
-  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
-  if (TripCount->isZero() ||
-      !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
+  using namespace llvm::VPlanPatternMatch;
+  if (match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
+      match(Term, m_BranchOnCond(
+                      m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue()))))) {
+    // Try to simplify the branch condition if TC <= VF * UF when the latch
+    // terminator is   BranchOnCount or BranchOnCond where the input is
+    // Not(ActiveLaneMask).
+    const SCEV *TripCount =
+        vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+    assert(!isa<SCEVCouldNotCompute>(TripCount) &&
+           "Trip count SCEV must be computable");
+    ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+    const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
+    if (TripCount->isZero() ||
+        !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
+      return;
+  } else if (match(Term, m_BranchOnCond(m_VPValue(Cond)))) {
+    // For BranchOnCond, check if we can prove the condition to be true using VF
+    // and UF.
+    if (!isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, SE))
+      return;
+  } else {
     return;
+  }
 
   // The vector loop region only executes once. If possible, completely remove
   // the region, otherwise replace the terminator controlling the latch with
