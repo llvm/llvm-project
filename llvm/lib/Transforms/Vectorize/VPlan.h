@@ -2269,12 +2269,6 @@ public:
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
-  VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
-      : VPReductionRecipe(R.getRecurrenceKind(), R.getFastMathFlags(), I,
-                          ChainOp, VecOp, CondOp, IsOrdered, DL) {}
-
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
