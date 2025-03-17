@@ -61731,5 +61731,3 @@ Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     return Align(1ULL << ExperimentalPrefInnermostLoopAlignment);
   return TargetLowering::getPrefLoopAlignment();
 }
-
-
