@@ -142,7 +142,7 @@ void InlinerPass::runOnOperation() {
     return isProfitableToInline(call, inliningThreshold);
   };
 
-  // By default, prevent inlining a functon containing multiple blocks into a
+  // By default, prevent inlining a function containing multiple blocks into a
   // region that requires a single block.
   auto canHandleMultipleBlocksCb = [=]() { return false; };
 
