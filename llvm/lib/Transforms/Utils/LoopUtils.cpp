@@ -1336,7 +1336,8 @@ Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
                                    const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "AnyOf reduction is not supported.");
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+         "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
