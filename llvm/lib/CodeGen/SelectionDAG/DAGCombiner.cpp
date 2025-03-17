@@ -21564,7 +21564,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
         SmallPtrSet<const SDNode *, 32> Visited;
         SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
-        Worklist.emplace_back(St->getOperand(0).getNode(), false);
+        Worklist.emplace_back(St->getChain().getNode(), false);
 
         while (!Worklist.empty()) {
           auto [Node, FoundCall] = Worklist.pop_back_val();
