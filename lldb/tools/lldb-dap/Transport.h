@@ -14,7 +14,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_TRANSPORT_H
 #define LLDB_TOOLS_LLDB_DAP_TRANSPORT_H
 
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
