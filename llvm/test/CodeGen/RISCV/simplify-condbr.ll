@@ -58,7 +58,6 @@ define fastcc i32 @S_regrepeat(ptr %startposp, i32 %max, i8 %0, i1 %cmp343) noun
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_10:
-; CHECK-NEXT:    bnez zero, .LBB0_9
 ; CHECK-NEXT:    j .LBB0_8
 entry:
   switch i8 %0, label %if.else1492 [

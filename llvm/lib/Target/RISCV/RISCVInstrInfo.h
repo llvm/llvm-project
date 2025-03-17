@@ -319,6 +319,26 @@ private:
                                const MachineInstr &MI2) const;
   bool hasReassociableVectorSibling(const MachineInstr &Inst,
                                     bool &Commuted) const;
+  /// Return true if the branch represented by the conditional branch with
+  /// components TBB, FBB, and CurCond was folded into an unconditional branch.
+  ///
+  /// If FBB is nullptr, then the the input represents a conditional branch with
+  /// a fallthrough.
+  ///
+  /// For example:
+  /// BRCOND EQ 0, 0, BB1
+  /// BR BB2
+  ///
+  /// can be simplified to BR BB1 since 0 == 0 statically. On the other hand,
+  ///
+  ///
+  /// BRCOND EQ 0, 1, BB1
+  /// BR BB2
+  ///
+  /// can be simplified to BR BB2 because 0 != 1 statically.
+  bool trySimplifyCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                         MachineBasicBlock *FBB,
+                         SmallVectorImpl<MachineOperand> &Cond) const;
 };
 
 namespace RISCV {
