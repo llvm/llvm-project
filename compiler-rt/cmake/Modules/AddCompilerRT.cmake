@@ -118,7 +118,7 @@ function(add_compiler_rt_component name)
 endfunction()
 
 macro(set_output_name output name arch)
-  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT CMAKE_SYSTEM_NAME MATCHES "AIX")
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
     set(${output} ${name})
   else()
     if(ANDROID AND ${arch} STREQUAL "i386")
