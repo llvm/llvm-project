@@ -490,7 +490,6 @@ def UnaryOpKind : I32EnumAttr<
   let cppNamespace = "::cir";
 }
 
-// FIXME: Pure won't work when we add overloading.
 def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   let summary = "Unary operations";
   let description = [{
