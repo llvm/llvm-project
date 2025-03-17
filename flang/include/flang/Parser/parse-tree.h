@@ -3826,7 +3826,7 @@ struct OmpExpectation {
 
 // REF: [5.1:217-220], [5.2:293-294]
 //
-// OmpRuntimeIdentifier ->                          // since 5.2
+// OmpInteropRuntimeIdentifier ->                   // since 5.2
 // CharLiteralConstant || ScalarIntConstantExpr
 struct OmpInteropRuntimeIdentifier {
   UNION_CLASS_BOILERPLATE(OmpInteropRuntimeIdentifier);
