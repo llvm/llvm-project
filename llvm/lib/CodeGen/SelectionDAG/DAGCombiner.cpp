@@ -21584,6 +21584,8 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
               return FoundCall;
             [[fallthrough]];
           default:
+            assert(Node->getOperand(0).getValueType() == MVT::Other &&
+                   "Invalid chain type");
             Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
             break;
           }
