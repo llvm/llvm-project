@@ -18652,12 +18652,20 @@ define amdgpu_ps i32 @s_fabs_bf16(bfloat inreg %a) {
 ; GFX10-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_fabs_bf16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_and_b32 s0, s0, 0x7fff
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11TRUE16-LABEL: s_fabs_bf16:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    v_and_b16 v0.l, 0x7fff, s0
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11FAKE16-LABEL: s_fabs_bf16:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_and_b32 s0, s0, 0x7fff
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11FAKE16-NEXT:    ; return to shader part epilog
   %op = call bfloat @llvm.fabs.bf16(bfloat %a)
   %cast = bitcast bfloat %op to i16
   %zext = zext i16 %cast to i32
@@ -18747,12 +18755,20 @@ define amdgpu_ps i32 @s_fneg_bf16(bfloat inreg %a) {
 ; GFX10-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_fneg_bf16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_xor_b32 s0, s0, 0x8000
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11TRUE16-LABEL: s_fneg_bf16:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, s0
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11FAKE16-LABEL: s_fneg_bf16:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_xor_b32 s0, s0, 0x8000
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11FAKE16-NEXT:    ; return to shader part epilog
   %op = fneg bfloat %a
   %cast = bitcast bfloat %op to i16
   %zext = zext i16 %cast to i32
@@ -18859,12 +18875,20 @@ define amdgpu_ps i32 @s_fneg_fabs_bf16(bfloat inreg %a) {
 ; GFX10-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11-LABEL: s_fneg_fabs_bf16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_bitset1_b32 s0, 15
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11TRUE16-LABEL: s_fneg_fabs_bf16:
+; GFX11TRUE16:       ; %bb.0:
+; GFX11TRUE16-NEXT:    v_or_b16 v0.l, 0x8000, s0
+; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX11FAKE16-LABEL: s_fneg_fabs_bf16:
+; GFX11FAKE16:       ; %bb.0:
+; GFX11FAKE16-NEXT:    s_bitset1_b32 s0, 15
+; GFX11FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11FAKE16-NEXT:    ; return to shader part epilog
   %fabs = call bfloat @llvm.fabs.bf16(bfloat %a)
   %op = fneg bfloat %fabs
   %cast = bitcast bfloat %op to i16

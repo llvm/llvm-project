@@ -1964,6 +1964,8 @@ def : GCNPat <
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
 >;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let SubtargetPredicate = p in {
 foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
   (UniformUnaryFrag<fneg> (fp16vt SReg_32:$src)),
@@ -1980,6 +1982,7 @@ def : GCNPat <
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
 >;
 } // End foreach fp16vt = ...
+} // let SubtargetPredicate = p
 
 def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
