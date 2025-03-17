@@ -55,15 +55,19 @@ namespace PR11856 {
 
   template<typename T> T *end(T*);
 
-  class X { };
+  struct X { };
+  struct Y {
+    int end;
+  };
   template <typename T>
   void Foo2() {
     T it1;
-    if (it1->end < it1->end) {
-    }
+    if (it1->end < it1->end) { }
 
     X *x;
-    if (x->end < 7) {  // expected-error{{no member named 'end' in 'PR11856::X'}}
-    }
+    if (x->end < 7) { } // expected-error{{no member named 'end' in 'PR11856::X'}}
+
+    Y *y;
+    if (y->end < 7) { }
   }
 }

@@ -2,20 +2,20 @@
 template<typename T, typename U, int N>
 struct X {
   void f(T* t) {
-    t->f0<U>(); // expected-error{{use 'template' keyword to treat 'f0' as a dependent template name}}
-    t->f0<int>(); // expected-error{{use 'template' keyword to treat 'f0' as a dependent template name}}
+    t->f0<U>(); // expected-warning{{use 'template' keyword to treat 'f0' as a dependent template name}}
+    t->f0<int>(); // expected-warning{{use 'template' keyword to treat 'f0' as a dependent template name}}
 
-    t->operator+<U const, 1>(1); // expected-error{{use 'template' keyword to treat 'operator +' as a dependent template name}}
-    t->f1<int const, 2>(1); // expected-error{{use 'template' keyword to treat 'f1' as a dependent template name}}
-    t->f1<3, int const>(1); // expected-error{{missing 'template' keyword prior to dependent template name 'f1'}}
+    t->operator+<U const, 1>(1); // expected-warning{{use 'template' keyword to treat 'operator +' as a dependent template name}}
+    t->f1<int const, 2>(1); // expected-warning{{use 'template' keyword to treat 'f1' as a dependent template name}}
+    t->f1<3, int const>(1); // expected-warning{{use 'template' keyword to treat 'f1' as a dependent template name}}
 
-    T::getAs<U>(); // expected-error{{use 'template' keyword to treat 'getAs' as a dependent template name}}
-    t->T::getAs<U>(); // expected-error{{use 'template' keyword to treat 'getAs' as a dependent template name}}
+    T::getAs<U>(); // expected-warning{{use 'template' keyword to treat 'getAs' as a dependent template name}}
+    t->T::getAs<U>(); // expected-warning{{use 'template' keyword to treat 'getAs' as a dependent template name}}
 
     (*t).f2<N>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
     (*t).f2<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
     T::f2<0>(); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
-    T::f2<0, int>(0); // expected-error{{missing 'template' keyword prior to dependent template name 'f2'}}
+    T::f2<0, int>(0); // expected-warning{{use 'template' keyword to treat 'f2' as a dependent template name}}
 
     T::foo<N < 2 || N >= 4>(); // expected-error{{missing 'template' keyword prior to dependent template name 'foo'}}
 
@@ -83,12 +83,14 @@ template<int N, typename T> void f(T t) {
   T::g<mb>(0);
 
   // ... but this one must be a template-id.
-  T::g<mb, int>(0); // expected-error {{missing 'template' keyword prior to dependent template name 'g'}}
+  T::g<mb, int>(0); // expected-warning {{use 'template' keyword to treat 'g' as a dependent template name}}
+                    // expected-error@-1 {{no matching function for call to 'g'}}
 }
 
 struct Y {
   template <int> void f(int);
   template <int = 0> static void g(int); // expected-warning 0-1{{extension}}
+                                         // expected-note@-1 {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
 };
 void q() { void (*p)(int) = Y::g; }
 template void f<0>(Y); // expected-note {{in instantiation of}}

@@ -1821,7 +1821,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
   // we interpret this as a template-id if it can be, but if it can't be, then
   // this is an error recovery case.
   if (Classification.getKind() == Sema::NC_UndeclaredTemplate &&
-      isTemplateArgumentList(1) == TPResult::False) {
+      isTemplateArgumentList(1, TNK_Undeclared_template) == TPResult::False) {
     // It's not a template-id; re-classify without the '<' as a hint.
     Token FakeNext = Next;
     FakeNext.setKind(tok::unknown);
@@ -2190,7 +2190,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
         // Only annotate an undeclared template name as a template-id if the
         // following tokens have the form of a template argument list.
         if (TNK != TNK_Undeclared_template ||
-            isTemplateArgumentList(1) != TPResult::False) {
+            isTemplateArgumentList(1, TNK) != TPResult::False) {
           // Consume the identifier.
           ConsumeToken();
           if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),

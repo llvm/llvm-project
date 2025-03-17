@@ -36,7 +36,7 @@ template<typename T>
 int A0<T>::template C2<int>::D1::* f6();
 
 template<typename T>
-int A0<T>::template C0<int>::E0<int>::* f7(); // expected-error {{use 'template' keyword to treat 'E0' as a dependent template name}}
+int A0<T>::template C0<int>::E0<int>::* f7(); // expected-warning {{use 'template' keyword to treat 'E0' as a dependent template name}}
                                               // expected-error@-1 {{expected unqualified-id}}
 
 template<typename T>

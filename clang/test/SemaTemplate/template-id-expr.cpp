@@ -149,11 +149,11 @@ struct Y2 : Y1<T> {
 
     int x;
     x = Y1::f4(0);
-    x = Y1::f4<int>(0); // expected-error {{use 'template'}} expected-error {{assigning to 'int' from incompatible type 'void'}}
+    x = Y1::f4<int>(0); // expected-warning {{use 'template'}} expected-error {{assigning to 'int' from incompatible type 'void'}}
     x = Y1::template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 
     x = p->f4(0);
-    x = p->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{use 'template'}}
+    x = p->f4<int>(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-warning {{use 'template'}}
     x = p->template f4(0); // expected-error {{assigning to 'int' from incompatible type 'void'}} expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
   }
 };
