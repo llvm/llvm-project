@@ -4283,6 +4283,17 @@ the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
 ``__builtin_va_list`` object.
 
+* ``void __builtin_c23_va_start(__builtin_va_list list, ...)``
+
+A builtin function for the target-specific ``va_start`` function-like macro,
+available only in C23 and later. The builtin accepts zero or one argument for
+the ellipsis (``...``). If such an argument is provided, it should be the name
+of the parameter preceeding the ellipsis, which is used for compatibility with
+C versions before C23. It is an error to provide two or more variadic arguments.
+This function initializes the given ``__builtin_va_list`` object. It is
+undefined behavior to call this function on an already initialized
+``__builtin_va_list`` object.
+
 * ``void __builtin_va_end(__builtin_va_list list)``
 
 A builtin function for the target-specific ``va_end`` function-like macro. This

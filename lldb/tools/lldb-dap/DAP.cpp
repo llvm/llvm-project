@@ -638,9 +638,11 @@ DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an apportunity to specify
   // those. Any of those three can be left empty.
-  llvm::StringRef target_triple = GetString(arguments, "targetTriple");
-  llvm::StringRef platform_name = GetString(arguments, "platformName");
-  llvm::StringRef program = GetString(arguments, "program");
+  const llvm::StringRef target_triple =
+      GetString(arguments, "targetTriple").value_or("");
+  const llvm::StringRef platform_name =
+      GetString(arguments, "platformName").value_or("");
+  const llvm::StringRef program = GetString(arguments, "program").value_or("");
   auto target = this->debugger.CreateTarget(
       program.data(), target_triple.data(), platform_name.data(),
       true, // Add dependent modules.
