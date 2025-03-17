@@ -21,6 +21,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1422,6 +1423,27 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     // Other suffixes will be diagnosed by the caller.
     return;
   }
+
+  // Parse a potential octal literal prefix.
+  bool SawOctalPrefix = false;
+  if ((c1 == 'O' || c1 == 'o') && (s[1] >= '0' && s[1] <= '7')) {
+    unsigned DiagId;
+    if (LangOpts.C2y)
+      DiagId = diag::warn_c2y_compat_octal_literal;
+    else
+      DiagId = diag::ext_octal_literal;
+    Diags.Report(TokLoc, DiagId);
+    ++s;
+    DigitsBegin = s;
+    SawOctalPrefix = true;
+  }
+
+  auto _ = llvm::make_scope_exit([&] {
+    // If we still have an octal value but we did not see an octal prefix,
+    // diagnose as being an obsolescent feature starting in C2y.
+    if (radix == 8 && LangOpts.C2y && !SawOctalPrefix && !hadError)
+      Diags.Report(TokLoc, diag::warn_unprefixed_octal_deprecated);
+  });
 
   // For now, the radix is set to 8. If we discover that we have a
   // floating point constant, the radix will change to 10. Octal floating

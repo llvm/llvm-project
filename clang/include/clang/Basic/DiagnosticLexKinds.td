@@ -256,6 +256,14 @@ def warn_cxx17_hex_literal : Warning<
   "hexadecimal floating literals are incompatible with "
   "C++ standards before C++17">,
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
+def ext_octal_literal : Extension<
+  "octal integer literals are a C2y extension">, InGroup<C2y>;
+def warn_c2y_compat_octal_literal : Warning<
+  "octal integer literals are incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
+def warn_unprefixed_octal_deprecated : Warning<
+  "octal literals without a '0o' prefix are deprecated">,
+  InGroup<DeprecatedOctalLiterals>;
 def ext_binary_literal : Extension<
   "binary integer literals are a C23 extension">, InGroup<C23>;
 def warn_c23_compat_binary_literal : Warning<
