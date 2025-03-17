@@ -22,32 +22,32 @@ struct BasicConstructor {
   BasicConstructor() : Captured([this]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct BasicConstructorWithCaptureAllByValue {
   BasicConstructorWithCaptureAllByValue() : Captured([=]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct BasicConstructorWithCaptureAllByRef {
   BasicConstructorWithCaptureAllByRef() : Captured([&]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct BasicField1 {
   std::function<void()> Captured = [this]() { static_cast<void>(this); };
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: 'this' captured by a lambda and stored in a class member variable;
-  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 struct BasicField2 {
   std::function<void()> Captured{[this]() { static_cast<void>(this); }};
   // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: 'this' captured by a lambda and stored in a class member variable;
-  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct NotCaptureThis {
@@ -59,7 +59,7 @@ struct AssignCapture {
   AssignCapture() : Captured([Self = this]() { static_cast<void>(Self); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct DeleteMoveAndCopy {
@@ -86,7 +86,7 @@ struct DeleteCopyDefaultMove {
   DeleteCopyDefaultMove& operator=(DeleteCopyDefaultMove const&) = delete;
   DeleteCopyDefaultMove& operator=(DeleteCopyDefaultMove &&) = default;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct DeleteMoveDefaultCopy {
@@ -97,7 +97,7 @@ struct DeleteMoveDefaultCopy {
   DeleteMoveDefaultCopy& operator=(DeleteMoveDefaultCopy const&) = default;
   DeleteMoveDefaultCopy& operator=(DeleteMoveDefaultCopy &&) = delete;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct DeleteCopyBase {
@@ -122,13 +122,13 @@ struct InheritDeleteCopy : DeleteCopyBase {
   InheritDeleteCopy() : DeleteCopyBase{}, Captured([this]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 struct InheritDeleteMove : DeleteMoveBase {
   InheritDeleteMove() : DeleteMoveBase{}, Captured([this]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 struct InheritDeleteCopyMove : DeleteCopyMoveBase {
   InheritDeleteCopyMove() : DeleteCopyMoveBase{}, Captured([this]() { static_cast<void>(this); }) {}
@@ -166,7 +166,7 @@ struct UserDefinedCopyMoveWithDefault1 {
   UserDefinedCopyMoveWithDefault1& operator=(UserDefinedCopyMoveWithDefault1 const&);
   UserDefinedCopyMoveWithDefault1& operator=(UserDefinedCopyMoveWithDefault1 &&);
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct UserDefinedCopyMoveWithDefault2 {
@@ -177,7 +177,7 @@ struct UserDefinedCopyMoveWithDefault2 {
   UserDefinedCopyMoveWithDefault2& operator=(UserDefinedCopyMoveWithDefault2 const&);
   UserDefinedCopyMoveWithDefault2& operator=(UserDefinedCopyMoveWithDefault2 &&);
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct UserDefinedCopyMoveWithDefault3 {
@@ -188,7 +188,7 @@ struct UserDefinedCopyMoveWithDefault3 {
   UserDefinedCopyMoveWithDefault3& operator=(UserDefinedCopyMoveWithDefault3 const&) = default;
   UserDefinedCopyMoveWithDefault3& operator=(UserDefinedCopyMoveWithDefault3 &&);
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct UserDefinedCopyMoveWithDefault4 {
@@ -199,12 +199,12 @@ struct UserDefinedCopyMoveWithDefault4 {
   UserDefinedCopyMoveWithDefault4& operator=(UserDefinedCopyMoveWithDefault4 const&);
   UserDefinedCopyMoveWithDefault4& operator=(UserDefinedCopyMoveWithDefault4 &&) = default;
   std::function<void()> Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct CustomFunctionWrapper {
   CustomFunctionWrapper() : Captured([this]() { static_cast<void>(this); }) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: 'this' captured by a lambda and stored in a class member variable;
   Fn Captured;
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: note: 'Fn' that stores captured 'this'
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: note: class member of type 'Fn' that stores captured 'this'
 };

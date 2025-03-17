@@ -115,8 +115,7 @@ void CapturingThisInMemberVariableCheck::check(
        "use-after-free")
       << Capture->getLocation();
   diag(Field->getLocation(),
-       "'%0' that stores captured 'this' and becomes invalid during "
-       "copying or moving",
+       "class member of type '%0' that stores captured 'this'",
        DiagnosticIDs::Note)
       << Field->getType().getAsString();
 }
