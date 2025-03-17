@@ -162,11 +162,11 @@ static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
 static bool areOptionsInSharedDir(CowCompilerInvocation &BuildInvocation,
                                   const ArrayRef<StringRef> SharedDirs) {
   const auto &HSOpts = BuildInvocation.getHeaderSearchOpts();
-  if (!isPathInSharedDir(SharedDirs, HSOpts.Sysroot))
-    return false;
+  assert(isPathInSharedDir(SharedDirs, HSOpts.Sysroot) &&
+         "Sysroots differ between module dependencies and current TU");
 
-  if (!isPathInSharedDir(SharedDirs, HSOpts.ResourceDir))
-    return false;
+  assert(isPathInSharedDir(SharedDirs, HSOpts.ResourceDir) &&
+         "ResourceDirs differ between module dependencies and current TU");
 
   for (const auto &Entry : HSOpts.UserEntries) {
     if (!Entry.IgnoreSysRoot)
@@ -799,7 +799,6 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
           MD.IsShareable = isPathInSharedDir(SharedDirs, *FullFilePath);
-          PathBuf.resize_for_overwrite(256);
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
