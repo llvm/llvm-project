@@ -8,6 +8,7 @@
 
 #include "ClangTidyOptions.h"
 #include "ClangTidyModuleRegistry.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -71,7 +72,8 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(std::string(KeyValue.getKey()), KeyValue.getValue().Value);
+      Options.emplace_back(std::string(KeyValue.getKey()),
+                           KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -135,13 +137,30 @@ template <> struct BlockScalarTraits<MultiLineString> {
   static void output(const MultiLineString &S, void *Ctxt, raw_ostream &OS) {
     OS << S.S;
   }
-
   static StringRef input(StringRef Str, void *Ctxt, MultiLineString &S) {
     S.S = Str;
     return "";
   }
 };
 
+template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
+  static void enumeration(IO &IO, clang::DiagnosticIDs::Level &Level) {
+    IO.enumCase(Level, "Error", clang::DiagnosticIDs::Level::Error);
+    IO.enumCase(Level, "Warning", clang::DiagnosticIDs::Level::Warning);
+    IO.enumCase(Level, "Note", clang::DiagnosticIDs::Level::Note);
+  }
+};
+template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
+  static const bool flow = false;
+};
+template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
+  static void mapping(IO &IO, ClangTidyOptions::CustomCheckDiag &D) {
+    IO.mapRequired("BindName", D.BindName);
+    MultiLineString MLS{D.Message};
+    IO.mapRequired("Message", MLS);
+    IO.mapOptional("Level", D.Level);
+  }
+};
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
   static const bool flow = false;
 };
@@ -150,6 +169,7 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
     IO.mapRequired("Name", V.Name);
     MultiLineString MLS{V.Query};
     IO.mapRequired("Query", MLS);
+    IO.mapRequired("Diagnostic", V.Diags);
   }
 };
 

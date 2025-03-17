@@ -22,6 +22,7 @@ public:
     for (const ClangTidyOptions::CustomCheckValue &V :
          Options->CustomChecks.value()) {
       CheckFactories.registerCheckFactory(
+          // add custom- prefix to avoid conflicts with builtin checks
           "custom-" + V.Name,
           [&V](llvm::StringRef Name, ClangTidyContext *Context) {
             return std::make_unique<custom::QueryCheck>(Name, V, Context);

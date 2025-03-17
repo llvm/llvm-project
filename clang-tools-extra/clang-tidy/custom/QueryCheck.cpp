@@ -10,6 +10,8 @@
 #include "../../clang-query/Query.h"
 #include "../../clang-query/QueryParser.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
+#include "clang/Basic/DiagnosticIDs.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang::ast_matchers;
@@ -19,7 +21,13 @@ namespace clang::tidy::custom {
 QueryCheck::QueryCheck(llvm::StringRef Name,
                        const ClangTidyOptions::CustomCheckValue &V,
                        ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), Matchers{} {
+    : ClangTidyCheck(Name, Context) {
+  for (const ClangTidyOptions::CustomCheckDiag &D : V.Diags) {
+    auto It = Diags.try_emplace(D.BindName, llvm::SmallVector<Diag>{}).first;
+    It->second.emplace_back(
+        Diag{D.Message, D.Level.value_or(DiagnosticIDs::Warning)});
+  }
+
   clang::query::QuerySession QS({});
   llvm::StringRef QueryStringRef{V.Query};
   while (!QueryStringRef.empty()) {
@@ -64,7 +72,9 @@ void QueryCheck::registerMatchers(MatchFinder *Finder) {
 
 void QueryCheck::check(const MatchFinder::MatchResult &Result) {
   for (auto &[Name, Node] : Result.Nodes.getMap())
-    diag(Node.getSourceRange().getBegin(), Name) << Node.getSourceRange();
+    if (Diags.contains(Name))
+      for (const Diag &D : Diags[Name])
+        diag(D.Message, D.Level) << Node.getSourceRange();
 }
 
 } // namespace clang::tidy::custom

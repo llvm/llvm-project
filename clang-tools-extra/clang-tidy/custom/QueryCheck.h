@@ -12,6 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace clang::tidy::custom {
 
@@ -28,6 +29,11 @@ public:
 
 private:
   llvm::SmallVector<ast_matchers::dynamic::DynTypedMatcher> Matchers{};
+  struct Diag {
+    std::string Message;
+    DiagnosticIDs::Level Level;
+  };
+  llvm::StringMap<llvm::SmallVector<Diag>> Diags{};
 };
 
 } // namespace clang::tidy::custom

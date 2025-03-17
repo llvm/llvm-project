@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 
+#include "clang/Basic/DiagnosticIDs.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -17,6 +18,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -129,10 +131,15 @@ struct ClangTidyOptions {
   /// Key-value mapping used to store check-specific options.
   OptionMap CheckOptions;
 
+  struct CustomCheckDiag {
+    std::string BindName;
+    std::string Message;
+    std::optional<DiagnosticIDs::Level> Level;
+  };
   struct CustomCheckValue {
     std::string Name;
     std::string Query;
-    // FIXME: extend more features here (e.g. isLanguageVersionSupported, Level)
+    llvm::SmallVector<CustomCheckDiag> Diags;
   };
   using CustomCheckValueList = llvm::SmallVector<CustomCheckValue>;
   std::optional<CustomCheckValueList> CustomChecks;
