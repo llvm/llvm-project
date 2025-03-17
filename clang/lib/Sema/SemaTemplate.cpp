@@ -759,11 +759,13 @@ Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
       TemplateArgs);
 }
 
-bool Sema::DiagnoseUninstantiableTemplate(
-    SourceLocation PointOfInstantiation, NamedDecl *Instantiation,
-    bool InstantiatedFromMember, const NamedDecl *Pattern,
-    const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
-    bool Complain, bool *Unreachable) {
+bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
+                                          NamedDecl *Instantiation,
+                                          bool InstantiatedFromMember,
+                                          const NamedDecl *Pattern,
+                                          const NamedDecl *PatternDef,
+                                          TemplateSpecializationKind TSK,
+                                          bool Complain, bool *Unreachable) {
   assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation) ||
          isa<VarDecl>(Instantiation));
 

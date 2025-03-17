@@ -5422,7 +5422,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
             << Function;
         if (Unreachable) {
           // FIXME: would be nice to mention which module the function template
-          // comes from. 
+          // comes from.
           Diag(PatternDecl->getLocation(),
                diag::note_unreachable_template_decl);
         } else {
