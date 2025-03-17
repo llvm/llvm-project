@@ -581,7 +581,7 @@ done:
 
 ; OPT-LABEL: @test_sink_local_small_offset_cmpxchg_i32(
 ; OPT: %sunkaddr = getelementptr i8, ptr addrspace(3) %in, i32 28
-; OPT: %tmp1.struct = cmpxchg ptr addrspace(3) %sunkaddr, i32 undef, i32 2 seq_cst monotonic
+; OPT: %tmp1.struct = cmpxchg ptr addrspace(3) %sunkaddr, i32 poison, i32 2 seq_cst monotonic
 define amdgpu_kernel void @test_sink_local_small_offset_cmpxchg_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) {
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
@@ -591,7 +591,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1.struct = cmpxchg ptr addrspace(3) %in.gep, i32 undef, i32 2 seq_cst monotonic
+  %tmp1.struct = cmpxchg ptr addrspace(3) %in.gep, i32 poison, i32 2 seq_cst monotonic
   %tmp1 = extractvalue { i32, i1 } %tmp1.struct, 0
   br label %endif
 
@@ -607,7 +607,7 @@ done:
 ; OPT-LABEL: @test_wrong_operand_local_small_offset_cmpxchg_i32(
 ; OPT: %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
 ; OPT: br i1
-; OPT: cmpxchg ptr addrspace(3) undef, ptr addrspace(3) %in.gep, ptr addrspace(3) undef seq_cst monotonic
+; OPT: cmpxchg ptr addrspace(3) poison, ptr addrspace(3) %in.gep, ptr addrspace(3) poison seq_cst monotonic
 define amdgpu_kernel void @test_wrong_operand_local_small_offset_cmpxchg_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) {
 entry:
   %out.gep = getelementptr ptr addrspace(3), ptr addrspace(3) %out, i32 999999
@@ -617,7 +617,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1.struct = cmpxchg ptr addrspace(3) undef, ptr addrspace(3) %in.gep, ptr addrspace(3) undef seq_cst monotonic
+  %tmp1.struct = cmpxchg ptr addrspace(3) poison, ptr addrspace(3) %in.gep, ptr addrspace(3) poison seq_cst monotonic
   %tmp1 = extractvalue { ptr addrspace(3), i1 } %tmp1.struct, 0
   br label %endif
 

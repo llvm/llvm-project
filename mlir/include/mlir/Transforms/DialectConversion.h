@@ -65,11 +65,14 @@ public:
     SignatureConversion(unsigned numOrigInputs)
         : remappedInputs(numOrigInputs) {}
 
-    /// This struct represents a range of new types or a single value that
+    /// This struct represents a range of new types or a range of values that
     /// remaps an existing signature input.
     struct InputMapping {
       size_t inputNo, size;
-      Value replacementValue;
+      SmallVector<Value, 1> replacementValues;
+
+      /// Return "true" if this input was replaces with one or multiple values.
+      bool replacedWithValues() const { return !replacementValues.empty(); }
     };
 
     /// Return the argument types for the new signature.
@@ -92,9 +95,9 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature to another `replacement`
-    /// value. This drops the original argument.
-    void remapInput(unsigned origInputNo, Value replacement);
+    /// Remap an input of the original signature to `replacements`
+    /// values. This drops the original argument.
+    void remapInput(unsigned origInputNo, ArrayRef<Value> replacements);
 
   private:
     /// Remap an input of the original signature with a range of types in the

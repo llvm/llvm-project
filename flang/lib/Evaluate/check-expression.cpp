@@ -69,13 +69,14 @@ public:
   bool operator()(const Component &component) const {
     return (*this)(component.base());
   }
-  // Forbid integer division by zero in constants.
+  // Prevent integer division by known zeroes in constant expressions.
   template <int KIND>
   bool operator()(
       const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
     using T = Type<TypeCategory::Integer, KIND>;
-    if (const auto divisor{GetScalarConstantValue<T>(division.right())}) {
-      return !divisor->IsZero() && (*this)(division.left());
+    if ((*this)(division.left()) && (*this)(division.right())) {
+      const auto divisor{GetScalarConstantValue<T>(division.right())};
+      return !divisor || !divisor->IsZero();
     } else {
       return false;
     }

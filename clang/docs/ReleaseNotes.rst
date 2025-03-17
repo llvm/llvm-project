@@ -35,6 +35,9 @@ Potentially Breaking Changes
 ============================
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
+- Fix missing diagnostics for uses of declarations when performing typename access,
+  such as when performing member access on a '[[deprecated]]' type alias.
+  (#GH58547)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -71,10 +74,21 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- Similarly to GCC, Clang now supports constant expressions in
+  the strings of a GNU ``asm`` statement.
+
+  .. code-block:: c++
+
+    int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+    }
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
+
+- Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -118,11 +132,16 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Added ``__builtin_c23_va_start()`` for compatibility with GCC and to enable
+  better diagnostic behavior for the ``va_start()`` macro in C23 and later.
+  This also updates the definition of ``va_start()`` in ``<stdarg.h>`` to use
+  the new builtin. Fixes #GH124031.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
+- Added `__builtin_elementwise_exp10`.
 
 New Compiler Flags
 ------------------
@@ -241,6 +260,9 @@ Improvements to Clang's diagnostics
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers 
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
+- The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
+  methods which are marked as virtual inside a ``final`` class, and hence can
+  never be overridden.
 
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
@@ -268,6 +290,9 @@ Bug Fixes in This Version
   considered an error in C23 mode and are allowed as an extension in earlier language modes.
 
 - Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
+- Fixed a modules crash where exception specifications were not propagated properly (#GH121245, relanded in #GH129982)
+- Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
+  ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -286,6 +311,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
   by template argument deduction.
@@ -301,11 +327,15 @@ Bug Fixes to C++ Support
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
+- Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
+- Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
+- Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 - Fixed uninitialized use check in a lambda within CXXOperatorCallExpr. (#GH129198)
+- Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -349,7 +379,13 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
-- Clang now supports MSVC vector deleting destructors (GH19772).
+- Clang now defines ``_CRT_USE_BUILTIN_OFFSETOF`` macro in MSVC-compatible mode,
+  which makes ``offsetof`` provided by Microsoft's ``<stddef.h>`` to be defined
+  correctly. (#GH59689)
+
+- Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
+  extensions are enabled. This allows for properly processing ``intsafe.h`` in
+  the Windows SDK.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -390,6 +426,13 @@ AST Matchers
 ------------
 
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
+- Extend ``templateArgumentCountIs`` to support function and variable template
+  specialization.
+- Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
+  ``ast_matchers::MatchFinderOptions``.
+- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
+  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
+  constructor. This allows it to skip system headers when traversing the AST.
 
 clang-format
 ------------
@@ -453,6 +496,7 @@ Python Binding Changes
 OpenMP Support
 --------------
 - Added support 'no_openmp_constructs' assumption clause.
+- Added support for 'self_maps' in map and requirement clause.
 - Added support for 'omp stripe' directive.
 
 Improvements

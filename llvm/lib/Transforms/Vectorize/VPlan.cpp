@@ -19,6 +19,7 @@
 #include "VPlan.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
@@ -221,7 +222,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
-      TypeAnalysis(CanonicalIVTy) {}
+      TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -264,7 +265,11 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return Data.VPV2Vector[Def];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist = Def->isDefinedOutsideLoopRegions();
+    bool SafeToHoist =
+        !Def->hasDefiningRecipe() ||
+        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
+                               Plan->getVectorPreheader());
+
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
@@ -929,6 +934,10 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
 
+  // Update VPDominatorTree since VPBasicBlock may be removed after State was
+  // constructed.
+  State->VPDT.recalculate(*this);
+
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
@@ -996,12 +1005,14 @@ void VPlan::execute(VPTransformState *State) {
       continue;
     }
 
-    auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+    auto *PhiR = cast<VPSingleDefRecipe>(&R);
+    // VPInstructions currently model scalar Phis only.
+    bool NeedsScalar = isa<VPInstruction>(PhiR) ||
                        (isa<VPReductionPHIRecipe>(PhiR) &&
                         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     Value *Phi = State->get(PhiR, NeedsScalar);
-    Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
+    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does not.
+    Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
   }
 }
@@ -1350,23 +1361,6 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
   bumpIndent(-1);
   OS << Indent << "}\n";
   dumpEdges(Region);
-}
-
-void VPlanIngredient::print(raw_ostream &O) const {
-  if (auto *Inst = dyn_cast<Instruction>(V)) {
-    if (!Inst->getType()->isVoidTy()) {
-      Inst->printAsOperand(O, false);
-      O << " = ";
-    }
-    O << Inst->getOpcodeName() << " ";
-    unsigned E = Inst->getNumOperands();
-    if (E > 0) {
-      Inst->getOperand(0)->printAsOperand(O, false);
-      for (unsigned I = 1; I < E; ++I)
-        Inst->getOperand(I)->printAsOperand(O << ", ", false);
-    }
-  } else // !Inst
-    V->printAsOperand(O, false);
 }
 
 #endif

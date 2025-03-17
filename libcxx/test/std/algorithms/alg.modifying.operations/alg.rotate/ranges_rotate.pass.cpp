@@ -21,8 +21,10 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "type_algorithms.h"
 
@@ -131,6 +133,29 @@ constexpr void test_iter_sent() {
   test_one<Iter, Sent, 7>({1, 2, 3, 4, 5, 6, 7}, 7, {1, 2, 3, 4, 5, 6, 7});
 }
 
+#if TEST_STD_VER >= 23
+template <std::size_t N>
+TEST_CONSTEXPR_CXX20 bool test_vector_bool() {
+  for (int offset = -4; offset <= 4; ++offset) {
+    std::vector<bool> a(N, false);
+    std::size_t mid = N / 2 + offset;
+    for (std::size_t i = mid; i < N; ++i)
+      a[i] = true;
+
+    // (iterator, sentinel)-overload
+    std::ranges::rotate(std::ranges::begin(a), std::ranges::begin(a) + mid, std::ranges::end(a));
+    for (std::size_t i = 0; i < N; ++i)
+      assert(a[i] == (i < N - mid));
+
+    // range-overload
+    std::ranges::rotate(a, std::ranges::begin(a) + (N - mid));
+    for (std::size_t i = 0; i < N; ++i)
+      assert(a[i] == (i >= mid));
+  }
+  return true;
+};
+#endif
+
 constexpr bool test() {
   types::for_each(types::forward_iterator_list<int*>(), []<class Iter>() {
     test_iter_sent<Iter, Iter>();
@@ -166,6 +191,16 @@ constexpr bool test() {
       }
     }
   }
+
+#if TEST_STD_VER >= 23
+  test_vector_bool<8>();
+  test_vector_bool<19>();
+  test_vector_bool<32>();
+  test_vector_bool<49>();
+  test_vector_bool<64>();
+  test_vector_bool<199>();
+  test_vector_bool<256>();
+#endif
 
   return true;
 }

@@ -456,9 +456,9 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; GISEL-CI-NEXT:    v_mad_f32 v0, v4, v0, v1
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v1, v5, v2
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
-  %src0.shuf = shufflevector <2 x half> %src0, <2 x half> undef, <2 x i32> <i32 1, i32 0>
-  %src1.shuf = shufflevector <2 x half> %src1, <2 x half> undef, <2 x i32> <i32 0, i32 1>
-  %src2.shuf = shufflevector <2 x half> %src2, <2 x half> undef, <2 x i32> <i32 1, i32 1>
+  %src0.shuf = shufflevector <2 x half> %src0, <2 x half> poison, <2 x i32> <i32 1, i32 0>
+  %src1.shuf = shufflevector <2 x half> %src1, <2 x half> poison, <2 x i32> <i32 0, i32 1>
+  %src2.shuf = shufflevector <2 x half> %src2, <2 x half> poison, <2 x i32> <i32 1, i32 1>
   %src0.ext = fpext <2 x half> %src0.shuf to <2 x float>
   %src1.ext = fpext <2 x half> %src1.shuf to <2 x float>
   %src2.ext = fpext <2 x half> %src2.shuf to <2 x float>
@@ -1970,15 +1970,12 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd(half %src0,
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v2.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v0.l
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
 ; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v2.l
 ; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v2, v0
-; SDAG-GFX1100-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v1
+; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v0, v1
+; SDAG-GFX1100-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v2
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX1100-FAKE16-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd:
@@ -2071,12 +2068,10 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half 
 ; SDAG-GFX1100-TRUE16-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd:
 ; SDAG-GFX1100-TRUE16:       ; %bb.0:
 ; SDAG-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v0.l
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.h
-; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v1, v0
-; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
+; SDAG-GFX1100-TRUE16-NEXT:    v_cvt_f32_f16_e32 v1, v1.l
+; SDAG-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; SDAG-GFX1100-TRUE16-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-GFX1100-TRUE16-NEXT:    v_add_f32_e32 v0, v0, v2
 ; SDAG-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
