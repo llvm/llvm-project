@@ -163,9 +163,6 @@ public:
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
 
-  unsigned getNumFixupKinds() const override {
-    return X86::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
@@ -646,7 +643,7 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < X86::NumTargetFixupKinds &&
          "Invalid kind!");
   assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
   return Infos[Kind - FirstTargetFixupKind];
