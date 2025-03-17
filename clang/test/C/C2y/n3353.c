@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify=expected,c2y -pedantic -std=c2y %s
+// RUN: %clang_cc1 -verify=expected,c2y,c -pedantic -std=c2y %s
 // RUN: %clang_cc1 -verify=expected,c2y,compat -Wpre-c2y-compat -std=c2y %s
-// RUN: %clang_cc1 -verify=expected,ext -pedantic -std=c23 %s
+// RUN: %clang_cc1 -verify=expected,ext,c -pedantic -std=c23 %s
 // RUN: %clang_cc1 -verify=expected,cpp -pedantic -x c++ -Wno-c11-extensions %s
 
 
@@ -22,6 +22,18 @@ static_assert(0O1234 == 0o1234);  /* ext-warning 2 {{octal integer literals are 
                                      cpp-warning 2 {{octal integer literals are a Clang extension}}
                                      compat-warning 2 {{octal integer literals are incompatible with standards before C2y}}
                                    */
+
+// Show that you can use them with the usual integer literal suffixes.
+static_assert(0o234ull == 156);  /* ext-warning {{octal integer literals are a C2y extension}}
+                                    cpp-warning {{octal integer literals are a Clang extension}}
+                                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                  */
+
+// And it's still a valid null pointer constant.
+static const void *ptr = 0o0;  /* ext-warning {{octal integer literals are a C2y extension}}
+                                  cpp-warning {{octal integer literals are a Clang extension}}
+                                  compat-warning {{octal integer literals are incompatible with standards before C2y}}
+                                */
 
 // Demonstrate that it works fine in the preprocessor.
 #if 0o123 != 0x53   /* ext-warning {{octal integer literals are a C2y extension}}
@@ -94,10 +106,12 @@ int r = M;  /* compat-warning {{octal integer literals are incompatible with sta
 
 // Also, test delimited escape sequences. Note, this paper added a delimited
 // escape sequence for octal *and* hex.
-auto a = "\x{12}\o{12}";   /* compat-warning 2 {{delimited escape sequences are incompatible with C standards before C2y}}
-                              ext-warning 2 {{delimited escape sequences are a C2y extension}}
-                              cpp-warning 2 {{delimited escape sequences are a C++23 extension}}
-                            */
+auto a = "\x{12}\o{12}\N{SPARKLES}";   /* compat-warning 2 {{delimited escape sequences are incompatible with C standards before C2y}}
+                                          ext-warning 2 {{delimited escape sequences are a C2y extension}}
+                                          cpp-warning 2 {{delimited escape sequences are a C++23 extension}}
+                                          cpp-warning {{named escape sequences are a C++23 extension}}
+                                          c-warning {{named escape sequences are a Clang extension}}
+                                        */
 
 #ifdef __cplusplus
 template <unsigned N>
