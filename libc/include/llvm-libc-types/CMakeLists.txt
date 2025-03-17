@@ -99,7 +99,14 @@ add_header(tss_dtor_t HDR tss_dtor_t.h)
 add_header(__atexithandler_t HDR __atexithandler_t.h)
 add_header(speed_t HDR speed_t.h)
 add_header(tcflag_t HDR tcflag_t.h)
-add_header(struct_termios HDR struct_termios.h DEPENDS .cc_t .speed_t .tcflag_t)
+add_header(
+    struct_termios
+  HDR
+    struct_termios.h
+  DEPENDS
+    .cc_t .speed_t .tcflag_t
+    libc.include.llvm-libc-macros.termios_macros
+)
 add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
 add_header(char8_t HDR char8_t.h)

@@ -11,7 +11,6 @@
 
 #include "__llvm-libc-common.h"
 #include "llvm-libc-macros/inttypes-macros.h"
-#include <stdint.h>
 
 %%public_api()
 

@@ -13,6 +13,8 @@
 #include "speed_t.h"
 #include "tcflag_t.h"
 
+#include "../llvm-libc-macros/termios-macros.h" // NCCS
+
 struct termios {
   tcflag_t c_iflag; // Input mode flags
   tcflag_t c_oflag; // Output mode flags
@@ -21,7 +23,6 @@ struct termios {
 #ifdef __linux__
   cc_t c_line; // Line discipline
 #endif         // __linux__
-  // NCCS is defined in llvm-libc-macros/termios-macros.h.
   cc_t c_cc[NCCS]; // Control characters
 #ifdef __linux__
   speed_t c_ispeed; // Input speed
