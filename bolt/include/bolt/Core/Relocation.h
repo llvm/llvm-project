@@ -47,6 +47,9 @@ struct Relocation {
   /// Relocation type.
   uint32_t Type;
 
+  /// Relocations added by optimizations can be optional.
+  bool Optional;
+
   /// The offset from the \p Symbol base used to compute the final
   /// value of this relocation.
   uint64_t Addend;

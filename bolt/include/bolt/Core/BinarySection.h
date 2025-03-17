@@ -359,15 +359,18 @@ public:
 
   /// Add a new relocation at the given /p Offset.
   void addRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
-                     uint64_t Addend, uint64_t Value = 0) {
+                     bool Optional, uint64_t Addend, uint64_t Value = 0) {
     assert(Offset < getSize() && "offset not within section bounds");
-    Relocations.emplace(Relocation{Offset, Symbol, Type, Addend, Value});
+    Relocations.emplace(
+        Relocation{Offset, Symbol, Type, Optional, Addend, Value});
   }
 
   /// Add a dynamic relocation at the given /p Offset.
   void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0) {
-    addDynamicRelocation(Relocation{Offset, Symbol, Type, Addend, Value});
+                            bool Optional, uint64_t Addend,
+                            uint64_t Value = 0) {
+    addDynamicRelocation(
+        Relocation{Offset, Symbol, Type, Optional, Addend, Value});
   }
 
   void addDynamicRelocation(const Relocation &Reloc) {
@@ -401,13 +404,13 @@ public:
 
   /// Lookup the relocation (if any) at the given /p Offset.
   const Relocation *getDynamicRelocationAt(uint64_t Offset) const {
-    Relocation Key{Offset, 0, 0, 0, 0};
+    Relocation Key{Offset, 0, 0, 0, 0, 0};
     auto Itr = DynamicRelocations.find(Key);
     return Itr != DynamicRelocations.end() ? &*Itr : nullptr;
   }
 
   std::optional<Relocation> takeDynamicRelocationAt(uint64_t Offset) {
-    Relocation Key{Offset, 0, 0, 0, 0};
+    Relocation Key{Offset, 0, 0, 0, 0, 0};
     auto Itr = DynamicRelocations.find(Key);
 
     if (Itr == DynamicRelocations.end())

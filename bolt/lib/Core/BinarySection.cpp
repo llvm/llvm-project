@@ -49,8 +49,8 @@ BinarySection::hash(const BinaryData &BD,
 
   uint64_t Offset = BD.getAddress() - getAddress();
   const uint64_t EndOffset = BD.getEndAddress() - getAddress();
-  auto Begin = Relocations.lower_bound(Relocation{Offset, 0, 0, 0, 0});
-  auto End = Relocations.upper_bound(Relocation{EndOffset, 0, 0, 0, 0});
+  auto Begin = Relocations.lower_bound(Relocation{Offset, 0, 0, 0, 0, 0});
+  auto End = Relocations.upper_bound(Relocation{EndOffset, 0, 0, 0, 0, 0});
   const StringRef Contents = getContents();
 
   while (Begin != End) {
@@ -275,7 +275,8 @@ void BinarySection::reorderContents(const std::vector<BinaryData *> &Order,
     // of the reordered segment to force LLVM to recognize and map this
     // section.
     MCSymbol *ZeroSym = BC.registerNameAtAddress("Zero", 0, 0, 0);
-    addRelocation(OS.tell(), ZeroSym, Relocation::getAbs64(), 0xdeadbeef);
+    addRelocation(OS.tell(), ZeroSym, Relocation::getAbs64(),
+                  /*Optional*/ false, 0xdeadbeef);
 
     uint64_t Zero = 0;
     OS.write(reinterpret_cast<const char *>(&Zero), sizeof(Zero));

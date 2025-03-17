@@ -1420,7 +1420,7 @@ void RewriteInstance::updateRtFiniReloc() {
   // desired value.
   FiniArraySection->addPendingRelocation(Relocation{
       /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-      /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+      /*Optional*/ false, /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
 }
 
 void RewriteInstance::registerFragments() {
@@ -1919,7 +1919,8 @@ void RewriteInstance::relocateEHFrameSection() {
     // Create a relocation against an absolute value since the goal is to
     // preserve the contents of the section independent of the new values
     // of referenced symbols.
-    RelocatedEHFrameSection->addRelocation(Offset, nullptr, RelType, Value);
+    RelocatedEHFrameSection->addRelocation(Offset, nullptr, RelType,
+                                           /*Optional*/ false, Value);
   };
 
   Error E = EHFrameParser::parse(DE, EHFrameSection->getAddress(), createReloc);
@@ -2455,7 +2456,8 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
-    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
+    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, /*Optional*/ false,
+                             Addend);
   }
 }
 
@@ -2486,7 +2488,8 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: R_*_RELATIVE relocation at 0x"
                       << Twine::utohexstr(Address) << " to 0x"
                       << Twine::utohexstr(Addend) << '\n';);
-    BC->addDynamicRelocation(Address, nullptr, RType, Addend);
+    BC->addDynamicRelocation(Address, nullptr, RType, /*Optional*/ false,
+                             Addend);
   };
 
   DataExtractor DE = DataExtractor(Section.getContents(),
@@ -2686,8 +2689,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // This might be a relocation for an ABS symbols like __global_pointer$ on
       // RISC-V
       ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol,
-                                  Relocation::getType(Rel), 0,
-                                  cantFail(Symbol.getValue()));
+                                  Relocation::getType(Rel), /*Optional*/ false,
+                                  0, cantFail(Symbol.getValue()));
       return;
     }
   }
@@ -2719,7 +2722,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // the code. It's required  to properly handle cases where
       // "symbol + addend" references an object different from "symbol".
       ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
-                                  Addend, ExtractedValue);
+                                  /*Optional*/ false, Addend, ExtractedValue);
     } else {
       LLVM_DEBUG({
         dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at"
@@ -2953,10 +2956,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (IsFromCode)
     ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
-                                Addend, ExtractedValue);
+                                /*Optional*/ false, Addend, ExtractedValue);
   else if (IsToCode || ForceRelocation)
-    BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
-                      ExtractedValue);
+    BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
+                      /*Optional*/ false, Addend, ExtractedValue);
   else
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
 }

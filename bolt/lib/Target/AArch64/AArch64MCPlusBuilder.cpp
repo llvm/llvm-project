@@ -2291,7 +2291,8 @@ public:
 
     auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
-    return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
+    return Relocation(
+        {RelOffset, RelSymbol, RelType, /*Optional*/ false, RelAddend, 0});
   }
 
   uint16_t getMinFunctionAlignment() const override { return 4; }

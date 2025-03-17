@@ -487,8 +487,8 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
     if (!BF)
       continue;
 
-    BC.addRelocation(EntryAddress, BF->getSymbol(), Relocation::getPC32(), 0,
-                     *Offset);
+    BC.addRelocation(EntryAddress, BF->getSymbol(), Relocation::getPC32(),
+                     /*Optional*/ false, 0, *Offset);
   }
 }
 
@@ -559,7 +559,7 @@ void LinuxKernelRewriter::processInstructionFixups() {
     Fixup.Section.addRelocation(Fixup.Offset, &Fixup.Label,
                                 Fixup.IsPCRelative ? ELF::R_X86_64_PC32
                                                    : ELF::R_X86_64_64,
-                                /*Addend*/ 0);
+                                /*Optional*/ false, /*Addend*/ 0);
   }
 }
 
@@ -828,7 +828,8 @@ Error LinuxKernelRewriter::rewriteORCTables() {
 
     if (Label)
       ORCUnwindIPSection->addRelocation(UnwindIPWriter.getOffset(), Label,
-                                        Relocation::getPC32(), /*Addend*/ 0);
+                                        Relocation::getPC32(),
+                                        /*Optional*/ false, /*Addend*/ 0);
 
     const int32_t IPValue =
         IP - ORCUnwindIPSection->getAddress() - UnwindIPWriter.getOffset();
@@ -1074,7 +1075,8 @@ Error LinuxKernelRewriter::rewriteStaticCalls() {
                                  StaticCallSection->getAddress() +
                                  (Entry.ID - 1) * STATIC_CALL_ENTRY_SIZE;
     StaticCallSection->addRelocation(EntryOffset, Entry.Label,
-                                     ELF::R_X86_64_PC32, /*Addend*/ 0);
+                                     ELF::R_X86_64_PC32, /*Optional*/ false,
+                                     /*Addend*/ 0);
   }
 
   return Error::success();
@@ -1378,7 +1380,7 @@ Error LinuxKernelRewriter::rewriteBugTable() {
             BC.MIB->getOrCreateInstLabel(Inst, "__BUG_", BC.Ctx.get());
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
         BugTableSection->addRelocation(EntryOffset, Label, ELF::R_X86_64_PC32,
-                                       /*Addend*/ 0);
+                                       /*Optional*/ false, /*Addend*/ 0);
       }
     }
 
@@ -1388,7 +1390,7 @@ Error LinuxKernelRewriter::rewriteBugTable() {
       if (!EmittedIDs.count(ID)) {
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
         BugTableSection->addRelocation(EntryOffset, nullptr, ELF::R_X86_64_PC32,
-                                       /*Addend*/ 0);
+                                       /*Optional*/ false, /*Addend*/ 0);
       }
     }
   }
@@ -1904,9 +1906,10 @@ Error LinuxKernelRewriter::rewriteStaticKeysJumpTable() {
                                      (EntryID - 1) * 16;
         StaticKeysJumpSection->addRelocation(EntryOffset, Label,
                                              ELF::R_X86_64_PC32,
-                                             /*Addend*/ 0);
+                                             /*Optional*/ false, /*Addend*/ 0);
         StaticKeysJumpSection->addRelocation(EntryOffset + 4, Target,
-                                             ELF::R_X86_64_PC32, /*Addend*/ 0);
+                                             ELF::R_X86_64_PC32,
+                                             /*Optional*/ false, /*Addend*/ 0);
       }
     }
   }

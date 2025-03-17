@@ -92,7 +92,8 @@ void bolt::JumpTable::updateOriginal() {
     // to the original jump table.
     if (BC.HasRelocations)
       getOutputSection().removeRelocationAt(EntryOffset);
-    getOutputSection().addRelocation(EntryOffset, Entry, RelType, RelAddend);
+    getOutputSection().addRelocation(EntryOffset, Entry, RelType,
+                                     /*Optional*/ false, RelAddend);
     EntryOffset += EntrySize;
   }
 }

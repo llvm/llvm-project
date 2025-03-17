@@ -4623,8 +4623,8 @@ bool BinaryFunction::isAArch64Veneer() const {
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                   uint32_t RelType, uint64_t Addend,
-                                   uint64_t Value) {
+                                   uint32_t RelType, bool Optional,
+                                   uint64_t Addend, uint64_t Value) {
   assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
          "address is outside of the function");
   uint64_t Offset = Address - getAddress();
@@ -4635,7 +4635,7 @@ void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
   std::map<uint64_t, Relocation> &Rels =
       IsCI ? Islands->Relocations : Relocations;
   if (BC.MIB->shouldRecordCodeRelocation(RelType))
-    Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
+    Rels[Offset] = Relocation{Offset, Symbol, RelType, Optional, Addend, Value};
 }
 
 } // namespace bolt
