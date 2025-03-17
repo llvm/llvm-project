@@ -126,11 +126,6 @@ static cl::opt<bool> MulConstantOptimization(
              "SHIFT, LEA, etc."),
     cl::Hidden);
 
-static cl::opt<bool>
-    EnableBaseIndexUpdate("update-baseIndex", cl::init(true),
-                          cl::desc("Update the value of base and index"),
-                          cl::Hidden);
-
 X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -56379,9 +56374,6 @@ static SDValue rebuildGatherScatter(MaskedGatherScatterSDNode *GorS,
 // and index value of a non-uniform gep
 static bool updateBaseAndIndex(SDValue &Base, SDValue &Index, const SDLoc &DL,
                                const SDValue &Gep, SelectionDAG &DAG) {
-  if (!EnableBaseIndexUpdate)
-    return false;
-
   SDValue Nbase;
   SDValue Nindex;
   bool Changed = false;
@@ -56397,7 +56389,7 @@ static bool updateBaseAndIndex(SDValue &Base, SDValue &Index, const SDLoc &DL,
           IndexWidth > 32 &&
           Op10.getOperand(0).getScalarValueSizeInBits() <= 32 &&
           DAG.ComputeNumSignBits(Op10) > (IndexWidth - 32) &&
-          Op11.getOpcode() == ISD::BUILD_VECTOR) {
+          DAG.getValidMinimumShiftAmount(Idx)) {
 
         KnownBits ExtKnown = DAG.computeKnownBits(Op10);
         bool ExtIsNonNegative = ExtKnown.isNonNegative();
