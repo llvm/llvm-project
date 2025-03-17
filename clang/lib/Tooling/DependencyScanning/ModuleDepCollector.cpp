@@ -158,25 +158,25 @@ static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
 }
 
 /// Check a subset of invocation options to determine whether the current
-/// context can safely be considered as shareable.
-static bool areOptionsInSharedDir(CowCompilerInvocation &BuildInvocation,
-                                  const ArrayRef<StringRef> SharedDirs) {
+/// context can safely be considered as stable.
+static bool areOptionsInStableDir(CowCompilerInvocation &BuildInvocation,
+                                  const ArrayRef<StringRef> StableDirs) {
   const auto &HSOpts = BuildInvocation.getHeaderSearchOpts();
-  assert(isPathInSharedDir(SharedDirs, HSOpts.Sysroot) &&
+  assert(isPathInStableDir(StableDirs, HSOpts.Sysroot) &&
          "Sysroots differ between module dependencies and current TU");
 
-  assert(isPathInSharedDir(SharedDirs, HSOpts.ResourceDir) &&
+  assert(isPathInStableDir(StableDirs, HSOpts.ResourceDir) &&
          "ResourceDirs differ between module dependencies and current TU");
 
   for (const auto &Entry : HSOpts.UserEntries) {
     if (!Entry.IgnoreSysRoot)
       continue;
-    if (!isPathInSharedDir(SharedDirs, Entry.Path))
+    if (!isPathInStableDir(StableDirs, Entry.Path))
       return false;
   }
 
   for (const auto &SysPrefix : HSOpts.SystemHeaderPrefixes) {
-    if (!isPathInSharedDir(SharedDirs, SysPrefix.Prefix))
+    if (!isPathInStableDir(StableDirs, SysPrefix.Prefix))
       return false;
   }
 
@@ -238,7 +238,7 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
   }
 }
 
-bool dependencies::isPathInSharedDir(ArrayRef<StringRef> Directories,
+bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
                                      const StringRef Input) {
   auto PathStartsWith = [](StringRef Prefix, StringRef Path) {
     auto PrefixIt = llvm::sys::path::begin(Prefix),
@@ -747,12 +747,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Start off with the assumption that this module is shareable when there
   // is a sysroot provided. As more dependencies are discovered, check if those
   // come from the provided shared directories.
-  const llvm::SmallVector<StringRef> SharedDirs = {
+  const llvm::SmallVector<StringRef> StableDirs = {
       MDC.ScanInstance.getHeaderSearchOpts().Sysroot,
       MDC.ScanInstance.getHeaderSearchOpts().ResourceDir};
-  MD.IsShareable =
-      !SharedDirs[0].empty() &&
-      (llvm::sys::path::root_directory(SharedDirs[0]) != SharedDirs[0]);
+  MD.IsInStableDirectories =
+      !StableDirs[0].empty() &&
+      (llvm::sys::path::root_directory(StableDirs[0]) != StableDirs[0]);
 
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
@@ -795,10 +795,11 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        if (MD.IsShareable) {
+        if (MD.IsInStableDirectories) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
-          MD.IsShareable = isPathInSharedDir(SharedDirs, *FullFilePath);
+          MD.IsInStableDirectories =
+              isPathInStableDir(StableDirs, *FullFilePath);
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
@@ -841,9 +842,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
             }
           });
 
-  // Check provided input paths from the invocation for determining IsShareable.
-  if (MD.IsShareable)
-    MD.IsShareable = areOptionsInSharedDir(CI, SharedDirs);
+  // Check provided input paths from the invocation for determining
+  // IsInStableDirectories.
+  if (MD.IsInStableDirectories)
+    MD.IsInStableDirectories = areOptionsInStableDir(CI, StableDirs);
 
   MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
@@ -888,10 +890,10 @@ void ModuleDepCollectorPP::addModulePrebuiltDeps(
       if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
         if (SeenSubmodules.insert(Import->getTopLevelModule()).second) {
           MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
-          // Conservatively consider the module as not shareable,
-          // as transitive dependencies from the prebuilt module have not been
-          // determined.
-          MD.IsShareable = false;
+          // Conservatively consider the module as not coming from stable
+          // directories, as transitive dependencies from the prebuilt module
+          // have not been determined.
+          MD.IsInStableDirectories = false;
         }
 }
 
@@ -908,8 +910,8 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
 void ModuleDepCollectorPP::addOneModuleDep(const Module *M, const ModuleID ID,
                                            ModuleDeps &MD) {
   MD.ClangModuleDeps.push_back(ID);
-  if (MD.IsShareable)
-    MD.IsShareable = MDC.ModularDeps[M]->IsShareable;
+  if (MD.IsInStableDirectories)
+    MD.IsInStableDirectories = MDC.ModularDeps[M]->IsInStableDirectories;
 }
 
 void ModuleDepCollectorPP::addModuleDep(

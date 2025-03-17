@@ -1,9 +1,9 @@
-// This test verifies modules that are entirely comprised from shared directory inputs are captured in
+// This test verifies modules that are entirely comprised from stable directory inputs are captured in
 // dependency information.
 
 // The first compilation verifies that transitive dependencies on local input are captured.
 // The second compilation verifies that external paths are resolved when a 
-// vfsoverlay for determining is-shareable.
+// vfsoverlay for determining is-in-stable-directories.
 
 // REQUIRES: shell
 // RUN: rm -rf %t
@@ -16,11 +16,11 @@
 
 // CHECK:   "modules": [
 // CHECK-NEXT:     {
-// CHECK:            "is-shareable": true,
+// CHECK:            "is-in-stable-directories": true,
 // CHECK:            "name": "A"
 
 // Verify that there are no more occurances of sysroot.
-// CHECK-NOT:            "is-shareable"
+// CHECK-NOT:            "is-in-stable-directories"
 
 // CHECK:            "name": "A"
 // CHECK:            "USE_VFS"

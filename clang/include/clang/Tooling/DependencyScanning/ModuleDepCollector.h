@@ -120,7 +120,7 @@ struct ModuleDeps {
   ///
   /// External paths, as opposed to virtual file paths, are always used
   /// for computing this value.
-  bool IsShareable;
+  bool IsInStableDirectories;
 
   /// The path to the modulemap file which defines this module.
   ///
@@ -331,11 +331,12 @@ void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                const LangOptions &LangOpts,
                                CodeGenOptions &CGOpts);
 
-/// Determine if \c Input can be resolved within a shared location.
+/// Determine if \c Input can be resolved within a stable directory.
 ///
-/// \param Directories Paths known to be in a shared location. e.g. Sysroot.
+/// \param Directories Paths known to be in a stable location. e.g. Sysroot.
 /// \param Input Path to evaluate.
-bool isPathInSharedDir(ArrayRef<StringRef> Directories, const StringRef Input);
+bool isPathInStableDir(const ArrayRef<StringRef> Directories,
+                       const StringRef Input);
 
 } // end namespace dependencies
 } // end namespace tooling

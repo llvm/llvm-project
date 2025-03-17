@@ -1,4 +1,4 @@
-/// This test validates that modules that depend on prebuilt modules resolve `is-shareable` as false.
+/// This test validates that modules that depend on prebuilt modules resolve `is-in-stable-directories` as false.
  
 // REQUIRES: shell
 // RUN: rm -rf %t
@@ -17,11 +17,11 @@
 // RUN: cat %t/deps_pch.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefix PCH_DEP
 // RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t 
 
-// PCH_DEP: "is-shareable": true
+// PCH_DEP: "is-in-stable-directories": true
 // PCH_DEP: "name": "A"
  
-// Verify is-shareable is not in any module dependencies, as they all depend on prebuilt modules.
-// CHECK-NOT: "is-shareable"
+// Verify is-in-stable-directories is not in any module dependencies, as they all depend on prebuilt modules.
+// CHECK-NOT: "is-in-stable-directories"
 
 //--- compile-pch.json.in
 [
