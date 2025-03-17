@@ -1,0 +1,93 @@
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK-DAG: OpName %[[#Foo:]] "foo"
+; CHECK: %[[#Foo]] = OpFunction
+; CHECK: OpPhi
+; CHECK-NEXT: OpPhi
+; CHECK-NEXT: OpPhi
+; CHECK-NEXT: OpPhi
+
+target triple = "spir64-unknown-unknown"
+
+define spir_kernel void @foo(i64 noundef %addr, i32 noundef %as, i64 noundef %size, i1 noundef zeroext %is_write, i64 noundef %poisoned_addr, ptr addrspace(2) noundef %file, i32 noundef %line, ptr addrspace(2) noundef %func, i1 noundef zeroext %is_recover) {
+entry:
+  %call = tail call spir_func noundef i64 @_ZN12_GLOBAL__N_111MemToShadowEmj(i64 noundef %poisoned_addr, i32 noundef %as)
+  %0 = inttoptr i64 %call to ptr addrspace(1)
+  %1 = load i8, ptr addrspace(1) %0, align 1
+  %cmp = icmp sgt i8 %1, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %add.ptr = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  %2 = load i8, ptr addrspace(1) %add.ptr, align 1
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  %shadow_value.0.in = phi i8 [ %2, %if.then ], [ %1, %entry ]
+  switch i8 %shadow_value.0.in, label %sw.default.i [
+    i8 -127, label %exit
+    i8 -111, label %exit
+    i8 -126, label %sw.bb1.i
+    i8 -110, label %sw.bb1.i
+    i8 -125, label %sw.bb2.i
+    i8 -109, label %sw.bb2.i
+    i8 -15, label %sw.bb3.i
+    i8 -14, label %sw.bb3.i
+    i8 -13, label %sw.bb3.i
+    i8 -124, label %sw.epilog
+    i8 -95, label %sw.bb5.i
+    i8 -123, label %sw.bb6.i
+  ]
+
+sw.bb1.i:                                         ; preds = %if.end, %if.end
+  br label %exit
+
+sw.bb2.i:                                         ; preds = %if.end, %if.end
+  br label %exit
+
+sw.bb3.i:                                         ; preds = %if.end, %if.end, %if.end
+  br label %exit
+
+sw.bb5.i:                                         ; preds = %if.end
+  br label %sw.epilog
+
+sw.bb6.i:                                         ; preds = %if.end
+  br label %sw.epilog
+
+sw.default.i:                                     ; preds = %if.end
+  br label %exit
+
+exit: ; preds = %sw.default.i, %sw.bb3.i, %sw.bb2.i, %sw.bb1.i, %if.end, %if.end
+  %retval.0.i = phi i32 [ 0, %sw.default.i ], [ 5, %sw.bb3.i ], [ 3, %sw.bb2.i ], [ 2, %sw.bb1.i ], [ 1, %if.end ], [ 1, %if.end ]
+  switch i8 %shadow_value.0.in, label %sw.default [
+    i8 -127, label %sw.epilog
+    i8 -126, label %sw.epilog
+    i8 -125, label %sw.epilog
+    i8 -15, label %sw.epilog
+    i8 -14, label %sw.epilog
+    i8 -13, label %sw.epilog
+    i8 -124, label %sw.epilog
+    i8 -95, label %sw.epilog
+    i8 -123, label %sw.epilog
+    i8 -111, label %sw.bb4
+    i8 -110, label %sw.bb4
+    i8 -109, label %sw.bb4
+  ]
+
+sw.bb4:                                           ; preds = %exit, %exit, %exit
+  br label %sw.epilog
+
+sw.default:                                       ; preds = %exit
+  br label %sw.epilog
+
+sw.epilog:                                        ; preds = %sw.default, %sw.bb4, %exit, %exit, %exit, %exit, %exit, %exit, %exit, %exit, %exit, %sw.bb6.i, %sw.bb5.i, %if.end
+  %retval.0.i13 = phi i32 [ %retval.0.i, %sw.default ], [ %retval.0.i, %sw.bb4 ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ %retval.0.i, %exit ], [ 4, %sw.bb5.i ], [ 7, %sw.bb6.i ], [ 6, %if.end ]
+  %error_type.0 = phi i32 [ 0, %sw.default ], [ 3, %sw.bb4 ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %exit ], [ 1, %sw.bb5.i ], [ 1, %sw.bb6.i ], [ 1, %if.end ]
+  %conv5 = trunc i64 %size to i32
+  tail call spir_func void @_ZN12_GLOBAL__N_127__asan_internal_report_saveEmjPU3AS2KcjS1_bj25DeviceSanitizerMemoryType24DeviceSanitizerErrorTypeb(i64 noundef %addr, ptr addrspace(2) noundef %file, i32 noundef %line, ptr addrspace(2) noundef %func, i1 noundef zeroext %is_write, i32 noundef %conv5, i32 noundef %retval.0.i13, i32 noundef %error_type.0, i1 noundef zeroext %is_recover)
+  ret void
+}
+
+declare i64 @_ZN12_GLOBAL__N_111MemToShadowEmj(i64 noundef, i32 noundef)
+declare void @_ZN12_GLOBAL__N_127__asan_internal_report_saveEmjPU3AS2KcjS1_bj25DeviceSanitizerMemoryType24DeviceSanitizerErrorTypeb(i64 noundef, ptr addrspace(2) noundef, i32 noundef, ptr addrspace(2) noundef, i1 noundef zeroext, i32 noundef, i32 noundef, i32 noundef, i1 noundef zeroext)

@@ -221,12 +221,12 @@ private:
   bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
-  void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
-                   int OpIdx) const;
-  void renderFImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
-                    int OpIdx) const;
+  //void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
+  //                 int OpIdx) const;
+  //void renderFImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
+  //                  int OpIdx) const;
 
-  bool selectConst(Register ResVReg, const SPIRVType *ResType, const APInt &Imm,
+  bool selectConst(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
   bool selectSelect(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
@@ -396,7 +396,8 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
-      //GR.invalidateMachineInstr(&I);
+      if (isPreISelGenericOpcode(MI.getOpcode()))
+        GR.erase(&MI);
       if (MI.getOpcode() != SPIRV::ASSIGN_TYPE)
         continue;
 
@@ -501,7 +502,9 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       Register DstReg = I.getOperand(0).getReg();
       Register SrcReg = I.getOperand(1).getReg();
       auto *Def = MRI->getVRegDef(SrcReg);
-      if (isTypeFoldingSupported(Def->getOpcode())) {
+      if (isTypeFoldingSupported(Def->getOpcode()) &&
+          Def->getOpcode() != TargetOpcode::G_CONSTANT &&
+          Def->getOpcode() != TargetOpcode::G_FCONSTANT) {
         bool Res = selectImpl(I, *CoverageInfo);
         LLVM_DEBUG({
           if (!Res && Def->getOpcode() != TargetOpcode::G_CONSTANT) {
@@ -564,6 +567,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
 static bool mayApplyGenericSelection(unsigned Opcode) {
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
+  case TargetOpcode::G_FCONSTANT:
     return false;
   case TargetOpcode::G_SADDO:
   case TargetOpcode::G_SSUBO:
@@ -593,8 +597,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectImpl(I, *CoverageInfo);
   switch (Opcode) {
   case TargetOpcode::G_CONSTANT:
-    return selectConst(ResVReg, ResType, I.getOperand(1).getCImm()->getValue(),
-                       I);
+  case TargetOpcode::G_FCONSTANT:
+    return selectConst(ResVReg, ResType, I);
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(ResVReg, I);
   case TargetOpcode::G_IMPLICIT_DEF:
@@ -2464,7 +2468,7 @@ bool SPIRVInstructionSelector::selectICmp(Register ResVReg,
     CmpOpc = getICmpOpcode(Pred);
   return selectCmp(ResVReg, ResType, CmpOpc, I);
 }
-
+/*
 void SPIRVInstructionSelector::renderFImm64(MachineInstrBuilder &MIB,
                                             const MachineInstr &I,
                                             int OpIdx) const {
@@ -2481,7 +2485,7 @@ void SPIRVInstructionSelector::renderImm32(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   addNumImm(I.getOperand(1).getCImm()->getValue(), MIB);
 }
-
+*/
 std::pair<Register, bool>
 SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                                            const SPIRVType *ResType) const {
@@ -2715,37 +2719,24 @@ bool SPIRVInstructionSelector::selectTrunc(Register ResVReg,
 
 bool SPIRVInstructionSelector::selectConst(Register ResVReg,
                                            const SPIRVType *ResType,
-                                           const APInt &Imm,
                                            MachineInstr &I) const {
-  unsigned TyOpcode = ResType->getOpcode();
-  assert(TyOpcode != SPIRV::OpTypePointer || Imm.isZero());
-  MachineBasicBlock &BB = *I.getParent();
-  if ((TyOpcode == SPIRV::OpTypePointer || TyOpcode == SPIRV::OpTypeEvent) &&
-      Imm.isZero())
-    return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .constrainAllUses(TII, TRI, RBI);
-  if (TyOpcode == SPIRV::OpTypeInt) {
-    assert(Imm.getBitWidth() <= 64 && "Unsupported integer width!");
-    const ConstantInt *CI =
-        ConstantInt::get(const_cast<IntegerType *>(cast<IntegerType>(
-                             GR.getTypeForSPIRVType(ResType))),
-                         Imm.getZExtValue());
-    const MachineInstr *ConstMI = GR.findMI(CI, GR.CurMF);
-    Register Reg =
-        (ConstMI && ConstMI != &I)
-            ? ConstMI->getOperand(0).getReg()
-            : GR.createConstInt(CI, I, ResType, TII, STI.isOpenCLEnv());
-    return Reg == ResVReg ? true : BuildCOPY(ResVReg, Reg, I);
+  unsigned Opcode = I.getOpcode();
+  unsigned TpOpcode = ResType->getOpcode();
+  Register Reg;
+  if (TpOpcode == SPIRV::OpTypePointer || TpOpcode == SPIRV::OpTypeEvent) {
+    assert(Opcode == TargetOpcode::G_CONSTANT &&
+           I.getOperand(1).getCImm()->isZero());
+    MachineBasicBlock &DepMBB = I.getMF()->front();
+    MachineIRBuilder MIRBuilder(DepMBB, DepMBB.getFirstNonPHI());
+    Reg = GR.getOrCreateConstNullPtr(MIRBuilder, ResType);
+  } else if (Opcode == TargetOpcode::G_FCONSTANT) {
+    Reg = GR.getOrCreateConstFP(I.getOperand(1).getFPImm()->getValue(), I,
+                                ResType, TII, STI.isOpenCLEnv());
+  } else {
+    Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getZExtValue(), I,
+                                 ResType, TII, STI.isOpenCLEnv());
   }
-  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantI))
-                 .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(ResType));
-  // <=32-bit integers should be caught by the sdag pattern.
-  assert(Imm.getBitWidth() > 32);
-  addNumImm(Imm, MIB);
-  return MIB.constrainAllUses(TII, TRI, RBI);
+  return Reg == ResVReg ? true : BuildCOPY(ResVReg, Reg, I);
 }
 
 bool SPIRVInstructionSelector::selectOpUndef(Register ResVReg,

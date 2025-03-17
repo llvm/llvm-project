@@ -47,11 +47,14 @@ extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
                               SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
                               MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
-                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
+                         MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
+                         SPIRVType *KnownResType);
 } // namespace llvm
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
+  // case TargetOpcode::G_CONSTANT:
+  // case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_SMIN:
@@ -102,20 +105,32 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register ResVReg = I.getOperand(0).getReg();
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (MRI.getRegClassOrNull(ResVReg))
+        /*if (MRI.getRegClassOrNull(ResVReg)) {
+          if (isTypeFoldingSupported(Opcode)) {
+            insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
+            processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
+          }
           continue;
-        assert(GR->getSPIRVTypeForVReg(ResVReg) == nullptr);
+        }*/
         // Check if we have type defined for operands of the new instruction
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
+        bool IsKnownReg = MRI.getRegClassOrNull(ResVReg);
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(
+            IsKnownReg ? ResVReg : I.getOperand(1).getReg());
         if (!ResVType)
           continue;
         // Set type & class
-        setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
+        if (!IsKnownReg)
+          setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
+          processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
+          if (IsKnownReg && MRI.hasOneUse(ResVReg)) {
+            MachineInstr &UseMI = *MRI.use_instr_begin(ResVReg);
+            if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
+              continue;
+          }
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
-          processInstr(I, MIB, MRI, GR);
         }
       }
     }

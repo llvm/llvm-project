@@ -326,7 +326,13 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
   SPIRVType *NewType =
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
         MachineInstrBuilder MIB;
-        if (!CI->isZero() || !ZeroAsNull) {
+        if (BitWidth == 1) {
+          MIB = MIRBuilder
+                    .buildInstr(CI->isZero() ? SPIRV::OpConstantFalse
+                                             : SPIRV::OpConstantTrue)
+                    .addDef(Res)
+                    .addUse(getSPIRVTypeID(SpvType));
+        } else if (!CI->isZero() || !ZeroAsNull) {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
@@ -360,8 +366,9 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
 
   unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
   LLT LLTy = LLT::scalar(BitWidth);
-  Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
-  MF.getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Res = MRI.createGenericVirtualRegister(LLTy);
+  MRI.setRegClass(Res, &SPIRV::iIDRegClass);
   assignTypeToVReg(Ty, Res, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
                    EmitIR);
 

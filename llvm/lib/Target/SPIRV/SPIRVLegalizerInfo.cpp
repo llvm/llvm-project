@@ -146,6 +146,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   for (auto Opc : getTypeFoldingSupportedOpcodes())
     getActionDefinitionsBuilder(Opc).custom();
+  //getActionDefinitionsBuilder(TargetOpcode::G_CONSTANT).custom();
+  //getActionDefinitionsBuilder(TargetOpcode::G_FCONSTANT).custom();
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
 
@@ -353,8 +355,7 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     LostDebugLocObserver &LocObserver) const {
   auto Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  if (!isTypeFoldingSupported(Opc)) {
-    assert(Opc == TargetOpcode::G_ICMP);
+  if (Opc == TargetOpcode::G_ICMP) {
     assert(GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
     auto &Op0 = MI.getOperand(2);
     auto &Op1 = MI.getOperand(3);

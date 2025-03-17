@@ -484,13 +484,18 @@ void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
 }
 
 void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
-                  MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR) {
+                  MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
+                  SPIRVType *KnownResType) {
   MIB.setInsertPt(*MI.getParent(), MI.getIterator());
   for (auto &Op : MI.operands()) {
     if (!Op.isReg() || Op.isDef())
       continue;
     Register OpReg = Op.getReg();
     SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OpReg);
+    if (!SpvType && KnownResType) {
+      SpvType = KnownResType;
+      GR->assignSPIRVTypeToVReg(KnownResType, OpReg, *MI.getMF());
+    }
     assert(SpvType);
     if (!MRI.getRegClassOrNull(OpReg))
       MRI.setRegClass(OpReg, GR->getRegClass(SpvType));
@@ -720,7 +725,7 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
   for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : MBB)
       if (isTypeFoldingSupported(MI.getOpcode()))
-        processInstr(MI, MIB, MRI, GR);
+        processInstr(MI, MIB, MRI, GR, nullptr);
 }
 
 static Register
