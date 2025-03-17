@@ -3576,7 +3576,7 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
     return true;
 
   const Function *Func = nullptr;
-  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+  if (auto F = Ctx.getOrCreateObjCBlock(E))
     Func = F;
 
   if (!Func)
