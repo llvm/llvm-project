@@ -1336,31 +1336,14 @@ Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
                                    const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "AnyOf reduction is not supported.");
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+         "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
   return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
-}
-
-Value *llvm::createReduction(IRBuilderBase &B,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi) {
-  // TODO: Support in-order reductions based on the recurrence descriptor.
-  // All ops in the reduction inherit fast-math-flags from the recurrence
-  // descriptor.
-  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
-  B.setFastMathFlags(Desc.getFastMathFlags());
-
-  RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfReduction(B, Src, Desc, OrigPhi);
-  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-    return createFindLastIVReduction(B, Src, Desc);
-
-  return createSimpleReduction(B, Src, RK);
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
