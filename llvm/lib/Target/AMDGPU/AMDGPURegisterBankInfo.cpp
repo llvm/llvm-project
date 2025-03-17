@@ -2416,9 +2416,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
 
-    if (DstTy.getSizeInBits() == 1) {
-      const RegisterBank *DstBank =
+    const RegisterBank *DstBank =
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+
+    if (DstTy.getSizeInBits() == 1) {
       if (DstBank == &AMDGPU::VCCRegBank)
         break;
 
@@ -2429,6 +2430,27 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       if (Helper.widenScalar(MI, 0, LLT::scalar(32)) !=
           LegalizerHelper::Legalized)
         llvm_unreachable("widen scalar should have succeeded");
+      return;
+    }
+
+    if (DstTy.getSizeInBits() == 16 && DstBank == &AMDGPU::SGPRRegBank) {
+      const LLT S32 = LLT::scalar(32);
+      MachineBasicBlock *MBB = MI.getParent();
+      MachineFunction *MF = MBB->getParent();
+      ApplyRegBankMapping ApplySALU(B, *this, MRI, &AMDGPU::SGPRRegBank);
+      LegalizerHelper Helper(*MF, ApplySALU, B);
+      // Widen to S32, but handle `G_XOR x, -1` differently. Legalizer widening
+      // will use a G_ANYEXT to extend the -1 which prevents matching G_XOR -1
+      // as "not".
+      if (MI.getOpcode() == AMDGPU::G_XOR &&
+          mi_match(MI.getOperand(2).getReg(), MRI, m_SpecificICstOrSplat(-1))) {
+        Helper.widenScalarSrc(MI, S32, 1, AMDGPU::G_ANYEXT);
+        Helper.widenScalarSrc(MI, S32, 2, AMDGPU::G_SEXT);
+        Helper.widenScalarDst(MI, S32);
+      } else {
+        if (Helper.widenScalar(MI, 0, S32) != LegalizerHelper::Legalized)
+          llvm_unreachable("widen scalar should have succeeded");
+      }
       return;
     }
 
