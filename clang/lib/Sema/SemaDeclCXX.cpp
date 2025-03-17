@@ -1681,10 +1681,10 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
   case IsTupleLike::NotTupleLike:
     break;
   }
+
   CXXRecordDecl *OrigRD = T->getAsCXXRecordDecl();
-  if (!OrigRD || OrigRD->isUnion()) {
+  if (!OrigRD || OrigRD->isUnion())
     return std::nullopt;
-  }
 
   if (RequireCompleteType(Loc, T, diag::err_incomplete_type))
     return std::nullopt;
