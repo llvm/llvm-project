@@ -100,6 +100,42 @@ int main(int argc, char** argv) {
     bm.operator()<std::list<int>>("rng::equal(list<int>) (it, it, it, it, pred)", ranges_equal_4leg_pred);
   }
 
+  // Benchmark {std,ranges}::equal on vector<bool>.
+  {
+    auto bm = [](std::string name, auto equal, bool aligned) {
+      benchmark::RegisterBenchmark(
+          name,
+          [=](auto& st) {
+            std::size_t const size = st.range();
+            std::vector<bool> c1(size, true);
+            std::vector<bool> c2(size + 8, true);
+            auto first1 = c1.begin();
+            auto last1  = c1.end();
+            auto first2 = aligned ? c2.begin() : c2.begin() + 4;
+            auto last2  = aligned ? c2.end() : c2.end() - 4;
+            for (auto _ : st) {
+              benchmark::DoNotOptimize(c1);
+              benchmark::DoNotOptimize(c2);
+              auto result = equal(first1, last1, first2, last2);
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(8)
+          ->Arg(50) // non power-of-two
+          ->Arg(1024)
+          ->Arg(8192)
+          ->Arg(1 << 20);
+    };
+
+    // {std,ranges}::equal(vector<bool>) (aligned)
+    bm("std::equal(vector<bool>) (aligned)", std_equal_4leg, true);
+    bm("rng::equal(vector<bool>) (aligned)", std::ranges::equal, true);
+
+    // {std,ranges}::equal(vector<bool>) (unaligned)
+    bm("std::equal(vector<bool>) (unaligned)", std_equal_4leg, false);
+    bm("rng::equal(vector<bool>) (unaligned)", std::ranges::equal, false);
+  }
+
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
   benchmark::Shutdown();
