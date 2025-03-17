@@ -662,10 +662,12 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        const addr_t func_start_file_addr =
-            m_range.GetBaseAddress().GetFileAddress();
-        const addr_t func_end_file_addr =
-            func_start_file_addr + m_range.GetByteSize();
+        AddressRange entry_range;
+        m_block.GetRangeContainingAddress(m_address, entry_range);
+        const addr_t range_start_file_addr = m_address.GetFileAddress();
+        const addr_t range_end_file_addr =
+            entry_range.GetBaseAddress().GetFileAddress() +
+            entry_range.GetByteSize();
 
         // Now calculate the offset to pass the subsequent line 0 entries.
         uint32_t first_non_zero_line = prologue_end_line_idx;
@@ -677,7 +679,7 @@ uint32_t Function::GetPrologueByteSize() {
               break;
           }
           if (line_entry.range.GetBaseAddress().GetFileAddress() >=
-              func_end_file_addr)
+              range_end_file_addr)
             break;
 
           first_non_zero_line++;
@@ -694,13 +696,13 @@ uint32_t Function::GetPrologueByteSize() {
 
         // Verify that this prologue end file address in the function's address
         // range just to be sure
-        if (func_start_file_addr < prologue_end_file_addr &&
-            prologue_end_file_addr < func_end_file_addr) {
-          m_prologue_byte_size = prologue_end_file_addr - func_start_file_addr;
+        if (range_start_file_addr < prologue_end_file_addr &&
+            prologue_end_file_addr < range_end_file_addr) {
+          m_prologue_byte_size = prologue_end_file_addr - range_start_file_addr;
         }
 
         if (prologue_end_file_addr < line_zero_end_file_addr &&
-            line_zero_end_file_addr < func_end_file_addr) {
+            line_zero_end_file_addr < range_end_file_addr) {
           m_prologue_byte_size +=
               line_zero_end_file_addr - prologue_end_file_addr;
         }
