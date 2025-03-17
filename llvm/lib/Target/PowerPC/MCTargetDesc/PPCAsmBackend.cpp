@@ -166,7 +166,7 @@ public:
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
-      return Kind >= FirstLiteralRelocationKind;
+      return false;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
     case PPC::fixup_ppc_br24_notoc:
