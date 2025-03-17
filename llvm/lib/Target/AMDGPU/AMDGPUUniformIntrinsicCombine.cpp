@@ -94,27 +94,35 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 }
 
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
-  bool IsChanged{false};
   Module *M = F.getParent();
   llvm::LLVMContext &Ctx = M->getContext();
-  llvm::Type *IntrinsicTy = llvm::Type::getInt32Ty(Ctx);
+  // List of AMDGPU intrinsics to optimize if their arguments are uniform.
+  std::vector<Intrinsic::ID> Intrinsics = {
+      Intrinsic::amdgcn_permlane64, Intrinsic::amdgcn_readfirstlane,
+      Intrinsic::amdgcn_readlane, Intrinsic::amdgcn_ballot};
 
-  if (!Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_permlane64,
-                                         {IntrinsicTy}) &&
-      !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readfirstlane,
-                                         {IntrinsicTy}) &&
-      !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readlane,
-                                         {IntrinsicTy}) &&
-      !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_ballot,
-                                         {IntrinsicTy})) {
-    return false;
-  }
+  bool IsChanged = false;
 
-  // Iterate over each instruction in the function to get the desired intrinsic
-  // inst to check for optimization.
-  for (Instruction &I : make_early_inc_range(instructions(F))) {
-    if (auto *Intrinsic = dyn_cast<IntrinsicInst>(&I)) {
-      IsChanged |= optimizeUniformIntrinsicInst(*Intrinsic);
+  // Iterate over each intrinsic in the list and process its uses within F.
+  for (Intrinsic::ID IID : Intrinsics) {
+    // Determine the correct return type for the intrinsic.
+    // Most intrinsics return i32, but amdgcn_ballot returns i64.
+    llvm::Type *IntrinsicTy = (IID == Intrinsic::amdgcn_ballot)
+                                  ? llvm::Type::getInt64Ty(Ctx)
+                                  : llvm::Type::getInt32Ty(Ctx);
+
+    // Check if the intrinsic is declared in the module with the expected type.
+    if (Function *Intr =
+            Intrinsic::getDeclarationIfExists(M, IID, {IntrinsicTy})) {
+      // Iterate over all users of the intrinsic.
+      for (User *U : Intr->users()) {
+        // Ensure the user is an intrinsic call within function F.
+        if (auto *II = dyn_cast<IntrinsicInst>(U)) {
+          if (II->getFunction() == &F) {
+            IsChanged |= optimizeUniformIntrinsicInst(*II);
+          }
+        }
+      }
     }
   }
   return IsChanged;
