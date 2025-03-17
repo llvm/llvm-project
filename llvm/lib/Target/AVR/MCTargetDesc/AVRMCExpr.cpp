@@ -53,8 +53,7 @@ void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {
   MCValue Value;
 
-  bool isRelocatable =
-      getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr);
+  bool isRelocatable = getSubExpr()->evaluateAsRelocatable(Value, nullptr);
 
   if (!isRelocatable)
     return false;
@@ -68,10 +67,9 @@ bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {
 }
 
 bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
-                                          const MCAssembler *Asm,
-                                          const MCFixup *Fixup) const {
+                                          const MCAssembler *Asm) const {
   MCValue Value;
-  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm, Fixup);
+  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm);
 
   if (!isRelocatable)
     return false;

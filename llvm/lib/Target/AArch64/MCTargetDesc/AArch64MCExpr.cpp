@@ -109,9 +109,8 @@ MCFragment *AArch64MCExpr::findAssociatedFragment() const {
 }
 
 bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAssembler *Asm,
-                                              const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+                                              const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   Res =
@@ -151,10 +150,9 @@ MCFragment *AArch64AuthMCExpr::findAssociatedFragment() const {
   llvm_unreachable("FIXME: what goes here?");
 }
 
-bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                  const MCAssembler *Asm,
-                                                  const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
+    MCValue &Res, const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   if (Res.getSymB())

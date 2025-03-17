@@ -129,14 +129,14 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << ')';
 }
 
-bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                           const MCFixup *Fixup) const {
-  // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X))) special cases.
+bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm)
+    const { // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X)))
+  // special cases.
   if (isGpOff()) {
     const MCExpr *SubExpr =
         cast<MipsMCExpr>(cast<MipsMCExpr>(getSubExpr())->getSubExpr())
             ->getSubExpr();
-    if (!SubExpr->evaluateAsRelocatable(Res, Asm, Fixup))
+    if (!SubExpr->evaluateAsRelocatable(Res, Asm))
       return false;
 
     Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
@@ -144,7 +144,7 @@ bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     return true;
   }
 
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
   Res =
       MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
