@@ -4428,7 +4428,7 @@ private:
 
         auto DecrUnschedForInst = [&](Instruction *I) {
           if (ScheduleData *OpSD = getScheduleData(I))
-            DecrUnsched(OpSD, /*IsControl*/false);
+            DecrUnsched(OpSD, /*IsControl=*/false);
         };
 
         // If BundleMember is a vector bundle, its operands may have been
@@ -4476,9 +4476,8 @@ private:
         for (ScheduleData *MemoryDep : BundleMember->getMemoryDependencies()) {
           // There are no more unscheduled dependencies after decrementing,
           // so we can put the dependent instruction into the ready list.
-          LLVM_DEBUG(dbgs()
-                     << "SLP:   check for readiness (mem): " << *MemoryDep
-                     << "\n");
+          LLVM_DEBUG(dbgs() << "SLP:   check for readiness (mem): "
+                            << *MemoryDep << "\n");
           DecrUnsched(MemoryDep);
         }
         // Handle the control dependencies.
@@ -9076,8 +9075,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     copy(Op1, NewVL.begin());
     copy(Op2, std::next(NewVL.begin(), Op1.size()));
     auto Invalid = ScheduleBundle::invalid();
-    auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid,
-                            LocalState, UserTreeIdx, {}, ReorderIndices);
+    auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
+                            UserTreeIdx, {}, ReorderIndices);
     LLVM_DEBUG(dbgs() << "SLP: split alternate node.\n"; TE->dump());
     auto AddNode = [&](ArrayRef<Value *> Op, unsigned Idx) {
       InstructionsState S = getSameOpcode(Op, *TLI);
@@ -9086,8 +9085,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         // Build gather node for loads, they will be gathered later.
         TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
                                                     Idx == 0 ? 0 : Op1.size());
-        (void)newTreeEntry(Op, TreeEntry::NeedToGather, Invalid, S,
-                           {TE, Idx});
+        (void)newTreeEntry(Op, TreeEntry::NeedToGather, Invalid, S, {TE, Idx});
       } else {
         TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
                                                     Idx == 0 ? 0 : Op1.size());
@@ -9224,7 +9222,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (isVectorized(V)) {
       LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
                         << ") is already in tree.\n");
-      if (TryToFindDuplicates(S)){
+      if (TryToFindDuplicates(S)) {
         auto Invalid = ScheduleBundle::invalid();
         newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
                      ReuseShuffleIndices);
@@ -18281,8 +18279,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       ReSchedule = true;
     }
     if (Bundle && !Bundle.getBundle().empty()) {
-      LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << Bundle
-                        << " in block " << BB->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << Bundle << " in block "
+                        << BB->getName() << "\n");
       calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP);
     }
 
@@ -18676,8 +18674,8 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
                  "ScheduleData not in scheduling region");
           if (Bundle->isReady()) {
             ReadyInsts.insert(Bundle);
-            LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *Bundle
-                            << "\n");
+            LLVM_DEBUG(dbgs()
+                       << "SLP:     gets ready on update: " << *Bundle << "\n");
           }
         }
         continue;
