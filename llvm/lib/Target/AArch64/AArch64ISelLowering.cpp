@@ -24036,18 +24036,16 @@ static SDValue performSTORECombine(SDNode *N,
       return SDValue();
 
     // Heuristic: If there are other users of integer scalars extracted from
-    // this vector that won't fold into the store -- abandon folding. This may
-    // extend the vector lifetime and disrupt paired stores.
-    for (auto Use = Vector->use_begin(), End = Vector->use_end(); Use != End;
-         ++Use) {
-      if (Use->getResNo() != Vector.getResNo())
+    // this vector that won't fold into the store -- abandon folding. Applying
+    // this fold may extend the vector lifetime and disrupt paired stores.
+    for (const auto &Use : Vector->uses()) {
+      if (Use.getResNo() != Vector.getResNo())
         continue;
-      SDNode *User = Use->getUser();
-      if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-        if (!User->hasOneUse() ||
-            (*User->user_begin())->getOpcode() != ISD::STORE)
-          return SDValue();
-      }
+      const SDNode *User = Use.getUser();
+      if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          (!User->hasOneUse() ||
+           (*User->user_begin())->getOpcode() != ISD::STORE))
+        return SDValue();
     }
 
     EVT FPElemVT = EVT::getFloatingPointVT(ElemVT.getSizeInBits());
