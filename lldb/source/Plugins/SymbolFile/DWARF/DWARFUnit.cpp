@@ -672,6 +672,37 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   return DWARFDIE(); // Not found
 }
 
+llvm::Error DWARFUnit::GetBitSizeAndSign(uint64_t die_offset,
+                                         uint64_t &bit_size, bool &sign) {
+  // Retrieve the type DIE that the value is being converted to. This
+  // offset is compile unit relative so we need to fix it up.
+  const uint64_t abs_die_offset = die_offset + GetOffset();
+  // FIXME: the constness has annoying ripple effects.
+  DWARFDIE die = GetDIE(abs_die_offset);
+  if (!die)
+    return llvm::createStringError("cannot resolve DW_OP_convert type DIE");
+  uint64_t encoding =
+      die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
+  bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  if (!bit_size)
+    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
+  if (!bit_size)
+    return llvm::createStringError("unsupported type size in DW_OP_convert");
+  switch (encoding) {
+  case DW_ATE_signed:
+  case DW_ATE_signed_char:
+    sign = true;
+    break;
+  case DW_ATE_unsigned:
+  case DW_ATE_unsigned_char:
+    sign = false;
+    break;
+  default:
+    return llvm::createStringError("unsupported encoding in DW_OP_convert");
+  }
+  return llvm::Error::success();
+}
+
 llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   DWARFDebugInfoEntry die;
   if (!die.Extract(GetData(), *this, &die_offset))
@@ -702,14 +733,6 @@ DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
     return *m_dwo;
   return *this;
 }
-
-uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
-  if (cu)
-    return cu->GetAddressByteSize();
-  return DWARFUnit::GetDefaultAddressSize();
-}
-
-uint8_t DWARFUnit::GetDefaultAddressSize() { return 4; }
 
 DWARFCompileUnit *DWARFUnit::GetSkeletonUnit() {
   if (m_skeleton_unit.load() == nullptr && IsDWOUnit()) {

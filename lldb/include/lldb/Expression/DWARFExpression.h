@@ -23,7 +23,7 @@ namespace lldb_private {
 
 namespace plugin {
 namespace dwarf {
-class DWARFUnit;
+class DWARFUnitInterface;
 } // namespace dwarf
 } // namespace plugin
 
@@ -65,20 +65,20 @@ public:
   /// \return
   ///     The address specified by the operation, if the operation exists, or
   ///     an llvm::Error otherwise.
-  llvm::Expected<lldb::addr_t>
-  GetLocation_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu) const;
+  llvm::Expected<lldb::addr_t> GetLocation_DW_OP_addr(
+      const plugin::dwarf::DWARFUnitInterface *dwarf_cu) const;
 
-  bool Update_DW_OP_addr(const plugin::dwarf::DWARFUnit *dwarf_cu,
+  bool Update_DW_OP_addr(const plugin::dwarf::DWARFUnitInterface *dwarf_cu,
                          lldb::addr_t file_addr);
 
   void UpdateValue(uint64_t const_value, lldb::offset_t const_value_byte_size,
                    uint8_t addr_byte_size);
 
-  bool
-  ContainsThreadLocalStorage(const plugin::dwarf::DWARFUnit *dwarf_cu) const;
+  bool ContainsThreadLocalStorage(
+      const plugin::dwarf::DWARFUnitInterface *dwarf_cu) const;
 
   bool LinkThreadLocalStorage(
-      const plugin::dwarf::DWARFUnit *dwarf_cu,
+      const plugin::dwarf::DWARFUnitInterface *dwarf_cu,
       std::function<lldb::addr_t(lldb::addr_t file_addr)> const
           &link_address_callback);
 
@@ -132,13 +132,14 @@ public:
   static llvm::Expected<Value>
   Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
            lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-           const plugin::dwarf::DWARFUnit *dwarf_cu,
+           const plugin::dwarf::DWARFUnitInterface *dwarf_cu,
            const lldb::RegisterKind reg_set, const Value *initial_value_ptr,
            const Value *object_address_ptr);
 
-  static bool ParseDWARFLocationList(const plugin::dwarf::DWARFUnit *dwarf_cu,
-                                     const DataExtractor &data,
-                                     DWARFExpressionList *loc_list);
+  static bool
+  ParseDWARFLocationList(const plugin::dwarf::DWARFUnitInterface *dwarf_cu,
+                         const DataExtractor &data,
+                         DWARFExpressionList *loc_list);
 
   bool GetExpressionData(DataExtractor &data) const {
     data = m_data;

@@ -44,8 +44,8 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     switch (m_form) {
     case DW_FORM_addr:
       assert(m_unit);
-      m_value.uval =
-          data.GetMaxU64(offset_ptr, DWARFUnit::GetAddressByteSize(m_unit));
+      m_value.uval = data.GetMaxU64(
+          offset_ptr, DWARFUnitInterface::GetAddressByteSize(m_unit));
       break;
     case DW_FORM_block1:
       m_value.uval = data.GetU8(offset_ptr);
@@ -242,7 +242,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
 
   // Compile unit address sized values
   case DW_FORM_addr:
-    *offset_ptr += DWARFUnit::GetAddressByteSize(unit);
+    *offset_ptr += DWARFUnitInterface::GetAddressByteSize(unit);
     return true;
 
   case DW_FORM_ref_addr:

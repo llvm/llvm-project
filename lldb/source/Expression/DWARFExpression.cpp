@@ -133,7 +133,7 @@ static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
 static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
                                         const lldb::offset_t data_offset,
                                         const LocationAtom op,
-                                        const DWARFUnit *dwarf_cu) {
+                                        const DWARFUnitInterface *dwarf_cu) {
   lldb::offset_t offset = data_offset;
   switch (op) {
   // Only used in LLVM metadata.
@@ -362,7 +362,8 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
                                // + LEB128
   {
     data.Skip_LEB128(&offset);
-    return DWARFUnit::GetAddressByteSize(dwarf_cu) + offset - data_offset;
+    return DWARFUnitInterface::GetAddressByteSize(dwarf_cu) + offset -
+           data_offset;
   }
 
   case DW_OP_GNU_entry_value:
@@ -393,8 +394,8 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
   return LLDB_INVALID_OFFSET;
 }
 
-llvm::Expected<lldb::addr_t>
-DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu) const {
+llvm::Expected<lldb::addr_t> DWARFExpression::GetLocation_DW_OP_addr(
+    const DWARFUnitInterface *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
@@ -422,7 +423,7 @@ DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu) const {
   return LLDB_INVALID_ADDRESS;
 }
 
-bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
+bool DWARFExpression::Update_DW_OP_addr(const DWARFUnitInterface *dwarf_cu,
                                         lldb::addr_t file_addr) {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
@@ -481,7 +482,7 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
 }
 
 bool DWARFExpression::ContainsThreadLocalStorage(
-    const DWARFUnit *dwarf_cu) const {
+    const DWARFUnitInterface *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
@@ -497,7 +498,7 @@ bool DWARFExpression::ContainsThreadLocalStorage(
   return false;
 }
 bool DWARFExpression::LinkThreadLocalStorage(
-    const DWARFUnit *dwarf_cu,
+    const DWARFUnitInterface *dwarf_cu,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
         &link_address_callback) {
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
@@ -783,7 +784,8 @@ enum LocationDescriptionKind {
   /* Composite*/
 };
 /// Adjust value's ValueType according to the kind of location description.
-void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
+void UpdateValueTypeFromLocationDescription(Log *log,
+                                            const DWARFUnitInterface *dwarf_cu,
                                             LocationDescriptionKind kind,
                                             Value *value = nullptr) {
   // Note that this function is conflating DWARF expressions with
@@ -875,7 +877,7 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
+    const DWARFUnitInterface *dwarf_cu, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr) {
 
   if (opcodes.GetByteSize() == 0)
@@ -2164,35 +2166,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         if (!bit_size)
           return llvm::createStringError("unspecified architecture");
       } else {
-        // Retrieve the type DIE that the value is being converted to. This
-        // offset is compile unit relative so we need to fix it up.
-        const uint64_t abs_die_offset = die_offset +  dwarf_cu->GetOffset();
-        // FIXME: the constness has annoying ripple effects.
-        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(abs_die_offset);
-        if (!die)
-          return llvm::createStringError(
-              "cannot resolve DW_OP_convert type DIE");
-        uint64_t encoding =
-            die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
-        bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
-        if (!bit_size)
-          bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
-        if (!bit_size)
-          return llvm::createStringError(
-              "unsupported type size in DW_OP_convert");
-        switch (encoding) {
-        case DW_ATE_signed:
-        case DW_ATE_signed_char:
-          sign = true;
-          break;
-        case DW_ATE_unsigned:
-        case DW_ATE_unsigned_char:
-          sign = false;
-          break;
-        default:
-          return llvm::createStringError(
-              "unsupported encoding in DW_OP_convert");
-        }
+        if (llvm::Error err =
+                const_cast<DWARFUnitInterface *>(dwarf_cu)->GetBitSizeAndSign(
+                    die_offset, bit_size, sign))
+          return err;
       }
       Scalar &top = stack.back().ResolveValue(exe_ctx);
       top.TruncOrExtendTo(bit_size, sign);
@@ -2353,7 +2330,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 }
 
 bool DWARFExpression::ParseDWARFLocationList(
-    const DWARFUnit *dwarf_cu, const DataExtractor &data,
+    const DWARFUnitInterface *dwarf_cu, const DataExtractor &data,
     DWARFExpressionList *location_list) {
   location_list->Clear();
   std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
