@@ -110,9 +110,6 @@ public:
   SystemZMCAsmBackend() : MCAsmBackend(llvm::endianness::big) {}
 
   // Override MCAsmBackend
-  unsigned getNumFixupKinds() const override {
-    return SystemZ::NumTargetFixupKinds;
-  }
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
@@ -151,7 +148,7 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < SystemZ::NumTargetFixupKinds &&
          "Invalid kind!");
   return SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind];
 }

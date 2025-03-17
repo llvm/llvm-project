@@ -142,9 +142,6 @@ namespace {
           Is64Bit(STI.getTargetTriple().isArch64Bit()),
           IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
-    unsigned getNumFixupKinds() const override {
-      return Sparc::NumTargetFixupKinds;
-    }
 
     std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
       unsigned Type;
@@ -264,7 +261,8 @@ namespace {
       if (Kind < FirstTargetFixupKind)
         return MCAsmBackend::getFixupKindInfo(Kind);
 
-      assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+      assert(unsigned(Kind - FirstTargetFixupKind) <
+                 Sparc::NumTargetFixupKinds &&
              "Invalid kind!");
       if (Endian == llvm::endianness::little)
         return InfosLE[Kind - FirstTargetFixupKind];
