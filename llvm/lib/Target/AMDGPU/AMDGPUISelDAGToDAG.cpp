@@ -3665,6 +3665,11 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
       // TODO: Should we try to look for neg/abs here?
     }
 
+    // Prevent unnecessary subreg COPY to VGPR_16
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getOperand(0).getValueType().getSizeInBits() == 32) {
+      Src = Src.getOperand(0);
+    }
     return true;
   }
 
