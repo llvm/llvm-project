@@ -572,7 +572,7 @@ foreach mx = SchedMxList in {
       defm "" : LMULWriteResMX<"WriteVSTE",  [SiFiveP600VST], mx, IsWorstCase>;
     }
 
-    // Mask load and store always have EMUL=1.
+    // Mask load and store have a maximum EMUL of 1.
     let ReleaseAtCycles = [SiFiveP600GetLMulCycles<"M1">.c] in {
       defm "" : LMULWriteResMX<"WriteVLDM",  [SiFiveP600VLD], mx, IsWorstCase=!eq(mx,"M1")>;
       defm "" : LMULWriteResMX<"WriteVSTM",  [SiFiveP600VST], mx, IsWorstCase=!eq(mx,"M1")>;
