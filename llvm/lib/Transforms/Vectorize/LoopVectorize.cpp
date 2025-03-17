@@ -3468,12 +3468,13 @@ bool LoopVectorizationCostModel::stridedAccessCanBeWidened(
   if (!VF.isVector())
     return false;
 
-  auto *Ptr = getLoadStorePointerOperand(I);
+  [[maybe_unused]] auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
-  // Ensure the accessed addresses are evenly spaced apart by a fixed stride.
-  // TODO: Support non-unit-reverse strided accesses.
-  if (Legal->isConsecutivePtr(ScalarTy, Ptr) != -1)
-    return false;
+  // TODO: Support non-unit-reverse strided accesses. Add stride analysis here
+  // to ensure that the accessed addresses are evenly spaced apart by a fixed
+  // stride.
+  assert(Legal->isConsecutivePtr(ScalarTy, Ptr) == -1 &&
+         "Only supports strided accesses with a stride of -1");
 
   const Align Alignment = getLoadStoreAlignment(I);
   return TTI.isLegalStridedLoadStore(toVectorTy(ScalarTy, VF), Alignment);
