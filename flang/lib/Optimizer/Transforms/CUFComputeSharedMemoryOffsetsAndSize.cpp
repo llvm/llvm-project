@@ -57,6 +57,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
 
     auto gpuMod = cuf::getOrCreateGPUModule(mod, symTab);
     mlir::Type i8Ty = builder.getI8Type();
+    mlir::Type i32Ty = builder.getI32Type();
     for (auto funcOp : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
       unsigned nbDynamicSharedVariables = 0;
       unsigned nbStaticSharedVariables = 0;
@@ -68,6 +69,8 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       // are static. If this is dynamic shared memory, then only the alignment
       // is computed.
       for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
+        mlir::Location loc = sharedOp.getLoc();
+        builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
           mlir::Type ty = sharedOp.getInType();
           // getTypeSizeAndAlignmentOrCrash will crash trying to compute the
@@ -77,14 +80,17 @@ struct CUFComputeSharedMemoryOffsetsAndSize
             ty = seqTy.getEleTy();
           unsigned short align = dl->getTypeABIAlignment(ty);
           ++nbDynamicSharedVariables;
-          sharedOp.setOffset(0);
+          mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
+          sharedOp.getOffsetMutable().assign(zero);
           alignment = std::max(alignment, align);
           continue;
         }
         auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
             sharedOp.getLoc(), sharedOp.getInType(), *dl, kindMap);
         ++nbStaticSharedVariables;
-        sharedOp.setOffset(llvm::alignTo(sharedMemSize, align));
+        mlir::Value offset = builder.createIntegerConstant(
+            loc, i32Ty, llvm::alignTo(sharedMemSize, align));
+        sharedOp.getOffsetMutable().assign(offset);
         sharedMemSize =
             llvm::alignTo(sharedMemSize, align) + llvm::alignTo(size, align);
         alignment = std::max(alignment, align);
