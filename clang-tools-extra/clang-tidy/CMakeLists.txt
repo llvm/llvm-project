@@ -11,7 +11,6 @@ include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 add_clang_library(clangTidy STATIC
   ClangTidy.cpp
   ClangTidyCheck.cpp
-  ClangQueryCheck.cpp
   ClangTidyModule.cpp
   ClangTidyDiagnosticConsumer.cpp
   ClangTidyOptions.cpp
@@ -39,7 +38,6 @@ clang_target_link_libraries(clangTidy
   clangSerialization
   clangTooling
   clangToolingCore
-  clangQuery
   )
 
 if(CLANG_TIDY_ENABLE_STATIC_ANALYZER)

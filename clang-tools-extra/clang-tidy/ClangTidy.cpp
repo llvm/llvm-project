@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidy.h"
-#include "ClangQueryCheck.h"
 #include "ClangTidyCheck.h"
 #include "ClangTidyDiagnosticConsumer.h"
 #include "ClangTidyModuleRegistry.h"
@@ -350,13 +349,6 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
   for (ClangTidyModuleRegistry::entry E : ClangTidyModuleRegistry::entries()) {
     std::unique_ptr<ClangTidyModule> Module = E.instantiate();
     Module->addCheckFactories(*CheckFactories);
-  }
-
-  for (const auto &[k, v] : Context.getOptions().ClangQueryChecks) {
-    CheckFactories->registerCheckFactory(k, [v](StringRef Name,
-                                                ClangTidyContext *Context) {
-      return std::make_unique<misc::ClangQueryCheck>(Name, Context, v.Matchers);
-    });
   }
 }
 
