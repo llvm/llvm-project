@@ -3948,6 +3948,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanhf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanhf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atanhf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinhf_test
   SUITE
     libc-math-smoke-tests

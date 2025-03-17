@@ -664,6 +664,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.acoshf16
     libc.src.math.asinf16
     libc.src.math.asinhf16
+    libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16

@@ -4029,6 +4029,24 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
 )
 
+add_entrypoint_object(
+  atanhf16
+  SRCS
+    atanhf16.cpp
+  HDRS
+    ../atanhf16.h
+  DEPENDS
+    .explogxf
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types 
+)
+
 add_object_library(
   inv_trigf_utils
   HDRS
