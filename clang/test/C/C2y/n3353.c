@@ -115,3 +115,6 @@ void foo() {
                */
 }
 #endif
+
+#line 0123  // expected-warning {{#line directive interprets number as decimal, not octal}}
+#line 0o123 // expected-error {{#line directive requires a simple digit sequence}}

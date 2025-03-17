@@ -3422,7 +3422,6 @@ void Lexer::DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
   Diags.Report(Loc, DiagId) << Named << !Opts.CPlusPlus;
 }
 
-
 std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
                                                  const char *SlashLoc,
                                                  Token *Result) {
