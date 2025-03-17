@@ -45,6 +45,6 @@ class foo {
 
 template <typename T>
 concept is_foo_concept = __is_same(foo::bar, T);
-// expected-error@-1 {{'bar' is a private member of 'foo'}}
+// expected-error@-1 {{'bar' is a private member of 'GH131530::foo'}}
 
 }
