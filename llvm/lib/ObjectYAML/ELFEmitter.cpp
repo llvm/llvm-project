@@ -206,7 +206,7 @@ template <class ELFT> class ELFState {
   NameToIdxMap DynSymN2I;
   ELFYAML::Object &Doc;
 
-  std::vector<std::pair<unsigned, ELFYAML::Section>>
+  std::vector<std::pair<Elf_Shdr *, ELFYAML::Section>>
       SectionHeadersOverrideHelper;
 
   StringSet<> ExcludedSectionHeaders;
@@ -849,7 +849,7 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       }
 
       LocationCounter += SHeader.sh_size;
-      SectionHeadersOverrideHelper.push_back({SN2I.get(Sec->Name), *Sec});
+      SectionHeadersOverrideHelper.push_back({&SHeader, *Sec});
       continue;
     }
 
@@ -903,15 +903,15 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     }
 
     LocationCounter += SHeader.sh_size;
-    SectionHeadersOverrideHelper.push_back({SN2I.get(Sec->Name), *Sec});
+    SectionHeadersOverrideHelper.push_back({&SHeader, *Sec});
   }
 }
 
 template <class ELFT>
 void ELFState<ELFT>::overrideSectionHeaders(std::vector<Elf_Shdr> &SHeaders) {
-  for (std::pair<unsigned, ELFYAML::Section> &IndexAndSec :
+  for (std::pair<Elf_Shdr *, ELFYAML::Section> &HeaderAndSec :
        SectionHeadersOverrideHelper)
-    overrideFields<ELFT>(&IndexAndSec.second, SHeaders[IndexAndSec.first]);
+    overrideFields<ELFT>(&HeaderAndSec.second, *HeaderAndSec.first);
 }
 
 template <class ELFT>
@@ -2099,7 +2099,9 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   // Now we can decide segment offsets.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
-  // Override section fields if requested.
+  // Override section fields, if requested. This needs to happen after program
+  // header layout happens, because otherwise the layout will use the new
+  // values.
   State.overrideSectionHeaders(SHeaders);
 
   bool ReachedLimit = CBA.getOffset() > MaxSize;
