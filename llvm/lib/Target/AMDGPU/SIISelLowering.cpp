@@ -9456,7 +9456,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     assert(NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f32);
 
-    if (!AMDGPU::isGFX12Plus(*Subtarget)) {
+    if (!Subtarget->hasBVHDualInst()) {
       emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
       return SDValue();
     }

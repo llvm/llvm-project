@@ -7214,7 +7214,7 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
   Register Offsets = MI.getOperand(9).getReg();
   Register TDescr = MI.getOperand(10).getReg();
 
-  if (!AMDGPU::isGFX12Plus(ST)) {
+  if (!ST.hasBVHDualInst()) {
     DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
                                         "intrinsic not supported on subtarget",
                                         MI.getDebugLoc());
