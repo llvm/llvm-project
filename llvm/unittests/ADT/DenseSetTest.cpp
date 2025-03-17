@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseSet.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <type_traits>
 
@@ -33,14 +34,10 @@ TEST(DenseSetTest, DoubleEntrySetTest) {
 }
 
 TEST(DenseSetTest, InsertRange) {
-  llvm::DenseSet<unsigned> set1;
-  llvm::DenseSet<unsigned> set2;
-  set1.insert(1);
-  set1.insert(2);
-  set1.insert(3);
+  llvm::DenseSet<unsigned> set;
   constexpr unsigned Args[] = {3, 1, 2};
-  set2.insert_range(Args);
-  EXPECT_EQ(set1, set2);
+  set.insert_range(Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
 }
 
 struct TestDenseSetInfo {
