@@ -697,15 +697,14 @@ Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
     if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
       return MI.getOperand(0).getReg();
-  return 0;
+  return Register();
 }
 
 Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                  int &FrameIndex) const {
   unsigned Dummy;
   if (isFrameLoadOpcode(MI.getOpcode(), Dummy)) {
-    unsigned Reg;
-    if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
+    if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
       return Reg;
     // Check for post-frame index elimination operations
     SmallVector<const MachineMemOperand *, 1> Accesses;
@@ -716,7 +715,7 @@ Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
       return MI.getOperand(0).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -732,15 +731,14 @@ Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     if (MI.getOperand(X86::AddrNumOperands).getSubReg() == 0 &&
         isFrameOperand(MI, 0, FrameIndex))
       return MI.getOperand(X86::AddrNumOperands).getReg();
-  return 0;
+  return Register();
 }
 
 Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                 int &FrameIndex) const {
   unsigned Dummy;
   if (isFrameStoreOpcode(MI.getOpcode(), Dummy)) {
-    unsigned Reg;
-    if ((Reg = isStoreToStackSlot(MI, FrameIndex)))
+    if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
       return Reg;
     // Check for post-frame index elimination operations
     SmallVector<const MachineMemOperand *, 1> Accesses;
@@ -751,7 +749,7 @@ Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
       return MI.getOperand(X86::AddrNumOperands).getReg();
     }
   }
-  return 0;
+  return Register();
 }
 
 /// Return true if register is PIC base; i.e.g defined by X86::MOVPC32r.
@@ -3624,7 +3622,7 @@ unsigned X86::getVectorRegisterWidth(const MCOperandInfo &Info) {
 }
 
 /// Return true if the Reg is X87 register.
-static bool isX87Reg(unsigned Reg) {
+static bool isX87Reg(Register Reg) {
   return (Reg == X86::FPCW || Reg == X86::FPSW ||
           (Reg >= X86::ST0 && Reg <= X86::ST7));
 }
@@ -4245,12 +4243,12 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(unsigned Reg) {
+static bool isHReg(Register Reg) {
   return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
 // Try and copy between VR128/VR64 and GR64 registers.
-static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
+static unsigned CopyToFromAsymmetricReg(Register DestReg, Register SrcReg,
                                         const X86Subtarget &Subtarget) {
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
@@ -9006,10 +9004,10 @@ bool X86InstrInfo::isSafeToMoveRegClassDefs(
 ///
 /// TODO: Eliminate this and move the code to X86MachineFunctionInfo.
 ///
-unsigned X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
+Register X86InstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   X86MachineFunctionInfo *X86FI = MF->getInfo<X86MachineFunctionInfo>();
   Register GlobalBaseReg = X86FI->getGlobalBaseReg();
-  if (GlobalBaseReg != 0)
+  if (GlobalBaseReg)
     return GlobalBaseReg;
 
   // Create the register. The code to initialize it is inserted
@@ -10481,7 +10479,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
     MachineDominatorTree *DT =
         &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    return VisitNode(DT->getRootNode(), 0);
+    return VisitNode(DT->getRootNode(), Register());
   }
 
   // Visit the dominator subtree rooted at Node in pre-order.
@@ -10489,7 +10487,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   // TLS_base_addr instructions. Otherwise, create the register
   // when the first such instruction is seen, and then use it
   // as we encounter more instructions.
-  bool VisitNode(MachineDomTreeNode *Node, unsigned TLSBaseAddrReg) {
+  bool VisitNode(MachineDomTreeNode *Node, Register TLSBaseAddrReg) {
     MachineBasicBlock *BB = Node->getBlock();
     bool Changed = false;
 
@@ -10521,7 +10519,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
   // Replace the TLS_base_addr instruction I with a copy from
   // TLSBaseAddrReg, returning the new instruction.
   MachineInstr *ReplaceTLSBaseAddrCall(MachineInstr &I,
-                                       unsigned TLSBaseAddrReg) {
+                                       Register TLSBaseAddrReg) {
     MachineFunction *MF = I.getParent()->getParent();
     const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
     const bool is64Bit = STI.is64Bit();
@@ -10541,7 +10539,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   // Create a virtual register in *TLSBaseAddrReg, and populate it by
   // inserting a copy instruction after I. Returns the new instruction.
-  MachineInstr *SetRegister(MachineInstr &I, unsigned *TLSBaseAddrReg) {
+  MachineInstr *SetRegister(MachineInstr &I, Register *TLSBaseAddrReg) {
     MachineFunction *MF = I.getParent()->getParent();
     const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
     const bool is64Bit = STI.is64Bit();
