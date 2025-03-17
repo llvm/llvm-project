@@ -14326,7 +14326,7 @@ static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
   APInt AddVal;
   SDValue SHLVal;
   sd_match(AddI, m_Add(m_Value(SHLVal), m_ConstInt(AddVal)));
- 
+
   APInt VShift;
   if (!sd_match(SHLVal, m_c_BinOp(ISD::SHL, m_Value(), m_ConstInt(VShift))))
     return false;
