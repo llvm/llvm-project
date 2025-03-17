@@ -79,6 +79,7 @@
 // CHECK-NEXT: debug.AnalysisOrder:RegionChanges = false
 // CHECK-NEXT: display-checker-name = true
 // CHECK-NEXT: display-ctu-progress = false
+// CHECK-NEXT: dump-entry-point-stats-to-csv = ""
 // CHECK-NEXT: eagerly-assume = true
 // CHECK-NEXT: elide-constructors = true
 // CHECK-NEXT: expand-macros = false

@@ -477,7 +477,7 @@ bb:
   %mul = extractvalue { i64, i1 } %umulo, 0
   %overflow = extractvalue { i64, i1 } %umulo, 1
   %res = select i1 %overflow, i64 0, i64 %mul
-  store i64 %res, ptr addrspace(1) undef
+  store i64 %res, ptr addrspace(1) poison
   ret void
 }
 
@@ -700,7 +700,7 @@ bb:
   %mul = extractvalue { i64, i1 } %umulo, 0
   %overflow = extractvalue { i64, i1 } %umulo, 1
   %res = select i1 %overflow, i64 0, i64 %mul
-  store i64 %res, ptr addrspace(1) undef
+  store i64 %res, ptr addrspace(1) poison
   ret void
 }
 
