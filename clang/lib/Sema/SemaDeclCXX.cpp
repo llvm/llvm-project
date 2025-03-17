@@ -17289,17 +17289,34 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
   }
 }
 
-bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
-                                               std::string &Result,
-                                               ASTContext &Ctx,
-                                               bool ErrorOnInvalidMessage) {
+template <typename ResultType>
+static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
+                                 ResultType &Result, ASTContext &Ctx,
+                                 Sema::StringEvaluationContext EvalContext,
+                                 bool ErrorOnInvalidMessage) {
+
   assert(Message);
   assert(!Message->isTypeDependent() && !Message->isValueDependent() &&
          "can't evaluate a dependant static assert message");
 
   if (const auto *SL = dyn_cast<StringLiteral>(Message)) {
     assert(SL->isUnevaluated() && "expected an unevaluated string");
-    Result.assign(SL->getString().begin(), SL->getString().end());
+    if constexpr (std::is_same_v<APValue, ResultType>) {
+      Result =
+          APValue(APValue::UninitArray{}, SL->getLength(), SL->getLength());
+      const ConstantArrayType *CAT =
+          SemaRef.getASTContext().getAsConstantArrayType(SL->getType());
+      assert(CAT && "string literal isn't an array");
+      QualType CharType = CAT->getElementType();
+      llvm::APSInt Value(SemaRef.getASTContext().getTypeSize(CharType),
+                         CharType->isUnsignedIntegerType());
+      for (unsigned I = 0; I < SL->getLength(); I++) {
+        Value = SL->getCodeUnit(I);
+        Result.getArrayInitializedElt(I) = APValue(Value);
+      }
+    } else {
+      Result.assign(SL->getString().begin(), SL->getString().end());
+    }
     return true;
   }
 
@@ -17307,16 +17324,14 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
   QualType T = Message->getType().getNonReferenceType();
   auto *RD = T->getAsCXXRecordDecl();
   if (!RD) {
-    Diag(Loc, diag::err_static_assert_invalid_message);
+    SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid) << EvalContext;
     return false;
   }
 
-  auto FindMember = [&](StringRef Member, bool &Empty,
-                        bool Diag = false) -> std::optional<LookupResult> {
-    DeclarationName DN = PP.getIdentifierInfo(Member);
-    LookupResult MemberLookup(*this, DN, Loc, Sema::LookupMemberName);
-    LookupQualifiedName(MemberLookup, RD);
-    Empty = MemberLookup.empty();
+  auto FindMember = [&](StringRef Member) -> std::optional<LookupResult> {
+    DeclarationName DN = SemaRef.PP.getIdentifierInfo(Member);
+    LookupResult MemberLookup(SemaRef, DN, Loc, Sema::LookupMemberName);
+    SemaRef.LookupQualifiedName(MemberLookup, RD);
     OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
                                     OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
@@ -17324,67 +17339,63 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
     return std::move(MemberLookup);
   };
 
-  bool SizeNotFound, DataNotFound;
-  std::optional<LookupResult> SizeMember = FindMember("size", SizeNotFound);
-  std::optional<LookupResult> DataMember = FindMember("data", DataNotFound);
-  if (SizeNotFound || DataNotFound) {
-    Diag(Loc, diag::err_static_assert_missing_member_function)
-        << ((SizeNotFound && DataNotFound) ? 2
-            : SizeNotFound                 ? 0
-                                           : 1);
-    return false;
-  }
-
+  std::optional<LookupResult> SizeMember = FindMember("size");
+  std::optional<LookupResult> DataMember = FindMember("data");
   if (!SizeMember || !DataMember) {
-    if (!SizeMember)
-      FindMember("size", SizeNotFound, /*Diag=*/true);
-    if (!DataMember)
-      FindMember("data", DataNotFound, /*Diag=*/true);
+    SemaRef.Diag(Loc, diag::err_user_defined_msg_missing_member_function)
+        << EvalContext
+        << ((!SizeMember && !DataMember) ? 2
+            : !SizeMember                ? 0
+                                         : 1);
     return false;
   }
 
   auto BuildExpr = [&](LookupResult &LR) {
-    ExprResult Res = BuildMemberReferenceExpr(
+    ExprResult Res = SemaRef.BuildMemberReferenceExpr(
         Message, Message->getType(), Message->getBeginLoc(), false,
         CXXScopeSpec(), SourceLocation(), nullptr, LR, nullptr, nullptr);
     if (Res.isInvalid())
       return ExprError();
-    Res = BuildCallExpr(nullptr, Res.get(), Loc, {}, Loc, nullptr, false, true);
+    Res = SemaRef.BuildCallExpr(nullptr, Res.get(), Loc, {}, Loc, nullptr,
+                                false, true);
     if (Res.isInvalid())
       return ExprError();
     if (Res.get()->isTypeDependent() || Res.get()->isValueDependent())
       return ExprError();
-    return TemporaryMaterializationConversion(Res.get());
+    return SemaRef.TemporaryMaterializationConversion(Res.get());
   };
 
   ExprResult SizeE = BuildExpr(*SizeMember);
   ExprResult DataE = BuildExpr(*DataMember);
 
-  QualType SizeT = Context.getSizeType();
-  QualType ConstCharPtr =
-      Context.getPointerType(Context.getConstType(Context.CharTy));
+  QualType SizeT = SemaRef.Context.getSizeType();
+  QualType ConstCharPtr = SemaRef.Context.getPointerType(
+      SemaRef.Context.getConstType(SemaRef.Context.CharTy));
 
   ExprResult EvaluatedSize =
-      SizeE.isInvalid() ? ExprError()
-                        : BuildConvertedConstantExpression(
-                              SizeE.get(), SizeT, CCEK_StaticAssertMessageSize);
+      SizeE.isInvalid()
+          ? ExprError()
+          : SemaRef.BuildConvertedConstantExpression(
+                SizeE.get(), SizeT, Sema::CCEK_StaticAssertMessageSize);
   if (EvaluatedSize.isInvalid()) {
-    Diag(Loc, diag::err_static_assert_invalid_mem_fn_ret_ty) << /*size*/ 0;
+    SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid_mem_fn_ret_ty)
+        << EvalContext << /*size*/ 0;
     return false;
   }
 
   ExprResult EvaluatedData =
       DataE.isInvalid()
           ? ExprError()
-          : BuildConvertedConstantExpression(DataE.get(), ConstCharPtr,
-                                             CCEK_StaticAssertMessageData);
+          : SemaRef.BuildConvertedConstantExpression(
+                DataE.get(), ConstCharPtr, Sema::CCEK_StaticAssertMessageData);
   if (EvaluatedData.isInvalid()) {
-    Diag(Loc, diag::err_static_assert_invalid_mem_fn_ret_ty) << /*data*/ 1;
+    SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid_mem_fn_ret_ty)
+        << EvalContext << /*data*/ 1;
     return false;
   }
 
   if (!ErrorOnInvalidMessage &&
-      Diags.isIgnored(diag::warn_static_assert_message_constexpr, Loc))
+      SemaRef.Diags.isIgnored(diag::warn_user_defined_msg_constexpr, Loc))
     return true;
 
   Expr::EvalResult Status;
@@ -17393,14 +17404,29 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
                                           EvaluatedData.get(), Ctx, Status) ||
       !Notes.empty()) {
-    Diag(Message->getBeginLoc(),
-         ErrorOnInvalidMessage ? diag::err_static_assert_message_constexpr
-                               : diag::warn_static_assert_message_constexpr);
+    SemaRef.Diag(Message->getBeginLoc(),
+                 ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
+                                       : diag::warn_user_defined_msg_constexpr)
+        << EvalContext;
     for (const auto &Note : Notes)
-      Diag(Note.first, Note.second);
+      SemaRef.Diag(Note.first, Note.second);
     return !ErrorOnInvalidMessage;
   }
   return true;
+}
+
+bool Sema::EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
+                            StringEvaluationContext EvalContext,
+                            bool ErrorOnInvalidMessage) {
+  return EvaluateAsStringImpl(*this, Message, Result, Ctx, EvalContext,
+                              ErrorOnInvalidMessage);
+}
+
+bool Sema::EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
+                            StringEvaluationContext EvalContext,
+                            bool ErrorOnInvalidMessage) {
+  return EvaluateAsStringImpl(*this, Message, Result, Ctx, EvalContext,
+                              ErrorOnInvalidMessage);
 }
 
 Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
@@ -17448,8 +17474,9 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     // the message is grammatically valid without evaluating it.
     if (!Failed && AssertMessage && Cond.getBoolValue()) {
       std::string Str;
-      EvaluateStaticAssertMessageAsString(AssertMessage, Str, Context,
-                                          /*ErrorOnInvalidMessage=*/false);
+      EvaluateAsString(AssertMessage, Str, Context,
+                       StringEvaluationContext::StaticAssert,
+                       /*ErrorOnInvalidMessage=*/false);
     }
 
     // CWG2518
@@ -17464,10 +17491,10 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       bool HasMessage = AssertMessage;
       if (AssertMessage) {
         std::string Str;
-        HasMessage =
-            EvaluateStaticAssertMessageAsString(
-                AssertMessage, Str, Context, /*ErrorOnInvalidMessage=*/true) ||
-            !Str.empty();
+        HasMessage = EvaluateAsString(AssertMessage, Str, Context,
+                                      StringEvaluationContext::StaticAssert,
+                                      /*ErrorOnInvalidMessage=*/true) ||
+                     !Str.empty();
         Msg << Str;
       }
       Expr *InnerCond = nullptr;
