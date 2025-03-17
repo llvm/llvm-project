@@ -96,7 +96,13 @@ TEST_CONSTEXPR_CXX26 void test(RandSrc& randomness) {
   test_one<Iter>(3, 2, randomness);
   test_one<Iter>(3, 3, randomness);
   test<Iter>(4, randomness);
-  test<Iter>(100, randomness);
+  test<Iter>(50, randomness);
+#if defined(_LIBCPP_HARDENING_MODE)
+  if (!TEST_IS_CONSTANT_EVALUATED) // avoid exceeding the constant evaluation step limit
+#endif
+  {
+    test<Iter>(100, randomness);
+  }
   if (!TEST_IS_CONSTANT_EVALUATED) { // avoid exceeding the constant evaluation step limit
     test<Iter>(1000, randomness);
   }
