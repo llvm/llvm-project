@@ -8,10 +8,13 @@
 
 #include "PPCMCExpr.h"
 #include "PPCFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -31,7 +34,7 @@ bool
 PPCMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
 
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
     return false;
 
   if (!Value.isAbsolute())
@@ -49,7 +52,7 @@ std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
     return Value & 0xffff;
   case VK_HI:
     return (Value >> 16) & 0xffff;
-  case VK_PPC_HA:
+  case VK_HA:
     return ((Value + 0x8000) >> 16) & 0xffff;
   case VK_HIGH:
     return (Value >> 16) & 0xffff;
@@ -68,27 +71,19 @@ std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
   }
 }
 
-bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                          const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!Asm)
+    return false;
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
+  // The signedness of the result is dependent on the instruction operand. E.g.
+  // in addis 3,3,65535@l, 65535@l is signed. In the absence of information at
+  // parse time (!Asm), disable the folding.
   std::optional<int64_t> MaybeInt = evaluateAsInt64(Res.getConstant());
   if (Res.isAbsolute() && MaybeInt) {
-    int64_t Result = *MaybeInt;
-    bool IsHalf16 = Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16;
-    bool IsHalf16DS =
-        Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16ds;
-    bool IsHalf16DQ =
-        Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16dq;
-    bool IsHalf = IsHalf16 || IsHalf16DS || IsHalf16DQ;
-
-    if (!IsHalf && Result >= 0x8000)
-      return false;
-    if ((IsHalf16DS && (Result & 0x3)) || (IsHalf16DQ && (Result & 0xf)))
-      return false;
-
-    Res = MCValue::get(Result);
+    Res = MCValue::get(*MaybeInt);
   } else {
     Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
                        getKind());

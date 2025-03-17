@@ -60,7 +60,7 @@ class LangOptions;
 class MacroDefinitionRecord;
 class MacroInfo;
 class Module;
-class InMemoryModuleCache;
+class ModuleCache;
 class ModuleFileExtension;
 class ModuleFileExtensionWriter;
 class NamedDecl;
@@ -117,7 +117,7 @@ private:
   const SmallVectorImpl<char> &Buffer;
 
   /// The PCM manager which manages memory buffers for pcm files.
-  InMemoryModuleCache &ModuleCache;
+  ModuleCache &ModCache;
 
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
@@ -682,7 +682,7 @@ public:
   /// Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            InMemoryModuleCache &ModuleCache,
+            ModuleCache &ModCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
             bool GeneratingReducedBMI = false);
@@ -986,9 +986,8 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx);
 
 public:
-  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-               StringRef OutputFile, StringRef isysroot,
-               std::shared_ptr<PCHBuffer> Buffer,
+  PCHGenerator(Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
+               StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
@@ -1010,14 +1009,14 @@ class CXX20ModulesGenerator : public PCHGenerator {
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
                         StringRef OutputFile, bool GeneratingReducedBMI,
                         bool AllowASTWithErrors);
 
 public:
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
                         StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
                               /*GeneratingReducedBMI=*/false,
                               AllowASTWithErrors) {}
 
@@ -1028,9 +1027,9 @@ class ReducedBMIGenerator : public CXX20ModulesGenerator {
   void anchor() override;
 
 public:
-  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+  ReducedBMIGenerator(Preprocessor &PP, ModuleCache &ModCache,
                       StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
                               /*GeneratingReducedBMI=*/true,
                               AllowASTWithErrors) {}
 };

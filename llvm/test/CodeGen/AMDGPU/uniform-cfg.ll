@@ -1066,7 +1066,7 @@ define amdgpu_kernel void @move_to_valu_i64_eq(ptr addrspace(1) %out) {
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %cond = load volatile i64, ptr addrspace(3) undef
+  %cond = load volatile i64, ptr addrspace(3) poison
   %cmp0 = icmp eq i64 %cond, 0
   br i1 %cmp0, label %if, label %else
 
@@ -1120,7 +1120,7 @@ define amdgpu_kernel void @move_to_valu_i64_ne(ptr addrspace(1) %out) {
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
-  %cond = load volatile i64, ptr addrspace(3) undef
+  %cond = load volatile i64, ptr addrspace(3) poison
   %cmp0 = icmp ne i64 %cond, 0
   br i1 %cmp0, label %if, label %else
 

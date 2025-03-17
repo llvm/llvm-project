@@ -1,5 +1,8 @@
 add_library(gpu_loader OBJECT Main.cpp)
 
+include(FindLibcCommonUtils)
+target_link_libraries(gpu_loader PUBLIC llvm-libc-common-utilities)
+
 target_include_directories(gpu_loader PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${LIBC_SOURCE_DIR}/include

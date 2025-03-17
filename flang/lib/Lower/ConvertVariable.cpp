@@ -738,9 +738,11 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     auto idxTy = builder.getIndexType();
     for (mlir::Value sh : elidedShape)
       indices.push_back(builder.createConvert(loc, idxTy, sh));
-    mlir::Value alloc = builder.create<cuf::AllocOp>(
-        loc, ty, nm, symNm, dataAttr, lenParams, indices);
-    return alloc;
+    if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+      return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
+                                                 indices);
+    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
+                                        indices);
   }
 
   // Let the builder do all the heavy lifting.
@@ -1032,12 +1034,16 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                symMap);
   if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
     auto *builder = &converter.getFirOpBuilder();
+    cuf::DataAttributeAttr dataAttr =
+        Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
+                                                        var.getSymbol());
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     auto *sym = &var.getSymbol();
     const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
+    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram &&
+        dataAttr.getValue() != cuf::DataAttribute::Shared) {
       converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
@@ -1577,17 +1583,6 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
   return false;
 }
 
-/// Compute extent from lower and upper bound.
-static mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Value lb, mlir::Value ub) {
-  mlir::IndexType idxTy = builder.getIndexType();
-  // Let the folder deal with the common `ub - <const> + 1` case.
-  auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ub, lb);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
-  return fir::factory::genMaxWithZero(builder, loc, rawExtent);
-}
-
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -1651,8 +1646,8 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       if (lowerBounds.empty())
         result.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       else
-        result.emplace_back(
-            computeExtent(builder, loc, lowerBounds[spec.index()], ub));
+        result.emplace_back(fir::factory::computeExtent(
+            builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isStar()) {
       result.emplace_back(getAssumedSizeExtent(loc, builder));
     }
@@ -2272,7 +2267,8 @@ void Fortran::lower::mapSymbolAttributes(
         if (auto high = spec->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           ub = builder.createConvert(loc, idxTy, genValue(expr));
-          extents.emplace_back(computeExtent(builder, loc, lb, ub));
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
         } else {
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isStar() && "expected assumed size");

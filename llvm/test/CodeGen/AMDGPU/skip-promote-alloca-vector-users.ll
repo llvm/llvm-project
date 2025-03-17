@@ -9,7 +9,7 @@ define amdgpu_kernel void @test_insertelement() #0 {
 entry:
   %alloca = alloca i16, align 4, addrspace(5)
   %in = insertelement <2 x ptr addrspace(5)> poison, ptr addrspace(5) %alloca, i32 0
-  store <2 x ptr addrspace(5)> %in, ptr undef, align 4
+  store <2 x ptr addrspace(5)> %in, ptr poison, align 4
   ret void
 }
 
@@ -20,7 +20,7 @@ define amdgpu_kernel void @test_insertvalue() #0 {
 entry:
   %alloca = alloca i16, align 4, addrspace(5)
   %in = insertvalue { ptr addrspace(5) } poison, ptr addrspace(5) %alloca, 0
-  store { ptr addrspace(5) } %in, ptr undef, align 4
+  store { ptr addrspace(5) } %in, ptr poison, align 4
   ret void
 }
 
@@ -31,7 +31,7 @@ define amdgpu_kernel void @test_insertvalue_array() #0 {
 entry:
   %alloca = alloca i16, align 4, addrspace(5)
   %in = insertvalue [2 x ptr addrspace(5)] poison, ptr addrspace(5) %alloca, 0
-  store [2 x ptr addrspace(5)] %in, ptr undef, align 4
+  store [2 x ptr addrspace(5)] %in, ptr poison, align 4
   ret void
 }
 

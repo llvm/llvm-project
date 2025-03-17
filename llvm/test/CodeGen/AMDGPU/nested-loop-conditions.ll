@@ -83,7 +83,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; IR-NEXT:    br i1 [[MY_TMP14]], label %[[BB16:.*]], label %[[BB20:.*]]
 ; IR:       [[BB16]]:
 ; IR-NEXT:    [[MY_TMP17:%.*]] = extractelement <2 x i32> [[MY_TMP15]], i64 1
-; IR-NEXT:    [[MY_TMP18:%.*]] = getelementptr inbounds i32, ptr addrspace(3) undef, i32 [[MY_TMP17]]
+; IR-NEXT:    [[MY_TMP18:%.*]] = getelementptr inbounds i32, ptr addrspace(3) poison, i32 [[MY_TMP17]]
 ; IR-NEXT:    [[MY_TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[MY_TMP18]], align 4
 ; IR-NEXT:    br label %[[BB20]]
 ; IR:       [[BB20]]:
@@ -129,7 +129,7 @@ bb13:                                             ; preds = %bb8, %bb3
 
 bb16:                                             ; preds = %bb13
   %my.tmp17 = extractelement <2 x i32> %my.tmp15, i64 1
-  %my.tmp18 = getelementptr inbounds i32, ptr addrspace(3) undef, i32 %my.tmp17
+  %my.tmp18 = getelementptr inbounds i32, ptr addrspace(3) poison, i32 %my.tmp17
   %my.tmp19 = load volatile i32, ptr addrspace(3) %my.tmp18
   br label %bb20
 

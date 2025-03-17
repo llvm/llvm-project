@@ -87,10 +87,10 @@ bb2:
 
 ; FIXME: These aren't localized because thesee were legalized before
 ; the localizer, and are no longer G_GLOBAL_VALUE.
-@gv0 = addrspace(1) global i32 undef, align 4
-@gv1 = addrspace(1) global i32 undef, align 4
-@gv2 = addrspace(1) global i32 undef, align 4
-@gv3 = addrspace(1) global i32 undef, align 4
+@gv0 = addrspace(1) global i32 poison, align 4
+@gv1 = addrspace(1) global i32 poison, align 4
+@gv2 = addrspace(1) global i32 poison, align 4
+@gv3 = addrspace(1) global i32 poison, align 4
 
 define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-LABEL: localize_globals:
@@ -159,10 +159,10 @@ bb2:
   ret void
 }
 
-@static.gv0 = internal addrspace(1) global i32 undef, align 4
-@static.gv1 = internal addrspace(1) global i32 undef, align 4
-@static.gv2 = internal addrspace(1) global i32 undef, align 4
-@static.gv3 = internal addrspace(1) global i32 undef, align 4
+@static.gv0 = internal addrspace(1) global i32 poison, align 4
+@static.gv1 = internal addrspace(1) global i32 poison, align 4
+@static.gv2 = internal addrspace(1) global i32 poison, align 4
+@static.gv3 = internal addrspace(1) global i32 poison, align 4
 
 define void @localize_internal_globals(i1 %cond) {
 ; GFX9-LABEL: localize_internal_globals:

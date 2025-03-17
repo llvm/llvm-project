@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.RetainPtrCtorAdoptChecker -verify %s
 
 #include "objc-mock-types.h"

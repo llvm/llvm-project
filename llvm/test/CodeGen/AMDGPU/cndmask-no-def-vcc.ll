@@ -37,7 +37,7 @@ bb2:
 define amdgpu_kernel void @preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) {
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
-  %undef = call i1 @llvm.amdgcn.class.f32(float undef, i32 undef)
+  %undef = call i1 @llvm.amdgcn.class.f32(float poison, i32 undef)
   %tmp4 = select i1 %undef, float %arg, float 1.000000e+00
   %tmp5 = fcmp ogt float %arg2, 0.000000e+00
   %tmp6 = fcmp olt float %arg2, 1.000000e+00
