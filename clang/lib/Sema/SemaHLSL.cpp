@@ -162,10 +162,7 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   // if CBuffer is false, then it's a TBuffer
   auto RC = CBuffer ? llvm::hlsl::ResourceClass::CBuffer
                     : llvm::hlsl::ResourceClass::SRV;
-  auto RK = CBuffer ? llvm::hlsl::ResourceKind::CBuffer
-                    : llvm::hlsl::ResourceKind::TBuffer;
   Result->addAttr(HLSLResourceClassAttr::CreateImplicit(getASTContext(), RC));
-  Result->addAttr(HLSLResourceAttr::CreateImplicit(getASTContext(), RK));
 
   SemaRef.PushOnScopeChains(Result, BufferScope);
   SemaRef.PushDeclContext(BufferScope, Result);
@@ -752,7 +749,7 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
                         HLSLShaderAttr::ConvertEnvironmentTypeToStr(ST));
                   });
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-      << A << llvm::Triple::getEnvironmentTypeName(Stage)
+      << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
 }
 
@@ -1961,6 +1958,17 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
+    // Set HasValidPackoffset if any of the decls has a register(c#) annotation;
+    for (const Decl *VD : DefaultCBufferDecls) {
+      const HLSLResourceBindingAttr *RBA =
+          VD->getAttr<HLSLResourceBindingAttr>();
+      if (RBA &&
+          RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
+        DefaultCBuffer->setHasValidPackoffset(true);
+        break;
+      }
+    }
+
     DeclGroupRef DG(DefaultCBuffer);
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
@@ -2649,6 +2657,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_exp10:
   case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_fmod:
   case Builtin::BI__builtin_elementwise_log:

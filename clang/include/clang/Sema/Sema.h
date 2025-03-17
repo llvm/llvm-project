@@ -2499,9 +2499,9 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
-  /// Check the arguments to '__builtin_va_start' or '__builtin_ms_va_start'
-  /// for validity.  Emit an error and return true on failure; return false
-  /// on success.
+  /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
+  /// or '__builtin_c23_va_start' for validity. Emit an error and return true
+  /// on failure; return false on success.
   bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
 
@@ -3167,6 +3167,13 @@ public:
   }
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);
+
+  enum class DiagCtorKind { None, Implicit, Typename };
+  /// Returns the TypeDeclType for the given type declaration,
+  /// as ASTContext::getTypeDeclType would, but
+  /// performs the required semantic checks for name lookup of said entity.
+  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+                           TypeDecl *TD, SourceLocation NameLoc);
 
   /// If the identifier refers to a type name within this scope,
   /// return the declaration of that type.
@@ -5444,7 +5451,8 @@ public:
   /// destructor is referenced.
   void MarkVirtualBaseDestructorsReferenced(
       SourceLocation Location, CXXRecordDecl *ClassDecl,
-      llvm::SmallPtrSetImpl<const RecordType *> *DirectVirtualBases = nullptr);
+      llvm::SmallPtrSetImpl<const CXXRecordDecl *> *DirectVirtualBases =
+          nullptr);
 
   /// Do semantic checks to allow the complete destructor variant to be emitted
   /// when the destructor is defined in another translation unit. In the Itanium
@@ -10746,11 +10754,6 @@ public:
   StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl, SourceLocation StartLoc,
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
-
-  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
-  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
-  /// value has been discarded.
-  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.

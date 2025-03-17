@@ -275,8 +275,11 @@ private:
   void CheckTargetUpdate();
   void CheckDependenceType(const parser::OmpDependenceType::Value &x);
   void CheckTaskDependenceType(const parser::OmpTaskDependenceType::Value &x);
+  std::optional<llvm::omp::Directive> GetCancelType(
+      llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
+      const parser::OmpClauseList &clauses);
   void CheckCancellationNest(
-      const parser::CharBlock &source, const parser::OmpCancelType::Type &type);
+      const parser::CharBlock &source, llvm::omp::Directive type);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
@@ -285,6 +288,7 @@ private:
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,
       const parser::OmpReductionIdentifier &ident);
   void CheckReductionModifier(const parser::OmpReductionModifier &);
+  void CheckLastprivateModifier(const parser::OmpLastprivateModifier &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

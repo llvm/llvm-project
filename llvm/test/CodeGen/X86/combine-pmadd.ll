@@ -51,11 +51,9 @@ define <8 x i32> @combine_pmaddwd_concat(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>
 ;
 ; AVX2-LABEL: combine_pmaddwd_concat:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpmaddwd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddwd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmaddwd %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a0, <8 x i16> %a1)
   %2 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a2, <8 x i16> %a3)
@@ -209,7 +207,7 @@ define <16 x i16> @combine_pmaddubsw_concat(<32 x i8> %a0, <32 x i8> %a1) {
   ret <16 x i16> %res
 }
 
-; TODO: Not beneficial to concatenate both inputs just to create a 256-bit pmaddubsw
+; Not beneficial to concatenate both inputs just to create a 256-bit pmaddubsw
 define <16 x i16> @combine_pmaddubsw_concat_unecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2, <16 x i8> %a3) {
 ; SSE-LABEL: combine_pmaddubsw_concat_unecessary:
 ; SSE:       # %bb.0:
@@ -227,11 +225,9 @@ define <16 x i16> @combine_pmaddubsw_concat_unecessary(<16 x i8> %a0, <16 x i8> 
 ;
 ; AVX2-LABEL: combine_pmaddubsw_concat_unecessary:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmaddubsw %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a0, <16 x i8> %a1)
   %2 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %a2, <16 x i8> %a3)

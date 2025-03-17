@@ -163,7 +163,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) {
 ; GFX9V5-NEXT:    s_endpgm
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -219,7 +219,7 @@ define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) {
 ; GFX9V5-NEXT:    s_endpgm
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 

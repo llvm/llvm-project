@@ -383,7 +383,7 @@ public:
 
   bool isSafeForAnyVectorWidth() const {
     return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
-           !LAI->getDepChecker().getStoreLoadForwardSafeVF();
+           LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
@@ -407,10 +407,15 @@ public:
     return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
   }
 
+  /// Return true if there is store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
+  }
+
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding and safe to operate simultaneously.
-  std::optional<unsigned> getMaxStoreLoadForwardSafeVFPowerOf2() const {
-    return LAI->getDepChecker().getStoreLoadForwardSafeVF();
+  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I

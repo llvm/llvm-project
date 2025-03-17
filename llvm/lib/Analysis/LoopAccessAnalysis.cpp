@@ -1757,9 +1757,9 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // cause any slowdowns.
   const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
-  uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 = std::min(
-      VectorizerParams::MaxVectorWidth * TypeByteSize,
-      MaxStoreLoadForwardSafeVF.value_or(std::numeric_limits<uint64_t>::max()));
+  uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
+      std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
+               MaxStoreLoadForwardSafeDistanceInBits);
 
   // Compute the smallest VF at which the store and load would be misaligned.
   for (uint64_t VF = 2 * TypeByteSize;
@@ -1781,14 +1781,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
 
   if (CommonStride &&
       MaxVFWithoutSLForwardIssuesPowerOf2 <
-          MaxStoreLoadForwardSafeVF.value_or(
-              std::numeric_limits<uint64_t>::max()) &&
+          MaxStoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize) {
     uint64_t MaxVF = MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride;
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-    MaxStoreLoadForwardSafeVF =
-        std::min(MaxStoreLoadForwardSafeVF.value_or(MaxVFInBits), MaxVFInBits);
+    MaxStoreLoadForwardSafeDistanceInBits =
+        std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
   }
   return false;
 }
@@ -2286,8 +2285,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
           (AIIsWrite ? AI : std::next(AI));
       while (OI != AE) {
         // Check every accessing instruction pair in program order.
-        for (std::vector<unsigned>::iterator I1 = Accesses[*AI].begin(),
-             I1E = Accesses[*AI].end(); I1 != I1E; ++I1)
+        auto &Acc = Accesses[*AI];
+        for (std::vector<unsigned>::iterator I1 = Acc.begin(), I1E = Acc.end();
+             I1 != I1E; ++I1)
           // Scan all accesses of another equivalence class, but only the next
           // accesses of the same equivalent class.
           for (std::vector<unsigned>::iterator
@@ -3004,9 +3004,11 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
     if (!DC.isSafeForAnyVectorWidth())
       OS << " with a maximum safe vector width of "
          << DC.getMaxSafeVectorWidthInBits() << " bits";
-    if (std::optional<unsigned> SLDist = DC.getStoreLoadForwardSafeVF())
-      OS << ", with a maximum safe store-load forward width of " << *SLDist
+    if (!DC.isSafeForAnyStoreLoadForwardDistances()) {
+      uint64_t SLDist = DC.getStoreLoadForwardSafeDistanceInBits();
+      OS << ", with a maximum safe store-load forward width of " << SLDist
          << " bits";
+    }
     if (PtrRtChecking->Need)
       OS << " with run-time checks";
     OS << "\n";

@@ -27,7 +27,6 @@
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/GetDylibInterface.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
@@ -337,8 +336,8 @@ static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_registerEHFrameSectionAllocAction << '\n'
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
@@ -1248,13 +1247,11 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       if (!UseEHFrames)
         ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
-        ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, ExitOnErr(EPCEHFrameRegistrar::Create(ES))));
+        ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
-      ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
+      ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
           ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));

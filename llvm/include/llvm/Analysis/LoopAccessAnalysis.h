@@ -216,10 +216,19 @@ public:
     return MaxSafeVectorWidthInBits;
   }
 
+  /// Return true if there is store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return MaxStoreLoadForwardSafeDistanceInBits ==
+           std::numeric_limits<uint64_t>::max();
+  }
+
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding, multiplied by the size of the elements in bits.
-  std::optional<uint64_t> getStoreLoadForwardSafeVF() const {
-    return MaxStoreLoadForwardSafeVF;
+  uint64_t getStoreLoadForwardSafeDistanceInBits() const {
+    assert(!isSafeForAnyStoreLoadForwardDistances() &&
+           "Expected the distance, that prevent store-load forwarding, to be "
+           "set.");
+    return MaxStoreLoadForwardSafeDistanceInBits;
   }
 
   /// In same cases when the dependency check fails we can still
@@ -312,7 +321,8 @@ private:
 
   /// Maximum power-of-2 number of elements, which do not prevent store-load
   /// forwarding, multiplied by the size of the elements in bits.
-  std::optional<uint64_t> MaxStoreLoadForwardSafeVF;
+  uint64_t MaxStoreLoadForwardSafeDistanceInBits =
+      std::numeric_limits<uint64_t>::max();
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.

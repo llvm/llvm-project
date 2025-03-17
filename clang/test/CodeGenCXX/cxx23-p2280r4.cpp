@@ -15,11 +15,11 @@ int& test() {
 }
 
 // CHECK-LABEL: @_Z1fv(
-// CHECK: [[X1:%.*]] = load ptr, ptr @x, align 8
+// CHECK: [[X1:%.*]] = load ptr, ptr @x, align {{.*}}
 // CHECK-NEXT: store ptr [[X1]]
-// CHECK: [[X2:%.*]] = load ptr, ptr @x, align 8
+// CHECK: [[X2:%.*]] = load ptr, ptr @x, align {{.*}}
 // CHECK-NEXT: store ptr [[X2]]
-// CHECK: [[X3:%.*]] = load ptr, ptr @x, align 8
+// CHECK: [[X3:%.*]] = load ptr, ptr @x, align {{.*}}
 // CHECK-NEXT: store ptr [[X3]]
 int &ff();
 int &x = ff();

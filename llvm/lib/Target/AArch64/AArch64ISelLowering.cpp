@@ -8230,7 +8230,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg && DAG.getMachineFunction().getFrameInfo().hasVAStart()) {
+  if (isVarArg) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
@@ -17505,7 +17505,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
       if (UseScalable)
         Shuffle = Builder.CreateInsertVector(
-            STVTy, UndefValue::get(STVTy), Shuffle,
+            STVTy, PoisonValue::get(STVTy), Shuffle,
             ConstantInt::get(Type::getInt64Ty(STVTy->getContext()), 0));
 
       Ops.push_back(Shuffle);

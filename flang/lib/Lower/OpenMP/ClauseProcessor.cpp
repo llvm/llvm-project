@@ -928,8 +928,24 @@ void ClauseProcessor::processMapObjects(
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // Create the mapper symbol from its name, if specified.
   mlir::FlatSymbolRefAttr mapperId;
-  std::string mapperIdName = mapperIdNameRef.str();
+  if (!mapperIdNameRef.empty() && !objects.empty()) {
+    std::string mapperIdName = mapperIdNameRef.str();
+    if (mapperIdName == "default") {
+      const omp::Object &object = objects.front();
+      auto &typeSpec = object.sym()->owner().IsDerivedType()
+                           ? *object.sym()->owner().derivedTypeSpec()
+                           : object.sym()->GetType()->derivedTypeSpec();
+      mapperIdName = typeSpec.name().ToString() + ".default";
+      mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
+    }
+    assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
+           "mapper not found");
+    mapperId =
+        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
+  }
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -962,20 +978,6 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
-    if (!mapperIdName.empty()) {
-      if (mapperIdName == "default") {
-        auto &typeSpec = object.sym()->owner().IsDerivedType()
-                             ? *object.sym()->owner().derivedTypeSpec()
-                             : object.sym()->GetType()->derivedTypeSpec();
-        mapperIdName = typeSpec.name().ToString() + ".default";
-        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
-      }
-      assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
-             "mapper not found");
-      mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                              mapperIdName);
-      mapperIdName.clear();
-    }
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
     // types to optimise
