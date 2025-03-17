@@ -7,9 +7,8 @@ add_llvm_component_library(LLVMModuleSplitter
   LINK_COMPONENTS
   Core
   IRReader
-  LLVMBitReader
-  LLVMBitWriter
-  LLVMModuleSplitter
+  BitReader
+  BitWriter
   Support
   TransformUtils
 )

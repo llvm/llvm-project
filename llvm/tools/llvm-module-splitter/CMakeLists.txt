@@ -1,9 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   Core
   IRReader
-  LLVMBitReader
-  LLVMBitWriter
-  LLVMModuleSplitter
+  BitReader
+  BitWriter
+  ModuleSplitter
   Support
   TransformUtils
 )
