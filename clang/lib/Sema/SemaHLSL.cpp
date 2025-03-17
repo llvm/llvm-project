@@ -162,10 +162,7 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   // if CBuffer is false, then it's a TBuffer
   auto RC = CBuffer ? llvm::hlsl::ResourceClass::CBuffer
                     : llvm::hlsl::ResourceClass::SRV;
-  auto RK = CBuffer ? llvm::hlsl::ResourceKind::CBuffer
-                    : llvm::hlsl::ResourceKind::TBuffer;
   Result->addAttr(HLSLResourceClassAttr::CreateImplicit(getASTContext(), RC));
-  Result->addAttr(HLSLResourceAttr::CreateImplicit(getASTContext(), RK));
 
   SemaRef.PushOnScopeChains(Result, BufferScope);
   SemaRef.PushDeclContext(BufferScope, Result);
