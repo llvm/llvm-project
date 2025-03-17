@@ -563,8 +563,6 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCValue &Target,
                                            const uint64_t,
                                            const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
   default:
