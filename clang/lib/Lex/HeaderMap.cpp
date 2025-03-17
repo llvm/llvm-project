@@ -157,6 +157,9 @@ std::optional<StringRef> HeaderMapImpl::getString(unsigned StrTabIdx) const {
   unsigned MaxLen = FileBuffer->getBufferSize() - StrTabIdx;
   unsigned Len = strnlen(Data, MaxLen);
 
+  if (MaxLen == 0)
+    return std::nullopt;
+
   // Check whether the buffer is null-terminated.
   if (Len == MaxLen && Data[Len - 1])
     return std::nullopt;
