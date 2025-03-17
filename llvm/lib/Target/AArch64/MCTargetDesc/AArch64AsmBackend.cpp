@@ -41,9 +41,6 @@ public:
                                     : llvm::endianness::big),
         TheTriple(TT) {}
 
-  unsigned getNumFixupKinds() const override {
-    return AArch64::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
@@ -78,7 +75,8 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) <
+               AArch64::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
@@ -98,7 +96,7 @@ public:
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t Value,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 };
 
@@ -520,7 +518,6 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
-                                              const uint64_t,
                                               const MCSubtargetInfo *STI) {
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
