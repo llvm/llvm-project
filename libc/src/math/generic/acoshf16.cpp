@@ -7,22 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/acoshf16.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
-#include "src/__support/FPUtil/generic/sqrt.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
 #include "src/math/generic/explogxf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 static constexpr size_t N_EXCEPTS = 2;
-static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ACOSHF16_EXCEPTS{
-    {// (input, RZ output, RU offset, RD offset, RN offset)
-     {0x41B7, 0x3ED8, 1, 0, 0},
-     {0x3CE4, 0x393E, 1, 0, 1}}};
+static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ACOSHF16_EXCEPTS{{
+    // (input, RZ output, RU offset, RD offset, RN offset)
+    // x = 0x1.6ep+1, acoshf16(x) = 0x1.dbp+0 (RZ)
+    {0x41B7, 0x3ED8, 1, 0, 0},
+    // x = 0x1.c8p+0, acoshf16(x) = 0x1.27cp-1 (RZ)
+    {0x3CE4, 0x393E, 1, 0, 1},
+}};
 
 LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -58,29 +63,48 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
 
   // acosh(1.0) exactly equals 0.0
   if (LIBC_UNLIKELY(x_u == 0x3c00U))
-    return float16(0.0f);
+    return FPBits::zero().get_val();
 
   if (auto r = ACOSHF16_EXCEPTS.lookup(xbits.uintval());
       LIBC_UNLIKELY(r.has_value()))
     return r.value();
 
-  float xf32 = x;
+  float xf = x;
   // High precision for inputs very close to 1.0
-  if (LIBC_UNLIKELY(xf32 < 1.25f)) {
-    float delta = xf32 - 1.0f;
+  // For inputs close to 1 (1 <= x < 1.25), use polynomial approximation:
+  //
+  // Step-by-step derivation:
+  // 1. Let y = acosh(x), thus x = cosh(y).
+  //
+  // 2. Rewrite cosh identity using exponential form:
+  //      cosh(y) = (e^y + e^{-y}) / 2
+  //      For y close to 0, let y = sqrt(2 * delta), thus:
+  //      x = cosh(y) ≈ 1 + delta (since cosh(0) = 1, and delta is small)
+  //      thus delta = x - 1.
+  //
+  // 3: Express y in terms of delta (for small delta):
+  //      y ≈ sqrt(2 * delta)
+  //
+  // 4: Expand acosh(1 + delta) using a Taylor expansion around delta = 0:
+  //      acosh(1 + delta) ≈ sqrt(2 * delta) * P(delta), where P(delta)
+  //      is a polynomial approximation obtained by fitting the function
+  //      precisely in the interval [0, 0.25].
+  //
+  // Because delta = x - 1 and 0 <= delta < 0.25, the polynomial approximation
+  // remains numerically stable and accurate in this domain, ensuring high
+  // precision.
+  if (LIBC_UNLIKELY(xf < 1.25f)) {
+    float delta = xf - 1.0f;
     float sqrt_2_delta = fputil::sqrt<float>(2.0 * delta);
-    float x2 = delta;
-    float pe =
-        fputil::polyeval(x2, 0x1.000000p+0f, -0x1.55551ap-4f, 0x1.33160cp-6f,
-                         -0x1.6890f4p-8f, 0x1.8f3a62p-10f);
+    float pe = fputil::polyeval(delta, 0x1p+0f, -0x1.55551ap-4f, 0x1.33160cp-6f,
+                                -0x1.6890f4p-8f, 0x1.8f3a62p-10f);
     float approx = sqrt_2_delta * pe;
     return fputil::cast<float16>(approx);
   }
 
-  // Standard computation for general case.
-  float sqrt_term =
-      fputil::sqrt<float>(fputil::multiply_add(xf32, xf32, -1.0f));
-  float result = static_cast<float>(log_eval(xf32 + sqrt_term));
+  // acosh(x) = log(x + sqrt(x^2 - 1))
+  float sqrt_term = fputil::sqrt<float>(fputil::multiply_add(xf, xf, -1.0f));
+  float result = static_cast<float>(log_eval(xf + sqrt_term));
 
   return fputil::cast<float16>(result);
 }
