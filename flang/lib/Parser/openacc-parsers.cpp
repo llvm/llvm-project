@@ -23,7 +23,7 @@ namespace Fortran::parser {
 // other types of line comments from fixed form.
 constexpr auto startAccLine{skipStuffBeforeStatement >>
     withMessage(
-        "expected OpenACC directive sentinal: !$ACC (free-form) / C$ACC or *$ACC (fixed-form)"_err_en_US,
+        "expected OpenACC directive sentinel: !$ACC (free-form) / C$ACC or *$ACC (fixed-form)"_err_en_US,
         "!$ACC "_sptok)};
 constexpr auto endAccLine{space >>
     recovery(
@@ -238,9 +238,8 @@ TYPE_PARSER(construct<OpenACCBlockConstruct>(
     recovery(withMessage("expected OpenACC end block directive"_err_en_US,
                  attempt(Parser<AccEndBlockDirective>{} / endAccLine)),
         // TODO: Is there a simpler way to build this?
-        sourced(construct<AccEndBlockDirective>(
-            sourced(construct<AccBlockDirective>(
-                pure(llvm::acc::Directive::ACCD_data))))))))
+        construct<AccEndBlockDirective>(construct<AccBlockDirective>(
+            pure(llvm::acc::Directive::ACCD_data))))))
 
 // Standalone constructs
 TYPE_PARSER(construct<OpenACCStandaloneConstruct>(

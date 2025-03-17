@@ -273,8 +273,8 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
 }
 
 // TODO: Make these configurable, based on verbosity level.
-const int MAX_CONTEXTS_EMITTED = 2;
-const bool OMIT_SHARED_CONTEXTS = true;
+static constexpr int MAX_CONTEXTS_EMITTED{2};
+static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine) const {
@@ -282,7 +282,7 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   const AllSources &sources{allCooked.allSources()};
   sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
-  // Always refers to if the attachment in the loop below is a context.
+  // Always refers to whether the attachment in the loop below is a context.
   bool isContext{attachmentIsContext_};
   int contextsEmitted{0};
   // Emit attachments.
@@ -300,9 +300,9 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
       // Truncate the number of contexts emitted.
       if (contextsEmitted < MAX_CONTEXTS_EMITTED) {
         emitAttachment();
-        contextsEmitted += 1;
+        ++contextsEmitted;
       }
-      if (OMIT_SHARED_CONTEXTS) {
+      if constexpr (OMIT_SHARED_CONTEXTS) {
         // Skip less specific contexts at the same location.
         for (const Message *next_attachment{attachment->attachment_.get()};
             next_attachment && next_attachment->attachmentIsContext_ &&
