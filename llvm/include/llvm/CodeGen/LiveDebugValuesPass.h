@@ -1,4 +1,4 @@
-//===- llvm/CodeGen/LiveDebugValuesPass.h --------------------*- C++ -*-===//
+//===- llvm/CodeGen/LiveDebugValuesPass.h -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,8 +19,10 @@ class LiveDebugValuesPass : public PassInfoMixin<LiveDebugValuesPass> {
 public:
   LiveDebugValuesPass(bool ShouldEmitDebugEntryValues)
       : ShouldEmitDebugEntryValues(ShouldEmitDebugEntryValues) {}
+
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
