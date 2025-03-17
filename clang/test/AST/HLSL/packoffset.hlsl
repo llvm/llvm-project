@@ -5,7 +5,6 @@
 cbuffer A
 {
     // CHECK-NEXT:-HLSLResourceClassAttr {{.*}} Implicit CBuffer
-    // CHECK-NEXT:-HLSLResourceAttr {{.*}} Implicit CBuffer
     // CHECK-NEXT: VarDecl {{.*}} A1 'hlsl_constant float4'
     // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 0
     float4 A1 : packoffset(c);

@@ -350,6 +350,12 @@ static std::initializer_list<LLT> AllS32Vectors = {
 static std::initializer_list<LLT> AllS64Vectors = {V2S64, V3S64, V4S64, V5S64,
                                                    V6S64, V7S64, V8S64, V16S64};
 
+static std::initializer_list<LLT> AllVectors{
+    V2S16,  V4S16,  V6S16,  V8S16,  V10S16, V12S16, V16S16, V2S128,
+    V4S128, V2S32,  V3S32,  V4S32,  V5S32,  V6S32,  V7S32,  V8S32,
+    V9S32,  V10S32, V11S32, V12S32, V16S32, V32S32, V2S64,  V3S64,
+    V4S64,  V5S64,  V6S64,  V7S64,  V8S64,  V16S64};
+
 // Checks whether a type is in the list of legal register types.
 static bool isRegisterClassType(const GCNSubtarget &ST, LLT Ty) {
   if (Ty.isPointerOrPointerVector())
@@ -2105,6 +2111,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .unsupported();
 
   getActionDefinitionsBuilder(G_PREFETCH).alwaysLegal();
+
+  getActionDefinitionsBuilder(
+      {G_VECREDUCE_SMIN, G_VECREDUCE_SMAX, G_VECREDUCE_UMIN, G_VECREDUCE_UMAX,
+       G_VECREDUCE_ADD, G_VECREDUCE_MUL, G_VECREDUCE_FMUL, G_VECREDUCE_FMIN,
+       G_VECREDUCE_FMAX, G_VECREDUCE_FMINIMUM, G_VECREDUCE_FMAXIMUM,
+       G_VECREDUCE_OR, G_VECREDUCE_AND, G_VECREDUCE_XOR})
+      .legalFor(AllVectors)
+      .scalarize(1)
+      .lower();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());

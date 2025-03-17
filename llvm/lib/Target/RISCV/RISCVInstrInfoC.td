@@ -332,7 +332,7 @@ def C_LW_INX : CLoad_ri<0b010, "c.lw", GPRF32C, uimm7_lsb00>,
   let Inst{5} = imm{6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFLD32, ReadFMemBase]> {
@@ -375,7 +375,7 @@ def C_SW_INX : CStore_rri<0b110, "c.sw", GPRF32C, uimm7_lsb00>,
   let Inst{5} = imm{6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]  in
 def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {
@@ -415,7 +415,7 @@ def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, immzero:$imm),
                               [], "c.addi", "$rd, $imm">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
-    DecoderNamespace = "RISCV32Only_", Defs = [X1],
+    DecoderNamespace = "RV32Only", Defs = [X1],
     Predicates = [HasStdExtCOrZca, IsRV32]  in
 def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins simm12_lsb0:$offset),
                        "c.jal", "$offset">, Sched<[WriteJal]>;
@@ -521,7 +521,7 @@ def C_LWSP_INX : CStackLoad<0b010, "c.lwsp", GPRF32NoX0, uimm8_lsb00>,
   let Inst{3-2} = imm{7-6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFLD32, ReadFMemBase]> {
@@ -581,7 +581,7 @@ def C_SWSP_INX : CStackStore<0b110, "c.swsp", GPRF32, uimm8_lsb00>,
   let Inst{8-7}  = imm{7-6};
 }
 
-let DecoderNamespace = "RISCV32Only_",
+let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFST32, ReadFStoreData, ReadFMemBase]> {

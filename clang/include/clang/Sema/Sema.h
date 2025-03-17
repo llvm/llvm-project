@@ -5585,9 +5585,15 @@ public:
   void ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
 
-  bool EvaluateStaticAssertMessageAsString(Expr *Message, std::string &Result,
-                                           ASTContext &Ctx,
-                                           bool ErrorOnInvalidMessage);
+  enum class StringEvaluationContext { StaticAssert = 0, Asm = 1 };
+
+  bool EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+  bool EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc);
@@ -11035,6 +11041,7 @@ private:
   ///@{
 
 public:
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -15323,6 +15330,13 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
+  DB << llvm::to_underlying(Ctx);
+  return DB;
+}
+
 } // end namespace clang
 
 #endif

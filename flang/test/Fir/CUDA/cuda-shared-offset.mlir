@@ -14,7 +14,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: gpu.func @_QPdynshared()
-// CHECK: %{{.*}} = cuf.shared_memory !fir.array<?xf32>, %c-1 : index {bindc_name = "r", offset = 0 : i32, uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>       
+// CHECK: %{{.*}} = cuf.shared_memory[%c0{{.*}} : i32] !fir.array<?xf32>, %c-1 : index {bindc_name = "r", uniq_name = "_QFdynsharedEr"} -> !fir.ref<!fir.array<?xf32>>       
 // CHECK: gpu.return
 // CHECK: }
 // CHECK: fir.global internal @_QPdynshared__shared_mem {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<0xi8>
@@ -43,12 +43,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: gpu.func @_QPshared_static()
-// CHECK: cuf.shared_memory i32 {bindc_name = "a", offset = 0 : i32, uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>      
-// CHECK: cuf.shared_memory i32 {bindc_name = "b", offset = 4 : i32, uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory i32 {bindc_name = "c", offset = 8 : i32, uniq_name = "_QFshared_staticEc"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory i32 {bindc_name = "d", offset = 12 : i32, uniq_name = "_QFshared_staticEd"} -> !fir.ref<i32>
-// CHECK: cuf.shared_memory i64 {bindc_name = "e", offset = 16 : i32, uniq_name = "_QFshared_staticEe"} -> !fir.ref<i64>
-// CHECK: cuf.shared_memory f32 {bindc_name = "r", offset = 24 : i32, uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
+// CHECK: cuf.shared_memory[%c0{{.*}} : i32] i32 {bindc_name = "a", uniq_name = "_QFshared_staticEa"} -> !fir.ref<i32>      
+// CHECK: cuf.shared_memory[%c4{{.*}} : i32] i32 {bindc_name = "b", uniq_name = "_QFshared_staticEb"} -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c8{{.*}} : i32] i32 {bindc_name = "c", uniq_name = "_QFshared_staticEc"} -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c12{{.*}} : i32] i32 {bindc_name = "d", uniq_name = "_QFshared_staticEd"} -> !fir.ref<i32>
+// CHECK: cuf.shared_memory[%c16{{.*}} : i32] i64 {bindc_name = "e", uniq_name = "_QFshared_staticEe"} -> !fir.ref<i64>
+// CHECK: cuf.shared_memory[%c24{{.*}} : i32] f32 {bindc_name = "r", uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
 // CHECK: gpu.return
 // CHECK: }
 // CHECK: fir.global internal @_QPshared_static__shared_mem(dense<0> : vector<28xi8>) {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<28xi8>
