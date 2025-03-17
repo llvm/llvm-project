@@ -763,7 +763,7 @@ bool Sema::DiagnoseUninstantiableTemplate(
     SourceLocation PointOfInstantiation, NamedDecl *Instantiation,
     bool InstantiatedFromMember, const NamedDecl *Pattern,
     const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
-    bool Complain /*= true*/, bool *Unreachable) {
+    bool Complain, bool *Unreachable) {
   assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation) ||
          isa<VarDecl>(Instantiation));
 

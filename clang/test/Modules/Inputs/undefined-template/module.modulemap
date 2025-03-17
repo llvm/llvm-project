@@ -1,7 +1,0 @@
-module hoge {
-  header "hoge.h"
-}
-
-module shared_ptr2 {
-  header "shared_ptr2.h"
-}
