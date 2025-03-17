@@ -647,7 +647,7 @@ define amdgpu_kernel void @bitcast_fneg_f32(ptr addrspace(1) %out, ptr addrspace
 ; GCN-NEXT:    s_endpgm
 bb:
   %vec0 = load volatile <2 x half>, ptr addrspace(3) %lds, align 4
-  %f32 = load volatile float, ptr addrspace(3) undef, align 4
+  %f32 = load volatile float, ptr addrspace(3) poison, align 4
   %neg.f32 = fsub float -0.0, %f32
   %bc = bitcast float %neg.f32 to <2 x half>
   %result = fadd <2 x half> %vec0, %bc
@@ -675,7 +675,7 @@ define amdgpu_kernel void @shuffle_bitcast_fneg_f32(ptr addrspace(1) %out, ptr a
 bb:
   %vec0 = load volatile <2 x half>, ptr addrspace(3) %lds, align 4
 
-  %f32 = load volatile float, ptr addrspace(3) undef, align 4
+  %f32 = load volatile float, ptr addrspace(3) poison, align 4
   %neg.f32 = fsub float -0.0, %f32
   %bc = bitcast float %neg.f32 to <2 x half>
   %shuf = shufflevector <2 x half> %bc, <2 x half> poison, <2 x i32> <i32 1, i32 0>

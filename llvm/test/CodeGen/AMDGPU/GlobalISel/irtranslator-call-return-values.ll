@@ -1239,10 +1239,10 @@ define amdgpu_kernel void @test_call_external_p3_func_void() #0 {
   ; GCN-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_p3_func_void, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0
   ; GCN-NEXT:   [[COPY21:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN-NEXT:   G_STORE [[COPY21]](p3), [[DEF]](p3) :: (volatile store (p3) into `ptr addrspace(3) undef`, addrspace 3)
+  ; GCN-NEXT:   G_STORE [[COPY21]](p3), [[DEF]](p3) :: (volatile store (p3) into `ptr addrspace(3) poison`, addrspace 3)
   ; GCN-NEXT:   S_ENDPGM 0
   %val = call ptr addrspace(3) @external_p3_func_void()
-  store volatile ptr addrspace(3) %val, ptr addrspace(3) undef
+  store volatile ptr addrspace(3) %val, ptr addrspace(3) poison
   ret void
 }
 
@@ -1299,10 +1299,10 @@ define amdgpu_kernel void @test_call_external_v2p3_func_void() #0 {
   ; GCN-NEXT:   [[COPY22:%[0-9]+]]:_(p3) = COPY $vgpr1
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[COPY21]](p3), [[COPY22]](p3)
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; GCN-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p3) :: (volatile store (<2 x p3>) into `ptr addrspace(3) undef`, addrspace 3)
+  ; GCN-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x p3>), [[DEF]](p3) :: (volatile store (<2 x p3>) into `ptr addrspace(3) poison`, addrspace 3)
   ; GCN-NEXT:   S_ENDPGM 0
   %val = call <2 x ptr addrspace(3)> @external_v2p3_func_void()
-  store volatile <2 x ptr addrspace(3)> %val, ptr addrspace(3) undef
+  store volatile <2 x ptr addrspace(3)> %val, ptr addrspace(3) poison
   ret void
 }
 

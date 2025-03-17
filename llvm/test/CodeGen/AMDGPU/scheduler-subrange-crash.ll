@@ -24,7 +24,7 @@ main_body:
   %array_vector9 = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float %tmp1, i32 1
   %array_vector10 = insertelement <4 x float> %array_vector9, float 0.000000e+00, i32 2
   %array_vector11 = insertelement <4 x float> %array_vector10, float poison, i32 3
-  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> poison, i32 undef, i32 4864, i32 0)
+  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> poison, i32 poison, i32 4864, i32 0)
   call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> poison, i32 36, i32 %arg, i32 68, i32 3)
   %bc = bitcast <4 x float> %array_vector3 to <4 x i32>
   %tmp4 = extractelement <4 x i32> %bc, i32 undef
@@ -35,13 +35,13 @@ main_body:
   %array_vector21 = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float %tmp, i32 1
   %array_vector22 = insertelement <4 x float> %array_vector21, float poison, i32 2
   %array_vector23 = insertelement <4 x float> %array_vector22, float poison, i32 3
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> poison, i32 28, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 28, i32 %arg, i32 68, i32 3)
   %bc52 = bitcast <4 x float> %array_vector23 to <4 x i32>
   %tmp6 = extractelement <4 x i32> %bc52, i32 undef
   call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp6, <4 x i32> poison, i32 64, i32 %arg, i32 68, i32 3)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> poison, i32 20, i32 %arg, i32 68, i32 3)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> poison, i32 56, i32 %arg, i32 68, i32 3)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> poison, i32 92, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 20, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 56, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 92, i32 %arg, i32 68, i32 3)
   ret void
 }
 
