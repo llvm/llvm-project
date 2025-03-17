@@ -26,8 +26,11 @@ pointer points to the new object, which will lead to bugs.
     assert(v2.Captured() == &v2); // assertion failed.
   }
 
-Possible fixes include refactoring the function object into a class member
-method or passing the ``this`` pointer as a parameter.
+Possible fixes:
+  - marking copy and move constructors and assignment operators deleted.
+  - using class member method instead of class member variable with function
+    object types.
+  - passing ``this`` pointer as parameter 
 
 .. option:: FunctionWrapperTypes
 
