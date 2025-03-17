@@ -4074,9 +4074,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     CallInst *CI =
         IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
     // The AVX masked load intrinsics do not have integer variants. We use the
-    // floating-point variants, and assume that the intrinsic will happily copy
-    // the shadows even if they are interpreted as "invalid" floating-point
-    // values (NaN etc.).
+    // floating-point variants, which will happily copy the shadows even if
+    // they are interpreted as "invalid" floating-point values (NaN etc.).
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
 
     if (!MS.TrackOrigins)
@@ -4260,7 +4259,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(I.getType()->isStructTy());
     [[maybe_unused]] StructType *RetTy = cast<StructType>(I.getType());
     assert(RetTy->getNumElements() > 0);
-    assert(isa<FixedVectorType>(RetTy->getElementType(0)));
     assert(RetTy->getElementType(0)->isIntOrIntVectorTy() ||
            RetTy->getElementType(0)->isFPOrFPVectorTy());
     for (unsigned int i = 0; i < RetTy->getNumElements(); i++)
@@ -4268,15 +4266,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (WithLane) {
       // 2, 3 or 4 vectors, plus lane number, plus input pointer
-      assert(numArgs >= 4);
-      assert(numArgs <= 6);
+      assert(4 <= numArgs && numArgs <= 6);
 
       // Return type is a struct of the input vectors
       assert(RetTy->getNumElements() + 2 == numArgs);
       for (unsigned int i = 0; i < RetTy->getNumElements(); i++)
         assert(I.getArgOperand(i)->getType() == RetTy->getElementType(0));
-    } else
+    } else {
       assert(numArgs == 1);
+    }
 
     IRBuilder<> IRB(&I);
 
@@ -4299,16 +4297,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const Align Alignment = Align(1);
 
     Type *SrcShadowTy = getShadowTy(Src);
-    Value *SrcShadowPtr, *SrcOriginPtr;
-    std::tie(SrcShadowPtr, SrcOriginPtr) =
+    auto [SrcShadowPtr, SrcOriginPtr] =
         getShadowOriginPtr(Src, IRB, SrcShadowTy, Alignment, /*isStore*/ false);
     ShadowArgs.push_back(SrcShadowPtr);
 
-    CallInst *CI;
     // The NEON vector load instructions handled by this function all have
     // integer variants. It is easier to use those rather than trying to cast
     // a struct of vectors of floats into a struct of vectors of integers.
-    CI = IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI = IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
     if (!MS.TrackOrigins)
