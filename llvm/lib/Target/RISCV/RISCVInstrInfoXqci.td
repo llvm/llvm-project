@@ -363,7 +363,7 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
     : RVInst48<(outs), (ins simm32_lsb0:$imm31),
-               opcodestr, "$imm31", [], InstFormatQCEJ> {
+               opcodestr, "$imm31", [], InstFormatOther> {
   bits<31> imm31;
 
   let Inst{47-32} = imm31{30-15};
