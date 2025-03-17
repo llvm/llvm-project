@@ -326,14 +326,14 @@ static int isMmapSafe(int Fd) {
 
 COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
                                                       ManagedMemory *Buf) {
-  Buf->Status = MM_INVALID;
+  Buf->Status = MS_INVALID;
   if (isMmapSafe(fileno(F))) {
     Buf->Addr =
         mmap(NULL, Length, PROT_READ, MAP_SHARED | MAP_FILE, fileno(F), 0);
     if (Buf->Addr == MAP_FAILED)
       PROF_ERR("%s: mmap failed: %s\n", __func__, strerror(errno))
     else
-      Buf->Status = MM_MMAP;
+      Buf->Status = MS_MMAP;
     return;
   }
 
@@ -362,16 +362,16 @@ COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
 
   // Reading was successful, record the result in the Buf parameter.
   Buf->Addr = Buffer;
-  Buf->Status = MM_MALLOC;
+  Buf->Status = MS_MALLOC;
 }
 
 COMPILER_RT_VISIBILITY
 void lprofReleaseBuffer(ManagedMemory *Buf, size_t Length) {
   switch (Buf->Status) {
-  case MM_MALLOC:
+  case MS_MALLOC:
     free(Buf->Addr);
     break;
-  case MM_MMAP:
+  case MS_MMAP:
     (void)munmap(Buf->Addr, Length);
     break;
   default:
@@ -379,7 +379,7 @@ void lprofReleaseBuffer(ManagedMemory *Buf, size_t Length) {
     break;
   }
   Buf->Addr = NULL;
-  Buf->Status = MM_INVALID;
+  Buf->Status = MS_INVALID;
 }
 
 COMPILER_RT_VISIBILITY const char *lprofGetPathPrefix(int *PrefixStrip,
