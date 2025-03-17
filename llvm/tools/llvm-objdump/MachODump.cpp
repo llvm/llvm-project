@@ -7594,7 +7594,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       else
         outs() << SymName << ":\n";
 
-      std::optional<DILineInfo> lastLine;
+      DILineInfo lastLine;
       for (uint64_t Index = Start; Index < End; Index += Size) {
         MCInst Inst;
 
@@ -7646,12 +7646,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
           // Print debug info.
           if (diContext) {
-            std::optional<DILineInfo> dli =
-                diContext->getLineInfoForAddress({PC, SectIdx});
+            DILineInfo dli = diContext->getLineInfoForAddress({PC, SectIdx})
+                                 .value_or(DILineInfo());
             // Print valid line info if it changed.
-            if (dli && dli != lastLine && dli->Line != 0)
-              outs() << "\t## " << dli->FileName << ':' << dli->Line << ':'
-                     << dli->Column;
+            if (dli != lastLine && dli.Line != 0)
+              outs() << "\t## " << dli.FileName << ':' << dli.Line << ':'
+                     << dli.Column;
             lastLine = dli;
           }
           outs() << "\n";
