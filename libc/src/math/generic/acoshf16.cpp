@@ -70,29 +70,37 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
     return r.value();
 
   float xf = x;
-  // High precision for inputs very close to 1.0
-  // For inputs close to 1 (1 <= x < 1.25), use polynomial approximation:
+  // High precision polynomial approximation for inputs very close to 1.0
+  // Specifically, for inputs within the range [1, 1.25), we employ the
+  // following step-by-step Taylor expansion derivation to maintain numerical
+  // accuracy:
   //
   // Step-by-step derivation:
-  // 1. Let y = acosh(x), thus x = cosh(y).
+  // 1. Define y = acosh(x), thus by definition x = cosh(y).
   //
-  // 2. Rewrite cosh identity using exponential form:
+  // 2. Expand cosh(y) using exponential identities:
   //      cosh(y) = (e^y + e^{-y}) / 2
-  //      For y close to 0, let y = sqrt(2 * delta), thus:
-  //      x = cosh(y) ≈ 1 + delta (since cosh(0) = 1, and delta is small)
-  //      thus delta = x - 1.
+  //      For small y, let us set y ≈ sqrt(2 * delta), thus:
+  //      x ≈ cosh(y) ≈ 1 + delta, for small delta
+  //      hence delta = x - 1.
   //
-  // 3: Express y in terms of delta (for small delta):
-  //      y ≈ sqrt(2 * delta)
+  // 3. Express y explicitly in terms of delta (for small delta):
+  //      y = acosh(1 + delta) ≈ sqrt(2 * delta) for very small delta.
   //
-  // 4: Expand acosh(1 + delta) using a Taylor expansion around delta = 0:
-  //      acosh(1 + delta) ≈ sqrt(2 * delta) * P(delta), where P(delta)
-  //      is a polynomial approximation obtained by fitting the function
-  //      precisely in the interval [0, 0.25].
+  // 4. Use Taylor expansion around delta = 0 to obtain a more accurate
+  // polynomial:
+  //      acosh(1 + delta) ≈ sqrt(2 * delta) * [1 - delta/12 + 3*delta^2/160 -
+  //      5*delta^3/896 + 35*delta^4/18432 + ...] For practical computation and
+  //      precision, truncate and fit the polynomial precisely in the range [0,
+  //      0.25].
   //
-  // Because delta = x - 1 and 0 <= delta < 0.25, the polynomial approximation
-  // remains numerically stable and accurate in this domain, ensuring high
-  // precision.
+  // 5. The implemented polynomial approximation (coefficients obtained from
+  // careful numerical fitting) is:
+  //      P(delta) ≈ 1 - 0x1.55551ap-4 * delta + 0x1.33160cp-6 * delta^2 -
+  //      0x1.6890f4p-8 * delta^3 + 0x1.8f3a62p-10 * delta^4
+  //
+  // Since delta = x - 1, and 0 <= delta < 0.25, this approximation achieves
+  // high precision and numerical stability.
   if (LIBC_UNLIKELY(xf < 1.25f)) {
     float delta = xf - 1.0f;
     float sqrt_2_delta = fputil::sqrt<float>(2.0 * delta);
