@@ -1967,6 +1967,7 @@ constraints, and clobber strings with a parenthesized constant expression
 producing an object with the following member functions
 
 .. code-block:: c++
+
   constexpr const char* data() const;
   constexpr size_t size() const;
 
