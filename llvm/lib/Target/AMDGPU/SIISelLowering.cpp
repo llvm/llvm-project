@@ -6035,8 +6035,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // During ISel, it's difficult to propagate the original EXEC mask to use as
     // an input to SI_WHOLE_WAVE_FUNC_RETURN. Set it up here instead.
     MachineInstr *Setup = TII->getWholeWaveFunctionSetup(*BB->getParent());
-    Register OriginalExec = Setup->getOperand(0).getReg();
     assert(Setup && "Couldn't find SI_SETUP_WHOLE_WAVE_FUNC");
+    Register OriginalExec = Setup->getOperand(0).getReg();
     MF->getRegInfo().clearKillFlags(OriginalExec);
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
