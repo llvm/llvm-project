@@ -143,26 +143,23 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     SmallVector<BasicBlock *, 32> IDFBlocks;
     SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
     ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks, PredCache);
-    IDF.resetLiveInBlocks();
     IDF.setLiveInBlocks(LiveInBlocks);
     IDF.calculate(IDFBlocks);
 
     // We've computed IDF, now insert new phi-nodes there.
-    SmallVector<PHINode *, 4> InsertedPHIsForVar;
     for (auto *FrontierBB : IDFBlocks) {
       IRBuilder<> B(FrontierBB, FrontierBB->begin());
       PHINode *PN = B.CreatePHI(R.Ty, 0, R.Name);
       R.Defines[FrontierBB] = PN;
-      InsertedPHIsForVar.push_back(PN);
       if (InsertedPHIs)
         InsertedPHIs->push_back(PN);
     }
 
     // Fill in arguments of the inserted PHIs.
-    for (auto *PN : InsertedPHIsForVar) {
-      BasicBlock *PBB = PN->getParent();
-      for (BasicBlock *Pred : PredCache.get(PBB))
-        PN->addIncoming(computeValueAt(Pred, R, DT), Pred);
+    for (auto *BB : IDFBlocks) {
+      auto *PHI = cast<PHINode>(&BB->front());
+      for (BasicBlock *Pred : PredCache.get(BB))
+        PHI->addIncoming(computeValueAt(Pred, R, DT), Pred);
     }
 
     // Rewrite actual uses with the inserted definitions.
