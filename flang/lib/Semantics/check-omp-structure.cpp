@@ -4969,7 +4969,7 @@ void OmpStructureChecker::CheckTraitSetSelector(
 void OmpStructureChecker::CheckTraitScore(const parser::OmpTraitScore &score) {
   // [6.0:322:23]
   // A score-expression must be a non-negative constant integer expression.
-  if (auto value{GetIntValue(score)}; !value || value <= 0) {
+  if (auto value{GetIntValue(score)}; !value || value < 0) {
     context_.Say(score.source,
         "SCORE expression must be a non-negative constant integer expression"_err_en_US);
   }
