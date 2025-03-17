@@ -6214,7 +6214,7 @@ def warn_possible_object_duplication_mutable : Warning<
   "it is mutable, has hidden visibility, and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 def warn_possible_object_duplication_init : Warning<
-  "initializeation of %0 may run twice when built into a shared library: "
+  "initialization of %0 may run twice when built into a shared library: "
   "it has hidden visibility and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 
@@ -10613,11 +10613,14 @@ def err_va_start_used_in_wrong_abi_function : Error<
   "'va_start' used in %select{System V|Win64}0 ABI function">;
 def err_ms_va_start_used_in_sysv_function : Error<
   "'__builtin_ms_va_start' used in System V ABI function">;
-def warn_second_arg_of_va_start_not_last_named_param : Warning<
-  "second argument to 'va_start' is not the last named parameter">,
+def warn_second_arg_of_va_start_not_last_non_variadic_param : Warning<
+  "second argument to 'va_start' is not the last non-variadic parameter">,
   InGroup<Varargs>;
 def warn_c17_compat_ellipsis_only_parameter : Warning<
   "'...' as the only parameter of a function is incompatible with C standards "
+  "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
+def warn_c17_compat_va_start_one_arg : Warning<
+  "passing only one argument to 'va_start' is incompatible with C standards "
   "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"
