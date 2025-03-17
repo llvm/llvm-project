@@ -5,7 +5,6 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
-// #include "dxc/DXIL/DxilMetadataHelper.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -30,12 +29,12 @@ public:
     MachineRegisterInfo &MRI = F.getRegInfo();
 
     for (MachineBasicBlock &BB : F) {
-      auto &phiInsts = blockToPhiInstsMap[&BB];
+      auto &PhiInsts = BlockToPhiInstsMap[&BB];
       for (MachineInstr &I : BB) {
         if (!I.isPHI())
           break;
-        phiInsts.insert(&I);
-        unsigned Reg = I.getOperand(0).getReg();
+        PhiInsts.insert(&I);
+        Register Reg = I.getOperand(0).getReg();
         // Add incoming values.
         for (unsigned i = 1; i < I.getNumOperands(); i += 2) {
           MachineOperand &MO = I.getOperand(i);
@@ -44,11 +43,11 @@ public:
           MachineInstr *DefMI = MRI.getUniqueVRegDef(MO.getReg());
           if (!DefMI)
             continue;
-          blockToPhiInstsMap[DefMI->getParent()].insert(DefMI);
+          BlockToPhiInstsMap[DefMI->getParent()].insert(DefMI);
         }
         // Add users.
         for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
-          blockToPhiInstsMap[UseMI.getParent()].insert(&UseMI);
+          BlockToPhiInstsMap[UseMI.getParent()].insert(&UseMI);
         }
       }
     }
@@ -56,7 +55,7 @@ public:
   void addCustomGraphFeatures(llvm::GraphWriter<CFGWithPhi *> &) const {}
   MachineFunction &F;
   DenseMap<const MachineBasicBlock *, DenseSet<MachineInstr *>>
-      blockToPhiInstsMap;
+      BlockToPhiInstsMap;
   void dump();
 };
 
@@ -64,13 +63,13 @@ void CFGWithPhi::dump() {
 #ifdef DBG
   for (MachineBasicBlock &BB : F) {
     dbgs() << BB.getName() << "\n";
-    auto &phiInsts = blockToPhiInstsMap[&BB];
-    for (MachineInstr *I : phiInsts) {
+    auto &PhiInsts = blockToPhiInstsMap[&BB];
+    for (MachineInstr *I : PhiInsts) {
       if (!I->isPHI())
         continue;
       I->dump();
     }
-    for (MachineInstr *I : phiInsts) {
+    for (MachineInstr *I : PhiInsts) {
       if (I->isPHI())
         continue;
       I->dump();
@@ -86,14 +85,14 @@ namespace llvm {
 
 template <> struct DOTGraphTraits<CFGWithPhi *> : public DefaultDOTGraphTraits {
 
-  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
-  static std::string getGraphName(const CFGWithPhi *G) {
+  static std::string getGraphName(const CFGWithPhi *) {
     return "CFG with Phi graph";
   }
 
   static std::string getNodeIdentifierLabel(const MachineBasicBlock *Node,
-                                            const CFGWithPhi *Graph) {
+                                            const CFGWithPhi *) {
     std::string R;
     raw_string_ostream OS(R);
     OS << static_cast<const void *>(Node);
@@ -107,17 +106,17 @@ template <> struct DOTGraphTraits<CFGWithPhi *> : public DefaultDOTGraphTraits {
     raw_string_ostream OS(Str);
 
     OS << "BB:" << BB->getName();
-    auto it = G->blockToPhiInstsMap.find(BB);
-    if (it != G->blockToPhiInstsMap.end()) {
+    auto It = G->BlockToPhiInstsMap.find(BB);
+    if (It != G->BlockToPhiInstsMap.end()) {
 
-      auto &phiInsts = it->second;
-      for (MachineInstr *I : phiInsts) {
+      auto &PhiInsts = It->second;
+      for (MachineInstr *I : PhiInsts) {
         if (!I->isPHI())
           continue;
         I->print(OS);
         OS << "\n";
       }
-      for (MachineInstr *I : phiInsts) {
+      for (MachineInstr *I : PhiInsts) {
         if (I->isPHI())
           continue;
         I->print(OS);
@@ -157,7 +156,7 @@ template <> struct DOTGraphTraits<CFGWithPhi *> : public DefaultDOTGraphTraits {
     return OutStr;
   }
   static std::string getNodeDescription(const MachineBasicBlock *SU,
-                                        const CFGWithPhi *G) {
+                                        const CFGWithPhi *) {
     return SU->getName().str();
   }
 
@@ -200,25 +199,24 @@ unsigned getRegSize(unsigned Reg, llvm::LaneBitmask &Mask,
                     const llvm::SIRegisterInfo *SIRI) {
   unsigned Size = SIRI->getRegSizeInBits(*MRI.getRegClass(Reg));
   Size >>= 5;
-  LaneBitmask mask = Mask;
-  if (mask.any()) {
-    if (unsigned maskSize = mask.getNumLanes()) {
-      if (maskSize < Size)
-        Size = maskSize;
+  if (Mask.any()) {
+    if (unsigned MaskSize = Mask.getNumLanes()) {
+      if (MaskSize < Size)
+        Size = MaskSize;
     }
   }
   return Size;
 }
 
-void CollectLiveSetPressure(const LiveSet &liveSet,
+void collectLiveSetPressure(const LiveSet &LiveSet,
                             const MachineRegisterInfo &MRI,
                             const SIRegisterInfo *SIRI, unsigned &VPressure,
                             unsigned &SPressure) {
   VPressure = 0;
   SPressure = 0;
-  for (auto liveIt : liveSet) {
-    unsigned Reg = liveIt.first;
-    unsigned Size = getRegSize(Reg, liveIt.second, MRI, SIRI);
+  for (auto LiveIt : LiveSet) {
+    unsigned Reg = LiveIt.first;
+    unsigned Size = getRegSize(Reg, LiveIt.second, MRI, SIRI);
     if (SIRI->isVGPR(MRI, Reg)) {
       VPressure += Size;
     } else {
@@ -228,58 +226,58 @@ void CollectLiveSetPressure(const LiveSet &liveSet,
 }
 
 bool isExecUpdateForControlFlow(llvm::MachineInstr &MI) {
-  bool isExecUpdate = false;
-  unsigned opcode = MI.getOpcode();
-  if (opcode == AMDGPU::S_MOV_B64 || opcode == AMDGPU::S_MOV_B32 ||
-      opcode == AMDGPU::S_OR_B64_term || opcode == AMDGPU::S_OR_B32_term ||
-      opcode == AMDGPU::S_OR_SAVEEXEC_B64 ||
-      opcode == AMDGPU::S_OR_SAVEEXEC_B32 || opcode == AMDGPU::S_AND_B64 ||
-      opcode == AMDGPU::S_AND_B32 || opcode == AMDGPU::S_ANDN2_B64 ||
-      opcode == AMDGPU::S_ANDN2_B32) {
+  bool IsExecUpdate = false;
+  unsigned Opcode = MI.getOpcode();
+  if (Opcode == AMDGPU::S_MOV_B64 || Opcode == AMDGPU::S_MOV_B32 ||
+      Opcode == AMDGPU::S_OR_B64_term || Opcode == AMDGPU::S_OR_B32_term ||
+      Opcode == AMDGPU::S_OR_SAVEEXEC_B64 ||
+      Opcode == AMDGPU::S_OR_SAVEEXEC_B32 || Opcode == AMDGPU::S_AND_B64 ||
+      Opcode == AMDGPU::S_AND_B32 || Opcode == AMDGPU::S_ANDN2_B64 ||
+      Opcode == AMDGPU::S_ANDN2_B32) {
     MachineOperand &Dst = MI.getOperand(0);
     if (Dst.getReg() == AMDGPU::EXEC || Dst.getReg() == AMDGPU::EXEC_LO) {
-      isExecUpdate = true;
+      IsExecUpdate = true;
     }
   }
-  return isExecUpdate;
+  return IsExecUpdate;
 }
 
-bool IsSub0Sub1SingleDef(unsigned Reg, const MachineRegisterInfo &MRI) {
+bool isSub0Sub1SingleDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   // Support multi def for pattern of pointer:
   // undef %808.sub0:sgpr_64 = COPY killed %795:sgpr_32
   // %808.sub1:sgpr_64 = S_MOV_B32 0
-  bool bHasSub0 = false;
-  bool bHasSub1 = false;
+  bool HasSub0 = false;
+  bool HasSub1 = false;
   for (MachineOperand &UserDefMO : MRI.def_operands(Reg)) {
     if (unsigned SubReg = UserDefMO.getSubReg()) {
-      bool bSingleSubReg = false;
+      bool IsSingleSubReg = false;
       switch (SubReg) {
       default:
         break;
       case AMDGPU::sub0:
-        if (!bHasSub0) {
-          bHasSub0 = true;
-          bSingleSubReg = true;
+        if (!HasSub0) {
+          HasSub0 = true;
+          IsSingleSubReg = true;
         }
         break;
       case AMDGPU::sub1:
-        if (!bHasSub1) {
-          bHasSub1 = true;
-          bSingleSubReg = true;
+        if (!HasSub1) {
+          HasSub1 = true;
+          IsSingleSubReg = true;
         }
         break;
       }
-      if (!bSingleSubReg) {
-        bHasSub0 = false;
+      if (!IsSingleSubReg) {
+        HasSub0 = false;
         break;
       }
     } else {
-      bHasSub0 = false;
+      HasSub0 = false;
       break;
     }
   }
 
-  return (bHasSub0 && bHasSub1);
+  return (HasSub0 && HasSub1);
 }
 
 LaneBitmask getRegMask(const MachineOperand &MO,
@@ -293,46 +291,46 @@ LaneBitmask getRegMask(const MachineOperand &MO,
                    MO.getSubReg());
 }
 
-void mergeLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet) {
-  for (auto Reg : inputSet) {
-    unsigned reg = Reg.first;
-    LaneBitmask mask = Reg.second;
-    auto targetReg = targetSet.find(reg);
-    if (targetReg != targetSet.end()) {
-      LaneBitmask targetMask = targetReg->second;
-      mask |= targetMask;
+void mergeLiveRegSet(LiveSet &TargetSet, const LiveSet &InputSet) {
+  for (auto It : InputSet) {
+    Register Reg = It.first;
+    LaneBitmask Mask = It.second;
+    auto TargetReg = TargetSet.find(Reg);
+    if (TargetReg != TargetSet.end()) {
+      LaneBitmask TargetMask = TargetReg->second;
+      Mask |= TargetMask;
     }
-    targetSet[reg] = mask;
+    TargetSet[Reg] = Mask;
   }
 }
 
-void andLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet) {
+void andLiveRegSet(LiveSet &TargetSet, const LiveSet &InputSet) {
   GCNRPTracker::LiveRegSet AndSet;
-  for (auto Reg : inputSet) {
-    unsigned reg = Reg.first;
-    LaneBitmask mask = Reg.second;
-    auto targetReg = targetSet.find(reg);
-    if (targetReg != targetSet.end()) {
-      LaneBitmask targetMask = targetReg->second;
-      mask &= targetMask;
-      AndSet[reg] = mask;
+  for (auto It : InputSet) {
+    Register Reg = It.first;
+    LaneBitmask Mask = It.second;
+    auto TargetReg = TargetSet.find(Reg);
+    if (TargetReg != TargetSet.end()) {
+      LaneBitmask TargetMask = TargetReg->second;
+      Mask &= TargetMask;
+      AndSet[Reg] = Mask;
     }
   }
 
-  targetSet = AndSet;
+  TargetSet = AndSet;
 }
 
-void andNotLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet) {
-  for (auto Reg : inputSet) {
-    unsigned reg = Reg.first;
-    LaneBitmask mask = Reg.second;
-    auto targetReg = targetSet.find(reg);
-    if (targetReg != targetSet.end()) {
-      LaneBitmask targetMask = targetReg->second;
-      if ((targetMask | mask) == mask)
-        targetSet.erase(reg);
+void andNotLiveRegSet(LiveSet &TargetSet, const LiveSet &InputSet) {
+  for (auto It : InputSet) {
+    unsigned Reg = It.first;
+    LaneBitmask Mask = It.second;
+    auto TargetReg = TargetSet.find(Reg);
+    if (TargetReg != TargetSet.end()) {
+      LaneBitmask TargetMask = TargetReg->second;
+      if ((TargetMask | Mask) == Mask)
+        TargetSet.erase(Reg);
       else
-        targetSet[reg] = targetMask & (~mask);
+        TargetSet[Reg] = TargetMask & (~Mask);
     }
   }
 }
@@ -356,56 +354,55 @@ MachineBasicBlock *split(MachineInstr *Inst) {
 
 struct Piece {
   unsigned Reg;
-  unsigned offset;
-  unsigned size;
-  static SmallVector<Piece, 8> split(std::bitset<32> mask) {
+  unsigned Offset;
+  unsigned Size;
+  static SmallVector<Piece, 8> split(std::bitset<32> Mask) {
 
-    SmallVector<Piece, 8> pieces;
-    Piece piece = {0, 0, 0};
+    SmallVector<Piece, 8> Pieces;
+    Piece Piece = {0, 0, 0};
     for (unsigned i = 0; i < 32; i++) {
-      if (mask.test(i)) {
-        if (piece.size == 0)
-          piece.offset = i;
+      if (Mask.test(i)) {
+        if (Piece.Size == 0)
+          Piece.Offset = i;
 
-        piece.size++;
+        Piece.Size++;
         // Make sure no piece bigger than 8.
-        if (piece.size == 8) {
-          pieces.emplace_back(piece);
-          piece.size = 0;
+        if (Piece.Size == 8) {
+          Pieces.emplace_back(Piece);
+          Piece.Size = 0;
         }
       } else {
-        if (piece.size == 0) {
+        if (Piece.Size == 0) {
           continue;
         }
-        pieces.emplace_back(piece);
-        piece.size = 0;
+        Pieces.emplace_back(Piece);
+        Piece.Size = 0;
       }
     }
-    return pieces;
+    return Pieces;
   }
 };
 
-void updateSubReg(MachineOperand &UseMO, const llvm::TargetRegisterClass *NewRC,
-                  unsigned offset, const SIRegisterInfo *SIRI,
-                  const SIInstrInfo *SIII) {
-  unsigned size = NewRC->getLaneMask().getNumLanes();
-  if (size == 1) {
+static void updateSubReg(MachineOperand &UseMO, const llvm::TargetRegisterClass *NewRC,
+                  unsigned Offset, const SIRegisterInfo *SIRI) {
+  unsigned Size = NewRC->getLaneMask().getNumLanes();
+  if (Size == 1) {
     UseMO.setSubReg(0);
   } else {
     const uint32_t SubReg = UseMO.getSubReg();
-    LaneBitmask Mask = SIRI->getSubRegIndexLaneMask(SubReg);
+    LaneBitmask LaneMask = SIRI->getSubRegIndexLaneMask(SubReg);
 
-    unsigned mask = Mask.getAsInteger() >> offset;
+    unsigned Mask = LaneMask.getAsInteger() >> Offset;
 
     unsigned NewSubReg = SIRI->getMinimalSpanningSubRegIdxSetForLaneMask(
-                                 NewRC, LaneBitmask(mask))
+                                 NewRC, LaneBitmask(Mask))
                              .front();
 
     UseMO.setSubReg(NewSubReg);
   }
 }
 
-bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
+bool reduceChannel(unsigned Offset, MachineInstr &MI, const MCInstrDesc &Desc,
                    MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                    const SIInstrInfo *SIII, SlotIndexes *SlotIndexes) {
   MachineOperand &DstMO = MI.getOperand(0);
@@ -413,7 +410,7 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
   if (DstMO.getSubReg()) {
     return false;
   }
-  unsigned Reg = DstMO.getReg();
+  Register Reg = DstMO.getReg();
 
   SmallVector<MachineOperand *, 2> UseMOs;
   for (MachineOperand &UseMO : MRI.use_nodbg_operands(Reg)) {
@@ -421,9 +418,9 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
   }
 
   const llvm::TargetRegisterClass *NewRC =
-      SIRI->getRegClass(desc.operands().front().RegClass);
-  unsigned size = NewRC->getLaneMask().getNumLanes();
-  if (offset > 0) {
+      SIRI->getRegClass(Desc.operands().front().RegClass);
+  unsigned Size = NewRC->getLaneMask().getNumLanes();
+  if (Offset > 0) {
     // Update offset operand in MI.
     MachineOperand *OffsetOp =
         SIII->getNamedOperand(MI, AMDGPU::OpName::offset);
@@ -433,7 +430,7 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
       if (OffsetOp->isImm()) {
         assert(OffsetOp != nullptr);
         int64_t Offset = OffsetOp->getImm();
-        Offset += offset * LaneSize;
+        Offset += Offset * LaneSize;
         if (!SIII->isLegalMUBUFImmOffset(Offset)) {
           return false;
         }
@@ -444,13 +441,13 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
     } else {
       OffsetOp = SIII->getNamedOperand(MI, AMDGPU::OpName::soffset);
       if (OffsetOp) {
-        unsigned NewOffsetReg =
+        Register NewOffsetReg =
             MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
         auto OffsetAdd = BuildMI(*MI.getParent()->getParent(), MI.getDebugLoc(),
                                  SIII->get(AMDGPU::S_ADD_U32))
                              .addDef(NewOffsetReg)
                              .add(*OffsetOp)
-                             .addImm(offset * LaneSize);
+                             .addImm(Offset * LaneSize);
         MachineInstr *OffsetAddMI = OffsetAdd.getInstr();
         MachineBasicBlock::iterator InsertPoint =
             llvm::findOrCreateInsertionPointForSccDef(MI.getParent(), MI, SIRI,
@@ -467,16 +464,16 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
     }
     // Update subReg for users.
     for (MachineOperand *UseMO : UseMOs) {
-      updateSubReg(*UseMO, NewRC, offset, SIRI, SIII);
+      updateSubReg(*UseMO, NewRC, Offset, SIRI);
     }
-  } else if (size == 1) {
+  } else if (Size == 1) {
     // Clear subReg when size is 1.
     for (MachineOperand *UseMO : UseMOs) {
       UseMO->setSubReg(0);
     }
   }
 
-  MI.setDesc(desc);
+  MI.setDesc(Desc);
   // Mutate reg class of Reg.
   MRI.setRegClass(Reg, NewRC);
   return true;
@@ -485,7 +482,7 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
 bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
                        const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
                        SlotIndexes *SlotIndexes) {
-  bool bImm = false;
+  bool IsImm = false;
   switch (MI.getOpcode()) {
   default:
     break;
@@ -493,67 +490,70 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX16_IMM:
-    bImm = true;
+    IsImm = true;
+    LLVM_FALLTHROUGH;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR:
   case AMDGPU::S_BUFFER_LOAD_DWORDX16_SGPR: {
-    unsigned Reg = MI.getOperand(0).getReg();
+    Register Reg = MI.getOperand(0).getReg();
     if (!MRI.getUniqueVRegDef(Reg))
       return false;
-    LaneBitmask dstMask = getRegMask(MI.getOperand(0), MRI);
+    LaneBitmask DstMask = getRegMask(MI.getOperand(0), MRI);
     LaneBitmask UseMask;
     for (MachineOperand &MO : MRI.use_operands(Reg)) {
       UseMask |= llvm::getRegMask(MO, MRI);
     }
 
-    const unsigned fullMask = dstMask.getAsInteger();
-    unsigned mask = UseMask.getAsInteger();
-    if (mask == fullMask)
+    const unsigned FullMask = DstMask.getAsInteger();
+    unsigned Mask = UseMask.getAsInteger();
+    if (Mask == FullMask)
       return false;
     // Split mask when there's gap. Then group mask to 2/4/8.
-    auto pieces = Piece::split(std::bitset<32>(mask));
+    auto Pieces = Piece::split(std::bitset<32>(Mask));
     // Now only support 1 piece.
-    if (pieces.size() != 1)
+    if (Pieces.size() != 1)
       return false;
-    auto piece = pieces[0];
-    if (piece.size > 8)
+    auto Piece = Pieces[0];
+    if (Piece.Size > 8)
       return false;
 
-    // TODO: enable offset support when bImm is true.
+    // TODO: enable offset support when IsImm is true.
     // Now if break different test when mul LaneSize or not mul for the offset.
-    if (bImm && piece.offset != 0)
+    if (IsImm && Piece.Offset != 0)
       return false;
 
-    switch (piece.size) {
+    switch (Piece.Size) {
     default:
       return false;
     case 1:
-      return reduceChannel(piece.offset, MI,
-                           SIII->get(bImm ? AMDGPU::S_BUFFER_LOAD_DWORD_IMM
+      return reduceChannel(Piece.Offset, MI,
+                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORD_IMM
                                           : AMDGPU::S_BUFFER_LOAD_DWORD_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 2:
-      return reduceChannel(piece.offset, MI,
-                           SIII->get(bImm ? AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM
+      return reduceChannel(Piece.Offset, MI,
+                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM
                                           : AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 3:
-      if (fullMask == 0xf)
+      if (FullMask == 0xf)
         return false;
+      LLVM_FALLTHROUGH;
     case 4:
-      return reduceChannel(piece.offset, MI,
-                           SIII->get(bImm ? AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM
+      return reduceChannel(Piece.Offset, MI,
+                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM
                                           : AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 5:
     case 6:
     case 7:
-      if (fullMask == 0xff)
+      if (FullMask == 0xff)
         return false;
+      LLVM_FALLTHROUGH;
     case 8:
-      return reduceChannel(piece.offset, MI,
-                           SIII->get(bImm ? AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM
+      return reduceChannel(Piece.Offset, MI,
+                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM
                                           : AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     }
@@ -610,15 +610,15 @@ bool reach_block(MachineBasicBlock *FromBB, MachineDominatorTree *DT,
 // If BB can reach hotMBBs.
 bool reach_blocks(MachineBasicBlock *BB, MachineDominatorTree *DT,
                   MachinePostDominatorTree *PDT, MachineLoopInfo *LI,
-                  DenseSet<MachineBasicBlock *> &hotMBBs) {
-  bool bCross = false;
-  for (MachineBasicBlock *hotBB : hotMBBs) {
-    if (reach_block(BB, DT, PDT, LI, hotBB)) {
-      bCross = true;
+                  DenseSet<MachineBasicBlock *> &HotMBBs) {
+  bool Cross = false;
+  for (MachineBasicBlock *HotBB : HotMBBs) {
+    if (reach_block(BB, DT, PDT, LI, HotBB)) {
+      Cross = true;
       break;
     }
   }
-  return bCross;
+  return Cross;
 }
 
 } // namespace llvm
@@ -634,7 +634,7 @@ void viewCFGWithPhi(llvm::MachineFunction &F) {
 } // namespace llvm
 
 namespace llvm {
-bool GetNonDebugMBBEnd(MachineBasicBlock::reverse_iterator &BBEnd,
+bool getNonDebugMBBEnd(MachineBasicBlock::reverse_iterator &BBEnd,
                        MachineBasicBlock &MBB) {
   // R.End doesn't point to the boundary instruction.
   // Skip Debug instr.
@@ -951,13 +951,13 @@ void write_define(MachineOperand &MO, const SlotIndexes *SlotIndexes,
                   const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                   raw_ostream &os) {
   // Split subReg?  MO.getSubReg();
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   unsigned SubReg = MO.getSubReg();
   MachineInstr *MI = MO.getParent();
   SlotIndex Slot = SlotIndexes->getInstructionIndex(*MI);
   if (SubReg == 0) {
-    unsigned size = get_reg_size(Reg, MRI, SIRI);
-    for (unsigned i = 0; i < size; i++) {
+    unsigned Size = get_reg_size(Reg, MRI, SIRI);
+    for (unsigned i = 0; i < Size; i++) {
       write_define(Slot, Reg, i, MRI, SIRI, os);
     }
   } else {
@@ -1744,13 +1744,13 @@ void write_contribution_list(llvm::MachineFunction &MF, const char *Filename) {
 }
 } // namespace llvm
 
-static bool IsPhysReg(const MachineOperand &Op) {
+static bool isPhysReg(const MachineOperand &Op) {
   return Op.isReg() && Op.getReg().isPhysical();
 }
 
 // Sometimes split bb uses physical registers defined in BB, have to add them to
 // live-in or the ir is malformed.
-void llvm::UpdatePhysRegLiveInForBlock(MachineBasicBlock *NewBB,
+void llvm::updatePhysRegLiveInForBlock(MachineBasicBlock *NewBB,
                                        const MachineRegisterInfo *MRI) {
   // Initialize with current set of liveins. For new blocks this will be empty.
   SmallDenseSet<unsigned, 8> DefSet;
@@ -1762,11 +1762,11 @@ void llvm::UpdatePhysRegLiveInForBlock(MachineBasicBlock *NewBB,
     // Add all undefined physical registers to the live in set.
     for (MachineOperand &Use : MI.operands()) {
       // Only process physreg uses.
-      if (!IsPhysReg(Use) || !Use.isUse())
+      if (!isPhysReg(Use) || !Use.isUse())
         continue;
 
       // Reserved regs do not need to be tracked through live-in sets.
-      unsigned Reg = Use.getReg();
+      Register Reg = Use.getReg();
       if (Use.isImplicit() && MRI && MRI->isReserved(Reg))
         continue;
 
@@ -1778,14 +1778,14 @@ void llvm::UpdatePhysRegLiveInForBlock(MachineBasicBlock *NewBB,
     // set.
     for (MachineOperand &Def : MI.operands()) {
       // Only process physreg defs.
-      if (!IsPhysReg(Def) || !Def.isDef())
+      if (!isPhysReg(Def) || !Def.isDef())
         continue;
       DefSet.insert(Def.getReg());
     }
   }
 }
 
-void llvm::BuildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
+void llvm::buildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
                                       SmallDenseSet<unsigned, 8> &LiveOutSet,
                                       const MachineRegisterInfo *MRI) {
   for (auto rit = NewBB->rbegin(); rit != NewBB->rend(); rit++) {
@@ -1794,14 +1794,14 @@ void llvm::BuildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
     // set.
     for (MachineOperand &Def : MI.operands()) {
       // Only process physreg defs.
-      if (!IsPhysReg(Def) || !Def.isDef())
+      if (!isPhysReg(Def) || !Def.isDef())
         continue;
       LiveOutSet.erase(Def.getReg());
     }
     // Add all undefined physical registers to the live in set.
     for (MachineOperand &Use : MI.operands()) {
       // Only process physreg uses.
-      if (!IsPhysReg(Use) || !Use.isUse())
+      if (!isPhysReg(Use) || !Use.isUse())
         continue;
 
       // Reserved regs do not need to be tracked through live-in sets.
@@ -1818,7 +1818,7 @@ void llvm::BuildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
   }
 }
 
-MachineReg llvm::CreateVirtualRegForOperand(MachineOpcode Opcode,
+MachineReg llvm::createVirtualRegForOperand(MachineOpcode Opcode,
                                             unsigned OpNum,
                                             MachineFunction &MF) {
   const TargetSubtargetInfo &ST = MF.getSubtarget();
@@ -1835,14 +1835,14 @@ MachineReg llvm::CreateVirtualRegForOperand(MachineOpcode Opcode,
   return MRI.createVirtualRegister(RC);
 }
 
-MachineReg llvm::CreateVirtualDstReg(MachineOpcode Opcode,
+MachineReg llvm::createVirtualDstReg(MachineOpcode Opcode,
                                      MachineFunction &MF) {
-  return llvm::CreateVirtualRegForOperand(Opcode, 0, MF);
+  return llvm::createVirtualRegForOperand(Opcode, 0, MF);
 }
 
 // Return true if the MI is a copy of exec.
 // If true then sets pDst to the destination register.
-bool llvm::IsExecCopy(const MachineInstr &MI, MachineReg Exec,
+bool llvm::isExecCopy(const MachineInstr &MI, MachineReg Exec,
                       MachineReg *pDst) {
   enum { DST = 0, SRC = 1 };
   bool FoundCopy = false;
@@ -1868,10 +1868,10 @@ bool llvm::IsExecCopy(const MachineInstr &MI, MachineReg Exec,
   return FoundCopy;
 }
 
-llvm::MachineRegWithSubReg llvm::GetWqmEntryActiveMask(MachineFunction &MF) {
+llvm::MachineRegWithSubReg llvm::getWqmEntryActiveMask(MachineFunction &MF) {
   llvm::MachineRegWithSubReg LiveLaneMask = {AMDGPU::NoRegister,
                                              AMDGPU::NoSubRegister};
-  if (MachineInstr *MI = GetWqmEntryActiveMaskInst(MF)) {
+  if (MachineInstr *MI = getWqmEntryActiveMaskInst(MF)) {
     LiveLaneMask.Reg = MI->getOperand(0).getReg();
     LiveLaneMask.SubReg = MI->getOperand(0).getSubReg();
   }
@@ -1879,7 +1879,7 @@ llvm::MachineRegWithSubReg llvm::GetWqmEntryActiveMask(MachineFunction &MF) {
   return LiveLaneMask;
 }
 
-MachineInstr *llvm::GetWqmEntryActiveMaskInst(MachineFunction &MF) {
+MachineInstr *llvm::getWqmEntryActiveMaskInst(MachineFunction &MF) {
 #if 0 // TODO: Get rid of this
     // Look forward in the entry block for the SET_LIVE_LANE_MASK instruction.
     // This instruction is added by the SIWholeQuadMode pass.
@@ -1897,7 +1897,7 @@ MachineInstr *llvm::GetWqmEntryActiveMaskInst(MachineFunction &MF) {
   return nullptr;
 }
 
-bool llvm::IsFetchShaderCall(const MachineInstr *MI) {
+bool llvm::isFetchShaderCall(const MachineInstr *MI) {
 #if 0 // TODO: Get rid of this.
     return 
         MI->getOpcode() == AMDGPU::AMDGPU_CALL_FETCH_SHADER ||
@@ -1907,12 +1907,12 @@ bool llvm::IsFetchShaderCall(const MachineInstr *MI) {
 #endif
 }
 
-bool llvm::IsSccLiveAt(llvm::MachineBasicBlock *MBB,
+bool llvm::isSccLiveAt(llvm::MachineBasicBlock *MBB,
                        llvm::MachineBasicBlock::iterator MI) {
   const TargetRegisterInfo *TRI =
       MBB->getParent()->getRegInfo().getTargetRegisterInfo();
-  for (auto it = MI; it != MBB->end(); ++it) {
-    const MachineInstr &CurMI = *it;
+  for (auto It = MI; It != MBB->end(); ++It) {
+    const MachineInstr &CurMI = *It;
     // Hit use of scc, it is live.
     if (CurMI.readsRegister(AMDGPU::SCC, TRI))
       return true;
@@ -1939,12 +1939,12 @@ bool llvm::IsSccLiveAt(llvm::MachineBasicBlock *MBB,
 // scc around BeforeInst. This way BeforeInst can safely be used
 // as the new insert location.
 //
-MachineBasicBlock::iterator llvm::FindOrCreateInsertionPointForSccDef(
+MachineBasicBlock::iterator llvm::findOrCreateInsertionPointForSccDef(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MI,
     const TargetRegisterInfo *TRI, const SIInstrInfo *TII,
     MachineRegisterInfo *MRI, SccDefInsertPointConstraintFlags Constraints) {
   // If SCC is dead at MI when we can use MI as the insert point.
-  if (!llvm::IsSccLiveAt(MBB, MI)) {
+  if (!llvm::isSccLiveAt(MBB, MI)) {
     return MI;
   }
 
@@ -1990,7 +1990,7 @@ MachineBasicBlock::iterator llvm::FindOrCreateInsertionPointForSccDef(
   //      MI
   //      S_CMP_LG_U32 %SavedSCC, 0       # Restore SCC
   //
-  unsigned int TmpScc =
+  Register TmpScc =
       MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   DebugLoc DL = MI->getDebugLoc();
   BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), TmpScc)
@@ -2006,39 +2006,39 @@ MachineBasicBlock::iterator llvm::FindOrCreateInsertionPointForSccDef(
 
 namespace {
 bool isLocalSegment(const LiveRange::Segment *Seg, SlotIndexes *Indexes,
-                    SmallDenseSet<MachineBasicBlock *, 2> &touchedMBBSet) {
-  MachineInstr *startMI = Indexes->getInstructionFromIndex(Seg->start);
-  MachineInstr *endMI = Indexes->getInstructionFromIndex(Seg->end);
+                    SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
+  MachineInstr *StartMI = Indexes->getInstructionFromIndex(Seg->start);
+  MachineInstr *EndMI = Indexes->getInstructionFromIndex(Seg->end);
   // Treat non inst as not local.
-  if (!startMI || !endMI)
+  if (!StartMI || !EndMI)
     return false;
   // is local when parent MBB the same.
-  bool bSameMBB = startMI->getParent() == endMI->getParent();
-  if (!bSameMBB)
+  bool IsSameMBB = StartMI->getParent() == EndMI->getParent();
+  if (!IsSameMBB)
     return false;
   // Collect touched MBB.
-  MachineBasicBlock *MBB = startMI->getParent();
-  touchedMBBSet.insert(MBB);
+  MachineBasicBlock *MBB = StartMI->getParent();
+  TouchedMBBSet.insert(MBB);
   return true;
 }
 
 bool isLocalLiveRange(const LiveRange *Range, SlotIndexes *Indexes,
-                      SmallDenseSet<MachineBasicBlock *, 2> &touchedMBBSet) {
+                      SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
   for (const LiveRange::Segment &Seg : Range->segments) {
-    if (!isLocalSegment(&Seg, Indexes, touchedMBBSet))
+    if (!isLocalSegment(&Seg, Indexes, TouchedMBBSet))
       return false;
   }
   return true;
 }
 
 bool isLocalSegment(const LiveRange::Segment *Seg, SlotIndexes *Indexes) {
-  MachineInstr *startMI = Indexes->getInstructionFromIndex(Seg->start);
-  MachineInstr *endMI = Indexes->getInstructionFromIndex(Seg->end);
+  MachineInstr *StartMI = Indexes->getInstructionFromIndex(Seg->start);
+  MachineInstr *EndMI = Indexes->getInstructionFromIndex(Seg->end);
   // Treat non inst as not local.
-  if (!startMI || !endMI)
+  if (!StartMI || !EndMI)
     return false;
   // is local when parent MBB the same.
-  return startMI->getParent() == endMI->getParent();
+  return StartMI->getParent() == EndMI->getParent();
 }
 
 bool isLocalLiveRange(const LiveRange *Range, SlotIndexes *Indexes) {
@@ -2053,19 +2053,19 @@ bool isLocalLiveRange(const LiveRange *Range, SlotIndexes *Indexes) {
 
 // In case like float4 v, v.x used and defined in one block, v.y used and define
 // in another block, one live interval could touch more than one MBB.
-// touchedMBBSet is used for scheduling where local live interval could cross
+// TouchedMBBSet is used for scheduling where local live interval could cross
 // multiple regions, need to calculate livereg for each region inside touched
 // MBB.
 bool llvm::isLocalLiveInterval(
     const LiveInterval &LI, SlotIndexes *Indexes,
-    SmallDenseSet<MachineBasicBlock *, 2> &touchedMBBSet) {
+    SmallDenseSet<MachineBasicBlock *, 2> &TouchedMBBSet) {
   if (LI.hasSubRanges()) {
     for (const auto &S : LI.subranges()) {
-      if (!isLocalLiveRange(&S, Indexes, touchedMBBSet))
+      if (!isLocalLiveRange(&S, Indexes, TouchedMBBSet))
         return false;
     }
   }
-  return isLocalLiveRange(&LI, Indexes, touchedMBBSet);
+  return isLocalLiveRange(&LI, Indexes, TouchedMBBSet);
 }
 
 bool llvm::isLocalLiveInterval(const LiveInterval &LI, SlotIndexes *Indexes) {
@@ -2096,7 +2096,7 @@ void llvm::buildEndLiveMap(
 
     // R.End doesn't point to the boundary instruction.
     // Skip Debug instr.
-    if (llvm::GetNonDebugMBBEnd(BBEnd, MBB)) {
+    if (llvm::getNonDebugMBBEnd(BBEnd, MBB)) {
       auto SI = SlotIndexes->getInstructionIndex(*BBEnd);
       MBBOutputSlotMap[&MBB] = After ? SI.getDeadSlot() : SI.getBaseIndex();
     }
@@ -2107,16 +2107,15 @@ void llvm::buildEndLiveMap(
     if (!LIS->hasInterval(Reg))
       continue;
 
-    LaneBitmask LiveMask;
     const auto &LI = LIS->getInterval(Reg);
 
     // Skip local live interval to make live input/ouput faster.
     if (llvm::isLocalLiveInterval(LI, SlotIndexes))
       continue;
 
-    for (auto outputIt : MBBOutputSlotMap) {
-      MachineBasicBlock *MBB = outputIt.first;
-      auto SI = outputIt.second;
+    for (auto OutputIt : MBBOutputSlotMap) {
+      MachineBasicBlock *MBB = OutputIt.first;
+      auto SI = OutputIt.second;
 
       auto LiveMask = getLiveLaneMask(Reg, SI, *LIS, MRI);
       if (LiveMask.any())
@@ -2125,7 +2124,7 @@ void llvm::buildEndLiveMap(
   }
 }
 
-unsigned llvm::GetCurrentVGPRCount(llvm::MachineFunction &MF,
+unsigned llvm::getCurrentVGPRCount(llvm::MachineFunction &MF,
                                    const SIRegisterInfo *SIRI) {
   auto &MRI = MF.getRegInfo();
   for (MCPhysReg Reg : reverse(AMDGPU::VGPR_32RegClass.getRegisters())) {
@@ -2136,10 +2135,10 @@ unsigned llvm::GetCurrentVGPRCount(llvm::MachineFunction &MF,
   return 0;
 }
 
-unsigned llvm::GetCurrentSGPRCount(llvm::MachineFunction &MF,
+unsigned llvm::getCurrentSGPRCount(llvm::MachineFunction &MF,
                                    const SIRegisterInfo *SIRI) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned ScratchRSrcReg = MFI->getScratchRSrcReg();
+  Register ScratchRSrcReg = MFI->getScratchRSrcReg();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned MaxSGPR = 0;
   for (MCPhysReg Reg : reverse(AMDGPU::SGPR_32RegClass.getRegisters())) {
@@ -2160,11 +2159,11 @@ unsigned llvm::GetCurrentSGPRCount(llvm::MachineFunction &MF,
 void llvm::dumpLiveSet(const LiveSet &LiveSet, const SIRegisterInfo *SIRI) {
 
   dbgs() << "\n live set: \n";
-  for (auto it : LiveSet) {
-    int Reg = it.first;
+  for (auto It : LiveSet) {
+    int Reg = It.first;
     dbgs() << printReg(Reg, SIRI);
-    if (it.second.any()) {
-      dbgs() << " mask:" << it.second.getAsInteger();
+    if (It.second.any()) {
+      dbgs() << " mask:" << It.second.getAsInteger();
     }
     dbgs() << "\n";
   }
@@ -2197,7 +2196,7 @@ bool llvm::IsLdsSpillSupportedForHwStage(xmd::HwStage Stage)
 #endif
 
 MachineBasicBlock::succ_iterator
-llvm::FindSuccessor(llvm::MachineBasicBlock *MBB,
+llvm::findSuccessor(llvm::MachineBasicBlock *MBB,
                     llvm::MachineBasicBlock *Succ) {
   for (MachineBasicBlock::succ_iterator It = MBB->succ_begin(),
                                         End = MBB->succ_end();

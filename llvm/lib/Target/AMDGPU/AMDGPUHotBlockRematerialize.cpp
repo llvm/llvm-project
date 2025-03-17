@@ -226,7 +226,7 @@ bool isSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
     if (!Op.isReg())
       continue;
     if (!MRI.getUniqueVRegDef(Op.getReg()) &&
-        !llvm::IsSub0Sub1SingleDef(Op.getReg(), MRI)) {
+        !llvm::isSub0Sub1SingleDef(Op.getReg(), MRI)) {
       return false;
     }
   }
@@ -280,7 +280,7 @@ unsigned collectMBBPressure(MachineBasicBlock &MBB, LiveIntervals *LIS,
   GCNUpwardRPTracker RPTracker(*LIS);
   // R.End doesn't point to the boundary instruction.
   // Skip Debug instr.
-  if (!llvm::GetNonDebugMBBEnd(BBEnd, MBB))
+  if (!llvm::getNonDebugMBBEnd(BBEnd, MBB))
     return ST->getOccupancyWithNumVGPRs(0);
 
   GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[&MBB];
@@ -327,7 +327,7 @@ unsigned collectFnPressure(MachineFunction &MF, LiveIntervals *LIS,
 
       // R.End doesn't point to the boundary instruction.
       // Skip Debug instr.
-      if (llvm::GetNonDebugMBBEnd(BBEnd, MBB)) {
+      if (llvm::getNonDebugMBBEnd(BBEnd, MBB)) {
         auto SI = SlotIndexes->getInstructionIndex(*BBEnd);
         MBBOutputSlotMap[&MBB] = SI;
       }
@@ -417,7 +417,7 @@ RematStatus getRematStatus(MachineFunction &MF, MachineLoopInfo *MLI,
   unsigned STgtOcc = ST->getOccupancyWithNumSGPRs(MaxSPressure);
   unsigned VTgtOcc = ST->getOccupancyWithNumVGPRs(MaxVPressure);
 
-  llvm::SchedScore TotalScore = llvm::CollectLatency(MF, *ST, MLI);
+  llvm::SchedScore TotalScore = llvm::collectLatency(MF, *ST, MLI);
   bool MemBound =
       TotalScore.isMemBound(TgtOcc, std::max(STgtOcc, VTgtOcc) - TgtOcc);
 
@@ -702,7 +702,7 @@ int rematGain(MachineInstr *DefMI, unsigned Reg, const MachineRegisterInfo &MRI,
     }
     bool IsSingleDef = MRI.hasOneDef(Reg);
     if (!IsSingleDef) {
-      IsSingleDef = llvm::IsSub0Sub1SingleDef(Reg, MRI);
+      IsSingleDef = llvm::isSub0Sub1SingleDef(Reg, MRI);
     }
 
     if (IsSingleDef) {
@@ -1066,7 +1066,7 @@ static MachineBasicBlock::iterator adjustInsertPointToAvoidSccSmash(
   const bool WillSmashScc =
       InstructionToMove->modifiesRegister(AMDGPU::SCC, SIRI);
   if (WillSmashScc) {
-    CurrentInsertPoint = llvm::FindOrCreateInsertionPointForSccDef(
+    CurrentInsertPoint = llvm::findOrCreateInsertionPointForSccDef(
         MBB, CurrentInsertPoint, SIRI, SIII, &MRI);
   }
 
@@ -1081,7 +1081,7 @@ static MachineBasicBlock::iterator adjustInsertPointForSubExpToAvoidSccSmash(
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
   const bool WillSmashScc = SubExpToMove.modifiesRegister(AMDGPU::SCC, SIRI);
   if (WillSmashScc) {
-    CurrentInsertPoint = llvm::FindOrCreateInsertionPointForSccDef(
+    CurrentInsertPoint = llvm::findOrCreateInsertionPointForSccDef(
         MBB, CurrentInsertPoint, SIRI, SIII, &MRI);
   }
 
@@ -1094,7 +1094,7 @@ static bool willSmashSccAtLocation(MachineInstr *MI, MachineBasicBlock *MBB,
   // It is ok to pass nullptr to `modifiesRegister` for TRI here since
   // SCC has no subreg/suprereg relationships.
   return MI->modifiesRegister(AMDGPU::SCC, nullptr) &&
-         llvm::IsSccLiveAt(MBB, Location);
+         llvm::isSccLiveAt(MBB, Location);
 }
 
 void applyCloneRemat(Remat *Remat, RematNode &Node,
@@ -1374,7 +1374,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
       const GCNRPTracker::LiveRegSet &LiveSet = LISLR;
       unsigned VPressure = 0;
       unsigned SPressure = 0;
-      CollectLiveSetPressure(LiveSet, MRI, SIRI, VPressure, SPressure);
+      collectLiveSetPressure(LiveSet, MRI, SIRI, VPressure, SPressure);
       if (MaxVPressure < VPressure)
         MaxVPressure = VPressure;
       if (MaxSPressure < SPressure)
@@ -1635,7 +1635,7 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
     if (OpReg.isPhysical())
       return false;
     if (!MRI.getUniqueVRegDef(OpReg) &&
-        !llvm::IsSub0Sub1SingleDef(OpReg, MRI)) {
+        !llvm::isSub0Sub1SingleDef(OpReg, MRI)) {
       return false;
     }
   }
@@ -1794,7 +1794,7 @@ std::vector<SubExp> buildSubExpFromCandidates(
         continue;
 
       MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
-      assert((DefMI || llvm::IsSub0Sub1SingleDef(Reg, MRI)) &&
+      assert((DefMI || llvm::isSub0Sub1SingleDef(Reg, MRI)) &&
              "UseMI should be safe to move");
       if (DefMI && CandidateDefs.count(DefMI) > 0)
         continue;
@@ -1982,7 +1982,7 @@ std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
         if (Candidates.count(Reg) == 0 && LocalCandidates.count(Reg) != 0)
           continue;
       }
-      assert((DefMI || llvm::IsSub0Sub1SingleDef(Reg, MRI)) &&
+      assert((DefMI || llvm::isSub0Sub1SingleDef(Reg, MRI)) &&
              "UseMI should be safe to move");
       if (DefMI && CandidateDefs.count(DefMI) > 0)
         continue;
@@ -2361,7 +2361,7 @@ void applySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &HotBlocks,
     DenseMap<unsigned, unsigned> RegMap;
     auto InsertPtr = MBB->getFirstNonPHI();
     // If Exp has scc read/write, make sure MBB not have scc in liveins.
-    if (IsModifiesScc && llvm::IsSccLiveAt(MBB, InsertPtr))
+    if (IsModifiesScc && llvm::isSccLiveAt(MBB, InsertPtr))
       continue;
     MachineFunction *MF = MBB->getParent();
     for (auto It = Exp.SUnits.begin(); It != Exp.SUnits.end(); It++) {
@@ -2470,7 +2470,7 @@ void applySubExpCloneNearUserInBlock(
         continue;
 
       // Do not overwrite a live scc.
-      if (IsModifiesScc && llvm::IsSccLiveAt(UserBB, &UseMI))
+      if (IsModifiesScc && llvm::isSccLiveAt(UserBB, &UseMI))
         continue;
 
       UseMIs.emplace_back(&UseMI);
@@ -3147,7 +3147,7 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *HotMi,
       if (SubExp.SOutputSize == 0)
         continue;
     }
-    if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
+    if (!SubExp.isSafeToMove(MRI))
       continue;
     // Not clone .
     if (SubExp.SUnits.size() > 10)
@@ -3410,7 +3410,7 @@ bool canHelpPressureWhenSink(SubExp &SubExp,
                              MachineDominatorTree *DT, bool IsCanClone,
                              bool IsSgprBound) {
   LLVM_DEBUG(SubExp.dump(MRI, SIRI));
-  if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
+  if (!SubExp.isSafeToMove(MRI))
     return false;
 
   // Update input size to ignore lives in which already in
@@ -3477,7 +3477,7 @@ bool canHelpPressureWhenSink(SubExp &SubExp,
 
 bool canHelpPressureWhenHoist(SubExp &SubExp, const MachineRegisterInfo &MRI,
                               const MachineLoopInfo *MLI, bool IsSgprBound) {
-  if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ true))
+  if (!SubExp.isSafeToMove(MRI))
     return false;
   if (SubExp.VInputSize < SubExp.VOutputSize)
     return false;
@@ -3722,9 +3722,9 @@ SubExp buildFreeSubExp(SubExp &Exp,
     FreeExp.OutputLive[Reg];
   }
 
-  CollectLiveSetPressure(FreeExp.InputLive, MRI, SIRI, FreeExp.VInputSize,
+  collectLiveSetPressure(FreeExp.InputLive, MRI, SIRI, FreeExp.VInputSize,
                          FreeExp.SInputSize);
-  CollectLiveSetPressure(FreeExp.OutputLive, MRI, SIRI, FreeExp.VOutputSize,
+  collectLiveSetPressure(FreeExp.OutputLive, MRI, SIRI, FreeExp.VOutputSize,
                          FreeExp.SOutputSize);
   return FreeExp;
 }
@@ -3779,7 +3779,7 @@ std::vector<SubExp> buildSubExpCandidates(
       if (!canHelpPressureWhenSink(Exp, PassThrus, MRI, SIRI, MLI, DT,
                                    IsCanClone, IsSgprBound)) {
         if (AllowPartialUseInSubExp &&
-            Exp.isSafeToMove(MRI, /*IsMoveUp*/ false)) {
+            Exp.isSafeToMove(MRI)) {
           SubExp FreeSubExp = buildFreeSubExp(Exp, PassThrus, MRI, SIRI);
           if (canHelpPressureWhenSink(FreeSubExp, PassThrus, MRI, SIRI, MLI, DT,
                                       IsCanClone, IsSgprBound)) {

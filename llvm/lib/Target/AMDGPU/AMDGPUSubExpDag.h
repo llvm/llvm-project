@@ -49,9 +49,8 @@ struct SubExp {
   unsigned VMaxSize;
   LiveSet InputLive;
   LiveSet OutputLive;
-  bool isSafeToMove(const llvm::MachineRegisterInfo &MRI, bool IsMoveUp) const;
-  void calcMaxPressure(const llvm::MachineRegisterInfo &MRI,
-                       const llvm::SIRegisterInfo *SIRI);
+  bool isSafeToMove(const llvm::MachineRegisterInfo &MRI) const;
+  void calcMaxPressure(const llvm::MachineRegisterInfo &MRI);
   void dump(const llvm::MachineRegisterInfo &MRI,
             const llvm::SIRegisterInfo *SIRI) const;
   bool modifiesRegister(unsigned Reg, const llvm::SIRegisterInfo *SIRI) const;
@@ -83,8 +82,8 @@ struct ExpDag {
   void addCustomGraphFeatures(llvm::GraphWriter<ExpDag *> &) const {}
 
 private:
-  template <typename T> void initNodes(const LiveSet &InputLiveReg, T &insts);
-  void addDataDep(const llvm::SIRegisterInfo *SIRI);
+  template <typename T> void initNodes(const LiveSet &InputLiveReg, T &Insts);
+  void addDataDep();
   void addCtrlDep();
   void buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
                    const llvm::SIRegisterInfo *SIRI,
@@ -140,10 +139,10 @@ public:
     llvm::DenseSet<llvm::SUnit *> HeadSet;
     llvm::DenseSet<llvm::SUnit *> TailSet;
     llvm::DenseMap<llvm::SUnit *, llvm::SUnit *> HeadTailMap;
-    unsigned maxReg = 0;
-    unsigned maxVGPR = 0;
-    unsigned maxSGPR = 0;
-    void colorSU(llvm::SUnit *SU, unsigned color);
+    unsigned MaxReg = 0;
+    unsigned MaxVGPR = 0;
+    unsigned MaxSGPR = 0;
+    void colorSU(llvm::SUnit *SU, unsigned Color);
     unsigned getLineage(llvm::SUnit *SU) const;
     bool isConflict(const llvm::SUnit *SU0, unsigned Lineage) const;
     bool isHead(llvm::SUnit *SU) const;
@@ -161,8 +160,8 @@ public:
   llvm::DenseMap<llvm::SUnit *, llvm::DenseSet<llvm::SUnit *>> &getReachMap() {
     return ReachMap;
   }
-  bool canReach(llvm::SUnit *a, llvm::SUnit *b);
-  void updateReachForEdge(llvm::SUnit *a, llvm::SUnit *b,
+  bool canReach(llvm::SUnit *a, llvm::SUnit *B);
+  void updateReachForEdge(llvm::SUnit *A, llvm::SUnit *B,
                           std::vector<llvm::SUnit> &SUnits);
   void fusionLineages(std::vector<llvm::SUnit> &SUnits);
   ColorResult &coloring();
@@ -172,10 +171,10 @@ public:
 private:
   Lineage buildChain(llvm::SUnit *Node, std::vector<llvm::SUnit> &SUnits);
   llvm::SUnit *findHeir(llvm::SUnit *SU, std::vector<llvm::SUnit> &SUnits);
-  bool isConflict(const Lineage &a, const Lineage &b);
-  bool canFuse(const Lineage &a, const Lineage &b);
-  bool tryFuse(Lineage &a, Lineage &b, std::vector<llvm::SUnit> &SUnits);
-  unsigned colorLineages(std::vector<Lineage *> &lineages,
+  bool isConflict(const Lineage &A, const Lineage &B);
+  bool canFuse(const Lineage &A, const Lineage &B);
+  bool tryFuse(Lineage &A, Lineage &B, std::vector<llvm::SUnit> &SUnits);
+  unsigned colorLineages(std::vector<Lineage *> &Lineages,
                          llvm::DenseMap<Lineage *, unsigned> &AllocMap,
                          const unsigned Limit);
 

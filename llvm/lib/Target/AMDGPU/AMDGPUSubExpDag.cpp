@@ -31,13 +31,13 @@ void SubExp::dump(const MachineRegisterInfo &MRI,
                   const SIRegisterInfo *SIRI) const {
   dbgs() << "\nSubExp:\n";
   dbgs() << "input regs:\n";
-  for (auto &input : InputLive) {
-    pressure::print_reg(input.first, MRI, SIRI, llvm::dbgs());
+  for (auto &Input : InputLive) {
+    pressure::print_reg(Input.first, MRI, SIRI, llvm::dbgs());
     dbgs() << "\n";
   }
   dbgs() << "output regs:\n";
-  for (auto &output : OutputLive) {
-    pressure::print_reg(output.first, MRI, SIRI, llvm::dbgs());
+  for (auto &Output : OutputLive) {
+    pressure::print_reg(Output.first, MRI, SIRI, llvm::dbgs());
     dbgs() << "\n";
   }
 
@@ -58,8 +58,7 @@ bool SubExp::modifiesRegister(unsigned Reg, const SIRegisterInfo *SIRI) const {
   return false;
 }
 
-void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
-                             const SIRegisterInfo *SIRI) {
+void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI) {
   SMaxSize = std::max(SInputSize, SOutputSize);
   VMaxSize = std::max(VInputSize, VOutputSize);
 
@@ -76,23 +75,23 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
       Register Reg = MO.getReg();
       if (!Reg.isVirtual())
         continue;
-      LaneBitmask mask = getRegMask(MO, MRI);
-      auto it = LiveRegs.find(Reg);
-      if (it != LiveRegs.end()) {
-        LiveRegs[Reg] = mask | it->second;
+      LaneBitmask Mask = getRegMask(MO, MRI);
+      auto It = LiveRegs.find(Reg);
+      if (It != LiveRegs.end()) {
+        LiveRegs[Reg] = Mask | It->second;
       } else {
-        LiveRegs[Reg] = mask;
+        LiveRegs[Reg] = Mask;
       }
     }
   }
 
-  for (auto it : LiveRegs) {
-    LaneBitmask emptyMask;
-    CurPressure.inc(it.first, emptyMask, it.second, MRI);
+  for (auto It : LiveRegs) {
+    LaneBitmask EmptyMask;
+    CurPressure.inc(It.first, EmptyMask, It.second, MRI);
   }
 
-  for (auto it = SUnits.rbegin(); it != SUnits.rend(); it++) {
-    MachineInstr *MI = *it;
+  for (auto It = SUnits.rbegin(); It != SUnits.rend(); It++) {
+    MachineInstr *MI = *It;
     auto *ST =
         &MI->getMF()
              ->getSubtarget<GCNSubtarget>(); // TODO: Better way to get this.
@@ -108,9 +107,9 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
 
       LaneBitmask LiveMask = getRegMask(MO, MRI);
       LaneBitmask PrevMask;
-      auto liveIt = LiveRegs.find(Reg);
-      if (liveIt != LiveRegs.end()) {
-        PrevMask = liveIt->second;
+      auto LiveIt = LiveRegs.find(Reg);
+      if (LiveIt != LiveRegs.end()) {
+        PrevMask = LiveIt->second;
       }
 
       if (MO.isDef()) {
@@ -123,16 +122,16 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
       LiveRegs[Reg] = LiveMask;
     }
 
-    unsigned sSize = CurPressure.getSGPRNum();
-    unsigned vSize = CurPressure.getVGPRNum(ST->hasGFX90AInsts());
-    if (sSize > SMaxSize)
-      SMaxSize = sSize;
-    if (vSize > VMaxSize)
-      VMaxSize = vSize;
+    unsigned SSize = CurPressure.getSGPRNum();
+    unsigned VSize = CurPressure.getVGPRNum(ST->hasGFX90AInsts());
+    if (SSize > SMaxSize)
+      SMaxSize = SSize;
+    if (VSize > VMaxSize)
+      VMaxSize = VSize;
   }
 }
 
-bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI, bool IsMoveUp) const {
+bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI) const {
   if (IsMultiDefOutput)
     return false;
   if (IsHasTerminatorInst)
@@ -142,7 +141,7 @@ bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI, bool IsMoveUp) const {
 
   // Input should be single def.
   for (unsigned Reg : TopRegs) {
-    if (!MRI.hasOneDef(Reg) && !llvm::IsSub0Sub1SingleDef(Reg, MRI))
+    if (!MRI.hasOneDef(Reg) && !llvm::isSub0Sub1SingleDef(Reg, MRI))
       return false;
   }
   return true;
@@ -154,11 +153,11 @@ ExpDag::ExpDag(const llvm::MachineRegisterInfo &MRI,
     : MRI(MRI), SIRI(SIRI), SIII(SIII), IsJoinInputToSubExp(IsJoinInput) {}
 
 template <typename T>
-void ExpDag::initNodes(const LiveSet &InputLiveReg, T &insts) {
-  unsigned NodeSize = InputLiveReg.size() + insts.size();
+void ExpDag::initNodes(const LiveSet &InputLiveReg, T &Insts) {
+  unsigned NodeSize = InputLiveReg.size() + Insts.size();
   SUnits.reserve(NodeSize);
 
-  for (MachineInstr *MI : insts) {
+  for (MachineInstr *MI : Insts) {
     if (MI->isDebugInstr())
       continue;
     SUnits.emplace_back(MI, SUnits.size());
@@ -167,8 +166,8 @@ void ExpDag::initNodes(const LiveSet &InputLiveReg, T &insts) {
     MISUnitMap[MI] = SU;
   }
 
-  for (auto it : InputLiveReg) {
-    unsigned Reg = it.first;
+  for (auto It : InputLiveReg) {
+    unsigned Reg = It.first;
     SUnits.emplace_back();
     SUnit *SU = &SUnits.back();
     SU->NodeNum = SUnits.size() - 1;
@@ -187,7 +186,7 @@ template <typename T>
 void ExpDag::build(const LiveSet &InputLiveReg, const LiveSet &OutputLiveReg,
                    T &Insts) {
   initNodes(InputLiveReg, Insts);
-  addDataDep(SIRI);
+  addDataDep();
   addCtrlDep();
   buildSubExp(InputLiveReg, OutputLiveReg, SIRI, SIII);
 }
@@ -203,10 +202,10 @@ template void ExpDag::build<std::vector<MachineInstr *>>(
 void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
                          const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
   IntEqClasses SubtreeClasses(SUnits.size());
-  std::vector<unsigned> passThruInputs;
+  std::vector<unsigned> PassThruInputs;
   for (SUnit &SU : SUnits) {
     if (SU.NumPredsLeft == 0 && SU.NumSuccsLeft == 0) {
-      passThruInputs.emplace_back(SU.NodeNum);
+      PassThruInputs.emplace_back(SU.NodeNum);
       continue;
     }
     if (!IsJoinInputToSubExp && !SU.isInstr())
@@ -227,9 +226,9 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
   SubtreeClasses.compress();
 
   unsigned NumSubExps = SubtreeClasses.getNumClasses();
-  // Not count passThruInputs for subExps since they're exp with only 1 SU.
+  // Not count PassThruInputs for subExps since they're exp with only 1 SU.
   // SubExpIndexMap is used to pack SubIdx within updated NumSubExps.
-  NumSubExps -= passThruInputs.size();
+  NumSubExps -= PassThruInputs.size();
   SubExps.resize(NumSubExps);
   DenseMap<unsigned, unsigned> SubExpIndexMap;
 
@@ -242,18 +241,18 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
     unsigned OriginSubIdx = SubIdx;
     // Pack subidx.
     if (SubExpIndexMap.count(SubIdx) == 0) {
-      unsigned count = SubExpIndexMap.size();
-      SubExpIndexMap.insert(std::make_pair(SubIdx, count));
+      unsigned Count = SubExpIndexMap.size();
+      SubExpIndexMap.insert(std::make_pair(SubIdx, Count));
     }
     SubIdx = SubExpIndexMap[SubIdx];
     // Use NodeQueueId as SubIdx. We don't do schedule on ExpDag.
     SU.NodeQueueId = SubIdx;
 
     SubExp &Exp = SubExps[SubIdx];
-    auto it = SUnitInputMap.find(&SU);
-    if (it != SUnitInputMap.end()) {
+    auto It = SUnitInputMap.find(&SU);
+    if (It != SUnitInputMap.end()) {
       // Input.
-      unsigned Reg = it->second;
+      Register Reg = It->second;
       Exp.TopRegs.insert(Reg);
     } else {
       MachineInstr *MI = SU.getInstr();
@@ -264,7 +263,7 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
           continue;
         if (!MO.isUse())
           continue;
-        unsigned Reg = MO.getReg();
+        Register Reg = MO.getReg();
         if (MRI.getLiveInPhysReg(Reg) || MRI.getLiveInVirtReg(Reg)) {
           Exp.IsUseIncomingReg = true;
         }
@@ -301,13 +300,13 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
               IsUsedInOtherBlk = true;
               break;
             }
-            auto suIt = MISUnitMap.find(&UserMI);
+            auto SuIt = MISUnitMap.find(&UserMI);
             // When UserMI is not in dag, treat it as other block.
-            if (suIt == MISUnitMap.end()) {
+            if (SuIt == MISUnitMap.end()) {
               IsUsedInOtherBlk = true;
               break;
             }
-            SUnit *UseSU = suIt->second;
+            SUnit *UseSU = SuIt->second;
             // UserMI should always be in same subExp.
             unsigned UseSubIdx = SubtreeClasses[UseSU->NodeNum];
             if (UseSubIdx != OriginSubIdx) {
@@ -333,34 +332,34 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
   // Only reg will miss live mask.
   for (SubExp &Exp : SubExps) {
     for (unsigned Reg : Exp.TopRegs) {
-      auto it = StartLiveReg.find(Reg);
-      assert(it != StartLiveReg.end() &&
+      auto It = StartLiveReg.find(Reg);
+      assert(It != StartLiveReg.end() &&
              "cannot find input reg in block start live");
-      Exp.InputLive[Reg] |= it->second;
+      Exp.InputLive[Reg] |= It->second;
     }
 
     for (unsigned Reg : Exp.BottomRegs) {
-      auto it = EndLiveReg.find(Reg);
-      if (it == EndLiveReg.end()) {
+      auto It = EndLiveReg.find(Reg);
+      if (It == EndLiveReg.end()) {
         //"cannot find output reg in block end live");
         // Bottom reg is killed inside current block, did not get out of the
         // block.
         // Or the bottom reg is not treat as output in this dag, not save to
-        // outputLive which will affect profit count.
+        // OutputLive which will affect profit count.
         continue;
       }
-      Exp.OutputLive[Reg] |= it->second;
+      Exp.OutputLive[Reg] |= It->second;
     }
 
-    CollectLiveSetPressure(Exp.InputLive, MRI, SIRI, Exp.VInputSize,
+    collectLiveSetPressure(Exp.InputLive, MRI, SIRI, Exp.VInputSize,
                            Exp.SInputSize);
-    CollectLiveSetPressure(Exp.OutputLive, MRI, SIRI, Exp.VOutputSize,
+    collectLiveSetPressure(Exp.OutputLive, MRI, SIRI, Exp.VOutputSize,
                            Exp.SOutputSize);
   }
 }
 
-void ExpDag::addDataDep(const SIRegisterInfo *SIRI) {
-  DenseMap<unsigned, MachineInstr *> curDefMI;
+void ExpDag::addDataDep() {
+  DenseMap<unsigned, MachineInstr *> CurDefMI;
 
   for (SUnit &SU : SUnits) {
     if (!SU.isInstr())
@@ -377,11 +376,11 @@ void ExpDag::addDataDep(const SIRegisterInfo *SIRI) {
       Register Reg = MO.getReg();
       SUnit *DefSU = nullptr;
 
-      auto curDefIt = curDefMI.find(Reg);
+      auto CurDefIt = CurDefMI.find(Reg);
       // Check def inst first.
-      if (curDefIt != curDefMI.end()) {
-        MachineInstr *curDef = curDefIt->second;
-        DefSU = MISUnitMap[curDef];
+      if (CurDefIt != CurDefMI.end()) {
+        MachineInstr *CurDef = CurDefIt->second;
+        DefSU = MISUnitMap[CurDef];
       } else {
         // physical reg is not in live reg.
         if (!Reg.isVirtual())
@@ -404,7 +403,7 @@ void ExpDag::addDataDep(const SIRegisterInfo *SIRI) {
         continue;
       if (!MO.isDef())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
 
       // For case like:
       // undef %808.sub0:sgpr_64 = COPY killed %795:sgpr_32
@@ -412,17 +411,17 @@ void ExpDag::addDataDep(const SIRegisterInfo *SIRI) {
       // When partially write, link MI to previous def.
       if (MO.getSubReg() != 0) {
         SUnit *DefSU = nullptr;
-        auto curDefIt = curDefMI.find(Reg);
+        auto CurDefIt = CurDefMI.find(Reg);
         // Check def inst first.
-        if (curDefIt != curDefMI.end()) {
-          MachineInstr *CurDef = curDefIt->second;
+        if (CurDefIt != CurDefMI.end()) {
+          MachineInstr *CurDef = CurDefIt->second;
           DefSU = MISUnitMap[CurDef];
           // Add link between different defs.
           SU.addPred(SDep(DefSU, SDep::Data, Reg));
         }
       }
 
-      curDefMI[Reg] = MI;
+      CurDefMI[Reg] = MI;
     }
   }
 }
@@ -521,7 +520,7 @@ void BlockExpDag::buildAvail(const LiveSet &PassThruSet,
 
       MachineInstr *MI = SU->getInstr();
       // Calc pressure based on pred nodes.
-      GCNRPTracker::LiveRegSet dagLive;
+      GCNRPTracker::LiveRegSet DagLive;
       for (auto &Pred : SU->Preds) {
         SUnit *PredSU = Pred.getSUnit();
         GCNRPTracker::LiveRegSet PredLive = DagAvailRegMap[PredSU];
@@ -533,9 +532,9 @@ void BlockExpDag::buildAvail(const LiveSet &PassThruSet,
           // Update PredLive based on MI.
           RP.advance();
         }
-        llvm::mergeLiveRegSet(dagLive, RP.getLiveRegs());
+        llvm::mergeLiveRegSet(DagLive, RP.getLiveRegs());
       }
-      DagAvailRegMap[SU] = dagLive;
+      DagAvailRegMap[SU] = DagLive;
 
       // Add succ to work list.
       for (auto &Succ : SU->Succs) {
@@ -561,23 +560,23 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
   if (MBB->empty())
     return;
   DenseMap<SUnit *, GCNRPTracker::LiveRegSet> DagAvailRegMap;
-  GCNRPTracker::LiveRegSet passThruSet;
-  for (auto Reg : StartLiveReg) {
-    unsigned reg = Reg.first;
-    auto EndReg = EndLiveReg.find(reg);
+  GCNRPTracker::LiveRegSet PassThruSet;
+  for (auto It : StartLiveReg) {
+    Register Reg = It.first;
+    auto EndReg = EndLiveReg.find(Reg);
     if (EndReg == EndLiveReg.end())
       continue;
 
-    LaneBitmask mask = Reg.second;
-    LaneBitmask endMask = EndReg->second;
-    mask &= endMask;
-    if (mask.getAsInteger() == 0)
+    LaneBitmask Mask = It.second;
+    LaneBitmask EndMask = EndReg->second;
+    Mask &= EndMask;
+    if (Mask.getAsInteger() == 0)
       continue;
-    passThruSet[reg] = mask;
+    PassThruSet[Reg] = Mask;
   }
 
   // Build avial for each nodes.
-  buildAvail(passThruSet, DagAvailRegMap);
+  buildAvail(PassThruSet, DagAvailRegMap);
 
   // Calc avaialbe for each node, live is avail & sum(input of success).
   // If a reg is avaiable from the node, then success node can use it from this
@@ -594,10 +593,10 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
       // Using pass thru as base because output of current SU should not
       // affect other output SUs.
       GCNUpwardRPTracker RP(*LIS);
-      RP.reset(BeginMI, &passThruSet, /*After*/ true);
+      RP.reset(BeginMI, &PassThruSet, /*After*/ true);
       MachineInstr *MI = SU.getInstr();
       if (MI) {
-        RP.reset(*MI, &passThruSet, /*After*/ true);
+        RP.reset(*MI, &PassThruSet, /*After*/ true);
         RP.recede(*MI);
       }
       DagPressureMap[&SU] = RP.getLiveRegs();
@@ -611,7 +610,6 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
   }
 
   while (!WorkList.empty()) {
-    bool IsUpdated = false;
     SmallVector<SUnit *, 4> ReadyNodes;
     for (SUnit *SU : WorkList) {
       if (SU->NumSuccsLeft > 0)
@@ -619,7 +617,6 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
       ReadyNodes.emplace_back(SU);
       // Ready, move it to Processed.
       Processed.insert(SU);
-      IsUpdated = true;
       // Only update 1 node once.
       // Order of schedle here should not affect pressure.
       break;
@@ -631,7 +628,7 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
 
       MachineInstr *MI = SU->getInstr();
       // Calc pressure based on succ nodes.
-      GCNRPTracker::LiveRegSet dagLive;
+      GCNRPTracker::LiveRegSet DagLive;
       for (auto &Succ : SU->Succs) {
         SUnit *SuccSU = Succ.getSUnit();
         GCNRPTracker::LiveRegSet SuccLive = DagPressureMap[SuccSU];
@@ -643,12 +640,12 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
           // Update SuccLive based on MI.
           RP.recede(*MI);
         }
-        llvm::mergeLiveRegSet(dagLive, RP.getLiveRegs());
+        llvm::mergeLiveRegSet(DagLive, RP.getLiveRegs());
       }
       // Remove live which not avail in SU.
-      GCNRPTracker::LiveRegSet availLive = DagAvailRegMap[SU];
-      llvm::andLiveRegSet(dagLive, availLive);
-      DagPressureMap[SU] = dagLive;
+      GCNRPTracker::LiveRegSet AvailLive = DagAvailRegMap[SU];
+      llvm::andLiveRegSet(DagLive, AvailLive);
+      DagPressureMap[SU] = DagLive;
 
       // Add pred to work list.
       for (auto &Pred : SU->Preds) {
@@ -669,16 +666,16 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
 // dump functions.
 
 std::string ExpDag::getGraphNodeLabel(const SUnit *SU) const {
-  std::string s;
-  raw_string_ostream oss(s);
-  auto it = SUnitInputMap.find(SU);
-  if (it != SUnitInputMap.end()) {
-    oss << "<input:" << llvm::printReg(it->second) << ">";
+  std::string S;
+  raw_string_ostream OSS(S);
+  auto It = SUnitInputMap.find(SU);
+  if (It != SUnitInputMap.end()) {
+    OSS << "<input:" << llvm::printReg(It->second) << ">";
   } else {
-    SU->getInstr()->print(oss, /*SkipOpers=*/true);
+    SU->getInstr()->print(OSS, /*SkipOpers=*/true);
   }
 
-  return oss.str();
+  return OSS.str();
 }
 
 /// Return the label.
@@ -688,7 +685,6 @@ std::string ExpDag::getDAGName() const { return "dag.exp"; }
 /// rendered using 'dot'.
 ///
 void ExpDag::viewGraph(const Twine &Name, const Twine &Title) const {
-#if 0 // TODO: Re-enable this
   // This code is only for debugging!
 #ifndef NDEBUG
   ViewGraph(const_cast<ExpDag *>(this), Name, false, Title);
@@ -696,7 +692,6 @@ void ExpDag::viewGraph(const Twine &Name, const Twine &Title) const {
   errs() << "BlockExpDag::viewGraph is only available in debug builds on "
          << "systems with Graphviz or gv!\n";
 #endif // NDEBUG
-#endif
 }
 
 void ExpDag::dump() {
@@ -713,9 +708,9 @@ static DenseSet<const SUnit *> ViewNodes;
 template <>
 struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
 
-  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+  DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
-  static std::string getGraphName(const llvm::ExpDag *G) {
+  static std::string getGraphName(const llvm::ExpDag *) {
     return "ExpDag graph";
   }
 
@@ -729,7 +724,7 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
   }
 
   static std::string getNodeIdentifierLabel(const SUnit *Node,
-                                            const llvm::ExpDag *Graph) {
+                                            const llvm::ExpDag *) {
     std::string R;
     raw_string_ostream OS(R);
     OS << static_cast<const void *>(Node);
@@ -738,8 +733,8 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
 
   /// If you want to override the dot attributes printed for a particular
   /// edge, override this method.
-  static std::string getEdgeAttributes(const SUnit *Node, SUnitIterator EI,
-                                       const llvm::ExpDag *Graph) {
+  static std::string getEdgeAttributes(const SUnit *, SUnitIterator EI,
+                                       const llvm::ExpDag *) {
     if (EI.isArtificialDep())
       return "color=cyan,style=dashed";
     if (EI.isCtrlDep())
@@ -747,7 +742,7 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
     return "";
   }
 
-  static std::string getNodeLabel(const SUnit *SU, const llvm::ExpDag *Graph) {
+  static std::string getNodeLabel(const SUnit *SU, const llvm::ExpDag *) {
     std::string Str;
     raw_string_ostream SS(Str);
     SS << "SU:" << SU->NodeNum;
@@ -758,7 +753,7 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
     return G->getGraphNodeLabel(SU);
   }
   static std::string getNodeAttributes(const SUnit *N,
-                                       const llvm::ExpDag *Graph) {
+                                       const llvm::ExpDag *) {
     std::string Str("shape=Mrecord");
 
     Str += ",style=filled,fillcolor=\"#";
@@ -798,42 +793,42 @@ void getRegBound(llvm::MachineBasicBlock *MBB,
   MaxSGPR = AMDGPU::SGPR104 - AMDGPU::SGPR0;
 
   const auto &EndSlot = LIS->getMBBEndIdx(MBB);
-  const GCNRPTracker::LiveRegSet outputLive =
+  const GCNRPTracker::LiveRegSet OutputLive =
       llvm::getLiveRegs(EndSlot, *LIS, MRI);
 
   auto *ST =
       &MBB->getParent()
            ->getSubtarget<GCNSubtarget>(); // TODO: Better way to get this.
   if (MBB->empty()) {
-    GCNRegPressure MaxPressure = getRegPressure(MRI, outputLive);
+    GCNRegPressure MaxPressure = getRegPressure(MRI, OutputLive);
     MaxSGPR = MaxPressure.getSGPRNum();
     MaxVGPR = MaxPressure.getVGPRNum(ST->hasGFX90AInsts());
     return;
   }
 
-  BlockExpDag dag(MBB, LIS, MRI, SIRI, SIII);
-  dag.build();
+  BlockExpDag Dag(MBB, LIS, MRI, SIRI, SIII);
+  Dag.build();
 
-  std::vector<SUnit> &SUnits = dag.SUnits;
+  std::vector<SUnit> &SUnits = Dag.SUnits;
   // Remove input nodes.
   for (SUnit &SU : SUnits) {
     if (!SU.isInstr())
       continue;
-    std::vector<SDep> inputDeps;
+    std::vector<SDep> InputDeps;
     for (SDep &Dep : SU.Preds) {
       SUnit *Pred = Dep.getSUnit();
       if (Pred->isInstr())
         continue;
-      inputDeps.emplace_back(Dep);
+      InputDeps.emplace_back(Dep);
     }
-    for (SDep &Dep : inputDeps) {
+    for (SDep &Dep : InputDeps) {
       SU.removePred(Dep);
     }
   }
 
-  unsigned inputSize = dag.InputSUnitMap.size();
-  unsigned instNodeSize = SUnits.size() - inputSize;
-  SUnits.erase(SUnits.begin() + instNodeSize, SUnits.end());
+  const unsigned InputSize = Dag.InputSUnitMap.size();
+  const unsigned InstNodeSize = SUnits.size() - InputSize;
+  SUnits.erase(SUnits.begin() + InstNodeSize, SUnits.end());
 
   std::vector<llvm::SUnit *> BotRoots;
   for (SUnit &SU : SUnits) {
@@ -844,9 +839,9 @@ void getRegBound(llvm::MachineBasicBlock *MBB,
   auto SchedResult = hrbSched(SUnits, BotRoots, MRI, SIRI);
 
   GCNUpwardRPTracker RPTracker(*LIS);
-  RPTracker.reset(MBB->front(), &outputLive, /*After*/ true);
-  for (auto it = SchedResult.rbegin(); it != SchedResult.rend(); it++) {
-    const SUnit *SU = *it;
+  RPTracker.reset(MBB->front(), &OutputLive, /*After*/ true);
+  for (auto It = SchedResult.rbegin(); It != SchedResult.rend(); It++) {
+    const SUnit *SU = *It;
     if (!SU->isInstr())
       continue;
     MachineInstr *MI = SU->getInstr();
@@ -863,32 +858,32 @@ void getRegBound(llvm::MachineBasicBlock *MBB,
 namespace {
 
 std::vector<SUnit *> buildWorkList(std::vector<llvm::SUnit> &SUnits) {
-  std::vector<SUnit *> resultList;
-  resultList.reserve(SUnits.size());
+  std::vector<SUnit *> ResultList;
+  ResultList.reserve(SUnits.size());
   for (SUnit &SU : SUnits) {
-    resultList.emplace_back(&SU);
+    ResultList.emplace_back(&SU);
   }
-  return resultList;
+  return ResultList;
 }
 
-void sortByHeight(std::vector<SUnit *> &workList) {
-  std::sort(workList.begin(), workList.end(),
-            [](const SUnit *a, const SUnit *b) {
+void sortByHeight(std::vector<SUnit *> &WorkList) {
+  std::sort(WorkList.begin(), WorkList.end(),
+            [](const SUnit *A, const SUnit *B) {
               // Lowest height first.
-              if (a->getHeight() < b->getHeight())
+              if (A->getHeight() < B->getHeight())
                 return true;
               // If height the same, NodeNum big first.
-              if (a->getHeight() == b->getHeight())
-                return a->NodeNum > b->NodeNum;
+              if (A->getHeight() == B->getHeight())
+                return A->NodeNum > B->NodeNum;
               return false;
             });
 }
 
-void sortByInChain(std::vector<SUnit *> &workList, DenseSet<SUnit *> &Chained) {
+void sortByInChain(std::vector<SUnit *> &WorkList, DenseSet<SUnit *> &Chained) {
   // In chain nodes at end.
-  std::sort(workList.begin(), workList.end(),
-            [&Chained](const SUnit *a, const SUnit *b) {
-              return Chained.count(a) < Chained.count(b);
+  std::sort(WorkList.begin(), WorkList.end(),
+            [&Chained](const SUnit *A, const SUnit *B) {
+              return Chained.count(A) < Chained.count(B);
             });
 }
 
@@ -905,7 +900,7 @@ const TargetRegisterClass *getRegClass(SUnit *SU,
   MachineOperand *MO = MI->defs().begin();
   if (!MO->isReg())
     return nullptr;
-  unsigned Reg = MO->getReg();
+  Register Reg = MO->getReg();
   return SIRI->getRegClassForReg(MRI, Reg);
 }
 
@@ -926,12 +921,12 @@ unsigned getSGPRSize(const TargetRegisterClass *RC,
   return RC->getLaneMask().getNumLanes();
 }
 
-void collectSameHeightBackNodes(SUnit *SU, SmallDenseSet<SUnit *, 2> &backNodes,
+void collectSameHeightBackNodes(SUnit *SU, SmallDenseSet<SUnit *, 2> &BackNodes,
                                 unsigned NodeNum,
-                                SmallDenseSet<SUnit *, 4> &visitedNodes) {
-  if (visitedNodes.count(SU))
+                                SmallDenseSet<SUnit *, 4> &VisitedNodes) {
+  if (VisitedNodes.count(SU))
     return;
-  visitedNodes.insert(SU);
+  VisitedNodes.insert(SU);
 
   for (SDep &Dep : SU->Succs) {
     if (Dep.isWeak())
@@ -943,8 +938,8 @@ void collectSameHeightBackNodes(SUnit *SU, SmallDenseSet<SUnit *, 2> &backNodes,
      if (Succ->NodeNum >= NodeNum)
        continue;*/
 
-    backNodes.insert(Succ);
-    collectSameHeightBackNodes(Succ, backNodes, NodeNum, visitedNodes);
+    BackNodes.insert(Succ);
+    collectSameHeightBackNodes(Succ, BackNodes, NodeNum, VisitedNodes);
   }
 }
 
@@ -963,60 +958,60 @@ SUnit *HRB::Lineage::getTail() const { return Nodes.back(); }
 
 void HRB::buildLinear(std::vector<llvm::SUnit> &SUnits) {
   // Working list from TopRoots.
-  std::vector<SUnit *> workList = buildWorkList(SUnits);
+  std::vector<SUnit *> WorkList = buildWorkList(SUnits);
   IntEqClasses EqClasses(SUnits.size());
 
-  while (!workList.empty()) {
-    sortByHeight(workList);
+  while (!WorkList.empty()) {
+    sortByHeight(WorkList);
     // Highest SU.
-    SUnit *SU = workList.back();
-    workList.pop_back();
+    SUnit *SU = WorkList.back();
+    WorkList.pop_back();
     if (!SU->isInstr())
       continue;
     if (ChainedNodes.count(SU) > 0)
       continue;
     IsRecomputeHeight = false;
-    Lineage lineage = buildChain(SU, SUnits);
+    Lineage Lineage = buildChain(SU, SUnits);
 
     // Remove chained nodes from worklist.
-    sortByInChain(workList, ChainedNodes);
-    while (!workList.empty()) {
-      SUnit *back = workList.back();
-      if (ChainedNodes.count(back))
-        workList.pop_back();
+    sortByInChain(WorkList, ChainedNodes);
+    while (!WorkList.empty()) {
+      SUnit *Back = WorkList.back();
+      if (ChainedNodes.count(Back))
+        WorkList.pop_back();
       else
         break;
     }
 
-    Lineages.emplace_back(lineage);
+    Lineages.emplace_back(Lineage);
 
     if (IsRecomputeHeight) {
       // Update height from tail.
-      SUnit *tail = lineage.Nodes.back();
-      tail->setDepthDirty();
-      tail->getHeight();
+      SUnit *Tail = Lineage.Nodes.back();
+      Tail->setDepthDirty();
+      Tail->getHeight();
     }
   }
 
-  DenseSet<SUnit *> tailSet;
+  DenseSet<SUnit *> TailSet;
   for (Lineage &L : Lineages) {
     if (L.Nodes.size() < 2)
       continue;
-    auto it = L.Nodes.rbegin();
-    it++;
-    SUnit *tail = L.Nodes.back();
-    // If already as tail for other lineage, start from next.
-    if (tailSet.count(tail) > 0) {
-      tail = *it;
-      it++;
+    auto It = L.Nodes.rbegin();
+    It++;
+    SUnit *Tail = L.Nodes.back();
+    // If already as tail for other Lineage, start from next.
+    if (TailSet.count(Tail) > 0) {
+      Tail = *It;
+      It++;
     } else {
-      tailSet.insert(tail);
+      TailSet.insert(Tail);
     }
-    for (; it != L.Nodes.rend(); it++) {
-      SUnit *SU = *it;
-      if (tail->NodeNum == -1)
+    for (; It != L.Nodes.rend(); It++) {
+      SUnit *SU = *It;
+      if (Tail->NodeNum == (unsigned)-1)
         continue;
-      EqClasses.join(SU->NodeNum, tail->NodeNum);
+      EqClasses.join(SU->NodeNum, Tail->NodeNum);
     }
   }
 
@@ -1024,7 +1019,7 @@ void HRB::buildLinear(std::vector<llvm::SUnit> &SUnits) {
   // TODO: assign sub class to node.
   for (Lineage &L : Lineages) {
     for (SUnit *SU : L.Nodes) {
-      if (SU->NodeNum == -1)
+      if (SU->NodeNum == (unsigned)-1)
         continue;
       unsigned SubIdx = EqClasses[SU->NodeNum];
       //// Pack subidx.
@@ -1040,7 +1035,7 @@ void HRB::buildLinear(std::vector<llvm::SUnit> &SUnits) {
       dbgs() << "Chained Nodes:"; for (SUnit *SU
                                        : ChainedNodes) {
         dbgs() << " " << SU->NodeNum << "\n";
-      } for (int i = 0; i < Lineages.size(); i++) {
+      } for (unsigned i = 0; i < Lineages.size(); i++) {
         dbgs() << "Lineage" << i << ":";
         Lineage &L = Lineages[i];
         for (SUnit *SU : L.Nodes) {
@@ -1078,7 +1073,7 @@ SUnit *HRB::findHeir(SUnit *SU, std::vector<llvm::SUnit> &SUnits) {
   }
   // Make sure choose lowest dependence between SameHeightCandidate.
   if (SameHeightCandidate.size() > 1) {
-    for (int i = 1; i < SameHeightCandidate.size(); i++) {
+    for (size_t i = 1; i < SameHeightCandidate.size(); i++) {
       SUnit *SU = SameHeightCandidate[i];
       // If Heir is pred of SU, use SU.
       if (canReach(SU, Heir))
@@ -1116,8 +1111,8 @@ SUnit *HRB::findHeir(SUnit *SU, std::vector<llvm::SUnit> &SUnits) {
 }
 
 HRB::Lineage HRB::buildChain(SUnit *Node, std::vector<llvm::SUnit> &SUnits) {
-  HRB::Lineage chain;
-  chain.addNode(Node);
+  HRB::Lineage Chain;
+  Chain.addNode(Node);
   ChainedNodes.insert(Node);
   LLVM_DEBUG(dbgs() << "start chain " << Node->NodeNum << "("
                     << Node->getHeight() << ")\n");
@@ -1125,7 +1120,7 @@ HRB::Lineage HRB::buildChain(SUnit *Node, std::vector<llvm::SUnit> &SUnits) {
     SUnit *Heir = findHeir(Node, SUnits);
     if (!Heir)
       break;
-    chain.addNode(Heir);
+    Chain.addNode(Heir);
 
     LLVM_DEBUG(dbgs() << "add node to chain " << Heir->NodeNum << "\n");
     if (ChainedNodes.count(Heir) > 0)
@@ -1137,38 +1132,38 @@ HRB::Lineage HRB::buildChain(SUnit *Node, std::vector<llvm::SUnit> &SUnits) {
   // Find biggest vgpr RC for the chain.
   // TODO: Build conflict and allocate on each edge of the chain.
   const TargetRegisterClass *RC = nullptr;
-  unsigned maxRCSize = 0;
-  for (SUnit *SU : chain.Nodes) {
+  unsigned MaxRCSize = 0;
+  for (SUnit *SU : Chain.Nodes) {
     const TargetRegisterClass *SuRC = getRegClass(SU, MRI, SIRI);
     unsigned RCSize = getVGPRSize(SuRC, SIRI);
-    if (RCSize > maxRCSize) {
-      maxRCSize = RCSize;
+    if (RCSize > MaxRCSize) {
+      MaxRCSize = RCSize;
       RC = SuRC;
     }
   }
   if (!RC) {
     // TODO: Find biggest sgpr RC.
-    unsigned maxRCSize = 0;
-    for (SUnit *SU : chain.Nodes) {
+    unsigned MaxRCSize = 0;
+    for (SUnit *SU : Chain.Nodes) {
       const TargetRegisterClass *SuRC = getRegClass(SU, MRI, SIRI);
       unsigned RCSize = getSGPRSize(SuRC, SIRI);
-      if (RCSize > maxRCSize) {
-        maxRCSize = RCSize;
+      if (RCSize > MaxRCSize) {
+        MaxRCSize = RCSize;
         RC = SuRC;
       }
     }
   }
-  chain.RC = RC;
-  return chain;
+  Chain.RC = RC;
+  return Chain;
 }
 
 void HRB::buildConflict() {
 
   for (unsigned i = 0; i < Lineages.size(); i++) {
-    Lineage &a = Lineages[i];
+    Lineage &A = Lineages[i];
     for (unsigned j = i + 1; j < Lineages.size(); j++) {
-      Lineage &b = Lineages[j];
-      if (isConflict(a, b)) {
+      Lineage &B = Lineages[j];
+      if (isConflict(A, B)) {
         Color.Conflicts[i].insert(j);
         Color.Conflicts[j].insert(i);
         LLVM_DEBUG(dbgs() << i << " conflict" << j << "\n");
@@ -1179,24 +1174,24 @@ void HRB::buildConflict() {
   }
 }
 
-bool HRB::canReach(llvm::SUnit *a, llvm::SUnit *b) {
-  auto it = ReachMap.find(a);
+bool HRB::canReach(llvm::SUnit *A, llvm::SUnit *B) {
+  auto It = ReachMap.find(A);
   // If no reach info, treat as reach.
-  if (it == ReachMap.end())
+  if (It == ReachMap.end())
     return true;
-  DenseSet<SUnit *> &CurReach = it->second;
-  return CurReach.find(b) != CurReach.end();
+  DenseSet<SUnit *> &CurReach = It->second;
+  return CurReach.find(B) != CurReach.end();
 }
 
-void HRB::updateReachForEdge(llvm::SUnit *a, llvm::SUnit *b,
+void HRB::updateReachForEdge(llvm::SUnit *A, llvm::SUnit *B,
                              std::vector<llvm::SUnit> &SUnits) {
-  DenseSet<SUnit *> &ReachA = ReachMap[a];
-  ReachA.insert(b);
-  DenseSet<SUnit *> &ReachB = ReachMap[b];
+  DenseSet<SUnit *> &ReachA = ReachMap[A];
+  ReachA.insert(B);
+  DenseSet<SUnit *> &ReachB = ReachMap[B];
   ReachA.insert(ReachB.begin(), ReachB.end());
 
   for (SUnit &SU : SUnits) {
-    if (!canReach(&SU, a))
+    if (!canReach(&SU, A))
       continue;
 
     DenseSet<SUnit *> &CurReach = ReachMap[&SU];
@@ -1252,91 +1247,91 @@ void HRB::buildReachRelation(ArrayRef<SUnit *> BotRoots) {
   });
 }
 
-bool HRB::isConflict(const Lineage &a, const Lineage &b) {
+bool HRB::isConflict(const Lineage &A, const Lineage &B) {
   // Make conflict between sgpr and vgpr to help group lineages when share
   // colors. Keep the conflict will group lineages in avoid mix use color in
   // different sub exp.
-  SUnit *head0 = a.getHead();
-  SUnit *tail0 = a.getTail();
-  SUnit *head1 = b.getHead();
-  SUnit *tail1 = b.getTail();
-  DenseSet<SUnit *> &Reach0 = ReachMap[head0];
-  DenseSet<SUnit *> &Reach1 = ReachMap[head1];
-  bool r01 = Reach0.count(tail1) != 0;
-  bool r10 = Reach1.count(tail0) != 0;
-  return r01 && r10;
+  SUnit *Head0 = A.getHead();
+  SUnit *Tail0 = A.getTail();
+  SUnit *Head1 = B.getHead();
+  SUnit *Tail1 = B.getTail();
+  DenseSet<SUnit *> &Reach0 = ReachMap[Head0];
+  DenseSet<SUnit *> &Reach1 = ReachMap[Head1];
+  bool R01 = Reach0.count(Tail1) != 0;
+  bool R10 = Reach1.count(Tail0) != 0;
+  return R01 && R10;
 }
-bool HRB::canFuse(const Lineage &a, const Lineage &b) {
-  if (a.RC != b.RC) {
+bool HRB::canFuse(const Lineage &A, const Lineage &B) {
+  if (A.RC != B.RC) {
     // no RC will not conflict with other nodes.
-    if (!a.RC)
+    if (!A.RC)
       return false;
-    if (!b.RC)
+    if (!B.RC)
       return false;
     // SGRP and VGPR not conflict.
-    if (SIRI->isSGPRClass(a.RC) != SIRI->isSGPRClass(b.RC))
+    if (SIRI->isSGPRClass(A.RC) != SIRI->isSGPRClass(B.RC))
       return false;
   }
   // Can Fuse if a.head reach b.tail but b.head not reach a.tail and vice versa.
-  SUnit *head0 = a.getHead();
-  SUnit *tail0 = a.getTail();
-  SUnit *head1 = b.getHead();
-  SUnit *tail1 = b.getTail();
-  DenseSet<SUnit *> &Reach0 = ReachMap[head0];
-  DenseSet<SUnit *> &Reach1 = ReachMap[head1];
-  bool r01 = Reach0.count(tail1) != 0;
-  bool r10 = Reach1.count(tail0) != 0;
-  return r01 != r10;
+  SUnit *Head0 = A.getHead();
+  SUnit *Tail0 = A.getTail();
+  SUnit *Head1 = B.getHead();
+  SUnit *Tail1 = B.getTail();
+  DenseSet<SUnit *> &Reach0 = ReachMap[Head0];
+  DenseSet<SUnit *> &Reach1 = ReachMap[Head1];
+  bool R01 = Reach0.count(Tail1) != 0;
+  bool R10 = Reach1.count(Tail0) != 0;
+  return R01 != R10;
 }
 
-bool HRB::tryFuse(Lineage &a, Lineage &b, std::vector<llvm::SUnit> &SUnits) {
+bool HRB::tryFuse(Lineage &A, Lineage &B, std::vector<llvm::SUnit> &SUnits) {
 
   // Can Fuse if a.head reach b.tail but b.head not reach a.tail and vice versa.
-  SUnit *head0 = a.getHead();
-  SUnit *tail0 = a.getTail();
-  SUnit *head1 = b.getHead();
-  SUnit *tail1 = b.getTail();
-  DenseSet<SUnit *> &Reach0 = ReachMap[head0];
-  DenseSet<SUnit *> &Reach1 = ReachMap[head1];
-  bool r01 = Reach0.count(tail1) != 0;
-  bool r10 = Reach1.count(tail0) != 0;
-  if (r01 == r10)
+  SUnit *Head0 = A.getHead();
+  SUnit *Tail0 = A.getTail();
+  SUnit *Head1 = B.getHead();
+  SUnit *Tail1 = B.getTail();
+  DenseSet<SUnit *> &Reach0 = ReachMap[Head0];
+  DenseSet<SUnit *> &Reach1 = ReachMap[Head1];
+  bool R01 = Reach0.count(Tail1) != 0;
+  bool R10 = Reach1.count(Tail0) != 0;
+  if (R01 == R10)
     return false;
-  Lineage *newHead = &a;
-  Lineage *newTail = &b;
-  if (r01) {
+  Lineage *NewHead = &A;
+  Lineage *NewTail = &B;
+  if (R01) {
     // a reach b, b cannot reach a.
     // link a.tail->b.head.
-    newHead = &a;
-    newTail = &b;
+    NewHead = &A;
+    NewTail = &B;
   } else {
     // b reach a, a cannot reach b.
     // link b.tail->a.head.
-    newHead = &b;
-    newTail = &a;
+    NewHead = &B;
+    NewTail = &A;
   }
 
   // Merge reg class.
-  const TargetRegisterClass *RC0 = newHead->RC;
-  const TargetRegisterClass *RC1 = newTail->RC;
+  const TargetRegisterClass *RC0 = NewHead->RC;
+  const TargetRegisterClass *RC1 = NewTail->RC;
   unsigned RC0Size = getVGPRSize(RC0, SIRI);
   unsigned RC1Size = getVGPRSize(RC1, SIRI);
   if (RC1Size > RC0Size)
-    newHead->RC = RC1;
+    NewHead->RC = RC1;
   // Merge chain.
-  SUnit *fuseTail = newHead->getTail();
-  SUnit *fuseHead = newTail->getHead();
-  assert(ReachMap[fuseHead].count(fuseTail) == 0 && "");
-  fuseHead->addPred(SDep(fuseTail, SDep::Artificial));
-  LLVM_DEBUG(dbgs() << "fuse " << fuseTail->NodeNum << "->" << fuseHead->NodeNum
+  SUnit *FuseTail = NewHead->getTail();
+  SUnit *FuseHead = NewTail->getHead();
+  assert(ReachMap[FuseHead].count(FuseTail) == 0 && "");
+  FuseHead->addPred(SDep(FuseTail, SDep::Artificial));
+  LLVM_DEBUG(dbgs() << "fuse " << FuseTail->NodeNum << "->" << FuseHead->NodeNum
                     << "\n");
   // Update reach map.
-  updateReachForEdge(fuseTail, fuseHead, SUnits);
+  updateReachForEdge(FuseTail, FuseHead, SUnits);
   // Merge Nodes.
-  newHead->Nodes.append(newTail->Nodes.begin(), newTail->Nodes.end());
+  NewHead->Nodes.append(NewTail->Nodes.begin(), NewTail->Nodes.end());
   // Clear newTail.
-  newTail->Nodes.clear();
-  newTail->RC = nullptr;
+  NewTail->Nodes.clear();
+  NewTail->RC = nullptr;
   return true;
 }
 
@@ -1346,27 +1341,27 @@ void HRB::fusionLineages(std::vector<llvm::SUnit> &SUnits) {
   bool IsUpdated = true;
   while (IsUpdated) {
     IsUpdated = false;
-    int size = Lineages.size();
-    for (int i = 0; i < size; i++) {
-      Lineage &a = Lineages[i];
-      if (a.length() == 0)
+    int Size = Lineages.size();
+    for (int i = 0; i < Size; i++) {
+      Lineage &A = Lineages[i];
+      if (A.length() == 0)
         continue;
 
-      for (int j = i + 1; j < size; j++) {
-        Lineage &b = Lineages[j];
-        if (b.length() == 0)
+      for (int j = i + 1; j < Size; j++) {
+        Lineage &B = Lineages[j];
+        if (B.length() == 0)
           continue;
-        if (tryFuse(a, b, SUnits)) {
+        if (tryFuse(A, B, SUnits)) {
           IsUpdated = true;
-          if (a.length() == 0)
+          if (A.length() == 0)
             break;
         }
       }
     }
     // Remove empty lineages.
     std::sort(Lineages.begin(), Lineages.end(),
-              [](const Lineage &a, const Lineage &b) {
-                return a.length() > b.length();
+              [](const Lineage &A, const Lineage &B) {
+                return A.length() > B.length();
               });
     while (Lineages.back().length() == 0) {
       Lineages.pop_back();
@@ -1379,63 +1374,63 @@ void HRB::fusionLineages(std::vector<llvm::SUnit> &SUnits) {
   }
 }
 
-unsigned HRB::colorLineages(std::vector<Lineage *> &lineages,
+unsigned HRB::colorLineages(std::vector<Lineage *> &InLineages,
                             DenseMap<Lineage *, unsigned> &AllocMap,
                             const unsigned Limit) {
   // allocate long Lineage first. How about size of RC?
-  std::sort(lineages.begin(), lineages.end(),
+  std::sort(InLineages.begin(), InLineages.end(),
             [](const Lineage *a, const Lineage *b) {
               // Make sure root allocate first.
               return a->length() > b->length();
             });
 
-  unsigned maxColor = 0;
+  unsigned MaxColor = 0;
   const unsigned VGPR_LIMIT = 256 * 4;
 
-  for (Lineage *L : lineages) {
+  for (Lineage *L : InLineages) {
     unsigned ID = L->ID;
     auto &Conflict = Color.Conflicts[ID];
-    std::bitset<VGPR_LIMIT> colors;
+    std::bitset<VGPR_LIMIT> Colors;
     for (unsigned j : Conflict) {
-      Lineage *C = &Lineages[j];
-      if (AllocMap.count(C) == 0)
+      Lineage *LineageC = &Lineages[j];
+      if (AllocMap.count(LineageC) == 0)
         continue;
-      unsigned c = AllocMap[C];
-      unsigned s = C->getSize();
-      for (unsigned i = 0; i < s; i++) {
-        unsigned pos = c + i;
-        colors.set(pos);
+      unsigned C = AllocMap[LineageC];
+      unsigned S = LineageC->getSize();
+      for (unsigned i = 0; i < S; i++) {
+        unsigned Pos = C + i;
+        Colors.set(Pos);
       }
     }
 
-    unsigned color = Limit;
-    unsigned size = L->getSize();
-    for (unsigned i = 0; i < Limit - size;) {
-      unsigned oldI = i;
-      for (unsigned j = 0; j < size; j++) {
-        unsigned pos = i + size - 1 - j;
-        if (colors.test(pos)) {
-          i = pos + 1;
+    unsigned Color = Limit;
+    unsigned Size = L->getSize();
+    for (unsigned i = 0; i < Limit - Size;) {
+      unsigned OldI = i;
+      for (unsigned j = 0; j < Size; j++) {
+        unsigned Pos = i + Size - 1 - j;
+        if (Colors.test(Pos)) {
+          i = Pos + 1;
           break;
         }
       }
 
-      if (i != oldI)
+      if (i != OldI)
         continue;
-      color = i;
+      Color = i;
       break;
     }
 
-    AllocMap[L] = color;
-    color += size;
-    if (color > maxColor)
-      maxColor = color;
+    AllocMap[L] = Color;
+    Color += Size;
+    if (Color > MaxColor)
+      MaxColor = Color;
   }
-  return maxColor;
+  return MaxColor;
 }
 
-void HRB::ColorResult::colorSU(SUnit *SU, unsigned color) {
-  ColorMap[SU] = color;
+void HRB::ColorResult::colorSU(SUnit *SU, unsigned Color) {
+  ColorMap[SU] = Color;
 }
 
 unsigned HRB::ColorResult::getLineage(SUnit *SU) const {
@@ -1454,53 +1449,53 @@ bool HRB::ColorResult::isTail(SUnit *SU) const { return TailSet.count(SU); }
 const SUnit *HRB::ColorResult::getTail(SUnit *SU) const {
   if (!isHead(SU))
     return nullptr;
-  auto it = HeadTailMap.find(SU);
-  return it->second;
+  auto It = HeadTailMap.find(SU);
+  return It->second;
 }
 
 unsigned HRB::ColorResult::getColor(const llvm::SUnit *SU) const {
-  auto it = ColorMap.find(SU);
-  return it->second;
+  auto It = ColorMap.find(SU);
+  return It->second;
 }
 
 unsigned HRB::ColorResult::getSize(const llvm::SUnit *SU) const {
-  auto it = SizeMap.find(SU);
-  return it->second;
+  auto It = SizeMap.find(SU);
+  return It->second;
 }
 
 HRB::ColorResult &HRB::coloring() {
   // Collect VGPR lineages.
-  std::vector<Lineage *> vgprLineages;
+  std::vector<Lineage *> VgprLineages;
   for (Lineage &L : Lineages) {
-    auto RC = L.RC;
+    const auto *RC = L.RC;
     if (!RC)
       continue;
     if (SIRI->isSGPRClass(RC))
       continue;
-    vgprLineages.emplace_back(&L);
+    VgprLineages.emplace_back(&L);
   }
 
   const unsigned VGPR_LIMIT = 256 * 4;
   DenseMap<Lineage *, unsigned> VAllocMap;
-  const unsigned maxVGPR = colorLineages(vgprLineages, VAllocMap, VGPR_LIMIT);
+  const unsigned MaxVGPR = colorLineages(VgprLineages, VAllocMap, VGPR_LIMIT);
 
   // Collect SGPR lineages.
-  std::vector<Lineage *> sgprLineages;
+  std::vector<Lineage *> SgprLineages;
   for (Lineage &L : Lineages) {
-    auto RC = L.RC;
+    const auto *RC = L.RC;
     if (!RC)
       continue;
     if (!SIRI->isSGPRClass(RC))
       continue;
-    sgprLineages.emplace_back(&L);
+    SgprLineages.emplace_back(&L);
   }
 
   const unsigned SGPR_LIMIT = 104;
   DenseMap<Lineage *, unsigned> SAllocMap;
-  const unsigned maxSGPR = colorLineages(sgprLineages, SAllocMap, SGPR_LIMIT);
+  const unsigned MaxSGPR = colorLineages(SgprLineages, SAllocMap, SGPR_LIMIT);
   // +1 for each type of lineages(SGPR, VGPR, no reg).
-  const unsigned maxReg = maxSGPR + 1 + maxVGPR + 1 + 1;
-  const unsigned sgprBase = maxVGPR + 1;
+  const unsigned MaxReg = MaxSGPR + 1 + MaxVGPR + 1 + 1;
+  const unsigned SgprBase = MaxVGPR + 1;
 
   for (Lineage &L : Lineages) {
     // Collect HeadSet.
@@ -1508,41 +1503,41 @@ HRB::ColorResult &HRB::coloring() {
     Color.TailSet.insert(L.getTail());
     Color.HeadTailMap[L.getHead()] = L.getTail();
     // Save color.
-    auto RC = L.RC;
+    const auto *RC = L.RC;
     // All no reg lineage goes to maxReg.
-    unsigned color = maxReg;
+    unsigned RegColor = MaxReg;
     if (!RC) {
     } else if (SIRI->isSGPRClass(RC)) {
-      color = SAllocMap[&L] + sgprBase;
+      RegColor = SAllocMap[&L] + SgprBase;
     } else {
-      color = VAllocMap[&L];
+      RegColor = VAllocMap[&L];
     }
-    unsigned size = L.getSize();
+    unsigned Size = L.getSize();
     for (SUnit *SU : L.Nodes) {
-      Color.colorSU(SU, color);
-      Color.SizeMap[SU] = size;
+      Color.colorSU(SU, RegColor);
+      Color.SizeMap[SU] = Size;
       Color.LineageMap[SU] = L.ID;
     }
   }
-  Color.maxReg = maxReg;
-  Color.maxSGPR = maxSGPR;
-  Color.maxVGPR = maxVGPR;
+  Color.MaxReg = MaxReg;
+  Color.MaxSGPR = MaxSGPR;
+  Color.MaxVGPR = MaxVGPR;
 
   for (unsigned i = 0; i < Lineages.size(); i++) {
-    Lineage &a = Lineages[i];
-    SUnit *headA = a.getHead();
-    unsigned colorA = Color.getColor(headA);
-    unsigned sizeA = Color.getSize(headA);
+    Lineage &A = Lineages[i];
+    SUnit *HeadA = A.getHead();
+    unsigned ColorA = Color.getColor(HeadA);
+    unsigned SizeA = Color.getSize(HeadA);
     for (unsigned j = i + 1; j < Lineages.size(); j++) {
-      Lineage &b = Lineages[j];
+      Lineage &B = Lineages[j];
 
-      SUnit *headB = b.getHead();
-      unsigned colorB = Color.getColor(headB);
-      unsigned sizeB = Color.getSize(headB);
+      SUnit *HeadB = B.getHead();
+      unsigned ColorB = Color.getColor(HeadB);
+      unsigned SizeB = Color.getSize(HeadB);
 
-      if (colorB >= (colorA + sizeA))
+      if (ColorB >= (ColorA + SizeA))
         continue;
-      if (colorA >= (colorB + sizeB))
+      if (ColorA >= (ColorB + SizeB))
         continue;
       Color.ShareColorLineages.insert(i);
       Color.ShareColorLineages.insert(j);
@@ -1553,7 +1548,7 @@ HRB::ColorResult &HRB::coloring() {
 }
 
 void HRB::dump() {
-  for (int i = 0; i < Lineages.size(); i++) {
+  for (unsigned i = 0; i < Lineages.size(); i++) {
     dbgs() << "Lineage" << i << ":";
     Lineage &L = Lineages[i];
     for (SUnit *SU : L.Nodes) {
@@ -1566,7 +1561,7 @@ void HRB::dump() {
     }
     if (!ReachMap.empty()) {
       dbgs() << "conflict:";
-      for (int j = 0; j < Lineages.size(); j++) {
+      for (unsigned j = 0; j < Lineages.size(); j++) {
         if (i == j)
           continue;
         if (isConflict(L, Lineages[j])) {
@@ -1581,9 +1576,9 @@ void HRB::dump() {
 void HRB::dumpReachMap() {
   if (!ReachMap.empty()) {
     dbgs() << "reachMap:";
-    for (auto it : ReachMap) {
-      SUnit *SU = it.first;
-      auto &Reach = it.second;
+    for (auto It : ReachMap) {
+      SUnit *SU = It.first;
+      auto &Reach = It.second;
       if (SU->isInstr()) {
         MachineInstr *MI = SU->getInstr();
         MI->print(dbgs());
@@ -1604,24 +1599,24 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
                                     std::vector<SUnit *> &BRoots,
                                     const llvm::MachineRegisterInfo &MRI,
                                     const llvm::SIRegisterInfo *SIRI) {
-  HRB hrb(MRI, SIRI);
+  HRB Hrb(MRI, SIRI);
   // build reach info to avoid dead loop when build linear.
-  hrb.buildReachRelation(BRoots);
-  hrb.buildLinear(SUnits);
+  Hrb.buildReachRelation(BRoots);
+  Hrb.buildLinear(SUnits);
 
-  std::sort(BRoots.begin(), BRoots.end(), [](const SUnit *a, const SUnit *b) {
-    return a->NumSuccsLeft < b->NumSuccsLeft;
+  std::sort(BRoots.begin(), BRoots.end(), [](const SUnit *A, const SUnit *B) {
+    return A->NumSuccsLeft < B->NumSuccsLeft;
   });
   while (!BRoots.empty() && BRoots.back()->NumSuccsLeft > 0) {
     BRoots.pop_back();
   }
 
-  hrb.buildReachRelation(BRoots);
-  hrb.fusionLineages(SUnits);
-  hrb.buildConflict();
-  const HRB::ColorResult &Color = hrb.coloring();
+  Hrb.buildReachRelation(BRoots);
+  Hrb.fusionLineages(SUnits);
+  Hrb.buildConflict();
+  const HRB::ColorResult &ColorRes = Hrb.coloring();
 
-  LLVM_DEBUG(hrb.dump());
+  LLVM_DEBUG(Hrb.dump());
 
   // All lineage head which don't has Pred is TopRoots.
   // Put top roots in worklist.
@@ -1638,30 +1633,30 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
   // When there're more than one sub exp in the DAG, make sure not mix different
   // sub exp or it will dead loop for color goes different subexp.
 
-  std::bitset<512 * 2> colors;
-  auto isColorAvail = [&colors](unsigned color, unsigned size) -> bool {
-    for (unsigned i = 0; i < size; i++) {
-      unsigned pos = color + i;
-      if (colors.test(pos))
+  std::bitset<512 * 2> Colors;
+  auto IsColorAvail = [&Colors](unsigned Color, unsigned Size) -> bool {
+    for (unsigned i = 0; i < Size; i++) {
+      unsigned Pos = Color + i;
+      if (Colors.test(Pos))
         return false;
     }
     return true;
   };
-  auto allocColor = [&colors](unsigned color, unsigned size) {
-    for (unsigned i = 0; i < size; i++) {
-      unsigned pos = color + i;
-      assert(!colors.test(pos) && "color already allocated");
-      LLVM_DEBUG(dbgs() << pos << "is allocated\n");
-      colors.set(pos);
+  auto AllocColor = [&Colors](unsigned Color, unsigned Size) {
+    for (unsigned i = 0; i < Size; i++) {
+      unsigned Pos = Color + i;
+      assert(!Colors.test(Pos) && "color already allocated");
+      LLVM_DEBUG(dbgs() << Pos << "is allocated\n");
+      Colors.set(Pos);
     }
   };
 
-  auto freeColor = [&colors](unsigned color, unsigned size) {
-    for (unsigned i = 0; i < size; i++) {
-      unsigned pos = color + i;
-      assert(colors.test(pos) && "color has not been allocated");
-      LLVM_DEBUG(dbgs() << pos << "is free\n");
-      colors.reset(pos);
+  auto FreeColor = [&Colors](unsigned Color, unsigned Size) {
+    for (unsigned i = 0; i < Size; i++) {
+      unsigned Pos = Color + i;
+      assert(Colors.test(Pos) && "color has not been allocated");
+      LLVM_DEBUG(dbgs() << Pos << "is free\n");
+      Colors.reset(Pos);
     }
   };
 
@@ -1680,25 +1675,25 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
   // ShareColorLineages will mark lineages which share color with other
   // lineages. When sched, choose new lineages which has more conflict with
   // ShareColorLineages.
-  const DenseSet<unsigned> &ShareColorLineages = Color.ShareColorLineages;
+  const DenseSet<unsigned> &ShareColorLineages = ColorRes.ShareColorLineages;
 
   std::vector<const SUnit *> Schedule;
   DenseSet<unsigned> UnfinishedLineages;
   while (!ReadyList.empty()) {
     // Make sure node conflict with predLineage first.
     std::sort(ReadyList.begin(), ReadyList.end(),
-              [&UnfinishedLineages, &Color](const SUnit *a, const SUnit *b) {
-                unsigned confA = 0;
+              [&UnfinishedLineages, &ColorRes](const SUnit *A, const SUnit *B) {
+                unsigned ConfA = 0;
                 for (unsigned L : UnfinishedLineages) {
-                  if (Color.isConflict(a, L))
-                    confA++;
+                  if (ColorRes.isConflict(A, L))
+                    ConfA++;
                 }
-                unsigned confB = 0;
+                unsigned ConfB = 0;
                 for (unsigned L : UnfinishedLineages) {
-                  if (Color.isConflict(b, L))
-                    confB++;
+                  if (ColorRes.isConflict(B, L))
+                    ConfB++;
                 }
-                return confA > confB;
+                return ConfA > ConfB;
               });
 
     LLVM_DEBUG(dbgs() << "ReadyList:\n"; for (SUnit *SU
@@ -1706,33 +1701,33 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
       dbgs() << " " << SU->NodeNum;
     } dbgs() << "\n";);
     SUnit *Candidate = nullptr;
-    for (auto it = ReadyList.begin(); it != ReadyList.end(); it++) {
-      SUnit *SU = *it;
-      unsigned color = Color.getColor(SU);
-      unsigned size = Color.getSize(SU);
+    for (auto It = ReadyList.begin(); It != ReadyList.end(); It++) {
+      SUnit *SU = *It;
+      unsigned Color = ColorRes.getColor(SU);
+      unsigned Size = ColorRes.getSize(SU);
       // If SU is not head or color is available, SU is the candidate.
-      if (Color.isHead(SU)) {
-        if (!isColorAvail(color, size))
+      if (ColorRes.isHead(SU)) {
+        if (!IsColorAvail(Color, Size))
           continue;
         // alloc color.
-        allocColor(color, size);
+        AllocColor(Color, Size);
         // save tail color.
-        const SUnit *Tail = Color.getTail(SU);
-        unsigned ID = Color.getLineage(SU);
-        SmallVector<std::tuple<unsigned, unsigned, unsigned>, 2> &tailColors =
+        const SUnit *Tail = ColorRes.getTail(SU);
+        unsigned ID = ColorRes.getLineage(SU);
+        SmallVector<std::tuple<unsigned, unsigned, unsigned>, 2> &TailColors =
             TailMap[Tail];
-        tailColors.emplace_back(std::make_tuple(color, size, ID));
+        TailColors.emplace_back(std::make_tuple(Color, Size, ID));
         if (ShareColorLineages.count(ID))
           UnfinishedLineages.insert(ID);
       }
 
       // free color for working lineage which end with SU.
-      if (Color.isTail(SU)) {
-        auto &tailColors = TailMap[SU];
-        for (auto &tailTuple : tailColors) {
-          unsigned lineageColor, lineageSize, ID;
-          std::tie(lineageColor, lineageSize, ID) = tailTuple;
-          freeColor(lineageColor, lineageSize);
+      if (ColorRes.isTail(SU)) {
+        auto &TailColors = TailMap[SU];
+        for (auto &TailTuple : TailColors) {
+          unsigned LineageColor, LineageSize, ID;
+          std::tie(LineageColor, LineageSize, ID) = TailTuple;
+          FreeColor(LineageColor, LineageSize);
           if (ShareColorLineages.count(ID))
             UnfinishedLineages.insert(ID);
         }
@@ -1742,21 +1737,21 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
 
       Candidate = SU;
       // Remove Candidate from ReadyList.
-      ReadyList.erase(it);
+      ReadyList.erase(It);
       break;
     }
 
     if (!Candidate) {
       // In case failed to find candidate, start a lineage if there is one.
-      for (auto it = ReadyList.begin(); it != ReadyList.end(); it++) {
-        SUnit *SU = *it;
+      for (auto It = ReadyList.begin(); It != ReadyList.end(); It++) {
+        SUnit *SU = *It;
 
-        if (!Color.isHead(SU)) {
+        if (!ColorRes.isHead(SU)) {
           continue;
         }
         Candidate = SU;
         // Remove Candidate from ReadyList.
-        ReadyList.erase(it);
+        ReadyList.erase(It);
         break;
       }
     }
