@@ -45,7 +45,7 @@ define i8 @flat_inst_valu_offset_1(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:1
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 1
+  %gep = getelementptr inbounds i8, ptr %p, i64 1
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -84,7 +84,7 @@ define i8 @flat_inst_valu_offset_11bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:2047
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 2047
+  %gep = getelementptr inbounds i8, ptr %p, i64 2047
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -123,7 +123,7 @@ define i8 @flat_inst_valu_offset_12bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 4095
+  %gep = getelementptr inbounds i8, ptr %p, i64 4095
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -184,7 +184,7 @@ define i8 @flat_inst_valu_offset_13bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8191
+  %gep = getelementptr inbounds i8, ptr %p, i64 8191
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -245,7 +245,7 @@ define i8 @flat_inst_valu_offset_24bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8388607
+  %gep = getelementptr inbounds i8, ptr %p, i64 8388607
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -288,7 +288,7 @@ define i8 @flat_inst_valu_offset_neg_11bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-2048
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -2048
+  %gep = getelementptr inbounds i8, ptr %p, i64 -2048
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -331,7 +331,7 @@ define i8 @flat_inst_valu_offset_neg_12bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-4096
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -4096
+  %gep = getelementptr inbounds i8, ptr %p, i64 -4096
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -374,7 +374,7 @@ define i8 @flat_inst_valu_offset_neg_13bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-8192
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -8192
+  %gep = getelementptr inbounds i8, ptr %p, i64 -8192
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -417,7 +417,7 @@ define i8 @flat_inst_valu_offset_neg_24bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-8388608
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -8388608
+  %gep = getelementptr inbounds i8, ptr %p, i64 -8388608
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -457,7 +457,7 @@ define i8 @flat_inst_valu_offset_2x_11bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:4095
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 4095
+  %gep = getelementptr inbounds i8, ptr %p, i64 4095
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -518,7 +518,7 @@ define i8 @flat_inst_valu_offset_2x_12bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8191
+  %gep = getelementptr inbounds i8, ptr %p, i64 8191
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -579,7 +579,7 @@ define i8 @flat_inst_valu_offset_2x_13bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 16383
+  %gep = getelementptr inbounds i8, ptr %p, i64 16383
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -659,7 +659,7 @@ define i8 @flat_inst_valu_offset_2x_24bit_max(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 16777214
+  %gep = getelementptr inbounds i8, ptr %p, i64 16777214
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -702,7 +702,7 @@ define i8 @flat_inst_valu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-4096
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -4096
+  %gep = getelementptr inbounds i8, ptr %p, i64 -4096
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -745,7 +745,7 @@ define i8 @flat_inst_valu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-8192
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -8192
+  %gep = getelementptr inbounds i8, ptr %p, i64 -8192
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -788,7 +788,7 @@ define i8 @flat_inst_valu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX12-NEXT:    flat_load_u8 v0, v[0:1] offset:-16384
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -16384
+  %gep = getelementptr inbounds i8, ptr %p, i64 -16384
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -850,7 +850,7 @@ define i8 @flat_inst_valu_offset_2x_neg_24bit_max(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -16777215
+  %gep = getelementptr inbounds i8, ptr %p, i64 -16777215
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -931,7 +931,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8589936639
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589936639
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1012,7 +1012,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8589936640
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589936640
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1093,7 +1093,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8589938687
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589938687
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1156,7 +1156,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8589938688
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589938688
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1237,7 +1237,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8589942783
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589942783
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1300,7 +1300,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 8589942784
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589942784
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1374,7 +1374,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854773761
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854773761
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1448,7 +1448,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854773760
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854773760
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1522,7 +1522,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854771713
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854771713
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1596,7 +1596,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854771712
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854771712
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1670,7 +1670,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854767617
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854767617
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1744,7 +1744,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854767616
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854767616
   %load = load i8, ptr %gep, align 4
   ret i8 %load
 }
@@ -1793,7 +1793,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_1(ptr %p) {
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 1
+  %gep = getelementptr inbounds i8, ptr %p, i64 1
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -1843,7 +1843,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_11bit_max(ptr %p) {
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 2047
+  %gep = getelementptr inbounds i8, ptr %p, i64 2047
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -1893,7 +1893,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_12bit_max(ptr %p) {
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 4095
+  %gep = getelementptr inbounds i8, ptr %p, i64 4095
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -1973,7 +1973,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_13bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8191
+  %gep = getelementptr inbounds i8, ptr %p, i64 8191
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2053,7 +2053,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_11bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -2048
+  %gep = getelementptr inbounds i8, ptr %p, i64 -2048
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2133,7 +2133,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_12bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -4096
+  %gep = getelementptr inbounds i8, ptr %p, i64 -4096
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2213,7 +2213,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_neg_13bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -8192
+  %gep = getelementptr inbounds i8, ptr %p, i64 -8192
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2263,7 +2263,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_11bit_max(ptr %p) {
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 4095
+  %gep = getelementptr inbounds i8, ptr %p, i64 4095
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2343,7 +2343,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_12bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8191
+  %gep = getelementptr inbounds i8, ptr %p, i64 8191
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2423,7 +2423,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_13bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 16383
+  %gep = getelementptr inbounds i8, ptr %p, i64 16383
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2503,7 +2503,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_11bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -4096
+  %gep = getelementptr inbounds i8, ptr %p, i64 -4096
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2583,7 +2583,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_12bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -8192
+  %gep = getelementptr inbounds i8, ptr %p, i64 -8192
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2663,7 +2663,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_2x_neg_13bit_max(ptr %p) {
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX11-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -16384
+  %gep = getelementptr inbounds i8, ptr %p, i64 -16384
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2758,7 +2758,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8589936639
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589936639
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2853,7 +2853,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8589936640
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589936640
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -2948,7 +2948,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8589938687
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589938687
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3044,7 +3044,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8589938688
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589938688
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3140,7 +3140,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split0(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8589942783
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589942783
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3236,7 +3236,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_split1(ptr %p) {
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 8589942784
+  %gep = getelementptr inbounds i8, ptr %p, i64 8589942784
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3335,7 +3335,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split0(ptr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854773761
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854773761
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3434,7 +3434,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_11bit_neg_high_split1(ptr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854773760
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854773760
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3533,7 +3533,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split0(ptr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854771713
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854771713
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3632,7 +3632,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_12bit_neg_high_split1(ptr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854771712
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854771712
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3731,7 +3731,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split0(ptr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854767617
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854767617
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
@@ -3830,7 +3830,7 @@ define amdgpu_kernel void @flat_inst_salu_offset_64bit_13bit_neg_high_split1(ptr
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    flat_store_b8 v[0:1], v0
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %gep = getelementptr i8, ptr %p, i64 -9223372036854767616
+  %gep = getelementptr inbounds i8, ptr %p, i64 -9223372036854767616
   %load = load volatile i8, ptr %gep, align 1
   store i8 %load, ptr poison
   ret void
