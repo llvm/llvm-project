@@ -51,7 +51,6 @@
 #include <optional>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscv-lower"
 
@@ -14318,28 +14317,27 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
 // or 3.
 static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
                               int64_t &ShlConst) {
+  using namespace llvm::SDPatternMatch;
   // Based on testing it seems that performance degrades if the ADDI has
   // more than 2 uses.
   if (AddI->use_size() > 2)
     return false;
 
-  auto *AddConstNode = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
-  if (!AddConstNode)
+  APInt AddVal;
+  SDValue SHLVal;
+  sd_match(AddI, m_Add(m_Value(SHLVal), m_ConstInt(AddVal)));
+ 
+  APInt VShift;
+  if (!sd_match(SHLVal, m_c_BinOp(ISD::SHL, m_Value(), m_ConstInt(VShift))))
     return false;
 
-  SDValue SHLVal = AddI->getOperand(0);
-  if (SHLVal->getOpcode() != ISD::SHL)
+  if (VShift.slt(1) || VShift.sgt(3))
     return false;
 
-  auto *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
-  if (!ShiftNode)
-    return false;
-
-  if (ShiftNode->getSExtValue() < 1 || ShiftNode->getSExtValue() > 3)
-    return false;
-
-  ShlConst = ShiftNode->getSExtValue();
-  AddConst = AddConstNode->getSExtValue();
+  // Set the values at the end when we know that the function will return
+  // true.
+  ShlConst = VShift.getSExtValue();
+  AddConst = AddVal.getSExtValue();
   return true;
 }
 
@@ -14347,6 +14345,8 @@ static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
 //          (ADDI (SH*ADD y, x), c1), if c0 equals to [1|2|3].
 static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
+
   // Perform this optimization only in the zba extension.
   if (!ReassocShlAddiAdd || !Subtarget.hasStdExtZba())
     return SDValue();
@@ -14362,12 +14362,8 @@ static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
 
   SDValue AddI = N->getOperand(0);
   SDValue Other = N->getOperand(1);
-  bool LHSIsAddI = SDPatternMatch::sd_match(
-      AddI, SDPatternMatch::m_Add(SDPatternMatch::m_Value(),
-                                  SDPatternMatch::m_ConstInt()));
-  bool RHSIsAddI = SDPatternMatch::sd_match(
-      Other, SDPatternMatch::m_Add(SDPatternMatch::m_Value(),
-                                   SDPatternMatch::m_ConstInt()));
+  bool LHSIsAddI = sd_match(AddI, m_Add(m_Value(), m_ConstInt()));
+  bool RHSIsAddI = sd_match(Other, m_Add(m_Value(), m_ConstInt()));
   int64_t AddConst = 0;
   int64_t ShlConst = 0;
 
