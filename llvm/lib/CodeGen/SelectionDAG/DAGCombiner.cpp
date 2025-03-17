@@ -21558,9 +21558,9 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
                                  unsigned NumStores) {
       for (unsigned i = 0; i < NumStores; ++i) {
         StoreSDNode *St = cast<StoreSDNode>(StoreNodes[i].MemNode);
-        SDValue Val = peekThroughBitcasts(St->getValue());
-        LoadSDNode *Ld = cast<LoadSDNode>(Val);
-        assert(Ld == LoadNodes[i].MemNode && "Load and store mismatch");
+        LoadSDNode *Ld = cast<LoadSDNode>(LoadNodes[i].MemNode);
+        assert(Ld == cast<LoadSDNode>(peekThroughBitcasts(St->getValue())) &&
+               "Load and store mismatch");
 
         SmallPtrSet<const SDNode *, 32> Visited;
         SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
