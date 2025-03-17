@@ -1,4 +1,4 @@
-//===--- hlsl_compat_overloads.h - Extra HLSL overloads for intrinsics --===//
+//===--- hlsl_compat_overloads.h - Extra HLSL overloads for intrinsics ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,6 +52,68 @@ constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value &&
                                 U>
 clamp(U p0, V p1, W p2) {
   return clamp(p0, (U)p1, (U)p2);
+}
+
+//===----------------------------------------------------------------------===//
+// max builtin overloads
+//===----------------------------------------------------------------------===//
+
+template <typename T, typename U, uint N>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
+max(vector<T, N> p0, U p1) {
+  return max(p0, (vector<T, N>)p1);
+}
+
+template <typename T, typename U, uint N>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
+max(U p0, vector<T, N> p1) {
+  return max((vector<T, N>)p0, p1);
+}
+
+template <typename T, typename R, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
+max(vector<T, N> p0, vector<R, N> p1) {
+  return max(p0, (vector<T, N>)p1);
+}
+
+template <typename U, typename V>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value, U>
+max(U p0, V p1) {
+  return max(p0, (U)p1);
+}
+
+//===----------------------------------------------------------------------===//
+// min builtin overloads
+//===----------------------------------------------------------------------===//
+
+template <typename T, typename U, uint N>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
+min(vector<T, N> p0, U p1) {
+  return min(p0, (vector<T, N>)p1);
+}
+
+template <typename T, typename U, uint N>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
+min(U p0, vector<T, N> p1) {
+  return min((vector<T, N>)p0, p1);
+}
+
+template <typename T, typename R, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
+min(vector<T, N> p0, vector<R, N> p1) {
+  return min(p0, (vector<T, N>)p1);
+}
+
+template <typename U, typename V>
+constexpr __detail::enable_if_t<
+    __detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value, U>
+min(U p0, V p1) {
+  return min(p0, (U)p1);
 }
 
 } // namespace hlsl

@@ -163,3 +163,19 @@ double4 test_min_double4_mismatch(double4 p0, double p1) { return min(p0, p1); }
 // CHECK-LABEL: define noundef nofpclass(nan inf) <4 x double> {{.*}}test_min_double4_mismatch2
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.minnum.v4f64
 double4 test_min_double4_mismatch2(double4 p0, double p1) { return min(p1, p0); }
+
+// CHECK-LABEL: define noundef <2 x i32> {{.*}}test_overloads1
+// CHECK: call <2 x i32> @llvm.smin.v2i32
+int2 test_overloads1(int2 p0, float p1) { return min(p0, p1); }
+
+// CHECK-LABEL: define noundef <2 x i32> {{.*}}test_overloads2
+// CHECK: call <2 x i32> @llvm.smin.v2i32
+int2 test_overloads2(int2 p0, float p1) { return min(p1, p0); }
+
+// CHECK-LABEL: define noundef nofpclass(nan inf) <3 x float> {{.*}}test_overloads3
+// CHECK: call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.minnum.v3f32
+float3 test_overloads3(float3 p0, int3 p1) { return min(p0, p1); }
+
+// CHECK-LABEL: define noundef nofpclass(nan inf) double {{.*}}test_overloads4
+// CHECK: call reassoc nnan ninf nsz arcp afn double @llvm.minnum.f64(
+double test_overloads4(double p0, int p1) { return min(p0, p1); }
