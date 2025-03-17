@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangTidyOptions.h"
+#include "../clang-query/Query.h"
+#include "../clang-query/QueryParser.h"
 #include "ClangTidyModuleRegistry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallString.h"
@@ -126,6 +128,83 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
   }
 }
 
+std::vector<clang::ast_matchers::dynamic::DynTypedMatcher>
+processQuerySource(IO &IO, StringRef SourceRef,
+                   clang::query::QuerySession &QS) {
+  namespace query = clang::query;
+  std::vector<clang::ast_matchers::dynamic::DynTypedMatcher> Matchers;
+
+  while (!SourceRef.empty()) {
+    query::QueryRef Q = query::QueryParser::parse(SourceRef, QS);
+    switch (Q->Kind) {
+    case query::QK_Match: {
+      const auto &MatchQuerry = llvm::cast<query::MatchQuery>(*Q);
+      Matchers.push_back(MatchQuerry.Matcher);
+      break;
+    }
+    case query::QK_Let: {
+      const auto &LetQuerry = llvm::cast<query::LetQuery>(*Q);
+      LetQuerry.run(llvm::errs(), QS);
+      break;
+    }
+    case query::QK_Invalid: {
+      const auto &InvalidQuerry = llvm::cast<query::InvalidQuery>(*Q);
+      for (const auto &Line : llvm::split(InvalidQuerry.ErrStr, "\n")) {
+        IO.setError(Line);
+      }
+      break;
+    }
+    // FIXME FileQuerry should also be supported, but what to do with relative
+    // paths?
+    case query::QK_File:
+    case query::QK_DisableOutputKind:
+    case query::QK_EnableOutputKind:
+    case query::QK_SetOutputKind:
+    case query::QK_SetTraversalKind:
+    case query::QK_Help:
+    case query::QK_NoOp:
+    case query::QK_Quit:
+    case query::QK_SetBool: {
+      IO.setError("unsupported querry kind");
+    }
+    }
+    SourceRef = Q->RemainingContent;
+  }
+
+  return Matchers;
+}
+
+template <>
+void yamlize(IO &IO, ClangTidyOptions::QueryCheckMap &Val, bool,
+             EmptyContext &Ctx) {
+  IO.beginMapping();
+  if (IO.outputting()) {
+    for (auto &[k, v] : Val) {
+      IO.mapRequired(k.data(), v);
+    }
+  } else {
+    for (StringRef Key : IO.keys()) {
+      IO.mapRequired(Key.data(), Val[Key]);
+    }
+  }
+  IO.endMapping();
+}
+
+template <>
+void yamlize(IO &IO, ClangTidyOptions::QueryCheckValue &Val, bool,
+             EmptyContext &Ctx) {
+  if (IO.outputting()) {
+    StringRef SourceRef = Val.Source;
+    IO.blockScalarString(SourceRef);
+  } else {
+    StringRef SourceRef;
+    IO.blockScalarString(SourceRef);
+    Val.Source = SourceRef;
+    clang::query::QuerySession QS({});
+    Val.Matchers = processQuerySource(IO, SourceRef, QS);
+  }
+}
+
 struct ChecksVariant {
   std::optional<std::string> AsString;
   std::optional<std::vector<std::string>> AsVector;
@@ -181,6 +260,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
+    IO.mapOptional("ClangQueryChecks", Options.ClangQueryChecks);
   }
 };
 
@@ -248,6 +328,10 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
         KeyValue.getKey(),
         ClangTidyValue(KeyValue.getValue().Value,
                        KeyValue.getValue().Priority + Order));
+  }
+
+  for (const auto &KeyValue : Other.ClangQueryChecks) {
+    ClangQueryChecks.insert_or_assign(KeyValue.getKey(), KeyValue.getValue());
   }
   return *this;
 }

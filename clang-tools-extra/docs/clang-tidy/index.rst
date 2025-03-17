@@ -292,6 +292,18 @@ An overview of all the command-line options:
     Checks                       - Same as '--checks'. Additionally, the list of
                                    globs can be specified as a list instead of a
                                    string.
+    ClangQueryChecks             - List of key-value pairs. Key specifies a name
+                                   of the new check and value specifies a list
+                                   of matchers in the form of clang-query
+                                   syntax. Example:
+                                     ClangQueryChecks:
+                                       custom-check: |
+                                         let matcher varDecl(
+                                           hasTypeLoc(
+                                             typeLoc().bind("Custom message")
+                                           )
+                                         )
+                                         match matcher
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
     ExtraArgs                    - Same as '--extra-arg'.
     ExtraArgsBefore              - Same as '--extra-arg-before'.

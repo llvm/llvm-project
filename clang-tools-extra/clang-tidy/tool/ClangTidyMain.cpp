@@ -60,6 +60,18 @@ Configuration files:
   Checks                       - Same as '--checks'. Additionally, the list of
                                  globs can be specified as a list instead of a
                                  string.
+  ClangQueryChecks             - List of key-value pairs. Key specifies a name
+                                  of the new check and value specifies a list
+                                  of matchers in the form of clang-query
+                                  syntax. Example:
+                                    ClangQueryChecks:
+                                      custom-check: |
+                                        let matcher varDecl(
+                                          hasTypeLoc(
+                                            typeLoc().bind("Custom message")
+                                          )
+                                        )
+                                        match matcher
   ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
   ExtraArgs                    - Same as '--extra-arg'.
   ExtraArgsBefore              - Same as '--extra-arg-before'.
@@ -483,7 +495,8 @@ static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
   return Closest;
 }
 
-static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
+static constexpr llvm::StringLiteral VerifyConfigWarningEnd =
+    " [-verify-config]\n";
 
 static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
                          StringRef Source) {
