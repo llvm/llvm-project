@@ -881,6 +881,18 @@ static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
 
+static void eraseIntrinsicRetPoplessBefore(ReturnInst *Return) {
+  if (Return == &*Return->getParent()->begin())
+    return;
+  auto *Prev = &*std::prev(Return->getIterator());
+  auto *Intr = dyn_cast<IntrinsicInst>(Prev);
+  if (!Intr)
+    return;
+  if (Intr->getIntrinsicID() != Intrinsic::ret_popless)
+    return;
+  Intr->eraseFromParent();
+}
+
 /// Clone the body of the original function into a resume function of
 /// some sort.
 void coro::BaseCloner::create() {
@@ -1021,8 +1033,10 @@ void coro::BaseCloner::create() {
   case coro::ABI::RetconOnce:
   case coro::ABI::RetconOnceDynamic:
     // Remove old returns.
-    for (ReturnInst *Return : Returns)
+    for (ReturnInst *Return : Returns) {
+      eraseIntrinsicRetPoplessBefore(Return);
       changeToUnreachable(Return);
+    }
     break;
 
   // With multi-suspend continuations, we'll already have eliminated the
