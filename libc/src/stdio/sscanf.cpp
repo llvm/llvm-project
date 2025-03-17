@@ -11,8 +11,8 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
+#include "src/stdio/scanf_core/string_reader.h"
 
 #include "hdr/stdio_macros.h"
 #include "hdr/types/FILE.h"

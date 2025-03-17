@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
-#include "src/stdio/scanf_core/reader.h"
+#include "src/stdio/scanf_core/string_reader.h"
 
 #include "test/UnitTest/Test.h"
 

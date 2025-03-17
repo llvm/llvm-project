@@ -39,31 +39,6 @@ public:
   LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
 
-class StringReader : public Reader<StringReader> {
-  const char *buffer;
-  [[maybe_unused]] size_t buff_len;
-  size_t buff_cur = 0;
-
-public:
-  LIBC_INLINE StringReader(const char *buffer, size_t buff_len)
-      : buffer(buffer), buff_len(buff_len) {}
-
-  LIBC_INLINE char getc() {
-    char output = buffer[buff_cur];
-    ++buff_cur;
-    return output;
-  }
-  LIBC_INLINE void ungetc(int) {
-    if (buff_cur > 0) {
-      // While technically c should be written back to the buffer, in scanf we
-      // always write the character that was already there. Additionally, the
-      // buffer is most likely to contain a string that isn't part of a file,
-      // which may not be writable.
-      --buff_cur;
-    }
-  }
-};
-
 } // namespace scanf_core
 } // namespace LIBC_NAMESPACE_DECL
 

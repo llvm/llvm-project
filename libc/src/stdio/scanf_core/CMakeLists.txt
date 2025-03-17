@@ -81,8 +81,15 @@ add_header_library(
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
-    ${file_deps}
-  ${use_system_file}
+)
+
+add_header_library(
+  string_reader
+  HDRS
+    string_reader.h
+  DEPENDS
+    .reader
+    libc.src.__support.macros.attributes
 )
 
 add_header_library(
