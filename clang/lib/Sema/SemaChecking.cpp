@@ -4940,15 +4940,15 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
     return false;
   }
 
-  // These are valid if SecondArgIsLastNamedArgument is false after the next
-  // block.
+  // These are valid if SecondArgIsLastNonVariadicArgument is false after the
+  // next block.
   QualType Type;
   SourceLocation ParamLoc;
   bool IsCRegister = false;
-  bool SecondArgIsLastNamedArgument = false;
+  bool SecondArgIsLastNonVariadicArgument = false;
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Arg)) {
     if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(DR->getDecl())) {
-      SecondArgIsLastNamedArgument = PV == LastParam;
+      SecondArgIsLastNonVariadicArgument = PV == LastParam;
 
       Type = PV->getType();
       ParamLoc = PV->getLocation();
@@ -4957,7 +4957,7 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
     }
   }
 
-  if (!SecondArgIsLastNamedArgument)
+  if (!SecondArgIsLastNonVariadicArgument)
     Diag(TheCall->getArg(1)->getBeginLoc(),
          diag::warn_second_arg_of_va_start_not_last_non_variadic_param);
   else if (IsCRegister || Type->isReferenceType() ||
