@@ -221,11 +221,6 @@ private:
   bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
-  //void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
-  //                 int OpIdx) const;
-  //void renderFImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
-  //                  int OpIdx) const;
-
   bool selectConst(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
@@ -2468,24 +2463,7 @@ bool SPIRVInstructionSelector::selectICmp(Register ResVReg,
     CmpOpc = getICmpOpcode(Pred);
   return selectCmp(ResVReg, ResType, CmpOpc, I);
 }
-/*
-void SPIRVInstructionSelector::renderFImm64(MachineInstrBuilder &MIB,
-                                            const MachineInstr &I,
-                                            int OpIdx) const {
-  assert(I.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
-         "Expected G_FCONSTANT");
-  const ConstantFP *FPImm = I.getOperand(1).getFPImm();
-  addNumImm(FPImm->getValueAPF().bitcastToAPInt(), MIB);
-}
 
-void SPIRVInstructionSelector::renderImm32(MachineInstrBuilder &MIB,
-                                           const MachineInstr &I,
-                                           int OpIdx) const {
-  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
-         "Expected G_CONSTANT");
-  addNumImm(I.getOperand(1).getCImm()->getValue(), MIB);
-}
-*/
 std::pair<Register, bool>
 SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                                            const SPIRVType *ResType) const {

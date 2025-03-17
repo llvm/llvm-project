@@ -146,8 +146,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   for (auto Opc : getTypeFoldingSupportedOpcodes())
     getActionDefinitionsBuilder(Opc).custom();
-  //getActionDefinitionsBuilder(TargetOpcode::G_CONSTANT).custom();
-  //getActionDefinitionsBuilder(TargetOpcode::G_FCONSTANT).custom();
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
 

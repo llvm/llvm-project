@@ -396,29 +396,7 @@ static void widenScalarLLTNextPow2(Register Reg, MachineRegisterInfo &MRI) {
   if (NewSz != Sz)
     MRI.setType(Reg, LLT::scalar(NewSz));
 }
-/*
-static std::pair<Register, unsigned>
-createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
-               const SPIRVGlobalRegistry &GR) {
-  if (!SpvType)
-    SpvType = GR.getSPIRVTypeForVReg(SrcReg);
-  const TargetRegisterClass *RC = GR.getRegClass(SpvType);
-  Register Reg = MRI.createGenericVirtualRegister(GR.getRegType(SpvType));
-  MRI.setRegClass(Reg, RC);
-  unsigned GetIdOp = SPIRV::GET_ID;
-  if (RC == &SPIRV::fIDRegClass)
-    GetIdOp = SPIRV::GET_fID;
-  else if (RC == &SPIRV::pIDRegClass)
-    GetIdOp = SPIRV::GET_pID;
-  else if (RC == &SPIRV::vfIDRegClass)
-    GetIdOp = SPIRV::GET_vfID;
-  else if (RC == &SPIRV::vpIDRegClass)
-    GetIdOp = SPIRV::GET_vpID;
-  else if (RC == &SPIRV::vIDRegClass)
-    GetIdOp = SPIRV::GET_vID;
-  return {Reg, GetIdOp};
-}
-*/
+
 static void setInsertPtAfterDef(MachineIRBuilder &MIB, MachineInstr *Def) {
   MachineBasicBlock &MBB = *Def->getParent();
   MachineBasicBlock::iterator DefIt =
@@ -502,23 +480,6 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
       MRI.setType(OpReg, GR->getRegType(SpvType));
   }
 }
-
-/*void processInstr2(MachineInstr &MI, MachineIRBuilder &MIB,
-                  MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR) {
-  MIB.setInsertPt(*MI.getParent(), MI.getIterator());
-  for (auto &Op : MI.operands()) {
-    if (!Op.isReg() || Op.isDef())
-      continue;
-    Register OpReg = Op.getReg();
-    SPIRVType *SpvType = GR->getSPIRVTypeForVReg(OpReg);
-    auto IdOpInfo = createNewIdReg(SpvType, OpReg, MRI, *GR);
-    MIB.buildInstr(IdOpInfo.second).addDef(IdOpInfo.first).addUse(OpReg);
-    const TargetRegisterClass *RC = GR->getRegClass(SpvType);
-    if (RC != MRI.getRegClassOrNull(OpReg))
-      MRI.setRegClass(OpReg, RC);
-    Op.setReg(IdOpInfo.first);
-  }
-}*/
 } // namespace llvm
 
 static void
