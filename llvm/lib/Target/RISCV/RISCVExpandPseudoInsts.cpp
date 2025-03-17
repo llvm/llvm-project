@@ -428,8 +428,9 @@ bool RISCVExpandPseudo::expandPseudoReadMulVLENB(
   unsigned VTypeImm = RISCVVType::encodeVTYPE(
       VLMUL, /*SEW=*/8, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::VSETVLI), Dst)
-      .addReg(RISCV::X0)
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoVSETVLIX0))
+      .addReg(Dst, RegState::Define)
+      .addReg(RISCV::X0, RegState::Kill)
       .addImm(VTypeImm);
 
   MBBI->eraseFromParent();
