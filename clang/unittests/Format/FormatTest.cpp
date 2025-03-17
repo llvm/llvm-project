@@ -28701,6 +28701,65 @@ TEST_F(FormatTest, BreakBeforeClassName) {
                "    ArenaSafeUniquePtr {};");
 }
 
+TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
+  FormatStyle::KeywordedFunctionLikeMacro QPropertyDeclaration;
+  QPropertyDeclaration.Name = "Q_PROPERTY";
+  QPropertyDeclaration.Keywords.push_back("READ");
+  QPropertyDeclaration.Keywords.push_back("WRITE");
+  QPropertyDeclaration.Keywords.push_back("NOTIFY");
+  QPropertyDeclaration.Keywords.push_back("RESET");
+
+  auto Style40 = getLLVMStyleWithColumns(40);
+  Style40.KeywordedFunctionLikeMacros.push_back(QPropertyDeclaration);
+  Style40.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+
+  verifyFormat("Q_PROPERTY(int name\n"
+               "           READ name\n"
+               "           WRITE setName\n"
+               "           NOTIFY nameChanged)",
+               Style40);
+  verifyFormat("class A {\n"
+               "  Q_PROPERTY(int name\n"
+               "             READ name\n"
+               "             WRITE setName\n"
+               "             NOTIFY nameChanged)\n"
+               "};",
+               Style40);
+  verifyFormat("/* sdf */ Q_PROPERTY(int name\n"
+               "                     READ name\n"
+               "                     WRITE setName\n"
+               "                     NOTIFY nameChanged)",
+               Style40);
+
+  auto Style120 = getLLVMStyleWithColumns(120);
+  Style120.KeywordedFunctionLikeMacros.push_back(QPropertyDeclaration);
+  Style120.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+
+  verifyFormat("Q_PROPERTY(int name\n"
+               "           READ name\n"
+               "           WRITE setName\n"
+               "           NOTIFY nameChanged)",
+               Style120);
+  verifyFormat("class A {\n"
+               "  Q_PROPERTY(int name\n"
+               "             READ name\n"
+               "             WRITE setName\n"
+               "             NOTIFY nameChanged)\n"
+               "};",
+               Style120);
+
+  Style120.BinPackParameters = FormatStyle::BPPS_BinPack;
+
+  verifyFormat(
+      "Q_PROPERTY(int name READ name WRITE setName NOTIFY nameChanged)",
+      Style120);
+
+  Style120.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat(
+      "Q_PROPERTY(int name READ name WRITE setName NOTIFY nameChanged)",
+      Style120);
+}
+
 } // namespace
 } // namespace test
 } // namespace format

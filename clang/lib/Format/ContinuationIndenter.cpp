@@ -349,6 +349,10 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     }
   }
 
+  // Don't break between function parameter keywords and parameter names.
+  if (Previous.is(TT_FunctionParameterKeyword) && Current.is(TT_StartOfName))
+    return false;
+
   // Don't allow breaking before a closing brace of a block-indented braced list
   // initializer if there isn't already a break.
   if (Current.is(tok::r_brace) && Current.MatchingParen &&

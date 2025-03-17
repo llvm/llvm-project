@@ -4152,6 +4152,39 @@ TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
   EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
+TEST_F(TokenAnnotatorTest, KeywordedFunctionLikeMacro) {
+  auto Style = getLLVMStyle();
+  FormatStyle::KeywordedFunctionLikeMacro QPropertyDeclaration;
+  QPropertyDeclaration.Name = "Q_PROPERTY";
+  QPropertyDeclaration.Keywords.push_back("READ");
+  QPropertyDeclaration.Keywords.push_back("WRITE");
+  QPropertyDeclaration.Keywords.push_back("NOTIFY");
+  QPropertyDeclaration.Keywords.push_back("RESET");
+  Style.KeywordedFunctionLikeMacros.push_back(QPropertyDeclaration);
+
+  auto Tokens = annotate(
+      "Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)",
+      Style);
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_FunctionParameterKeyword);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_StartOfName);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_FunctionParameterKeyword);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_StartOfName);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_FunctionParameterKeyword);
+  EXPECT_TOKEN(Tokens[9], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("struct S { Q_OBJECT\n"
+                    "Q_PROPERTY(int value READ value WRITE setValue "
+                    "NOTIFY valueChanged)\n };",
+                    Style);
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_FunctionLikeOrFreestandingMacro);
+  EXPECT_TOKEN(Tokens[8], tok::identifier, TT_FunctionParameterKeyword);
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_FunctionParameterKeyword);
+  EXPECT_TOKEN(Tokens[12], tok::identifier, TT_FunctionParameterKeyword);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

@@ -4784,6 +4784,38 @@ the configuration (without a prefix: ``Auto``).
   replaced with a single newline and form feed followed by the remaining
   newlines.
 
+.. _KeywordedFunctionLikeMacros:
+
+**KeywordedFunctionLikeMacros** (``List of KeywordedFunctionLikeMacros``) :versionbadge:`clang-format 21` :ref:`¶ <KeywordedFunctionLikeMacros>`
+  Allows to format function-like macros with keyworded parameters according
+  to the BinPackParameters setting, treating keywords as parameter
+  separators.
+
+  Q_PROPERTY is an example of such a macro:
+
+  .. code-block:: c++
+
+    Q_PROPERTY(int name READ name WRITE setName NOTIFY nameChanged)
+
+  With ``BinPackParameters``  set to ``OnePerLine`` (or
+  ``AlwaysOnePerLine``) and
+
+  .. code-block:: yaml
+
+    KeywordedFunctionLikeMacros:
+    - Name: "Q_PROPERTY"
+      Keywords: ['READ', 'WRITE', 'MEMBER', 'RESET', 'NOTIFY']
+
+  the line above will be split on these keywords:
+
+  .. code-block:: c++
+
+    Q_PROPERTY(
+        int name
+        READ name
+        WRITE setName
+        NOTIFY nameChanged)
+
 .. _LambdaBodyIndentation:
 
 **LambdaBodyIndentation** (``LambdaBodyIndentationKind``) :versionbadge:`clang-format 13` :ref:`¶ <LambdaBodyIndentation>`

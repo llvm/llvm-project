@@ -1,3 +1,4 @@
 Strings
 IncludeCategories
+KeywordedFunctionLikeMacros
 RawStringFormats

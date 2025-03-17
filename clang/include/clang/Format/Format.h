@@ -3309,6 +3309,45 @@ struct FormatStyle {
   /// \version 20
   bool KeepFormFeed;
 
+  /// Function-like declaration with keyworded parameters.
+  /// Lists possible keywords for a named function-like macro.
+  struct KeywordedFunctionLikeMacro {
+    std::string Name;
+    std::vector<std::string> Keywords;
+
+    bool operator==(const KeywordedFunctionLikeMacro &Other) const {
+      return Name == Other.Name && Keywords == Other.Keywords;
+    }
+  };
+
+  /// Allows to format function-like macros with keyworded parameters according
+  /// to the BinPackParameters setting, treating keywords as parameter
+  /// separators.
+  ///
+  /// Q_PROPERTY is an example of such a macro:
+  /// \code
+  ///   Q_PROPERTY(int name READ name WRITE setName NOTIFY nameChanged)
+  /// \endcode
+  ///
+  /// With ``BinPackParameters``  set to ``OnePerLine`` (or
+  /// ``AlwaysOnePerLine``) and
+  /// \code{.yaml}
+  ///   KeywordedFunctionLikeMacros:
+  ///   - Name: "Q_PROPERTY"
+  ///     Keywords: ['READ', 'WRITE', 'MEMBER', 'RESET', 'NOTIFY']
+  /// \endcode
+  ///
+  /// the line above will be split on these keywords:
+  /// \code
+  ///   Q_PROPERTY(
+  ///       int name
+  ///       READ name
+  ///       WRITE setName
+  ///       NOTIFY nameChanged)
+  /// \endcode
+  /// \version 21
+  std::vector<KeywordedFunctionLikeMacro> KeywordedFunctionLikeMacros;
+
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
     /// Align lambda body relative to the lambda signature. This is the default.
@@ -5528,6 +5567,7 @@ struct FormatStyle {
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLines == R.KeepEmptyLines &&
            KeepFormFeed == R.KeepFormFeed && Language == R.Language &&
+           KeywordedFunctionLikeMacros == R.KeywordedFunctionLikeMacros &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
