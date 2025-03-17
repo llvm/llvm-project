@@ -5331,7 +5331,7 @@ recurse:
                                       StringRef Name = {}) {
       if (Name.empty())
         Name = getTraitSpelling(E->getKind());
-      Out << 'u' << Name.size() << Name;
+      mangleVendorType(Name);
       if (SAE->isArgumentType())
         mangleType(SAE->getArgumentType());
       else
