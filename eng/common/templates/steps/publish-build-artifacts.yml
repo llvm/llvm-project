@@ -25,6 +25,10 @@ parameters:
   type: string
   default: 'Container'
 
+- name: retryCountOnTaskFailure
+  type: string
+  default: 10
+
 steps:
 - ${{ if eq(parameters.is1ESPipeline, true) }}:
   - 'eng/common/templates cannot be referenced from a 1ES managed template': error
@@ -38,3 +42,5 @@ steps:
     PathtoPublish: ${{ parameters.pathToPublish }}
     ${{ if parameters.artifactName }}:
       ArtifactName: ${{ parameters.artifactName }}
+    ${{ if parameters.retryCountOnTaskFailure }}:
+      retryCountOnTaskFailure: ${{ parameters.retryCountOnTaskFailure }}

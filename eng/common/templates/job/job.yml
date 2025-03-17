@@ -46,6 +46,7 @@ jobs:
               artifactName: ${{ coalesce(parameters.artifacts.publish.artifacts.name , 'Artifacts_$(Agent.Os)_$(_BuildConfig)') }}
               continueOnError: true
               condition: always()
+              retryCountOnTaskFailure: 10 # for any logs being locked
       - ${{ if and(ne(parameters.artifacts.publish.logs, 'false'), ne(parameters.artifacts.publish.logs, '')) }}:
         - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
           parameters:
@@ -56,6 +57,7 @@ jobs:
               displayName: 'Publish logs'
               continueOnError: true
               condition: always()
+              retryCountOnTaskFailure: 10 # for any logs being locked
               sbomEnabled: false  # we don't need SBOM for logs
 
     - ${{ if ne(parameters.enablePublishBuildArtifacts, 'false') }}:
@@ -66,7 +68,7 @@ jobs:
             displayName: Publish Logs
             pathToPublish: '$(Build.ArtifactStagingDirectory)/artifacts/log/$(_BuildConfig)'
             publishLocation: Container
-            artifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)' ) }}
+            artifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)_Attempt$(System.JobAttempt)' ) }}
             continueOnError: true
             condition: always()
 

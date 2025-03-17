@@ -24,6 +24,10 @@ parameters:
 - name: is1ESPipeline
   type: boolean
   default: true
+
+- name: retryCountOnTaskFailure
+  type: string
+  default: 10
   
 steps:
 - ${{ if ne(parameters.is1ESPipeline, true) }}:
@@ -38,4 +42,5 @@ steps:
     PathtoPublish: ${{ parameters.pathToPublish }}
     ${{ if parameters.artifactName }}:
       ArtifactName: ${{ parameters.artifactName }}
-      
+    ${{ if parameters.retryCountOnTaskFailure }}:
+      retryCountOnTaskFailure: ${{ parameters.retryCountOnTaskFailure }}
