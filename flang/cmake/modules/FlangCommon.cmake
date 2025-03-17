@@ -24,6 +24,13 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
   add_compile_definitions(FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}")
 endif()
 
+# The NVPTX target can't emit a binary due to the PTXAS dependency, just
+# hard-code this.
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
+  return()
+endif ()
+
 # Check if 128-bit float computations can be done via long double
 # Note that '-nostdinc++' might be implied when this code kicks in
 # (see 'runtimes/CMakeLists.txt'), so we cannot use 'cfloat' C++ header
