@@ -86,23 +86,17 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // TODO-WAVETRANSFORM: should we utilize uniform-info to map uniform vreg_1
-    // to sreg-32 instead of vreg_32? Or is it possible for ISel should directly
-    // generate sreg32 in those cases?
-    // AU.addRequired<MachineUniformityAnalysisPass>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
 private:
-  // MachineUniformityInfo *UniformInfo = nullptr;
 };
 
 } // End anonymous namespace.
 
 INITIALIZE_PASS_BEGIN(AMDGPUFinalizeISelWaveTransform, DEBUG_TYPE,
                       "AMDGPU Finalize ISel Wave Transform", false, false)
-// INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(AMDGPUFinalizeISelWaveTransform, DEBUG_TYPE,
                     "AMDGPU Finalize ISel Wave Transform", false, false)
 
@@ -220,13 +214,6 @@ bool AMDGPUFinalizeISelWaveTransform::runOnMachineFunction(
   if (MF.getProperties().hasProperty(
           MachineFunctionProperties::Property::Selected))
     return false;
-
-  // TODO-WAVETRANSFORM: do we utilize uniform-info to map uniform vreg_1
-  // to sreg-32 instead of vreg_32?
-  // AU.addRequired<MachineUniformityAnalysisPass>();
-  // UniformInfo =
-  //    &getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
-  // LLVM_DEBUG(UniformInfo->print(dbgs()));
 
   Vreg1WideningHelper Helper(&MF);
   bool Changed = Helper.widenVreg1s();
