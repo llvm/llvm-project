@@ -443,11 +443,12 @@ __builtin_structured_binding_size (C++)
 passed as argument.
 
 This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = arg;``.
-If the argument is not destructurable (ie not an array, vector, complex,
-*tuple-like* type or destructurable class type), ``__builtin_structured_binding_size(T)``
-is not a valid expression (``__builtin_structured_binding_size`` is SFINEA-friendly).
+If the argument is not destructurable (ie not a builtin array, builtin SIMD vector,
+builtin complex, *tuple-like* type or destructurable class type),
+``__builtin_structured_binding_size(T)`` is not a valid expression
+(``__builtin_structured_binding_size`` is SFINEA-friendly).
 
-A type is considered a valid tuple if ``std::tuple_size_v<T>`` is a valid expression,
+A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
 even if there is no valid ``std::tuple_element`` specialization or suitable
 ``get`` function for that type.
 
