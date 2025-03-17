@@ -824,8 +824,7 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
-; GFX11-GISEL-NEXT:    v_pk_add_f16 v0, s2, s0
+; GFX11-GISEL-NEXT:    v_pk_add_f16 v0, s2, s3 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 ; GFX10PLUS-SDAG-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX10PLUS-SDAG:       ; %bb.0:
