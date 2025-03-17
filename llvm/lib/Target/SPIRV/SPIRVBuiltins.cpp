@@ -701,7 +701,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2266,6 +2267,38 @@ static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool
+generateSubgroupMatrixMultiplyAccumulateInst(const SPIRV::IncomingCall *Call,
+                                             MachineIRBuilder &MIRBuilder,
+                                             SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  auto MIB = MIRBuilder.buildInstr(Opcode);
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  MIB.addDef(Call->ReturnRegister).addUse(TypeReg);
+
+  size_t size = Call->Arguments.size();
+
+  if (size > 4) {
+    // Add first 4 arguments normally
+    for (size_t i = 0; i < 4; i++) {
+      MIB.addUse(Call->Arguments[i]);
+    }
+    const uint32_t memop = getConstFromIntrinsic(Call->Arguments.back(), MRI);
+    MIB.addImm(memop);
+  } else {
+    // Add all arguments if there are ≤ 4
+    for (size_t i = 0; i < size; i++) {
+      MIB.addUse(Call->Arguments[i]);
+    }
+  }
+
+  return true;
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2847,6 +2880,9 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::SubgroupMatrixMultiplyAccumulate:
+    return generateSubgroupMatrixMultiplyAccumulateInst(Call.get(), MIRBuilder,
+                                                        GR);
   }
   return false;
 }

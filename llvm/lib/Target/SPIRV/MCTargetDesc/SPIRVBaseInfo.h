@@ -52,6 +52,11 @@ namespace ExecutionModel {
 #include "SPIRVGenTables.inc"
 } // namespace ExecutionModel
 
+namespace MatrixMultiplyAccumulate {
+#define GET_MatrixMultiplyAccumulate_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulate
+
 namespace MemoryModel {
 #define GET_MemoryModel_DECL
 #include "SPIRVGenTables.inc"

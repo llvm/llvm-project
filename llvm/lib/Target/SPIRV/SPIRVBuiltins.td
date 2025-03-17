@@ -67,6 +67,7 @@ def CoopMatr : BuiltinGroup;
 def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
+def SubgroupMatrixMultiplyAccumulate : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -1127,6 +1128,9 @@ defm : DemangledNativeBuiltin<"clock_read_sub_group", OpenCL_std, KernelClock, 0
 defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
+
+//SPV_INTEL_subgroup_matrix_multiply_accumulate
+defm : DemangledNativeBuiltin<"__spirv_SubgroupMatrixMultiplyAccumulateINTEL", OpenCL_std, SubgroupMatrixMultiplyAccumulate, 4, 8, OpSubgroupMatrixMultiplyAccumulateINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.

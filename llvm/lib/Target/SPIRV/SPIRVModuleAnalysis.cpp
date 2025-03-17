@@ -1699,6 +1699,19 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixInvocationInstructionsINTEL);
     break;
+  case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate))
+      report_fatal_error("This matrix instructions require the "
+                         "following SPIR-V extension: "
+                         "SPV_INTEL_subgroup_matrix_multiply_accumulate",
+                         false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
+    Reqs.addCapability(
+        SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
+    break;
+  }
   case SPIRV::OpConvertHandleToImageINTEL:
   case SPIRV::OpConvertHandleToSamplerINTEL:
   case SPIRV::OpConvertHandleToSampledImageINTEL:
