@@ -10651,8 +10651,8 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMatrixType,
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportTemplateParmDeclDefaultValue,
                          DefaultTestValuesForRunOptions);
 
-ISTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAndMergeAnonymousNamespace,
-                        DefaultTestValuesForRunOptions);
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAndMergeAnonymousNamespace,
+                         DefaultTestValuesForRunOptions);
 
 // FIXME: Make ImportOpenCLPipe test work.
 // INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportOpenCLPipe,
