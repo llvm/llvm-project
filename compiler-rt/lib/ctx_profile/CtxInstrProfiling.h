@@ -80,6 +80,10 @@ struct ContextRoot {
   ContextNode *FirstNode = nullptr;
   Arena *FirstMemBlock = nullptr;
   Arena *CurrentMem = nullptr;
+
+  // Count the number of entries - regardless if we could take the `Taken` mutex
+  ::__sanitizer::atomic_uint64_t TotalEntries = {};
+
   // This is init-ed by the static zero initializer in LLVM.
   // Taken is used to ensure only one thread traverses the contextual graph -
   // either to read it or to write it. On server side, the same entrypoint will

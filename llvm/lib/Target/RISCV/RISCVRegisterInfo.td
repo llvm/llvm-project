@@ -710,12 +710,13 @@ foreach m = [1, 2, 4] in {
   }
 }
 
-class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
+class VReg<list<ValueType> regTypes, dag regList, int Vlmul, int nf = 1>
     : RISCVRegisterClass<regTypes,
                          64, // The maximum supported ELEN is 64.
                          regList> {
   let IsVRegClass = 1;
   let VLMul = Vlmul;
+  let NF = nf;
 
   let Size = !mul(VLMul, NF, 64);
   let CopyCost = !mul(VLMul, NF);
@@ -799,17 +800,15 @@ class VTupRegList<int LMUL, int NF> {
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    let NF = nf in {
-      def "VRN" # nf # "M" # m # "NoV0"
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-               m>;
-      def "VRN" # nf # "M" # m
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-               m>;
-    }
+    def "VRN" # nf # "M" # m # "NoV0"
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+             m, nf>;
+    def "VRN" # nf # "M" # m
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                  !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+             m, nf>;
   }
 }
 

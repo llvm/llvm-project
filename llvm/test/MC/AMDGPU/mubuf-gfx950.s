@@ -30,4 +30,3 @@ buffer_load_dwordx4 off, s[8:11], s3 offset:4095 lds
 // GFX950: buffer_load_dwordx4 v0, s[8:11], s101 offen lds ; encoding: [0x00,0x10,0x5d,0xe0,0x00,0x00,0x02,0x65]
 // ERR: :[[@LINE+1]]:39: error: invalid operand for instruction
 buffer_load_dwordx4 v0, s[8:11], s101 offen lds
-

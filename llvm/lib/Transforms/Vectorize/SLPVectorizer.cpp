@@ -3084,6 +3084,10 @@ private:
 
   /// \returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
+  TreeEntry *getOperandEntry(TreeEntry *E, unsigned Idx) {
+    return const_cast<TreeEntry *>(
+        getOperandEntry(const_cast<const TreeEntry *>(E), Idx));
+  }
 
   /// Gets the root instruction for the given node. If the node is a strided
   /// load/store node with the reverse order, the root instruction is the last
@@ -6661,6 +6665,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           // Clear ordering of the operand.
           if (!OpTE.ReorderIndices.empty()) {
             OpTE.ReorderIndices.clear();
+          } else if (!OpTE.ReuseShuffleIndices.empty()) {
+            reorderReuses(OpTE.ReuseShuffleIndices, Mask);
           } else {
             assert(OpTE.isGather() && "Expected only gather/buildvector node.");
             reorderScalars(OpTE.Scalars, Mask);
@@ -10759,7 +10765,7 @@ void BoUpSLP::transformNodes() {
         break;
       // This node is a minmax node.
       E.CombinedOp = TreeEntry::MinMax;
-      TreeEntry *CondEntry = const_cast<TreeEntry *>(getOperandEntry(&E, 0));
+      TreeEntry *CondEntry = getOperandEntry(&E, 0);
       if (SelectOnly && CondEntry->UserTreeIndex &&
           CondEntry->State == TreeEntry::Vectorize) {
         // The condition node is part of the combined minmax node.
@@ -14077,6 +14083,17 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     }
     return true;
   };
+  auto CheckParentNodes = [&](const TreeEntry *User1, const TreeEntry *User2,
+                              unsigned EdgeIdx) {
+    const TreeEntry *Ptr1 = User1;
+    while (Ptr1) {
+      unsigned Idx = Ptr1->UserTreeIndex.EdgeIdx;
+      Ptr1 = Ptr1->UserTreeIndex.UserTE;
+      if (Ptr1 == User2)
+        return Idx < EdgeIdx;
+    }
+    return false;
+  };
   for (Value *V : VL) {
     if (isConstant(V) || !VisitedValue.insert(V).second)
       continue;
@@ -14116,6 +14133,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         if (TEUseEI.UserTE != UseEI.UserTE &&
             (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
              HasGatherUser(TEUseEI.UserTE)))
+          continue;
+        // If the user node is the operand of the other user node - skip.
+        if (CheckParentNodes(TEUseEI.UserTE, UseEI.UserTE, UseEI.EdgeIdx))
           continue;
       }
 
@@ -16376,7 +16396,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // visit every block once.
       SmallPtrSet<BasicBlock *, 4> VisitedBBs;
 
-      for (unsigned I : seq<unsigned>(0, PH->getNumIncomingValues())) {
+      for (unsigned I : seq<unsigned>(PH->getNumIncomingValues())) {
         ValueList Operands;
         BasicBlock *IBB = PH->getIncomingBlock(I);
 
@@ -16387,7 +16407,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
 
         if (!VisitedBBs.insert(IBB).second) {
-          NewPhi->addIncoming(NewPhi->getIncomingValueForBlock(IBB), IBB);
+          Value *VecOp = NewPhi->getIncomingValueForBlock(IBB);
+          NewPhi->addIncoming(VecOp, IBB);
+          TreeEntry *OpTE = getOperandEntry(E, I);
+          OpTE->VectorizedValue = VecOp;
           continue;
         }
 
@@ -18965,7 +18988,7 @@ bool BoUpSLP::collectValuesToDemote(
     const unsigned NumOps = E.getNumOperands();
     SmallVector<const TreeEntry *> Ops(NumOps);
     transform(seq<unsigned>(0, NumOps), Ops.begin(),
-              std::bind(&BoUpSLP::getOperandEntry, this, &E, _1));
+              [&](unsigned Idx) { return getOperandEntry(&E, Idx); });
 
     return TryProcessInstruction(BitWidth, Ops);
   }
