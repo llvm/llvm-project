@@ -2297,10 +2297,9 @@ class VPReductionRecipe : public VPRecipeWithIRFlags {
 
 protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
-                    FastMathFlags FMF, Instruction *I,
-                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, FMF, DL), RdxDesc(R),
+                    Instruction *I, ArrayRef<VPValue *> Operands,
+                    VPValue *CondOp, bool IsOrdered, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, R.getFastMathFlags(), DL), RdxDesc(R),
         IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
@@ -2313,7 +2312,7 @@ public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     bool IsOrdered, DebugLoc DL = {})
-      : VPReductionRecipe(VPDef::VPReductionSC, R, R.getFastMathFlags(), I,
+      : VPReductionRecipe(VPDef::VPReductionSC, R, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
                           IsOrdered, DL) {}
 
@@ -2376,7 +2375,6 @@ public:
                        DebugLoc DL = {})
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
-            R.getFastMathFlags(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
             R.isOrdered(), DL) {}
