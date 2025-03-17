@@ -66,9 +66,9 @@ let SchedModel = Znver4Model in {
 
 // AMD SOG Zen4, 2.10.3 Retire Control Unit
 // The unit can receive up to 6 macro ops dispatched per cycle and track up to
-// 320 macro ops in-flight in non-SMT mode or 128 per thread in SMT mode. <...>
-// The retire unit handles in-order commit of up to nine macro ops per cycle.
-def Zn4RCU : RetireControlUnit<Znver4Model.MicroOpBufferSize, 9>;
+// 320 macro ops in-flight in non-SMT mode or 160 per thread in SMT mode. <...>
+// The retire unit handles in-order commit of up to eight macro ops per cycle.
+def Zn4RCU : RetireControlUnit<Znver4Model.MicroOpBufferSize, 8>;
 
 //===----------------------------------------------------------------------===//
 // Integer Execution Unit
@@ -175,7 +175,7 @@ def Zn4Int : ProcResGroup<[Zn4ALU0, Zn4AGU0, Zn4BRU0, // scheduler 0
 // Execution pipes
 //===----------------------------------------------------------------------===//
 
-// AMD SOG Zen4, 2.10.1 Schedulers
+// AMD SOG Zen4, 2.4 Superscalar Organization
 // <...>, and six FPU pipes.
 // Agner, 22.10 Floating point execution pipes
 // There are six floating point/vector execution pipes,
@@ -357,7 +357,7 @@ def Zn4FP : ProcResGroup<[Zn4FP0, Zn4FP2,          /*Zn4FP4,*/ // scheduler 0
 
 // AMD SOG Zen4, 2.12 Load-Store Unit
 // The LS unit contains three largely independent pipe-lines
-// enabling the execution of three 256-bit memory operations per cycle.
+// enabling the execution of three memory operations per cycle.
 def Zn4LSU : ProcResource<3>;
 
 // AMD SOG Zen4, 2.12 Load-Store Unit
@@ -365,8 +365,8 @@ def Zn4LSU : ProcResource<3>;
 let Super = Zn4LSU in
 def Zn4Load : ProcResource<3> {
   // AMD SOG Zen4, 2.12 Load-Store Unit
-  // The LS unit can process up to 72 out-of-order loads.
-  let BufferSize = 72;
+  // The LS can track up to 48 uncompleted loads and up to 88 completed loads.
+  let BufferSize = 88;
 }
 
 def Zn4LoadQueue : LoadQueue<Zn4Load>;
