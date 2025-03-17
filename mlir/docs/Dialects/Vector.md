@@ -269,63 +269,23 @@ Below is a list of vector dialect operations that move values from an abstract
   `vector.scalable_extract`, `vector.scalable_insert`,
   `vector.extract_strided_slice`, `vector.insert_strided_slice`.
 
-#### Current Naming in Vector Dialect
-| **Vector Dialect Op**          | **Operand Names**        | **Operand Types**             | **Result Name**  | **Result Type**      |
-|--------------------------------|--------------------------|-------------------------------|------------------|----------------------|
-| `vector.load`                  | `base`                   | `memref`                      | `result`         | `vector`             |
-| `vector.store`                 | `valueToStore`, `base`   | `vector`, `memref`            | -                | -                    |
-| `vector.transfer_read`         | `source`                 | `memref` / `tensor`           | `vector`         | `vector`             |
-| `vector.transfer_write`        | `vector`, `source`       | `vector`, `memref`/ `tensor`  | `result`         | `vector`             |
-| `vector.gather`                | `base`                   | `memref`                      | `result`         | `vector`             |
-| `vector.scatter`               | `valueToStore`, `base`   | `vector`, `memref`            | -                | -                    |
-| `vector.expandload`            | `base`                   | `memref`                      | `result`         | `vector`             |
-| `vector.compressstore`         | `valueToStore`,`base`    | `vector`, `memref`            | -                | -                    |
-| `vector.maskedload`            | `base`                   | `memref`                      | `result`         | `vector`             |
-| `vector.maskedstore`           | `valueToStore`, `base`   | `vector`, `memref`            | -                | -                    |
-| `vector.extract`               | `vector`                 | `vector`                      | `result`         | `scalar` / `vector`  |
-| `vector.insert`                | `source`, `dest`         | `scalar` / `vector`, `vector` | `result`         | `vector`             |
-| `vector.scalable_extract`      | `source`                 | `vector`                      | `res`            | `scalar` / `vector`  |
-| `vector.scalable_insert`       | `source`, `dest`         | `scalar` / `vector`, `vector` | `res`            | `vector`             |
-| `vector.extract_strided_slice` | `vector`                 | `vector`                      | (missing name)   | `vector`             |
-| `vector.insert_strided_slice`  | `source`, `dest`         | `vector`                      | `res`            | `vector`             |
+These operations share the following properties:
+- One of their arguments must be a `vector`.
+- The other argument (or result) can be either a `vector` or a scalar.
 
-Note that "read" operations take one operand ("from"), whereas "write"
-operations require two ("value-to-store" and "to").
-
-### Observations
-Each "read" operation has a "from" argument, while each "write" operation has a
-"to" and a "value-to-store" operand. However, the naming conventions are
-**inconsistent**, making it difficult to extract common patterns or determine
-operand roles. Here are some inconsistencies:
-
-- `getBase()` in `vector.load` refers to the **"from"** operand (source).
-- `getBase()` in `vector.store` refers to the **"to"** operand (destination).
-- `vector.transfer_read` and `vector.transfer_write` use `getSource()`, which:
-  - **Conflicts** with the `vector.load` / `vector.store` naming pattern.
-  - **Does not clearly indicate** whether the operand represents a **source**
-    or **destination**.
-- `vector.insert` defines `getSource()` and `getDest()`, making the distinction
-  between "to" and "from" operands **clear**. However, its sibling operation,
-  `vector.extract`, only defines `getVector()`, making it unclear whether it
-  represents a **source** or **destination**.
-- `vector.store` uses `getValueToStore()`, whereas
-  `vector.insert_strided_slice` does not.
-
-There is **no consistent way** to identify:
-- `"from"` (read operand)
-- `"to"` (write operand)
-- `"value-to-store"` (written value)
+Our existing taxonomies make it difficult to differentiate between the two.
 
 ### Indexed vs. Non-Indexed Taxonomy
-A more consistent way to classify "to", "from", and "value-to-store" arguments
-is by determining whether an operand is _indexed_ or _non-indexed_.
+A useful way to classify arguments in "read"/"write" operations is to determine  
+whether an operand is **indexed** or **non-indexed**.
 
 The distinction is somewhat intuitive, but for clarity:
-- Indexed operands require indices to specify an element/slice (e.g., `%A[0]`).
-- Non-indexed operands do not require indices as they are accessed in their
-  entirety (e.g., `%B`).
+- **Indexed operands** require indices to specify an element or slice  
+  (e.g., `%A[0]`).
+- **Non-indexed operands** do not require indices, as they are accessed in  
+  their entirety (e.g., `%B`).
 
-Below is an example using: `vector.transfer_read` and `vector.transfer_write`
+Below is an example using `vector.transfer_read` and `vector.transfer_write`:
 ```mlir
                       Indexed Operand
                              |
@@ -342,15 +302,15 @@ vector.transfer_write %4, %arg1[%c3, %c3]
     : vector<1x1x4x3xf32>, memref<?x?xvector<4x3xf32>>
 ```
 
-Using the "indexed" vs. "non-indexed" classification, we can systematically
-differentiate between "to", "from" and "value-to-store" arguments across
+Using the indexed vs. non-indexed classification, we can also systematically
+differentiate between "to", "from", and "value-to-store" arguments across
 operations:
-* "to" is always _indexed_ for "write" operations, "value-to-store" is
-  _non-indexed_,
-* "from" is always _indexed_ for "read" operations.
 
-In addition, for "read" operations, we can view the "result" as a non-indexed
-argument.
+* "to" is always indexed for "write" operations (i.e., always a `vector`), while
+  "value-to-store" is non-indexed (i.e., either a `vector` or a scalar).
+* "from" is always indexed for "read" operations (i.e., a `vector`).
+
+Finally, for "read" operations, the "result" can be viewed as a non-indexed argument.
 
 ## Bikeshed Naming Discussion
 
