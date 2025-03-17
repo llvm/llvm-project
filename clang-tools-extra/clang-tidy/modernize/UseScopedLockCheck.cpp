@@ -222,36 +222,36 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Decl = Result.Nodes.getNodeAs<VarDecl>("lock-decl-single")) {
-    emitDiag(Decl, Result);
+    diagOnSingleLock(Decl, Result);
     return;
   }
 
   if (const auto *Compound =
           Result.Nodes.getNodeAs<CompoundStmt>("block-multiple")) {
-    emitDiag(findLocksInCompoundStmt(Compound, Result), Result);
+    diagOnMultipleLocks(findLocksInCompoundStmt(Compound, Result), Result);
     return;
   }
 
   if (const auto *Typedef =
           Result.Nodes.getNodeAs<TypedefDecl>("lock-guard-typedef")) {
-    emitDiag(Typedef->getTypeSourceInfo(), Result);
+    diagOnSourceInfo(Typedef->getTypeSourceInfo(), Result);
     return;
   }
 
   if (const auto *UsingAlias =
           Result.Nodes.getNodeAs<TypeAliasDecl>("lock-guard-using-alias")) {
-    emitDiag(UsingAlias->getTypeSourceInfo(), Result);
+    diagOnSourceInfo(UsingAlias->getTypeSourceInfo(), Result);
     return;
   }
 
   if (const auto *Using =
           Result.Nodes.getNodeAs<UsingDecl>("lock-guard-using-decl")) {
-    emitDiag(Using, Result);
+    diagOnUsingDecl(Using, Result);
   }
 }
 
-void UseScopedLockCheck::emitDiag(const VarDecl *LockGuard,
-                                  const MatchFinder::MatchResult &Result) {
+void UseScopedLockCheck::diagOnSingleLock(
+    const VarDecl *LockGuard, const MatchFinder::MatchResult &Result) {
   auto Diag = diag(LockGuard->getBeginLoc(), UseScopedLockMessage);
 
   const SourceRange LockGuardTypeRange =
@@ -296,13 +296,13 @@ void UseScopedLockCheck::emitDiag(const VarDecl *LockGuard,
   llvm_unreachable("Invalid argument number of std::lock_guard constructor");
 }
 
-void UseScopedLockCheck::emitDiag(
+void UseScopedLockCheck::diagOnMultipleLocks(
     const llvm::SmallVector<llvm::SmallVector<const VarDecl *>> &LockGroups,
     const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const llvm::SmallVector<const VarDecl *> &Group : LockGroups) {
     if (Group.size() == 1) {
       if (WarnOnSingleLocks)
-        emitDiag(Group[0], Result);
+        diagOnSingleLock(Group[0], Result);
     } else {
       diag(Group[0]->getBeginLoc(),
            "use single 'std::scoped_lock' instead of multiple "
@@ -315,7 +315,7 @@ void UseScopedLockCheck::emitDiag(
   }
 }
 
-void UseScopedLockCheck::emitDiag(
+void UseScopedLockCheck::diagOnSourceInfo(
     const TypeSourceInfo *LockGuardSourceInfo,
     const ast_matchers::MatchFinder::MatchResult &Result) {
   const TypeLoc TL = LockGuardSourceInfo->getTypeLoc();
@@ -332,7 +332,7 @@ void UseScopedLockCheck::emitDiag(
   }
 }
 
-void UseScopedLockCheck::emitDiag(
+void UseScopedLockCheck::diagOnUsingDecl(
     const UsingDecl *UsingDecl,
     const ast_matchers::MatchFinder::MatchResult &Result) {
   diag(UsingDecl->getLocation(), UseScopedLockMessage)

@@ -35,15 +35,15 @@ public:
   }
 
 private:
-  void emitDiag(const VarDecl *LockGuard,
-                const ast_matchers::MatchFinder::MatchResult &Result);
-  void emitDiag(
+  void diagOnSingleLock(const VarDecl *LockGuard,
+                        const ast_matchers::MatchFinder::MatchResult &Result);
+  void diagOnMultipleLocks(
       const llvm::SmallVector<llvm::SmallVector<const VarDecl *>> &LockGroups,
       const ast_matchers::MatchFinder::MatchResult &Result);
-  void emitDiag(const TypeSourceInfo *LockGuardSourceInfo,
-                const ast_matchers::MatchFinder::MatchResult &Result);
-  void emitDiag(const UsingDecl *UsingDecl,
-                const ast_matchers::MatchFinder::MatchResult &Result);
+  void diagOnSourceInfo(const TypeSourceInfo *LockGuardSourceInfo,
+                        const ast_matchers::MatchFinder::MatchResult &Result);
+  void diagOnUsingDecl(const UsingDecl *UsingDecl,
+                       const ast_matchers::MatchFinder::MatchResult &Result);
 
   const bool WarnOnSingleLocks;
   const bool WarnOnUsingAndTypedef;
