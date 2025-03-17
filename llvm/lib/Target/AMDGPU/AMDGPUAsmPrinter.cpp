@@ -990,7 +990,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // dispatch registers are function args.
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
 
-  if (isShader(F.getCallingConv())) {
+  // Shaders that use the init.whole.wave intrinsic sometimes have VGPR
+  // arguments that are only added for the purpose of preserving their inactive
+  // lanes. Skip including them in the VGPR count.
+  if (isShader(F.getCallingConv()) && !MFI->hasInitWholeWave()) {
     bool IsPixelShader =
         F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
 
