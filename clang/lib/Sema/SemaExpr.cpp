@@ -4169,10 +4169,10 @@ static ExprResult BuildStructuredBindingSizeTraitImpl(Sema &S, QualType T,
   assert(!T->isDependentType());
   std::optional<unsigned> Size =
       S.GetDecompositionElementCount(T, ArgRange.getBegin());
-  if (!Size) {
+
+  if (!Size)
     return S.Diag(Loc, diag::err_arg_is_not_destructurable) << T << ArgRange;
-    return ExprError();
-  }
+
   Expr *Inner;
   if (E)
     Inner = new (S.getASTContext()) UnaryExprOrTypeTraitExpr(
