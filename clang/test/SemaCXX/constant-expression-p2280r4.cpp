@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
-// RUN: %clang_cc1 -std=c++23 -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++23 -verify=expected,interpreter %s -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
 
@@ -176,4 +176,51 @@ namespace extern_reference_used_as_unknown {
   extern int &x;
   int y;
   constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}}
+}
+
+namespace uninit_reference_used {
+  int y;
+  constexpr int &r = r; // expected-error {{must be initialized by a constant expression}} \
+  // nointerpreter-note {{initializer of 'r' is not a constant expression}} \
+  // nointerpreter-note {{declared here}}
+  constexpr int &rr = (rr, y);
+  constexpr int &g() {
+    int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // nointerpreter-note {{declared here}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    return x;
+  }
+  constexpr int &gg = g(); // expected-error {{must be initialized by a constant expression}} \
+  // nointerpreter-note {{reference to 'x' is not a constant expression}} \
+  // interpreter-note {{in call to 'g()'}}
+  constexpr int g2() {
+    int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    return x;
+  }
+  constexpr int gg2 = g2(); // expected-error {{must be initialized by a constant expression}} \
+  // interpreter-note {{in call to 'g2()'}}
+  constexpr int &g3() {
+    int &x = (x,y); // expected-warning{{left operand of comma operator has no effect}} \
+    // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}}
+    return x;
+  }
+  constexpr int &gg3 = g3();
+  typedef decltype(sizeof(1)) uintptr_t;
+  constexpr uintptr_t g4() {
+    uintptr_t * &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    *(uintptr_t*)x = 10;
+    return 3;
+  }
+  constexpr uintptr_t gg4 = g4(); // expected-error {{must be initialized by a constant expression}} \
+  // interpreter-note {{in call to 'g4()'}}
+  constexpr int g5() {
+    int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+    // interpreter-note {{read of uninitialized object is not allowed in a constant expression}}
+    return 3;
+  }
+  constexpr uintptr_t gg5 = g5(); // interpreter-error {{must be initialized by a constant expression}} \
+  // interpreter-note {{in call to 'g5()'}}
+
 }
