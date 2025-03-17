@@ -231,11 +231,17 @@ SPIRVType *SPIRVGlobalRegistry::createOpType(
 SPIRVType *SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems,
                                                 SPIRVType *ElemType,
                                                 MachineIRBuilder &MIRBuilder) {
+
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   auto EleOpc = ElemType->getOpcode();
   (void)EleOpc;
-  assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
-          EleOpc == SPIRV::OpTypeBool) &&
-         "Invalid vector element type");
+  if (!ST.canUseExtension(
+          SPIRV::Extension::Extension::SPV_INTEL_masked_gather_scatter)) {
+    assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
+            EleOpc == SPIRV::OpTypeBool) &&
+           "Invalid vector element type");
+  }
 
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     return MIRBuilder.buildInstr(SPIRV::OpTypeVector)
@@ -1060,6 +1066,7 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return Width == 1 ? getOpTypeBool(MIRBuilder)
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
+
   if (Ty->isFloatingPointTy())
     return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
   if (Ty->isVoidTy())
@@ -1088,10 +1095,11 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
       ParamTypes.push_back(findSPIRVType(ParamTy, MIRBuilder, AccQual, EmitIR));
     return getOpTypeFunction(RetTy, ParamTypes, MIRBuilder);
   }
-
   unsigned AddrSpace = typeToAddressSpace(Ty);
   SPIRVType *SpvElementType = nullptr;
   if (Type *ElemTy = ::getPointeeType(Ty))
+    SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
+  else if (Type *ElemTy = this->findPointerToBaseTypeMap(Ty))
     SpvElementType = getOrCreateSPIRVType(ElemTy, MIRBuilder, AccQual, EmitIR);
   else
     SpvElementType = getOrCreateSPIRVIntegerType(8, MIRBuilder);

@@ -1770,6 +1770,14 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
+  case SPIRV::OpMaskedGatherINTEL:
+  case SPIRV::OpMaskedScatterINTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::Extension::SPV_INTEL_masked_gather_scatter)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter);
+      Reqs.addCapability(SPIRV::Capability::MaskedGatherScatterINTEL);
+    }
+    break;
 
   default:
     break;

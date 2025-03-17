@@ -46,6 +46,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVTargetMachine.cpp
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
+  SPIRVCodeGenPrepare.cpp
 
   LINK_COMPONENTS
   Analysis

@@ -78,7 +78,8 @@ class SPIRVGlobalRegistry {
 
   // Holds the maximum ID we have in the module.
   unsigned Bound;
-
+  /// maps the pointer type to the base type
+  DenseMap<Type *, Type *> PointerToBaseTypeMap;
   // Maps values associated with untyped pointers into deduced element types of
   // untyped pointers.
   DenseMap<Value *, Type *> DeducedElTys;
@@ -635,6 +636,19 @@ public:
   void buildAssignType(IRBuilder<> &B, Type *Ty, Value *Arg);
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
+
+  void addPointerToBaseTypeMap(Type *PTy, Type *BaseTy) {
+      if(PTy == nullptr)
+          return;
+      assert(PTy->isPointerTy() && "PTy must be a pointer type");
+    PointerToBaseTypeMap[PTy] = BaseTy;
+  }
+
+  Type *findPointerToBaseTypeMap(const Type *PTy) {
+    auto BaseTyIter = PointerToBaseTypeMap.find(PTy); 
+    return BaseTyIter == PointerToBaseTypeMap.end() ? nullptr : BaseTyIter -> second;
+  }
+
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

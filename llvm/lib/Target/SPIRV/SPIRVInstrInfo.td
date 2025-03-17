@@ -956,3 +956,9 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+//SPV_INTEL_masked_gather_scatter
+def OpMaskedGatherINTEL: Op<6428, (outs ID:$res) , (ins TYPE:$type, ID:$PtrVector, i32imm:$alignment, ID:$mask, ID:$fillempty),
+				  "$res = OpMaskedGatherINTEL $type $PtrVector $alignment $mask $fillempty">;
+def OpMaskedScatterINTEL: Op<6429, (outs) , (ins ID:$inVector, ID:$PtrVector, i32imm:$alignment, ID:$mask),
+				  "OpMaskedScatterINTEL $inVector $PtrVector $alignment $mask">;

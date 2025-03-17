@@ -19,6 +19,7 @@ class SPIRVSubtarget;
 class InstructionSelector;
 class RegisterBankInfo;
 
+ModulePass *createSPIRVCodeGenPreparePass( const SPIRVTargetMachine &TM);
 ModulePass *createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM);
 FunctionPass *createSPIRVStructurizerPass();
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();

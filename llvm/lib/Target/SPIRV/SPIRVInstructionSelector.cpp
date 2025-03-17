@@ -3192,6 +3192,34 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_masked_gather: {
+    Register MemLoc = I.getOperand(2).getReg();
+    int32_t Alignment = I.getOperand(3).getImm();
+    Register Mask = I.getOperand(4).getReg();
+    Register PassThrough = I.getOperand(5).getReg();
+    return BuildMI(*(I.getParent()), I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpMaskedGatherINTEL))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(MemLoc)
+        .addImm(Alignment)
+        .addUse(Mask)
+        .addUse(PassThrough)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+  case Intrinsic::spv_masked_scatter: {
+    Register Value = I.getOperand(1).getReg();
+    Register MemLocs = I.getOperand(2).getReg();
+    int32_t Alignment = I.getOperand(3).getImm();
+    Register Mask = I.getOperand(4).getReg();
+    auto MIB = BuildMI(*(I.getParent()), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpMaskedScatterINTEL))
+                   .addUse(Value)
+                   .addUse(MemLocs)
+                   .addImm(Alignment)
+                   .addUse(Mask);
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
