@@ -220,9 +220,10 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     Value -= Offset;
   }
 
-  // Let the backend force a relocation if needed.
+  // .reloc directive and the backend might force the relocation.
   if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI)) {
+      (Fixup.getKind() >= FirstLiteralRelocationKind ||
+       getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI))) {
     IsResolved = false;
     WasForced = true;
   }
