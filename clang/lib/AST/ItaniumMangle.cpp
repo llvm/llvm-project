@@ -5327,7 +5327,19 @@ recurse:
       }
     };
 
-    switch(SAE->getKind()) {
+    auto MangleExtensionBuiltin = [&](const UnaryExprOrTypeTraitExpr *E,
+                                      StringRef Name = {}) {
+      if (Name.empty())
+        Name = getTraitSpelling(E->getKind());
+      Out << 'u' << Name.size() << Name;
+      if (SAE->isArgumentType())
+        mangleType(SAE->getArgumentType());
+      else
+        mangleTemplateArgExpr(SAE->getArgumentExpr());
+      Out << 'E';
+    };
+
+    switch (SAE->getKind()) {
     case UETT_SizeOf:
       Out << 's';
       MangleAlignofSizeofArg();
@@ -5337,12 +5349,7 @@ recurse:
       // have acted differently since Clang 8, but were previously mangled the
       // same.)
       if (!isCompatibleWith(LangOptions::ClangABI::Ver11)) {
-        Out << "u11__alignof__";
-        if (SAE->isArgumentType())
-          mangleType(SAE->getArgumentType());
-        else
-          mangleTemplateArgExpr(SAE->getArgumentExpr());
-        Out << 'E';
+        MangleExtensionBuiltin(SAE, "__alignof");
         break;
       }
       [[fallthrough]];
@@ -5350,54 +5357,22 @@ recurse:
       Out << 'a';
       MangleAlignofSizeofArg();
       break;
+
+    case UETT_StructuredBindingSize:
+      MangleExtensionBuiltin(SAE);
+      break;
+
+    case UETT_VectorElements:
+    case UETT_OpenMPRequiredSimdAlign:
+    case UETT_VecStep:
+    case UETT_PtrAuthTypeDiscriminator:
     case UETT_DataSizeOf: {
       DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID =
-          Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                "cannot yet mangle __datasizeof expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_PtrAuthTypeDiscriminator: {
-      DiagnosticsEngine &Diags = Context.getDiags();
       unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_ptrauth_type_discriminator expression");
-      Diags.Report(E->getExprLoc(), DiagID);
+          DiagnosticsEngine::Error, "cannot yet mangle %0 expression");
+      Diags.Report(E->getExprLoc(), DiagID) << getTraitSpelling(SAE->getKind());
       return;
     }
-    case UETT_VecStep: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                     "cannot yet mangle vec_step expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_OpenMPRequiredSimdAlign: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_omp_required_simd_align expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_VectorElements: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_vectorelements expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_StructuredBindingSize:
-      Out << "u11__builtin_structured_binding_size";
-      if (SAE->isArgumentType())
-        mangleType(SAE->getArgumentType());
-      else
-        mangleTemplateArgExpr(SAE->getArgumentExpr());
-      Out << 'E';
-      break;
-      return;
     }
     break;
   }

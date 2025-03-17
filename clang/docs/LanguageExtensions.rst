@@ -439,7 +439,7 @@ type ignoring tail padding.
 __builtin_structured_binding_size (C++)
 ---------------------------------------
 ``__builtin_structured_binding_size`` returns the *structured binding size*
-([dcl.struct.bind]) of the type ``T`` (or unevaluate expression ``arg``)
+([dcl.struct.bind]) of the type ``T`` (or unevaluated expression ``arg``)
 passed as argument.
 
 This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = arg;``.
