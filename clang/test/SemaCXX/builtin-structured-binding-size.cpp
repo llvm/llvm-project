@@ -14,6 +14,8 @@ struct SE1 : S1 { int b;};
 
 class  P1 {int a;}; // #note-private
 
+union U1 {};
+union U2 {int a;};
 
 template <typename T>
 concept is_destructurable = requires {
@@ -32,6 +34,14 @@ static_assert(__builtin_structured_binding_size(SE1) == 1);
 // expected-error@-1 {{cannot decompose class type 'SE1': both it and its base class 'S1' have non-static data members}} \
 // expected-error@-1 {{type 'SE1' is not destructurable}} \
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+static_assert(__builtin_structured_binding_size(U1) == 0);
+// expected-error@-1 {{type 'U1' is not destructurable}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+static_assert(__builtin_structured_binding_size(U2) == 0);
+// expected-error@-1 {{type 'U2' is not destructurable}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
 
 
 static_assert(__builtin_structured_binding_size(int[0]) == 0);
