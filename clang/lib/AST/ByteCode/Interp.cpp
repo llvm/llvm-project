@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
+#include "Compiler.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpShared.h"
@@ -496,6 +497,8 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
+    return true;
+  if (!Ptr.getDeclID())
     return true;
   return CheckConstant(S, OpPC, Ptr.getDeclDesc());
 }
@@ -1355,6 +1358,11 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
+static void compileFunction(InterpState &S, const Function *Func) {
+  Compiler<ByteCodeEmitter>(S.getContext(), S.P)
+      .compileFunc(Func->getDecl(), const_cast<Function *>(Func));
+}
+
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
@@ -1376,6 +1384,9 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (S.checkingPotentialConstantExpression())
       return false;
   }
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -1401,7 +1412,6 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = FrameBefore;
   return false;
 }
-
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
   assert(Func);
@@ -1441,6 +1451,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
       return false;
   }
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -1483,6 +1496,9 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   size_t ThisOffset = ArgSize - (Func->hasRVO() ? primSize(PT_Ptr) : 0);
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
   const FunctionDecl *Callee = Func->getDecl();
+
+  if (!Func->isFullyCompiled())
+    compileFunction(S, Func);
 
   // C++2a [class.abstract]p6:
   //   the effect of making a virtual call to a pure virtual function [...] is
