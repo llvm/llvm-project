@@ -4023,14 +4023,16 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
     SPIRV::BuiltIn::BuiltIn BuiltInValue, Register ResVReg,
     const SPIRVType *ResType, MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
-  const SPIRVType *U32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
-      U32Type, MIRBuilder, SPIRV::StorageClass::Input);
+      ResType, MIRBuilder, SPIRV::StorageClass::Input);
 
   // Create new register for the input ID builtin variable.
   Register NewRegister =
-      MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
-  MIRBuilder.getMRI()->setType(NewRegister, LLT::pointer(0, 64));
+      MIRBuilder.getMRI()->createVirtualRegister(GR.getRegClass(PtrType));
+  MIRBuilder.getMRI()->setType(
+      NewRegister,
+      LLT::pointer(storageClassToAddressSpace(SPIRV::StorageClass::Input),
+                   GR.getPointerSize()));
   GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
 
   // Build global variable with the necessary decorations for the input ID
@@ -4043,7 +4045,7 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
   // Load uint value from the global variable.
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
                  .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(U32Type))
+                 .addUse(GR.getSPIRVTypeID(ResType))
                  .addUse(Variable);
 
   return MIB.constrainAllUses(TII, TRI, RBI);
