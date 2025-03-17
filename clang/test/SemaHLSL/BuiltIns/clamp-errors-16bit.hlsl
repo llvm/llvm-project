@@ -7,6 +7,6 @@
 
 // check we error on 16 bit type if shader model is too old
 // CHECK: '-enable-16bit-types' option requires target HLSL Version >= 2018 and shader model >= 6.2, but HLSL Version is 'hlsl202x' and shader model is '6.0'
-half test_half_error(DTEST_TYPE p0, int p1) {
+half test_half_error(TEST_TYPE p0, int p1) {
   return clamp(p0, p1, p1);
 }
