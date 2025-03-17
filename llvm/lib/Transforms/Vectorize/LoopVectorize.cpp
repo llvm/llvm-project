@@ -7467,8 +7467,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
         continue;
       }
-      // If a FOR's splice wasn't used it will have been removed, so the VPlan
-      // model won't cost it whilst the legacy will.
+      // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
+      // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
         if (none_of(FOR->users(), [](VPUser *U) {
               auto *VPI = dyn_cast<VPInstruction>(U);
