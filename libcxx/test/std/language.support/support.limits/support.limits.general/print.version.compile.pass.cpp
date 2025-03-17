@@ -18,7 +18,7 @@
 // Test the feature test macros defined by <print>
 
 /*  Constant           Value
-    __cpp_lib_print    202207L [C++23]
+    __cpp_lib_print    202403L [C++23]
 */
 
 #include <print>
@@ -54,8 +54,8 @@
 #   ifndef __cpp_lib_print
 #     error "__cpp_lib_print should be defined in c++23"
 #   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++23"
+#   if __cpp_lib_print != 202403L
+#     error "__cpp_lib_print should have the value 202403L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_print
@@ -69,8 +69,8 @@
 #   ifndef __cpp_lib_print
 #     error "__cpp_lib_print should be defined in c++26"
 #   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++26"
+#   if __cpp_lib_print != 202403L
+#     error "__cpp_lib_print should have the value 202403L in c++26"
 #   endif
 # else
 #   ifdef __cpp_lib_print
