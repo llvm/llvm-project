@@ -20,9 +20,9 @@
 
 namespace llvm {
 
-class MachineRegisterClassInfoAnalysis
-    : public AnalysisInfoMixin<MachineRegisterClassInfoAnalysis> {
-  friend AnalysisInfoMixin<MachineRegisterClassInfoAnalysis>;
+class MachineRegisterClassAnalysis
+    : public AnalysisInfoMixin<MachineRegisterClassAnalysis> {
+  friend AnalysisInfoMixin<MachineRegisterClassAnalysis>;
 
   static AnalysisKey Key;
 

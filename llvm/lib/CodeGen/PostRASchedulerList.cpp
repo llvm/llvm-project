@@ -388,7 +388,7 @@ PostRASchedulerPass::run(MachineFunction &MF,
                   .getManager();
   AliasAnalysis *AA = &FAM.getResult<AAManager>(MF.getFunction());
   RegisterClassInfo *RegClassInfo =
-      &FAM.getResult<MachineRegisterClassInfoAnalysis>(MF.getFunction());
+      &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   PostRAScheduler Impl(MF, MLI, AA, TM, RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)

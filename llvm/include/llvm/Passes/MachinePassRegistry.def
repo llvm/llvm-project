@@ -114,7 +114,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
 MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-reg-class-info",
-                          MachineRegisterClassInfoAnalysis())
+                          MachineRegisterClassAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MACHINE_FUNCTION_ANALYSIS("regalloc-evict", RegAllocEvictionAdvisorAnalysis())

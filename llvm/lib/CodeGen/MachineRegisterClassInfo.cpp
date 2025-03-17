@@ -19,9 +19,9 @@ using namespace llvm;
 INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass, "machine-reg-class-info",
                 "Machine Register Class Info Analysis", true, true)
 
-MachineRegisterClassInfoAnalysis::Result
-MachineRegisterClassInfoAnalysis::run(MachineFunction &MF,
-                                      MachineFunctionAnalysisManager &) {
+MachineRegisterClassAnalysis::Result
+MachineRegisterClassAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
   RegisterClassInfo RCI;
   RCI.runOnMachineFunction(MF);
   return RCI;
@@ -43,4 +43,4 @@ bool MachineRegisterClassInfoWrapperPass::runOnMachineFunction(
 
 void MachineRegisterClassInfoWrapperPass::anchor() {}
 
-AnalysisKey MachineRegisterClassInfoAnalysis::Key;
+AnalysisKey MachineRegisterClassAnalysis::Key;

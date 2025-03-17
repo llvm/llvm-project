@@ -597,7 +597,7 @@ MachineSchedulerPass::run(MachineFunction &MF,
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassInfoAnalysis>(MF);
+  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   Impl->setMFAM(&MFAM);
   bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS, RegClassInfo});
   if (!Changed)

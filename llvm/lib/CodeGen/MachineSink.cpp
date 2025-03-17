@@ -777,7 +777,7 @@ MachineSinkingPass::run(MachineFunction &MF,
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
   auto *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
-  auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassInfoAnalysis>(MF);
+  auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
                       MBFI, MBPI, AA, RegClassInfo);
   bool Changed = Impl.run(MF);

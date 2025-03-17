@@ -268,7 +268,7 @@ SIPreAllocateWWMRegsPass::run(MachineFunction &MF,
   auto *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto *Matrix = &MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   auto *VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
-  const auto &RCI = MFAM.getResult<MachineRegisterClassInfoAnalysis>(MF);
+  const auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   SIPreAllocateWWMRegs(LIS, Matrix, VRM, RCI).run(MF);
   return PreservedAnalyses::all();
 }

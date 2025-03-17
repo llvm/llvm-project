@@ -4253,7 +4253,7 @@ RegisterCoalescerPass::run(MachineFunction &MF,
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   auto &Loops = MFAM.getResult<MachineLoopAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
-  auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassInfoAnalysis>(MF);
+  auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   RegisterCoalescer Impl(&LIS, SI, &Loops, RegClassInfo);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
