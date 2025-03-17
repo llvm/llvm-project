@@ -65,7 +65,7 @@ public:
   createObjectTargetWriter() const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t Value,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
