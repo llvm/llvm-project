@@ -752,8 +752,9 @@ def neg_and_one_to_sext_inreg : GICombineRule<
   (defs root:$dst),
   (match (G_AND $and, $x, 1),
          (G_SUB $dst, 0, $and),
-         [{ return Helper.isLegalOrBeforeLegalizer(
-            {TargetOpcode::G_SEXT_INREG, {MRI.getType(${x}.getReg())}}); }]),
+         [{ return MRI.hasOneNonDBGUse(${and}.getReg()) &&
+            Helper.isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_SEXT_INREG, {MRI.getType(${x}.getReg())}}); }]),
   (apply (G_SEXT_INREG $dst, $x, 1))
 >;
 
