@@ -1005,6 +1005,109 @@ RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
   }
 }
 
+// Return true if MO definitely contains the value one.
+static bool isOne(MachineOperand &MO) {
+  if (MO.isImm() && MO.getImm() == 1)
+    return true;
+
+  if (!MO.isReg() || !MO.getReg().isVirtual())
+    return false;
+
+  MachineRegisterInfo &MRI =
+      MO.getParent()->getParent()->getParent()->getRegInfo();
+  MachineInstr *DefMI = MRI.getUniqueVRegDef(MO.getReg());
+  if (!DefMI)
+    return false;
+
+  // For now, just check the canonical one value.
+  if (DefMI->getOpcode() == RISCV::ADDI &&
+      DefMI->getOperand(1).getReg() == RISCV::X0 &&
+      DefMI->getOperand(2).getImm() == 1)
+    return true;
+
+  return false;
+}
+
+// Return true if MO definitely contains the value zero.
+static bool isZero(MachineOperand &MO) {
+  if (MO.isImm() && MO.getImm() == 0)
+    return true;
+  if (MO.isReg() && MO.getReg() == RISCV::X0)
+    return true;
+  return false;
+}
+
+bool RISCVInstrInfo::trySimplifyCondBr(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    SmallVectorImpl<MachineOperand> &Cond) const {
+
+  if (!TBB || Cond.size() != 3)
+    return false;
+
+  RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
+  auto LHS = Cond[1];
+  auto RHS = Cond[2];
+
+  MachineBasicBlock *Folded = nullptr;
+  switch (CC) {
+  default:
+    // TODO: Implement for more CCs
+    return false;
+  case RISCVCC::COND_EQ: {
+    // We can statically evaluate that we take the first branch
+    if ((isZero(LHS) && isZero(RHS)) || (isOne(LHS) && isOne(RHS))) {
+      Folded = TBB;
+      break;
+    }
+    // We can statically evaluate that we take the second branch
+    if ((isZero(LHS) && isOne(RHS)) || (isOne(LHS) && isZero(RHS))) {
+      Folded = FBB;
+      break;
+    }
+    return false;
+  }
+  case RISCVCC::COND_NE: {
+    // We can statically evaluate that we take the first branch
+    if ((isOne(LHS) && isZero(RHS)) || (isZero(LHS) && isOne(RHS))) {
+      Folded = TBB;
+      break;
+    }
+    // We can statically evaluate that we take the second branch
+    if ((isZero(LHS) && isZero(RHS)) || (isOne(LHS) && isOne(RHS))) {
+      Folded = FBB;
+      break;
+    }
+    return false;
+  }
+  }
+
+  // At this point, its legal to optimize.
+  removeBranch(MBB);
+  Cond.clear();
+
+  // Only need to insert a branch if we're not falling through.
+  if (Folded) {
+    DebugLoc DL = MBB.findBranchDebugLoc();
+    insertBranch(MBB, Folded, nullptr, {}, DL);
+  }
+
+  // Update the successors. Remove them all and add back the correct one.
+  while (!MBB.succ_empty())
+    MBB.removeSuccessor(MBB.succ_end() - 1);
+
+  // If it's a fallthrough, we need to figure out where MBB is going.
+  if (!Folded) {
+    MachineFunction::iterator Fallthrough = ++MBB.getIterator();
+    if (Fallthrough != MBB.getParent()->end())
+      MBB.addSuccessor(&*Fallthrough);
+  } else
+    MBB.addSuccessor(Folded);
+
+  TBB = Folded;
+  FBB = nullptr;
+  return true;
+}
+
 bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TBB,
                                    MachineBasicBlock *&FBB,
@@ -1062,6 +1165,9 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   // Handle a single conditional branch.
   if (NumTerminators == 1 && I->getDesc().isConditionalBranch()) {
     parseCondBranch(*I, TBB, Cond);
+    // Try to fold the branch of the conditional branch into a the fallthru.
+    if (AllowModify)
+      trySimplifyCondBr(MBB, TBB, FBB, Cond);
     return false;
   }
 
@@ -1070,6 +1176,10 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       I->getDesc().isUnconditionalBranch()) {
     parseCondBranch(*std::prev(I), TBB, Cond);
     FBB = getBranchDestBlock(*I);
+    // Try to fold the branch of the conditional branch into an unconditional
+    // branch.
+    if (AllowModify)
+      trySimplifyCondBr(MBB, TBB, FBB, Cond);
     return false;
   }
 
