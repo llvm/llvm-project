@@ -129,6 +129,14 @@ struct ClangTidyOptions {
   /// Key-value mapping used to store check-specific options.
   OptionMap CheckOptions;
 
+  struct CustomCheckValue {
+    std::string Name;
+    std::string Query;
+    // FIXME: extend more features here (e.g. isLanguageVersionSupported, Level)
+  };
+  using CustomCheckValueList = llvm::SmallVector<CustomCheckValue>;
+  std::optional<CustomCheckValueList> CustomChecks;
+
   using ArgList = std::vector<std::string>;
 
   /// Add extra compilation arguments to the end of the list.
