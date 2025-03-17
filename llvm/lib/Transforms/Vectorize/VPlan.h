@@ -2249,8 +2249,12 @@ protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
                     VPValue *CondOp, bool IsOrdered, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, R.getFastMathFlags(), DL), RdxDesc(R),
-        IsOrdered(IsOrdered) {
+      : VPRecipeWithIRFlags(SC, Operands,
+                            isa_and_nonnull<FPMathOperator>(I)
+                                ? R.getFastMathFlags()
+                                : FastMathFlags(),
+                            DL),
+        RdxDesc(R), IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
