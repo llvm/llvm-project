@@ -180,5 +180,5 @@ def AMDGPURegBankCombiner : GICombiner<
   [unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
-   redundant_and]> {
+   identity_combines, redundant_and]> {
 }
