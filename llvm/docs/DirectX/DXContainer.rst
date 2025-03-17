@@ -405,20 +405,21 @@ Root Signature (RTS0) Part
 --------------------------
 .. _RTS0:
 
-The Root Signature defines the interface between the shader and the pipeline, 
-specifying which resources are bound to the shader and how they are accessed. 
-This structure serves as a contract between the application and the GPU, 
-establishing a layout for resource binding that both the shader compiler and 
-the runtime can understand.
+The Root Signature data defines the shader's resource interface with Direct3D 12, 
+specifying what resources the shader needs to access and how they're organized 
+and bound to the pipeline. 
 
-The Root Signature consists of a header followed by an array of root parameters 
-and an array of static samplers. The structure uses a versioned design with 
-offset-based references to allow for flexible serialization and deserialization. 
-One consequence of using an offset-based reference is that root parameters and 
-static samplers don't need to follow any specific ordering logic.
+The RTS0 part comprises three data structures: ``RootSignatureHeader``, 
+``RootParameters`` and ``StaticSamplers``. The details of each will be described 
+in the following sections. All ``RootParameters`` will be serialized following the 
+order they were defined in the metadata representation.
 
 Root Signature Header
 ~~~~~~~~~~~~~~~~~~~~~
+
+The root signature header is 24 bytes long, consisting of six 32 bit values 
+representing the version, number and offset of parameters, number and offset 
+of static samplers, and a flags field for global behaviours:
 
 .. code-block:: c
 
@@ -432,215 +433,113 @@ Root Signature Header
    }
 
 
-The `RootSignatureHeader` structure contains the top-level information about a root signature:
-
-#. **Version**: Specifies the version of the root signature format. This allows for backward 
-   compatibility as the format evolves.
-#. **NumParameters**: The number of root parameters contained in this root signature.
-#. **ParametersOffset**: Byte offset from the beginning of RST0 section to the array of root 
-   parameters header.
-#. **NumStaticSamplers**: The number of static samplers defined in the root signature.
-#. **StaticSamplerOffset**: Byte offset to the array of static samplers.
-#. **Flags**: Bit flags that define global behaviors for the root signature, such as whether 
-   to deny vertex shader access to certain resources.
-
-This header allows readers to navigate the binary representation of the root signature by 
-providing counts and offsets to locate each component within the serialized data.
-
 Root Parameters
 ~~~~~~~~~~~~~~~
+Root parameters define how resources are bound to the shader pipeline, each 
+type having different size and fields. 
 
-Root signatures parameters are split into a header section containing the parameter type, 
-shader visibility and its offset, and a data section. The parameters don't need to follow 
-any specific order. Root parameters define the interface elements that shaders can access. 
-Each parameter can be one of several types, including descriptor tables, constants, or 
-descriptors for different resource types.
-
-Root Parameter Header
-'''''''''''''''''''''
+Each slot of root parameters is preceded by 12 bytes, three 32 bit values, 
+representing the parameter type, a flag encoding the pipeline stages where 
+the data is visible, and an offset calculated from the start of RTS0 section.
 
 .. code-block:: c
 
    struct RootParameterHeader {
-     dxbc::RootParameterType ParameterType;
-     dxbc::ShaderVisibility ShaderVisibility;
+     uint32_t ParameterType;
+     uint32_t ShaderVisibility;
      uint32_t ParameterOffset;
    };
 
-
-Each root parameter in the signature is preceded by a `RootParameterHeader` that describes 
-the parameter's basic attributes:
-
-#. **ParameterType**: Enumeration indicating what type of parameter this is (e.g., descriptor 
-   table, constants, CBV, SRV, UAV).
-#. **ShaderVisibility**: Specifies which shader stages can access this parameter (e.g., all stages, 
-   vertex shader only, pixel shader only).
-#. **ParameterOffset**: Byte offset to the specific parameter data structure 
-   for this entry.
-
-The header uses a parameter type field rather than encoding the version of the parameter through 
-size, allowing for a more explicit representation of the parameter's nature.
-
-Root Parameter Types
-''''''''''''''''''''
-This section describes the representation of each root parameter type.
+The following sections will describe each of the root parameters types and their encodings.
 
 Root Constants
-^^^^^^^^^^^^^^
+''''''''''''''
+
+Root constants are values passed directly to shaders without needing a constant
+buffer. It is a 12 bytes long structure, two 32 bit values encoding the register 
+and space the constant is assigned to, and one 32 bit value encoding the constant value.
 
 .. code-block:: c
 
   struct RootConstants {
-    uint32_t ShaderRegister;
-    uint32_t RegisterSpace;
-    uint32_t Num32BitValues;
+    uint32_t Register;
+    uint32_t Space;
+    uint32_t Value;
   };
 
-The ``RootConstants`` structure represents inline root constants that are directly embedded in the root 
-signature and passed to the shader without requiring a constant buffer resource:
-
-#. **ShaderRegister**: The shader register (b#) where these constants are bound.
-#. **RegisterSpace**: The register space used for the binding.
-#. **Num32BitValues**: The number of 32-bit values included in this constant buffer.
-
-Root constants provide a fast way to pass small amounts of data directly to the shader without the 
-overhead of creating and binding a constant buffer resource.
-
 Root Descriptor
-^^^^^^^^^^^^^^^
+'''''''''''''''
 
-Root descriptors provide a mechanism for binding individual resources to shader stages in the Direct3D 12 
-rendering pipeline. They allow applications to specify how shader stages access specific GPU resources.
+Root descriptors provide direct GPU memory addresses to resources. Version 1.1 of 
+root descriptor is a 12 byte long, the first two 32 bit values encode the register 
+and space being assigned to the descriptor, and the last 32 bit value is an access flag flag. 
+
+Version 1.0 doesn't contain the flags available in version 1.1.
 
 .. code-block:: c
 
-   enum RootDescriptorFlags {
-      None = 0,
-      DataVolatile = 0x2,
-      DataStaticWhileSetAtExecute = 0x4,
-      DataStatic = 0x8,
-   }
-
-   // Version 1.0 Root Descriptor
    struct RootDescriptor_V1_0 {
       uint32_t ShaderRegister;
       uint32_t RegisterSpace;
    };
    
-   // Version 1.1 Root Descriptor
    struct RootDescriptor_V1_1 {
       uint32_t ShaderRegister;
       uint32_t RegisterSpace;      
-      // Bitfield of flags from the Flags enum
       uint32_t Flags;
    };
 
-Version 1.1 of Root Descriptors has introduced some flags that can hint the drivers into
-performing further code optimizations. For details, check
-`Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
-
-Version 1.0 Root Descriptor
-"""""""""""""""""""""""""""
-The Version 1.0 RootDescriptor_V1_0 provides basic resource binding:
-
-#. **ShaderRegister**: The shader register where the descriptor is bound.
-#. **RegisterSpace**: The register space used for the binding.
-
-Version 1.1 Root Descriptor
-"""""""""""""""""""""""""""
-The Version 1.1 RootDescriptor_V1_1 extends the base structure with the following additional fields:
-
-#. **Flags**: Provides additional metadata about the descriptor's usage pattern.
-
 Root Descriptor Table
-^^^^^^^^^^^^^^^^^^^^^
-Descriptor tables function as containers that hold references to descriptors in descriptor heaps. 
-They allow multiple descriptors to be bound to the pipeline through a single root signature parameter.
-Tables are split in a Header and Data Section. The Header contains information that helps locate the data,
-which will contain a collection of descriptor ranges.
+'''''''''''''''''''''
+Descriptor tables let shaders access multiple resources through a single pointer to a descriptor heap. 
 
-Root Descriptor Table Header
-"""""""""""""""""""""""""""""""
+The tables are made of a collection of descriptor ranges. Version 1.1 ranges are 24 bytes long, containing 
+five 32 bit values: The type of register, the number of registers in the range, the starting register number, 
+the register space, an offset in number of descriptors from the start of the table and finally an access flag. 
 
-.. code-block:: c
-
-   struct RootDescriptorTable {
-      uint32_t NumDescriptorRanges;      
-      uint32_t DescriptorRangesOffset;  
-   };
-
-RootDescriptorTable provides basic table structure:
-
-#. **NumDescriptorRanges**: Number of descriptor ranges
-#. **DescriptorRangesOffset**: Offset to descriptor range array
-
-Descriptor Range Version 1.0
-""""""""""""""""""""""""""""
+Version 1.0 ranges are the 20 bytes long, following the same structure without the flags. 
 
 .. code-block:: c
 
    struct DescriptorRange_V1_0 {
-      dxbc::DescriptorRangeType RangeType;
+      uint_32t RangeType;
       uint32_t NumDescriptors;
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
       uint32_t OffsetInDescriptorsFromTableStart;
    };
-
-The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definition:
-
-#. **RangeType**: Type of descriptors (CBV, SRV, UAV, or Sampler)
-#. **NumDescriptors**: Number of descriptors in the range
-#. **BaseShaderRegister**: First shader register in the range
-#. **RegisterSpace**: Register space for the range
-#. **OffsetInDescriptorsFromTableStart**: Offset from the descriptor heap start
-
-Descriptor Range Version 1.1
-""""""""""""""""""""""""""""
-
-.. code-block:: c
 
    struct DescriptorRange_V1_1 {
       dxbc::DescriptorRangeType RangeType;
       uint32_t NumDescriptors;
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
-      uint32_t OffsetInDescriptorsFromTableStart;
-      // New flags for Version 1.1
-      enum Flags {
-        None                        = 0x0,
-        // Descriptors are static and known at root signature creation
-        DESCRIPTORS_STATIC          = 0x1,
-        // Descriptors remain constant during command list execution
-        DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS = 0x2,
-        // Descriptors may change frequently
-        DESCRIPTORS_VOLATILE        = 0x4
-      };
-      
+      uint32_t OffsetInDescriptorsFromTableStart;      
       // Bitfield of flags from the Flags enum
       uint32_t Flags;
    };
 
-The Version 1.1 DescriptorRange_V1_1 extends the base structure with performance optimization flags.
-
-#. **Flags**: Provide additional information about the descriptors and enable further driver optimizations.
-   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
-
 Static Samplers
 ~~~~~~~~~~~~~~~
 
-Static samplers provide a way to define fixed sampler states within the root signature itself.
+Static samplers are predefined filtering settings built into the root signature, avoiding descriptor heap lookups. 
+
+This section also has a variable size. The size is 68 bytes long, containing the following fields: 32 bits for a 
+filter mode, three 32 bit fields for texture address mode, 64 bits for the bias value of minmap level calculation, 
+32 bits for maximum anisotropy level, 32 bits for the comparison function type, 32 bits for the static border colour, 
+two 64 bit fields for the min and max level of detail, two 32 bit fields for the register number and space and finally 
+32 bits for the shader visibility flag.
 
 .. code-block:: c
 
    struct StaticSamplerDesc {
-      FilterMode Filter;
+      FilterMode Filter; 
       TextureAddressMode AddressU;
       TextureAddressMode AddressV;
       TextureAddressMode AddressW;
       float MipLODBias;
       uint32_t MaxAnisotropy;
-      ComparisonFunc ComparisonFunc;
+      ComparisonFunc ComparisonFunc; 
       StaticBorderColor BorderColor;
       float MinLOD;
       float MaxLOD;
@@ -649,24 +548,3 @@ Static samplers provide a way to define fixed sampler states within the root sig
       ShaderVisibility ShaderVisibility;
    };
 
-
-The StaticSamplerDesc structure defines all properties of a static sampler:
-
-#. **Filter**: The filtering mode (e.g., point, linear, anisotropic) used for texture sampling. 
-   For details, check `Static Sampler Fileters definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter#syntax>`_. 
-#. **AddressU**: The addressing mode for the U texture coordinate.
-   For details, check `Texture address mode definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_. 
-#. **AddressV**: The addressing mode for the V texture coordinate.
-#. **AddressW**: The addressing mode for the W texture coordinate.
-#. **MipLODBias**: Bias value applied to mipmap level of detail calculations.
-#. **MaxAnisotropy**: Maximum anisotropy level when using anisotropic filtering.
-#. **ComparisonFunc**: Comparison function used for comparison samplers.
-   For details, check `Comparison Function definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>`_. 
-#. **BorderColor**: Predefined border color used when address mode is set to border.
-   For details, check `Static border color <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>`_. 
-#. **MinLOD**: Minimum level of detail to use for sampling.
-#. **MaxLOD**: Maximum level of detail to use for sampling.
-#. **ShaderRegister**: The shader sampler register (s#) where this sampler is bound.
-#. **RegisterSpace**: The register space used for the binding.
-#. **ShaderVisibility**: Specifies which shader stages can access this sampler.
-   For details, check `Shader Visibility definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_.
