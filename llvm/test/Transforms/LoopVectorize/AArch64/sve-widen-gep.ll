@@ -69,8 +69,7 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP8]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -162,8 +161,7 @@ define void @pointer_induction(ptr noalias %start, i64 %N) {
 ; CHECK-NEXT:    [[INDEX2:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 2
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 1, [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP8]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP11]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
