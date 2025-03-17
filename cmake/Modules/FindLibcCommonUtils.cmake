@@ -7,7 +7,7 @@
 #===--------------------------------------------------------------------===//
 
 if(NOT TARGET llvm-libc-common-utilities)
-  set(libc_path ${CMAKE_CURRENT_LIST_DIR}/../../../libc)
+  set(libc_path ${CMAKE_CURRENT_LIST_DIR}/../../libc)
   if (EXISTS ${libc_path} AND IS_DIRECTORY ${libc_path})
     add_library(llvm-libc-common-utilities INTERFACE)
     # TODO: Reorganize the libc shared section so that it can be included without
