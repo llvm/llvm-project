@@ -85,10 +85,6 @@ public:
       received_entries;
 
   void SetUp() override {
-    // This would have been called by the plugin reg in a "real" pluging
-    // For tests, we just call it directly.
-    lldb_private::FakePlugin::Initialize();
-
     auto *ins = lldb_private::telemetry::TelemetryManager::GetInstance();
     ASSERT_NE(ins, nullptr);
 
