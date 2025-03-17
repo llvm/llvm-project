@@ -26,19 +26,14 @@ namespace clang::tidy::modernize {
 namespace {
 
 bool isLockGuard(const QualType &Type) {
-  if (const auto *Record = Type->getAs<RecordType>()) {
-    if (const RecordDecl *Decl = Record->getDecl()) {
+  if (const auto *Record = Type->getAs<RecordType>())
+    if (const RecordDecl *Decl = Record->getDecl())
       return Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
-    }
-  }
 
-  if (const auto *TemplateSpecType =
-          Type->getAs<TemplateSpecializationType>()) {
+  if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
     if (const TemplateDecl *Decl =
-            TemplateSpecType->getTemplateName().getAsTemplateDecl()) {
+            TemplateSpecType->getTemplateName().getAsTemplateDecl())
       return Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
-    }
-  }
 
   return false;
 }
@@ -50,9 +45,8 @@ llvm::SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
       const QualType Type =
           VD->getType().getUnqualifiedType().getCanonicalType();
-      if (isLockGuard(Type)) {
+      if (isLockGuard(Type))
         LockGuards.push_back(VD);
-      }
     }
   }
 
@@ -129,10 +123,9 @@ AST_MATCHER_P(CompoundStmt, hasMultiple, ast_matchers::internal::Matcher<Stmt>,
               InnerMatcher) {
   size_t Count = 0;
 
-  for (const Stmt *Stmt : Node.body()) {
+  for (const Stmt *Stmt : Node.body())
     if (InnerMatcher.matches(*Stmt, Finder, Builder))
       Count++;
-  }
 
   return Count > 1;
 }
@@ -264,16 +257,14 @@ void UseScopedLockCheck::emitDiag(const VarDecl *LockGuard,
   const SourceRange LockGuardTypeRange =
       getLockGuardRange(LockGuard->getTypeSourceInfo());
 
-  if (LockGuardTypeRange.isInvalid()) {
+  if (LockGuardTypeRange.isInvalid())
     return;
-  }
 
   // Create Fix-its only if we can find the constructor call to properly handle
   // 'std::lock_guard l(m, std::adopt_lock)' case.
   const auto *CtorCall = dyn_cast<CXXConstructExpr>(LockGuard->getInit());
-  if (!CtorCall) {
+  if (!CtorCall)
     return;
-  }
 
   if (CtorCall->getNumArgs() == 1) {
     Diag << FixItHint::CreateReplacement(LockGuardTypeRange,
@@ -310,18 +301,16 @@ void UseScopedLockCheck::emitDiag(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const llvm::SmallVector<const VarDecl *> &Group : LockGroups) {
     if (Group.size() == 1) {
-      if (WarnOnSingleLocks) {
+      if (WarnOnSingleLocks)
         emitDiag(Group[0], Result);
-      }
     } else {
       diag(Group[0]->getBeginLoc(),
            "use single 'std::scoped_lock' instead of multiple "
            "'std::lock_guard'");
 
-      for (const VarDecl *Lock : llvm::drop_begin(Group)) {
+      for (const VarDecl *Lock : llvm::drop_begin(Group))
         diag(Lock->getLocation(), "additional 'std::lock_guard' declared here",
              DiagnosticIDs::Note);
-      }
     }
   }
 }
@@ -336,9 +325,8 @@ void UseScopedLockCheck::emitDiag(
 
     const SourceRange LockGuardRange =
         getLockGuardNameRange(LockGuardSourceInfo);
-    if (LockGuardRange.isInvalid()) {
+    if (LockGuardRange.isInvalid())
       return;
-    }
 
     Diag << FixItHint::CreateReplacement(LockGuardRange, "scoped_lock");
   }
