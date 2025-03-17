@@ -16,6 +16,7 @@ config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.gold_executable = "@GOLD_EXECUTABLE@"
+config.ld_bfd_executable = "@LD_BFD_EXECUTABLE@"
 config.ld64_executable = "@LD64_EXECUTABLE@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.ocamlfind_executable = "@OCAMLFIND@"
