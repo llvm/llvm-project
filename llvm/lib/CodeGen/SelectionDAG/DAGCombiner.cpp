@@ -21584,8 +21584,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
               return FoundCall;
             [[fallthrough]];
           default:
-            if (Node->getNumOperands() > 0)
-              Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
+            Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
             break;
           }
         }
