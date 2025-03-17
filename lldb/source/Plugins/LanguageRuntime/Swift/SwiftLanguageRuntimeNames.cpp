@@ -102,6 +102,7 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
   static const llvm::SmallVector<llvm::SmallVector<Kind>>
       async_annotation_paths = {
           {Kind::Type, Kind::FunctionType, Kind::AsyncAnnotation},
+          {Kind::Type, Kind::NoEscapeFunctionType, Kind::AsyncAnnotation},
           {Kind::Type, Kind::DependentGenericType, Kind::Type,
            Kind::FunctionType, Kind::AsyncAnnotation},
       };
