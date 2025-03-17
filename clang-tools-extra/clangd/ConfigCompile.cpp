@@ -705,7 +705,7 @@ struct FragmentCompiler {
                   .map("Never", Config::HeaderInsertionPolicy::NeverInsert)
                   .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
-          C.HeaderInsertion.Policy = *Val;
+          C.Completion.HeaderInsertion = *Val;
         });
     }
   }
