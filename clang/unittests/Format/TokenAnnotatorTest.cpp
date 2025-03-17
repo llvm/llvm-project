@@ -3856,6 +3856,56 @@ TEST_F(TokenAnnotatorTest, AfterPPDirective) {
   EXPECT_TOKEN(Tokens[2], tok::minusminus, TT_AfterPPDirective);
 }
 
+TEST_F(TokenAnnotatorTest, UserDefinedConversionFunction) {
+  auto Tokens = annotate("operator int(void);");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
+
+  Tokens = annotate("explicit operator int *();");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_FunctionDeclarationLParen);
+
+  Tokens = annotate("operator int &();");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
+
+  Tokens = annotate("operator auto() const { return 2; }");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[4], tok::kw_const, TT_TrailingAnnotation);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_FunctionLBrace);
+
+  Tokens = annotate("operator decltype(auto)() const;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[7], tok::kw_const, TT_TrailingAnnotation);
+
+  Tokens = annotate("virtual operator Foo() = 0;");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
+
+  Tokens = annotate("operator Foo() override { return Foo(); }");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_FunctionLBrace);
+
+  Tokens = annotate("friend Bar::operator Foo();");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
