@@ -58,7 +58,8 @@ LLVM_INSTANTIATE_REGISTRY(clang::tidy::ClangTidyModuleRegistry)
 namespace clang::tidy {
 
 namespace custom {
-extern void setOptions(ClangTidyOptions const &O);
+extern void registerCustomChecks(ClangTidyOptions const &O,
+                                 ClangTidyCheckFactories &Factories);
 } // namespace custom
 
 namespace {
@@ -350,7 +351,7 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
     IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS)
     : Context(Context), OverlayFS(std::move(OverlayFS)),
       CheckFactories(new ClangTidyCheckFactories) {
-  custom::setOptions(Context.getOptions());
+  custom::registerCustomChecks(Context.getOptions(), *CheckFactories);
   for (ClangTidyModuleRegistry::entry E : ClangTidyModuleRegistry::entries()) {
     std::unique_ptr<ClangTidyModule> Module = E.instantiate();
     Module->addCheckFactories(*CheckFactories);
@@ -421,7 +422,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
                         .getCurrentWorkingDirectory();
   if (WorkingDir)
     Context.setCurrentBuildDirectory(WorkingDir.get());
-
+  custom::registerCustomChecks(Context.getOptions(), *CheckFactories);
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecksForLanguage(&Context);
 
@@ -664,7 +665,7 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
       std::make_unique<DefaultOptionsProvider>(ClangTidyGlobalOptions(), Opts),
       AllowEnablingAnalyzerAlphaCheckers);
   ClangTidyCheckFactories Factories;
-  custom::setOptions(Context.getOptions());
+  custom::registerCustomChecks(Context.getOptions(), Factories);
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries()) {
     Module.instantiate()->addCheckFactories(Factories);

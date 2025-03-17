@@ -9,10 +9,12 @@
 #include "QueryCheck.h"
 #include "../../clang-query/Query.h"
 #include "../../clang-query/QueryParser.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <string>
 
 using namespace clang::ast_matchers;
 
@@ -23,9 +25,16 @@ QueryCheck::QueryCheck(llvm::StringRef Name,
                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
   for (const ClangTidyOptions::CustomCheckDiag &D : V.Diags) {
-    auto It = Diags.try_emplace(D.BindName, llvm::SmallVector<Diag>{}).first;
-    It->second.emplace_back(
-        Diag{D.Message, D.Level.value_or(DiagnosticIDs::Warning)});
+    auto DiagnosticIdIt =
+        Diags
+            .try_emplace(D.Level.value_or(DiagnosticIDs::Warning),
+                         llvm::StringMap<llvm::SmallVector<std::string>>{})
+            .first;
+    auto DiagMessageIt =
+        DiagnosticIdIt->getSecond()
+            .try_emplace(D.BindName, llvm::SmallVector<std::string>{})
+            .first;
+    DiagMessageIt->second.emplace_back(D.Message);
   }
 
   clang::query::QuerySession QS({});
@@ -71,10 +80,23 @@ void QueryCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void QueryCheck::check(const MatchFinder::MatchResult &Result) {
+  auto Emit = [this](DiagMaps const &DiagMaps, std::string const &BindName,
+                     DynTypedNode const &Node, DiagnosticIDs::Level Level) {
+    if (!DiagMaps.contains(Level))
+      return;
+    auto &DiagMap = DiagMaps.at(Level);
+    if (!DiagMap.contains(BindName))
+      return;
+    for (const std::string &Message : DiagMap.at(BindName)) {
+      diag(Node.getSourceRange().getBegin(), Message, Level);
+    }
+  };
   for (auto &[Name, Node] : Result.Nodes.getMap())
-    if (Diags.contains(Name))
-      for (const Diag &D : Diags[Name])
-        diag(D.Message, D.Level) << Node.getSourceRange();
+    Emit(Diags, Name, Node, DiagnosticIDs::Error);
+  for (auto &[Name, Node] : Result.Nodes.getMap())
+    Emit(Diags, Name, Node, DiagnosticIDs::Warning);
+  // place Note last, otherwise it will not be emitted
+  for (auto &[Name, Node] : Result.Nodes.getMap())
+    Emit(Diags, Name, Node, DiagnosticIDs::Note);
 }
-
 } // namespace clang::tidy::custom

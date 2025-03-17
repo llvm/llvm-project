@@ -3,33 +3,39 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../ClangTidyOptions.h"
 #include "QueryCheck.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 namespace clang::tidy {
 namespace custom {
 
-// FIXME: could be clearer to add parameter of addCheckFactories to pass
-// Options?
-static ClangTidyOptions const *Options = nullptr;
-extern void setOptions(ClangTidyOptions const &O) { Options = &O; }
-
 class CustomModule : public ClangTidyModule {
 public:
-  void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
-    if (Options == nullptr || !Options->CustomChecks.has_value() ||
-        Options->CustomChecks->empty())
-      return;
-    for (const ClangTidyOptions::CustomCheckValue &V :
-         Options->CustomChecks.value()) {
-      CheckFactories.registerCheckFactory(
-          // add custom- prefix to avoid conflicts with builtin checks
-          "custom-" + V.Name,
-          [&V](llvm::StringRef Name, ClangTidyContext *Context) {
-            return std::make_unique<custom::QueryCheck>(Name, V, Context);
-          });
-    }
-  }
+  void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {}
 };
+
+// FIXME: could be clearer to add parameter of addCheckFactories to pass
+// Options?
+extern void registerCustomChecks(ClangTidyOptions const &Options,
+                                 ClangTidyCheckFactories &Factories) {
+  static llvm::SmallSet<llvm::SmallString<32>, 8> CustomCheckNames{};
+  if (!Options.CustomChecks.has_value() || Options.CustomChecks->empty())
+    return;
+  for (llvm::SmallString<32> const &Name : CustomCheckNames)
+    Factories.erase(Name);
+  for (const ClangTidyOptions::CustomCheckValue &V :
+       Options.CustomChecks.value()) {
+    llvm::SmallString<32> Name = llvm::StringRef{"custom-" + V.Name};
+    Factories.registerCheckFactory(
+        // add custom- prefix to avoid conflicts with builtin checks
+        Name, [&V](llvm::StringRef Name, ClangTidyContext *Context) {
+          return std::make_unique<custom::QueryCheck>(Name, V, Context);
+        });
+    CustomCheckNames.insert(std::move(Name));
+  }
+}
 
 } // namespace custom
 
