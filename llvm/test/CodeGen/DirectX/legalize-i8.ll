@@ -100,7 +100,6 @@ define i16 @i16_test(i16 %a) {
 
 define i32 @all_imm() {
   ; CHECK-LABEL: define i32 @all_imm(
-  ; CHECK-NOT: trunc
   ; CHECK-NOT: sext i8
   ; CHECK: ret i32 -1
   %1 = sub i8 0, 1

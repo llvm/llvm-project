@@ -1,4 +1,4 @@
-//===- DXILLegalizePass.cpp - Legalizes llvm IR for DXIL-*- C++----------*-===//
+//===- DXILLegalizePass.cpp - Legalizes llvm IR for DXIL ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,7 +59,7 @@ static bool fixI8TruncUseChain(Instruction &I,
         APInt Value = Imm->getValue();
         unsigned NewBitWidth = InstrType->getIntegerBitWidth();
         // Note: options here are sext or sextOrTrunc.
-        // Since i8 isn't suppport we assume new values
+        // Since i8 isn't supported, we assume new values
         // will always have a higher bitness.
         APInt NewValue = Value.sext(NewBitWidth);
         NewOperands.push_back(ConstantInt::get(InstrType, NewValue));
