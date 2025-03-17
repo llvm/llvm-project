@@ -201,7 +201,7 @@ public:
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
     switch(Fixup.getTargetKind()) {
       default:
