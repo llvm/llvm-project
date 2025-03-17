@@ -85,8 +85,6 @@ class InstructionInfoView : public InstructionView {
   /// Extract comment (//, /* */) from the source assembly placed just after
   /// instruction.
   void getComment(const llvm::MCInst &Inst, std::string &CommentString) const;
-  /// Print Scheduling Info to avoid mixing too much options
-  void printSchedulingInfoView(raw_ostream &OS) const;
 
 public:
   InstructionInfoView(const llvm::MCSubtargetInfo &ST,
@@ -99,8 +97,7 @@ public:
                       const InstToInstrumentsT &InstToInstruments)
       : InstructionView(ST, IP, S), MCII(II), CE(C),
         PrintEncodings(ShouldPrintEncodings),
-        PrintBarriers(ShouldPrintBarriers),
-        PrintFullInfo(ShouldPrintFullInfo),
+        PrintBarriers(ShouldPrintBarriers), PrintFullInfo(ShouldPrintFullInfo),
         LoweredInsts(LoweredInsts), IM(IM),
         InstToInstruments(InstToInstruments) {}
 

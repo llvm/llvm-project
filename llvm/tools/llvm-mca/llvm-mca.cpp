@@ -227,35 +227,35 @@ static cl::opt<unsigned> StoreQueueSize("squeue",
 
 enum class InstructionTablesType { NONE, NORMAL, FULL };
 
-class InstructionTablesOptionParser :
-  public cl::parser<enum InstructionTablesType> {
+class InstructionTablesOptionParser
+    : public cl::parser<enum InstructionTablesType> {
 public:
   explicit InstructionTablesOptionParser(cl::Option &O)
       : cl::parser<enum InstructionTablesType>(O) {}
 
   bool parse(cl::Option &O, StringRef ArgName, StringRef Arg,
-	     enum InstructionTablesType &Value) {
+             enum InstructionTablesType &Value) {
     if (Arg.empty()) {
       Value = InstructionTablesType::NORMAL;
       return false;
     }
-    return cl::parser<enum InstructionTablesType>::parse(O, ArgName, Arg, Value);
+    return cl::parser<enum InstructionTablesType>::parse(O, ArgName, Arg,
+                                                         Value);
   }
 };
 
 static cl::opt<enum InstructionTablesType, false, InstructionTablesOptionParser>
-    InstructionTablesOption("instruction-tables",
-           cl::desc("Print instruction tables"),
-  	   cl::values(
-	      clEnumValN(InstructionTablesType::NONE, "none",
-			 "Do not print instruction tables"),
-	      clEnumValN(InstructionTablesType::NORMAL, "normal",
-			 "Print instruction tables"),
-	      clEnumValN(InstructionTablesType::FULL, "full",
-			 "Print instruction tables with additional"
-			 " information: bypass latency, LLVM opcode,"
-		         " used resources")),
-           cl::cat(ToolOptions), cl::init(InstructionTablesType::NONE));
+    InstructionTablesOption(
+        "instruction-tables", cl::desc("Print instruction tables"),
+        cl::values(clEnumValN(InstructionTablesType::NONE, "none",
+                              "Do not print instruction tables"),
+                   clEnumValN(InstructionTablesType::NORMAL, "normal",
+                              "Print instruction tables"),
+                   clEnumValN(InstructionTablesType::FULL, "full",
+                              "Print instruction tables with additional"
+                              " information: bypass latency, LLVM opcode,"
+                              " used resources")),
+        cl::cat(ToolOptions), cl::init(InstructionTablesType::NONE));
 
 bool PrintInstructionTables() {
   if (InstructionTablesOption == InstructionTablesType::NONE)
@@ -724,7 +724,7 @@ int main(int argc, char **argv) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
             ShowBarriers, PrintInstructionTables(InstructionTablesType::FULL),
-	    *IM, InstToInstruments));
+            *IM, InstToInstruments));
       }
 
       Printer.addView(

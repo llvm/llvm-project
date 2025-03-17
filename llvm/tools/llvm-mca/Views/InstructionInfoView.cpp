@@ -48,89 +48,9 @@ void InstructionInfoView::getComment(const MCInst &MCI,
   return;
 }
 
-void InstructionInfoView::printSchedulingInfoView(raw_ostream &OS) const {
-  std::string Buffer;
-  std::string CommentString;
-  raw_string_ostream TempStream(Buffer);
-  formatted_raw_ostream FOS(TempStream);
-
-  ArrayRef<MCInst> Source = getSource();
-  if (!Source.size())
-    return;
-
-  IIVDVec IIVD(Source.size());
-  collectData(IIVD);
-
-  FOS << "\n\nResources:\n";
-  const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
-  for (unsigned I = 1, ResourceIndex = 0, E = SM.getNumProcResourceKinds();
-       I < E; ++I) {
-    const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
-    unsigned NumUnits = ProcResource.NumUnits;
-    // Skip invalid resources with zero units.
-    if (!NumUnits)
-      continue;
-
-    FOS << '[' << ResourceIndex << ']';
-    FOS.PadToColumn(6);
-    FOS << "- " << ProcResource.Name << ':' << NumUnits;
-    if (ProcResource.SubUnitsIdxBegin) {
-      FOS.PadToColumn(20);
-      for (unsigned U = 0; U < NumUnits; ++U) {
-        FOS << SM.getProcResource(ProcResource.SubUnitsIdxBegin[U])->Name;
-        if ((U + 1) < NumUnits) {
-          FOS << ", ";
-        }
-      }
-    }
-    FOS << '\n';
-    ResourceIndex++;
-  }
-
-  FOS << "\n\nScheduling Info:\n";
-  FOS << "[1]: #uOps\n[2]: Latency\n[3]: Bypass Latency\n"
-      << "[4]: Throughput\n[5]: Resources\n"
-      << "[6]: LLVM OpcodeName\n";
-
-  // paddings for each scheduling info output. Start at [2]
-  std::vector<unsigned> paddings = {7, 12, 18, 27, 94, 113, 150};
-  for (unsigned i = 0; i < paddings.size() - 1; i++) {
-    FOS << "[" << i + 1 << "]";
-    FOS.PadToColumn(paddings[i]);
-  }
-  FOS << "Instructions:\n";
-
-  for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
-    getComment(Inst, CommentString);
-
-    FOS << " " << IIVDEntry.NumMicroOpcodes;
-    FOS.PadToColumn(paddings[0]);
-    FOS << " " << IIVDEntry.Latency;
-    FOS.PadToColumn(paddings[1]);
-    FOS << " " << IIVDEntry.Bypass;
-    FOS.PadToColumn(paddings[2]);
-    if (IIVDEntry.RThroughput) {
-      double RT = 1.0 / *IIVDEntry.RThroughput;
-      FOS << " " << format("%.2f", RT);
-    } else {
-      FOS << " -";
-    }
-    FOS.PadToColumn(paddings[3]);
-    FOS << " " << IIVDEntry.Resources;
-    FOS.PadToColumn(paddings[4]);
-    FOS << " " << IIVDEntry.OpcodeName;
-    FOS.PadToColumn(paddings[5]);
-    FOS << " " << printInstructionString(Inst);
-    FOS.PadToColumn(paddings[6]);
-    FOS << CommentString << '\n';
-  }
-
-  FOS.flush();
-  OS << Buffer;
-}
-
 void InstructionInfoView::printView(raw_ostream &OS) const {
   std::string Buffer;
+  std::string CommentString;
   raw_string_ostream TempStream(Buffer);
   formatted_raw_ostream FOS(TempStream);
 
@@ -142,40 +62,73 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   collectData(IIVD);
 
   if (PrintFullInfo) {
-    if (PrintEncodings)
-      WithColor::warning()
-          << "No encodings printed when -scheduling-info option enabled.\n";
-    if (PrintBarriers)
-      WithColor::warning()
-          << "No barrier printed when -scheduling-info option enabled.\n";
+    FOS << "\n\nResources:\n";
+    const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
+    for (unsigned I = 1, ResourceIndex = 0, E = SM.getNumProcResourceKinds();
+         I < E; ++I) {
+      const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
+      unsigned NumUnits = ProcResource.NumUnits;
+      // Skip invalid resources with zero units.
+      if (!NumUnits)
+        continue;
 
-    printSchedulingInfoView(OS);
-    return;
+      FOS << '[' << ResourceIndex << ']';
+      FOS.PadToColumn(6);
+      FOS << "- " << ProcResource.Name << ':' << NumUnits;
+      if (ProcResource.SubUnitsIdxBegin) {
+        FOS.PadToColumn(20);
+        for (unsigned U = 0; U < NumUnits; ++U) {
+          FOS << SM.getProcResource(ProcResource.SubUnitsIdxBegin[U])->Name;
+          if ((U + 1) < NumUnits) {
+            FOS << ", ";
+          }
+        }
+      }
+      FOS << '\n';
+      ResourceIndex++;
+    }
   }
 
   std::vector<unsigned> paddings = {0, 7, 14, 21, 28, 35};
-  std::vector<std::string>   fields   = {"#uOps", "Latency", "RThroughput",
-    "MayLoad", "MayStore", "HasSideEffects (U)"};
-  std::vector<std::string>   end_fields;
-  unsigned last_padding = 35;
+  std::vector<std::string> fields = {"#uOps",       "Latency",
+                                     "RThroughput", "MayLoad",
+                                     "MayStore",    "HasSideEffects (U)"};
+  std::vector<std::string> end_fields;
+  unsigned LastPadding = 35;
+  if (PrintFullInfo) {
+    fields.push_back("Bypass Latency");
+    paddings.push_back(LastPadding + 7);
+    LastPadding += 7;
+    fields.push_back("Resources");
+    paddings.push_back(LastPadding + 7);
+    LastPadding += 7;
+    fields.push_back("LLVM Opcode Name");
+    paddings.push_back(LastPadding + 57);
+    LastPadding += 57;
+  }
   if (PrintBarriers) {
-    paddings.push_back(last_padding + 7);
-    paddings.push_back(last_padding + 14);
-    last_padding += 14;
-    fields.push_back("LoadBarrier"); fields.push_back("StoreBarrier");
+    fields.push_back("LoadBarrier");
+    paddings.push_back(LastPadding + 7);
+    fields.push_back("StoreBarrier");
+    paddings.push_back(LastPadding + 14);
+    LastPadding += 14;
   }
   if (PrintEncodings) {
-    paddings.push_back(last_padding + 7);
-    paddings.push_back(last_padding + 14);
-    paddings.push_back(last_padding + 44);
-    last_padding += 44;
+    paddings.push_back(LastPadding + 7);
+    paddings.push_back(LastPadding + 14);
+    paddings.push_back(LastPadding + 44);
+    LastPadding += 44;
     fields.push_back("Encoding Size");
     end_fields.push_back("Encodings:");
     end_fields.push_back("Instructions:");
-  }
-  else {
-    paddings.push_back(last_padding + 7);
-    last_padding += 7;
+  } else {
+    if (PrintFullInfo) {
+      paddings.push_back(LastPadding + 27);
+      LastPadding += 27;
+    } else {
+      paddings.push_back(LastPadding + 7);
+      LastPadding += 7;
+    }
     end_fields.push_back("Instructions:");
   }
 
@@ -190,19 +143,17 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
       FOS.PadToColumn(paddings[i]);
     if (i < fields.size()) {
       FOS << "[" << i + 1 << "]";
-    }
-    else {
+    } else {
       FOS << end_fields[i - fields.size()];
     }
   }
   FOS << "\n";
 
   for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
-    FOS.PadToColumn(paddings[0]+1);
+    FOS.PadToColumn(paddings[0] + 1);
     FOS << IIVDEntry.NumMicroOpcodes;
-    FOS.PadToColumn(paddings[1]+1);
+    FOS.PadToColumn(paddings[1] + 1);
     FOS << IIVDEntry.Latency;
-
     FOS.PadToColumn(paddings[2]);
     if (IIVDEntry.RThroughput) {
       double RT = *IIVDEntry.RThroughput;
@@ -210,34 +161,49 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     } else {
       FOS << " -";
     }
-    FOS.PadToColumn(paddings[3]+1);
+    FOS.PadToColumn(paddings[3] + 1);
     FOS << (IIVDEntry.mayLoad ? "*" : " ");
-    FOS.PadToColumn(paddings[4]+1);
+    FOS.PadToColumn(paddings[4] + 1);
     FOS << (IIVDEntry.mayStore ? "*" : " ");
-    FOS.PadToColumn(paddings[5]+1);
+    FOS.PadToColumn(paddings[5] + 1);
     FOS << (IIVDEntry.hasUnmodeledSideEffects ? "U" : " ");
-    unsigned last_padding_idx = 5;
+    unsigned LastPaddingIdx = 5;
+
+    if (PrintFullInfo) {
+      FOS.PadToColumn(paddings[LastPaddingIdx + 1] + 1);
+      FOS << IIVDEntry.Bypass;
+      FOS.PadToColumn(paddings[LastPaddingIdx + 2] + 1);
+      FOS << IIVDEntry.Resources;
+      FOS.PadToColumn(paddings[LastPaddingIdx + 3] + 1);
+      FOS << IIVDEntry.OpcodeName;
+      LastPaddingIdx += 3;
+    }
 
     if (PrintBarriers) {
-      FOS.PadToColumn(paddings[last_padding_idx + 1]+1);
+      FOS.PadToColumn(paddings[LastPaddingIdx + 1] + 1);
       FOS << (LoweredInsts[Index]->isALoadBarrier() ? "*" : " ");
-      FOS.PadToColumn(paddings[last_padding_idx + 2]+1);
+      FOS.PadToColumn(paddings[LastPaddingIdx + 2] + 1);
       FOS << (LoweredInsts[Index]->isAStoreBarrier() ? "*" : " ");
-      last_padding_idx += 2;
+      LastPaddingIdx += 2;
     }
 
     if (PrintEncodings) {
       StringRef Encoding(CE.getEncoding(Index));
       unsigned EncodingSize = Encoding.size();
-      FOS.PadToColumn(paddings[last_padding_idx + 1]+1);
+      FOS.PadToColumn(paddings[LastPaddingIdx + 1] + 1);
       FOS << EncodingSize;
-      FOS.PadToColumn(paddings[last_padding_idx + 2]);
+      FOS.PadToColumn(paddings[LastPaddingIdx + 2]);
       for (unsigned i = 0, e = Encoding.size(); i != e; ++i)
         FOS << format("%02x ", (uint8_t)Encoding[i]);
-      last_padding_idx += 2;
+      LastPaddingIdx += 2;
     }
-    FOS.PadToColumn(paddings[last_padding_idx + 1]);
-    FOS << printInstructionString(Inst) << '\n';
+    FOS.PadToColumn(paddings[LastPaddingIdx + 1]);
+    FOS << printInstructionString(Inst);
+    if (PrintFullInfo) {
+      getComment(Inst, CommentString);
+      FOS << "\t" << CommentString;
+    }
+    FOS << '\n';
   }
 
   FOS.flush();
