@@ -36,6 +36,20 @@ bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
 
+  // Combines without nsw trunc.
+  if (!(Trunc->getFlags() & MachineInstr::NoSWrap)) {
+    if (DstTy != SrcTy)
+      return false;
+
+    unsigned TruncWidth = MRI.getType(Trunc->getReg(0)).getScalarSizeInBits();
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSExtInReg(Dst, Src, TruncWidth);
+    };
+    return true;
+  }
+
+  // Combines for nsw trunc.
+
   if (DstTy == SrcTy) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
     return true;
