@@ -152,6 +152,7 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
   return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
+         SentinelValue == Other.SentinelValue &&
          IsNonIntegral == Other.IsNonIntegral;
 }
 
@@ -206,9 +207,10 @@ constexpr DataLayout::PrimitiveSpec DefaultVectorSpecs[] = {
 };
 
 // Default pointer type specifications.
-constexpr DataLayout::PointerSpec DefaultPointerSpecs[] = {
-    // p0:64:64:64:64
-    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, false},
+const DataLayout::PointerSpec DefaultPointerSpecs[] = {
+    // p0:64:64:64:64:0
+    {0, 64, Align::Constant<8>(), Align::Constant<8>(), 64, APInt(64, 0),
+     false},
 };
 
 DataLayout::DataLayout()
@@ -294,6 +296,22 @@ static Error parseSize(StringRef Str, unsigned &BitWidth,
     return createStringError(Name + " must be a non-zero 24-bit integer");
 
   return Error::success();
+}
+
+static Error parseSentinelValue(StringRef Str, APInt &V) {
+  if (Str.empty())
+    return createStringError("sentinel value component cannot be empty");
+  if (Str.size() != 1)
+    return createStringError("sentinel value component must be a '0' or 'f'");
+  if (Str[0] == '0') {
+    V.clearAllBits();
+    return Error::success();
+  }
+  if (Str[0] == 'f') {
+    V.setAllBits();
+    return Error::success();
+  }
+  return createStringError("sentinel value component must be a '0' or 'f'");
 }
 
 /// Attempts to parse an alignment component of a specification.
@@ -409,13 +427,14 @@ Error DataLayout::parseAggregateSpec(StringRef Spec) {
 }
 
 Error DataLayout::parsePointerSpec(StringRef Spec) {
-  // p[<n>]:<size>:<abi>[:<pref>[:<idx>]]
+  // p[<n>]:<size>:<abi>[:<pref>[:<idx>[:<sentinel>]]]
   SmallVector<StringRef, 5> Components;
   assert(Spec.front() == 'p');
   Spec.drop_front().split(Components, ':');
 
-  if (Components.size() < 3 || Components.size() > 5)
-    return createSpecFormatError("p[<n>]:<size>:<abi>[:<pref>[:<idx>]]");
+  if (Components.size() < 3 || Components.size() > 6)
+    return createSpecFormatError(
+        "p[<n>]:<size>:<abi>[:<pref>[:<idx>[:<sentinel>]]]");
 
   // Address space. Optional, defaults to 0.
   unsigned AddrSpace = 0;
@@ -454,8 +473,14 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
+  APInt SentinelValue(BitWidth, 0);
+  if (Components.size() > 5) {
+    if (Error Err = parseSentinelValue(Components[5], SentinelValue))
+      return Err;
+  }
+
   setPointerSpec(AddrSpace, BitWidth, ABIAlign, PrefAlign, IndexBitWidth,
-                 false);
+                 SentinelValue, /*IsNonIntegral=*/false);
   return Error::success();
 }
 
@@ -631,7 +656,7 @@ Error DataLayout::parseLayoutString(StringRef LayoutString) {
     // the spec for AS0, and we then update that to mark it non-integral.
     const PointerSpec &PS = getPointerSpec(AS);
     setPointerSpec(AS, PS.BitWidth, PS.ABIAlign, PS.PrefAlign, PS.IndexBitWidth,
-                   true);
+                   PS.SentinelValue, /*IsNonIntegral=*/true);
   }
 
   return Error::success();
@@ -679,16 +704,19 @@ DataLayout::getPointerSpec(uint32_t AddrSpace) const {
 
 void DataLayout::setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth,
                                 Align ABIAlign, Align PrefAlign,
-                                uint32_t IndexBitWidth, bool IsNonIntegral) {
+                                uint32_t IndexBitWidth, APInt SentinelValue,
+                                bool IsNonIntegral) {
   auto I = lower_bound(PointerSpecs, AddrSpace, LessPointerAddrSpace());
   if (I == PointerSpecs.end() || I->AddrSpace != AddrSpace) {
     PointerSpecs.insert(I, PointerSpec{AddrSpace, BitWidth, ABIAlign, PrefAlign,
-                                       IndexBitWidth, IsNonIntegral});
+                                       IndexBitWidth, SentinelValue,
+                                       IsNonIntegral});
   } else {
     I->BitWidth = BitWidth;
     I->ABIAlign = ABIAlign;
     I->PrefAlign = PrefAlign;
     I->IndexBitWidth = IndexBitWidth;
+    I->SentinelValue = SentinelValue;
     I->IsNonIntegral = IsNonIntegral;
   }
 }
@@ -1019,4 +1047,11 @@ Align DataLayout::getPreferredAlign(const GlobalVariable *GV) const {
     }
   }
   return Alignment;
+}
+
+APInt DataLayout::getSentinelPointerValue(unsigned AS) const {
+  auto I = lower_bound(PointerSpecs, AS, LessPointerAddrSpace());
+  if (I != PointerSpecs.end() || I->AddrSpace == AS)
+    return I->SentinelValue;
+  return PointerSpecs[0].SentinelValue;
 }

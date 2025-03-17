@@ -313,11 +313,12 @@ TEST(DataLayout, ParsePointerSpec) {
     EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
 
   for (StringRef Str :
-       {"p", "p0", "p:32", "p0:32", "p:32:32:32:32:32", "p0:32:32:32:32:32"})
+       {"p", "p0", "p:32", "p0:32", "p:32:32:32:32:32:0", "p0:32:32:32:32:32:0"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
-        FailedWithMessage("malformed specification, must be of the form "
-                          "\"p[<n>]:<size>:<abi>[:<pref>[:<idx>]]\""));
+        FailedWithMessage(
+            "malformed specification, must be of the form "
+            "\"p[<n>]:<size>:<abi>[:<pref>[:<idx>[:<sentinel>]]]\""));
 
   // address space
   for (StringRef Str : {"p0x0:32:32", "px:32:32:32", "p16777216:32:32:32:32"})
@@ -401,6 +402,19 @@ TEST(DataLayout, ParsePointerSpec) {
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
         FailedWithMessage("index size cannot be larger than the pointer size"));
+
+  // sentinel value
+  for (StringRef Str :
+       {"p:32:32:32:32:a", "p0:32:32:32:32:ab", "p42:32:32:32:32:123"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("sentinel value component must be a '0' or 'f'"));
+
+  for (StringRef Str :
+       {"p:32:32:32:32:", "p0:32:32:32:32:", "p42:32:32:32:32:"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("sentinel value component cannot be empty"));
 }
 
 TEST(DataLayoutTest, ParseNativeIntegersSpec) {

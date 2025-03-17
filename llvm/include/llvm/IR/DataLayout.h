@@ -78,6 +78,7 @@ public:
     Align ABIAlign;
     Align PrefAlign;
     uint32_t IndexBitWidth;
+    APInt SentinelValue;
     /// Pointers in this address space don't have a well-defined bitwise
     /// representation (e.g. may be relocated by a copying garbage collector).
     /// Additionally, they may also be non-integral (i.e. containing additional
@@ -148,7 +149,7 @@ private:
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
-                      bool IsNonIntegral);
+                      APInt SentinelValue, bool IsNonIntegral);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -552,6 +553,11 @@ public:
   ///
   /// This includes an explicitly requested alignment (if the global has one).
   Align getPreferredAlign(const GlobalVariable *GV) const;
+
+  /// Returns the sentinel pointer value for a given address space. If the
+  /// address space is invalid, it defaults to the sentinel pointer value of
+  /// address space 0, aligning with the behavior of \p getPointerSpec.
+  APInt getSentinelPointerValue(unsigned AS) const;
 };
 
 inline DataLayout *unwrap(LLVMTargetDataRef P) {
