@@ -669,6 +669,7 @@ def testStridedLayoutAttr():
         # CHECK: strides are dynamic: [True, True, True]
         print(f"strides are dynamic: {[s == dynamic for s in attr.strides]}")
 
+
 # CHECK-LABEL: TEST: testContiguousLayoutAttr
 @run
 def testContiguousLayoutAttr():
