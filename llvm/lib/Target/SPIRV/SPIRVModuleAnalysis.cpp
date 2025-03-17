@@ -920,6 +920,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::StallEnableINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPGAClusterAttributesINTEL);
+  } else if (Dec == SPIRV::Decoration::StallFreeINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPGAClusterAttributesV2INTEL);
   }
 }
 
@@ -1976,6 +1980,68 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   buildOpDecorate(DstReg, I, TII, SPIRV::Decoration::FPFastMathMode, {FMFlags});
 }
 
+static std::vector<uint32_t>
+getMetaDataValues(std::vector<llvm::MDNode *> &MetaDataList) {
+  std::vector<uint32_t> res;
+  for (auto metaDataNode : MetaDataList) {
+    if (metaDataNode->getNumOperands() > 0) {
+      if (auto *CMD = llvm::dyn_cast<llvm::ConstantAsMetadata>(
+              metaDataNode->getOperand(0))) {
+        if (auto *CI = llvm::dyn_cast<llvm::ConstantInt>(CMD->getValue())) {
+          APInt val = CI->getValue();
+          int64_t decVal = val.getZExtValue();
+          res.push_back(decVal);
+        }
+      }
+    }
+  }
+  return res;
+}
+
+static void handleFunctionDecoration(llvm::Module::const_iterator F,
+                                     const SPIRVInstrInfo &TII,
+                                     MachineModuleInfo *MMI,
+                                     const SPIRVSubtarget &ST) {
+  MachineFunction *MF = MMI->getMachineFunction(*F);
+  Register FuncReg;
+  MachineInstr *FirstInstr = nullptr;
+  llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>> MetaDataList;
+  // Find function register and first instruction
+  for (auto &MBB : *MF) {
+    for (auto &MI : MBB) {
+      if (MI.getOpcode() == SPIRV::OpFunction) {
+        FirstInstr = &MI;
+        FuncReg = MI.getOperand(0).getReg();
+        break;
+      }
+    }
+    if (FuncReg.isValid() && FirstInstr)
+      break;
+  }
+  // Add function-level decorations based on metadata
+  F->getAllMetadata(MetaDataList);
+  for (auto &MetaData : MetaDataList) {
+    if (MetaData.second == F->getMetadata("stall_enable") ||
+        MetaData.second == F->getMetadata("stall_free")) {
+      if (ST.canUseExtension(
+              SPIRV::Extension::SPV_INTEL_fpga_cluster_attributes)) {
+        std::vector<llvm::MDNode *> MetaDataVector;
+        MetaDataVector.push_back(MetaData.second);
+        std::vector<uint32_t> params = getMetaDataValues(MetaDataVector);
+        if (params.at(0) == 1) {
+          if (MetaData.second == F->getMetadata("stall_enable")) {
+            buildOpDecorate(FuncReg, *FirstInstr, TII,
+                            SPIRV::Decoration::StallEnableINTEL, {});
+          } else {
+            buildOpDecorate(FuncReg, *FirstInstr, TII,
+                            SPIRV::Decoration::StallFreeINTEL, {});
+          }
+        }
+      }
+    }
+  }
+}
+
 // Walk all functions and add decorations related to MI flags.
 static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
                            MachineModuleInfo *MMI, const SPIRVSubtarget &ST,
@@ -1987,6 +2053,8 @@ static void addDecorations(const Module &M, const SPIRVInstrInfo &TII,
     for (auto &MBB : *MF)
       for (auto &MI : MBB)
         handleMIFlagDecoration(MI, ST, TII, MAI.Reqs);
+
+    handleFunctionDecoration(F, TII, MMI, ST);
   }
 }
 
