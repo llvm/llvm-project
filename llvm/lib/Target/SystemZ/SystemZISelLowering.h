@@ -755,6 +755,7 @@ private:
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
