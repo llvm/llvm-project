@@ -729,8 +729,8 @@ Concatenate vectors to form a longer vector.
 
 .. code-block:: none
 
-  %4:_(<16 x i32>) = G_CONCAT_VECTORS %3:_(<4 x i32>), %2:_(<4 x i32>),
-                                      %1:_(<4 x i32>), %0:_(<4 x i32>)
+  %4:_(<16 x i32>) = G_CONCAT_VECTORS %0:_(<4 x i32>), %1:_(<4 x i32>),
+                                      %2:_(<4 x i32>), %3:_(<4 x i32>)
 
 
 G_BUILD_VECTOR, G_BUILD_VECTOR_TRUNC
