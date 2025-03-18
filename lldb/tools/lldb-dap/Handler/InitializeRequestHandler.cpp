@@ -463,6 +463,8 @@ void InitializeRequestHandler::operator()(
   body.try_emplace("supportsDataBreakpoints", true);
   // The debug adapter supports the `readMemory` request.
   body.try_emplace("supportsReadMemoryRequest", true);
+  // The debug adapter supports the 'writeMemory' request.
+  body.try_emplace("supportsWriteMemoryRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;

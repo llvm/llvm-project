@@ -153,6 +153,8 @@ static void RegisterRequestCallbacks(DAP &dap) {
 
   // Testing requests
   dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
+  // WriteMemory request
+  dap.RegisterRequest<WriteMemoryRequestHandler>();
 }
 
 static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {

@@ -112,3 +112,23 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         # Reads at offset 0x0 fail
         mem = self.dap_server.request_readMemory("0x0", 0, 6)
         self.assertEqual(mem["success"], False)
+
+    def test_writeMemory(self):
+        """
+        Tests the 'writeMemory' request
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        self.source_path = os.path.join(os.getcwd(), source)
+        self.set_source_breakpoints(
+            source,
+            [line_number(source, "// Breakpoint")],
+        )
+        self.continue_to_next_stop()
+
+        ptr_deref = self.dap_server.request_evaluate("not_a_ptr")["body"]
+        memref = ptr_deref["memoryReference"]
+
+        mem = self.dap_server.request_writeMemory(memref, 0, "0x11")["body"]
+        self.assertEqual(mem["bytesWritten"], 8)
