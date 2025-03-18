@@ -100,9 +100,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = nuw G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s32)
-    ; CHECK-NEXT: $x1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: $x1 = COPY [[SEXT_INREG]](s64)
     %0:_(s64) = COPY $x0
     %2:_(s32) = nuw G_TRUNC %0
     %3:_(s64) = G_SEXT  %2
@@ -117,9 +116,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s32)
-    ; CHECK-NEXT: $x1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: $x1 = COPY [[SEXT_INREG]](s64)
     %0:_(s64) = COPY $x0
     %2:_(s32) = G_TRUNC %0
     %3:_(s64) = G_SEXT  %2
@@ -371,4 +369,151 @@ body:             |
     %2:_(s16) = nsw G_TRUNC %0
     %3:_(s32) = G_SEXT  %2
     $w1 = COPY %3
+...
+---
+name: trunc_sext_i32_i16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: trunc_sext_i32_i16
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
+    %0:_(s32) = COPY $w0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+...
+---
+name: trunc_sext_i32_i1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: trunc_sext_i32_i1
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
+    ; CHECK-NEXT: $w0 = COPY [[SEXT]](s32)
+    %0:_(s32) = COPY $w0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+...
+---
+name: trunc_sext_i32_i2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: trunc_sext_i32_i2
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s2) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s2)
+    ; CHECK-NEXT: $w0 = COPY [[SEXT]](s32)
+    %0:_(s32) = COPY $w0
+    %1:_(s2) = G_TRUNC %0
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+...
+---
+name: trunc_sext_i32_i8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: trunc_sext_i32_i8
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
+    ; CHECK-NEXT: $w0 = COPY [[SEXT_INREG]](s32)
+    %0:_(s32) = COPY $w0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+...
+---
+name: trunc_sext_i64_i32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: trunc_sext_i64_i32
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; CHECK-NEXT: $x0 = COPY [[SEXT_INREG]](s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s32) = G_TRUNC %0
+    %2:_(s64) = G_SEXT %1
+    $x0 = COPY %2
+...
+---
+name: trunc_sext_v2i32_v2i16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: trunc_sext_v2i32_v2i16
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<2 x s32>) = G_SEXT_INREG [[COPY]], 16
+    ; CHECK-NEXT: $x0 = COPY [[SEXT_INREG]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $x0
+    %1:_(<2 x s16>) = G_TRUNC %0
+    %2:_(<2 x s32>) = G_SEXT %1
+    $x0 = COPY %2
+...
+---
+name: trunc_sext_v4i16_v4i8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: trunc_sext_v4i16_v4i8
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $x0
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<4 x s16>) = G_SEXT_INREG [[COPY]], 8
+    ; CHECK-NEXT: $x0 = COPY [[SEXT_INREG]](<4 x s16>)
+    %0:_(<4 x s16>) = COPY $x0
+    %1:_(<4 x s8>) = G_TRUNC %0
+    %2:_(<4 x s16>) = G_SEXT %1
+    $x0 = COPY %2
+...
+---
+name: trunc_sext_mismatching_types
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    ; CHECK-LABEL: name: trunc_sext_mismatching_types
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
+    ; CHECK-NEXT: $w0 = COPY [[SEXT]](s32)
+    %0:_(s64) = COPY $x0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
 ...
