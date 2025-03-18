@@ -409,9 +409,6 @@ void populateVectorLinearizeShuffleLikeOpsPatterns(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target, unsigned targetBitWidth);
 
-/// Populates patterns for propagating `vector.extract` through the vector ops.
-void populateVectorPropagateExtractsPatterns(RewritePatternSet &patterns);
-
 } // namespace vector
 } // namespace mlir
 
