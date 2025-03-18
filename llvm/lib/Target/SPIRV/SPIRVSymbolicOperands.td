@@ -513,6 +513,8 @@ defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composi
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
 defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
+defm FPGAClusterAttributesINTEL : CapabilityOperand<5904, 0, 0, [SPV_INTEL_fpga_cluster_attributes], []>;
+defm FPGAClusterAttributesV2INTEL : CapabilityOperand<6150, 0, 0, [SPV_INTEL_fpga_cluster_attributes], []>; 
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1264,6 +1266,8 @@ defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [Functio
 defm AliasScopeINTEL : DecorationOperand<5914, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm NoAliasINTEL : DecorationOperand<5915, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm FPMaxErrorDecorationINTEL : DecorationOperand<6170, 0, 0, [], [FPMaxErrorINTEL]>;
+defm StallEnableINTEL : DecorationOperand<5905, 0, 0, [SPV_INTEL_fpga_cluster_attributes], [FPGAClusterAttributesINTEL]>;
+defm StallFreeINTEL : DecorationOperand<6151, 0, 0, [SPV_INTEL_fpga_cluster_attributes], [FPGAClusterAttributesV2INTEL]>; 
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
