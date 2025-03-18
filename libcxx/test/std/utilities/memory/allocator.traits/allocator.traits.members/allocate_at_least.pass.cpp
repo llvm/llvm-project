@@ -46,7 +46,7 @@ constexpr bool test() {
   { // check that std::allocate_at_least forwards to allocator::allocate if no allocate_at_least exists
     no_allocate_at_least<int> alloc;
     using AllocTraits = std::allocator_traits<decltype(alloc)>;
-    std::same_as<std::allocation_result<int*>, AllocTraits::size_type> decltype(auto) ret =
+    std::same_as<std::allocation_result<int*, AllocTraits::size_type>> decltype(auto) ret =
         AllocTraits::allocate_at_least(alloc, 1);
     assert(ret.count == 1);
     assert(ret.ptr == &alloc.t);
@@ -55,7 +55,7 @@ constexpr bool test() {
   { // check that std::allocate_at_least forwards to allocator::allocate_at_least if allocate_at_least exists
     has_allocate_at_least<int> alloc;
     using AllocTraits = std::allocator_traits<decltype(alloc)>;
-    std::same_as<std::allocation_result<int*>, AllocTraits::size_type> decltype(auto) ret =
+    std::same_as<std::allocation_result<int*, AllocTraits::size_type>> decltype(auto) ret =
         AllocTraits::allocate_at_least(alloc, 1);
     assert(ret.count == 2);
     assert(ret.ptr == &alloc.t2);
