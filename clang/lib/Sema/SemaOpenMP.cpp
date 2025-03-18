@@ -7267,14 +7267,11 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
       Sema::TentativeAnalysisScope Trap(SemaRef);
 
       if (auto *SpecializedMethod = dyn_cast<CXXMethodDecl>(BestDecl)) {
-        if (!SpecializedMethod->isStatic()) {
-        if (auto *MemberCall = dyn_cast<CXXMemberCallExpr>(CE)) {
+        auto *MemberCall = dyn_cast<CXXMemberCallExpr>(CE);
         BestExpr = MemberExpr::CreateImplicit(
             Context, MemberCall->getImplicitObjectArgument(),
             /*IsArrow=*/false, SpecializedMethod, Context.BoundMemberTy,
             MemberCall->getValueKind(), MemberCall->getObjectKind());
-      }
-      }
       }
       NewCall = SemaRef.BuildCallExpr(Scope, BestExpr, LParenLoc, ArgExprs,
                                       RParenLoc, ExecConfig);

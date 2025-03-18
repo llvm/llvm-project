@@ -431,27 +431,6 @@ static void instantiateOMPDeclareVariantAttr(
           Local.InstantiatedLocal(
               PVD, FD->getParamDecl(PVD->getFunctionScopeIndex()));
         return S.SubstExpr(E, TemplateArgs);
-      } else if (auto *CMD = dyn_cast<CXXMethodDecl>(DRE->getDecl())) {
-        const TemplateArgumentList *TAL = TemplateArgumentList::CreateCopy(
-            S.Context, TemplateArgs.getInnermost());
-        auto *TPL = CMD->getTemplateParameterList(0);
-        TemplateDeclInstantiator Instantiator(S, CMD->getDeclContext(),
-                                              TemplateArgs);
-        CXXMethodDecl *MD = cast<CXXMethodDecl>(Instantiator.VisitCXXMethodDecl(CMD, TPL));
-        QualType FnPtrType;
-        if (MD && !MD->isStatic()) {
-          const Type *ClassType =
-              S.Context.getTypeDeclType(MD->getParent()).getTypePtr();
-          FnPtrType = S.Context.getMemberPointerType(MD->getType(), ClassType);
-        } else {
-          FnPtrType = MD->getType();
-        }
-        E = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
-             SourceLocation(), MD,
-             /* RefersToEnclosingVariableOrCapture */ false,
-             /* NameLoc */ MD->getLocation(), FnPtrType,
-             ExprValueKind::VK_PRValue);
-        return ExprResult(E);
       }
     }
     Sema::CXXThisScopeRAII ThisScope(S, ThisContext, Qualifiers(),
