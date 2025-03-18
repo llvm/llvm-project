@@ -52,8 +52,8 @@ class BreakpointLocationsTestCase(TestBase):
                 f"1: file = 'main.c', line = {self.line}, exact_match = 0, locations = 3"
             ],
             patterns=[
-                "where = a.out`func_inlined .+unresolved, hit count = 0",
-                r"where = a.out`main .+\[inlined\].+unresolved, hit count = 0",
+                "where = a.out`func_inlined .+?unresolved, hit count = 0",
+                r"where = a.out`main .+?\[inlined\].+?unresolved, hit count = 0",
             ],
         )
 
