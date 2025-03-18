@@ -46,18 +46,18 @@ c.subw a3, a4
 # CHECK-ASM-AND-OBJ: c.addw a0, a2
 # CHECK-ASM: encoding: [0x31,0x9d]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-RV64:  error: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64:  error: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.addw a0, a2
 
 # CHECK-ASM-AND-OBJ: c.addiw a3, -32
 # CHECK-ASM: encoding: [0x81,0x36]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-RV64:  error: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64:  error: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.addiw a3, -32
 # CHECK-ASM-AND-OBJ: c.addiw a3, 31
 # CHECK-ASM: encoding: [0xfd,0x26]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
-# CHECK-NO-RV64:  error: instruction requires the following: RV64I Base Instruction Set{{$}}
+# CHECK-NO-RV64:  error: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.addiw a3, 31
 
 # CHECK-ASM-AND-OBJ: c.slli s0, 63
