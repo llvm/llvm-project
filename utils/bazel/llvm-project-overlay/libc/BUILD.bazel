@@ -1319,6 +1319,7 @@ libc_support_library(
             "src/__support/OSUtil/linux/aarch64/syscall.h",
             "src/__support/OSUtil/linux/x86_64/syscall.h",
         ],
+	"@platforms//os:windows": [],
     }),
     deps = [
         ":__support_common",
@@ -1360,6 +1361,7 @@ libc_support_library(
     textual_hdrs = select({
         "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
         "@platforms//os:linux": ["src/__support/OSUtil/linux/io.h"],
+	"@platforms//os:windows": ["src/__support/OSUtil/windows/io.h"],
     }),
     deps = [
         ":__support_common",

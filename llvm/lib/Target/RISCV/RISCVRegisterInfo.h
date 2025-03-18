@@ -22,34 +22,34 @@
 namespace llvm {
 
 namespace RISCVRI {
-enum {
+enum : uint8_t {
   // The IsVRegClass value of this RegisterClass.
   IsVRegClassShift = 0,
   IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
   // The VLMul value of this RegisterClass. This value is valid iff IsVRegClass
   // is true.
   VLMulShift = IsVRegClassShift + 1,
-  VLMulShiftMask = 0b111 << VLMulShift,
+  VLMulShiftMask = 0b11 << VLMulShift,
 
   // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
   // true.
-  NFShift = VLMulShift + 3,
+  NFShift = VLMulShift + 2,
   NFShiftMask = 0b111 << NFShift,
 };
 
 /// \returns the IsVRegClass for the register class.
-static inline bool isVRegClass(uint64_t TSFlags) {
+static inline bool isVRegClass(uint8_t TSFlags) {
   return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
 }
 
 /// \returns the LMUL for the register class.
-static inline RISCVVType::VLMUL getLMul(uint64_t TSFlags) {
+static inline RISCVVType::VLMUL getLMul(uint8_t TSFlags) {
   return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
                                         VLMulShift);
 }
 
 /// \returns the NF for the register class.
-static inline unsigned getNF(uint64_t TSFlags) {
+static inline unsigned getNF(uint8_t TSFlags) {
   return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
 }
 } // namespace RISCVRI
