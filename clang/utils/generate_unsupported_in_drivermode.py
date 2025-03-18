@@ -58,7 +58,8 @@ exceptions_sequence = [
 ]
 
 
-class UnsupportedDriverOption:
+@dataclass
+class DriverOption:
     """Defines an unsupported driver-option combination
     driver: The driver string as defined by OptionVisibility in Options.td
     option: The option object from Options.td
@@ -66,18 +67,10 @@ class UnsupportedDriverOption:
     prefix: String that precedes the option. Ex. "-"
     """
 
-    def __init__(self, driver, option, option_name, prefix):
-        self.driver = driver
-        self.option = option
-        self.option_name = option_name
-        self.prefix = prefix
-
-    # For sorting
-    def __len__(self):
-        return len(self.option_name)
-
-    def __lt__(self, other):
-        return len(self.option_name) > len(other.option_name)
+    driver: str
+    option: str
+    option_name: str
+    prefix: str
 
 
 @dataclass
@@ -88,9 +81,9 @@ class DriverData:
     visibility_str: The corresponding visibility string from OptionVisibility in Options.td
     lit_cmd_end: String at the end of the Lit command
     check_str: The string or regex to be sent to FileCheck
-    supported_joined_option_sequence: List of UnsupportedDriverOption objects for supported options
+    supported_joined_option_sequence: List of DriverOption objects for supported options
                                       that are Kind *JOINED*, as defined in Options.td
-    supported_non_joined_option_sequence: List of UnsupportedDriverOption objects for supported options
+    supported_non_joined_option_sequence: List of DriverOption objects for supported options
                                           that are not Kind *JOINED*, as defined in Options.td
     test_option_sequence: A list of all the prefix-option pairs that will be tested for this driver
     """
@@ -100,12 +93,12 @@ class DriverData:
     visibility_str: str
     lit_cmd_end: str
     check_str: str
-    supported_joined_option_sequence: list[UnsupportedDriverOption] = dataclasses.field(
+    supported_joined_option_sequence: list[DriverOption] = dataclasses.field(
         default_factory=list
     )
-    supported_non_joined_option_sequence: list[
-        UnsupportedDriverOption
-    ] = dataclasses.field(default_factory=list)
+    supported_non_joined_option_sequence: list[DriverOption] = dataclasses.field(
+        default_factory=list
+    )
     test_option_sequence: list[str] = dataclasses.field(default_factory=list)
 
 
@@ -189,78 +182,69 @@ def write_lit_test(test_path, test_visibility):
     test_visibility: VISIBILITY_DEFAULT, VISIBILITY_FLANG, or VISIBILITY_FC1 which indicates whether to write
     to the main Lit test file, the flang test file, or the flang -fc1 test file
     """
-    try:
-        with open(test_path, "w") as lit_file:
-            lit_file.write(get_lit_test_note(test_visibility))
-            batch_size = 100
+    lit_file = open(test_path, "w")
 
-            for visibility, driver_data in driver_data_dict.items():
-                is_flang_pair = (
-                    visibility == VISIBILITY_FLANG or visibility == VISIBILITY_FC1
+    lit_file.write(get_lit_test_note(test_visibility))
+    batch_size = 100
+
+    for visibility, driver_data in driver_data_dict.items():
+        is_flang_pair = (
+            visibility == VISIBILITY_FLANG or visibility == VISIBILITY_FC1
+        )
+
+        if (
+            (
+                test_visibility == VISIBILITY_FLANG
+                and visibility != VISIBILITY_FLANG
+            )
+            or (
+                test_visibility == VISIBILITY_FC1
+                and visibility != VISIBILITY_FC1
+            )
+            or (test_visibility == VISIBILITY_DEFAULT and is_flang_pair)
+        ):
+            continue
+
+        comment_str = EXCLAMATION if is_flang_pair else SLASH_SLASH
+
+        unflattened_option_data = list(
+            batched(driver_data.test_option_sequence, batch_size)
+        )
+
+        for i, batch in enumerate(unflattened_option_data):
+            # Example run line: "// RUN: not %clang -cc1 -A ...  -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
+            run_cmd = (
+                f"{comment_str}RUN: not " + driver_data.lit_cmd_prefix
+            )  # "// RUN: not %clang -cc1 "
+
+            for option_str in batch:
+                run_cmd += option_str + " "  # "-A"
+
+            run_cmd += (
+                driver_data.lit_cmd_options  # "-x c++"
+                + driver_data.lit_cmd_end  # " - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK"
+                + str(i)  # "0"
+                + " %s\n\n"  # " %s"
+            )
+
+            lit_file.write(run_cmd)
+
+            for option_str in batch:
+                # Example check line: "// CC1OptionCHECK0: {{(unknown argument).*-A}}"
+                check_cmd = (
+                    comment_str  # "//
+                    + visibility  # "CC1Option"
+                    + "CHECK"
+                    + str(i)  # "0"
+                    + ": {{("
+                    + driver_data.check_str  # "unknown argument"
+                    + ").*"
+                    + option_str.replace("+", "\\+")  # "-A"
+                    + "}}\n"
                 )
+                lit_file.write(check_cmd)
 
-                if (
-                    (
-                        test_visibility == VISIBILITY_FLANG
-                        and visibility != VISIBILITY_FLANG
-                    )
-                    or (
-                        test_visibility == VISIBILITY_FC1
-                        and visibility != VISIBILITY_FC1
-                    )
-                    or (test_visibility == VISIBILITY_DEFAULT and is_flang_pair)
-                ):
-                    continue
-
-                comment_str = EXCLAMATION if is_flang_pair else SLASH_SLASH
-
-                unflattened_option_data = list(
-                    batched(driver_data.test_option_sequence, batch_size)
-                )
-
-                for i, batch in enumerate(unflattened_option_data):
-                    # Example run line: "// RUN: not %clang -cc1 -A ...  -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
-                    run_cmd = (
-                        f"{comment_str}RUN: not " + driver_data.lit_cmd_prefix
-                    )  # "// RUN: not %clang -cc1 "
-
-                    for option_str in batch:
-                        run_cmd += option_str + " "  # "-A"
-
-                    run_cmd += (
-                        driver_data.lit_cmd_options  # "-x c++"
-                        + driver_data.lit_cmd_end  # " - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK"
-                        + str(i)  # "0"
-                        + " %s\n\n"  # " %s"
-                    )
-
-                    lit_file.write(run_cmd)
-
-                    for option_str in batch:
-                        # Example check line: "// CC1OptionCHECK0: {{(unknown argument).*-A}}"
-                        check_cmd = (
-                            comment_str  # "//
-                            + visibility  # "CC1Option"
-                            + "CHECK"
-                            + str(i)  # "0"
-                            + ": {{("
-                            + driver_data.check_str  # "unknown argument"
-                            + ").*"
-                            + option_str.replace("+", "\\+")  # "-A"
-                            + "}}\n"
-                        )
-                        lit_file.write(check_cmd)
-
-    except (FileNotFoundError, PermissionError, OSError):
-        raise IOError(f"Error opening {test_path}. Exiting")
-    else:
-        lit_file.close()
-
-
-def validate_file(path):
-    if not os.path.isfile(path):
-        raise argparse.ArgumentTypeError(f"Invalid file provided: {path}")
-    return path
+    lit_file.close()
 
 
 # List of driver flavours
@@ -273,42 +257,49 @@ skipped_sequence = []
 
 # Parse arguments
 parser = argparse.ArgumentParser(
-    description="This script generates Lit regression test files that validate that options are only exposed to "
+    description="Generate a lit test to validate that options are only exposed to "
     "intended driver modes. "
     "The options and driver modes are parsed from Options.td."
 )
 
+default_options_td_dir = os.path.join(
+    os.path.dirname(__file__), "../include/clang/Driver"
+)
 parser.add_argument(
-    "<path>/Options.td",
-    type=validate_file,
-    help="Path to Options.td file. Typically found under clang/include/clang/Driver/Options.td",
+    "--options-td-dir",
+    help="Include directory for Options.td. Typically found under clang/include/clang/Driver, which is the default.",
+    default=default_options_td_dir,
+)
+default_llvm_include_dir = os.path.join(os.path.dirname(__file__), "../../llvm/include")
+parser.add_argument(
+    "--llvm-include-dir",
+    help="Include directory for LLVM TableGen executable. The typical source tree path will be used by default.",
+    default=default_llvm_include_dir,
 )
 parser.add_argument(
     "--llvm-bin",
-    help="llvm build tree bin directory path. Must be specified with --llvm-tblgen. Default path: llvm-project/build/bin",
+    help="llvm build tree bin directory path. Only used if --llvm-tblgen is not specified.",
 )
 parser.add_argument(
     "--llvm-tblgen",
-    help="LLVM TableGen executable. If not included with --llvm-bin, the script will search for the llvm-tblgen executable",
+    help="LLVM TableGen executable. If --llvm-bin is also not specified, the PATH will be searched.",
 )
+args = parser.parse_args()
 
-args = vars(parser.parse_args())
-
-tablegen = ""
-arg_llvm_bin = args["llvm_bin"]
-arg_llvm_tblgen = args["llvm_tblgen"]
-if arg_llvm_bin is None or arg_llvm_tblgen is None:
-    tablegen = shutil.which("llvm-tblgen")
-else:
-    tablegen = arg_llvm_bin + "/" + arg_llvm_tblgen
+if not args.llvm_tblgen:
+    if args.llvm_bin:
+        args.llvm_tblgen = os.path.join(args.llvm_bin, "llvm-tblgen")
+    else:
+        args.llvm_tblgen = "llvm-tblgen"
 
 # Run TableGen to convert Options.td to json
+# Ex: llvm-tblgen -I llvm-project/llvm/include llvm-project/clang/include/clang/Driver/Options.td -dump-json
 options_json_str = subprocess.run(
     [
-        tablegen,
+        args.llvm_tblgen,
         "-I",
-        os.path.join(os.path.dirname(__file__), "../../llvm/include"),
-        args["<path>/Options.td"],
+        args.llvm_include_dir,
+        args.options_td_dir + "/Options.td",
         "-dump-json",
     ],
     stdout=subprocess.PIPE,
@@ -421,21 +412,25 @@ for option in options_dictionary["!instanceof"]["Option"]:
     for driver in driver_sequence:
         if driver not in visibility_set and option not in exceptions_sequence:
             unsupported_sequence.append(
-                UnsupportedDriverOption(driver, option, option_name, prefix)
+                DriverOption(driver, option, option_name, prefix)
             )
         elif is_option_kind_joined:
             driver_data_dict[driver].supported_joined_option_sequence.append(
-                UnsupportedDriverOption(driver, option, option_name, prefix)
+                DriverOption(driver, option, option_name, prefix)
             )
         else:
             driver_data_dict[driver].supported_non_joined_option_sequence.append(
-                UnsupportedDriverOption(driver, option, option_name, prefix)
+                DriverOption(driver, option, option_name, prefix)
             )
 
 # Sort the supported lists for the next block
 for driver_data in driver_data_dict.values():
-    driver_data.supported_joined_option_sequence.sort(key=len, reverse=True)
-    driver_data.supported_non_joined_option_sequence.sort(key=len, reverse=True)
+    driver_data.supported_joined_option_sequence.sort(
+        key=lambda o: len(o.option_name), reverse=True
+    )
+    driver_data.supported_non_joined_option_sequence.sort(
+        key=lambda o: len(o.option_name), reverse=True
+    )
 
 # For a given driver, this script cannot generate tests for unsupported options whose option "Name" have a prefix that
 # corresponds to a supported/visible option of Kind *JOINED*. These driver-option pairs are removed here.
@@ -460,7 +455,11 @@ for unsupported_pair in unsupported_sequence:
     ].supported_non_joined_option_sequence
 
     # Check for matching kind *JOINED* option name prefixes
-    start_index = bisect_left(supported_joined_seq, unsupported_pair)
+    start_index = bisect_left(
+        supported_joined_seq,
+        -len(unsupported_pair.option_name),
+        key=lambda o: -len(o.option_name),
+    )
 
     for supported_pair in supported_joined_seq[start_index:]:
         if (
@@ -470,7 +469,11 @@ for unsupported_pair in unsupported_sequence:
             skipped_sequence.append(unsupported_pair)
 
     # Check for matching option names
-    start_index = bisect_left(supported_non_joined_seq, unsupported_pair)
+    start_index = bisect_left(
+        supported_non_joined_seq,
+        -len(unsupported_pair.option_name),
+        key=lambda o: -len(o.option_name),
+    )
 
     for supported_pair in supported_non_joined_seq[start_index:]:
         if (
