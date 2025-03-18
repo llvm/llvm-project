@@ -126,6 +126,8 @@ Changes to the RISC-V Backend
   'Xqccmp' extension, which is a frame-pointer convention compatible version of
   Zcmp.
 * Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
+  extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
