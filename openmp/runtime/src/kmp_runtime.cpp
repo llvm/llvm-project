@@ -8521,7 +8521,9 @@ int __kmp_aux_get_team_num() {
   while (team && team->t.t_parent &&
          team->t.t_parent->t.t_pkfn != (microtask_t)__kmp_teams_master)
     team = team->t.t_parent;
-  return team ? team->t.t_master_tid : 0;
+  if (!team || !team->t.t_parent)
+    return 0;
+  return team->t.t_master_tid;
 }
 
 int __kmp_aux_get_num_teams() {
