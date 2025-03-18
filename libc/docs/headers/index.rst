@@ -10,9 +10,11 @@ Implementation Status
    complex
    cpio
    ctype
+   endian
    errno
    fenv
    float
+   glob
    inttypes
    locale
    math/index.rst
@@ -22,6 +24,7 @@ Implementation Status
    setjmp
    signal
    stdbit
+   stdfix
    stdio
    stdlib
    string
@@ -29,6 +32,7 @@ Implementation Status
    sys/mman
    sys/resource
    sys/stat
+   sys/statvfs
    sys/time
    sys/wait
    termios

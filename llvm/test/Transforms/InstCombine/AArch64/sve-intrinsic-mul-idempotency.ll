@@ -51,7 +51,7 @@ define <vscale x 8 x i16> @idempotent_mul_with_predicated_dup(<vscale x 8 x i1> 
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]], <vscale x 8 x i16> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 ;
-  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 1)
+  %1 = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, i16 1)
   %2 = call <vscale x 8 x i16> @llvm.aarch64.sve.mul.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> %1)
   ret <vscale x 8 x i16> %2
 }
@@ -107,11 +107,11 @@ define <vscale x 2 x i64> @non_idempotent_mul_with_predicated_dup(<vscale x 2 x 
   ; Different predicates
 ; CHECK-LABEL: define <vscale x 2 x i64> @non_idempotent_mul_with_predicated_dup(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG1:%.*]], <vscale x 2 x i1> [[PG2:%.*]], <vscale x 2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[PG1]], i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> [[PG1]], i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.nxv2i64(<vscale x 2 x i1> [[PG2]], <vscale x 2 x i64> [[A]], <vscale x 2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
 ;
-  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg1, i64 1)
+  %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg1, i64 1)
   %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.mul.nxv2i64(<vscale x 2 x i1> %pg2, <vscale x 2 x i64> %a, <vscale x 2 x i64> %1)
   ret <vscale x 2 x i64> %2
 }

@@ -25,7 +25,8 @@ class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def LLVMArrayType : LLVMType<"LLVMArray", "array", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getTypeSize"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+                                ["getTypeSize", "getPreferredAlignment"]>,
     DeclareTypeInterfaceMethods<DestructurableTypeInterface>]> {
   let summary = "LLVM array type";
   let description = [{
@@ -124,7 +125,7 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
 def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
   MutableType,
   DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-    ["areCompatible", "verifyEntries"]>,
+    ["areCompatible", "verifyEntries", "getPreferredAlignment"]>,
   DeclareTypeInterfaceMethods<DestructurableTypeInterface,
     ["getSubelementIndexMap", "getTypeAtIndex"]>
 ]> {
@@ -257,7 +258,8 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
 
 def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "getIndexBitwidth", "areCompatible", "verifyEntries"]>]> {
+      "getIndexBitwidth", "areCompatible", "verifyEntries",
+      "getPreferredAlignment"]>]> {
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents
@@ -291,9 +293,9 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec"> {
   let summary = "LLVM fixed vector type";
   let description = [{
-    LLVM dialect scalable vector type, represents a sequence of elements of
-    unknown length that is known to be divisible by some constant. These
-    elements can be processed as one in SIMD context.
+    LLVM dialect vector type that supports all element types that are supported
+    in LLVM vectors but that are not supported by the builtin MLIR vector type.
+    E.g., LLVMFixedVectorType supports LLVM pointers as element type.
   }];
 
   let typeName = "llvm.fixed_vec";

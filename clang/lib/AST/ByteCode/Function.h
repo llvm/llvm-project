@@ -51,6 +51,11 @@ public:
     return llvm::make_range(Descriptors.begin(), Descriptors.end());
   }
 
+  llvm::iterator_range<LocalVectorTy::const_reverse_iterator>
+  locals_reverse() const {
+    return llvm::reverse(Descriptors);
+  }
+
 private:
   /// Object descriptors in this block.
   LocalVectorTy Descriptors;
@@ -227,7 +232,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO);
+           bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -247,6 +252,7 @@ private:
 private:
   friend class Program;
   friend class ByteCodeEmitter;
+  friend class Context;
 
   /// Program reference.
   Program &P;

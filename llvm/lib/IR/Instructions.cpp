@@ -609,15 +609,17 @@ bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
   // ptrauth) forces a callsite to be at least readonly.
-  return hasOperandBundlesOtherThan(
-             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+  return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
+                                     LLVMContext::OB_kcfi,
+                                     LLVMContext::OB_convergencectrl}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
 bool CallBase::hasClobberingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
-              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
+              LLVMContext::OB_convergencectrl}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -709,6 +711,20 @@ CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
   auto &BOI = getBundleOpInfoForOperand(OpNo);
   auto OBU = operandBundleFromBundleOpInfo(BOI);
   return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
+}
+
+bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
+  for (unsigned I = 0, E = arg_size(); I < E; ++I) {
+    if (!getArgOperand(I)->getType()->isPointerTy())
+      continue;
+
+    CaptureInfo CI = getParamAttributes(I).getCaptureInfo();
+    if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
+      CI &= Fn->getAttributes().getParamAttrs(I).getCaptureInfo();
+    if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents()))
+      return true;
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2702,8 +2718,7 @@ BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
 
 // Exchange the two operands to this instruction. This instruction is safe to
 // use on any binary instruction and does not modify the semantics of the
-// instruction. If the instruction is order-dependent (SetLT f.e.), the opcode
-// is changed.
+// instruction.
 bool BinaryOperator::swapOperands() {
   if (!isCommutative())
     return true; // Can't commute operands

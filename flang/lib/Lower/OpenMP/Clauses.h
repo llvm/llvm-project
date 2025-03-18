@@ -231,6 +231,7 @@ using Inbranch = tomp::clause::InbranchT<TypeTy, IdTy, ExprTy>;
 using Inclusive = tomp::clause::InclusiveT<TypeTy, IdTy, ExprTy>;
 using Indirect = tomp::clause::IndirectT<TypeTy, IdTy, ExprTy>;
 using Init = tomp::clause::InitT<TypeTy, IdTy, ExprTy>;
+using Initializer = tomp::clause::InitializerT<TypeTy, IdTy, ExprTy>;
 using InReduction = tomp::clause::InReductionT<TypeTy, IdTy, ExprTy>;
 using IsDevicePtr = tomp::clause::IsDevicePtrT<TypeTy, IdTy, ExprTy>;
 using Lastprivate = tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>;
@@ -242,6 +243,8 @@ using Mergeable = tomp::clause::MergeableT<TypeTy, IdTy, ExprTy>;
 using Message = tomp::clause::MessageT<TypeTy, IdTy, ExprTy>;
 using NoOpenmp = tomp::clause::NoOpenmpT<TypeTy, IdTy, ExprTy>;
 using NoOpenmpRoutines = tomp::clause::NoOpenmpRoutinesT<TypeTy, IdTy, ExprTy>;
+using NoOpenmpConstructs =
+    tomp::clause::NoOpenmpConstructsT<TypeTy, IdTy, ExprTy>;
 using NoParallelism = tomp::clause::NoParallelismT<TypeTy, IdTy, ExprTy>;
 using Nocontext = tomp::clause::NocontextT<TypeTy, IdTy, ExprTy>;
 using Nogroup = tomp::clause::NogroupT<TypeTy, IdTy, ExprTy>;
@@ -283,6 +286,7 @@ using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;
 using UnifiedSharedMemory =
     tomp::clause::UnifiedSharedMemoryT<TypeTy, IdTy, ExprTy>;
+using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;

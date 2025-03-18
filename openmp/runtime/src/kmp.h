@@ -521,13 +521,6 @@ enum library_type {
   library_throughput
 };
 
-#if KMP_OS_LINUX
-enum clock_function_type {
-  clock_function_gettimeofday,
-  clock_function_clock_gettime
-};
-#endif /* KMP_OS_LINUX */
-
 #if KMP_MIC_SUPPORTED
 enum mic_type { non_mic, mic1, mic2, mic3, dummy };
 #endif
@@ -2613,7 +2606,9 @@ typedef struct {
 typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
   unsigned nowait : 1;
   unsigned re_record : 1;
-  unsigned reserved : 30;
+  unsigned graph_reset : 1; /* 1==discard taskgraph record, 0==use taskgraph
+                               record */
+  unsigned reserved : 29;
 } kmp_taskgraph_flags_t;
 
 /// Represents a TDG node
@@ -2657,7 +2652,7 @@ typedef struct kmp_tdg_info {
 extern int __kmp_tdg_dot;
 extern kmp_int32 __kmp_max_tdgs;
 extern kmp_tdg_info_t **__kmp_global_tdgs;
-extern kmp_int32 __kmp_curr_tdg_idx;
+extern kmp_tdg_info_t *__kmp_curr_tdg;
 extern kmp_int32 __kmp_successors_size;
 extern std::atomic<kmp_int32> __kmp_tdg_task_id;
 extern kmp_int32 __kmp_num_tdg;
@@ -2797,6 +2792,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPX_TASKGRAPH
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
+  kmp_int32 td_tdg_task_id; // local task id in its TDG
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
@@ -3415,8 +3411,6 @@ extern kmp_bootstrap_lock_t
                              __kmp_threads expansion to co-exist */
 
 extern kmp_lock_t __kmp_global_lock; /* control OS/global access  */
-extern kmp_queuing_lock_t __kmp_dispatch_lock; /* control dispatch access  */
-extern kmp_lock_t __kmp_debug_lock; /* control I/O access for KMP_DEBUG */
 
 extern enum library_type __kmp_library;
 
@@ -3544,11 +3538,6 @@ extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
 extern int __kmp_hot_teams_mode;
 extern int __kmp_hot_teams_max_level;
 #endif
-
-#if KMP_OS_LINUX
-extern enum clock_function_type __kmp_clock_function;
-extern int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
 
 #if KMP_MIC_SUPPORTED
 extern enum mic_type __kmp_mic_type;

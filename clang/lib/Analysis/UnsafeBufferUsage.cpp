@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
+#include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -480,21 +482,86 @@ static void findStmtsInUnspecifiedUntypedContext(
   // FIXME: Handle loop bodies.
 }
 
+// Returns true iff integer E1 is equivalent to integer E2.
+//
+// For now we only support such expressions:
+//    expr := DRE | const-value | expr BO expr
+//    BO   := '*' | '+'
+//
+// FIXME: We can reuse the expression comparator of the interop analysis after
+// it has been upstreamed.
+static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx);
+static bool areEqualIntegralBinaryOperators(const BinaryOperator *E1,
+                                            const Expr *E2_LHS,
+                                            BinaryOperatorKind BOP,
+                                            const Expr *E2_RHS,
+                                            ASTContext &Ctx) {
+  if (E1->getOpcode() == BOP) {
+    switch (BOP) {
+      // Commutative operators:
+    case BO_Mul:
+    case BO_Add:
+      return (areEqualIntegers(E1->getLHS(), E2_LHS, Ctx) &&
+              areEqualIntegers(E1->getRHS(), E2_RHS, Ctx)) ||
+             (areEqualIntegers(E1->getLHS(), E2_RHS, Ctx) &&
+              areEqualIntegers(E1->getRHS(), E2_LHS, Ctx));
+    default:
+      return false;
+    }
+  }
+  return false;
+}
+
+static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
+  E1 = E1->IgnoreParenImpCasts();
+  E2 = E2->IgnoreParenImpCasts();
+  if (!E1->getType()->isIntegerType() || E1->getType() != E2->getType())
+    return false;
+
+  Expr::EvalResult ER1, ER2;
+
+  // If both are constants:
+  if (E1->EvaluateAsInt(ER1, Ctx) &&
+      E2->EvaluateAsInt(ER2, Ctx))
+    return ER1.Val.getInt() == ER2.Val.getInt();
+
+  // Otherwise, they should have identical stmt kind:
+  if (E1->getStmtClass() != E2->getStmtClass())
+    return false;
+  switch (E1->getStmtClass()) {
+  case Stmt::DeclRefExprClass:
+    return cast<DeclRefExpr>(E1)->getDecl() == cast<DeclRefExpr>(E2)->getDecl();
+  case Stmt::BinaryOperatorClass: {
+    auto BO2 = cast<BinaryOperator>(E2);
+    return areEqualIntegralBinaryOperators(cast<BinaryOperator>(E1),
+                                           BO2->getLHS(), BO2->getOpcode(),
+                                           BO2->getRHS(), Ctx);
+  }
+  default:
+    return false;
+  }
+}
+
 // Given a two-param std::span construct call, matches iff the call has the
 // following forms:
 //   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
 //   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{&var, 1}`
+//   3. `std::span<T>{&var, 1}` or `std::span<T>{std::addressof(...), 1}`
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
-//   6. `std::span<T>{std::addressof(...), 1}`
+//   6. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
+//       `f` is a function with attribute `alloc_size(N, M)`;
+//       `args` represents the list of arguments;
+//       `N, M` are parameter indexes to the allocating element number and size.
+//        Sometimes, there is only one parameter index representing the total
+//        size.
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         const ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
-  const Expr *Arg0 = Node.getArg(0)->IgnoreImplicit();
-  const Expr *Arg1 = Node.getArg(1)->IgnoreImplicit();
+  const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
+  const Expr *Arg1 = Node.getArg(1)->IgnoreParenImpCasts();
   auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
     if (auto E0CV = E0->getIntegerConstantExpr(Ctx))
       if (auto E1CV = E1->getIntegerConstantExpr(Ctx)) {
@@ -514,7 +581,9 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   if (Arg1CV && Arg1CV->isZero())
     // Check form 5:
     return true;
-  switch (Arg0->IgnoreImplicit()->getStmtClass()) {
+
+  // Check forms 1-3:
+  switch (Arg0->getStmtClass()) {
   case Stmt::CXXNewExprClass:
     if (auto Size = cast<CXXNewExpr>(Arg0)->getArraySize()) {
       // Check form 1:
@@ -534,6 +603,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       return Arg1CV && Arg1CV->isOne();
     break;
   case Stmt::CallExprClass:
+    // Check form 3:
     if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
       const auto FnDecl = CE->getDirectCallee();
       if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
@@ -553,6 +623,35 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
 
     // Check form 4:
     return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
+  }
+  // Check form 6:
+  if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
+    if (!CCast->getType()->isPointerType())
+      return false;
+
+    QualType PteTy = CCast->getType()->getPointeeType();
+
+    if (!(PteTy->isConstantSizeType() && Ctx.getTypeSizeInChars(PteTy).isOne()))
+      return false;
+
+    if (const auto *Call = dyn_cast<CallExpr>(CCast->getSubExpr())) {
+      if (const FunctionDecl *FD = Call->getDirectCallee())
+        if (auto *AllocAttr = FD->getAttr<AllocSizeAttr>()) {
+          const Expr *EleSizeExpr =
+              Call->getArg(AllocAttr->getElemSizeParam().getASTIndex());
+          // NumElemIdx is invalid if AllocSizeAttr has 1 argument:
+          ParamIdx NumElemIdx = AllocAttr->getNumElemsParam();
+
+          if (!NumElemIdx.isValid())
+            return areEqualIntegers(Arg1, EleSizeExpr, Ctx);
+
+          const Expr *NumElesExpr = Call->getArg(NumElemIdx.getASTIndex());
+
+          if (auto BO = dyn_cast<BinaryOperator>(Arg1))
+            return areEqualIntegralBinaryOperators(BO, NumElesExpr, BO_Mul,
+                                                   EleSizeExpr, Ctx);
+        }
+    }
   }
   return false;
 }
@@ -589,6 +688,25 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     // bug
     if (ArrIdx.isNonNegative() && ArrIdx.getLimitedValue() < limit)
       return true;
+  } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
+    // For an integer expression `e` and an integer constant `n`, `e & n` and
+    // `n & e` are bounded by `n`:
+    if (BE->getOpcode() != BO_And)
+      return false;
+
+    const Expr *LHS = BE->getLHS();
+    const Expr *RHS = BE->getRHS();
+
+    if ((!LHS->isValueDependent() &&
+         LHS->EvaluateAsInt(EVResult,
+                            Finder->getASTContext())) || // case: `n & e`
+        (!RHS->isValueDependent() &&
+         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) { // `e & n`
+      llvm::APSInt result = EVResult.Val.getInt();
+      if (result.isNonNegative() && result.getLimitedValue() < limit)
+        return true;
+    }
+    return false;
   }
   return false;
 }
@@ -1057,7 +1175,7 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
       // The array element type must be compatible with `char` otherwise an
       // explicit cast will be needed, which will make this check unreachable.
       // Therefore, the array extent is same as its' bytewise size.
-      if (Size->EvaluateAsConstantExpr(ER, Ctx)) {
+      if (Size->EvaluateAsInt(ER, Ctx)) {
         APSInt EVal = ER.Val.getInt(); // Size must have integer type
 
         return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
@@ -2686,12 +2804,13 @@ template <typename NodeTy>
 static std::optional<SourceLocation>
 getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
               const LangOptions &LangOpts) {
-  unsigned TkLen = Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts);
-  SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
+  if (unsigned TkLen =
+          Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts)) {
+    SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
 
-  if (Loc.isValid())
-    return Loc;
-
+    if (Loc.isValid())
+      return Loc;
+  }
   return std::nullopt;
 }
 

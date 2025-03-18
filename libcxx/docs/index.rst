@@ -128,14 +128,14 @@ Libc++ aims to support common compilers that implement the C++11 Standard. In or
 good balance between stability for users and maintenance cost, testing coverage and development
 velocity, libc++ drops support for older compilers as newer ones are released.
 
-============ =============== ========================== =====================
-Compiler     Versions        Restrictions               Support policy
-============ =============== ========================== =====================
-Clang        17, 18, 19-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
-AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
-Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
-GCC          14              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
-============ =============== ========================== =====================
+============ =================== ========================== =====================
+Compiler     Versions            Restrictions               Support policy
+============ =================== ========================== =====================
+Clang        18, 19, 20, 21-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
+AppleClang   15                                             latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+Open XL      17.1.3 (AIX)                                   latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
+GCC          14                  In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
+============ =================== ========================== =====================
 
 Libc++ also supports common platforms and architectures:
 
@@ -242,5 +242,5 @@ Quick Links
 * `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
 * `libcxx-commits Mailing List <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_
 * `libc++ forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
-* `libc++ chat <https://discord.com/channels/636084430946959380/636732894974312448>`_
+* `libc++ chat <https://discord.com/channels/636084430946959380/636732894974312448>`_ (`invite link <https://discord.gg/xS7Z362>`_)
 * `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

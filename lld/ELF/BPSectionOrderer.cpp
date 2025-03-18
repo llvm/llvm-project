@@ -30,7 +30,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
 
   static uint64_t getSize(const Section &sec) { return sec.getSize(); }
   static bool isCodeSection(const Section &sec) {
-    return sec.flags & llvm::ELF::SHF_EXECINSTR;
+    return sec.flags & ELF::SHF_EXECINSTR;
   }
   ArrayRef<Defined *> getSymbols(const Section &sec) {
     auto it = secToSym.find(&sec);
@@ -40,15 +40,15 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
   }
 
   static void
-  getSectionHashes(const Section &sec, llvm::SmallVectorImpl<uint64_t> &hashes,
-                   const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
+  getSectionHashes(const Section &sec, SmallVectorImpl<uint64_t> &hashes,
+                   const DenseMap<const void *, uint64_t> &sectionToIdx) {
     constexpr unsigned windowSize = 4;
 
     // Calculate content hashes: k-mers and the last k-1 bytes.
     ArrayRef<uint8_t> data = sec.content();
     if (data.size() >= windowSize)
       for (size_t i = 0; i <= data.size() - windowSize; ++i)
-        hashes.push_back(llvm::support::endian::read32le(data.data() + i));
+        hashes.push_back(support::endian::read32le(data.data() + i));
     for (uint8_t byte : data.take_back(windowSize - 1))
       hashes.push_back(byte);
 
@@ -75,8 +75,11 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
     auto *d = dyn_cast<Defined>(&sym);
     if (!d)
       return;
-    auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
-    if (!sec || sec->size == 0 || !orderer.secToSym.try_emplace(sec, d).second)
+    auto *sec = dyn_cast_or_null<InputSection>(d->section);
+    // Skip empty, discarded, ICF folded sections. Skipping ICF folded sections
+    // reduces duplicate detection work in BPSectionOrderer.
+    if (!sec || sec->size == 0 || !sec->isLive() || sec->repl != sec ||
+        !orderer.secToSym.try_emplace(sec, d).second)
       return;
     rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
         .insert(sections.size());

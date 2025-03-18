@@ -6,6 +6,7 @@
 ! C931 A stat-variable in an image-selector shall not be a coindexed object.
 subroutine s1()
   use ISO_FORTRAN_ENV
+  save
   type(team_type) :: team1, team2
   real :: rCoarray[10,20,*]
   real :: rVar1, rVar2

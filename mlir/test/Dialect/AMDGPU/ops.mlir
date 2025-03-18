@@ -25,6 +25,25 @@ func.func @packed_stoch_round_fp8(%v1: f32, %stoch: i32, %others: vector<4xf8E5M
   func.return %ret : vector<4xf8E5M2FNUZ>
 }
 
+// CHECK-LABEL: func @fat_raw_buffer_cast_easy
+// CHECK: amdgpu.fat_raw_buffer_cast
+func.func @fat_raw_buffer_cast_easy(%m: memref<8xi32>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m : memref<8xi32> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+}
+
+// CHECK-LABEL: func @fat_raw_buffer_cast
+// CHECK: amdgpu.fat_raw_buffer_cast
+// CHECK-SAME: validBytes(%{{[^)]*}})
+// CHECK-SAME: cacheSwizzleStride(%{{[^)]*}})
+// CHECK-SAME: boundsCheck(false)
+// CHECK-SAME: resetOffset
+func.func @fat_raw_buffer_cast(%m: memref<8xi32, strided<[1], offset: ?>>, %validBytes: i32, %cacheSwizzle: i14) -> memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>> {
+  %ret = amdgpu.fat_raw_buffer_cast %m validBytes(%validBytes) cacheSwizzleStride(%cacheSwizzle) boundsCheck(false) resetOffset
+    : memref<8xi32, strided<[1], offset: ?>> to memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+  func.return %ret : memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+}
+
 // CHECK-LABEL: func @raw_buffer_load_f32_from_rank_1
 func.func @raw_buffer_load_f32_from_rank_1(%src : memref<128xf32>, %offset : i32, %idx0 : i32) -> f32 {
   // CHECK: amdgpu.raw_buffer_load {indexOffset = 1 : i32} %{{.*}}[{{.*}}] sgprOffset %{{.*}} : memref<128xf32>, i32 -> f32

@@ -32,14 +32,14 @@ void SemaMSP430::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   if (hasFunctionProto(D) && getFunctionOrMethodNumParams(D) != 0) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*MSP430*/ 1 << 0;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*MSP430*/ 1 << /*interrupt*/ 0 << 0;
     return;
   }
 
   if (!getFunctionOrMethodResultType(D)->isVoidType()) {
-    Diag(D->getLocation(), diag::warn_interrupt_attribute_invalid)
-        << /*MSP430*/ 1 << 1;
+    Diag(D->getLocation(), diag::warn_interrupt_signal_attribute_invalid)
+        << /*MSP430*/ 1 << /*interrupt*/ 0 << 1;
     return;
   }
 

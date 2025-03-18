@@ -65,7 +65,7 @@ template <class D> struct BPOrderer {
                         &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
 
-  std::optional<StringRef> static getResolvedLinkageName(llvm::StringRef name) {
+  std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
     return {};
   }
 };
@@ -147,11 +147,14 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
   return sectionUns;
 }
 
-/// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
-/// "yyyy" are numbers that could change between builds. We need to use the
-/// root symbol name before this suffix so these symbols can be matched with
-/// profiles which may have different suffixes.
+/// Symbols can be appended with "(.__uniq.xxxx)?(.llvm.yyyy)?(.Tgm)?" where
+/// "xxxx" and "yyyy" are numbers that could change between builds, and .Tgm is
+/// the global merge functions suffix
+/// (see GlobalMergeFunc::MergingInstanceSuffix). We need to use the root symbol
+/// name before this suffix so these symbols can be matched with profiles which
+/// may have different suffixes.
 inline StringRef getRootSymbol(StringRef name) {
+  name.consume_back(".Tgm");
   auto [P0, S0] = name.rsplit(".llvm.");
   auto [P1, S1] = P0.rsplit(".__uniq.");
   return P1;
@@ -186,7 +189,7 @@ auto BPOrderer<D>::computeOrder(
     }
     auto &traces = reader->getTemporalProfTraces();
 
-    MapVector<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
+    DenseMap<unsigned, BPFunctionNode::UtilityNodeT> sectionIdxToFirstUN;
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;

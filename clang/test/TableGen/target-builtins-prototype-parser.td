@@ -10,55 +10,55 @@
 include "clang/Basic/BuiltinsBase.td"
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_01, "E8idE4b", "")
+// CHECK: Builtin::Info{{.*}} __builtin_01 {{.*}} /* E8idE4b */
   let Prototype = "_ExtVector<8,int>(double, _ExtVector<4,        bool>)";
   let Spellings = ["__builtin_01"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_02, "E8UiE4s", "")
+// CHECK: Builtin::Info{{.*}} __builtin_02 {{.*}} /* E8UiE4s */
   let Prototype = "_ExtVector<8,unsigned int>(_ExtVector<4, short>)";
   let Spellings = ["__builtin_02"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_03, "di", "")
+// CHECK: Builtin::Info{{.*}} __builtin_03 {{.*}} /* di */
   let Prototype = "double(int)";
   let Spellings = ["__builtin_03"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_04, "diIUi", "")
+// CHECK: Builtin::Info{{.*}} __builtin_04 {{.*}} /* diIUi */
  let Prototype = "double(int, _Constant unsigned int)";
   let Spellings = ["__builtin_04"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_05, "v&v&", "")
+// CHECK: Builtin::Info{{.*}} __builtin_05 {{.*}} /* v&v& */
  let Prototype = "void&(void&)";
   let Spellings = ["__builtin_05"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_06, "v*v*cC*.", "")
+// CHECK: Builtin::Info{{.*}} __builtin_06 {{.*}} /* v*v*cC*. */
  let Prototype = "void*(void*, char const*, ...)";
   let Spellings = ["__builtin_06"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_07, "E8iE4dE4b.", "")
+// CHECK: Builtin::Info{{.*}} __builtin_07 {{.*}} /* E8iE4dE4b. */
   let Prototype = "_ExtVector<8, int>(_ExtVector<4,double>, _ExtVector<4, bool>, ...)";
   let Spellings = ["__builtin_07"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_08, "di*R", "")
+// CHECK: Builtin::Info{{.*}} __builtin_08 {{.*}} /* di*R */
   let Prototype = "double(int * restrict)";
   let Spellings = ["__builtin_08"];
 }
 
 def : Builtin {
-// CHECK: BUILTIN(__builtin_09, "V2yy", "")
+// CHECK: Builtin::Info{{.*}} __builtin_09 {{.*}} /* V2yy */
   let Prototype = "_Vector<2, __bf16>(__bf16)";
   let Spellings = ["__builtin_09"];
 }

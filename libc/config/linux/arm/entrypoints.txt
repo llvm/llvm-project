@@ -20,6 +20,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # poll.h entrypoints
+    libc.src.poll.poll
+
     # string.h entrypoints
     libc.src.string.memccpy
     libc.src.string.memchr

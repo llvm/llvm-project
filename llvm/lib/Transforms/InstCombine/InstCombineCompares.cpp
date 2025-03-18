@@ -882,7 +882,8 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
 
     void tooManyUses() override { Captured = true; }
 
-    bool captured(const Use *U) override {
+    Action captured(const Use *U, UseCaptureInfo CI) override {
+      // TODO(captures): Use UseCaptureInfo.
       auto *ICmp = dyn_cast<ICmpInst>(U->getUser());
       // We need to check that U is based *only* on the alloca, and doesn't
       // have other contributions from a select/phi operand.
@@ -892,11 +893,11 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
         // Collect equality icmps of the alloca, and don't treat them as
         // captures.
         ICmps[ICmp] |= 1u << U->getOperandNo();
-        return false;
+        return Continue;
       }
 
       Captured = true;
-      return true;
+      return Stop;
     }
   };
 
@@ -1884,17 +1885,23 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
   // llvm.is.fpclass(X, fcInf|fcNan)
   // (icmp ne (and (bitcast X to int), ExponentMask), ExponentMask) -->
   // llvm.is.fpclass(X, ~(fcInf|fcNan))
+  // (icmp eq (and (bitcast X to int), ExponentMask), 0) -->
+  // llvm.is.fpclass(X, fcSubnormal|fcZero)
+  // (icmp ne (and (bitcast X to int), ExponentMask), 0) -->
+  // llvm.is.fpclass(X, ~(fcSubnormal|fcZero))
   Value *V;
   if (!Cmp.getParent()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat) &&
       Cmp.isEquality() &&
       match(X, m_OneUse(m_ElementWiseBitCast(m_Value(V))))) {
     Type *FPType = V->getType()->getScalarType();
-    if (FPType->isIEEELikeFPTy() && C1 == *C2) {
+    if (FPType->isIEEELikeFPTy() && (C1.isZero() || C1 == *C2)) {
       APInt ExponentMask =
           APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt();
-      if (C1 == ExponentMask) {
-        unsigned Mask = FPClassTest::fcNan | FPClassTest::fcInf;
+      if (*C2 == ExponentMask) {
+        unsigned Mask = C1.isZero()
+                            ? FPClassTest::fcZero | FPClassTest::fcSubnormal
+                            : FPClassTest::fcNan | FPClassTest::fcInf;
         if (isICMP_NE)
           Mask = ~Mask & fcAllFlags;
         return replaceInstUsesWith(Cmp, Builder.createIsFPClass(V, Mask));
@@ -5059,6 +5066,27 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   if (PredOut != Pred && isKnownNonZero(A, Q))
     return new ICmpInst(PredOut, Op0, Op1);
 
+  // These transform work when A is negative.
+  // X s< X^A, X s<= X^A, X u> X^A, X u>= X^A  --> X s< 0
+  // X s> X^A, X s>= X^A, X u< X^A, X u<= X^A  --> X s>= 0
+  if (match(A, m_Negative())) {
+    CmpInst::Predicate NewPred;
+    switch (ICmpInst::getStrictPredicate(Pred)) {
+    default:
+      return nullptr;
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_UGT:
+      NewPred = ICmpInst::ICMP_SLT;
+      break;
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_ULT:
+      NewPred = ICmpInst::ICMP_SGE;
+      break;
+    }
+    Constant *Const = Constant::getNullValue(Op0->getType());
+    return new ICmpInst(NewPred, Op0, Const);
+  }
+
   return nullptr;
 }
 
@@ -5609,6 +5637,11 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
       return false;
     return std::nullopt;
   };
+  // Remove samesign here since it is illegal to keep it when we speculatively
+  // execute comparisons. For example, `icmp samesign ult umax(X, -46), -32`
+  // cannot be decomposed into `(icmp samesign ult X, -46) or (icmp samesign ult
+  // -46, -32)`. `X` is allowed to be non-negative here.
+  Pred = static_cast<CmpInst::Predicate>(Pred);
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
   if (!CmpXZ.has_value() && !CmpYZ.has_value())

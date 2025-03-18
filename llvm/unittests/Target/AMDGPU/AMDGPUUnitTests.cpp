@@ -32,15 +32,16 @@ std::unique_ptr<const GCNTargetMachine>
 llvm::createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   InitializeAMDGPUTarget();
 
+  Triple TT(TStr);
   std::string Error;
-  const Target *T = TargetRegistry::lookupTarget(TStr, Error);
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T)
     return nullptr;
 
   TargetOptions Options;
   return std::unique_ptr<GCNTargetMachine>(
       static_cast<GCNTargetMachine *>(T->createTargetMachine(
-          TStr, CPU, FS, Options, std::nullopt, std::nullopt)));
+          TT, CPU, FS, Options, std::nullopt, std::nullopt)));
 }
 
 static cl::opt<bool> PrintCpuRegLimits(
@@ -163,4 +164,84 @@ TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
   };
 
   testGPRLimits("VGPR", true, test);
+}
+
+static const char *printSubReg(const TargetRegisterInfo &TRI, unsigned SubReg) {
+  return SubReg ? TRI.getSubRegIndexName(SubReg) : "<none>";
+}
+
+TEST(AMDGPU, TestReverseComposeSubRegIndices) {
+  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", "gfx900", "");
+  if (!TM)
+    return;
+  GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()), *TM);
+
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+#define EXPECT_SUBREG_EQ(A, B, Expect)                                         \
+  do {                                                                         \
+    unsigned Reversed = TRI->reverseComposeSubRegIndices(A, B);                \
+    EXPECT_EQ(Reversed, Expect)                                                \
+        << printSubReg(*TRI, A) << ", " << printSubReg(*TRI, B) << " => "      \
+        << printSubReg(*TRI, Reversed) << ", *" << printSubReg(*TRI, Expect);  \
+  } while (0);
+
+  EXPECT_SUBREG_EQ(AMDGPU::NoSubRegister, AMDGPU::sub0, AMDGPU::sub0);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::NoSubRegister, AMDGPU::sub0);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub0, AMDGPU::sub0);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub1);
+  EXPECT_SUBREG_EQ(AMDGPU::sub1, AMDGPU::sub0, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub0, AMDGPU::sub0);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub0_sub1, AMDGPU::sub0_sub1);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1_sub2_sub3, AMDGPU::sub0_sub1,
+                   AMDGPU::sub0_sub1);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub0_sub1_sub2_sub3,
+                   AMDGPU::sub0_sub1_sub2_sub3);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1_sub2_sub3, AMDGPU::sub1_sub2,
+                   AMDGPU::sub1_sub2);
+  EXPECT_SUBREG_EQ(AMDGPU::sub1_sub2, AMDGPU::sub0_sub1_sub2_sub3,
+                   AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub1_sub2_sub3, AMDGPU::sub0_sub1_sub2_sub3,
+                   AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1_sub2_sub3, AMDGPU::sub1_sub2_sub3,
+                   AMDGPU::sub1_sub2_sub3);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub30, AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub30, AMDGPU::sub0, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0, AMDGPU::sub31, AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub31, AMDGPU::sub0, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub30, AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub30, AMDGPU::sub0_sub1, AMDGPU::NoSubRegister);
+
+  EXPECT_SUBREG_EQ(AMDGPU::sub0_sub1, AMDGPU::sub30_sub31,
+                   AMDGPU::NoSubRegister);
+  EXPECT_SUBREG_EQ(AMDGPU::sub30_sub31, AMDGPU::sub0_sub1,
+                   AMDGPU::NoSubRegister);
+
+  for (unsigned SubIdx0 = 1, LastSubReg = TRI->getNumSubRegIndices();
+       SubIdx0 != LastSubReg; ++SubIdx0) {
+    for (unsigned SubIdx1 = 1; SubIdx1 != LastSubReg; ++SubIdx1) {
+      if (unsigned ForwardCompose =
+              TRI->composeSubRegIndices(SubIdx0, SubIdx1)) {
+        unsigned ReverseComposed =
+            TRI->reverseComposeSubRegIndices(SubIdx0, ForwardCompose);
+        EXPECT_EQ(ReverseComposed, SubIdx1);
+      }
+
+      if (unsigned ReverseCompose =
+              TRI->reverseComposeSubRegIndices(SubIdx0, SubIdx1)) {
+        unsigned Recompose = TRI->composeSubRegIndices(SubIdx0, ReverseCompose);
+        EXPECT_EQ(Recompose, SubIdx1);
+      }
+    }
+  }
 }

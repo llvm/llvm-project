@@ -5032,7 +5032,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
-  case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
   case UTT_IsRvalueReference:
   case UTT_IsMemberFunctionPointer:
@@ -5679,8 +5678,6 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T.isTriviallyRelocatableType(C);
   case UTT_IsBitwiseCloneable:
     return T.isBitwiseCloneableType(C);
-  case UTT_IsReferenceable:
-    return T.isReferenceable();
   case UTT_CanPassInRegs:
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl(); RD && !T.hasQualifiers())
       return RD->canPassInRegisters();

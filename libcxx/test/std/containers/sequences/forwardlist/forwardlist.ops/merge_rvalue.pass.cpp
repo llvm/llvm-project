@@ -57,9 +57,9 @@ int main(int, char**) {
     const T to[3] = {0, 1, 2};
 
     C c2(std::begin(to), std::end(to));
-    I io[3] = {c2.begin(), ++c2.begin(), ++ ++c2.begin()};
+    I io[3]                         = {c2.begin(), ++c2.begin(), ++ ++c2.begin()};
     std::reference_wrapper<T> ro[3] = {*io[0], *io[1], *io[2]};
-    P po[3] = {&*io[0], &*io[1], &*io[2]};
+    P po[3]                         = {&*io[0], &*io[1], &*io[2]};
 
     C c1;
     c1.merge(std::move(c2));

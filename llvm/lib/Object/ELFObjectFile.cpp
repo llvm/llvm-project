@@ -545,10 +545,6 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx90a";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:
-    return "gfx940";
-  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:
-    return "gfx941";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
     return "gfx942";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:
@@ -785,7 +781,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
 std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
   std::string Err;
   const auto Triple = makeTriple();
-  const auto *T = TargetRegistry::lookupTarget(Triple.str(), Err);
+  const auto *T = TargetRegistry::lookupTarget(Triple, Err);
   if (!T)
     return {};
   uint32_t JumpSlotReloc = 0, GlobDatReloc = 0;

@@ -15,6 +15,7 @@
 
 #  include <__exception/operations.h>
 #  include <__fwd/memory.h>
+#  include <__memory/addressof.h>
 #  include <__memory/unique_ptr.h>
 #  include <__new/exceptions.h>
 #  include <__ostream/put_character_sequence.h>
@@ -339,7 +340,7 @@ basic_ostream<_CharT, _Traits>& basic_ostream<_CharT, _Traits>::operator<<(const
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, _CharT __c) {
-  return std::__put_character_sequence(__os, &__c, 1);
+  return std::__put_character_sequence(__os, std::addressof(__c), 1);
 }
 
 template <class _CharT, class _Traits>
@@ -353,9 +354,9 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_
       typedef ostreambuf_iterator<_CharT, _Traits> _Ip;
       if (std::__pad_and_output(
               _Ip(__os),
-              &__c,
-              (__os.flags() & ios_base::adjustfield) == ios_base::left ? &__c + 1 : &__c,
-              &__c + 1,
+              std::addressof(__c),
+              std::addressof(__c) + (((__os.flags() & ios_base::adjustfield) == ios_base::left) ? 1 : 0),
+              std::addressof(__c) + 1,
               __os,
               __os.fill())
               .failed())
@@ -407,7 +408,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn) {
       if (__len > __bs) {
         __wb = (_CharT*)malloc(__len * sizeof(_CharT));
         if (__wb == 0)
-          __throw_bad_alloc();
+          std::__throw_bad_alloc();
         __h.reset(__wb);
       }
       for (_CharT* __p = __wb; *__strn != '\0'; ++__strn, ++__p)

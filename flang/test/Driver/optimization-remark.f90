@@ -5,33 +5,33 @@
 ! DEFINE: %{output} = -emit-llvm -flang-deprecated-no-hlfir -o /dev/null 2>&1
 
 ! Check fc1 can handle -Rpass
-! RUN: %flang_fc1 %s -O1 -Rpass %{output} 2>&1 | FileCheck %s --check-prefix=REMARKS
+! RUN: %flang_fc1 %s -O1 -vectorize-loops -Rpass %{output} 2>&1 | FileCheck %s --check-prefix=REMARKS
 
 ! Check that we can override -Rpass= with -Rno-pass.
-! RUN: %flang_fc1 %s -O1 -Rpass -Rno-pass %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang_fc1 %s -O1 -vectorize-loops -Rpass -Rno-pass %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check -Rno-pass, -Rno-pass-analysis, -Rno-pass-missed nothing emitted
-! RUN: %flang %s -O1 -Rno-pass -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-missed -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
-! RUN: %flang %s -O1 -Rno-pass-analysis -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 -Rno-pass -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 -Rno-pass-missed -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
+! RUN: %flang %s -O2 -Rno-pass-analysis -S %{output} 2>&1 | FileCheck %s --allow-empty --check-prefix=NO-REMARKS
 
 ! Check valid -Rpass regex
-! RUN: %flang %s -O1 -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 -Rpass=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-missed regex
-! RUN: %flang %s -O1 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 -Rpass-missed=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED-REGEX-LOOP-ONLY
 
 ! Check valid -Rpass-analysis regex
-! RUN: %flang %s -O1 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
+! RUN: %flang %s -O2 -Rpass-analysis=loop -S %{output} 2>&1 | FileCheck %s --check-prefix=ANALYSIS-REGEX-LOOP-ONLY
 
 ! Check full -Rpass message is emitted
-! RUN: %flang %s -O1 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
+! RUN: %flang %s -O2 -Rpass -S %{output} 2>&1 | FileCheck %s --check-prefix=PASS
 
 ! Check full -Rpass-missed message is emitted
-! RUN: %flang %s -O1 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
+! RUN: %flang %s -O2 -Rpass-missed -S %{output} 2>&1 | FileCheck %s --check-prefix=MISSED
 
 ! Check full -Rpass-analysis message is emitted
-! RUN: %flang %s -O1 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
+! RUN: %flang %s -O2 -Rpass-analysis -S -o /dev/null 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ! REMARKS: remark:
 ! NO-REMARKS-NOT: remark:

@@ -1029,6 +1029,15 @@ cc_library(
 )
 
 cc_library(
+    name = "Telemetry",
+    srcs = glob(["lib/Telemetry/*.cpp"]),
+    hdrs = glob(["include/llvm/Telemetry/*.h"]),
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [":Support"],
+)
+
+cc_library(
     name = "TextAPI",
     srcs = glob(
         [
@@ -1225,6 +1234,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":BinaryFormat",
         ":BitReader",
         ":BitstreamWriter",
         ":Core",
@@ -1643,6 +1653,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Object",
+        ":ObjectYAML",
         ":Support",
         ":TargetParser",
         ":TransformUtils",
@@ -5917,6 +5928,7 @@ py_binary(
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
+        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )
@@ -5927,6 +5939,7 @@ py_binary(
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
+        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )

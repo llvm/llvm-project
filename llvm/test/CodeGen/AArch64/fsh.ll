@@ -394,7 +394,6 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: fshl_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    lsr w8, w1, #1
-; CHECK-SD-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-SD-NEXT:    mvn w9, w2
 ; CHECK-SD-NEXT:    lsl w10, w0, w2
 ; CHECK-SD-NEXT:    lsr w8, w8, w9
@@ -420,7 +419,6 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: fshr_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    lsl w8, w0, #1
-; CHECK-SD-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-SD-NEXT:    mvn w9, w2
 ; CHECK-SD-NEXT:    lsr w10, w1, w2
 ; CHECK-SD-NEXT:    lsl w8, w8, w9
@@ -3909,9 +3907,8 @@ entry:
 define <8 x i8> @fshl_v8i8_c(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-LABEL: fshl_v8i8_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushr v1.8b, v1.8b, #1
 ; CHECK-SD-NEXT:    shl v0.8b, v0.8b, #3
-; CHECK-SD-NEXT:    usra v0.8b, v1.8b, #4
+; CHECK-SD-NEXT:    usra v0.8b, v1.8b, #5
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fshl_v8i8_c:
@@ -3927,8 +3924,7 @@ entry:
 define <8 x i8> @fshr_v8i8_c(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-LABEL: fshr_v8i8_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    add v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    shl v0.8b, v0.8b, #4
+; CHECK-SD-NEXT:    shl v0.8b, v0.8b, #5
 ; CHECK-SD-NEXT:    usra v0.8b, v1.8b, #3
 ; CHECK-SD-NEXT:    ret
 ;
@@ -3945,9 +3941,8 @@ entry:
 define <16 x i8> @fshl_v16i8_c(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-SD-LABEL: fshl_v16i8_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushr v1.16b, v1.16b, #1
 ; CHECK-SD-NEXT:    shl v0.16b, v0.16b, #3
-; CHECK-SD-NEXT:    usra v0.16b, v1.16b, #4
+; CHECK-SD-NEXT:    usra v0.16b, v1.16b, #5
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fshl_v16i8_c:
@@ -3963,8 +3958,7 @@ entry:
 define <16 x i8> @fshr_v16i8_c(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-SD-LABEL: fshr_v16i8_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    add v0.16b, v0.16b, v0.16b
-; CHECK-SD-NEXT:    shl v0.16b, v0.16b, #4
+; CHECK-SD-NEXT:    shl v0.16b, v0.16b, #5
 ; CHECK-SD-NEXT:    usra v0.16b, v1.16b, #3
 ; CHECK-SD-NEXT:    ret
 ;
@@ -3981,9 +3975,8 @@ entry:
 define <4 x i16> @fshl_v4i16_c(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: fshl_v4i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushr v1.4h, v1.4h, #1
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #3
-; CHECK-SD-NEXT:    usra v0.4h, v1.4h, #12
+; CHECK-SD-NEXT:    usra v0.4h, v1.4h, #13
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fshl_v4i16_c:
@@ -3999,8 +3992,7 @@ entry:
 define <4 x i16> @fshr_v4i16_c(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: fshr_v4i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    add v0.4h, v0.4h, v0.4h
-; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #12
+; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #13
 ; CHECK-SD-NEXT:    usra v0.4h, v1.4h, #3
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4018,7 +4010,6 @@ define <7 x i16> @fshl_v7i16_c(<7 x i16> %a, <7 x i16> %b) {
 ; CHECK-SD-LABEL: fshl_v7i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    adrp x8, .LCPI124_0
-; CHECK-SD-NEXT:    ushr v1.8h, v1.8h, #1
 ; CHECK-SD-NEXT:    adrp x9, .LCPI124_1
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI124_0]
 ; CHECK-SD-NEXT:    ldr q3, [x9, :lo12:.LCPI124_1]
@@ -4060,7 +4051,6 @@ define <7 x i16> @fshr_v7i16_c(<7 x i16> %a, <7 x i16> %b) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    adrp x8, .LCPI125_0
 ; CHECK-SD-NEXT:    adrp x9, .LCPI125_1
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
 ; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI125_0]
 ; CHECK-SD-NEXT:    ldr q3, [x9, :lo12:.LCPI125_1]
 ; CHECK-SD-NEXT:    ushl v1.8h, v1.8h, v2.8h
@@ -4099,9 +4089,8 @@ entry:
 define <8 x i16> @fshl_v8i16_c(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: fshl_v8i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushr v1.8h, v1.8h, #1
 ; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #3
-; CHECK-SD-NEXT:    usra v0.8h, v1.8h, #12
+; CHECK-SD-NEXT:    usra v0.8h, v1.8h, #13
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fshl_v8i16_c:
@@ -4117,8 +4106,7 @@ entry:
 define <8 x i16> @fshr_v8i16_c(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: fshr_v8i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #12
+; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #13
 ; CHECK-SD-NEXT:    usra v0.8h, v1.8h, #3
 ; CHECK-SD-NEXT:    ret
 ;
@@ -4135,12 +4123,10 @@ entry:
 define <16 x i16> @fshl_v16i16_c(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-SD-LABEL: fshl_v16i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ushr v2.8h, v2.8h, #1
-; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #3
-; CHECK-SD-NEXT:    ushr v3.8h, v3.8h, #1
 ; CHECK-SD-NEXT:    shl v1.8h, v1.8h, #3
-; CHECK-SD-NEXT:    usra v0.8h, v2.8h, #12
-; CHECK-SD-NEXT:    usra v1.8h, v3.8h, #12
+; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #3
+; CHECK-SD-NEXT:    usra v1.8h, v3.8h, #13
+; CHECK-SD-NEXT:    usra v0.8h, v2.8h, #13
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fshl_v16i16_c:
@@ -4158,10 +4144,8 @@ entry:
 define <16 x i16> @fshr_v16i16_c(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-SD-LABEL: fshr_v16i16_c:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    add v1.8h, v1.8h, v1.8h
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-SD-NEXT:    shl v1.8h, v1.8h, #12
-; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #12
+; CHECK-SD-NEXT:    shl v1.8h, v1.8h, #13
+; CHECK-SD-NEXT:    shl v0.8h, v0.8h, #13
 ; CHECK-SD-NEXT:    usra v1.8h, v3.8h, #3
 ; CHECK-SD-NEXT:    usra v0.8h, v2.8h, #3
 ; CHECK-SD-NEXT:    ret
