@@ -4,7 +4,7 @@
 
 struct S0 {};
 struct S1 {int a;};
-struct S2 {int a; int b;};
+struct S2 {int a; int b; static int c;};
 struct S3 {double a; int b; int c;};
 struct S4 {int a: 1; int b :2;};
 struct S5 {int : 1; int b :2;};
