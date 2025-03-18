@@ -8,13 +8,12 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-OBJ:     TypedUAVLoadAdditionalFormats: true
 
 ; CHECK:      Combined Shader Flags for Module
-; CHECK-NEXT: Shader Flags Value: 0x200002000
+; CHECK-NEXT: Shader Flags Value: 0x00002000
 
 ; CHECK: Note: shader requires additional functionality:
 ; CHECK:       Typed UAV Load Additional Formats
-; CHECK:       Any UAV may not alias any other UAV
 
-; CHECK: Function multicomponent : 0x200002000
+; CHECK: Function multicomponent : 0x00002000
 define <4 x float> @multicomponent() #0 {
   %res = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -24,7 +23,7 @@ define <4 x float> @multicomponent() #0 {
   ret <4 x float> %val
 }
 
-; CHECK: Function onecomponent : 0x200000000
+; CHECK: Function onecomponent : 0x00000000
 define float @onecomponent() #0 {
   %res = call target("dx.TypedBuffer", float, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -34,7 +33,7 @@ define float @onecomponent() #0 {
   ret float %val
 }
 
-; CHECK: Function noload : 0x200000000
+; CHECK: Function noload : 0x00000000
 define void @noload(<4 x float> %val) #0 {
   %res = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -44,4 +43,8 @@ define void @noload(<4 x float> %val) #0 {
   ret void
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"dx.resmayalias", i32 1}
+
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}
+
