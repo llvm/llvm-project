@@ -52,17 +52,16 @@ from fractions import Fraction
 # Basic idea:
 #
 # * We generate an InstRW for a row in the instruction tables based on a simple rule:
-#   matching the throughput assuming all utilized units are fully utilized.
+#   match the throughput assuming all utilized units are fully utilized.
 #
 #   Take the following row in the Neoverse N3 instruction tables as an example:
 #
 #   Instruction Group           Instructions  Latency  Throughput  Pipelines
 #   Branch and link, register   BLR           1        2           B, S
 #
-#   The throughput is 2, that means 2 instructions are execute in a cycle.
-#   The pipeline B has 2 units, that means it can execute 2 B uops in a cycle,
-#   so each instruction has 1 B uop. Similarly, each instruction has 1 S uop.
-#   And the number of uops in an instruction is 2.
+#   The throughput is 2, that means 2 instructions are executed in a cycle.
+#   The pipeline B and C each has 2 units, that means 2 B uops and 2 S uops
+#   are executed in a cycle. So each instruction has 1 B uop and 1 S uop.
 #
 
 
