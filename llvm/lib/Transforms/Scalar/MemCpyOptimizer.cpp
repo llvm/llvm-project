@@ -1571,9 +1571,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
               continue;
             }
           }
-          if (UI != Store && UI->hasMetadata(LLVMContext::MD_tbaa)) {
+          if (UI != Store && UI->hasMetadata(LLVMContext::MD_tbaa))
             AllocaInstUsersWithTBAA.insert(UI);
-          }
           if (UI->hasMetadata(LLVMContext::MD_noalias))
             NoAliasInstrs.insert(UI);
           if (!ModRefCallback(UI))
