@@ -234,8 +234,8 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[18:19]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v20, v21, v[15:17], v[5:7], v[8:10]], s[4:7]
 ; GFX11-NEXT:    ; implicit-def: $vgpr18
@@ -360,8 +360,8 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[18:19]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[11:12]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v16, v17, v[13:15], v[4:6]], s[4:7] a16
 ; GFX11-NEXT:    ; implicit-def: $vgpr18
@@ -476,8 +476,8 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[14:15]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[19:20], v21, v[16:18], v[6:8], v[9:11]], s[4:7]
 ; GFX11-NEXT:    ; implicit-def: $vgpr4
@@ -604,8 +604,8 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[12:13]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[17:18], v19, v[14:16], v[20:22]], s[4:7] a16
 ; GFX11-NEXT:    ; implicit-def: $vgpr4
@@ -735,7 +735,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -839,7 +839,7 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -921,7 +921,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -995,6 +995,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }

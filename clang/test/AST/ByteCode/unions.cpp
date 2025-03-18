@@ -522,4 +522,52 @@ namespace MemberCalls {
   static_assert(foo()); // both-error {{not an integral constant expression}} \
                         // both-note {{in call to}}
 }
+
+namespace InactiveDestroy {
+  struct A {
+    constexpr ~A() {}
+  };
+  union U {
+    A a;
+    constexpr ~U() {
+    }
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace InactiveTrivialDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace ActiveDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+  constexpr bool foo2() {
+    U u{};
+    u.a.~A();
+    return true;
+  }
+  static_assert(foo2());
+}
+
 #endif

@@ -2763,3 +2763,33 @@ llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
 // CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %0, i32 16) ]
 // CHECK-NEXT:   ret void
 // CHECK-NEXT: }
+
+// -----
+
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>,
+                     #llvm.mlir.module_flag<min, "PIC Level", 2>,
+                     #llvm.mlir.module_flag<max, "PIE Level", 2>,
+                     #llvm.mlir.module_flag<max, "uwtable", 2>,
+                     #llvm.mlir.module_flag<max, "frame-pointer", 1>]
+}
+
+// CHECK: !llvm.module.flags = !{![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FrameP:]], ![[#DBG:]]}
+
+// CHECK: ![[#WCHAR]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: ![[#PIC]] = !{i32 8, !"PIC Level", i32 2}
+// CHECK: ![[#PIE]] = !{i32 7, !"PIE Level", i32 2}
+// CHECK: ![[#UWTABLE]] = !{i32 7, !"uwtable", i32 2}
+// CHECK: ![[#FrameP]] = !{i32 7, !"frame-pointer", i32 1}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+// Verifies that the debug info version is not added twice, if it's already present initially.
+
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3>]
+}
+
+// CHECK: !llvm.module.flags = !{![[#DBG:]]}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}

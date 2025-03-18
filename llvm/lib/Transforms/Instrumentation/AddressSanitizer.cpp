@@ -612,6 +612,45 @@ void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
   *OrShadowOffset = Mapping.OrShadowOffset;
 }
 
+void removeASanIncompatibleFnAttributes(Function &F, bool ReadsArgMem) {
+  // Sanitizer checks read from shadow, which invalidates memory(argmem: *).
+  //
+  // This is not only true for sanitized functions, because AttrInfer can
+  // infer those attributes on libc functions, which is not true if those
+  // are instrumented (Android) or intercepted.
+  //
+  // We might want to model ASan shadow memory more opaquely to get rid of
+  // this problem altogether, by hiding the shadow memory write in an
+  // intrinsic, essentially like in the AArch64StackTagging pass. But that's
+  // for another day.
+
+  // The API is weird. `onlyReadsMemory` actually means "does not write", and
+  // `onlyWritesMemory` actually means "does not read". So we reconstruct
+  // "accesses memory" && "does not read" <=> "writes".
+  bool Changed = false;
+  if (!F.doesNotAccessMemory()) {
+    bool WritesMemory = !F.onlyReadsMemory();
+    bool ReadsMemory = !F.onlyWritesMemory();
+    if ((WritesMemory && !ReadsMemory) || F.onlyAccessesArgMemory()) {
+      F.removeFnAttr(Attribute::Memory);
+      Changed = true;
+    }
+  }
+  if (ReadsArgMem) {
+    for (Argument &A : F.args()) {
+      if (A.hasAttribute(Attribute::WriteOnly)) {
+        A.removeAttr(Attribute::WriteOnly);
+        Changed = true;
+      }
+    }
+  }
+  if (Changed) {
+    // nobuiltin makes sure later passes don't restore assumptions about
+    // the function.
+    F.addFnAttr(Attribute::NoBuiltin);
+  }
+}
+
 ASanAccessInfo::ASanAccessInfo(int32_t Packed)
     : Packed(Packed),
       AccessSizeIndex((Packed >> kAccessSizeIndexShift) & kAccessSizeIndexMask),
@@ -2732,6 +2771,9 @@ GlobalVariable *ModuleAddressSanitizer::getOrCreateModuleName() {
 
 bool ModuleAddressSanitizer::instrumentModule() {
   initializeCallbacks();
+
+  for (Function &F : M)
+    removeASanIncompatibleFnAttributes(F, /*ReadsArgMem=*/false);
 
   // Create a module constructor. A destructor is created lazily because not all
   // platforms, and not all modules need it.

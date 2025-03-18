@@ -2562,7 +2562,7 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   %arg1.load = load volatile { i8, i32 }, ptr addrspace(5) %arg1
   store volatile { i8, i32 } %arg0.load, ptr addrspace(1) poison
   store volatile { i8, i32 } %arg1.load, ptr addrspace(1) poison
-  store volatile i32 %arg2, ptr addrspace(3) undef
+  store volatile i32 %arg2, ptr addrspace(3) poison
   ret void
 }
 
@@ -3780,10 +3780,10 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   %arg0.0 = extractelement <3 x float> %arg0, i32 0
   %arg0.1 = extractelement <3 x float> %arg0, i32 1
   %arg0.2 = extractelement <3 x float> %arg0, i32 2
-  store volatile float %arg0.0, ptr addrspace(3) undef
-  store volatile float %arg0.1, ptr addrspace(3) undef
-  store volatile float %arg0.2, ptr addrspace(3) undef
-  store volatile i32 %arg1, ptr addrspace(3) undef
+  store volatile float %arg0.0, ptr addrspace(3) poison
+  store volatile float %arg0.1, ptr addrspace(3) poison
+  store volatile float %arg0.2, ptr addrspace(3) poison
+  store volatile i32 %arg1, ptr addrspace(3) poison
   ret void
 }
 
@@ -3832,10 +3832,10 @@ define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
   %arg0.0 = extractelement <3 x i32> %arg0, i32 0
   %arg0.1 = extractelement <3 x i32> %arg0, i32 1
   %arg0.2 = extractelement <3 x i32> %arg0, i32 2
-  store volatile i32 %arg0.0, ptr addrspace(3) undef
-  store volatile i32 %arg0.1, ptr addrspace(3) undef
-  store volatile i32 %arg0.2, ptr addrspace(3) undef
-  store volatile i32 %arg1, ptr addrspace(3) undef
+  store volatile i32 %arg0.0, ptr addrspace(3) poison
+  store volatile i32 %arg0.1, ptr addrspace(3) poison
+  store volatile i32 %arg0.2, ptr addrspace(3) poison
+  store volatile i32 %arg1, ptr addrspace(3) poison
   ret void
 }
 

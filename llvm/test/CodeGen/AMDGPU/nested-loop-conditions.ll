@@ -83,7 +83,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; IR-NEXT:    br i1 [[MY_TMP14]], label %[[BB16:.*]], label %[[BB20:.*]]
 ; IR:       [[BB16]]:
 ; IR-NEXT:    [[MY_TMP17:%.*]] = extractelement <2 x i32> [[MY_TMP15]], i64 1
-; IR-NEXT:    [[MY_TMP18:%.*]] = getelementptr inbounds i32, ptr addrspace(3) undef, i32 [[MY_TMP17]]
+; IR-NEXT:    [[MY_TMP18:%.*]] = getelementptr inbounds i32, ptr addrspace(3) poison, i32 [[MY_TMP17]]
 ; IR-NEXT:    [[MY_TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[MY_TMP18]], align 4
 ; IR-NEXT:    br label %[[BB20]]
 ; IR:       [[BB20]]:
@@ -129,7 +129,7 @@ bb13:                                             ; preds = %bb8, %bb3
 
 bb16:                                             ; preds = %bb13
   %my.tmp17 = extractelement <2 x i32> %my.tmp15, i64 1
-  %my.tmp18 = getelementptr inbounds i32, ptr addrspace(3) undef, i32 %my.tmp17
+  %my.tmp18 = getelementptr inbounds i32, ptr addrspace(3) poison, i32 %my.tmp17
   %my.tmp19 = load volatile i32, ptr addrspace(3) %my.tmp18
   br label %bb20
 
@@ -252,10 +252,10 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; IR:       [[BB21]]:
 ; IR-NEXT:    [[MY_TMP22:%.*]] = extractelement <2 x i32> [[MY_TMP17]], i64 1
 ; IR-NEXT:    [[MY_TMP23:%.*]] = lshr i32 [[MY_TMP22]], 16
-; IR-NEXT:    [[MY_TMP24:%.*]] = select i1 undef, i32 undef, i32 [[MY_TMP23]]
+; IR-NEXT:    [[MY_TMP24:%.*]] = select i1 false, i32 0, i32 [[MY_TMP23]]
 ; IR-NEXT:    [[MY_TMP25:%.*]] = uitofp i32 [[MY_TMP24]] to float
 ; IR-NEXT:    [[MY_TMP26:%.*]] = fmul float [[MY_TMP25]], 0x3EF0001000000000
-; IR-NEXT:    [[MY_TMP27:%.*]] = fsub float [[MY_TMP26]], undef
+; IR-NEXT:    [[MY_TMP27:%.*]] = fsub float [[MY_TMP26]], 0x7FF8000000000000
 ; IR-NEXT:    [[MY_TMP28:%.*]] = fcmp olt float [[MY_TMP27]], 5.000000e-01
 ; IR-NEXT:    [[MY_TMP29:%.*]] = select i1 [[MY_TMP28]], i64 1, i64 2
 ; IR-NEXT:    [[MY_TMP30:%.*]] = extractelement <4 x i32> [[MY_TMP936]], i64 [[MY_TMP29]]
@@ -317,10 +317,10 @@ bb18:                                             ; preds = %bb18, %bb16
 bb21:                                             ; preds = %bb18
   %my.tmp22 = extractelement <2 x i32> %my.tmp17, i64 1
   %my.tmp23 = lshr i32 %my.tmp22, 16
-  %my.tmp24 = select i1 undef, i32 undef, i32 %my.tmp23
+  %my.tmp24 = select i1 false, i32 0, i32 %my.tmp23
   %my.tmp25 = uitofp i32 %my.tmp24 to float
   %my.tmp26 = fmul float %my.tmp25, 0x3EF0001000000000
-  %my.tmp27 = fsub float %my.tmp26, undef
+  %my.tmp27 = fsub float %my.tmp26, 0x7FF8000000000000
   %my.tmp28 = fcmp olt float %my.tmp27, 5.000000e-01
   %my.tmp29 = select i1 %my.tmp28, i64 1, i64 2
   %my.tmp30 = extractelement <4 x i32> %my.tmp936, i64 %my.tmp29

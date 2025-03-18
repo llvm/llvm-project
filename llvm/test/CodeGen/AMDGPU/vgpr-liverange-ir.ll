@@ -538,7 +538,8 @@ if.then:                                          ; preds = %entry
   ret void
 
 if.then9:                                         ; preds = %entry
-  br i1 undef, label %sw.bb18, label %sw.bb
+  %undef = freeze i1 poison
+  br i1 %undef, label %sw.bb18, label %sw.bb
 
 sw.bb:                                            ; preds = %if.then9
   %i17 = load i8, ptr addrspace(1) null, align 1
@@ -654,7 +655,7 @@ if.then:                                          ; preds = %entry
   %4 = addrspacecast ptr %2 to ptr addrspace(4)
   %5 = load <8 x i32>, ptr addrspace(4) %4, align 32
   %6 = load <4 x i32>, ptr addrspace(4) %add.ptr.i, align 16
-  %7 = tail call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float undef, float undef, <8 x i32> %5, <4 x i32> %6, i1 false, i32 0, i32 0)
+  %7 = tail call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float poison, float poison, <8 x i32> %5, <4 x i32> %6, i1 false, i32 0, i32 0)
   store float %7, ptr addrspace(1) poison, align 4
   ret void
 }
