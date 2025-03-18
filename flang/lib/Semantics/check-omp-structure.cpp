@@ -5650,7 +5650,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
         common::visitors{
             [&](const parser::OmpClause::Init &initClause) {
               if (OmpVerifyModifiers(initClause.v, llvm::omp::OMPC_init,
-                                     GetContext().directiveSource, context_)) {
+                      GetContext().directiveSource, context_)) {
 
                 auto &modifiers{OmpGetModifiers(initClause.v)};
                 auto &&interopTypeModifier{
@@ -5669,9 +5669,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               const auto *name{parser::Unwrap<parser::Name>(interopVar)};
               const auto *objectSymbol{name->symbol};
               if (llvm::is_contained(objectSymbolList, objectSymbol)) {
-                context_.Say(
-                    GetContext().directiveSource,
-                    "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
+                context_.Say(GetContext().directiveSource,
+                "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
               } else {
                 objectSymbolList.insert(objectSymbol);
               }
@@ -5685,9 +5684,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               const auto *name{parser::Unwrap<parser::Name>(interopVar)};
               const auto *objectSymbol{name->symbol};
               if (llvm::is_contained(objectSymbolList, objectSymbol)) {
-                context_.Say(
-                    GetContext().directiveSource,
-                    "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
+                context_.Say(GetContext().directiveSource,
+                "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
               } else {
                 objectSymbolList.insert(objectSymbol);
               }
@@ -5698,9 +5696,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
               const auto *name{parser::Unwrap<parser::Name>(interopVar)};
               const auto *objectSymbol{name->symbol};
               if (llvm::is_contained(objectSymbolList, objectSymbol)) {
-                context_.Say(
-                    GetContext().directiveSource,
-                    "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
+                context_.Say(GetContext().directiveSource,
+                "Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct."_err_en_US);
               } else {
                 objectSymbolList.insert(objectSymbol);
               }
@@ -5711,12 +5708,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   }
   if (targetCount > 1 || targetSyncCount > 1) {
     context_.Say(GetContext().directiveSource,
-                 "Each interop-type may be speciﬁed at most once."_err_en_US);
+          "Each interop-type may be speciﬁed at most once."_err_en_US);
   }
   if (isDependClauseOccured && !targetSyncCount) {
-    context_.Say(
-        GetContext().directiveSource,
-        "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
+    context_.Say(GetContext().directiveSource,
+  "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
   }
 }
 
