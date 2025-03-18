@@ -3,9 +3,9 @@
 typedef unsigned size_t;
 class MyClass {
   size_t m;
-  int q[__counted_by(m)]; // expected-error{{arrow notation not allowed for struct member in count parameter}}
+  int q[__counted_by(m)];
 
-  // The error is because we do not have FAM support right now.  Previously, this example will crash.
+  // Previously, this example will crash.
 };
 
 namespace value_dependent_assertion_violation {

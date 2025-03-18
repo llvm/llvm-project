@@ -10888,12 +10888,17 @@ public:
     if (auto CF = ConstantFoldOrNull(E))
       return CF;
 
+    const Expr *Base = E->getBase();
+
     // For structs/classes in C++, referring to a field creates a MemberExpr
     // instead of DeclRefExpr. To support other parts of bounds-safety logic,
     // replace the MemberExpr by DeclRefExpr.
-    // TODO: Check if this works for FAMs.
     // TODO: Add support for MemberExpr (rdar://134311605).
-    if (!IsArray && SemaRef.getLangOpts().CPlusPlus) {
+    if (SemaRef.getLangOpts().CPlusPlus &&
+        // The MemberExprs that are allowed in C++ but not in C are those having
+        // `this->` implicitly or explicitly as their bases.
+        (Base->isImplicitCXXThis() ||
+         isa<CXXThisExpr>(Base->IgnoreParenImpCasts()))) {
       ValueDecl *VD = E->getMemberDecl();
       bool IsNewVD = Visited.insert(VD).second;
       if (IsNewVD)

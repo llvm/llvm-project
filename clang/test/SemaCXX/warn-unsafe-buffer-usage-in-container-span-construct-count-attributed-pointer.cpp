@@ -8,7 +8,7 @@ namespace std {
 
 template<typename T>
 struct span {
-  constexpr span(T *, size_t) {}
+  constexpr span(const T *, size_t) {}
 };
 
 }  // namespace std
@@ -162,3 +162,17 @@ void test_span_ctor_warn(const char * p,
   std::span S2{wp, wcslen(wp)}; // expected-warning{{passing 'const wchar_t *' to parameter of incompatible type 'const wchar_t * __terminated_by(0)' (aka 'const wchar_t *') is an unsafe operation}}
 }
 #pragma clang diagnostic pop
+
+namespace test_fam {
+  class FAM {
+  public:
+    size_t count;
+    int fam[__counted_by(count)];
+  };
+
+  void test(const FAM *f) {
+    std::span<int> s{f->fam, f->count};
+    std::span<int> s2{f->fam, f->count + 1};  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  }
+
+} // namespace test_fam
