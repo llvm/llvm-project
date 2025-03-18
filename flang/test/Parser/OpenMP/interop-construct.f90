@@ -1,3 +1,4 @@
+! REQUIRES: openmp_runtime
 ! RUN: %flang_fc1 -fdebug-unparse -fopenmp-version=52 -fopenmp %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s 
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp-version=52 -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 
