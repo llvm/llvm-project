@@ -1662,8 +1662,9 @@ public:
     // See if this has an explicit type specified.
     std::map<std::pair<unsigned, MVT::SimpleValueType>,
              MVT::SimpleValueType>::const_iterator PTTI =
-      PromoteToType.find(std::make_pair(Op, VT.SimpleTy));
-    if (PTTI != PromoteToType.end()) return PTTI->second;
+        PromoteToType.find(std::make_pair(Op, VT.SimpleTy));
+    if (PTTI != PromoteToType.end())
+      return PTTI->second;
 
     assert((VT.isInteger() || VT.isFloatingPoint()) &&
            "Cannot autopromote this type, add it with AddPromotedToType.");
@@ -1671,7 +1672,7 @@ public:
     uint64_t VTBits = VT.getScalarSizeInBits();
     MVT NVT = VT;
     do {
-      NVT = (MVT::SimpleValueType)(NVT.SimpleTy+1);
+      NVT = (MVT::SimpleValueType)(NVT.SimpleTy + 1);
       assert(NVT.isInteger() == VT.isInteger() &&
              NVT.isFloatingPoint() == VT.isFloatingPoint() &&
              "Didn't find type to promote to!");
