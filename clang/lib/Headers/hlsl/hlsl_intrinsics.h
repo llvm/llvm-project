@@ -89,7 +89,8 @@ void asuint(double4, out uint4, out uint4);
 /// \param Val The input value.
 #ifdef __HLSL_ENABLE_16_BIT
 
-template <typename T, int N> constexpr vector<int16_t, N> asint16(vector<T, N> V) {
+template <typename T, int N>
+constexpr vector<int16_t, N> asint16(vector<T, N> V) {
   return __detail::bit_cast<int16_t, T, N>(V);
 }
 
