@@ -101,6 +101,27 @@ static_assert(__builtin_structured_binding_size(P1) == 0);
 // expected-note@#note-private {{implicitly declared private here}}
 
 
+void func(int array[14], int x = __builtin_structured_binding_size(decltype(array)));
+//expected-error@-1 {{type 'decltype(array)' (aka 'int *') cannot be decomposed}}
+
+struct SM {
+    static int array[14];
+    static_assert(__builtin_structured_binding_size(decltype(array)) == 14);
+};
+
+template <typename Ty, int N = __builtin_structured_binding_size(Ty)> // #tpl-1
+struct T {
+    static constexpr int value = N;
+};
+
+T<int> t1;
+// expected-error@#tpl-1 {{type 'int' cannot be decomposed}} \
+// expected-error@#tpl-1 {{non-type template argument is not a constant expression}} \
+// expected-note@-1 {{in instantiation of default argument for 'T<int>' required here}} \
+// expected-note@-1 {{while checking a default template argument used here}} \
+
+static_assert(T<S3>::value == 3);
+
 static_assert(is_destructurable<S0>);
 static_assert(is_destructurable<const S0>);
 static_assert(is_destructurable<volatile S0>);
