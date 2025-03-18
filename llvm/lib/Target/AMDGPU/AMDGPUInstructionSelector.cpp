@@ -4445,9 +4445,8 @@ getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
       Statlist.push_back(Curr);
     }
   }
-  if (onlyLastSameOrNeg) {
+  if (onlyLastSameOrNeg)
     Statlist.push_back(Curr);
-  }
   return Statlist;
 }
 
@@ -4469,9 +4468,8 @@ static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
 static bool isSameOperand(const MachineOperand *Op1,
                           const MachineOperand *Op2) {
   if (Op1->isReg()) {
-    if (Op2->isReg()) {
+    if (Op2->isReg())
       return Op1->getReg() == Op2->getReg();
-    }
     return false;
   }
   return Op1->isIdenticalTo(*Op2);
@@ -4506,12 +4504,10 @@ static bool validToPack(SrcStatus HiStat, SrcStatus LoStat, unsigned int &Mods,
     if ((HiStat == IS_SAME || HiStat == IS_NEG) &&
         (LoStat == IS_SAME || LoStat == IS_NEG) &&
         isInlinableConstant(*NewOp, TII)) {
-      if (HiStat == IS_NEG) {
+      if (HiStat == IS_NEG)
         Mods ^= SISrcMods::NEG_HI;
-      }
-      if (LoStat == IS_NEG) {
+      if (LoStat == IS_NEG)
         Mods ^= SISrcMods::NEG;
-      }
       // opsel = opsel_hi = 0, since the upper half and lower half both
       // the same as the target inlinable constant
       return true;
@@ -4532,29 +4528,40 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
-  if (Stat.second == IS_NEG) {
+  if (Stat.second == IS_NEG)
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-  }
+
   Op = Stat.first;
   MachineInstr *MI = MRI.getVRegDef(Op->getReg());
-  if (MI->getOpcode() == AMDGPU::G_BUILD_VECTOR && MI->getNumOperands() == 3 &&
-      (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
-    SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist_Hi;
-    SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist_Lo;
-    Statlist_Hi = getSrcStats(&MI->getOperand(2), MRI);
-    if (Statlist_Hi.size() != 0) {
-      Statlist_Lo = getSrcStats(&MI->getOperand(1), MRI);
-      if (Statlist_Lo.size() != 0) {
-        for (int i = Statlist_Hi.size() - 1; i >= 0; i--) {
-          for (int j = Statlist_Lo.size() - 1; j >= 0; j--) {
-            if (isSameOperand(Statlist_Hi[i].first, Statlist_Lo[j].first)) {
-              if (validToPack(Statlist_Hi[i].second, Statlist_Lo[j].second,
-                              Mods, Statlist_Hi[i].first, RootOp, TII, MRI)) {
-                return {Statlist_Hi[i].first, Mods};
-              }
-            }
-          }
-        }
+
+  if (MI->getOpcode() != AMDGPU::G_BUILD_VECTOR || MI->getNumOperands() != 3 ||
+      (IsDOT && Subtarget->hasDOTOpSelHazard())) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Op, Mods};
+  }
+
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist_Hi;
+  Statlist_Hi = getSrcStats(&MI->getOperand(2), MRI);
+
+  if (Statlist_Hi.size() == 0) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Op, Mods};
+  }
+
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist_Lo;
+  Statlist_Lo = getSrcStats(&MI->getOperand(1), MRI);
+
+  if (Statlist_Lo.size() == 0) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Op, Mods};
+  }
+
+  for (int i = Statlist_Hi.size() - 1; i >= 0; i--) {
+    for (int j = Statlist_Lo.size() - 1; j >= 0; j--) {
+      if (isSameOperand(Statlist_Hi[i].first, Statlist_Lo[j].first)) {
+        if (validToPack(Statlist_Hi[i].second, Statlist_Lo[j].second, Mods,
+                        Statlist_Hi[i].first, RootOp, TII, MRI))
+          return {Statlist_Hi[i].first, Mods};
       }
     }
   }
