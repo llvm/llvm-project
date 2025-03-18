@@ -487,7 +487,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<Log> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
   if (log_file_path)
-    log = std::make_unique<Log>(std::ofstream(log_file_path));
+    log = std::make_unique<Log>(log_file_path);
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();

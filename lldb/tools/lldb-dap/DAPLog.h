@@ -54,15 +54,20 @@
 
 namespace lldb_dap {
 
-class Log {
+/// Log manages the lldb-dap log file, used with the corresponding `DAP_LOG` and
+/// `DAP_LOG_ERROR` helpers.
+class Log final {
 public:
-  Log(std::ofstream stream) : m_stream(std::move(stream)) {}
+  /// Creates a log file with the given filename.
+  Log(llvm::StringRef filename);
 
-  void WriteMessage(llvm::StringRef message) {
-    std::scoped_lock<std::mutex> lock(m_mutex);
-    m_stream << message.str();
-    m_stream.flush();
-  }
+  /// Log is not copyable.
+  /// @{
+  Log(const Log &) = delete;
+  void operator=(const Log &) = delete;
+  /// @}
+
+  void WriteMessage(llvm::StringRef message);
 
 private:
   std::mutex m_mutex;

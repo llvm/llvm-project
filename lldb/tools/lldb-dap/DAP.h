@@ -218,8 +218,7 @@ struct DAP {
   ///     LLDB commands to execute as soon as the debugger instance is allocaed.
   /// \param[in] transport
   ///     Transport for this debug session.
-  DAP(llvm::StringRef path, Log *log,
-      const ReplMode default_repl_mode,
+  DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, Transport &transport);
 
   ~DAP();
