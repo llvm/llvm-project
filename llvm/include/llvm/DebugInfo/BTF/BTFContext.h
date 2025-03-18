@@ -30,11 +30,11 @@ public:
     // BTF is no DWARF, so ignore this operation for now.
   }
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
 
   DILineInfoTable getLineInfoForAddressRange(
@@ -47,12 +47,6 @@ public:
 
   std::vector<DILocal>
   getLocalsForAddress(object::SectionedAddress Address) override;
-
-  std::optional<DILineInfo> getOptionalLineInfoForAddress(
-      object::SectionedAddress Address,
-      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  std::optional<DILineInfo>
-  getOptionalLineInfoForDataAddress(object::SectionedAddress Address) override;
 
   static std::unique_ptr<BTFContext> create(
       const object::ObjectFile &Obj,

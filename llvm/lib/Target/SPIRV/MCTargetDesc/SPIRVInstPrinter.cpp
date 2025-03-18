@@ -14,7 +14,6 @@
 #include "SPIRV.h"
 #include "SPIRVBaseInfo.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -97,7 +96,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
-  Register Reg = MI->getOperand(0).getReg();
+  MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
   auto Set = getExtInstSetFromString(Name);
   ExtInstSetIDs.insert({Reg, Set});
@@ -335,7 +334,7 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (OpNo < MI->getNumOperands()) {
     const MCOperand &Op = MI->getOperand(OpNo);
     if (Op.isReg())
-      O << '%' << (Register(Op.getReg()).virtRegIndex() + 1);
+      O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
     else if (Op.isImm())
       O << formatImm((int64_t)Op.getImm());
     else if (Op.isDFPImm())

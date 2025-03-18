@@ -194,6 +194,13 @@ countls(T f) {
   return cpp::countl_zero(value_bits) - FXRep::SIGN_LEN;
 }
 
+// fixed-point to integer conversion
+template <typename T, typename XType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<T>, XType>
+bitsfx(T f) {
+  return cpp::bit_cast<XType, T>(f);
+}
+
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -99,6 +99,31 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
+  if (!CSF.LowPrecisionPresent)
+    CSF.LowPrecisionPresent =
+        I.getType()->isIntegerTy(16) || I.getType()->isHalfTy();
+
+  if (!CSF.LowPrecisionPresent) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(16) || Op->getType()->isHalfTy()) {
+        CSF.LowPrecisionPresent = true;
+        break;
+      }
+    }
+  }
+
+  if (!CSF.Int64Ops)
+    CSF.Int64Ops = I.getType()->isIntegerTy(64);
+
+  if (!CSF.Int64Ops) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(64)) {
+        CSF.Int64Ops = true;
+        break;
+      }
+    }
+  }
+
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
     switch (II->getIntrinsicID()) {
     default:

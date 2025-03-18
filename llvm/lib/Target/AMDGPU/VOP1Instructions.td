@@ -243,7 +243,7 @@ defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
 def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
-  let DstRC = RegisterOperand<SReg_32>;
+  let DstRC = RegisterOperand<SReg_32_XM0>;
   let Src0RC32 = VRegOrLdsSrc_32;
   let Asm32 = " $vdst, $src0";
 }

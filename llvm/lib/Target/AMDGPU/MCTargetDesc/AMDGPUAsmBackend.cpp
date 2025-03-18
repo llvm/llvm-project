@@ -31,7 +31,6 @@ class AMDGPUAsmBackend : public MCAsmBackend {
 public:
   AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
-  unsigned getNumFixupKinds() const override { return AMDGPU::NumTargetFixupKinds; };
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -52,9 +51,6 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, uint64_t Value,
-                             const MCSubtargetInfo *STI) override;
 };
 
 } //End anonymous namespace
@@ -189,16 +185,9 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < AMDGPU::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
-}
-
-bool AMDGPUAsmBackend::shouldForceRelocation(const MCAssembler &,
-                                             const MCFixup &Fixup,
-                                             const MCValue &, const uint64_t,
-                                             const MCSubtargetInfo *STI) {
-  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
@@ -238,7 +227,7 @@ class ELFAMDGPUAsmBackend : public AMDGPUAsmBackend {
 
 public:
   ELFAMDGPUAsmBackend(const Target &T, const Triple &TT)
-      : AMDGPUAsmBackend(T), Is64Bit(TT.getArch() == Triple::amdgcn),
+      : AMDGPUAsmBackend(T), Is64Bit(TT.isAMDGCN()),
         HasRelocationAddend(TT.getOS() == Triple::AMDHSA) {
     switch (TT.getOS()) {
     case Triple::AMDHSA:

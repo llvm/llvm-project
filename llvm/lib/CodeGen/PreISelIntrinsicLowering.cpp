@@ -415,8 +415,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       GV->setAlignment(Align(16));
       Value *PatternPtr = GV;
       Value *NumBytes = Builder.CreateMul(
-          Builder.getInt64(DL.getTypeSizeInBits(Memset->getValue()->getType()) /
-                           8),
+          Builder.getInt64(DL.getTypeAllocSize(Memset->getValue()->getType())),
           Memset->getLength());
       CallInst *MemsetPattern16Call =
           Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});

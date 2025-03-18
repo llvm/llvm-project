@@ -15,6 +15,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 #include <memory>
+#include <optional>
+#include <type_traits>
 
 namespace flangomp {
 #define GEN_PASS_DEF_GENERICLOOPCONVERSIONPASS
@@ -58,7 +60,7 @@ public:
       if (teamsLoopCanBeParallelFor(loopOp))
         rewriteToDistributeParallelDo(loopOp, rewriter);
       else
-        rewriteToDistrbute(loopOp, rewriter);
+        rewriteToDistribute(loopOp, rewriter);
       break;
     }
 
@@ -76,9 +78,6 @@ public:
 
     if (loopOp.getOrder())
       return todo("order");
-
-    if (!loopOp.getReductionVars().empty())
-      return todo("reduction");
 
     return mlir::success();
   }
@@ -168,7 +167,7 @@ private:
     case ClauseBindKind::Parallel:
       return rewriteToWsloop(loopOp, rewriter);
     case ClauseBindKind::Teams:
-      return rewriteToDistrbute(loopOp, rewriter);
+      return rewriteToDistribute(loopOp, rewriter);
     case ClauseBindKind::Thread:
       return rewriteToSimdLoop(loopOp, rewriter);
     }
@@ -211,8 +210,9 @@ private:
         loopOp, rewriter);
   }
 
-  void rewriteToDistrbute(mlir::omp::LoopOp loopOp,
-                          mlir::ConversionPatternRewriter &rewriter) const {
+  void rewriteToDistribute(mlir::omp::LoopOp loopOp,
+                           mlir::ConversionPatternRewriter &rewriter) const {
+    assert(loopOp.getReductionVars().empty());
     rewriteToSingleWrapperOp<mlir::omp::DistributeOp,
                              mlir::omp::DistributeOperands>(loopOp, rewriter);
   }
@@ -246,6 +246,12 @@ private:
     Fortran::common::openmp::EntryBlockArgs args;
     args.priv.vars = clauseOps.privateVars;
 
+    if constexpr (!std::is_same_v<OpOperandsTy,
+                                  mlir::omp::DistributeOperands>) {
+      populateReductionClauseOps(loopOp, clauseOps);
+      args.reduction.vars = clauseOps.reductionVars;
+    }
+
     auto wrapperOp = rewriter.create<OpTy>(loopOp.getLoc(), clauseOps);
     mlir::Block *opBlock = genEntryBlock(rewriter, args, wrapperOp.getRegion());
 
@@ -275,8 +281,7 @@ private:
 
     auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loopOp.getLoc(),
                                                              parallelClauseOps);
-    mlir::Block *parallelBlock =
-        genEntryBlock(rewriter, parallelArgs, parallelOp.getRegion());
+    genEntryBlock(rewriter, parallelArgs, parallelOp.getRegion());
     parallelOp.setComposite(true);
     rewriter.setInsertionPoint(
         rewriter.create<mlir::omp::TerminatorOp>(loopOp.getLoc()));
@@ -288,19 +293,53 @@ private:
     rewriter.createBlock(&distributeOp.getRegion());
 
     mlir::omp::WsloopOperands wsloopClauseOps;
+    populateReductionClauseOps(loopOp, wsloopClauseOps);
+    Fortran::common::openmp::EntryBlockArgs wsloopArgs;
+    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+
     auto wsloopOp =
         rewriter.create<mlir::omp::WsloopOp>(loopOp.getLoc(), wsloopClauseOps);
     wsloopOp.setComposite(true);
-    rewriter.createBlock(&wsloopOp.getRegion());
+    genEntryBlock(rewriter, wsloopArgs, wsloopOp.getRegion());
 
     mlir::IRMapping mapper;
-    mlir::Block &loopBlock = *loopOp.getRegion().begin();
 
-    for (auto [loopOpArg, parallelOpArg] : llvm::zip_equal(
-             loopBlock.getArguments(), parallelBlock->getArguments()))
+    auto loopBlockInterface =
+        llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*loopOp);
+    auto parallelBlockInterface =
+        llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*parallelOp);
+    auto wsloopBlockInterface =
+        llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*wsloopOp);
+
+    for (auto [loopOpArg, parallelOpArg] :
+         llvm::zip_equal(loopBlockInterface.getPrivateBlockArgs(),
+                         parallelBlockInterface.getPrivateBlockArgs()))
       mapper.map(loopOpArg, parallelOpArg);
 
+    for (auto [loopOpArg, wsloopOpArg] :
+         llvm::zip_equal(loopBlockInterface.getReductionBlockArgs(),
+                         wsloopBlockInterface.getReductionBlockArgs()))
+      mapper.map(loopOpArg, wsloopOpArg);
+
     rewriter.clone(*loopOp.begin(), mapper);
+  }
+
+  void
+  populateReductionClauseOps(mlir::omp::LoopOp loopOp,
+                             mlir::omp::ReductionClauseOps &clauseOps) const {
+    clauseOps.reductionMod = loopOp.getReductionModAttr();
+    clauseOps.reductionVars = loopOp.getReductionVars();
+
+    std::optional<mlir::ArrayAttr> reductionSyms = loopOp.getReductionSyms();
+    if (reductionSyms)
+      clauseOps.reductionSyms.assign(reductionSyms->begin(),
+                                     reductionSyms->end());
+
+    std::optional<llvm::ArrayRef<bool>> reductionByref =
+        loopOp.getReductionByref();
+    if (reductionByref)
+      clauseOps.reductionByref.assign(reductionByref->begin(),
+                                      reductionByref->end());
   }
 };
 

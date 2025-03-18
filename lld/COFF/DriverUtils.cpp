@@ -218,22 +218,6 @@ void LinkerDriver::parseSection(StringRef s) {
   ctx.config.section[name] = parseSectionAttributes(ctx, attrs);
 }
 
-// Parses /aligncomm option argument.
-void LinkerDriver::parseAligncomm(StringRef s) {
-  auto [name, align] = s.split(',');
-  if (name.empty() || align.empty()) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  int v;
-  if (align.getAsInteger(0, v)) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  ctx.config.alignComm[std::string(name)] =
-      std::max(ctx.config.alignComm[std::string(name)], 1 << v);
-}
-
 void LinkerDriver::parseDosStub(StringRef path) {
   std::unique_ptr<MemoryBuffer> stub =
       CHECK(MemoryBuffer::getFile(path), "could not open " + path);

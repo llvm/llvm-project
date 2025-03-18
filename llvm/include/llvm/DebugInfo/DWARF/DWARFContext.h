@@ -386,10 +386,10 @@ public:
   ///            executable's debug info.
   DIEsForAddress getDIEsForAddress(uint64_t Address, bool CheckDWO = false);
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
   DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
@@ -400,12 +400,6 @@ public:
 
   std::vector<DILocal>
   getLocalsForAddress(object::SectionedAddress Address) override;
-
-  std::optional<DILineInfo> getOptionalLineInfoForAddress(
-      object::SectionedAddress Address,
-      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  std::optional<DILineInfo>
-  getOptionalLineInfoForDataAddress(object::SectionedAddress Address) override;
 
   bool isLittleEndian() const { return DObj->isLittleEndian(); }
   static unsigned getMaxSupportedVersion() { return 5; }

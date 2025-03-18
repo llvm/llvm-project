@@ -33,18 +33,8 @@ PDBContext::PDBContext(const COFFObjectFile &Object,
 void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){}
 
 std::optional<DILineInfo>
-PDBContext::getOptionalLineInfoForAddress(object::SectionedAddress Address,
-                                          DILineInfoSpecifier Specifier) {
-  return getLineInfoForAddress(Address, Specifier);
-}
-
-std::optional<DILineInfo> PDBContext::getOptionalLineInfoForDataAddress(
-    object::SectionedAddress Address) {
-  return getLineInfoForDataAddress(Address);
-}
-
-DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                             DILineInfoSpecifier Specifier) {
+PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                  DILineInfoSpecifier Specifier) {
   DILineInfo Result;
   Result.FunctionName = getFunctionName(Address.Address, Specifier.FNKind);
 
@@ -75,7 +65,7 @@ DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 PDBContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   // Unimplemented. S_GDATA and S_LDATA in CodeView (used to describe global
   // variables) aren't capable of carrying line information.
@@ -95,9 +85,10 @@ PDBContext::getLineInfoForAddressRange(object::SectionedAddress Address,
     return Table;
 
   while (auto LineInfo = LineNumbers->getNext()) {
-    DILineInfo LineEntry = getLineInfoForAddress(
-        {LineInfo->getVirtualAddress(), Address.SectionIndex}, Specifier);
-    Table.push_back(std::make_pair(LineInfo->getVirtualAddress(), LineEntry));
+    if (std::optional<DILineInfo> LineEntry = getLineInfoForAddress(
+            {LineInfo->getVirtualAddress(), Address.SectionIndex}, Specifier))
+      Table.push_back(
+          std::make_pair(LineInfo->getVirtualAddress(), *LineEntry));
   }
   return Table;
 }
@@ -106,7 +97,8 @@ DIInliningInfo
 PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
                                       DILineInfoSpecifier Specifier) {
   DIInliningInfo InlineInfo;
-  DILineInfo CurrentLine = getLineInfoForAddress(Address, Specifier);
+  DILineInfo CurrentLine =
+      getLineInfoForAddress(Address, Specifier).value_or(DILineInfo());
 
   // Find the function at this address.
   std::unique_ptr<PDBSymbol> ParentFunc =

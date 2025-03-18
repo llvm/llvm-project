@@ -222,6 +222,16 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+inline bool IsCUDAShared(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
+      return true;
+    }
+  }
+  return false;
+}
+
 inline bool NeedCUDAAlloc(const Symbol &sym) {
   if (IsDummy(sym)) {
     return false;
@@ -631,6 +641,8 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(

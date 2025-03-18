@@ -33,8 +33,9 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<TargetMachine>
-createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
   std::string Error;
+  Triple TT(TargetStr);
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T)
     return nullptr;
@@ -126,7 +127,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -275,7 +276,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -418,7 +419,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -561,7 +562,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -706,7 +707,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -851,7 +852,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -997,7 +998,7 @@ noVRegs:         false
 hasFakeUses:     false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false

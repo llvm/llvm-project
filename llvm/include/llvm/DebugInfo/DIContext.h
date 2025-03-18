@@ -252,10 +252,12 @@ public:
     return true;
   }
 
-  virtual DILineInfo getLineInfoForAddress(
+  // For getLineInfoForAddress and getLineInfoForDataAddress, std::nullopt is
+  // returned when debug info is missing for the given address.
+  virtual std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual DILineInfo
+  virtual std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) = 0;
   virtual DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
@@ -266,12 +268,6 @@ public:
 
   virtual std::vector<DILocal>
   getLocalsForAddress(object::SectionedAddress Address) = 0;
-
-  virtual std::optional<DILineInfo> getOptionalLineInfoForAddress(
-      object::SectionedAddress Address,
-      DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
-  virtual std::optional<DILineInfo>
-  getOptionalLineInfoForDataAddress(object::SectionedAddress Address) = 0;
 
 private:
   const DIContextKind Kind;

@@ -45,7 +45,7 @@ namespace lldb_dap {
 //             }]
 // },
 void ConfigurationDoneRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   dap.SendJSON(llvm::json::Value(std::move(response)));

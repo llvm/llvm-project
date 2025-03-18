@@ -21,22 +21,12 @@ using object::ObjectFile;
 using object::SectionedAddress;
 
 std::optional<DILineInfo>
-BTFContext::getOptionalLineInfoForAddress(object::SectionedAddress Address,
-                                          DILineInfoSpecifier Specifier) {
-  return getLineInfoForAddress(Address, Specifier);
-}
-
-std::optional<DILineInfo> BTFContext::getOptionalLineInfoForDataAddress(
-    object::SectionedAddress Address) {
-  return getLineInfoForDataAddress(Address);
-}
-
-DILineInfo BTFContext::getLineInfoForAddress(SectionedAddress Address,
-                                             DILineInfoSpecifier Specifier) {
+BTFContext::getLineInfoForAddress(SectionedAddress Address,
+                                  DILineInfoSpecifier Specifier) {
   const BTF::BPFLineInfo *LineInfo = BTF.findLineInfo(Address);
   DILineInfo Result;
   if (!LineInfo)
-    return Result;
+    return std::nullopt;
 
   Result.LineSource = BTF.findString(LineInfo->LineOff);
   Result.FileName = BTF.findString(LineInfo->FileNameOff);
@@ -45,9 +35,10 @@ DILineInfo BTFContext::getLineInfoForAddress(SectionedAddress Address,
   return Result;
 }
 
-DILineInfo BTFContext::getLineInfoForDataAddress(SectionedAddress Address) {
+std::optional<DILineInfo>
+BTFContext::getLineInfoForDataAddress(SectionedAddress Address) {
   // BTF does not convey such information.
-  return {};
+  return std::nullopt;
 }
 
 DILineInfoTable

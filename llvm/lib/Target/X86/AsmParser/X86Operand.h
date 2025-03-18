@@ -416,9 +416,15 @@ struct X86Operand final : public MCParsedAsmOperand {
       return isImm();
   }
 
-  bool isAbsMem16() const {
-    return isAbsMem() && Mem.ModeSize == 16;
+  bool isAbsMemMode16() const { return isAbsMem() && Mem.ModeSize == 16; }
+
+  bool isDispImm8() const {
+    if (auto *CE = dyn_cast<MCConstantExpr>(getMemDisp()))
+      return isImmSExti64i8Value(CE->getValue());
+    return true;
   }
+
+  bool isAbsMem8() const { return isAbsMem() && isMem8() && isDispImm8(); }
 
   bool isMemUseUpRegs() const override { return UseUpRegs; }
 

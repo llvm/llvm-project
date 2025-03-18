@@ -15,6 +15,8 @@ void NormalFunc() {
 
 #pragma acc shutdown
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
+_Pragma("acc shutdown")
+  // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
 #pragma acc shutdown if (some_int() < some_long())
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: if clause

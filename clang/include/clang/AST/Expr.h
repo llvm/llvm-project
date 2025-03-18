@@ -787,6 +787,10 @@ public:
                                  const Expr *PtrExpression, ASTContext &Ctx,
                                  EvalResult &Status) const;
 
+  bool EvaluateCharRangeAsString(APValue &Result, const Expr *SizeExpression,
+                                 const Expr *PtrExpression, ASTContext &Ctx,
+                                 EvalResult &Status) const;
+
   /// If the current Expr can be evaluated to a pointer to a null-terminated
   /// constant string, return the constant string (without the terminating
   /// null).
@@ -3005,18 +3009,6 @@ public:
                           FPOptionsOverride FPFeatures, unsigned MinNumArgs = 0,
                           ADLCallKind UsesADL = NotADL);
 
-  /// Create a temporary call expression with no arguments in the memory
-  /// pointed to by Mem. Mem must points to at least sizeof(CallExpr)
-  /// + sizeof(Stmt *) bytes of storage, aligned to alignof(CallExpr):
-  ///
-  /// \code{.cpp}
-  ///   alignas(CallExpr) char Buffer[sizeof(CallExpr) + sizeof(Stmt *)];
-  ///   CallExpr *TheCall = CallExpr::CreateTemporary(Buffer, etc);
-  /// \endcode
-  static CallExpr *CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
-                                   ExprValueKind VK, SourceLocation RParenLoc,
-                                   ADLCallKind UsesADL = NotADL);
-
   /// Create an empty call expression, for deserialization.
   static CallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                bool HasFPFeatures, EmptyShell Empty);
@@ -5188,6 +5180,16 @@ public:
     : Expr(InitListExprClass, Empty), AltForm(nullptr, true) { }
 
   unsigned getNumInits() const { return InitExprs.size(); }
+
+  /// getNumInits but if the list has an EmbedExpr inside includes full length
+  /// of embedded data.
+  unsigned getNumInitsWithEmbedExpanded() const {
+    unsigned Sum = InitExprs.size();
+    for (auto *IE : InitExprs)
+      if (auto *EE = dyn_cast<EmbedExpr>(IE))
+        Sum += EE->getDataElementCount() - 1;
+    return Sum;
+  }
 
   /// Retrieve the set of initializers.
   Expr **getInits() { return reinterpret_cast<Expr **>(InitExprs.data()); }

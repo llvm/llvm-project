@@ -1201,6 +1201,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif
 
+#  if __has_feature(nullability)
+#    define _LIBCPP_DIAGNOSE_NULLPTR _Nonnull
+#  else
+#    define _LIBCPP_DIAGNOSE_NULLPTR
+#  endif
+
 // TODO(LLVM 22): Remove this macro once LLVM19 support ends. __cpp_explicit_this_parameter has been set in LLVM20.
 // Clang-18 has support for deducing this, but it does not set the FTM.
 #  if defined(__cpp_explicit_this_parameter) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1800)

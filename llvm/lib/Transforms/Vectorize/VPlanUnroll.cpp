@@ -295,8 +295,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
-      auto *Phi = cast<VPReductionPHIRecipe>(R.getOperand(0));
-      if (Phi->isOrdered()) {
+      auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
+      if (Phi && Phi->isOrdered()) {
         auto &Parts = VPV2Parts[Phi];
         if (Part == 1) {
           Parts.clear();
@@ -311,12 +311,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }

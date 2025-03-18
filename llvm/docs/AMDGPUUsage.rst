@@ -758,6 +758,12 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
+
+     dynamic-vgpr    TODO                         Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
+                                                  Waves launched in this mode may allocate or deallocate the VGPRs
+                                                  using dedicated instructions, but may not send the DEALLOC_VGPRS
+                                                  message.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -1698,14 +1704,27 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
                                                       emits this attribute when all the three numbers are >= 1.
 
-     "amdgpu-no-agpr"                                 Indicates the function will not require allocating AGPRs. This is only
-                                                      relevant on subtargets with AGPRs. The behavior is undefined if a
-                                                      function which requires AGPRs is reached through any function marked
-                                                      with this attribute.
-
      "amdgpu-hidden-argument"                         This attribute is used internally by the backend to mark function arguments
                                                       as hidden. Hidden arguments are managed by the compiler and are not part of
                                                       the explicit arguments supplied by the user.
+
+     "amdgpu-agpr-alloc"="min(,max)"                  Indicates a minimum and maximum range for the number of AGPRs to make
+                                                      available to allocate. The values will be rounded up to the next multiple
+                                                      of the allocation granularity (4). The minimum value is interpreted as the
+                                                      minimum required number of AGPRs for the function to allocate (that is, the
+                                                      function requires no more than min registers). If only one value is specified,
+                                                      it is interpreted as the minimum register budget. The maximum will restrict
+                                                      allocation to use no more than max AGPRs.
+
+                                                      The values may be ignored if satisfying it would violate other allocation
+                                                      constraints.
+
+                                                      The behavior is undefined if a function which requires more AGPRs than the
+                                                      lower bound is reached through any function marked with a higher value of this
+                                                      attribute. A minimum value of 0 indicates the function does not require
+                                                      any AGPRs.
+
+                                                      This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
 
      "amdgpu-sgpr-hazard-wait"                        Disabled SGPR hazard wait insertion if set to 0.
                                                       Exists for testing performance impact of SGPR hazard waits only.
@@ -1719,6 +1738,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-sgpr-hazard-mem-wait-cull-threshold"     Sets the number of active SGPR hazards that must be present before
                                                       inserting a cull sequence at a memory wait.
+
+     "amdgpu-promote-alloca-to-vector-max-regs"       Maximum vector size (in 32b registers) to create when promoting alloca.
+
+     "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
 
      ================================================ ==========================================================
 
@@ -2306,6 +2329,9 @@ if needed.
   The executable machine code for the kernels and functions they call. Generated
   as position independent code. See :ref:`amdgpu-code-conventions` for
   information on conventions used in the isa generation.
+
+``.amdgpu.kernel.runtime.handle``
+  Symbols used for device enqueue.
 
 .. _amdgpu-note-records:
 
@@ -18188,7 +18214,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (cumode)
      ``.amdhsa_memory_ordered``                               1                   GFX10-GFX12  Controls MEM_ORDERED in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
+     ``.amdhsa_forward_progress``                             1                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
