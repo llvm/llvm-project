@@ -331,10 +331,10 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
 }
 
 llvm::json::Value FileSpec::ToJSON() const {
-  std::string file_spec{};
-  llvm::raw_string_ostream stream(file_spec);
+  std::string str{};
+  llvm::raw_string_ostream stream(str);
   this->Dump(stream);
-  return llvm::json::Value(std::move(file_spec));
+  return llvm::json::Value(std::move(str));
 }
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
