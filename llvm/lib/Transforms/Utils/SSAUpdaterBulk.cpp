@@ -194,7 +194,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
       auto *User = cast<Instruction>(U->getUser());
       BasicBlock *BB = getUserBB(U);
-      Value *V = computeValue(BB, /*IsLiveOut=*/ BB != User->getParent());
+      Value *V = computeValue(BB, /*IsLiveOut=*/BB != User->getParent());
       Value *OldVal = U->get();
       assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.
