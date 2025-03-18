@@ -10,7 +10,6 @@
 #define _LIBCPP___ATOMIC_SUPPORT_H
 
 #include <__config>
-#include <__type_traits/is_trivially_copyable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
