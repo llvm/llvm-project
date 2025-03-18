@@ -76,8 +76,8 @@ void CommandInfo::serialize(Serializer &serializer) const {
     serializer.write("error_data", error_data.value());
 }
 
-std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
-uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
+std::atomic<uint64_t> CommandInfo::g_command_id_seed = 1;
+uint64_t CommandInfo::GetNextID() { return g_command_id_seed.fetch_add(1); }
 
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
