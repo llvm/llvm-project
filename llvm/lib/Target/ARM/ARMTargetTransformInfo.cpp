@@ -1462,9 +1462,9 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
   // the compiler will attempt to vectorize as well as using
   // scalar (S/U)MLAL operations. This is in cases where we have
   // the pattern ext(mul(ext(i16), ext(i16))) we find
-  // that generated codegen performs better when only using (S/U)MLAL scalar
+  // that codegen performs better when only using (S/U)MLAL scalar
   // ops instead of trying to mix vector ops with (S/U)MLAL ops. We therefore
-  // check if a mul instruction is used in a SMLAL pattern.
+  // check if a mul instruction is used in a (U/S)MLAL pattern.
   auto MulInDSPMLALPattern = [&](const Instruction *I, unsigned Opcode,
                                  Type *Ty) -> bool {
     if (!ST->hasDSP())
@@ -1487,9 +1487,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
       return isa<ZExtInst>(V) || isa<SExtInst>(V);
     };
     auto IsExtensionFromHalf = [&, IsExtInst](const Value *V) -> bool {
-      if (IsExtInst(V))
-        return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
-      return false;
+      return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
     };
 
     // We check the arguments of the instruction to see if they're extends
