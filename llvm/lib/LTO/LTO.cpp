@@ -1314,7 +1314,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   // expected to be handled separately.
   auto IsVisibleToRegularObj = [&](StringRef name) {
     auto It = GlobalResolutions->find(name);
-    return (It == GlobalResolutions->end() || It->second.VisibleOutsideSummary);
+    return (It == GlobalResolutions->end() ||
+            It->second.VisibleOutsideSummary || It->second.ExportDynamic);
   };
 
   // If allowed, upgrade public vcall visibility metadata to linkage unit
