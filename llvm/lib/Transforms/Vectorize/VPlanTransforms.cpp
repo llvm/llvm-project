@@ -1768,7 +1768,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
+    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
 
