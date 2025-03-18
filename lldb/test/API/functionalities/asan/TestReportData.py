@@ -20,6 +20,7 @@ class AsanTestReportDataCase(TestBase):
         self.asan_tests()
 
     @skipIf(oslist=no_match(["macosx"]))
+    @skipIf(bugnumber="rdar://144997976")
     def test_libsanitizers_asan(self):
         try:
             self.build(make_targets=["libsanitizers"])
@@ -38,9 +39,6 @@ class AsanTestReportDataCase(TestBase):
         self.col_crash = 16
 
     def asan_tests(self, libsanitizers=False):
-        if libsanitizers:
-            self.runCmd("log enable lldb expr")
-
         target = self.createTestTarget()
 
         if libsanitizers:

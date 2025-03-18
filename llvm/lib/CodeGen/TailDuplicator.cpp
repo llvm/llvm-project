@@ -601,8 +601,11 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // that rearrange the predecessors of the indirect branch.
 
   bool HasIndirectbr = false;
-  if (!TailBB.empty())
+  bool HasComputedGoto = false;
+  if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
+    HasComputedGoto = TailBB.back().isComputedGoto();
+  }
 
   if (HasIndirectbr && PreRegAlloc)
     MaxDuplicateCount = TailDupIndirectBranchSize;
@@ -660,7 +663,12 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // Duplicating a BB which has both multiple predecessors and successors will
   // may cause huge amount of PHI nodes. If we want to remove this limitation,
   // we have to address https://github.com/llvm/llvm-project/issues/78578.
-  if (TailBB.pred_size() > TailDupPredSize &&
+  // NB. This basically unfactors computed gotos that were factored early on in
+  // the compilation process to speed up edge based data flow. If we do not
+  // unfactor them again, it can seriously pessimize code with many computed
+  // jumps in the source code, such as interpreters. Therefore we do not
+  // restrict the computed gotos.
+  if (!HasComputedGoto && TailBB.pred_size() > TailDupPredSize &&
       TailBB.succ_size() > TailDupSuccSize) {
     // If TailBB or any of its successors contains a phi, we may have to add a
     // large number of additional phis with additional incoming values.

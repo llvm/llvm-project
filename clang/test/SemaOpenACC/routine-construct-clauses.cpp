@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
 void Func();
+void Func2();
 
 #pragma acc routine(Func) worker
 #pragma acc routine(Func) vector nohost
@@ -121,3 +122,46 @@ struct DependentT {
 void Inst() {
   DependentT<HasFuncs> T;// expected-note{{in instantiation of}}
 }
+
+#pragma acc routine(Func) gang device_type(Inst)
+#pragma acc routine(Func) gang dtype(Inst)
+#pragma acc routine(Func) device_type(*) worker
+#pragma acc routine(Func) dtype(*) worker
+
+#pragma acc routine(Func) dtype(*) gang
+#pragma acc routine(Func) device_type(*) worker
+#pragma acc routine(Func) device_type(*) vector
+#pragma acc routine(Func) dtype(*) seq
+#pragma acc routine(Func) seq device_type(*) bind("asdf")
+#pragma acc routine(Func2) seq device_type(*) bind(WhateverElse)
+#pragma acc routine(Func) seq dtype(*) device_type(*)
+// expected-error@+2{{OpenACC clause 'nohost' may not follow a 'dtype' clause in a 'routine' construct}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) seq dtype(*) nohost
+// expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'routine' construct}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) seq device_type(*) nohost
+
+// 2.15: a bind clause may not bind to a routine name that has a visible bind clause.
+void Func3();
+#pragma acc routine(Func3) seq bind("asdf")
+// OK: Doesn't have a bind
+#pragma acc routine(Func3) seq
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-4{{previous clause is here}}
+#pragma acc routine(Func3) seq bind("asdf")
+
+void Func4();
+#pragma acc routine(Func4) seq
+// OK: Doesn't have a bind
+#pragma acc routine(Func4) seq bind("asdf")
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-2{{previous clause is here}}
+#pragma acc routine(Func4) seq bind("asdf")
+void Func5();
+#pragma acc routine(Func5) seq bind("asdf")
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-2{{previous clause is here}}
+#pragma acc routine(Func5) seq bind("asdf")
+// OK: Doesn't have a bind
+#pragma acc routine(Func5) seq

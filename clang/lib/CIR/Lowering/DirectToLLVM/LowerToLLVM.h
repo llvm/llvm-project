@@ -136,6 +136,34 @@ private:
       cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 };
 
+class CIRToLLVMUnaryOpLowering
+    : public mlir::OpConversionPattern<cir::UnaryOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnaryOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
+public:
+  using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMTrapOpLowering : public mlir::OpConversionPattern<cir::TrapOp> {
+public:
+  using mlir::OpConversionPattern<cir::TrapOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::TrapOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 

@@ -762,8 +762,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else {
       CmdArgs.push_back("-fprofile-continuous");
       // Platforms that require a bias variable:
-      if (T.isOSBinFormatELF() || T.isOSAIX() ||
-          T.isKnownWindowsMSVCEnvironment()) {
+      if (T.isOSBinFormatELF() || T.isOSAIX() || T.isOSWindows()) {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-runtime-counter-relocation");
       }
@@ -8031,21 +8030,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_forder_file_instrumentation)) {
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << /*hasReplacement=*/true
-        << "-ftemporal-profile";
-    CmdArgs.push_back("-forder-file-instrumentation");
-    // Enable order file instrumentation when ThinLTO is not on. When ThinLTO is
-    // on, we need to pass these flags as linker flags and that will be handled
-    // outside of the compiler.
-    if (!IsUsingLTO) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-order-file-instrumentation");
-    }
-  }
-
   if (Arg *A = Args.getLastArg(options::OPT_fforce_enable_int128,
                                options::OPT_fno_force_enable_int128)) {
     if (A->getOption().matches(options::OPT_fforce_enable_int128))
@@ -8994,7 +8978,8 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     }
     Triples += Action::GetOffloadKindName(CurKind);
     Triples += '-';
-    Triples += CurTC->getTriple().normalize();
+    Triples +=
+        CurTC->getTriple().normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
     if ((CurKind == Action::OFK_HIP || CurKind == Action::OFK_Cuda) &&
         !StringRef(CurDep->getOffloadingArch()).empty()) {
       Triples += '-';
@@ -9088,7 +9073,8 @@ void OffloadBundler::ConstructJobMultipleOutputs(
     auto &Dep = DepInfo[I];
     Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
     Triples += '-';
-    Triples += Dep.DependentToolChain->getTriple().normalize();
+    Triples += Dep.DependentToolChain->getTriple().normalize(
+        llvm::Triple::CanonicalForm::FOUR_IDENT);
     if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
          Dep.DependentOffloadKind == Action::OFK_Cuda) &&
         !Dep.DependentBoundArch.empty()) {

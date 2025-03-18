@@ -41,16 +41,17 @@ struct MissingFeatures {
   static bool supportComdat() { return false; }
 
   // Load/store attributes
-  static bool opLoadThreadLocal() { return false; }
+  static bool opLoadStoreThreadLocal() { return false; }
   static bool opLoadEmitScalarRangeCheck() { return false; }
   static bool opLoadBooleanRepresentation() { return false; }
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreMemOrder() { return false; }
   static bool opLoadStoreVolatile() { return false; }
   static bool opLoadStoreAlignment() { return false; }
+  static bool opLoadStoreAtomic() { return false; }
+  static bool opLoadStoreObjC() { return false; }
 
   // AllocaOp handling
-  static bool opAllocaVarDeclContext() { return false; }
   static bool opAllocaStaticLocal() { return false; }
   static bool opAllocaNonGC() { return false; }
   static bool opAllocaImpreciseLifetime() { return false; }
@@ -61,6 +62,7 @@ struct MissingFeatures {
   static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
   static bool opAllocaDynAllocSize() { return false; }
+  static bool opAllocaCaptureByInit() { return false; }
 
   // FuncOp handling
   static bool opFuncOpenCLKernelMetadata() { return false; }
@@ -70,12 +72,29 @@ struct MissingFeatures {
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
 
+  // Unary operator handling
+  static bool opUnarySignedOverflow() { return false; }
+  static bool opUnaryPromotionType() { return false; }
+
   // Misc
   static bool scalarConversionOpts() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
   static bool lowerModeOptLevel() { return false; }
+  static bool opTBAA() { return false; }
+  static bool objCLifetime() { return false; }
+  static bool emitNullabilityCheck() { return false; }
+  static bool astVarDeclInterface() { return false; }
+  static bool stackSaveOp() { return false; }
+  static bool aggValueSlot() { return false; }
+
+  static bool unsizedTypes() { return false; }
+  static bool sanitizers() { return false; }
+  static bool CGFPOptionsRAII() { return false; }
+
+  // Missing types
+  static bool vectorType() { return false; }
 };
 
 } // namespace cir

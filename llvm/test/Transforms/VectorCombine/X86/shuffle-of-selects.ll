@@ -4,28 +4,12 @@
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=CHECK,AVX512
 
 define <4 x i16> @src_v2tov4_i16(<2 x i1> %a, <2 x i1> %b, <2 x i16> %x, <2 x i16> %y, <2 x i16> %z) {
-; SSE-LABEL: define <4 x i16> @src_v2tov4_i16(
-; SSE-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[X]], <2 x i16> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[Z]], <2 x i16> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x i16> [[TMP2]], <4 x i16> [[TMP3]]
-; SSE-NEXT:    ret <4 x i16> [[RES]]
-;
-; AVX2-LABEL: define <4 x i16> @src_v2tov4_i16(
-; AVX2-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[X]], <2 x i16> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[Z]], <2 x i16> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x i16> [[TMP2]], <4 x i16> [[TMP3]]
-; AVX2-NEXT:    ret <4 x i16> [[RES]]
-;
-; AVX512-LABEL: define <4 x i16> @src_v2tov4_i16(
-; AVX512-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
-; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i16> [[X]], <2 x i16> [[Z]]
-; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i16> [[Y]], <2 x i16> [[X]]
-; AVX512-NEXT:    [[RES:%.*]] = shufflevector <2 x i16> [[SELECT_XZ]], <2 x i16> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX512-NEXT:    ret <4 x i16> [[RES]]
+; CHECK-LABEL: define <4 x i16> @src_v2tov4_i16(
+; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i16> [[X]], <2 x i16> [[Z]]
+; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i16> [[Y]], <2 x i16> [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i16> [[SELECT_XZ]], <2 x i16> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i16> [[RES]]
 ;
   %select.xz = select <2 x i1> %a, <2 x i16> %x, <2 x i16> %z
   %select.yx = select <2 x i1> %b, <2 x i16> %y, <2 x i16> %x
@@ -34,28 +18,12 @@ define <4 x i16> @src_v2tov4_i16(<2 x i1> %a, <2 x i1> %b, <2 x i16> %x, <2 x i1
 }
 
 define <8 x i16> @src_v4tov8_i16(<4 x i1> %a, <4 x i1> %b, <4 x i16> %x, <4 x i16> %y, <4 x i16> %z) {
-; SSE-LABEL: define <8 x i16> @src_v4tov8_i16(
-; SSE-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i16> [[X:%.*]], <4 x i16> [[Y:%.*]], <4 x i16> [[Z:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[A]], <4 x i1> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[X]], <4 x i16> [[Y]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[Z]], <4 x i16> [[X]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[RES:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[TMP2]], <8 x i16> [[TMP3]]
-; SSE-NEXT:    ret <8 x i16> [[RES]]
-;
-; AVX2-LABEL: define <8 x i16> @src_v4tov8_i16(
-; AVX2-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i16> [[X:%.*]], <4 x i16> [[Y:%.*]], <4 x i16> [[Z:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[A]], <4 x i1> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[X]], <4 x i16> [[Y]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[Z]], <4 x i16> [[X]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX2-NEXT:    [[RES:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[TMP2]], <8 x i16> [[TMP3]]
-; AVX2-NEXT:    ret <8 x i16> [[RES]]
-;
-; AVX512-LABEL: define <8 x i16> @src_v4tov8_i16(
-; AVX512-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i16> [[X:%.*]], <4 x i16> [[Y:%.*]], <4 x i16> [[Z:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x i16> [[X]], <4 x i16> [[Z]]
-; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x i16> [[Y]], <4 x i16> [[X]]
-; AVX512-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[SELECT_XZ]], <4 x i16> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX512-NEXT:    ret <8 x i16> [[RES]]
+; CHECK-LABEL: define <8 x i16> @src_v4tov8_i16(
+; CHECK-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i16> [[X:%.*]], <4 x i16> [[Y:%.*]], <4 x i16> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x i16> [[X]], <4 x i16> [[Z]]
+; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x i16> [[Y]], <4 x i16> [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i16> [[SELECT_XZ]], <4 x i16> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i16> [[RES]]
 ;
   %select.xz = select <4 x i1> %a, <4 x i16> %x, <4 x i16> %z
   %select.yx = select <4 x i1> %b, <4 x i16> %y, <4 x i16> %x
@@ -94,12 +62,27 @@ define <8 x i16> @src_v8tov8_i16(<8 x i1> %a, <8 x i1> %b, <8 x i16> %x, <8 x i1
 }
 
 define <16 x i16> @src_v8tov16_i16(<8 x i1> %a, <8 x i1> %b, <8 x i16> %x, <8 x i16> %y, <8 x i16> %z) {
-; CHECK-LABEL: define <16 x i16> @src_v8tov16_i16(
-; CHECK-SAME: <8 x i1> [[A:%.*]], <8 x i1> [[B:%.*]], <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]], <8 x i16> [[Z:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <8 x i1> [[A]], <8 x i16> [[X]], <8 x i16> [[Z]]
-; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <8 x i1> [[B]], <8 x i16> [[Y]], <8 x i16> [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <8 x i16> [[SELECT_XZ]], <8 x i16> [[SELECT_YX]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    ret <16 x i16> [[RES]]
+; SSE-LABEL: define <16 x i16> @src_v8tov16_i16(
+; SSE-SAME: <8 x i1> [[A:%.*]], <8 x i1> [[B:%.*]], <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]], <8 x i16> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SELECT_XZ:%.*]] = select <8 x i1> [[A]], <8 x i16> [[X]], <8 x i16> [[Z]]
+; SSE-NEXT:    [[SELECT_YX:%.*]] = select <8 x i1> [[B]], <8 x i16> [[Y]], <8 x i16> [[X]]
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <8 x i16> [[SELECT_XZ]], <8 x i16> [[SELECT_YX]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; SSE-NEXT:    ret <16 x i16> [[RES]]
+;
+; AVX2-LABEL: define <16 x i16> @src_v8tov16_i16(
+; AVX2-SAME: <8 x i1> [[A:%.*]], <8 x i1> [[B:%.*]], <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]], <8 x i16> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[A]], <8 x i1> [[B]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[X]], <8 x i16> [[Y]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[Z]], <8 x i16> [[X]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX2-NEXT:    [[RES:%.*]] = select <16 x i1> [[TMP1]], <16 x i16> [[TMP2]], <16 x i16> [[TMP3]]
+; AVX2-NEXT:    ret <16 x i16> [[RES]]
+;
+; AVX512-LABEL: define <16 x i16> @src_v8tov16_i16(
+; AVX512-SAME: <8 x i1> [[A:%.*]], <8 x i1> [[B:%.*]], <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]], <8 x i16> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <8 x i1> [[A]], <8 x i16> [[X]], <8 x i16> [[Z]]
+; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <8 x i1> [[B]], <8 x i16> [[Y]], <8 x i16> [[X]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <8 x i16> [[SELECT_XZ]], <8 x i16> [[SELECT_YX]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; AVX512-NEXT:    ret <16 x i16> [[RES]]
 ;
   %select.xz = select <8 x i1> %a, <8 x i16> %x, <8 x i16> %z
   %select.yx = select <8 x i1> %b, <8 x i16> %y, <8 x i16> %x
@@ -108,28 +91,12 @@ define <16 x i16> @src_v8tov16_i16(<8 x i1> %a, <8 x i1> %b, <8 x i16> %x, <8 x 
 }
 
 define <4 x i32> @src_v2tov4_i32(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
-; SSE-LABEL: define <4 x i32> @src_v2tov4_i32(
-; SSE-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[X]], <2 x i32> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[Z]], <2 x i32> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
-; SSE-NEXT:    ret <4 x i32> [[RES]]
-;
-; AVX2-LABEL: define <4 x i32> @src_v2tov4_i32(
-; AVX2-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[X]], <2 x i32> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[Z]], <2 x i32> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> [[TMP3]]
-; AVX2-NEXT:    ret <4 x i32> [[RES]]
-;
-; AVX512-LABEL: define <4 x i32> @src_v2tov4_i32(
-; AVX512-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i32> [[X]], <2 x i32> [[Z]]
-; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i32> [[Y]], <2 x i32> [[X]]
-; AVX512-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[SELECT_XZ]], <2 x i32> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX512-NEXT:    ret <4 x i32> [[RES]]
+; CHECK-LABEL: define <4 x i32> @src_v2tov4_i32(
+; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i32> [[X]], <2 x i32> [[Z]]
+; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i32> [[Y]], <2 x i32> [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i32> [[SELECT_XZ]], <2 x i32> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %select.xz = select <2 x i1> %a, <2 x i32> %x, <2 x i32> %z
   %select.yx = select <2 x i1> %b, <2 x i32> %y, <2 x i32> %x
@@ -138,12 +105,27 @@ define <4 x i32> @src_v2tov4_i32(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i3
 }
 
 define <8 x i32> @src_v4tov8_i32(<4 x i1> %a, <4 x i1> %b, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
-; CHECK-LABEL: define <8 x i32> @src_v4tov8_i32(
-; CHECK-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x i32> [[X]], <4 x i32> [[Z]]
-; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x i32> [[Y]], <4 x i32> [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[SELECT_XZ]], <4 x i32> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <8 x i32> [[RES]]
+; SSE-LABEL: define <8 x i32> @src_v4tov8_i32(
+; SSE-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x i32> [[X]], <4 x i32> [[Z]]
+; SSE-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x i32> [[Y]], <4 x i32> [[X]]
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[SELECT_XZ]], <4 x i32> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    ret <8 x i32> [[RES]]
+;
+; AVX2-LABEL: define <8 x i32> @src_v4tov8_i32(
+; AVX2-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[A]], <4 x i1> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> [[Y]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> [[X]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[RES:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> [[TMP3]]
+; AVX2-NEXT:    ret <8 x i32> [[RES]]
+;
+; AVX512-LABEL: define <8 x i32> @src_v4tov8_i32(
+; AVX512-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x i32> [[X]], <4 x i32> [[Z]]
+; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x i32> [[Y]], <4 x i32> [[X]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[SELECT_XZ]], <4 x i32> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX512-NEXT:    ret <8 x i32> [[RES]]
 ;
   %select.xz = select <4 x i1> %a, <4 x i32> %x, <4 x i32> %z
   %select.yx = select <4 x i1> %b, <4 x i32> %y, <4 x i32> %x
@@ -182,12 +164,27 @@ define <2 x i64> @src_v2tov2_i64(<2 x i1> %a, <2 x i1> %b, <2 x i64> %x, <2 x i6
 }
 
 define <4 x i64> @src_v2tov4_i64(<2 x i1> %a, <2 x i1> %b, <2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
-; CHECK-LABEL: define <4 x i64> @src_v2tov4_i64(
-; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], <2 x i64> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i64> [[X]], <2 x i64> [[Z]]
-; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i64> [[Y]], <2 x i64> [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[SELECT_XZ]], <2 x i64> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x i64> [[RES]]
+; SSE-LABEL: define <4 x i64> @src_v2tov4_i64(
+; SSE-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], <2 x i64> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i64> [[X]], <2 x i64> [[Z]]
+; SSE-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i64> [[Y]], <2 x i64> [[X]]
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[SELECT_XZ]], <2 x i64> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x i64> [[RES]]
+;
+; AVX2-LABEL: define <4 x i64> @src_v2tov4_i64(
+; AVX2-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], <2 x i64> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[X]], <2 x i64> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[Z]], <2 x i64> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[TMP2]], <4 x i64> [[TMP3]]
+; AVX2-NEXT:    ret <4 x i64> [[RES]]
+;
+; AVX512-LABEL: define <4 x i64> @src_v2tov4_i64(
+; AVX512-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x i64> [[X:%.*]], <2 x i64> [[Y:%.*]], <2 x i64> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x i64> [[X]], <2 x i64> [[Z]]
+; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x i64> [[Y]], <2 x i64> [[X]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <2 x i64> [[SELECT_XZ]], <2 x i64> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX512-NEXT:    ret <4 x i64> [[RES]]
 ;
   %select.xz = select <2 x i1> %a, <2 x i64> %x, <2 x i64> %z
   %select.yx = select <2 x i1> %b, <2 x i64> %y, <2 x i64> %x
@@ -226,12 +223,27 @@ define <4 x float> @src_v2tov4_float(<2 x i1> %a, <2 x i1> %b, <2 x float> %x, <
 }
 
 define <8 x float> @src_v4tov8_float(<4 x i1> %a, <4 x i1> %b, <4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; CHECK-LABEL: define <8 x float> @src_v4tov8_float(
-; CHECK-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x float> [[X]], <4 x float> [[Z]]
-; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x float> [[Y]], <4 x float> [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XZ]], <4 x float> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <8 x float> [[RES]]
+; SSE-LABEL: define <8 x float> @src_v4tov8_float(
+; SSE-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x float> [[X]], <4 x float> [[Z]]
+; SSE-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x float> [[Y]], <4 x float> [[X]]
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XZ]], <4 x float> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; SSE-NEXT:    ret <8 x float> [[RES]]
+;
+; AVX2-LABEL: define <8 x float> @src_v4tov8_float(
+; AVX2-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[A]], <4 x i1> [[B]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[Z]], <4 x float> [[X]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX2-NEXT:    [[RES:%.*]] = select <8 x i1> [[TMP1]], <8 x float> [[TMP2]], <8 x float> [[TMP3]]
+; AVX2-NEXT:    ret <8 x float> [[RES]]
+;
+; AVX512-LABEL: define <8 x float> @src_v4tov8_float(
+; AVX512-SAME: <4 x i1> [[A:%.*]], <4 x i1> [[B:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <4 x i1> [[A]], <4 x float> [[X]], <4 x float> [[Z]]
+; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <4 x i1> [[B]], <4 x float> [[Y]], <4 x float> [[X]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XZ]], <4 x float> [[SELECT_YX]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; AVX512-NEXT:    ret <8 x float> [[RES]]
 ;
   %select.xz = select <4 x i1> %a, <4 x float> %x, <4 x float> %z
   %select.yx = select <4 x i1> %b, <4 x float> %y, <4 x float> %x
@@ -270,17 +282,63 @@ define <2 x double> @src_v2tov2_double(<2 x i1> %a, <2 x i1> %b, <2 x double> %x
 }
 
 define <4 x double> @src_v2tov4_double(<2 x i1> %a, <2 x i1> %b, <2 x double> %x, <2 x double> %y, <2 x double> %z) {
-; CHECK-LABEL: define <4 x double> @src_v2tov4_double(
-; CHECK-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x double> [[X:%.*]], <2 x double> [[Y:%.*]], <2 x double> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x double> [[X]], <2 x double> [[Z]]
-; CHECK-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x double> [[Y]], <2 x double> [[X]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <2 x double> [[SELECT_XZ]], <2 x double> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[RES]]
+; SSE-LABEL: define <4 x double> @src_v2tov4_double(
+; SSE-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x double> [[X:%.*]], <2 x double> [[Y:%.*]], <2 x double> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x double> [[X]], <2 x double> [[Z]]
+; SSE-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x double> [[Y]], <2 x double> [[X]]
+; SSE-NEXT:    [[RES:%.*]] = shufflevector <2 x double> [[SELECT_XZ]], <2 x double> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[RES]]
+;
+; AVX2-LABEL: define <4 x double> @src_v2tov4_double(
+; AVX2-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x double> [[X:%.*]], <2 x double> [[Y:%.*]], <2 x double> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i1> [[A]], <2 x i1> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[X]], <2 x double> [[Y]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[Z]], <2 x double> [[X]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX2-NEXT:    [[RES:%.*]] = select <4 x i1> [[TMP1]], <4 x double> [[TMP2]], <4 x double> [[TMP3]]
+; AVX2-NEXT:    ret <4 x double> [[RES]]
+;
+; AVX512-LABEL: define <4 x double> @src_v2tov4_double(
+; AVX512-SAME: <2 x i1> [[A:%.*]], <2 x i1> [[B:%.*]], <2 x double> [[X:%.*]], <2 x double> [[Y:%.*]], <2 x double> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XZ:%.*]] = select <2 x i1> [[A]], <2 x double> [[X]], <2 x double> [[Z]]
+; AVX512-NEXT:    [[SELECT_YX:%.*]] = select <2 x i1> [[B]], <2 x double> [[Y]], <2 x double> [[X]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <2 x double> [[SELECT_XZ]], <2 x double> [[SELECT_YX]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; AVX512-NEXT:    ret <4 x double> [[RES]]
 ;
   %select.xz = select <2 x i1> %a, <2 x double> %x, <2 x double> %z
   %select.yx = select <2 x i1> %b, <2 x double> %y, <2 x double> %x
   %res = shufflevector <2 x double> %select.xz, <2 x double> %select.yx, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x double> %res
+}
+
+; ISSUE - https://github.com/llvm/llvm-project/issues/130250
+; There should be no issues when the mask elements are in the following range
+; DestVectorSize * 2 < MaskEls < SrcVectorSize * 2
+define <2 x float> @test_mask0(<4 x i1> %c, <4 x float> %x, <4 x float> %y, <4 x float> %z) {
+; CHECK-LABEL: define <2 x float> @test_mask0(
+; CHECK-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XY:%.*]] = select <4 x i1> [[C]], <4 x float> [[X]], <4 x float> [[Y]]
+; CHECK-NEXT:    [[SELECT_YZ:%.*]] = select <4 x i1> [[C]], <4 x float> [[Y]], <4 x float> [[Z]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XY]], <4 x float> [[SELECT_YZ]], <2 x i32> <i32 4, i32 7>
+; CHECK-NEXT:    ret <2 x float> [[RES]]
+;
+  %select.xy = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  %select.yz = select <4 x i1> %c, <4 x float> %y, <4 x float> %z
+  %res = shufflevector <4 x float> %select.xy, <4 x float> %select.yz, <2 x i32> <i32 4, i32 7>
+  ret <2 x float> %res
+}
+
+define <2 x float> @test_mask1(<4 x i1> %c, <4 x float> %x, <4 x float> %y, <4 x float> %z) {
+; CHECK-LABEL: define <2 x float> @test_mask1(
+; CHECK-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT_XY:%.*]] = select <4 x i1> [[C]], <4 x float> [[X]], <4 x float> [[Y]]
+; CHECK-NEXT:    [[SELECT_YZ:%.*]] = select <4 x i1> [[C]], <4 x float> [[Y]], <4 x float> [[Z]]
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XY]], <4 x float> [[SELECT_YZ]], <2 x i32> <i32 7, i32 4>
+; CHECK-NEXT:    ret <2 x float> [[RES]]
+;
+  %select.xy = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  %select.yz = select <4 x i1> %c, <4 x float> %y, <4 x float> %z
+  %res = shufflevector <4 x float> %select.xy, <4 x float> %select.yz, <2 x i32> <i32 7, i32 4>
+  ret <2 x float> %res
 }
 
 ; FMF Flags
