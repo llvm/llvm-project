@@ -83,27 +83,24 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[EP_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
-; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[EP_IV]]>
-; CHECK-NEXT:     vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
-; CHECK-NEXT:     WIDEN ir<%load.a> = load vp<[[PTR_A]]>
-; CHECK-NEXT:     WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
-; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[EP_IV]]>
-; CHECK-NEXT:     vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
-; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>
-; CHECK-NEXT:     WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
-; CHECK-NEXT:     WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
-; CHECK-NEXT:     PARTIAL-REDUCE ir<%add> = add ir<%accum>, ir<%mul>
-; CHECK-NEXT:     EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[EP_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
+; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[EP_IV]]>
+; CHECK-NEXT:   vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
+; CHECK-NEXT:   WIDEN ir<%load.a> = load vp<[[PTR_A]]>
+; CHECK-NEXT:   WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
+; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[EP_IV]]>
+; CHECK-NEXT:   vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
+; CHECK-NEXT:   WIDEN ir<%load.b> = load vp<[[PTR_B]]>
+; CHECK-NEXT:   WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
+; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
+; CHECK-NEXT:   PARTIAL-REDUCE ir<%add> = add ir<%accum>, ir<%mul>
+; CHECK-NEXT:   EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
+; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<%accum>, ir<%add>

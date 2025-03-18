@@ -74,10 +74,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:    [[TMP13:%.*]] = and <vscale x 4 x i32> [[TMP12]], splat (i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i32> [[TMP13]], splat (i32 1)
 ; VSCALEFORTUNING2-NEXT:    [[TMP15:%.*]] = zext <vscale x 4 x i32> [[TMP14]] to <vscale x 4 x i64>
-; VSCALEFORTUNING2-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i64> [[TMP15]], i32 0
-; VSCALEFORTUNING2-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP16]]
-; VSCALEFORTUNING2-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[TMP17]], i64 0
-; VSCALEFORTUNING2-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[DOTSPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
+; VSCALEFORTUNING2-NEXT:    [[DOTSPLAT:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP15]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vscale.i32()
 ; VSCALEFORTUNING2-NEXT:    [[TMP19:%.*]] = mul i32 [[TMP18]], 4
 ; VSCALEFORTUNING2-NEXT:    [[TMP20:%.*]] = sub i32 [[TMP19]], 1
@@ -210,10 +207,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP17:%.*]] = and <vscale x 4 x i32> [[TMP16]], splat (i32 1)
 ; PRED-NEXT:    [[TMP18:%.*]] = xor <vscale x 4 x i32> [[TMP17]], splat (i32 1)
 ; PRED-NEXT:    [[TMP19:%.*]] = zext <vscale x 4 x i32> [[TMP18]] to <vscale x 4 x i64>
-; PRED-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 4 x i64> [[TMP19]], i32 0
-; PRED-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[SRC_2]], i64 [[TMP20]]
-; PRED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[TMP21]], i64 0
-; PRED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[DOTSPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
+; PRED-NEXT:    [[DOTSPLAT:%.*]] = getelementptr i32, ptr [[SRC_2]], <vscale x 4 x i64> [[TMP19]]
 ; PRED-NEXT:    [[TMP22:%.*]] = call i32 @llvm.vscale.i32()
 ; PRED-NEXT:    [[TMP23:%.*]] = mul i32 [[TMP22]], 4
 ; PRED-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], 1

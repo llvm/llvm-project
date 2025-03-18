@@ -3415,6 +3415,9 @@ public:
   /// second predecessor is the exiting block of the region.
   const VPBasicBlock *getCFGPredecessor(unsigned Idx) const;
 
+  /// Returns true if the block is a loop header in a plain-CFG VPlan.
+  bool isHeader(const VPDominatorTree &VPDT) const;
+
 protected:
   /// Execute the recipes in the IR basic block \p BB.
   void executeRecipes(VPTransformState *State, BasicBlock *BB);
@@ -3566,6 +3569,10 @@ public:
   /// Clone all blocks in the single-entry single-exit region of the block and
   /// their recipes without updating the operands of the cloned recipes.
   VPRegionBlock *clone() override;
+
+  /// Remove the current region from its VPlan, connecting its predecessor to
+  /// its entry and exiting block to its successor.
+  void removeRegion();
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take
