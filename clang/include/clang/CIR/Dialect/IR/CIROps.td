@@ -469,6 +469,54 @@ def BrOp : CIR_Op<"br",
 }
 
 //===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+def UnaryOpKind_Inc   : I32EnumAttrCase<"Inc",   1, "inc">;
+def UnaryOpKind_Dec   : I32EnumAttrCase<"Dec",   2, "dec">;
+def UnaryOpKind_Plus  : I32EnumAttrCase<"Plus",  3, "plus">;
+def UnaryOpKind_Minus : I32EnumAttrCase<"Minus", 4, "minus">;
+def UnaryOpKind_Not   : I32EnumAttrCase<"Not",   5, "not">;
+
+def UnaryOpKind : I32EnumAttr<
+    "UnaryOpKind",
+    "unary operation kind",
+    [UnaryOpKind_Inc,
+     UnaryOpKind_Dec,
+     UnaryOpKind_Plus,
+     UnaryOpKind_Minus,
+     UnaryOpKind_Not,
+     ]> {
+  let cppNamespace = "::cir";
+}
+
+def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
+  let summary = "Unary operations";
+  let description = [{
+    `cir.unary` performs the unary operation according to
+    the specified opcode kind: [inc, dec, plus, minus, not].
+
+    It requires one input operand and has one result, both types
+    should be the same.
+
+    ```mlir
+    %7 = cir.unary(inc, %1) : i32 -> i32
+    %8 = cir.unary(dec, %2) : i32 -> i32
+    ```
+  }];
+
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind, Arg<CIR_AnyType>:$input);
+
+  let assemblyFormat = [{
+      `(` $kind `,` $input `)` `:` type($input) `,` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
