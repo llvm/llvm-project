@@ -86,10 +86,10 @@ void DebuggerInfo::serialize(Serializer &serializer) const {
   serializer.write("is_exit_entry", is_exit_entry);
 }
 
-void ExecModuleInfo::serialize(Serializer &serializer) const {
+void ExecutableModuleInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
-  serializer.write("exec_uuid", exec_uuid.GetAsString());
+  serializer.write("uuid", uuid.GetAsString());
   serializer.write("pid", pid);
   serializer.write("triple", triple);
   serializer.write("is_start_entry", is_start_entry);
@@ -98,7 +98,7 @@ void ExecModuleInfo::serialize(Serializer &serializer) const {
 void ProcessExitInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
-  serializer.write("exec_uuid", exec_uuid.GetAsString());
+  serializer.write("module_uuid", module_uuid.GetAsString());
   serializer.write("pid", pid);
   serializer.write("is_start_entry", is_start_entry);
   if (exit_desc.has_value()) {

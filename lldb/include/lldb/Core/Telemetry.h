@@ -155,11 +155,10 @@ struct DebuggerInfo : public LLDBBaseTelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
-struct ExecModuleInfo : public LLDBBaseTelemetryInfo {
+struct ExecutableModuleInfo : public LLDBBaseTelemetryInfo {
   lldb::ModuleSP exec_mod;
-
   /// The same as the executable-module's UUID.
-  UUID exec_uuid;
+  UUID uuid;
   /// PID of the process owned by this target.
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
   /// The triple of this executable module.
@@ -170,7 +169,7 @@ struct ExecModuleInfo : public LLDBBaseTelemetryInfo {
   /// event (eg., after the module and any dependency were loaded.)
   bool is_start_entry = false;
 
-  ExecModuleInfo() = default;
+  ExecutableModuleInfo() = default;
 
   llvm::telemetry::KindType getKind() const override {
     return LLDBEntryKind::ExecModuleInfo;
@@ -191,7 +190,8 @@ struct ExitDescription {
 };
 
 struct ProcessExitInfo : public LLDBBaseTelemetryInfo {
-  UUID exec_uuid;
+  // The executable-module's UUID.
+  UUID module_uuid;
   lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
   bool is_start_entry = false;
   std::optional<ExitDescription> exit_desc;

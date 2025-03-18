@@ -1072,19 +1072,19 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Find the executable-module's UUID, if available.
   Target &target = GetTarget();
   helper.SetDebugger(&(target.GetDebugger()));
-  UUID exec_uuid;
-  if (ModuleSP exec_mod = target.GetExecutableModule())
-    exec_uuid = exec_mod->GetUUID();
+  UUID module_uuid;
+  if (ModuleSP mod = target.GetExecutableModule())
+    module_uuid = mod->GetUUID();
 
   helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
-    info->exec_uuid = exec_uuid;
+    info->module_uuid = module_uuid;
     info->pid = m_pid;
     info->is_start_entry = true;
     info->exit_desc = {status, exit_string.str()};
   });
 
   helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
-    info->exec_uuid = exec_uuid;
+    info->module_uuid = module_uuid;
     info->pid = m_pid;
   });
 
