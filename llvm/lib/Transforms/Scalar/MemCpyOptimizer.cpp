@@ -1692,9 +1692,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!SrcAllocaInstUsers.empty()) {
     MDNode *mergeTBAA =
         (*SrcAllocaInstUsers.begin())->getMetadata(LLVMContext::MD_tbaa);
-    for (Instruction *it : DestAllocaInstUsers) {
-      it->setMetadata(LLVMContext::MD_tbaa, mergeTBAA);
-    }
+    for (Instruction *It : DestAllocaInstUsers)
+      It->setMetadata(LLVMContext::MD_tbaa, mergeTBAA);
   }
 
   LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
