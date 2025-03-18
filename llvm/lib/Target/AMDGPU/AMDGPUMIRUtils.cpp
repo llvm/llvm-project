@@ -397,6 +397,98 @@ struct Piece {
   }
 };
 
+static std::vector<unsigned>
+getMinimalSpanningSubRegIdxSetForLaneMask(const TargetRegisterInfo *TRI,
+                                          const TargetRegisterClass *RC,
+                                          LaneBitmask Mask) {
+  // TODO: this could replace the code it was copied from in SplitKit.cpp
+
+  // First pass: Try to find a perfectly matching subregister index.
+  // If none exists find the one covering the most lanemask bits.
+  SmallVector<unsigned, 8> PossibleIndexes;
+  unsigned BestIdx = 0;
+  const LaneBitmask Avoid = ~Mask;
+  {
+    unsigned BestCover = 0;
+    for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E; ++Idx) {
+      // Is this index even compatible with the given class?
+      if (TRI->getSubClassWithSubReg(RC, Idx) != RC)
+        continue;
+      LaneBitmask SubRegMask = TRI->getSubRegIndexLaneMask(Idx);
+      // Early exit if we found a perfect match.
+      if (SubRegMask == Mask) {
+        BestIdx = Idx;
+        break;
+      }
+
+      // The index must not cover any lanes outside
+      if ((SubRegMask & Avoid).any())
+        continue;
+
+      unsigned PopCount = SubRegMask.getNumLanes();
+      PossibleIndexes.push_back(Idx);
+      if (PopCount > BestCover) {
+        BestCover = PopCount;
+        BestIdx = Idx;
+      }
+    }
+  }
+
+  // Abort if we cannot possibly implement the COPY with the given indexes.
+  if (BestIdx == 0) {
+    LLVM_DEBUG(dbgs() << "Unable to find minimal spanning sub register(s) for "
+                      << TRI->getRegClassName(RC) << " mask "
+                      << PrintLaneMask(Mask) << '\n');
+    assert(false && "Impossible to span reg class");
+    return std::vector<unsigned>();
+  }
+
+  std::vector<unsigned> Result;
+  Result.push_back(BestIdx);
+
+  // Greedy heuristic: Keep iterating keeping the best covering subreg index
+  // each time.
+  Mask &= ~(TRI->getSubRegIndexLaneMask(BestIdx));
+  while (Mask.any()) {
+    BestIdx = 0;
+    int BestCover = std::numeric_limits<int>::min();
+    for (unsigned Idx : PossibleIndexes) {
+      LaneBitmask SubRegMask = TRI->getSubRegIndexLaneMask(Idx);
+      // Early exit if we found a perfect match.
+      if (SubRegMask == Mask) {
+        BestIdx = Idx;
+        break;
+      }
+
+      // Guaranteed above
+      assert((SubRegMask & Avoid).none());
+
+      // Try to cover as much of the remaining lanes as possible but as few of
+      // the already covered lanes as possible.
+      int Cover = (SubRegMask & Mask).getNumLanes() -
+                  (SubRegMask & ~Mask).getNumLanes();
+      if (Cover > BestCover) {
+        BestCover = Cover;
+        BestIdx = Idx;
+      }
+    }
+
+    if (BestIdx == 0) {
+      LLVM_DEBUG(
+          dbgs() << "Unable to find minimal spanning sub register(s) for "
+                 << TRI->getRegClassName(RC) << " mask " << PrintLaneMask(Mask)
+                 << '\n');
+      assert(false && "Impossible to span reg class");
+      return std::vector<unsigned>();
+    }
+
+    Result.push_back(BestIdx);
+    Mask &= ~TRI->getSubRegIndexLaneMask(BestIdx);
+  }
+
+  return Result;
+}
+
 static void updateSubReg(MachineOperand &UseMO,
                          const llvm::TargetRegisterClass *NewRC,
                          unsigned Offset, const SIRegisterInfo *SIRI) {
@@ -409,8 +501,8 @@ static void updateSubReg(MachineOperand &UseMO,
 
     unsigned Mask = LaneMask.getAsInteger() >> Offset;
 
-    unsigned NewSubReg = SIRI->getMinimalSpanningSubRegIdxSetForLaneMask(
-                                 NewRC, LaneBitmask(Mask))
+    unsigned NewSubReg = getMinimalSpanningSubRegIdxSetForLaneMask(
+                             SIRI, NewRC, LaneBitmask(Mask))
                              .front();
 
     UseMO.setSubReg(NewSubReg);
