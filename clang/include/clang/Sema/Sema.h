@@ -10673,7 +10673,7 @@ public:
 
 
   // Unused, kept in Clang 20 for ABI stability.
-  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E) {};
+  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
