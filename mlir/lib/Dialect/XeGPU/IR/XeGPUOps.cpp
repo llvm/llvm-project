@@ -95,12 +95,14 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
   assert(succeeded(expectedValueShapeOrFailure) &&
          "Failed to compute distributed vector shape for "
          "tensor descriptor ");
+  bool isSIMD = valueShape == adjustedTdescShape;
+  bool isSIMT = valueShape == expectedValueShapeOrFailure.value().getShape();
 
-  return valueTy == expectedValueShapeOrFailure.value()
+  return (isSIMD || isSIMT)
              ? success()
              : emitError()
                    << "Result shape " << makeString(valueShape)
-                   << " is not consistent with distributed vector shape "
+                   << " is not consistent with SIMD/SIMT vector shape "
                    << makeString(expectedValueShapeOrFailure.value().getShape())
                    << " for tensor descriptor " << tdescTy;
 }

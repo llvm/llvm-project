@@ -131,10 +131,10 @@ LogicalResult
 SGMapAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                   llvm::ArrayRef<uint32_t> wi_layout,
                   llvm::ArrayRef<uint32_t> wi_data) {
-  if (wi_layout.size() != 2)
-    return emitError() << "expected wi_layout of size 2";
-  if (wi_data.size() != 2)
-    return emitError() << "expected wi_data of size 2";
+  if (wi_layout.size() != 1 && wi_layout.size() != 2)
+    return emitError() << "expected 1D or 2D wi_layout";
+  if (wi_data.size() != 1 && wi_data.size() != 2)
+    return emitError() << "expected 1D or 2D wi_data";
   return success();
 }
 

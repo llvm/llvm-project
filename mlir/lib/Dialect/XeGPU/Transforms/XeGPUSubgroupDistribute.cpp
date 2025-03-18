@@ -15,9 +15,16 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -120,6 +127,8 @@ public:
 
   const WiLayout &getLayout() const { return wiLayout; }
   const WiData &getData() const { return wiData; }
+  ArrayRef<int64_t> getLayoutAsArrayRef() const { return wiLayout.layout; }
+  ArrayRef<int64_t> getDataAsArrayRef() const { return wiData.layout; }
 };
 
 void SGMap::print(raw_ostream &os) const {
@@ -221,6 +230,10 @@ static SGMap getSGMapForDPASOperand(VectorType vectorTy, unsigned operandNum) {
   }
   /// Otherwise, return the default layout for the vector type.
   return getDefaultSgMap(vectorTy);
+}
+
+static SGMap getSupportedSGMapForOp(Operation *op) {
+  return getDefaultSgMap(2);
 }
 
 ///===----------------------------------------------------------------------===///
@@ -634,6 +647,56 @@ void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
+static LogicalResult
+attachLayoutAttributes(Operation *top,
+                       llvm::function_ref<SGMap(Value)> getPropagatedLayout) {
+  /// Helper to convert SGMap to xegpu::SGMapAttr.
+  auto getSGMapForResult = [&](Value r) -> Attribute {
+    auto layout = getPropagatedLayout(r);
+    if (!layout.isAssigned())
+      return {};
+    SmallVector<uint32_t, 2> wiLayout, wiData;
+    for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
+                                               layout.getDataAsArrayRef())) {
+      wiLayout.push_back(static_cast<uint32_t>(layout));
+      wiData.push_back(static_cast<uint32_t>(data));
+    }
+    return xegpu::SGMapAttr::get(top->getContext(), wiLayout, wiData);
+  };
+  /// Attach the layout attributes to the results of the operations.
+  top->walk([&](Operation *op) {
+    /// If no results, skip the operation.
+    if (op->getNumResults() == 0)
+      return;
+    if (auto tensorDescTy =
+            dyn_cast<xegpu::TensorDescType>(op->getResult(0).getType())) {
+      auto sgMapAttr = getSGMapForResult(op->getResult(0));
+      if (!sgMapAttr)
+        op->emitError("Expecting a layout for the result tensor descriptor.");
+      /// Clone the op, attach the sg_map to the result tensor descriptor, and
+      /// remove the original op.
+      OpBuilder builder(op);
+      auto *newOp = builder.clone(*op);
+      auto newTensorDescTy = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), sgMapAttr);
+      newOp->getResult(0).setType(newTensorDescTy);
+      op->replaceAllUsesWith(newOp->getResults());
+      op->erase();
+      return;
+    }
+    /// Otherwise simply attach the sg_map to the op itself.
+    for (auto [i, r] : llvm::enumerate(op->getResults())) {
+      auto sgMapAttr = getSGMapForResult(r);
+      if (sgMapAttr) {
+        auto attrName = "r" + std::to_string(i);
+        op->setAttr(attrName, sgMapAttr);
+      }
+    }
+  });
+  return success();
+}
+
 namespace {
 struct XeGPUSubgroupDistributePass final
     : public xegpu::impl::XeGPUSubgroupDistributeBase<
@@ -648,13 +711,14 @@ struct XeGPUSubgroupDistributePass final
 } // namespace
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
-  Operation *op = getOperation();
-  RunSGMapPropagation solver(op);
-
-  // Print the analysis result and exit.
+  auto &analyis = getAnalysis<RunSGMapPropagation>();
+  // Print the analysis result and exit. (for testing purposes)
   if (printOnly) {
     auto &os = llvm::outs();
-    solver.printAnalysisResult(os);
+    analyis.printAnalysisResult(os);
     return;
   }
+  auto getPropagatedLayout = [&](Value val) { return analyis.getSGMap(val); };
+  if (failed(attachLayoutAttributes(getOperation(), getPropagatedLayout)))
+    signalPassFailure();
 }
