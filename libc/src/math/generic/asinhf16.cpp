@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_EXCEPTS = 8;
 
 static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{{
@@ -41,6 +42,7 @@ static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{{
     // x = -0x1.26cp+4, asinhf16(x) = -0x1.cd8p+1 (RZ)
     {0xcc9b, 0xc336, 0, 1, 1}
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -58,9 +60,11 @@ LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
     return x;
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values
   if (auto r = ASINHF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   float xf = x;
   const float SIGN[2] = {1.0f, -1.0f};
