@@ -1912,6 +1912,12 @@ public:
 
       SCEVCheckCond = SCEVExp.expandCodeForPredicate(
           &UnionPred, SCEVCheckBlock->getTerminator());
+      if (isa<Constant>(SCEVCheckCond)) {
+        // Clean up directly after expanding the predicate to a constant, to
+        // avoid further expansions re-using anything left over from SCEVExp.
+        SCEVExpanderCleaner SCEVCleaner(SCEVExp);
+        SCEVCleaner.cleanup();
+      }
     }
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
