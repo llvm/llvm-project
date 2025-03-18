@@ -1455,8 +1455,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     return (ExistsOpInit::get(Type, Expr))->Fold(CurRec);
   }
 
-  case tgtok::XRecords: {
-    // Value ::= !records '<' Type '>' '(' Regex? ')'
+  case tgtok::XInstances: {
+    // Value ::= !instances '<' Type '>' '(' Regex? ')'
     Lex.Lex(); // eat the operation.
 
     const RecTy *Type = ParseOperatorType();
@@ -1464,7 +1464,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
       return nullptr;
 
     if (!consume(tgtok::l_paren)) {
-      TokError("expected '(' after type of !records");
+      TokError("expected '(' after type of !instances");
       return nullptr;
     }
 
@@ -1476,13 +1476,13 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
 
       const auto *RegexType = dyn_cast<TypedInit>(Regex);
       if (!RegexType) {
-        Error(RegexLoc, "expected string type argument in !records operator");
+        Error(RegexLoc, "expected string type argument in !instances operator");
         return nullptr;
       }
 
       const auto *SType = dyn_cast<StringRecTy>(RegexType->getType());
       if (!SType) {
-        Error(RegexLoc, "expected string type argument in !records operator");
+        Error(RegexLoc, "expected string type argument in !instances operator");
         return nullptr;
       }
     } else {
@@ -1491,11 +1491,11 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     }
 
     if (!consume(tgtok::r_paren)) {
-      TokError("expected ')' in !records");
+      TokError("expected ')' in !instances");
       return nullptr;
     }
 
-    return RecordsOpInit::get(Type, Regex)->Fold();
+    return InstancesOpInit::get(Type, Regex)->Fold();
   }
 
   case tgtok::XConcat:
