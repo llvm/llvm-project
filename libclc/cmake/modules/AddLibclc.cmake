@@ -340,37 +340,35 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
-  if( ${ARG_OPT_FLAGS} )
-    set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
+  set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
+  add_custom_target( ${builtins_opt_lib_tgt} ALL )
+  set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
+    FOLDER "libclc/Device IR/Opt"
+  )
+  add_dependencies( ${builtins_opt_lib_tgt} ${builtins_link_lib_tgt} )
 
-    # Add opt target
+  # Add opt target
+  if( ${ARG_OPT_FLAGS} STREQUAL "" )
+    # no-op
+    set( builtins_opt_lib ${builtins_link_lib} )
+  else()
     add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_opt_lib_tgt}.bc
         ${builtins_link_lib}
       DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
     )
-    add_custom_target( ${builtins_opt_lib_tgt}
-      ALL DEPENDS ${builtins_opt_lib_tgt}.bc
-    )
     set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
       TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${builtins_opt_lib_tgt}.bc
-      FOLDER "libclc/Device IR/Opt"
+      DEPENDS ${builtins_opt_lib_tgt}.bc
     )
-
     set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
-
-    set( builtins_link_opt_lib ${builtins_opt_lib} )
-    set( builtins_link_opt_lib_tgt ${builtins_opt_lib_tgt} )
-  else()
-    set( builtins_link_opt_lib ${builtins_link_lib} )
-    set( builtins_link_opt_lib_tgt ${builtins_link_lib_tgt} )
   endif()
 
   # Add prepare target
   set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
   add_custom_command( OUTPUT ${obj_suffix}
-    COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_link_opt_lib}
-    DEPENDS ${builtins_link_opt_lib} ${builtins_link_opt_lib_tgt} ${prepare_builtins_target} )
+    COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
+    DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
   add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
   set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
 
