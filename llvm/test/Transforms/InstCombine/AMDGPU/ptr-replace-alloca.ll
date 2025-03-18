@@ -4,15 +4,16 @@
 %struct.type = type { [256 x <2 x i64>] }
 @g1 = external hidden addrspace(3) global %struct.type, align 16
 
+; This test requires the PtrReplacer to replace users in an RPO traversal.
+; Furthermore, %ptr.else need not to be replaced so it must be retained in
+; %ptr.sink.
 define <2 x i64> @func(ptr addrspace(4) byref(%struct.type) align 16 %0, i1 %cmp.0) {
 ; CHECK-LABEL: define <2 x i64> @func(
 ; CHECK-SAME: ptr addrspace(4) byref([[STRUCT_TYPE:%.*]]) align 16 [[TMP0:%.*]], i1 [[CMP_0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COERCE:%.*]] = alloca [[STRUCT_TYPE]], align 16, addrspace(5)
-; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 16 dereferenceable(4096) [[COERCE]], ptr addrspace(4) noundef align 16 dereferenceable(4096) [[TMP0]], i64 4096, i1 false)
 ; CHECK-NEXT:    br i1 [[CMP_0]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[VAL_THEN:%.*]] = addrspacecast ptr addrspace(5) [[COERCE]] to ptr
+; CHECK-NEXT:    [[VAL_THEN:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
 ; CHECK-NEXT:    br label %[[SINK:.*]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[PTR_ELSE:%.*]] = load ptr, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g1, i32 32), align 16
@@ -43,5 +44,36 @@ sink:
   ret <2 x i64> %val.sink
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+define <2 x i64> @func_phi_loop(ptr addrspace(4) byref(%struct.type) align 16 %0, i1 %cmp.0) {
+; CHECK-LABEL: define <2 x i64> @func_phi_loop(
+; CHECK-SAME: ptr addrspace(4) byref([[STRUCT_TYPE:%.*]]) align 16 [[TMP0:%.*]], i1 [[CMP_0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VAL_0:%.*]] = addrspacecast ptr addrspace(4) [[TMP0]] to ptr
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PTR_PHI_R:%.*]] = phi ptr [ [[PTR_1:%.*]], %[[LOOP]] ], [ [[VAL_0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[PTR_1]] = load ptr, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g1, i32 32), align 16
+; CHECK-NEXT:    br i1 [[CMP_0]], label %[[LOOP]], label %[[SINK:.*]]
+; CHECK:       [[SINK]]:
+; CHECK-NEXT:    [[VAL_SINK:%.*]] = load <2 x i64>, ptr [[PTR_PHI_R]], align 16
+; CHECK-NEXT:    ret <2 x i64> [[VAL_SINK]]
+;
+entry:
+  %coerce = alloca %struct.type, align 16, addrspace(5)
+  call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 16 %coerce, ptr addrspace(4) align 16 %0, i64 4096, i1 false)
+  %ptr.0 = getelementptr inbounds i8, ptr addrspace(5) %coerce, i64 0
+  %val.0 = addrspacecast ptr addrspace(5) %ptr.0 to ptr
+  br label %loop
+
+loop:
+  %ptr.phi = phi ptr [ %val.1, %loop ], [ %val.0, %entry ]
+  %ptr.1 = load ptr, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @g1, i32 32), align 16
+  %val.1 = getelementptr inbounds nuw i8, ptr %ptr.1, i64 0
+  br i1 %cmp.0, label %loop, label %sink
+
+sink:
+  %val.sink = load <2 x i64>, ptr %ptr.phi, align 16
+  ret <2 x i64> %val.sink
+}
+
 declare void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noalias writeonly captures(none), ptr addrspace(4) noalias readonly captures(none), i64, i1 immarg) #0
