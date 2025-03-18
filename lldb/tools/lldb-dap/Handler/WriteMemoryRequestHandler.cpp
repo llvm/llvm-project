@@ -1,5 +1,4 @@
-//===-- WriteMemoryRequestHandler.cpp
-//--------------------------------------===//
+//===-- WriteMemoryRequestHandler.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "EventHelper.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
 
 namespace lldb_dap {
@@ -94,8 +91,6 @@ namespace lldb_dap {
 void WriteMemoryRequestHandler::operator()(
     const llvm::json::Object &request) const {
   llvm::json::Object response;
-  llvm::json::Array response_writeMemory;
-  llvm::json::Object body;
   FillResponse(request, response);
 
   auto arguments = request.getObject("arguments");
@@ -117,28 +112,28 @@ void WriteMemoryRequestHandler::operator()(
 
   llvm::StringRef data64 = GetString(arguments, "data").value_or("");
 
-  std::string output;
   lldb::SBError writeError;
-  int64_t countWrite = 0;
+  uint64_t bytes_written = 0;
 
-  output = llvm::encodeBase64(data64);
+  std::string output = llvm::encodeBase64(data64);
 
   // write the memory
   if (!output.empty()) {
     lldb::SBProcess process = dap.target.GetProcess();
-    countWrite =
+    bytes_written =
         process.WriteMemory(address_offset, static_cast<void *>(output.data()),
                             output.size(), writeError);
   }
 
-  if (countWrite == 0) {
+  if (bytes_written == 0) {
     response["success"] = false;
     EmplaceSafeString(response, "message", writeError.GetCString());
     dap.SendJSON(llvm::json::Value(std::move(response)));
     return;
   }
 
-  body.try_emplace("bytesWritten", std::move(countWrite));
+  llvm::json::Object body;
+  body.try_emplace("bytesWritten", std::move(bytes_written));
 
   response.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(response)));

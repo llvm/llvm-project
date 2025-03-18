@@ -73,11 +73,11 @@ add_lldb_tool(lldb-dap
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
+  Handler/WriteMemoryRequestHandler.cpp
   
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
-  Handler/WriteMemoryRequestHandler.cpp
 
   LINK_LIBS
     liblldb

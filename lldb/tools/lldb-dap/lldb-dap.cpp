@@ -146,6 +146,7 @@ static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<StepOutRequestHandler>();
   dap.RegisterRequest<ThreadsRequestHandler>();
   dap.RegisterRequest<VariablesRequestHandler>();
+  dap.RegisterRequest<WriteMemoryRequestHandler>();
 
   // Custom requests
   dap.RegisterRequest<CompileUnitsRequestHandler>();
@@ -153,8 +154,6 @@ static void RegisterRequestCallbacks(DAP &dap) {
 
   // Testing requests
   dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
-  // WriteMemory request
-  dap.RegisterRequest<WriteMemoryRequestHandler>();
 }
 
 static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
