@@ -1041,7 +1041,8 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
     for (MachineRegisterInfo::def_instr_iterator DefIt =
              MRI->def_instr_begin(SrcReg);
          DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
-      if ((*DefIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+      if ((*DefIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
+          (*DefIt).getOpcode() == SPIRV::OpVariable) {
         IsGV = true;
         break;
       }
@@ -2727,7 +2728,6 @@ bool SPIRVInstructionSelector::selectOpUndef(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-
 bool SPIRVInstructionSelector::selectInsertVal(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I) const {
@@ -2886,7 +2886,16 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                              ? MRI->getVRegDef(I.getOperand(2).getReg())
                              : nullptr;
     assert(MI);
-    return selectGlobalValue(MI->getOperand(0).getReg(), *MI, Init);
+    Register GVarVReg = MI->getOperand(0).getReg();
+    bool Res = selectGlobalValue(GVarVReg, *MI, Init);
+    // We violate SSA form by inserting OpVariable having a gMIR instruction
+    // %vreg = G_GLOBAL_VALUE @gvar
+    // We need to fix this erasing the duplicated definition.
+    if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+      GR.invalidateMachineInstr(MI);
+      MI->removeFromParent();
+    }
+    return Res;
   }
   case Intrinsic::spv_undef: {
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))

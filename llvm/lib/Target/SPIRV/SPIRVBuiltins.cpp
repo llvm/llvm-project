@@ -536,9 +536,8 @@ static Register buildBuiltinVariableLoad(
 /// SPIRVType in ASSIGN_TYPE, otherwise create it from \p Ty. Defined in
 /// SPIRVPreLegalizer.cpp.
 extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI);
+                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                              MachineRegisterInfo &MRI);
 
 // TODO: Move to TableGen.
 static SPIRV::MemorySemantics::MemorySemantics

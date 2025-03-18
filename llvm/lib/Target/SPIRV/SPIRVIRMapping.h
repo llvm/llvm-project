@@ -1,4 +1,4 @@
-//===-- SPIRVDuplicatesTracker.h - SPIR-V Duplicates Tracker ----*- C++ -*-===//
+//===------------ SPIRVMapping.h - SPIR-V Duplicates Tracker ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,28 +26,6 @@
 
 namespace llvm {
 namespace SPIRV {
-/*
-inline size_t to_hash(const MachineInstr *MI,
-                      std::unordered_set<const MachineInstr *> &Visited) {
-  if (!MI || !Visited.insert(MI).second)
-    return 0;
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-  SmallVector<size_t, 16> Codes{MI->getOpcode()};
-  size_t H;
-  for (unsigned I = MI->getNumDefs(); I < MI->getNumOperands(); ++I) {
-    const MachineOperand &MO = MI->getOperand(I);
-    H = MO.isReg() ? to_hash(getDef(MO, &MRI), Visited)
-                   : size_t(llvm::hash_value(MO));
-    Codes.push_back(H);
-  }
-  return llvm::hash_combine(Codes.begin(), Codes.end());
-}
-
-inline size_t to_hash(const MachineInstr *MI) {
-  std::unordered_set<const MachineInstr *> Visited;
-  return to_hash(MI, Visited);
-}
-*/
 
 inline size_t to_hash(const MachineInstr *MI) {
   hash_code H = llvm::hash_combine(MI->getOpcode(), MI->getNumOperands());
@@ -63,10 +41,10 @@ inline size_t to_hash(const MachineInstr *MI) {
   return H;
 }
 
-using MIHandle = std::pair<const MachineInstr *, size_t>;
+using MIHandle = std::tuple<const MachineInstr *, Register, size_t>;
 
 inline MIHandle getMIKey(const MachineInstr *MI) {
-  return std::make_pair(MI, SPIRV::to_hash(MI));
+  return std::make_tuple(MI, MI->getOperand(0).getReg(), SPIRV::to_hash(MI));
 }
 
 using IRHandle = std::tuple<const void *, unsigned, unsigned>;
@@ -200,10 +178,8 @@ public:
     SPIRV::MIHandle MIKey = SPIRV::getMIKey(MI);
     auto It1 = Vregs.try_emplace(HandleMF, MIKey);
     if (!It1.second) {
-      // there is an expired record
-      auto [ExistMI, _] = It1.first->second;
-      // invalidate the record
-      Defs.erase(ExistMI);
+      // there is an expired record that we need to invalidate
+      Defs.erase(std::get<0>(It1.first->second));
       // update the record
       It1.first->second = MIKey;
     }
@@ -225,13 +201,14 @@ public:
     auto It = Vregs.find(HandleMF);
     if (It == Vregs.end())
       return nullptr;
-    auto [MI, Hash] = It->second;
-    assert(SPIRV::to_hash(MI) == Hash);
-    assert(Defs.find(MI) != Defs.end() && Defs.find(MI)->second == HandleMF);
-    /*if (SPIRV::to_hash(MI) != Hash) {
+    auto [MI, Reg, Hash] = It->second;
+    const MachineInstr *Def = MF->getRegInfo().getVRegDef(Reg);
+    if (!Def || Def != MI || SPIRV::to_hash(MI) != Hash) {
+      // there is an expired record that we need to invalidate
       erase(MI);
       return nullptr;
-    }*/
+    }
+    assert(Defs.find(MI) != Defs.end() && Defs.find(MI)->second == HandleMF);
     return MI;
   }
   Register find(SPIRV::IRHandle Handle, const MachineFunction *MF) {
