@@ -264,10 +264,10 @@ std::int32_t RTNAME(GetCwd)(
 }
 
 std::int32_t RTNAME(Hostnm)(
-    const Descriptor &hnam, const char *sourceFile, int line) {
+    const Descriptor &res, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
-  RUNTIME_CHECK(terminator, IsValidCharDescriptor(&hnam));
+  RUNTIME_CHECK(terminator, IsValidCharDescriptor(&res));
 
   char buf[256];
   std::int32_t status{0};
@@ -292,7 +292,7 @@ std::int32_t RTNAME(Hostnm)(
 
   if (status == 0) {
     std::int64_t strLen{StringLength(buf)};
-    std::int32_t status{CopyCharsToDescriptor(hnam, buf, strLen)};
+    std::int32_t status{CopyCharsToDescriptor(res, buf, strLen)};
   }
 
   return status;

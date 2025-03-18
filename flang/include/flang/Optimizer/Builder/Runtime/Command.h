@@ -61,7 +61,7 @@ mlir::Value genGetCwd(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate a call to the Hostnm runtime function which implements
 /// the HOSTNM intrinsic.
 mlir::Value genHostnm(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value c);
+                      mlir::Value res);
 
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H

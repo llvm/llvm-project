@@ -481,7 +481,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"getpid", &I::genGetPID},
     {"getuid", &I::genGetUID},
     {"hostnm",
-     &I::genGetCwd,
+     &I::genHostnm,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"iachar", &I::genIchar},
@@ -4328,8 +4328,8 @@ IntrinsicLibrary::genHostnm(std::optional<mlir::Type> resultType,
   assert((args.size() == 1 && resultType.has_value()) ||
          (args.size() >= 1 && !resultType.has_value()));
 
-  mlir::Value cwd = fir::getBase(args[0]);
-  mlir::Value statusValue = fir::runtime::genHostnm(builder, loc, cwd);
+  mlir::Value res = fir::getBase(args[0]);
+  mlir::Value statusValue = fir::runtime::genHostnm(builder, loc, res);
 
   if (resultType.has_value()) {
     // Function form, return status.
