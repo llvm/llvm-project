@@ -142,6 +142,7 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
     II.replaceAllUsesWith(Src);
+    II.eraseFromParent();
     return true;
   }
   case Intrinsic::amdgcn_ballot: {
@@ -165,6 +166,8 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << "\n");
           ICmp->replaceAllUsesWith(NotOp);
+          ICmp->eraseFromParent();
+          II.eraseFromParent();
           Changed = true;
         }
         // (icmp ne %ballot, 0)  -->  %ballot_arg
@@ -172,6 +175,8 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
                             << *Src << "\n");
           ICmp->replaceAllUsesWith(Src);
+          ICmp->eraseFromParent();
+          II.eraseFromParent();
           Changed = true;
         }
       }
