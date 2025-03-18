@@ -236,10 +236,17 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   return error;
 }
 
-Status ProcessWindows::DoResume() {
+Status ProcessWindows::DoResume(RunDirection direction) {
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
   Status error;
+
+  if (direction == RunDirection::eRunReverse) {
+    error.FromErrorStringWithFormatv(
+        "error: {0} does not support reverse execution of processes",
+        GetPluginName());
+    return error;
+  }
 
   StateType private_state = GetPrivateState();
   if (private_state == eStateStopped || private_state == eStateCrashed) {
