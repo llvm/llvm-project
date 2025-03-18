@@ -1111,10 +1111,8 @@ def VLM_V : VUnitStrideLoadMask<"vlm.v">,
              Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
 def VSM_V : VUnitStrideStoreMask<"vsm.v">,
              Sched<[WriteVSTM_WorstCase, ReadVSTM_WorstCase, ReadVSTX]>;
-def : InstAlias<"vle1.v $vd,$rs1",
-                (VLM_V VR:$vd, GPRMemZeroOffset:$rs1), 0>;
-def : InstAlias<"vse1.v $vs3, $rs1",
-                (VSM_V VR:$vs3, GPRMemZeroOffset:$rs1), 0>;
+def : MnemonicAlias<"vle1.v", "vlm.v">;
+def : MnemonicAlias<"vse1.v", "vsm.v">;
 
 def VS1R_V : VWholeStore<0, "vs1r.v", VR>,
              Sched<[WriteVST1R, ReadVST1R, ReadVSTX]>;
@@ -1582,8 +1580,7 @@ defm VFREDMIN : VREDMINMAX_FV_V<"vfredmin", 0b000101>;
 }
 } // RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
 
-def : InstAlias<"vfredsum.vs $vd, $vs2, $vs1$vm",
-                (VFREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
+def : MnemonicAlias<"vfredsum.vs", "vfredusum.vs">;
 
 // Vector Widening Floating-Point Reduction Instructions
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2 in {
@@ -1597,8 +1594,7 @@ defm VFWREDUSUM : VWRED_FV_V<"vfwredusum", 0b110001>;
 }
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask, DestEEW = EEWSEWx2
 
-def : InstAlias<"vfwredsum.vs $vd, $vs2, $vs1$vm",
-                (VFWREDUSUM_VS VR:$vd, VR:$vs2, VR:$vs1, VMaskOp:$vm), 0>;
+def : MnemonicAlias<"vfwredsum.vs", "vfwredusum.vs">;
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
@@ -1623,10 +1619,8 @@ def : InstAlias<"vmset.m $vd",
 def : InstAlias<"vmnot.m $vd, $vs",
                 (VMNAND_MM VR:$vd, VR:$vs, VR:$vs)>;
 
-def : InstAlias<"vmandnot.mm $vd, $vs2, $vs1",
-                (VMANDN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
-def : InstAlias<"vmornot.mm $vd, $vs2, $vs1",
-                (VMORN_MM VR:$vd, VR:$vs2, VR:$vs1), 0>;
+def : MnemonicAlias<"vmandnot.mm", "vmandn.mm">;
+def : MnemonicAlias<"vmornot.mm", "vmorn.mm">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
@@ -1645,8 +1639,7 @@ def VFIRST_M : RVInstV<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
 
-def : InstAlias<"vpopc.m $vd, $vs2$vm",
-                (VCPOP_M GPR:$vd, VR:$vs2, VMaskOp:$vm), 0>;
+def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
 let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsVLMask in {
 
