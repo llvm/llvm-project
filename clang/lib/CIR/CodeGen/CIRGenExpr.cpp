@@ -264,6 +264,13 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   return addr;
 }
 
+mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
+                                             clang::QualType qt) {
+  mlir::Type t = convertType(qt);
+  CharUnits alignment = getContext().getTypeAlignInChars(qt);
+  return builder.createDummyValue(loc, t, alignment);
+}
+
 /// This creates an alloca and inserts it  at the current insertion point of the
 /// builder.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
