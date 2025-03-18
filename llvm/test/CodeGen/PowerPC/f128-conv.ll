@@ -1347,7 +1347,7 @@ define half @trunc(fp128 %a) nounwind {
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    bl __trunctfhf2
+; CHECK-NEXT:    bl __trunckfhf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    mtfprwz f0, r3
@@ -1362,7 +1362,7 @@ define half @trunc(fp128 %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
-; CHECK-P8-NEXT:    bl __trunctfhf2
+; CHECK-P8-NEXT:    bl __trunckfhf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    clrldi r3, r3, 48
 ; CHECK-P8-NEXT:    bl __extendhfsf2

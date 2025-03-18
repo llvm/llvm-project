@@ -55,7 +55,7 @@ define fp128 @extenddfkf2(double %a) {
 
 define half @trunctfhf2(fp128 %a) {
 ; CHECK-LABEL: trunctfhf2:
-; CHECK: __trunctfhf2
+; CHECK: __trunckfhf2
 entry:
   %i = fptrunc fp128 %a to half
   ret half %i
