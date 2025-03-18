@@ -1082,9 +1082,9 @@ public:
 
     IRMapping mapping;
     Location loc = eltwise->getLoc();
-    for (auto arg : eltwise->getOperands()) {
-      Value newArg =
-          rewriter.create<vector::ExtractOp>(loc, arg, op.getMixedPosition());
+    SmallVector<OpFoldResult> pos = op.getMixedPosition();
+    for (Value arg : eltwise->getOperands()) {
+      Value newArg = rewriter.create<vector::ExtractOp>(loc, arg, pos);
       mapping.map(arg, newArg);
     }
 
