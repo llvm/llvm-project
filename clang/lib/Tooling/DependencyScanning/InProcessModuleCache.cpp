@@ -35,7 +35,7 @@ public:
     // modules, so we'd typically only reach it if the owner crashed (but so did
     // we, since we run in the same process), or encountered deadlock.
     (void)MaxSeconds;
-    std::shared_lock Lock(*OwningLock.mutex());
+    std::shared_lock<std::shared_mutex> Lock(*OwningLock.mutex());
     return llvm::WaitForUnlockResult::Success;
   }
 
@@ -65,7 +65,7 @@ public:
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
     auto &Mtx = [&]() -> std::shared_mutex & {
-      std::lock_guard Lock(Mutexes.Mutex);
+      std::lock_guard<std::mutex> Lock(Mutexes.Mutex);
       auto &Mutex = Mutexes.Map[Filename];
       if (!Mutex)
         Mutex = std::make_unique<std::shared_mutex>();
