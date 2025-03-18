@@ -633,8 +633,8 @@ class CVLoad_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd), 
       (ins GPRMem:$rs1, simm12:$imm12), opcodestr, "$rd, ${imm12}(${rs1})">;
 
-let Predicates = [HasVendorXCVelw, IsRV32], hasSideEffects = 0, 
-    mayLoad = 1, mayStore = 0 in {
+let Predicates = [HasVendorXCVelw, IsRV32], DecoderNamespace = "XCV",
+    hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
   // Event load
   def CV_ELW : CVLoad_ri<0b011, "cv.elw">;
 }
