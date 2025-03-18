@@ -1980,9 +1980,9 @@ define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    st1w { z1.s }, p0, [x9, #2, mul vl]
-; CHECK-NEXT:    st1w { z2.s }, p0, [x9, #3, mul vl]
-; CHECK-NEXT:    st1w { z3.s }, p0, [x9, #1, mul vl]
+; CHECK-NEXT:    str z1, [x9, #2, mul vl]
+; CHECK-NEXT:    str z2, [x9, #3, mul vl]
+; CHECK-NEXT:    str z3, [x9, #1, mul vl]
 ; CHECK-NEXT:    b.ne LBB19_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret

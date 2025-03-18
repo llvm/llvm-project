@@ -23,6 +23,7 @@ if (LLVM_ENABLE_EH)
 endif()
 
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang-rt")
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
   message(FATAL_ERROR "In-source builds are not allowed. \
@@ -33,17 +34,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
 endif()
 
 option(FLANG_ENABLE_WERROR "Fail and stop building flang if a warning is triggered." OFF)
-
-# The out of tree builds of the compiler and the Fortran runtime
-# must use the same setting of FLANG_RUNTIME_F128_MATH_LIB
-# to be composable. Failure to synchronize this setting may result
-# in linking errors or fatal failures in F128 runtime functions.
-set(FLANG_RUNTIME_F128_MATH_LIB "" CACHE STRING
-  "Specifies the target library used for implementing IEEE-754 128-bit float \
-  math in F18 runtime, e.g. it might be libquadmath for targets where \
-  REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
-  is mapped to long double, etc."
-  )
 
 # Check for a standalone build and configure as appropriate from
 # there.
@@ -78,6 +68,8 @@ endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "flang isn't supported on 32 bit CPUs")
 endif()
+
+set(MLIR_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../mlir" CACHE PATH "Path to MLIR source tree")
 
 if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -197,6 +189,11 @@ if (FLANG_STANDALONE_BUILD)
     ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
 
   set(LLVM_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/llvm-lit" CACHE STRING "Command used to spawn lit")
+  set(LIT_ARGS_DEFAULT "-sv")
+  if (MSVC OR XCODE)
+    set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
+  endif()
+  set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 
   option(FLANG_INCLUDE_TESTS
          "Generate build targets for the Flang unit tests."
@@ -240,14 +237,31 @@ else()
     set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
-  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir ) # --src-root
-  set(MLIR_INCLUDE_DIR ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
+  set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
   set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
+  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
 
-option(FLANG_INCLUDE_RUNTIME "Build the runtime in-tree (deprecated; to be replaced with LLVM_ENABLE_RUNTIMES=flang-rt)" ON)
+set(FLANG_INCLUDE_RUNTIME_default ON)
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(FLANG_INCLUDE_RUNTIME_default OFF)
+endif ()
+option(FLANG_INCLUDE_RUNTIME "Build the runtime in-tree (deprecated; to be replaced with LLVM_ENABLE_RUNTIMES=flang-rt)" ${FLANG_INCLUDE_RUNTIME_default})
+if (FLANG_INCLUDE_RUNTIME)
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(WARNING "Building Flang-RT using LLVM_ENABLE_RUNTIMES. FLANG_INCLUDE_RUNTIME=${FLANG_INCLUDE_RUNTIME} ignored.")
+    set(FLANG_INCLUDE_RUNTIME OFF)
+  else ()
+     message(STATUS "Building Flang-RT in-tree")
+  endif ()
+else ()
+  if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(STATUS "Building Flang-RT using LLVM_ENABLE_RUNTIMES")
+  else ()
+    message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, either add LLVM_ENABLE_RUNTIMES=flang-rt, or compile a standalone Flang-RT.")
+  endif ()
+endif ()
 
 set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
@@ -301,7 +315,7 @@ set(FLANG_DEFAULT_LINKER "" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
-   "Default Fortran runtime library to use (\"libFortranRuntime\"), leave empty for platform default.")
+   "Default Fortran runtime library to use (\"libflang_rt.runtime\"), leave empty for platform default.")
 
 if (NOT(FLANG_DEFAULT_RTLIB STREQUAL ""))
   message(WARNING "Resetting Flang's default runtime library to use platform default.")
@@ -356,20 +370,6 @@ set(FLANG_REPOSITORY_STRING "" CACHE STRING
 if (FLANG_REPOSITORY_STRING)
   add_definitions(-DFLANG_REPOSITORY_STRING="${FLANG_REPOSITORY_STRING}")
 endif()
-
-if (FLANG_RUNTIME_F128_MATH_LIB)
-  add_compile_definitions(
-    FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}"
-    )
-endif()
-
-include(TestBigEndian)
-test_big_endian(IS_BIGENDIAN)
-if (IS_BIGENDIAN)
-  add_compile_definitions(FLANG_BIG_ENDIAN=1)
-else ()
-  add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
-endif ()
 
 # Configure Flang's Version.inc file.
 configure_file(
@@ -467,7 +467,19 @@ if (APPLE)
   endif()
 endif()
 
+# Set up job pools for flang.  Some of the flang sources take a lot of memory to
+# compile, so allow users to limit the number of parallel flang jobs.  This is
+# useful for building flang alongside several other projects since you can use
+# the maximum number of build jobs for the other projects while limiting the
+# number of flang compile jobs.
+set(FLANG_PARALLEL_COMPILE_JOBS CACHE STRING
+  "The maximum number of concurrent compilation jobs for Flang (Ninja only)")
+if (FLANG_PARALLEL_COMPILE_JOBS)
+  set_property(GLOBAL APPEND PROPERTY JOB_POOLS flang_compile_job_pool=${FLANG_PARALLEL_COMPILE_JOBS})
+endif()
+
 include(AddFlang)
+include(FlangCommon)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
@@ -561,7 +573,13 @@ include(GetClangResourceDir)
 get_clang_resource_dir(HEADER_BINARY_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 configure_file(
   ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
-  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h)
+  ${HEADER_BINARY_DIR}/ISO_Fortran_binding.h COPYONLY)
+
+# llvm-test-suite explicitly searches for this header file
+# (`ISO_FORTRAN_C_HEADER`), cannot hide it in Clang's resource dir.
+configure_file(
+  ${FLANG_SOURCE_DIR}/include/flang/ISO_Fortran_binding.h
+  ${LLVM_RUNTIME_OUTPUT_INTDIR}/../include/flang/ISO_Fortran_binding.h COPYONLY)
 
 # And also install it into the install area
 get_clang_resource_dir(HEADER_INSTALL_DIR SUBDIR include)

@@ -522,10 +522,10 @@ void test_float(void) {
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 0, 0
 
   vf = vec_round(vf);
-  // CHECK: call <4 x float> @llvm.s390.vfisb(<4 x float> %{{.*}}, i32 4, i32 4)
+  // CHECK: call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfisb %{{.*}}, %{{.*}}, 4, 4
   vd = vec_round(vd);
-  // CHECK: call <2 x double> @llvm.s390.vfidb(<2 x double> %{{.*}}, i32 4, i32 4)
+  // CHECK: call <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double> %{{.*}}, metadata !{{.*}})
   // CHECK-ASM: vfidb %{{.*}}, %{{.*}}, 4, 4
 
   vbi = vec_fp_test_data_class(vf, 0, &cc);

@@ -2187,6 +2187,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinf16_test.cpp
+  DEPENDS
+    libc.src.math.asinf16  
+)
+
+add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
@@ -2197,6 +2208,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.acosf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  acosf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acosf16_test.cpp
+  DEPENDS
+    libc.src.math.acosf16  
 )
 
 add_fp_unittest(
@@ -2778,6 +2800,35 @@ add_fp_unittest(
     libc.src.stdlib.srand
 )
 
+add_fp_unittest(
+  add_same_type_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    add_same_type_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
+  sub_same_type_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sub_same_type_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.types
+)
 
 add_subdirectory(generic)
 add_subdirectory(smoke)

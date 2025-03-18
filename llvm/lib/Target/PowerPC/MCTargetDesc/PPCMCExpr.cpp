@@ -8,10 +8,13 @@
 
 #include "PPCMCExpr.h"
 #include "PPCFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -24,145 +27,66 @@ const PPCMCExpr *PPCMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 
 void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   getSubExpr()->print(OS, MAI);
-
-  switch (Kind) {
-  default:
-    llvm_unreachable("Invalid kind!");
-  case VK_PPC_LO:
-    OS << "@l";
-    break;
-  case VK_PPC_HI:
-    OS << "@h";
-    break;
-  case VK_PPC_HA:
-    OS << "@ha";
-    break;
-  case VK_PPC_HIGH:
-    OS << "@high";
-    break;
-  case VK_PPC_HIGHA:
-    OS << "@higha";
-    break;
-  case VK_PPC_HIGHER:
-    OS << "@higher";
-    break;
-  case VK_PPC_HIGHERA:
-    OS << "@highera";
-    break;
-  case VK_PPC_HIGHEST:
-    OS << "@highest";
-    break;
-  case VK_PPC_HIGHESTA:
-    OS << "@highesta";
-    break;
-  }
+  OS << '@' << MAI->getVariantKindName(Kind);
 }
 
 bool
 PPCMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
 
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
     return false;
 
   if (!Value.isAbsolute())
     return false;
-
-  Res = evaluateAsInt64(Value.getConstant());
+  auto Tmp = evaluateAsInt64(Value.getConstant());
+  if (!Tmp)
+    return false;
+  Res = *Tmp;
   return true;
 }
 
-int64_t
-PPCMCExpr::evaluateAsInt64(int64_t Value) const {
+std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
   switch (Kind) {
-    case VK_PPC_LO:
-      return Value & 0xffff;
-    case VK_PPC_HI:
-      return (Value >> 16) & 0xffff;
-    case VK_PPC_HA:
-      return ((Value + 0x8000) >> 16) & 0xffff;
-    case VK_PPC_HIGH:
-      return (Value >> 16) & 0xffff;
-    case VK_PPC_HIGHA:
-      return ((Value + 0x8000) >> 16) & 0xffff;
-    case VK_PPC_HIGHER:
-      return (Value >> 32) & 0xffff;
-    case VK_PPC_HIGHERA:
-      return ((Value + 0x8000) >> 32) & 0xffff;
-    case VK_PPC_HIGHEST:
-      return (Value >> 48) & 0xffff;
-    case VK_PPC_HIGHESTA:
-      return ((Value + 0x8000) >> 48) & 0xffff;
-    case VK_PPC_None:
-      break;
+  case VK_LO:
+    return Value & 0xffff;
+  case VK_HI:
+    return (Value >> 16) & 0xffff;
+  case VK_HA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case VK_HIGH:
+    return (Value >> 16) & 0xffff;
+  case VK_HIGHA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case VK_HIGHER:
+    return (Value >> 32) & 0xffff;
+  case VK_HIGHERA:
+    return ((Value + 0x8000) >> 32) & 0xffff;
+  case VK_HIGHEST:
+    return (Value >> 48) & 0xffff;
+  case VK_HIGHESTA:
+    return ((Value + 0x8000) >> 48) & 0xffff;
+  default:
+    return {};
   }
-  llvm_unreachable("Invalid kind!");
 }
 
-bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                          const MCFixup *Fixup) const {
-  MCValue Value;
-
-  if (!getSubExpr()->evaluateAsRelocatable(Value, Asm, Fixup))
+bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!Asm)
+    return false;
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  if (Value.isAbsolute()) {
-    int64_t Result = evaluateAsInt64(Value.getConstant());
-    bool IsHalf16 = Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16;
-    bool IsHalf16DS =
-        Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16ds;
-    bool IsHalf16DQ =
-        Fixup && Fixup->getTargetKind() == PPC::fixup_ppc_half16dq;
-    bool IsHalf = IsHalf16 || IsHalf16DS || IsHalf16DQ;
-
-    if (!IsHalf && Result >= 0x8000)
-      return false;
-    if ((IsHalf16DS && (Result & 0x3)) || (IsHalf16DQ && (Result & 0xf)))
-      return false;
-
-    Res = MCValue::get(Result);
+  // The signedness of the result is dependent on the instruction operand. E.g.
+  // in addis 3,3,65535@l, 65535@l is signed. In the absence of information at
+  // parse time (!Asm), disable the folding.
+  std::optional<int64_t> MaybeInt = evaluateAsInt64(Res.getConstant());
+  if (Res.isAbsolute() && MaybeInt) {
+    Res = MCValue::get(*MaybeInt);
   } else {
-    if (!Asm || !Asm->hasLayout())
-      return false;
-
-    MCContext &Context = Asm->getContext();
-    const MCSymbolRefExpr *Sym = Value.getSymA();
-    MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
-    if (Modifier != MCSymbolRefExpr::VK_None)
-      return false;
-    switch (Kind) {
-      default:
-        llvm_unreachable("Invalid kind!");
-      case VK_PPC_LO:
-        Modifier = MCSymbolRefExpr::VK_PPC_LO;
-        break;
-      case VK_PPC_HI:
-        Modifier = MCSymbolRefExpr::VK_PPC_HI;
-        break;
-      case VK_PPC_HA:
-        Modifier = MCSymbolRefExpr::VK_PPC_HA;
-        break;
-      case VK_PPC_HIGH:
-        Modifier = MCSymbolRefExpr::VK_PPC_HIGH;
-        break;
-      case VK_PPC_HIGHA:
-        Modifier = MCSymbolRefExpr::VK_PPC_HIGHA;
-        break;
-      case VK_PPC_HIGHERA:
-        Modifier = MCSymbolRefExpr::VK_PPC_HIGHERA;
-        break;
-      case VK_PPC_HIGHER:
-        Modifier = MCSymbolRefExpr::VK_PPC_HIGHER;
-        break;
-      case VK_PPC_HIGHEST:
-        Modifier = MCSymbolRefExpr::VK_PPC_HIGHEST;
-        break;
-      case VK_PPC_HIGHESTA:
-        Modifier = MCSymbolRefExpr::VK_PPC_HIGHESTA;
-        break;
-    }
-    Sym = MCSymbolRefExpr::create(&Sym->getSymbol(), Modifier, Context);
-    Res = MCValue::get(Sym, Value.getSymB(), Value.getConstant());
+    Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
+                       getKind());
   }
 
   return true;

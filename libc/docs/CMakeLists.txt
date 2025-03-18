@@ -43,6 +43,7 @@ if (SPHINX_FOUND)
       errno
       fenv
       float
+      glob
       inttypes
       locale
       net/if
@@ -59,6 +60,7 @@ if (SPHINX_FOUND)
       sys/mman
       sys/resource
       sys/stat
+      sys/statvfs
       sys/time
       sys/wait
       termios

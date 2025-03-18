@@ -1106,9 +1106,7 @@ Value FilterIterator::genShouldFilter(OpBuilder &b, Location l) {
         Value notLegit = genCrdNotLegitPredicate(b, l, wrapCrd);
         return {notLegit};
       });
-
-  assert(r.size() == 1);
-  return r.front();
+  return llvm::getSingleElement(r);
 }
 
 Value FilterIterator::genNotEndImpl(OpBuilder &b, Location l) {
@@ -1120,8 +1118,7 @@ Value FilterIterator::genNotEndImpl(OpBuilder &b, Location l) {
         // crd < size
         return {CMPI(ult, crd, size)};
       });
-  assert(r.size() == 1);
-  return r.front();
+  return llvm::getSingleElement(r);
 }
 
 ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
@@ -1145,7 +1142,6 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
       /*beforeBuilder=*/
       [this](OpBuilder &b, Location l, ValueRange ivs) {
         ValueRange isFirst = linkNewScope(ivs);
-        assert(isFirst.size() == 1);
         scf::ValueVector cont =
             genWhenInBound(b, l, *wrap, C_FALSE,
                            [this, isFirst](OpBuilder &b, Location l,
@@ -1155,7 +1151,7 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
                                  genCrdNotLegitPredicate(b, l, wrapCrd);
                              Value crd = fromWrapCrd(b, l, wrapCrd);
                              Value ret = ANDI(CMPI(ult, crd, size), notLegit);
-                             ret = ORI(ret, isFirst.front());
+                             ret = ORI(ret, llvm::getSingleElement(isFirst));
                              return {ret};
                            });
         b.create<scf::ConditionOp>(l, cont.front(), ivs);
@@ -1200,8 +1196,7 @@ Value SubSectIterHelper::genNotEnd(OpBuilder &b, Location l) {
         // crd < size
         return {CMPI(ult, crd, subSect.subSectSz)};
       });
-  assert(r.size() == 1);
-  return r.front();
+  return llvm::getSingleElement(r);
 }
 
 Value SubSectIterHelper::deref(OpBuilder &b, Location l) {

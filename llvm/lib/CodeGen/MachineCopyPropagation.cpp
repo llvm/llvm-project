@@ -971,6 +971,19 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
     forwardUses(MI);
 
+    // It's possible that the previous transformation has resulted in a no-op
+    // register move (i.e. one where source and destination registers are the
+    // same and are not referring to a reserved register). If so, delete it.
+    CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
+    if (CopyOperands &&
+        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg() &&
+        !MRI->isReserved(CopyOperands->Source->getReg())) {
+      MI.eraseFromParent();
+      NumDeletes++;
+      Changed = true;
+      continue;
+    }
+
     // Not a copy.
     SmallVector<Register, 4> Defs;
     const MachineOperand *RegMask = nullptr;
@@ -1018,18 +1031,30 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
           continue;
         }
 
-        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
-                   MaybeDead->dump());
-
         // Invalidate all entries in the copy map which are not preserved by
         // this register mask.
-        for (unsigned RegUnit : TRI->regunits(Reg))
+        bool MIRefedinCopyInfo = false;
+        for (unsigned RegUnit : TRI->regunits(Reg)) {
           if (!PreservedRegUnits.test(RegUnit))
             Tracker.clobberRegUnit(RegUnit, *TRI, *TII, UseCopyInstr);
+          else {
+            if (MaybeDead == Tracker.findCopyForUnit(RegUnit, *TRI)) {
+              MIRefedinCopyInfo = true;
+            }
+          }
+        }
 
         // erase() will return the next valid iterator pointing to the next
         // element after the erased one.
         DI = MaybeDeadCopies.erase(DI);
+
+        // Preserved by RegMask, DO NOT remove copy
+        if (MIRefedinCopyInfo)
+          continue;
+
+        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: "
+                          << *MaybeDead);
+
         MaybeDead->eraseFromParent();
         Changed = true;
         ++NumDeletes;

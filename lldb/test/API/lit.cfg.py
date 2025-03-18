@@ -179,6 +179,9 @@ if lldb_use_simulator:
     elif lldb_use_simulator == "tvos":
         lit_config.note("Running API tests on tvOS simulator")
         config.available_features.add("lldb-simulator-tvos")
+    elif lldb_use_simulator == "qemu-user":
+        lit_config.note("Running API tests on qemu-user simulator")
+        config.available_features.add("lldb-simulator-qemu-user")
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
@@ -284,6 +287,9 @@ elif "lldb-simulator-tvos" in config.available_features:
         "--platform-name",
         "tvos-simulator",
     ]
+
+if "lldb-simulator-qemu-user" in config.available_features:
+    dotest_cmd += ["--platform-name", "qemu-user"]
 
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:

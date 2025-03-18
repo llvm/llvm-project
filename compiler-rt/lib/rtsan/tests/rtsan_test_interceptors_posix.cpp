@@ -401,7 +401,7 @@ TEST_F(RtsanFileTest, FcntlFlockDiesWhenRealtime) {
   ASSERT_THAT(fd, Ne(-1));
 
   auto Func = [fd]() {
-    struct flock lock {};
+    struct flock lock{};
     lock.l_type = F_RDLCK;
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
@@ -735,7 +735,7 @@ TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
     GTEST_SKIP();
   }
 
-  struct ifreq ifr {};
+  struct ifreq ifr{};
   strncpy(ifr.ifr_name, ifaddr->ifa_name, IFNAMSIZ - 1);
 
   int retval = ioctl(sock, SIOCGIFADDR, &ifr);
@@ -860,6 +860,30 @@ TEST_F(RtsanOpenedFileTest, FwriteDiesWhenRealtime) {
   const char *message = "Hello, world!";
   auto Func = [&]() { fwrite(&message, 1, 4, GetOpenFile()); };
   ExpectRealtimeDeath(Func, "fwrite");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkDiesWhenRealtime) {
+  auto Func = [&]() { unlink(GetTemporaryFilePath()); };
+  ExpectRealtimeDeath(Func, "unlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
+  auto Func = [&]() { unlinkat(0, GetTemporaryFilePath(), 0); };
+  ExpectRealtimeDeath(Func, "unlinkat");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, TruncateDiesWhenRealtime) {
+  auto Func = [&]() { truncate(GetTemporaryFilePath(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("truncate"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
+  auto Func = [&]() { ftruncate(GetOpenFd(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftruncate"));
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -1096,6 +1120,25 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
     os_unfair_lock_lock(&unfair_lock);
   };
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+// We intercept _os_nospin_lock_lock because it's the internal
+// locking mechanism for MacOS's atomic implementation for data
+// types that are larger than the hardware's maximum lock-free size.
+// However, it's a private implementation detail and not visible in any headers,
+// so we must duplicate the required type definitions to forward declaration
+// what we need here.
+extern "C" {
+struct _os_nospin_lock_s {
+  unsigned int oul_value;
+};
+void _os_nospin_lock_lock(_os_nospin_lock_s *);
+}
+TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
+  _os_nospin_lock_s lock{};
+  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
+  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif

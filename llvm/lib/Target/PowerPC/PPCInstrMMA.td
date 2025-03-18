@@ -1,12 +1,4 @@
 
-// Mask immediates for MMA instructions (2, 4 and 8 bits).
-def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
-def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
-def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
-
-def MMA : Predicate<"Subtarget->hasMMA()">;
-
-
 // Multiclass definitions for MMA accumulator instructions.
 // ----------------------------------------------------------------------------
 

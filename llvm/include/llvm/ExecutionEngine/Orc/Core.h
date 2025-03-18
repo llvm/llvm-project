@@ -1580,18 +1580,36 @@ public:
     return EPC->getBootstrapSymbols(Pairs);
   }
 
-  /// Run a wrapper function in the executor.
+  /// Run a wrapper function in the executor. The given WFRHandler will be
+  /// called on the result when it is returned.
   ///
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  ///
-  /// The given OnComplete function will be called to return the result.
-  template <typename... ArgTs>
-  void callWrapperAsync(ArgTs &&... Args) {
-    EPC->callWrapperAsync(std::forward<ArgTs>(Args)...);
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                        ExecutorProcessControl::IncomingWFRHandler OnComplete,
+                        ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(WrapperFnAddr, std::move(OnComplete), ArgBuffer);
+  }
+
+  /// Run a wrapper function in the executor using the given Runner to dispatch
+  /// OnComplete when the result is ready.
+  template <typename RunPolicyT, typename FnT>
+  void callWrapperAsync(RunPolicyT &&Runner, ExecutorAddr WrapperFnAddr,
+                        FnT &&OnComplete, ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(std::forward<RunPolicyT>(Runner), WrapperFnAddr,
+                          std::forward<FnT>(OnComplete), ArgBuffer);
+  }
+
+  /// Run a wrapper function in the executor. OnComplete will be dispatched
+  /// as a GenericNamedTask using this instance's TaskDispatch object.
+  template <typename FnT>
+  void callWrapperAsync(ExecutorAddr WrapperFnAddr, FnT &&OnComplete,
+                        ArrayRef<char> ArgBuffer) {
+    EPC->callWrapperAsync(WrapperFnAddr, std::forward<FnT>(OnComplete),
+                          ArgBuffer);
   }
 
   /// Run a wrapper function in the executor. The wrapper function should be
@@ -1635,11 +1653,11 @@ public:
   /// (using registerJITDispatchHandler) and called from the executor.
   template <typename SPSSignature, typename HandlerT>
   static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](
-               SendResultFunction SendResult,
-               const char *ArgData, size_t ArgSize) mutable {
-      shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
-                                                         std::move(SendResult));
+    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
+                                           const char *ArgData,
+                                           size_t ArgSize) mutable {
+      shared::WrapperFunction<SPSSignature>::handleAsync(
+          ArgData, ArgSize, std::move(SendResult), H);
     };
   }
 

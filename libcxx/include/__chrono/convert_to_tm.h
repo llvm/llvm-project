@@ -15,6 +15,7 @@
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
+#include <__chrono/gps_clock.h>
 #include <__chrono/hh_mm_ss.h>
 #include <__chrono/local_info.h>
 #include <__chrono/month.h>
@@ -122,6 +123,11 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
   // (It also avoids issues when the date is before the UTC epoch.)
   constexpr chrono::seconds __offset{4383 * 24 * 60 * 60};
   return std::__convert_to_tm<_Tm>(chrono::sys_time<_Rp>{__tp.time_since_epoch() - __offset});
+}
+
+template <class _Tm, class _Duration>
+_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::gps_time<_Duration> __tp) {
+  return std::__convert_to_tm<_Tm>(chrono::utc_clock::to_sys(chrono::gps_clock::to_utc(__tp)));
 }
 
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB

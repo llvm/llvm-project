@@ -39,6 +39,9 @@ Implemented Papers
 ------------------
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
+- P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
+- P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
+- P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
 - P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
 - P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
 - P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
@@ -46,13 +49,21 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
-- The ``std::ranges::{copy, copy_n, copy_backward}`` algorithms have been optimized for ``std::vector<bool>::iterator``\s,
-  resulting in a performance improvement of up to 2000x.
+- The ``std::ranges::{copy, copy_n, copy_backward, move, move_backward, rotate}`` algorithms have been optimized for
+  ``std::vector<bool>::iterator``, resulting in a performance improvement of up to 2000x.
+
+- The ``std::ranges::equal`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a performance
+  improvement of up to 188x.
+
+- The ``std::ranges::swap_ranges`` algorithm has been optimized for ``std::vector<bool>::iterator``, resulting in a
+  performance improvement of up to 611x.
 
 - Updated formatting library to Unicode 16.0.0.
 
 Deprecations and Removals
 -------------------------
+
+- ``std::is_pod`` and ``std::is_pod_v`` are deprecated in C++20 and later.
 
 Upcoming Deprecations and Removals
 ----------------------------------
