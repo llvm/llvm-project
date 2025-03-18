@@ -1383,6 +1383,14 @@ def HasVendorXqcibm
       AssemblerPredicate<(all_of FeatureVendorXqcibm),
                          "'Xqcibm' (Qualcomm uC Bit Manipulation Extension)">;
 
+def FeatureVendorXqcibi
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Branch Immediate Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcibi
+    : Predicate<"Subtarget->hasVendorXqcibi()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcibi),
+                         "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
+
 def FeatureVendorXqcilo
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Offset Load Store Extension",
                                  [FeatureStdExtZca]>;
