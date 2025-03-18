@@ -80,17 +80,20 @@
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
+#include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
+#include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
-#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -110,6 +113,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
@@ -129,6 +133,7 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
@@ -226,7 +231,6 @@
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
-#include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
@@ -788,6 +792,8 @@ Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
 
     if (ParamName == "kernel") {
       Result.CompileKernel = true;
+    } else if (ParamName == "use-after-scope") {
+      Result.UseAfterScope = true;
     } else {
       return make_error<StringError>(
           formatv("invalid AddressSanitizer pass parameter '{0}' ", ParamName)
@@ -1307,7 +1313,9 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
     else if (ParamName == "ignore-single-use")
       Result.IgnoreSingleUse = Enable;
     else if (ParamName == "merge-const")
-      Result.MergeConst = Enable;
+      Result.MergeConstantGlobals = Enable;
+    else if (ParamName == "merge-const-aggressive")
+      Result.MergeConstAggressive = Enable;
     else if (ParamName == "merge-external")
       Result.MergeExternal = Enable;
     else if (ParamName.consume_front("max-offset=")) {
@@ -1316,6 +1324,10 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
             formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid global-merge pass parameter '{0}' ", Params).str(),
+          inconvertibleErrorCode());
     }
   }
   return Result;
@@ -1437,6 +1449,19 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
 Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
                                             "MachineSinkingPass");
+}
+
+Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
+  bool AllowTailMerge = true;
+  if (!Params.empty()) {
+    AllowTailMerge = !Params.consume_front("no-");
+    if (Params != "tail-merge")
+      return make_error<StringError>(
+          formatv("invalid MachineBlockPlacementPass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return AllowTailMerge;
 }
 
 } // namespace

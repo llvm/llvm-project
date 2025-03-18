@@ -1747,7 +1747,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
-  VPScalarPHIRecipe *PrevEVL = nullptr;
+  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -1762,12 +1762,13 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
     }
-    PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
+    PrevEVL = new VPInstruction(Instruction::PHI, {MaxEVL, &EVL}, DebugLoc(),
+                                "prev.evl");
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
+    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
 
@@ -2089,9 +2090,9 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
       StringRef Name =
           isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR =
-          new VPScalarPHIRecipe(PhiR->getStartValue(), PhiR->getBackedgeValue(),
-                                PhiR->getDebugLoc(), Name);
+      auto *ScalarR = new VPInstruction(
+          Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+          PhiR->getDebugLoc(), Name);
       ScalarR->insertBefore(PhiR);
       PhiR->replaceAllUsesWith(ScalarR);
       PhiR->eraseFromParent();
@@ -2157,10 +2158,14 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn())
-      IncomingFromEarlyExit =
-          EarlyExitB.createNaryOp(VPInstruction::ExtractFirstActive,
-                                  {IncomingFromEarlyExit, EarlyExitTakenCond});
+    if (!IncomingFromEarlyExit->isLiveIn()) {
+      VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
+          VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
+          "first.active.lane");
+      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
+          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
+          nullptr, "early.exit.value");
+    }
     ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
@@ -2180,36 +2185,47 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
+void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
+#ifndef NDEBUG
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
+#endif
+
+  SmallVector<VPValue *> VPValues;
+  append_range(VPValues, Plan.getLiveIns());
+  for (VPRecipeBase &R : *Plan.getEntry())
+    append_range(VPValues, R.definedValues());
+
   auto *VectorPreheader = Plan.getVectorPreheader();
-  VPBuilder Builder(VectorPreheader);
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
-    if (all_of(LiveIn->users(),
-               [LiveIn](VPUser *U) {
-                 return cast<VPRecipeBase>(U)->usesScalars(LiveIn);
-               }) ||
-        !LiveIn->getLiveInIRValue() ||
-        isa<Constant>(LiveIn->getLiveInIRValue()))
+  for (VPValue *VPV : VPValues) {
+    if (all_of(VPV->users(),
+               [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
+        (VPV->isLiveIn() &&
+         (!VPV->getLiveInIRValue() || isa<Constant>(VPV->getLiveInIRValue()))))
       continue;
 
-    // Add explicit broadcast if the vector preheader dominates all users.
-    // TODO: Find valid insert point for all users.
-    if (all_of(LiveIn->users(), [&VPDT, VectorPreheader](VPUser *U) {
-          return VectorPreheader != cast<VPRecipeBase>(U)->getParent() &&
-                 VPDT.dominates(VectorPreheader,
-                                cast<VPRecipeBase>(U)->getParent());
-        })) {
-      auto *Broadcast =
-          Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
-      LiveIn->replaceUsesWithIf(Broadcast, [LiveIn, Broadcast](VPUser &U,
-                                                               unsigned Idx) {
-        return Broadcast != &U && !cast<VPRecipeBase>(&U)->usesScalars(LiveIn);
-      });
+    // Add explicit broadcast at the insert point that dominates all users.
+    VPBasicBlock *HoistBlock = VectorPreheader;
+    VPBasicBlock::iterator HoistPoint = VectorPreheader->end();
+    for (VPUser *User : VPV->users()) {
+      if (User->usesScalars(VPV))
+        continue;
+      if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
+        HoistPoint = HoistBlock->begin();
+      else
+        assert(VPDT.dominates(VectorPreheader,
+                              cast<VPRecipeBase>(User)->getParent()) &&
+               "All users must be in the vector preheader or dominated by it");
     }
+
+    VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
+    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
+    VPV->replaceUsesWithIf(Broadcast,
+                           [VPV, Broadcast](VPUser &U, unsigned Idx) {
+                             return Broadcast != &U && !U.usesScalars(VPV);
+                           });
   }
 }

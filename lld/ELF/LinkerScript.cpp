@@ -1559,6 +1559,8 @@ bool LinkerScript::spillSections() {
   if (potentialSpillLists.empty())
     return false;
 
+  DenseSet<PotentialSpillSection *> skippedSpills;
+
   bool spilled = false;
   for (SectionCommand *cmd : reverse(sectionCommands)) {
     auto *osd = dyn_cast<OutputDesc>(cmd);
@@ -1590,6 +1592,16 @@ bool LinkerScript::spillSections() {
           break;
 
         // Consume spills until finding one that might help, then consume it.
+        auto canSpillHelp = [&](PotentialSpillSection *spill) {
+          // Spills to the same region that overflowed cannot help.
+          if (hasRegionOverflowed(osec->memRegion) &&
+              spill->getParent()->memRegion == osec->memRegion)
+            return false;
+          if (hasRegionOverflowed(osec->lmaRegion) &&
+              spill->getParent()->lmaRegion == osec->lmaRegion)
+            return false;
+          return true;
+        };
         PotentialSpillList &list = it->second;
         PotentialSpillSection *spill;
         for (spill = list.head; spill; spill = spill->next) {
@@ -1597,17 +1609,9 @@ bool LinkerScript::spillSections() {
             list.head = spill->next;
           else
             potentialSpillLists.erase(isec);
-
-          // Spills to the same region that overflowed cannot help.
-          if (hasRegionOverflowed(osec->memRegion) &&
-              spill->getParent()->memRegion == osec->memRegion)
-            continue;
-          if (hasRegionOverflowed(osec->lmaRegion) &&
-              spill->getParent()->lmaRegion == osec->lmaRegion)
-            continue;
-
-          // This spill might resolve the overflow.
-          break;
+          if (canSpillHelp(spill))
+            break;
+          skippedSpills.insert(spill);
         }
         if (!spill)
           continue;
@@ -1644,6 +1648,15 @@ bool LinkerScript::spillSections() {
       }
     }
   }
+
+  // Clean up any skipped spills.
+  DenseSet<InputSectionDescription *> isds;
+  for (PotentialSpillSection *s : skippedSpills)
+    isds.insert(s->isd);
+  for (InputSectionDescription *isd : isds)
+    llvm::erase_if(isd->sections, [&](InputSection *s) {
+      return skippedSpills.contains(dyn_cast<PotentialSpillSection>(s));
+    });
 
   return spilled;
 }

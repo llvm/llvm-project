@@ -270,6 +270,15 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   linkerMDNode->addOperand(listMDNode);
 }
 
+static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
+                                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
+    llvmModule->addModuleFlag(
+        convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
+        flagAttr.getKey().getValue(), flagAttr.getValue());
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {

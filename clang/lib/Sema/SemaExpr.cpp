@@ -1533,7 +1533,7 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
     // In C++ 26, usual arithmetic conversions between 2 different enum types
     // are ill-formed.
     if (getLangOpts().CPlusPlus26)
-      DiagID = diag::err_conv_mixed_enum_types_cxx26;
+      DiagID = diag::warn_conv_mixed_enum_types_cxx26;
     else if (!L->castAs<EnumType>()->getDecl()->hasNameForLinkage() ||
              !R->castAs<EnumType>()->getDecl()->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
@@ -3924,10 +3924,18 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     // to get the integer value from an overly-wide APInt is *extremely*
     // expensive, so the naive approach of assuming
     // llvm::IntegerType::MAX_INT_BITS is a big performance hit.
-    unsigned BitsNeeded =
-        Literal.isBitInt ? llvm::APInt::getSufficientBitsNeeded(
-                               Literal.getLiteralDigits(), Literal.getRadix())
-                         : Context.getTargetInfo().getIntMaxTWidth();
+    unsigned BitsNeeded = Context.getTargetInfo().getIntMaxTWidth();
+    if (Literal.isBitInt)
+      BitsNeeded = llvm::APInt::getSufficientBitsNeeded(
+          Literal.getLiteralDigits(), Literal.getRadix());
+    if (Literal.MicrosoftInteger) {
+      if (Literal.MicrosoftInteger == 128 &&
+          !Context.getTargetInfo().hasInt128Type())
+        PP.Diag(Tok.getLocation(), diag::err_integer_literal_too_large)
+            << Literal.isUnsigned;
+      BitsNeeded = Literal.MicrosoftInteger;
+    }
+
     llvm::APInt ResultVal(BitsNeeded, 0);
 
     if (Literal.GetIntegerValue(ResultVal)) {
@@ -18355,7 +18363,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // If this is the first "real" use, act on that.
   if (OdrUse == OdrUseContext::Used && !Func->isUsed(/*CheckUsedAttr=*/false)) {
     // Keep track of used but undefined functions.
-    if (!Func->isDefined()) {
+    if (!Func->isDefined() && !Func->isInAnotherModuleUnit()) {
       if (mightHaveNonExternalLinkage(Func))
         UndefinedButUsed.insert(std::make_pair(Func->getCanonicalDecl(), Loc));
       else if (Func->getMostRecentDecl()->isInlined() &&

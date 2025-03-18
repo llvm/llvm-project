@@ -124,6 +124,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
     return static_cast<float>(xd * result);
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (LIBC_UNLIKELY(x_abs == 0x4619'9998U)) { // x = 0x1.33333p13
     float r = -0x1.63f4bap-2f;
     int rounding = fputil::quick_get_round();
@@ -132,6 +133,7 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
       r = -0x1.63f4bcp-2f;
     return xbits.is_neg() ? -r : r;
   }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
     if (x_abs == 0x7f80'0000U) {

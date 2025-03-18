@@ -23,6 +23,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 static constexpr size_t N_LOG10F16_EXCEPTS = 11;
 #else
@@ -71,6 +72,7 @@ static constexpr fputil::ExceptValues<float16, N_LOG10F16_EXCEPTS>
         // x = 0x1.674p+13, log10f16(x) = 0x1.03cp+2 (RZ)
         {0x719dU, 0x440fU, 1U, 0U, 0U},
     }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, log10f16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -110,8 +112,10 @@ LLVM_LIBC_FUNCTION(float16, log10f16, (float16 x)) {
     return FPBits::inf().get_val();
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = LOG10F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // To compute log10(x), we perform the following range reduction:
   //   x = 2^m * 1.mant,

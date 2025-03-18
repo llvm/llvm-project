@@ -63,7 +63,9 @@ LIBC_INLINE constexpr uint32_t const_ten_exp(uint32_t exponent) {
     }                                                                          \
   } while (false)
 
-LIBC_INLINE int convert_fixed(Writer *writer, const FormatSection &to_conv) {
+template <WriteMode write_mode>
+LIBC_INLINE int convert_fixed(Writer<write_mode> *writer,
+                              const FormatSection &to_conv) {
   // Long accum should be the largest type, so we can store all the smaller
   // numbers in things sized for it.
   using LARep = fixed_point::FXRep<unsigned long accum>;

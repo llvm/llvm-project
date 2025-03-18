@@ -43,7 +43,7 @@ protected:
 
   RISCVInstrInfoTest() {
     std::string Error;
-    auto TT(Triple::normalize(GetParam()));
+    Triple TT(GetParam());
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     TargetOptions Options;
 
