@@ -795,7 +795,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 }
 
 /// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(Instruction *E) {
+static std::optional<unsigned> getExtractIndex(const Instruction *E) {
   unsigned Opcode = E->getOpcode();
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
@@ -8893,7 +8893,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           TTI.getArithmeticInstrCost(Opcode1, Op2VecTy, Kind);
       InstructionCost NewCost =
           NewVecOpsCost + InsertCost +
-          (VectorizableTree.front()->hasState() &&
+          (!VectorizableTree.empty() && VectorizableTree.front()->hasState() &&
                    VectorizableTree.front()->getOpcode() == Instruction::Store
                ? NewShuffleCost
                : 0);
@@ -14086,11 +14086,18 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   auto CheckParentNodes = [&](const TreeEntry *User1, const TreeEntry *User2,
                               unsigned EdgeIdx) {
     const TreeEntry *Ptr1 = User1;
+    const TreeEntry *Ptr2 = User2;
+    SmallDenseMap<const TreeEntry *, unsigned> PtrToIdx;
+    while (Ptr2) {
+      PtrToIdx.try_emplace(Ptr2, EdgeIdx);
+      EdgeIdx = Ptr2->UserTreeIndex.EdgeIdx;
+      Ptr2 = Ptr2->UserTreeIndex.UserTE;
+    }
     while (Ptr1) {
       unsigned Idx = Ptr1->UserTreeIndex.EdgeIdx;
       Ptr1 = Ptr1->UserTreeIndex.UserTE;
-      if (Ptr1 == User2)
-        return Idx < EdgeIdx;
+      if (auto It = PtrToIdx.find(Ptr1); It != PtrToIdx.end())
+        return Idx < It->second;
     }
     return false;
   };
@@ -22715,8 +22722,38 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-          if (S && !S.isAltShuffle())
+          if (S && !S.isAltShuffle()) {
+            const auto *E1 = dyn_cast<ExtractElementInst>(I1);
+            const auto *E2 = dyn_cast<ExtractElementInst>(I2);
+            if (!E1 || !E2)
+              continue;
+
+            // Sort on ExtractElementInsts primarily by vector operands. Prefer
+            // program order of the vector operands.
+            const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
+            const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+            if (V1 != V2) {
+              if (!V1 || !V2)
+                continue;
+              if (V1->getParent() != V2->getParent())
+                continue;
+              return V1->comesBefore(V2);
+            }
+            // If we have the same vector operand, try to sort by constant
+            // index.
+            std::optional<unsigned> Id1 = getExtractIndex(E1);
+            std::optional<unsigned> Id2 = getExtractIndex(E2);
+            // Bring constants to the top
+            if (Id1 && !Id2)
+              return true;
+            if (!Id1 && Id2)
+              return false;
+            // First elements come first.
+            if (Id1 && Id2)
+              return *Id1 < *Id2;
+
             continue;
+          }
           return I1->getOpcode() < I2->getOpcode();
         }
         if (I1)

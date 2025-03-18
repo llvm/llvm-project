@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-fold-operands -filetype=null %s 2>&1 | FileCheck -check-prefixes=ERR-LEGACY,ERR %s
 # RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -passes=si-fold-operands -filetype=null %s 2>&1 | FileCheck -check-prefixes=ERR-NPM,ERR %s
 

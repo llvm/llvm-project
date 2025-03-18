@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseSet.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <type_traits>
 
@@ -30,6 +31,13 @@ TEST(DenseSetTest, DoubleEntrySetTest) {
   set.insert(1);
   // Original failure was an infinite loop in this call:
   EXPECT_EQ(0u, set.count(2));
+}
+
+TEST(DenseSetTest, InsertRange) {
+  llvm::DenseSet<unsigned> set;
+  constexpr unsigned Args[] = {3, 1, 2};
+  set.insert_range(Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
 }
 
 struct TestDenseSetInfo {

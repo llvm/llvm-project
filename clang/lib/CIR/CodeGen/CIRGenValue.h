@@ -93,6 +93,7 @@ class LValue {
 
 public:
   bool isSimple() const { return lvType == Simple; }
+  bool isBitField() const { return lvType == BitField; }
 
   // TODO: Add support for volatile
   bool isVolatile() const { return false; }

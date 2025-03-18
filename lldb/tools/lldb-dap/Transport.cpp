@@ -8,7 +8,7 @@
 
 #include "Transport.h"
 #include "DAPLog.h"
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"

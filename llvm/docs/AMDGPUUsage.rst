@@ -758,6 +758,12 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
+
+     dynamic-vgpr    TODO                         Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
+                                                  Waves launched in this mode may allocate or deallocate the VGPRs
+                                                  using dedicated instructions, but may not send the DEALLOC_VGPRS
+                                                  message.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -18208,7 +18214,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (cumode)
      ``.amdhsa_memory_ordered``                               1                   GFX10-GFX12  Controls MEM_ORDERED in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
+     ``.amdhsa_forward_progress``                             1                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.

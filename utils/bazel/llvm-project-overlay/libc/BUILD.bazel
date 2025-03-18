@@ -5139,18 +5139,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "scanf_string_reader",
+    hdrs = ["src/stdio/scanf_core/string_reader.h"],
+    deps = [
+        ":__support_macros_attributes",
+        ":scanf_reader",
+    ],
+)
+
+libc_support_library(
     name = "scanf_converter",
     srcs = [
-        "src/stdio/scanf_core/converter.cpp",
         "src/stdio/scanf_core/converter_utils.h",
         "src/stdio/scanf_core/current_pos_converter.h",
-        "src/stdio/scanf_core/float_converter.cpp",
         "src/stdio/scanf_core/float_converter.h",
-        "src/stdio/scanf_core/int_converter.cpp",
         "src/stdio/scanf_core/int_converter.h",
-        "src/stdio/scanf_core/ptr_converter.cpp",
         "src/stdio/scanf_core/ptr_converter.h",
-        "src/stdio/scanf_core/string_converter.cpp",
         "src/stdio/scanf_core/string_converter.h",
     ],
     hdrs = [
@@ -5170,7 +5174,6 @@ libc_support_library(
 
 libc_support_library(
     name = "scanf_main",
-    srcs = ["src/stdio/scanf_core/scanf_main.cpp"],
     hdrs = ["src/stdio/scanf_core/scanf_main.h"],
     deps = [
         ":__support_arg_list",
@@ -5251,7 +5254,7 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":scanf_main",
-        ":scanf_reader",
+        ":scanf_string_reader",
         ":types_FILE",
     ],
 )
@@ -5264,7 +5267,7 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":scanf_main",
-        ":scanf_reader",
+        ":scanf_string_reader",
         ":types_FILE",
     ],
 )
