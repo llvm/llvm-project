@@ -729,3 +729,7 @@ ConstString Function::GetName() const {
 ConstString Function::GetNameNoArguments() const {
   return m_mangled.GetName(Mangled::ePreferDemangledWithoutArguments);
 }
+
+Mangled::DemangledInfo Function::GetDemangledInfo() const {
+  return m_mangled.GetDemangledInfo();
+}

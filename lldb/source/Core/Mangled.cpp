@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Demangle/Utility.h"
 #include "llvm/Support/Compiler.h"
 
 #include <mutex>
@@ -152,16 +153,21 @@ static char *GetMSVCDemangledStr(llvm::StringRef M) {
   return demangled_cstr;
 }
 
-static char *GetItaniumDemangledStr(const char *M) {
+static std::pair<char *, Mangled::DemangledInfo>
+GetItaniumDemangledStr(const char *M) {
   char *demangled_cstr = nullptr;
 
+  Mangled::DemangledInfo info;
   llvm::ItaniumPartialDemangler ipd;
   bool err = ipd.partialDemangle(M);
   if (!err) {
     // Default buffer and size (will realloc in case it's too small).
     size_t demangled_size = 80;
     demangled_cstr = static_cast<char *>(std::malloc(demangled_size));
-    demangled_cstr = ipd.finishDemangle(demangled_cstr, &demangled_size);
+
+    llvm::itanium_demangle::OutputBuffer OB(demangled_cstr, demangled_size);
+    demangled_cstr = ipd.finishDemangle(&OB, &demangled_size);
+    info = std::move(OB.FunctionInfo);
 
     assert(demangled_cstr &&
            "finishDemangle must always succeed if partialDemangle did");
@@ -174,9 +180,14 @@ static char *GetItaniumDemangledStr(const char *M) {
       LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
     else
       LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
+
+    if (!info.hasBasename())
+      LLDB_LOGF(log,
+                "demangled itanium: %s -> error: failed to retrieve name info",
+                M);
   }
 
-  return demangled_cstr;
+  return {demangled_cstr, std::move(info)};
 }
 
 static char *GetRustV0DemangledStr(llvm::StringRef M) {
@@ -269,6 +280,16 @@ ConstString Mangled::GetDemangledName() const {
   return GetDemangledNameImpl(/*force=*/false);
 }
 
+const Mangled::DemangledInfo &Mangled::GetDemangledInfo() const {
+  // TODO: if setting m_demangled_info previously failed
+  // we still end up re-demangling. If m_demangled_info
+  // was an optional we could prevent that.
+  if (!m_demangled_info.hasBasename())
+    GetDemangledNameImpl(/*force=*/true);
+
+  return m_demangled_info;
+}
+
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
@@ -293,7 +314,10 @@ ConstString Mangled::GetDemangledNameImpl(bool force) const {
     demangled_name = GetMSVCDemangledStr(m_mangled);
     break;
   case eManglingSchemeItanium: {
-    demangled_name = GetItaniumDemangledStr(m_mangled.GetCString());
+    std::pair<char *, Mangled::DemangledInfo> demangled =
+        GetItaniumDemangledStr(m_mangled.GetCString());
+    demangled_name = demangled.first;
+    m_demangled_info = std::move(demangled.second);
     break;
   }
   case eManglingSchemeRustV0:
