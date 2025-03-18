@@ -1111,10 +1111,10 @@ def VLM_V : VUnitStrideLoadMask<"vlm.v">,
              Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
 def VSM_V : VUnitStrideStoreMask<"vsm.v">,
              Sched<[WriteVSTM_WorstCase, ReadVSTM_WorstCase, ReadVSTX]>;
-def : InstAlias<"vle1.v $vd, (${rs1})",
-                (VLM_V VR:$vd, GPR:$rs1), 0>;
-def : InstAlias<"vse1.v $vs3, (${rs1})",
-                (VSM_V VR:$vs3, GPR:$rs1), 0>;
+def : InstAlias<"vle1.v $vd,$rs1",
+                (VLM_V VR:$vd, GPRMemZeroOffset:$rs1), 0>;
+def : InstAlias<"vse1.v $vs3, $rs1",
+                (VSM_V VR:$vs3, GPRMemZeroOffset:$rs1), 0>;
 
 def VS1R_V : VWholeStore<0, "vs1r.v", VR>,
              Sched<[WriteVST1R, ReadVST1R, ReadVSTX]>;
