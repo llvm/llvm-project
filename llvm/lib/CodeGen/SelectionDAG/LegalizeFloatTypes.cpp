@@ -2756,7 +2756,10 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 #endif
       report_fatal_error("Do not know how to promote this operator's result!");
 
-    case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;
+    case ISD::BITCAST:
+    case ISD::FREEZE:
+      R = PromoteFloatRes_BITCAST(N);
+      break;
     case ISD::ConstantFP: R = PromoteFloatRes_ConstantFP(N); break;
     case ISD::EXTRACT_VECTOR_ELT:
                           R = PromoteFloatRes_EXTRACT_VECTOR_ELT(N); break;
