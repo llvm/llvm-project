@@ -15,7 +15,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOAMDGPUPASS
@@ -36,17 +36,16 @@ using namespace mlir;
 /// - The permutation map doesn't perform permutation (broadcasting is allowed).
 /// Note: those conditions mostly come from TransferReadToVectorLoadLowering
 /// pass.
-static LogicalResult
-transferPreconditions(PatternRewriter &rewriter,
-                      VectorTransferOpInterface xferOp,
-                      SmallVector<unsigned> &broadcastedDims,
-                      VectorType &unbroadcastedVectorType) {
+static LogicalResult transferPreconditions(
+    PatternRewriter &rewriter, VectorTransferOpInterface xferOp,
+    bool &requiresBroadcasting, VectorType &unbroadcastedVectorType) {
   if (!xferOp.getMask())
     return rewriter.notifyMatchFailure(xferOp, "Only support masked transfer");
 
   // Permutations are handled by VectorToSCF or
   // populateVectorTransferPermutationMapLoweringPatterns.
   // We let the 0-d corner case pass-through as it is supported.
+  SmallVector<unsigned> broadcastedDims;
   if (!xferOp.getPermutationMap().isMinorIdentityWithBroadcasting(
           &broadcastedDims))
     return rewriter.notifyMatchFailure(xferOp, "not minor identity + bcast");
@@ -56,9 +55,8 @@ transferPreconditions(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(xferOp, "not a memref source");
 
   Attribute addrSpace = memRefType.getMemorySpace();
-  if (!addrSpace ||
-      llvm::dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
-          amdgpu::AddressSpace::FatRawBuffer)
+  if (!addrSpace || dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
+                        amdgpu::AddressSpace::FatRawBuffer)
     return rewriter.notifyMatchFailure(xferOp, "not in buffer address space");
 
   // Non-unit strides are handled by VectorToSCF.
@@ -73,6 +71,7 @@ transferPreconditions(PatternRewriter &rewriter,
     unbroadcastedVectorShape[i] = 1;
   unbroadcastedVectorType = xferOp.getVectorType().cloneWith(
       unbroadcastedVectorShape, xferOp.getVectorType().getElementType());
+  requiresBroadcasting = !broadcastedDims.empty();
 
   // `vector.load` supports vector types as memref's elements only when the
   // resulting vector type is the same as the element type.
@@ -98,31 +97,31 @@ transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
-struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
 
-    SmallVector<unsigned> broadcastedDims;
+    bool requiresBroadcasting = false;
     VectorType unbroadcastedVectorType;
-    if (failed(transferPreconditions(rewriter, readOp, broadcastedDims,
+    if (failed(transferPreconditions(rewriter, readOp, requiresBroadcasting,
                                      unbroadcastedVectorType))) {
       return failure();
     }
 
-    Value fill = rewriter.create<vector::SplatOp>(
-        readOp.getLoc(), unbroadcastedVectorType, readOp.getPadding());
+    Location loc = readOp.getLoc();
+    Value fill = rewriter.create<vector::SplatOp>(loc, unbroadcastedVectorType,
+                                                  readOp.getPadding());
     Value load = rewriter.create<vector::LoadOp>(
-        readOp.getLoc(), unbroadcastedVectorType, readOp.getSource(),
-        readOp.getIndices());
-    Value res = rewriter.create<arith::SelectOp>(
-        readOp.getLoc(), unbroadcastedVectorType, readOp.getMask(), load, fill);
+        loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
+    Value res = rewriter.create<arith::SelectOp>(loc, unbroadcastedVectorType,
+                                                 readOp.getMask(), load, fill);
 
     // Insert a broadcasting op if required.
-    if (!broadcastedDims.empty()) {
-      res = rewriter.create<vector::BroadcastOp>(readOp.getLoc(),
-                                                 readOp.getVectorType(), res);
+    if (requiresBroadcasting) {
+      res = rewriter.create<vector::BroadcastOp>(loc, readOp.getVectorType(),
+                                                 res);
     }
 
     rewriter.replaceOp(readOp, res);
@@ -136,12 +135,11 @@ void mlir::populateVectorToAMDGPUConversionPatterns(
   patterns.add<TransferReadLowering>(patterns.getContext());
 }
 
-struct ConvertVectorToAMDGPUPass
+struct ConvertVectorToAMDGPUPass final
     : public impl::ConvertVectorToAMDGPUPassBase<ConvertVectorToAMDGPUPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorToAMDGPUConversionPatterns(patterns);
-    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
-      return signalPassFailure();
+    walkAndApplyPatterns(getOperation(), std::move(patterns));
   }
 };

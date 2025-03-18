@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-amdgpu --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --convert-vector-to-amdgpu --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @transfer_to_maskedload_fatrawbuffer(
 // CHECK-SAME: %[[ARG0:.*]]: memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>
@@ -9,9 +9,10 @@ func.func @transfer_to_maskedload_fatrawbuffer(%mem : memref<8x8xf32, #amdgpu.ad
   %res = vector.transfer_read %mem[%idx, %idx], %cf0, %mask {in_bounds = [true]} : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, vector<4xf32>
   return %res : vector<4xf32>
 }
-// CHECK: %[[CST:.*]] = arith.constant dense<0.000000e+00>
+// CHECK: %[[CST:.*]] = arith.constant 0.0
+// CHECK: %[[SPLAT:.*]] = vector.splat %[[CST]]
 // CHECK: %[[LOAD:.*]] = vector.load %arg0[%arg1, %arg1]
-// CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[CST]]
+// CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[SPLAT]]
 // CHECK: return %[[SELECT]] : vector<4xf32>
 
 // -----
@@ -43,9 +44,10 @@ func.func @transfer_broadcasting(%mem : memref<8x8xf32, #amdgpu.address_space<fa
       : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, vector<4xf32>
   return %res : vector<4xf32>
 }
-// CHECK: %[[CST:.*]] = arith.constant dense<0.000000e+00>
+// CHECK: %[[CST:.*]] = arith.constant 0.0
+// CHECK: %[[SPLAT:.*]] = vector.splat %[[CST]]
 // CHECK: %[[LOAD:.*]] = vector.load %arg0[%arg1, %arg1]
-// CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[CST]]
+// CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[SPLAT]]
 // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[SELECT]] : vector<1xf32> to vector<4xf32>
 // CHECK: return %[[BROADCAST]] : vector<4xf32>
 
@@ -62,7 +64,8 @@ func.func @transfer_scalar(%mem : memref<8x8xf32, #amdgpu.address_space<fat_raw_
       : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, vector<1xf32>
   return %res : vector<1xf32>
 }
-// CHECK: %[[CST:.*]] = arith.constant dense<0.000000e+00>
+// CHECK: %[[CST:.*]] = arith.constant 0.0
+// CHECK: %[[SPLAT:.*]] = vector.splat %[[CST]]
 // CHECK: %[[LOAD:.*]] = vector.load %arg0[%arg1, %arg1]
-// CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[CST]]
+// CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[SPLAT]]
 // CHECK: return %[[SELECT]] : vector<1xf32>
