@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify=both,expected
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify=both,nowarn -Wno-enum-enum-conversion
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify=both -Wno-enum-enum-conversion
 
 enum E1 { e };
 enum E2 { f };
