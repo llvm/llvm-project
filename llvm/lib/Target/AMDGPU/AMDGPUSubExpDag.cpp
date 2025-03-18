@@ -420,7 +420,7 @@ void ExpDag::addDataDep() {
       Register Reg = MO.getReg();
 
       // For case like:
-      // undef %808.sub0:sgpr_64 = COPY killed %795:sgpr_32
+      // undef_ %808.sub0:sgpr_64 = COPY killed %795:sgpr_32
       // %808.sub1:sgpr_64 = S_MOV_B32 0
       // When partially write, link MI to previous def.
       if (MO.getSubReg() != 0) {

@@ -258,7 +258,7 @@ bool isExecUpdateForControlFlow(llvm::MachineInstr &MI) {
 
 bool isSub0Sub1SingleDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   // Support multi def for pattern of pointer:
-  // undef %808.sub0:sgpr_64 = COPY killed %795:sgpr_32
+  // undef_ %808.sub0:sgpr_64 = COPY killed %795:sgpr_32
   // %808.sub1:sgpr_64 = S_MOV_B32 0
   bool HasSub0 = false;
   bool HasSub1 = false;
@@ -296,7 +296,7 @@ bool isSub0Sub1SingleDef(unsigned Reg, const MachineRegisterInfo &MRI) {
 
 LaneBitmask getRegMask(const MachineOperand &MO,
                        const MachineRegisterInfo &MRI) {
-  // We don't rely on read-undef flag because in case of tentative schedule
+  // We don't rely on read-undef_ flag because in case of tentative schedule
   // tracking it isn't set correctly yet. This works correctly however since
   // use mask has been tracked before using LIS.
   return MO.getSubReg() == 0
