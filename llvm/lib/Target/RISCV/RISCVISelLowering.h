@@ -403,7 +403,15 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
-  LAST_VL_VECTOR_OP = VFIRST_VL,
+  // XRivosVizip
+  RI_VZIPEVEN_VL,
+  RI_VZIPODD_VL,
+  RI_VZIP2A_VL,
+  RI_VZIP2B_VL,
+  RI_VUNZIP2A_VL,
+  RI_VUNZIP2B_VL,
+
+  LAST_VL_VECTOR_OP = RI_VUNZIP2B_VL,
 
   // Read VLENB CSR
   READ_VLENB,

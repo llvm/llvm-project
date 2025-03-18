@@ -4553,8 +4553,10 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
 /// way through the source.
 static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
                                 int &OddSrc, const RISCVSubtarget &Subtarget) {
-  // We need to be able to widen elements to the next larger integer type.
-  if (VT.getScalarSizeInBits() >= Subtarget.getELen())
+  // We need to be able to widen elements to the next larger integer type or
+  // use the zip2a instruction at e64.
+  if (VT.getScalarSizeInBits() >= Subtarget.getELen() &&
+      !Subtarget.hasVendorXRivosVizip())
     return false;
 
   int Size = Mask.size();
@@ -4609,6 +4611,43 @@ static bool isElementRotate(std::array<std::pair<int, int>, 2> &SrcInfo,
     return true;
   return SrcInfo[0].second < 0 && SrcInfo[1].second > 0 &&
          SrcInfo[1].second - SrcInfo[0].second == (int)NumElts;
+}
+
+static bool isAlternating(std::array<std::pair<int, int>, 2> &SrcInfo,
+                          ArrayRef<int> Mask, bool &Polarity) {
+  int NumElts = Mask.size();
+  bool NonUndefFound = false;
+  for (unsigned i = 0; i != Mask.size(); ++i) {
+    int M = Mask[i];
+    if (M < 0)
+        continue;
+    int Src = M >= (int)NumElts;
+    int Diff = (int)i - (M % NumElts);
+    bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
+    if (!NonUndefFound) {
+      NonUndefFound = true;
+      Polarity = (C == i % 2);
+      continue;
+    }
+    if ((Polarity && C != i % 2) || (!Polarity && C == i % 2))
+      return false;
+  }
+  return true;
+}
+
+static bool isZipEven(std::array<std::pair<int, int>, 2> &SrcInfo,
+                      ArrayRef<int> Mask) {
+  bool Polarity;
+  return SrcInfo[0].second == 0 && SrcInfo[1].second == 1 &&
+    isAlternating(SrcInfo, Mask, Polarity) && Polarity;
+;
+}
+
+static bool isZipOdd(std::array<std::pair<int, int>, 2> &SrcInfo,
+                     ArrayRef<int> Mask) {
+  bool Polarity;
+  return SrcInfo[0].second == 0 && SrcInfo[1].second == -1 &&
+    isAlternating(SrcInfo, Mask, Polarity) && !Polarity;
 }
 
 // Lower a deinterleave shuffle to SRL and TRUNC.  Factor must be
@@ -4868,6 +4907,36 @@ static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor, unsigned &Index) {
       return false;
   }
   return true;
+}
+
+static SDValue lowerVIZIP(unsigned Opc, SDValue Op0, SDValue Op1,
+                          const SDLoc &DL, SelectionDAG &DAG,
+                          const RISCVSubtarget &Subtarget) {
+  assert(RISCVISD::RI_VZIPEVEN_VL == Opc || RISCVISD::RI_VZIPODD_VL == Opc ||
+         RISCVISD::RI_VZIP2A_VL == Opc || RISCVISD::RI_VZIP2B_VL == Opc ||
+         RISCVISD::RI_VUNZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2B_VL == Opc);
+  assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
+
+  MVT VT = Op0.getSimpleValueType();
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
+  Op0 = DAG.getBitcast(IntVT, Op0);
+  Op1 = DAG.getBitcast(IntVT, Op1);
+
+  MVT ContainerVT = IntVT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, IntVT, Subtarget);
+    Op0 = convertToScalableVector(ContainerVT, Op0, DAG, Subtarget);
+    Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
+  }
+
+  auto [Mask, VL] = getDefaultVLOps(IntVT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Passthru = DAG.getUNDEF(ContainerVT);
+  SDValue Res =
+    DAG.getNode(Opc, DL, ContainerVT, Op0, Op1, Passthru, Mask, VL);
+  if (IntVT.isFixedLengthVector())
+    Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
+  Res = DAG.getBitcast(VT, Res);
+  return Res;
 }
 
 // Given a vector a, b, c, d return a vector Factor times longer
@@ -5384,6 +5453,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   MVT XLenVT = Subtarget.getXLenVT();
   MVT VT = Op.getSimpleValueType();
+  EVT ElemVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
@@ -5556,6 +5626,25 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
   }
 
+  // If this is an e64 deinterleave(2) (possibly with two distinct sources)
+  // match to the vunzip2a/vunzip2b.
+  unsigned Index = 0;
+  if (Subtarget.hasVendorXRivosVizip() && ElemVT == MVT::i64 &&
+      ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
+      1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
+    MVT HalfVT = VT.getHalfNumVectorElementsVT();
+    unsigned Opc = Index == 0 ?
+        RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
+    V1 = lowerVIZIP(Opc, V1, DAG.getUNDEF(VT), DL, DAG, Subtarget);
+    V2 = lowerVIZIP(Opc, V2, DAG.getUNDEF(VT), DL, DAG, Subtarget);
+
+    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
+                     DAG.getVectorIdxConstant(0, DL));
+    V2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V2,
+                     DAG.getVectorIdxConstant(0, DL));
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, V1, V2);
+  }
+
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
     return V;
@@ -5596,6 +5685,15 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                          DAG.getVectorIdxConstant(OddSrc % Size, DL));
     }
 
+    // Prefer vzip2a if available.
+    // TODO: Extend to matching zip2b if EvenSrc and OddSrc allow.
+    if (Subtarget.hasVendorXRivosVizip())  {
+      EvenV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                          EvenV, DAG.getVectorIdxConstant(0, DL));
+      OddV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                          OddV, DAG.getVectorIdxConstant(0, DL));
+      return lowerVIZIP(RISCVISD::RI_VZIP2A_VL, EvenV, OddV, DL, DAG, Subtarget);
+    }
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
 
@@ -5645,6 +5743,17 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       SDValue Res = DAG.getUNDEF(ContainerVT);
       Res = GetSlide(SrcInfo[0], TrueMask, Res);
       return convertFromScalableVector(VT, Res, DAG, Subtarget);
+    }
+
+    if (Subtarget.hasVendorXRivosVizip() && isZipEven(SrcInfo, Mask)) {
+      SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
+      SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
+      return lowerVIZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG, Subtarget);
+    }
+    if (Subtarget.hasVendorXRivosVizip() && isZipOdd(SrcInfo, Mask)) {
+      SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
+      SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
+      return lowerVIZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG, Subtarget);
     }
 
     // Build the mask.  Note that vslideup unconditionally preserves elements
@@ -6710,7 +6819,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 127 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
@@ -6734,12 +6843,13 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 127 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
     return true;
-  if (Opcode >= RISCVISD::VRGATHER_VX_VL && Opcode <= RISCVISD::VFIRST_VL)
+  if (Opcode >= RISCVISD::VRGATHER_VX_VL &&
+      Opcode <= RISCVISD::LAST_VL_VECTOR_OP)
     return true;
   if (Opcode >= RISCVISD::STRICT_FADD_VL &&
       Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL)
@@ -21758,6 +21868,12 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VCPOP_VL)
   NODE_NAME_CASE(VFIRST_VL)
+  NODE_NAME_CASE(RI_VZIPEVEN_VL)
+  NODE_NAME_CASE(RI_VZIPODD_VL)
+  NODE_NAME_CASE(RI_VZIP2A_VL)
+  NODE_NAME_CASE(RI_VZIP2B_VL)
+  NODE_NAME_CASE(RI_VUNZIP2A_VL)
+  NODE_NAME_CASE(RI_VUNZIP2B_VL)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)
