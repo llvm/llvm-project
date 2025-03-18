@@ -21,9 +21,9 @@ namespace mca {
 
 void InstructionInfoView::getComment(const MCInst &MCI,
                                      std::string &CommentString) const {
-  StringRef s = MCI.getLoc().getPointer();
+  StringRef S = MCI.getLoc().getPointer();
   std::string InstrStr;
-  size_t pos = 0, pos_cmt = 0;
+  size_t Pos = 0, PosCmt = 0;
 
   // Recognized comments are after assembly instructions on the same line.
   // It is usefull to add in comment scheduling information from architecture
@@ -31,17 +31,17 @@ void InstructionInfoView::getComment(const MCInst &MCI,
   // '#' comment mark is not supported by llvm-mca
 
   CommentString = "";
-  if ((pos = s.find("\n")) != std::string::npos) {
-    InstrStr = s.substr(0, pos);
+  if (Pos = S.find("\n"); Pos != std::string::npos) {
+    InstrStr = S.substr(0, Pos);
     // C style comment
-    if (((pos_cmt = InstrStr.find("/*")) != std::string::npos) &&
-        ((pos = InstrStr.find("*/")) != std::string::npos)) {
-      CommentString = InstrStr.substr(pos_cmt, pos);
+    if (((PosCmt = InstrStr.find("/*")) != std::string::npos) &&
+        ((Pos = InstrStr.find("*/")) != std::string::npos)) {
+      CommentString = InstrStr.substr(PosCmt, Pos);
       return;
     }
     // C++ style comment
-    if ((pos_cmt = InstrStr.find("//")) != std::string::npos) {
-      CommentString = InstrStr.substr(pos_cmt, pos);
+    if ((PosCmt = InstrStr.find("//")) != std::string::npos) {
+      CommentString = InstrStr.substr(PosCmt, Pos);
       return;
     }
   }

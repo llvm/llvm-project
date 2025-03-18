@@ -182,7 +182,6 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
   if (Entries.empty())
     return 0;
 
-  unsigned Latency = 0;
   unsigned MaxLatency = 0;
   unsigned WriteResourceID = 0;
   unsigned DefEnd = SCDesc.NumWriteLatencyEntries;
@@ -191,15 +190,14 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
     // Lookup the definition's write latency in SubtargetInfo.
     const MCWriteLatencyEntry *WLEntry =
         STI.getWriteLatencyEntry(&SCDesc, DefIdx);
-    unsigned Cycles = (unsigned)WLEntry->Cycles;
-    // Invalid latency. Consider 0 cycle latency
-    if (WLEntry->Cycles < 0)
-      Cycles = 0;
-    if (Cycles > Latency) {
+    unsigned Cycles = 0;
+    // If latency is Invalid (<0), consider 0 cycle latency
+    if (WLEntry->Cycles > 0)
+      Cycles = (unsigned)WLEntry->Cycles;
+    if (Cycles > MaxLatency) {
       MaxLatency = Cycles;
       WriteResourceID = WLEntry->WriteResourceID;
     }
-    Latency = MaxLatency;
   }
 
   for (const MCReadAdvanceEntry &E : Entries) {
