@@ -181,7 +181,13 @@ bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
   if (!module)
     return false;
   *module_name = module->full_name();
+  // On AIX, the address for the data in the object is the same with the runtime one.
+  // So, we don't need to sub the base address.
+#if SANITIZER_AIX
+  *module_offset = address;
+#else
   *module_offset = address - module->base_address();
+#endif
   *module_arch = module->arch();
   return true;
 }
@@ -282,6 +288,9 @@ class LLVMSymbolizerProcess final : public SymbolizerProcess {
     const char *const kSymbolizerArch = "--default-arch=powerpc64";
 #  elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char *const kSymbolizerArch = "--default-arch=powerpc64le";
+#  elif defined(__powerpc__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    // Must check __powerpc__ after __powerpc64__ because both can be set.
+    const char* const kSymbolizerArch = "--default-arch=powerpc";
 #  elif defined(__s390x__)
     const char *const kSymbolizerArch = "--default-arch=s390x";
 #  elif defined(__s390__)
@@ -472,7 +481,6 @@ const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
     Report("WARNING: Command buffer too small");
     return nullptr;
   }
-
   return symbolizer_process_->SendCommand(buffer_);
 }
 

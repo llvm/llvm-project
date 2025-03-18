@@ -289,7 +289,7 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   }
 
   const char *path =
-      user_path ? user_path : FindPathToBinary("llvm-symbolizer.exe");
+      user_path ? user_path : FindPathToBinaryOrLibrary("llvm-symbolizer.exe");
   if (path) {
     if (user_path && user_path[0] == '\0') {
       VReport(2, "External symbolizer is explicitly disabled.\n");
