@@ -63,6 +63,7 @@ sub SearchInPath {
 }
 
 my $Compiler;
+my @CompilerArgs;
 my $Clang;
 my $DefaultCCompiler;
 my $DefaultCXXCompiler;
@@ -89,7 +90,7 @@ if (`uname -s` =~ m/Darwin/) {
 }
 
 if ($FindBin::Script =~ /c\+\+-analyzer/) {
-  $Compiler = $ENV{'CCC_CXX'};
+  ($Compiler, @CompilerArgs) = shellwords($ENV{'CCC_CXX'});
   if (!defined $Compiler || (! -x $Compiler && ! SearchInPath($Compiler))) { $Compiler = $DefaultCXXCompiler; }
 
   $Clang = $ENV{'CLANG_CXX'};
@@ -98,7 +99,7 @@ if ($FindBin::Script =~ /c\+\+-analyzer/) {
   $IsCXX = 1
 }
 else {
-  $Compiler = $ENV{'CCC_CC'};
+  ($Compiler, @CompilerArgs) = shellwords($ENV{'CCC_CC'});
   if (!defined $Compiler || (! -x $Compiler && ! SearchInPath($Compiler))) { $Compiler = $DefaultCCompiler; }
 
   $Clang = $ENV{'CLANG'};
@@ -199,7 +200,7 @@ sub GetCCArgs {
   die "could not find clang line\n" if (!defined $line);
   # Strip leading and trailing whitespace characters.
   $line =~ s/^\s+|\s+$//g;
-  my @items = quotewords('\s+', 0, $line);
+  my @items = shellwords($line);
   my $cmd = shift @items;
   die "cannot find 'clang' in 'clang' command\n" if (!($cmd =~ /clang/ || basename($cmd) =~ /llvm/));
   # If this is the llvm-driver the internal command will look like "llvm clang ...".
@@ -462,9 +463,9 @@ my $Output;
 my %Uniqued;
 
 # Forward arguments to gcc.
-my $Status = system($Compiler,@ARGV);
+my $Status = system($Compiler,@CompilerArgs,@ARGV);
 if (defined $ENV{'CCC_ANALYZER_LOG'}) {
-  print STDERR "$Compiler @ARGV\n";
+  print STDERR "$Compiler @CompilerArgs @ARGV\n";
 }
 if ($Status) { exit($Status >> 8); }
 
