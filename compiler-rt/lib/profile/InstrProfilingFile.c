@@ -357,15 +357,6 @@ static uint32_t fileWriter(ProfDataWriter *This, ProfDataIOVec *IOVecs,
   return 0;
 }
 
-/* TODO: make buffer size controllable by an internal option, and compiler can pass the size
-   to runtime via a variable. */
-static uint32_t orderFileWriter(FILE *File, const uint32_t *DataStart) {
-  if (fwrite(DataStart, sizeof(uint32_t), INSTR_ORDER_FILE_BUFFER_SIZE, File) !=
-      INSTR_ORDER_FILE_BUFFER_SIZE)
-    return 1;
-  return 0;
-}
-
 static void initFileWriter(ProfDataWriter *This, FILE *File) {
   This->Write = fileWriter;
   This->WriterCtx = File;
@@ -503,7 +494,7 @@ static void createProfileDir(const char *Filename) {
  * the original profile data is truncated and gets ready for the profile
  * dumper. With profile merging enabled, each executable as well as any of
  * its instrumented shared libraries dump profile data into their own data file.
-*/
+ */
 static FILE *openFileForMerging(const char *ProfileFileName, int *MergeDone) {
   FILE *ProfileFile = getProfileFile();
   int rc;
@@ -574,27 +565,6 @@ static int writeFile(const char *OutputName) {
   RetVal = lprofWriteData(&fileWriter, lprofGetVPDataReader(), MergeDone);
 
   closeFileObject(OutputFile);
-  return RetVal;
-}
-
-/* Write order data to file \c OutputName.  */
-static int writeOrderFile(const char *OutputName) {
-  int RetVal;
-  FILE *OutputFile;
-
-  OutputFile = fopen(OutputName, "w");
-
-  if (!OutputFile) {
-    PROF_WARN("can't open file with mode ab: %s\n", OutputName);
-    return -1;
-  }
-
-  FreeHook = &free;
-  setupIOBuffer();
-  const uint32_t *DataBegin = __llvm_profile_begin_orderfile();
-  RetVal = orderFileWriter(OutputFile, DataBegin);
-
-  fclose(OutputFile);
   return RetVal;
 }
 
@@ -1236,65 +1206,6 @@ int __llvm_profile_dump(void) {
               "online profile merging is not on");
   int rc = __llvm_profile_write_file();
   lprofSetProfileDumped(1);
-  return rc;
-}
-
-/* Order file data will be saved in a file with suffx .order. */
-static const char *OrderFileSuffix = ".order";
-
-COMPILER_RT_VISIBILITY
-int __llvm_orderfile_write_file(void) {
-  int rc, Length, LengthBeforeAppend, SuffixLength;
-  const char *Filename;
-  char *FilenameBuf;
-
-  // Temporarily suspend getting SIGKILL when the parent exits.
-  int PDeathSig = lprofSuspendSigKill();
-
-  SuffixLength = strlen(OrderFileSuffix);
-  Length = getCurFilenameLength() + SuffixLength;
-  FilenameBuf = (char *)COMPILER_RT_ALLOCA(Length + 1);
-  Filename = getCurFilename(FilenameBuf, 1);
-
-  /* Check the filename. */
-  if (!Filename) {
-    PROF_ERR("Failed to write file : %s\n", "Filename not set");
-    if (PDeathSig == 1)
-      lprofRestoreSigKill();
-    return -1;
-  }
-
-  /* Append order file suffix */
-  LengthBeforeAppend = strlen(Filename);
-  memcpy(FilenameBuf + LengthBeforeAppend, OrderFileSuffix, SuffixLength);
-  FilenameBuf[LengthBeforeAppend + SuffixLength] = '\0';
-
-  /* Check if there is llvm/runtime version mismatch.  */
-  if (GET_VERSION(__llvm_profile_get_version()) != INSTR_PROF_RAW_VERSION) {
-    PROF_ERR("Runtime and instrumentation version mismatch : "
-             "expected %d, but get %d\n",
-             INSTR_PROF_RAW_VERSION,
-             (int)GET_VERSION(__llvm_profile_get_version()));
-    if (PDeathSig == 1)
-      lprofRestoreSigKill();
-    return -1;
-  }
-
-  /* Write order data to the file. */
-  rc = writeOrderFile(Filename);
-  if (rc)
-    PROF_ERR("Failed to write file \"%s\": %s\n", Filename, strerror(errno));
-
-  // Restore SIGKILL.
-  if (PDeathSig == 1)
-    lprofRestoreSigKill();
-
-  return rc;
-}
-
-COMPILER_RT_VISIBILITY
-int __llvm_orderfile_dump(void) {
-  int rc = __llvm_orderfile_write_file();
   return rc;
 }
 

@@ -3551,6 +3551,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start:
+  case Builtin::BI__builtin_c23_va_start:
   case Builtin::BI__builtin_va_end:
     EmitVAStartEnd(BuiltinID == Builtin::BI__va_start
                        ? EmitScalarExpr(E->getArg(0))
@@ -4309,6 +4310,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_exp2:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::exp2, "elt.exp2"));
+  case Builtin::BI__builtin_elementwise_exp10:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::exp10, "elt.exp10"));
   case Builtin::BI__builtin_elementwise_log:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::log, "elt.log"));

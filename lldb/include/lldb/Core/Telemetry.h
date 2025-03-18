@@ -65,7 +65,7 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   // TBD: could add some memory stats here too?
 
   lldb::user_id_t debugger_id = LLDB_INVALID_UID;
-  Debugger *debugger;
+  Debugger *debugger = nullptr;
 
   // For dyn_cast, isa, etc operations.
   llvm::telemetry::KindType getKind() const override {

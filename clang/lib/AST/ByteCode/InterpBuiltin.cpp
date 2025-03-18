@@ -2045,8 +2045,10 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
       (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
 
   size_t Index = Ptr.getIndex();
+  size_t Step = 0;
   for (;;) {
-    const Pointer &ElemPtr = Index > 0 ? Ptr.atIndex(Index) : Ptr;
+    const Pointer &ElemPtr =
+        (Index + Step) > 0 ? Ptr.atIndex(Index + Step) : Ptr;
 
     if (!CheckLoad(S, OpPC, ElemPtr))
       return false;
@@ -2060,8 +2062,8 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     if (StopAtZero && V == 0)
       break;
 
-    ++Index;
-    if (MaxLength && Index == MaxLength->getZExtValue())
+    ++Step;
+    if (MaxLength && Step == MaxLength->getZExtValue())
       break;
   }
 

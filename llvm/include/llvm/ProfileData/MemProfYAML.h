@@ -155,6 +155,14 @@ template <> struct MappingTraits<memprof::AllocationInfo> {
 // In YAML, we use GUIDMemProfRecordPair instead of MemProfRecord so that we can
 // treat the GUID and the fields within MemProfRecord at the same level as if
 // the GUID were part of MemProfRecord.
+template <> struct MappingTraits<memprof::CallSiteInfo> {
+  static void mapping(IO &Io, memprof::CallSiteInfo &CS) {
+    Io.mapRequired("Frames", CS.Frames);
+    // Keep this optional to make it easier to write tests.
+    Io.mapOptional("CalleeGuids", CS.CalleeGuids);
+  }
+};
+
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
@@ -174,6 +182,7 @@ template <> struct MappingTraits<memprof::AllMemProfData> {
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::Frame)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<memprof::Frame>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::AllocationInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(memprof::GUIDMemProfRecordPair)
 
 #endif // LLVM_PROFILEDATA_MEMPROFYAML_H_

@@ -786,6 +786,7 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_bitreverse(T x)        return the integer represented after reversing the bits of x           integer types
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
+ T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -1957,6 +1958,32 @@ references can be used instead of numeric references.
     err:
       return -1;
   }
+
+
+Constexpr strings in GNU ASM statememts
+=======================================
+
+In C++11 mode (and greater), Clang supports specifying the template,
+constraints, and clobber strings with a parenthesized constant expression
+producing an object with the following member functions
+
+.. code-block:: c++
+
+  constexpr const char* data() const;
+  constexpr size_t size() const;
+
+such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
+This mechanism follow the same rules as ``static_assert`` messages in
+C++26, see ``[dcl.pre]/p12``.
+
+Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
+
+.. code-block:: c++
+
+   int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+   }
+
 
 Objective-C Features
 ====================
@@ -4280,6 +4307,17 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
+``__builtin_va_list`` object.
+
+* ``void __builtin_c23_va_start(__builtin_va_list list, ...)``
+
+A builtin function for the target-specific ``va_start`` function-like macro,
+available only in C23 and later. The builtin accepts zero or one argument for
+the ellipsis (``...``). If such an argument is provided, it should be the name
+of the parameter preceeding the ellipsis, which is used for compatibility with
+C versions before C23. It is an error to provide two or more variadic arguments.
+This function initializes the given ``__builtin_va_list`` object. It is
+undefined behavior to call this function on an already initialized
 ``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``

@@ -244,6 +244,12 @@ check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
 
+# Check whether -Wl,--as-needed is supported.
+check_linker_flag(C "LINKER:--as-needed" LINKER_SUPPORTS_AS_NEEDED)
+if (LINKER_SUPPORTS_AS_NEEDED)
+  set(LINKER_AS_NEEDED_OPT "LINKER:--as-needed")
+endif()
+
 # Different platform may have different name for the POSIX thread library.
 # For example, libpthread.a on AIX. Search for it as it is needed when
 # building the shared flang_rt.runtime.so.
@@ -292,17 +298,6 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
     set(FLANG_RT_INCLUDE_QUADMATH_H "\"${FLANG_RT_GCC_RESOURCE_DIR}/include/quadmath.h\"")
   endif ()
 endif ()
-
-# Check if 128-bit float computations can be done via long double.
-check_cxx_source_compiles(
-  "#include <cfloat>
-   #if LDBL_MANT_DIG != 113
-   #error LDBL_MANT_DIG != 113
-   #endif
-   int main() { return 0; }
-  "
-  HAVE_LDBL_MANT_DIG_113)
-
 
 #####################
 # Build Preparation #

@@ -12,31 +12,39 @@ namespace llvm {
 namespace orc {
 namespace shared {
 
-Expected<std::vector<WrapperFunctionCall>>
-runFinalizeActions(AllocActions &AAs) {
+void runFinalizeActions(AllocActions &AAs,
+                        OnRunFinalizeActionsCompleteFn OnComplete) {
   std::vector<WrapperFunctionCall> DeallocActions;
   DeallocActions.reserve(numDeallocActions(AAs));
 
   for (auto &AA : AAs) {
     if (AA.Finalize)
-      if (auto Err = AA.Finalize.runWithSPSRetErrorMerged())
-        return joinErrors(std::move(Err), runDeallocActions(DeallocActions));
+
+      if (auto Err = AA.Finalize.runWithSPSRetErrorMerged()) {
+        while (!DeallocActions.empty()) {
+          Err = joinErrors(std::move(Err),
+                           DeallocActions.back().runWithSPSRetErrorMerged());
+          DeallocActions.pop_back();
+        }
+        return OnComplete(std::move(Err));
+      }
 
     if (AA.Dealloc)
       DeallocActions.push_back(std::move(AA.Dealloc));
   }
 
   AAs.clear();
-  return DeallocActions;
+  OnComplete(std::move(DeallocActions));
 }
 
-Error runDeallocActions(ArrayRef<WrapperFunctionCall> DAs) {
+void runDeallocActions(ArrayRef<WrapperFunctionCall> DAs,
+                       OnRunDeallocActionsComeleteFn OnComplete) {
   Error Err = Error::success();
   while (!DAs.empty()) {
     Err = joinErrors(std::move(Err), DAs.back().runWithSPSRetErrorMerged());
     DAs = DAs.drop_back();
   }
-  return Err;
+  OnComplete(std::move(Err));
 }
 
 } // namespace shared
