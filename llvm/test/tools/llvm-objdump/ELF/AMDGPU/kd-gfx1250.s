@@ -29,7 +29,7 @@
 ; CHECK-NEXT: .amdhsa_fp16_overflow 0
 ; CHECK-NEXT: ; FLAT_SCRATCH_IS_NV 0
 ; CHECK-NEXT: .amdhsa_memory_ordered 1
-; CHECK-NEXT: .amdhsa_forward_progress 0
+; CHECK-NEXT: .amdhsa_forward_progress 1
 ; CHECK-NEXT: .amdhsa_round_robin_scheduling 0
 ; CHECK-NEXT: .amdhsa_enable_private_segment 0
 ; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -85,7 +85,7 @@
 ; CHECK-NEXT: .amdhsa_fp16_overflow 0
 ; CHECK-NEXT: ; FLAT_SCRATCH_IS_NV 0
 ; CHECK-NEXT: .amdhsa_memory_ordered 1
-; CHECK-NEXT: .amdhsa_forward_progress 0
+; CHECK-NEXT: .amdhsa_forward_progress 1
 ; CHECK-NEXT: .amdhsa_round_robin_scheduling 0
 ; CHECK-NEXT: .amdhsa_enable_private_segment 0
 ; CHECK-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
