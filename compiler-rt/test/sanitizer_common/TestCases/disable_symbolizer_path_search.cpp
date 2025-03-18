@@ -2,7 +2,7 @@
 
 // RUN: %clangxx %s -o %t
 // RUN: echo $ASAN_SYMBOLIZER_PATH
-// RUN: env --u ASAN_SYMBOLIZER_PATH -u
+// RUN: env -u ASAN_SYMBOLIZER_PATH
 // RUN: echo $ASAN_SYMBOLIZER_PATH
 // RUN: %run %t 2>&1 | FileCheck %s
 
