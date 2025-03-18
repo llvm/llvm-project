@@ -17,8 +17,8 @@ on:
         required: true
         type: choice
         options:
-          - ubuntu-22.04
-          - ubuntu-22.04-arm
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
           - macos-13
           - macos-14
 
@@ -157,7 +157,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
+          ubuntu-24.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
@@ -276,7 +276,7 @@ jobs:
     if: >-
       github.event_name != 'pull_request' &&
       needs.prepare.outputs.upload == 'true'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # For release uploads
       id-token: write     # For artifact attestations
