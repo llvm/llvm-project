@@ -20,7 +20,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterClassInfo.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
