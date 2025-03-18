@@ -244,11 +244,10 @@ public:
   void replacePointer(Value *V);
 
 private:
-  bool collectUsersRecursive(Instruction &I);
   void replace(Instruction *I);
   Value *getReplacement(Value *I);
   bool isAvailable(Instruction *I) const {
-    return I == &Root || Worklist.contains(I);
+    return I == &Root || UsersToReplace.contains(I);
   }
 
   bool isEqualOrValidAddrSpaceCast(const Instruction *I,
@@ -260,8 +259,7 @@ private:
     return (FromAS == ToAS) || IC.isValidAddrSpaceCast(FromAS, ToAS);
   }
 
-  SmallPtrSet<Instruction *, 32> ValuesToRevisit;
-  SmallSetVector<Instruction *, 4> Worklist;
+  SmallSetVector<Instruction *, 4> UsersToReplace;
   MapVector<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
@@ -270,77 +268,88 @@ private:
 } // end anonymous namespace
 
 bool PointerReplacer::collectUsers() {
-  if (!collectUsersRecursive(Root))
-    return false;
+  SmallVector<Instruction *> Worklist;
+  SmallSetVector<Instruction *, 4> ValuesToRevisit;
 
-  // Ensure that all outstanding (indirect) users of I
-  // are inserted into the Worklist. Return false
-  // otherwise.
-  return llvm::set_is_subset(ValuesToRevisit, Worklist);
-}
+  auto PushUsersToWorklist = [&](Instruction *Inst) {
+    for (auto *U : Inst->users()) {
+      if (auto *I = dyn_cast<Instruction>(U)) {
+        if (!isAvailable(I) && !ValuesToRevisit.contains(I))
+          Worklist.emplace_back(I);
+      }
+    }
+  };
 
-bool PointerReplacer::collectUsersRecursive(Instruction &I) {
-  for (auto *U : I.users()) {
-    auto *Inst = cast<Instruction>(&*U);
+  PushUsersToWorklist(&Root);
+  while (!Worklist.empty()) {
+    auto *Inst = Worklist.pop_back_val();
+    if (!Inst)
+      return false;
+    if (isAvailable(Inst))
+      continue;
     if (auto *Load = dyn_cast<LoadInst>(Inst)) {
       if (Load->isVolatile())
         return false;
-      Worklist.insert(Load);
+      UsersToReplace.insert(Load);
     } else if (auto *PHI = dyn_cast<PHINode>(Inst)) {
       // All incoming values must be instructions for replacability
       if (any_of(PHI->incoming_values(),
                  [](Value *V) { return !isa<Instruction>(V); }))
         return false;
 
-      // If at least one incoming value of the PHI is not in Worklist,
-      // store the PHI for revisiting and skip this iteration of the
-      // loop.
-      if (any_of(PHI->incoming_values(), [this](Value *V) {
-            return !isAvailable(cast<Instruction>(V));
-          })) {
-        ValuesToRevisit.insert(Inst);
+      // If all incoming values are available, mark this PHI as
+      // replacable and push it's users into the worklist.
+      if (all_of(PHI->incoming_values(),
+                 [&](Value *V) { return isAvailable(cast<Instruction>(V)); })) {
+        UsersToReplace.insert(PHI);
+        PushUsersToWorklist(PHI);
         continue;
       }
 
-      Worklist.insert(PHI);
-      if (!collectUsersRecursive(*PHI))
+      // Not all incoming values are available. If this PHI was already
+      // visited prior to this iteration, return false.
+      if (!ValuesToRevisit.insert(PHI))
         return false;
+
+      // Push PHI back into the stack, followed by unavailable
+      // incoming values.
+      Worklist.emplace_back(PHI);
+      for (unsigned Idx = 0; Idx < PHI->getNumIncomingValues(); ++Idx) {
+        auto *IncomingValue = cast<Instruction>(PHI->getIncomingValue(Idx));
+        if (UsersToReplace.contains(IncomingValue))
+          continue;
+        if (!ValuesToRevisit.insert(IncomingValue))
+          return false;
+        Worklist.emplace_back(IncomingValue);
+      }
     } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
-      if (!isa<Instruction>(SI->getTrueValue()) ||
-          !isa<Instruction>(SI->getFalseValue()))
+      auto *TrueInst = dyn_cast<Instruction>(SI->getTrueValue());
+      auto *FalseInst = dyn_cast<Instruction>(SI->getFalseValue());
+      if (!TrueInst || !FalseInst)
         return false;
 
-      if (!isAvailable(cast<Instruction>(SI->getTrueValue())) ||
-          !isAvailable(cast<Instruction>(SI->getFalseValue()))) {
-        ValuesToRevisit.insert(Inst);
-        continue;
-      }
-      Worklist.insert(SI);
-      if (!collectUsersRecursive(*SI))
-        return false;
-    } else if (isa<GetElementPtrInst>(Inst)) {
-      Worklist.insert(Inst);
-      if (!collectUsersRecursive(*Inst))
-        return false;
+      UsersToReplace.insert(SI);
+      PushUsersToWorklist(SI);
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+      UsersToReplace.insert(GEP);
+      PushUsersToWorklist(GEP);
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;
-      Worklist.insert(Inst);
+      UsersToReplace.insert(Inst);
     } else if (isEqualOrValidAddrSpaceCast(Inst, FromAS)) {
-      Worklist.insert(Inst);
-      if (!collectUsersRecursive(*Inst))
-        return false;
+      UsersToReplace.insert(Inst);
+      PushUsersToWorklist(Inst);
     } else if (Inst->isLifetimeStartOrEnd()) {
       continue;
     } else {
       // TODO: For arbitrary uses with address space mismatches, should we check
       // if we can introduce a valid addrspacecast?
-      LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
+      LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *Inst << '\n');
       return false;
     }
   }
-
-  return true;
+  return llvm::set_is_subset(ValuesToRevisit, UsersToReplace);
 }
 
 Value *PointerReplacer::getReplacement(Value *V) { return WorkMap.lookup(V); }
@@ -443,7 +452,7 @@ void PointerReplacer::replacePointer(Value *V) {
 #endif
   WorkMap[&Root] = V;
 
-  for (Instruction *Workitem : Worklist)
+  for (Instruction *Workitem : UsersToReplace)
     replace(Workitem);
 }
 
