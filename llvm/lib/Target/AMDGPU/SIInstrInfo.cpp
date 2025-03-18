@@ -6297,6 +6297,12 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
       continue;
     }
 
+    // True16 Operands cannot contain VGPR_32 (typically occurs during
+    // SIFixSGPRCopies). True16 instructions are always selected as VOP3
+    if (ST.useRealTrue16Insts() && AMDGPU::isTrue16Inst(Opc) && MO.isReg() &&
+        MRI.getRegClass(MO.getReg()) == &AMDGPU::VGPR_32RegClass)
+      legalizeOpWithMove(MI, Idx);
+
     if (!RI.isSGPRClass(RI.getRegClassForReg(MRI, MO.getReg())))
       continue; // VGPRs are legal
 
@@ -8632,7 +8638,8 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
       break;
     }
 
-    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo))) {
+    if (!RI.hasVectorRegisters(getOpRegClass(UseMI, OpNo)) ||
+        AMDGPU::isTrue16Inst(UseMI.getOpcode())) {
       Worklist.insert(&UseMI);
 
       do {

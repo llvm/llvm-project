@@ -698,9 +698,10 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ; GFX11-SAFE-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, s0, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v1
-; GFX11-SAFE-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0/*Invalid register, operand has 'VS_16' register class*/, s0, vcc_lo
-; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SAFE-TRUE16-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
+; GFX11-SAFE-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SAFE-TRUE16-NEXT:    v_cndmask_b16 v0.l, v0.l, s0, vcc_lo
 ; GFX11-SAFE-TRUE16-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0.l
 ; GFX11-SAFE-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, 0, vcc_lo
 ; GFX11-SAFE-TRUE16-NEXT:    ; return to shader part epilog
