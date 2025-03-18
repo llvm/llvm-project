@@ -2628,8 +2628,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   return swift_ast_sp;
 }
 
-/// Determine whether this CU was compiled with C++ interop enabled.
-bool SwiftASTContext::ShouldEnableCXXInterop(CompileUnit *cu) {
+bool SwiftASTContext::CheckFlagInCU(CompileUnit *cu, const char *flag) {
   AutoBool interop_enabled =
     ModuleList::GetGlobalModuleListProperties().GetSwiftEnableCxxInterop();
   switch (interop_enabled) {
@@ -2643,8 +2642,6 @@ bool SwiftASTContext::ShouldEnableCXXInterop(CompileUnit *cu) {
     lldb::ModuleSP module = cu->CalculateSymbolContextModule();
     if (!module)
       return false;
-    // Look for the "-enable-experimental-cxx-interop" compile flag in the
-    // args of the compile units this module is composed of.
     auto *sym_file = module->GetSymbolFile();
     if (!sym_file)
       return false;
@@ -2653,7 +2650,7 @@ bool SwiftASTContext::ShouldEnableCXXInterop(CompileUnit *cu) {
       if (unit.get() == cu) {
         if (cu->GetLanguage() == eLanguageTypeSwift)
           for (const char *arg : args.GetArgumentArrayRef())
-            if (strcmp(arg, "-enable-experimental-cxx-interop") == 0)
+            if (strcmp(arg, flag) == 0)
               return true;
         return false;
       }
@@ -2661,6 +2658,15 @@ bool SwiftASTContext::ShouldEnableCXXInterop(CompileUnit *cu) {
   }
   }
   return false;
+}
+
+/// Determine whether this CU was compiled with C++ interop enabled.
+bool SwiftASTContext::ShouldEnableCXXInterop(CompileUnit *cu) {
+  return CheckFlagInCU(cu, "-enable-experimental-cxx-interop");
+}
+
+bool SwiftASTContext::ShouldEnableEmbeddedSwift(CompileUnit *cu) {
+  return CheckFlagInCU(cu, "-enable-embedded-swift");
 }
 
 static bool IsUnitTestExecutable(lldb_private::Module &module) {
@@ -2776,7 +2782,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     swift_ast_sp->m_is_scratch_context = true;
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
     lang_opts.EnableCXXInterop = ShouldEnableCXXInterop(cu);
-    if (target_sp->IsEmbeddedSwift())
+    if (ShouldEnableEmbeddedSwift(cu))
       lang_opts.enableFeature(swift::Feature::Embedded);
   } else {
     // Typesystem fallback context.
@@ -2793,7 +2799,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
     lang_opts.EnableAccessControl = false;
     lang_opts.EnableCXXInterop = ShouldEnableCXXInterop(cu);
-    if (module_sp->IsEmbeddedSwift())
+    if (ShouldEnableEmbeddedSwift(cu))
       lang_opts.enableFeature(swift::Feature::Embedded);
   }
   auto defer_log = llvm::make_scope_exit(
