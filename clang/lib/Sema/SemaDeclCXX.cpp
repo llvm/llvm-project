@@ -1688,7 +1688,7 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
     break;
   }
 
-  CXXRecordDecl *OrigRD = T->getAsCXXRecordDecl();
+  const CXXRecordDecl *OrigRD = T->getAsCXXRecordDecl();
   if (!OrigRD || OrigRD->isUnion())
     return std::nullopt;
 
