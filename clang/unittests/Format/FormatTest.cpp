@@ -29104,7 +29104,7 @@ TEST_F(FormatTest, DoesNotCrashOnNonNullTerminatedStringRefs) {
 
   // The internal API used to crash when passed a non-null-terminated StringRef.
   // Check this does not happen anymore.
-  verifyFormat(FirstLine);
+  verifyNoCrash(FirstLine);
 }
 
 } // namespace
