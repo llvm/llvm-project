@@ -494,7 +494,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 static std::unique_ptr<TagNode>
 writeFileDefinition(const Location &L,
                     std::optional<StringRef> RepositoryUrl = std::nullopt) {
-  if (!L.IsFileInRootDir && !RepositoryUrl)
+  if (!L.IsFileInRootDir || !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
