@@ -330,7 +330,7 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
-      if (IsWin64 || IsUEFI64) {
+      if (IsWin64) {
         return (HasSSE ? CSR_Win64_RegCall_SaveList :
                          CSR_Win64_RegCall_NoSSE_SaveList);
       } else {

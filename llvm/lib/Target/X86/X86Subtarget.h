@@ -333,6 +333,10 @@ public:
 
   bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
 
+  bool isTargetWindowsOrUEFI64() const {
+    return isTargetWin64() || isTargetUEFI64();
+  }
+
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
@@ -353,6 +357,7 @@ public:
     // On Win64 and UEFI64, all these conventions just use the default
     // convention.
     case CallingConv::C:
+      return isTargetWin64() || isTargetUEFI64();
     case CallingConv::Fast:
     case CallingConv::Tail:
     case CallingConv::Swift:
@@ -362,7 +367,7 @@ public:
     case CallingConv::X86_ThisCall:
     case CallingConv::X86_VectorCall:
     case CallingConv::Intel_OCL_BI:
-      return isTargetWin64() || isTargetUEFI64();
+      return isTargetWin64();
     // This convention allows using the Win64 convention on other targets.
     case CallingConv::Win64:
       return true;

@@ -223,7 +223,8 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
     bool NeedQuotes = GV->hasName() && !canBeUnquotedInDirective(GV->getName());
     if (NeedQuotes)
       OS << "\"";
-    if (TT.isWindowsGNUEnvironment() || TT.isWindowsCygwinEnvironment() || TT.isUEFI()) {
+    if (TT.isWindowsGNUEnvironment() || TT.isWindowsCygwinEnvironment() ||
+        TT.isUEFI()) {
       std::string Flag;
       raw_string_ostream FlagOS(Flag);
       Mangler.getNameWithPrefix(FlagOS, GV, false);

@@ -484,7 +484,7 @@ void X86PassConfig::addIRPasses() {
 
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
-  if (TT.isOSWindowsOrUEFI()) {
+  if (TT.isOSWindows()) {
     if (TT.getArch() == Triple::x86_64) {
       addPass(createCFGuardDispatchPass());
     } else {
