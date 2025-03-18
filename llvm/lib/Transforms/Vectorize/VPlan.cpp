@@ -752,15 +752,13 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   if (!isReplicator()) {
     // Create and register the new vector loop.
-    Loop *PrevLoop = State->CurrentParentLoop;
+    Loop *PrevParentLoop = State->CurrentParentLoop;
     State->CurrentParentLoop = State->LI->AllocateLoop();
-    BasicBlock *VectorPH = State->CFG.VPBB2IRBB[getPreheaderVPBB()];
-    Loop *ParentLoop = State->LI->getLoopFor(VectorPH);
 
     // Insert the new loop into the loop nest and register the new basic blocks
     // before calling any utilities such as SCEV that require valid LoopInfo.
-    if (ParentLoop)
-      ParentLoop->addChildLoop(State->CurrentParentLoop);
+    if (PrevParentLoop)
+      PrevParentLoop->addChildLoop(State->CurrentParentLoop);
     else
       State->LI->addTopLevelLoop(State->CurrentParentLoop);
 
@@ -770,7 +768,7 @@ void VPRegionBlock::execute(VPTransformState *State) {
       Block->execute(State);
     }
 
-    State->CurrentParentLoop = PrevLoop;
+    State->CurrentParentLoop = PrevParentLoop;
     return;
   }
 
