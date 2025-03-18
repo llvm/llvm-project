@@ -5,7 +5,7 @@
 define spir_func noundef i32 @test_branch(i32 noundef %X) {
 entry:
 ; CHECK-LABEL: ; -- Begin function test_branch
-  ; CHECK: OpSelectionMerge %[[#]] DontFlatten
+; CHECK: OpSelectionMerge %[[#]] DontFlatten
   %X.addr = alloca i32, align 4
   %resp = alloca i32, align 4
   store i32 %X, ptr %X.addr, align 4
@@ -34,7 +34,7 @@ if.end:                                           ; preds = %if.else, %if.then
 define spir_func noundef i32 @test_flatten(i32 noundef %X) {
 entry:
 ; CHECK-LABEL: ; -- Begin function test_flatten
-  ; CHECK: OpSelectionMerge %[[#]] Flatten
+; CHECK: OpSelectionMerge %[[#]] Flatten
   %X.addr = alloca i32, align 4
   %resp = alloca i32, align 4
   store i32 %X, ptr %X.addr, align 4
@@ -62,7 +62,7 @@ if.end:                                           ; preds = %if.else, %if.then
 define spir_func noundef i32 @test_no_attr(i32 noundef %X) {
 entry:
 ; CHECK-LABEL: ; -- Begin function test_no_attr
-  ; CHECK: OpSelectionMerge %[[#]] None
+; CHECK: OpSelectionMerge %[[#]] None
   %X.addr = alloca i32, align 4
   %resp = alloca i32, align 4
   store i32 %X, ptr %X.addr, align 4
@@ -90,7 +90,7 @@ if.end:                                           ; preds = %if.else, %if.then
 define spir_func noundef i32 @flatten_switch(i32 noundef %X) {
 entry:
 ; CHECK-LABEL: ; -- Begin function flatten_switch
-  ; CHECK: OpSelectionMerge %[[#]] Flatten
+; CHECK: OpSelectionMerge %[[#]] Flatten
   %X.addr = alloca i32, align 4
   %resp = alloca i32, align 4
   store i32 %X, ptr %X.addr, align 4
@@ -130,7 +130,7 @@ sw.epilog:                                        ; preds = %entry, %sw.bb2, %sw
 define spir_func noundef i32 @branch_switch(i32 noundef %X) {
   entry:
   ; CHECK-LABEL: ; -- Begin function branch_switch
-    ; CHECK: OpSelectionMerge %[[#]] DontFlatten
+  ; CHECK: OpSelectionMerge %[[#]] DontFlatten
   %X.addr = alloca i32, align 4
   %resp = alloca i32, align 4
   store i32 %X, ptr %X.addr, align 4
@@ -169,7 +169,7 @@ sw.epilog:                                        ; preds = %entry, %sw.bb2, %sw
 
 define spir_func noundef i32 @no_attr_switch(i32 noundef %X) {
   ; CHECK-LABEL: ; -- Begin function no_attr_switch
-  ; CHECK: OpSelectionMerge %[[#]] None
+; CHECK: OpSelectionMerge %[[#]] None
 entry:
   %X.addr = alloca i32, align 4
   %resp = alloca i32, align 4
