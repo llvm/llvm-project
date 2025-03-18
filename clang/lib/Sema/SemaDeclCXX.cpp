@@ -1479,7 +1479,7 @@ static bool CheckMemberDecompositionFields(Sema &S, SourceLocation Loc,
                                            const CXXRecordDecl *OrigRD,
                                            QualType DecompType,
                                            DeclAccessPair BasePair) {
-  const CXXRecordDecl *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
+  const auto *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
   if (!RD)
     return true;
 
@@ -1527,7 +1527,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
   CXXCastPath BasePath;
   DeclAccessPair BasePair =
       findDecomposableBaseClass(S, Src->getLocation(), OrigRD, BasePath);
-  const CXXRecordDecl *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
+  const auto *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
   if (!RD)
     return true;
   QualType BaseType = S.Context.getQualifiedType(S.Context.getRecordType(RD),
@@ -1698,7 +1698,7 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
   CXXCastPath BasePath;
   DeclAccessPair BasePair =
       findDecomposableBaseClass(*this, Loc, OrigRD, BasePath);
-  const CXXRecordDecl *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
+  const auto *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
   if (!RD)
     return std::nullopt;
 

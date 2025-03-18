@@ -5066,7 +5066,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsInterfaceClass:
     return true;
 
-  // We diagnose incomplete class types later
+  // We diagnose incomplete class types later.
   case UTT_StructuredBindingSize:
     return true;
 

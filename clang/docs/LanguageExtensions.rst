@@ -1922,10 +1922,12 @@ The ``__builtin_structured_binding_size(T)`` type trait returns
 the *structured binding size* ([dcl.struct.bind]) of type ``T``
 
 This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = declval<T&>();``.
-If the argument cannot be decomposed (ie not a builtin array, builtin SIMD vector,
-builtin complex, *tuple-like* type or destructurable class type),
-``__builtin_structured_binding_size(T)`` is not a valid expression
-(``__builtin_structured_binding_size`` is SFINAE-friendly).
+If the argument cannot be decomposed, ``__builtin_structured_binding_size(T)``
+is not a valid expression (``__builtin_structured_binding_size`` is SFINAE-friendly).
+
+builtin arrays, builtin SIMD vectors,
+builtin complex types, *tuple-like* types, and decomposable class types
+are decomposable types.
 
 A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
 even if there is no valid ``std::tuple_element`` specialization or suitable

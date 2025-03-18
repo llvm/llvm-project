@@ -6,6 +6,10 @@ struct S0 {};
 struct S1 {int a;};
 struct S2 {int a; int b;};
 struct S3 {double a; int b; int c;};
+struct S4 {int a: 1; int b :2;};
+struct S5 {int : 1; int b :2;};
+struct S6 {union {int a;}; }; // #note-anon-union
+struct S7 {int a[];};
 
 
 
@@ -29,6 +33,20 @@ static_assert(__builtin_structured_binding_size(S1) == 0);
 // expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(S1) == 0'}} \
 // expected-note@-1 {{expression evaluates to '1 == 0'}}
 static_assert(__builtin_structured_binding_size(S1) == 1);
+static_assert(__builtin_structured_binding_size(S2) == 2);
+static_assert(__builtin_structured_binding_size(S3) == 3);
+static_assert(__builtin_structured_binding_size(S4) == 2);
+static_assert(__builtin_structured_binding_size(S5) == 2);
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(S5) == 2'}} \
+// expected-note@-1 {{expression evaluates to '1 == 2'}}
+static_assert(__builtin_structured_binding_size(S6) == 2);
+// expected-error@-1 {{static assertion failed due to requirement '__builtin_structured_binding_size(S6) == 2'}} \
+// expected-error@-1 {{cannot decompose class type 'S6' because it has an anonymous union member}} \
+// expected-note@-1 {{expression evaluates to '1 == 2'}}
+// expected-note@#note-anon-union {{declared here}}
+static_assert(__builtin_structured_binding_size(S7) == 1);
+
+
 static_assert(__builtin_structured_binding_size(SD) == 1);
 static_assert(__builtin_structured_binding_size(SE1) == 1);
 // expected-error@-1 {{cannot decompose class type 'SE1': both it and its base class 'S1' have non-static data members}} \
@@ -150,6 +168,16 @@ static_assert(__builtin_structured_binding_size(TSizeError) == 42);
 static_assert(!is_destructurable<TSizeError>);
 }
 
+
+struct S {
+  int x;
+  int y;
+  static_assert(__builtin_structured_binding_size(S) == 2);
+  //expected-error@-1 {{incomplete type 'S' where a complete type is required}} \
+  // expected-error@-1 {{type 'S' cannot be decomposed}} \
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}} \
+  // expected-note@-4 {{definition of 'S' is not complete until the closing '}'}}
+};
 
 // Check we can implement std::exec::tag_of_t
 template <typename T>
