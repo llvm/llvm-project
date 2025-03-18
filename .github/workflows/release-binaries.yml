@@ -16,9 +16,11 @@ on:
         description: "Runner to use for the build"
         required: true
         type: choice
+        # We use ubuntu-22.04 rather than the latest version to make the built
+        # binaries more portable (eg functional aginast older glibc).
         options:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
+          - ubuntu-22.04
+          - ubuntu-22.04-arm
           - macos-13
           - macos-14
 
@@ -157,7 +159,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-24.04*)
+          ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
