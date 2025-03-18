@@ -166,7 +166,7 @@ static void EventThreadFunction(DAP &dap) {
           case lldb::eStateExited:
             lldb::SBStream stream;
             process.GetStatus(stream);
-            dap.SendOutput(OutputType::Console, stream.GetData());
+            dap.SendOutput(stream.GetData());
 
             // When restarting, we can get an "exited" event for the process we
             // just killed with the old PID, or even with no PID. In that case
@@ -178,7 +178,7 @@ static void EventThreadFunction(DAP &dap) {
               // Run any exit LLDB commands the user specified in the
               // launch.json
               dap.RunExitCommands();
-              dap.onExited();
+              dap.SendExited(process);
               dap.SendTerminatedEvent();
               done = true;
             }

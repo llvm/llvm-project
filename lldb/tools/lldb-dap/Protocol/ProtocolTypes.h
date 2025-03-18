@@ -56,6 +56,7 @@ struct Source {
 
   // unsupported keys: origin, sources, adapterData, checksums
 };
+llvm::json::Value toJSON(const Source &);
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 
 } // namespace lldb_dap::protocol

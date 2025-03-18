@@ -66,7 +66,7 @@ void BaseRequestHandler::SetSourceMapFromArguments(
       if (mapping == nullptr || mapping->size() != 2 ||
           (*mapping)[0].kind() != llvm::json::Value::String ||
           (*mapping)[1].kind() != llvm::json::Value::String) {
-        dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
+        dap.SendOutput(llvm::StringRef(sourceMapHelp));
         return;
       }
       const auto mapFrom = GetAsString((*mapping)[0]);
@@ -81,7 +81,7 @@ void BaseRequestHandler::SetSourceMapFromArguments(
     }
   } else {
     if (ObjectContainsKey(arguments, sourceMapKey)) {
-      dap.SendOutput(OutputType::Console, llvm::StringRef(sourceMapHelp));
+      dap.SendOutput(llvm::StringRef(sourceMapHelp));
       return;
     }
     if (sourcePath.empty())

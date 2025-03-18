@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
+#include "Events/EventHandler.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBListener.h"
@@ -131,8 +132,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
                                    dap.target.GetExecutable().GetFilename());
-    dap.SendOutput(OutputType::Console,
-                   llvm::StringRef(attach_msg, attach_msg_len));
+    dap.SendOutput(llvm::StringRef(attach_msg, attach_msg_len));
   }
   if (attachCommands.empty()) {
     // No "attachCommands", just attach normally.
@@ -201,7 +201,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
-    dap.onProcess();
+    dap.SendProcess(dap.target, ProcessStartMethod::attach);
     dap.SendJSON(CreateEventObject("initialized"));
   }
 }

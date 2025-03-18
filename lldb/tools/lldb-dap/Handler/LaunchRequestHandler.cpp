@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
+#include "Events/EventHandler.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
 #include "llvm/Support/FileSystem.h"
@@ -123,9 +124,9 @@ void LaunchRequestHandler::operator()(const llvm::json::Object &request) const {
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
 
-  if (!status.Fail()) {
-    dap.onProcess();
-  }
+  if (!status.Fail())
+    dap.SendProcess(dap.target, ProcessStartMethod::launch);
+
   dap.SendJSON(CreateEventObject("initialized"));
 }
 } // namespace lldb_dap

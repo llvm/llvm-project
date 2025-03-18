@@ -8,6 +8,7 @@
 
 #include "EventHelper.h"
 #include "DAP.h"
+#include "Events/EventHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBFileSpec.h"
@@ -128,9 +129,9 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
   char buffer[OutputBufferSize];
   size_t count;
   while ((count = process.GetSTDOUT(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
+    dap.SendOutput(llvm::StringRef(buffer, count), OutputCategory::Stdout);
   while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
-    dap.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
+    dap.SendOutput(llvm::StringRef(buffer, count), OutputCategory::Stderr);
 }
 
 // Send a "continued" event to indicate the process is in the running state.

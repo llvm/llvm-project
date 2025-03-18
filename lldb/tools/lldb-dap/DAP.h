@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
 #include "DAPForward.h"
+#include "Events/EventHandler.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
@@ -57,11 +58,6 @@ typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
-
-/// A debug adapter initiated event.
-template <typename... Args> using OutgoingEvent = std::function<void(Args...)>;
-
-enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
 /// Buffer size for handling output events.
 constexpr uint64_t OutputBufferSize = (1u << 12);
@@ -236,11 +232,13 @@ struct DAP {
   /// Typed Events Handlers
   /// @{
 
-  /// onExited sends an event that the debuggee has exited.
-  OutgoingEvent<> onExited;
-  /// onProcess sends an event that indicates that the debugger has begun
-  /// debugging a new process.
-  OutgoingEvent<> onProcess;
+  /// Sends an event that the debuggee has exited.
+  ExitedEventHandler SendExited;
+  /// Sends an event that indicates that the debugger has begun debugging a new
+  /// process.
+  ProcessEventHandler SendProcess;
+  /// Sends an event that indicates the target has produced some output.
+  OutputEventHandler SendOutput;
 
   /// @}
 
@@ -263,13 +261,8 @@ struct DAP {
   /// Send the given message to the client
   void Send(const protocol::Message &message);
 
-  void SendOutput(OutputType o, const llvm::StringRef output);
-
   void SendProgressEvent(uint64_t progress_id, const char *message,
                          uint64_t completed, uint64_t total);
-
-  void __attribute__((format(printf, 3, 4)))
-  SendFormattedOutput(OutputType o, const char *format, ...);
 
   static int64_t GetNextSourceReference();
 

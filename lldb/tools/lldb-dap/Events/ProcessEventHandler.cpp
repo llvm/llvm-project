@@ -6,29 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DAP.h"
 #include "Events/EventHandler.h"
 #include "Protocol/ProtocolEvents.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBTarget.h"
 
 using namespace llvm;
+using namespace lldb;
 using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-ProcessEventBody ProcessEventHandler::Handler() const {
-  ProcessEventBody body;
+void ProcessEventHandler::operator()(SBTarget &target,
+                                     ProcessStartMethod startMethod) const {
+  SBProcess process = target.GetProcess();
+  if (!target.IsValid() || !process.IsValid())
+    return;
 
   char path[PATH_MAX] = {0};
-  dap.target.GetExecutable().GetPath(path, sizeof(path));
+  target.GetExecutable().GetPath(path, sizeof(path));
+
+  ProcessEventBody body;
   body.name = path;
-  body.systemProcessId = dap.target.GetProcess().GetProcessID();
-  body.isLocalProcess = dap.target.GetPlatform().GetName() ==
+  body.systemProcessId = process.GetProcessID();
+  body.isLocalProcess = target.GetPlatform().GetName() ==
                         lldb::SBPlatform::GetHostPlatform().GetName();
-  body.startMethod = dap.is_attach ? ProcessEventBody::StartMethod::attach
-                                   : ProcessEventBody::StartMethod::launch;
-  body.pointerSize = dap.target.GetAddressByteSize();
-  return body;
+  body.startMethod = startMethod;
+  body.pointerSize = target.GetAddressByteSize();
+
+  dap.Send(protocol::Event{/*event=*/ProcessEventHandler::event.str(),
+                           /*body*/ body});
 }
 
 } // namespace lldb_dap

@@ -39,6 +39,7 @@ add_lldb_tool(lldb-dap
 
   Events/ExitedEventHandler.cpp
   Events/ProcessEventHandler.cpp
+  Events/OutputEventHandler.cpp
 
   Handler/ResponseHandler.cpp
   Handler/AttachRequestHandler.cpp

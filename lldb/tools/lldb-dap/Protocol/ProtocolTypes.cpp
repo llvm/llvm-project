@@ -37,6 +37,32 @@ bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
   return true;
 }
 
+json::Value toJSON(const Source::PresentationHint &P) {
+  switch (P) {
+  case Source::PresentationHint::normal:
+    return "normal";
+  case Source::PresentationHint::emphasize:
+    return "emphasize";
+  case Source::PresentationHint::deemphasize:
+    return "deemphasize";
+  }
+}
+
+json::Value toJSON(const Source &S) {
+  json::Object result;
+
+  if (S.name)
+    result.insert({"name", *S.name});
+  if (S.path)
+    result.insert({"path", *S.path});
+  if (S.sourceReference)
+    result.insert({"sourceReference", *S.sourceReference});
+  if (S.presentationHint)
+    result.insert({"presentationHint", *S.presentationHint});
+
+  return std::move(result);
+}
+
 bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.mapOptional("name", S.name) && O.mapOptional("path", S.path) &&

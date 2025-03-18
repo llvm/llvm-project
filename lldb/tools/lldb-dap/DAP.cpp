@@ -83,9 +83,8 @@ DAP::DAP(llvm::StringRef path, std::ofstream *log,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(default_repl_mode),
-      onExited(ExitedEventHandler(*this)),
-      onProcess(ProcessEventHandler(*this)) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode), SendExited(*this),
+      SendProcess(*this), SendOutput(*this) {}
 
 DAP::~DAP() = default;
 
@@ -205,12 +204,12 @@ llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
   if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Stdout, output);
+        SendOutput(output, OutputCategory::Stdout);
       }))
     return Error;
 
   if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Stderr, output);
+        SendOutput(output, OutputCategory::Stderr);
       }))
     return Error;
 
@@ -247,103 +246,6 @@ void DAP::Send(const protocol::Message &message) {
   if (llvm::Error err = transport.Write(message))
     DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
                   transport.GetClientName());
-}
-
-// "OutputEvent": {
-//   "allOf": [ { "$ref": "#/definitions/Event" }, {
-//     "type": "object",
-//     "description": "Event message for 'output' event type. The event
-//                     indicates that the target has produced some output.",
-//     "properties": {
-//       "event": {
-//         "type": "string",
-//         "enum": [ "output" ]
-//       },
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "category": {
-//             "type": "string",
-//             "description": "The output category. If not specified,
-//                             'console' is assumed.",
-//             "_enum": [ "console", "stdout", "stderr", "telemetry" ]
-//           },
-//           "output": {
-//             "type": "string",
-//             "description": "The output to report."
-//           },
-//           "variablesReference": {
-//             "type": "number",
-//             "description": "If an attribute 'variablesReference' exists
-//                             and its value is > 0, the output contains
-//                             objects which can be retrieved by passing
-//                             variablesReference to the VariablesRequest."
-//           },
-//           "source": {
-//             "$ref": "#/definitions/Source",
-//             "description": "An optional source location where the output
-//                             was produced."
-//           },
-//           "line": {
-//             "type": "integer",
-//             "description": "An optional source location line where the
-//                             output was produced."
-//           },
-//           "column": {
-//             "type": "integer",
-//             "description": "An optional source location column where the
-//                             output was produced."
-//           },
-//           "data": {
-//             "type":["array","boolean","integer","null","number","object",
-//                     "string"],
-//             "description": "Optional data to report. For the 'telemetry'
-//                             category the data will be sent to telemetry, for
-//                             the other categories the data is shown in JSON
-//                             format."
-//           }
-//         },
-//         "required": ["output"]
-//       }
-//     },
-//     "required": [ "event", "body" ]
-//   }]
-// }
-void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
-  if (output.empty())
-    return;
-
-  const char *category = nullptr;
-  switch (o) {
-  case OutputType::Console:
-    category = "console";
-    break;
-  case OutputType::Stdout:
-    category = "stdout";
-    break;
-  case OutputType::Stderr:
-    category = "stderr";
-    break;
-  case OutputType::Telemetry:
-    category = "telemetry";
-    break;
-  }
-
-  // Send each line of output as an individual event, including the newline if
-  // present.
-  ::size_t idx = 0;
-  do {
-    ::size_t end = output.find('\n', idx);
-    if (end == llvm::StringRef::npos)
-      end = output.size() - 1;
-    llvm::json::Object event(CreateEventObject("output"));
-    llvm::json::Object body;
-    body.try_emplace("category", category);
-    EmplaceSafeString(body, "output", output.slice(idx, end + 1).str());
-    event.try_emplace("body", std::move(body));
-    SendJSON(llvm::json::Value(std::move(event)));
-    idx = end + 1;
-  } while (idx < output.size());
 }
 
 // interface ProgressStartEvent extends Event {
@@ -444,16 +346,17 @@ void DAP::SendProgressEvent(uint64_t progress_id, const char *message,
   progress_event_reporter.Push(progress_id, message, completed, total);
 }
 
-void __attribute__((format(printf, 3, 4)))
-DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
-  char buffer[1024];
-  va_list args;
-  va_start(args, format);
-  int actual_length = vsnprintf(buffer, sizeof(buffer), format, args);
-  va_end(args);
-  SendOutput(
-      o, llvm::StringRef(buffer, std::min<int>(actual_length, sizeof(buffer))));
-}
+// void __attribute__((format(printf, 3, 4)))
+// DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
+//   char buffer[1024];
+//   va_list args;
+//   va_start(args, format);
+//   int actual_length = vsnprintf(buffer, sizeof(buffer), format, args);
+//   va_end(args);
+//   SendOutput(
+//       o, llvm::StringRef(buffer, std::min<int>(actual_length,
+//       sizeof(buffer))));
+// }
 
 ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
   const auto num = thread.GetStopReasonDataCount();
@@ -567,7 +470,7 @@ bool DAP::RunLLDBCommands(llvm::StringRef prefix,
   bool required_command_failed = false;
   std::string output =
       ::RunLLDBCommands(debugger, prefix, commands, required_command_failed);
-  SendOutput(OutputType::Console, output);
+  SendOutput(output);
   return !required_command_failed;
 }
 
@@ -1044,8 +947,7 @@ void DAP::SetFrameFormat(llvm::StringRef format) {
   lldb::SBError error;
   frame_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
-    SendOutput(OutputType::Console,
-               llvm::formatv(
+    SendOutput(llvm::formatv(
                    "The provided frame format '{0}' couldn't be parsed: {1}\n",
                    format, error.GetCString())
                    .str());
@@ -1058,8 +960,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
   lldb::SBError error;
   thread_format = lldb::SBFormat(format.str().c_str(), error);
   if (error.Fail()) {
-    SendOutput(OutputType::Console,
-               llvm::formatv(
+    SendOutput(llvm::formatv(
                    "The provided thread format '{0}' couldn't be parsed: {1}\n",
                    format, error.GetCString())
                    .str());

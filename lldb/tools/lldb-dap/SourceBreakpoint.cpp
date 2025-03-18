@@ -294,7 +294,7 @@ void SourceBreakpoint::SetLogMessage() {
 void SourceBreakpoint::NotifyLogMessageError(llvm::StringRef error) {
   std::string message = "Log message has error: ";
   message += error;
-  dap.SendOutput(OutputType::Console, message);
+  dap.SendOutput(message);
 }
 
 /*static*/
@@ -328,7 +328,7 @@ bool SourceBreakpoint::BreakpointHitCallback(
   }
   if (!output.empty() && output.back() != '\n')
     output.push_back('\n'); // Ensure log message has line break.
-  bp->dap.SendOutput(OutputType::Console, output.c_str());
+  bp->dap.SendOutput(output);
 
   // Do not stop.
   return false;

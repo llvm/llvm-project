@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DAP.h"
 #include "Events/EventHandler.h"
 #include "lldb/API/SBProcess.h"
 
 namespace lldb_dap {
 
-protocol::ExitedEventBody ExitedEventHandler::Handler() const {
+void ExitedEventHandler::operator()(lldb::SBProcess &process) const {
+  if (!process.IsValid())
+    return;
+
   protocol::ExitedEventBody body;
-  body.exitCode = dap.target.GetProcess().GetExitStatus();
-  return body;
+  body.exitCode = process.GetExitStatus();
+  dap.Send(protocol::Event{/*event=*/ExitedEventHandler::event.str(),
+                           /*body=*/std::move(body)});
 }
 
 } // namespace lldb_dap

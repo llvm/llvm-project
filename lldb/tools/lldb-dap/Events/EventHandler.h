@@ -9,27 +9,17 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_EVENTS_EVENT_HANDLER
 #define LLDB_TOOLS_LLDB_DAP_EVENTS_EVENT_HANDLER
 
-#include "DAP.h"
-#include "Protocol/ProtocolBase.h"
+#include "DAPForward.h"
 #include "Protocol/ProtocolEvents.h"
-#include "lldb/API/SBProcess.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {
 
-template <typename Body, typename... Args> class BaseEventHandler {
+/// An event handler for triggering DAP events.
+class EventHandler {
 public:
-  BaseEventHandler(DAP &dap) : dap(dap) {}
-
-  virtual ~BaseEventHandler() = default;
-
-  virtual llvm::StringLiteral getEvent() const = 0;
-  virtual Body Handler(Args...) const = 0;
-
-  void operator()(Args... args) const {
-    Body body = Handler(args...);
-    protocol::Event event{/*event=*/getEvent().str(), /*body=*/std::move(body)};
-    dap.Send(event);
-  }
+  EventHandler(DAP &dap) : dap(dap) {}
+  virtual ~EventHandler() = default;
 
 protected:
   DAP &dap;
@@ -37,19 +27,33 @@ protected:
 
 /// Handler for the event indicates that the debuggee has exited and returns its
 /// exit code.
-class ExitedEventHandler : public BaseEventHandler<protocol::ExitedEventBody> {
+class ExitedEventHandler : public EventHandler {
 public:
-  using BaseEventHandler::BaseEventHandler;
-  llvm::StringLiteral getEvent() const override { return "exited"; }
-  protocol::ExitedEventBody Handler() const override;
+  using EventHandler::EventHandler;
+  static constexpr llvm::StringLiteral event = "exited";
+  void operator()(lldb::SBProcess &process) const;
 };
 
-class ProcessEventHandler
-    : public BaseEventHandler<protocol::ProcessEventBody> {
+using ProcessStartMethod = protocol::ProcessEventBody::StartMethod;
+
+/// Handler for the event indicates that the debugger has begun debugging a new
+/// process. Either one that it has launched, or one that it has attached to.
+class ProcessEventHandler : public EventHandler {
 public:
-  using BaseEventHandler::BaseEventHandler;
-  llvm::StringLiteral getEvent() const override { return "process"; }
-  protocol::ProcessEventBody Handler() const override;
+  using EventHandler::EventHandler;
+  static constexpr llvm::StringLiteral event = "process";
+  void operator()(lldb::SBTarget &target, ProcessStartMethod startMethod) const;
+};
+
+using OutputCategory = protocol::OutputEventBody::Category;
+
+/// Handle for the event indicates that the target has produced some output.
+class OutputEventHandler : public EventHandler {
+public:
+  using EventHandler::EventHandler;
+  static constexpr llvm::StringLiteral event = "output";
+  void operator()(llvm::StringRef output,
+                  OutputCategory category = OutputCategory::Console) const;
 };
 
 } // end namespace lldb_dap
