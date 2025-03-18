@@ -17,7 +17,7 @@ using LlvmLibcAcoshf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 static constexpr uint16_t START = 0x3c00U;
-static constexpr uint16_t STOP = 0x7bffU;
+static constexpr uint16_t STOP = 0x7c00;
 
 TEST_F(LlvmLibcAcoshf16Test, PositiveRange) {
   for (uint16_t v = START; v <= STOP; ++v) {
