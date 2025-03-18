@@ -401,6 +401,10 @@ public:
   /// Return the base name of the topmost nominal type.
   static llvm::StringRef GetBaseName(swift::Demangle::NodePointer node);
 
+  /// Given a mangled name that mangles a "type metadata for Type", return a
+  /// CompilerType with that Type.
+  CompilerType GetTypeFromTypeMetadataNode(llvm::StringRef mangled_name);
+
   /// Use API notes to determine the swiftified name of \p clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
                            TypeSystemClang &clang_typesystem) override;

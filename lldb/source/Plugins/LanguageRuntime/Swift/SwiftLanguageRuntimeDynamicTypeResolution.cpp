@@ -1965,6 +1965,41 @@ static bool IsPrivateNSClass(NodePointer node) {
   return false;
 }
 
+CompilerType SwiftLanguageRuntime::GetDynamicTypeAndAddress_EmbeddedClass(
+    uint64_t instance_ptr, CompilerType class_type) {
+  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return {};
+  /// If this is an embedded Swift type, there is no metadata, and the
+  /// pointer points to the type's vtable. We can still resolve the type by
+  /// reading the vtable's symbol name.
+  auto pointer = reflection_ctx->ReadPointer(instance_ptr);
+  if (!pointer)
+    return {};
+  llvm::StringRef symbol_name;
+  if (pointer->isResolved()) {
+    // Find the symbol name at this address.
+    Address address;
+    address.SetLoadAddress(pointer->getOffset(), &GetProcess().GetTarget());
+    Symbol *symbol = address.CalculateSymbolContextSymbol();
+    if (!symbol)
+      return {};
+    Mangled mangled = symbol->GetMangled();
+    if (!mangled)
+      return {};
+    symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
+  } else {
+    symbol_name = pointer->getSymbol();
+  }
+  TypeSystemSwiftTypeRefSP ts = class_type.GetTypeSystem()
+                                    .dyn_cast_or_null<TypeSystemSwift>()
+                                    ->GetTypeSystemSwiftTypeRef();
+  // The symbol name will be something like "type metadata for Class", extract
+  // "Class" from that name.
+  auto dynamic_type = ts->GetTypeFromTypeMetadataNode(symbol_name);
+  return dynamic_type;
+}
+
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     ValueObject &in_value, CompilerType class_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
@@ -2026,48 +2061,46 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     if (!reflection_ctx)
       return false;
 
-    const swift::reflection::TypeRef *typeref = nullptr;
-    {
-      auto typeref_or_err = reflection_ctx->ReadTypeFromInstance(
-          instance_ptr, ts->GetDescriptorFinder(), true);
-      if (typeref_or_err)
-        typeref = &*typeref_or_err;
-      else
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), typeref_or_err.takeError(),
-                        "{0}");
+    CompilerType dynamic_type;
+    if (SwiftLanguageRuntime::GetManglingFlavor(
+            class_type.GetMangledTypeName()) ==
+        swift::Mangle::ManglingFlavor::Default) {
+
+      const swift::reflection::TypeRef *typeref = nullptr;
+      {
+        auto typeref_or_err = reflection_ctx->ReadTypeFromInstance(
+            instance_ptr, ts->GetDescriptorFinder(), true);
+        if (typeref_or_err)
+          typeref = &*typeref_or_err;
+        else
+          LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), typeref_or_err.takeError(),
+                          "{0}");
+      }
+
+      if (!typeref) {
+        HEALTH_LOG(
+            "could not read typeref for type: {0} (instance_ptr = {1:x})",
+            class_type.GetMangledTypeName(), instance_ptr);
+        return false;
+      }
+
+      auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+          class_type.GetMangledTypeName());
+
+      swift::Demangle::Demangler dem;
+      swift::Demangle::NodePointer node = typeref->getDemangling(dem);
+      dynamic_type = ts->RemangleAsType(dem, node, flavor);
+    } else {
+      dynamic_type =
+          GetDynamicTypeAndAddress_EmbeddedClass(instance_ptr, class_type);
+      if (!dynamic_type) {
+        HEALTH_LOG("could not resolve dynamic type of embedded swift class: "
+                   "{0} (instance_ptr = {1:x})",
+                   class_type.GetMangledTypeName(), instance_ptr);
+        return false;
+      }
     }
 
-    // If we couldn't find the typeref from the instance, the best we can do is
-    // use the static type. This is a valid use case when the binary doesn't
-    // contain any metadata (for example, embedded Swift).
-    if (!typeref) {
-      auto typeref_or_err = reflection_ctx->GetTypeRef(
-          class_type.GetMangledTypeName(), ts->GetDescriptorFinder());
-      if (typeref_or_err)
-        typeref = &*typeref_or_err;
-      else
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), typeref_or_err.takeError(),
-                        "{0}");
-    }
-
-    if (!typeref) {
-      HEALTH_LOG("could not read typeref for type: {0} (instance_ptr = {0:x})",
-                 class_type.GetMangledTypeName(), instance_ptr);
-      return false;
-    }
-    swift::Demangle::Demangler dem;
-    swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-    CompilerType dynamic_type = ts->RemangleAsType(dem, node);
-    LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
-             class_type.GetMangledTypeName());
-    class_type_or_name.SetCompilerType(dynamic_type);
-
-    auto flavor =
-        SwiftLanguageRuntime::GetManglingFlavor(class_type.GetMangledTypeName());
-
-    swift::Demangle::Demangler dem;
-    swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-    CompilerType dynamic_type = ts->RemangleAsType(dem, node, flavor);
     LLDB_LOG(log, "dynamic type of instance_ptr {0:x} is {1}", instance_ptr,
              class_type.GetMangledTypeName());
     class_type_or_name.SetCompilerType(dynamic_type);
@@ -2218,39 +2251,77 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
   auto tr_ts = tss->GetTypeSystemSwiftTypeRef();
   if (!tr_ts)
     return false;
-  auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
-      remote_existential, *existential_typeref,
-      tr_ts->GetDescriptorFinder());
+
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+      existential_type.GetMangledTypeName());
+  CompilerType dynamic_type;
+  uint64_t dynamic_address = 0;
+  if (flavor == swift::Mangle::ManglingFlavor::Default) {
+    auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
+        remote_existential, *existential_typeref, tr_ts->GetDescriptorFinder());
+
+    if (!pair) {
+      if (log)
+        log->Printf("Runtime failed to get dynamic type of existential");
+      return false;
+    }
+
+    const swift::reflection::TypeRef *typeref;
+    swift::remote::RemoteAddress out_address(nullptr);
+    std::tie(typeref, out_address) = *pair;
+
+    auto ts = tss->GetTypeSystemSwiftTypeRef();
+    if (!ts)
+      return false;
+    swift::Demangle::Demangler dem;
+    swift::Demangle::NodePointer node = typeref->getDemangling(dem);
+    dynamic_type = ts->RemangleAsType(dem, node, flavor);
+    dynamic_address = out_address.getAddressData();
+  } else {
+    // In the embedded Swift case, the existential container just points to the
+    // instance.
+    auto reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return false;
+    auto maybe_addr_or_symbol =
+        reflection_ctx->ReadPointer(existential_address);
+    if (!maybe_addr_or_symbol)
+      return false;
+
+    uint64_t address = 0;
+    if (maybe_addr_or_symbol->isResolved()) {
+      address = maybe_addr_or_symbol->getOffset();
+    } else {
+      SymbolContextList sc_list;
+      auto &module_list = GetProcess().GetTarget().GetImages();
+      module_list.FindSymbolsWithNameAndType(
+          ConstString(maybe_addr_or_symbol->getSymbol()), eSymbolTypeAny,
+          sc_list);
+      if (sc_list.GetSize() != 1)
+        return false;
+
+      SymbolContext sc = sc_list[0];
+      Symbol *symbol = sc.symbol;
+      address = symbol->GetLoadAddress(&GetProcess().GetTarget());
+    }
+
+    dynamic_type =
+        GetDynamicTypeAndAddress_EmbeddedClass(address, existential_type);
+    if (!dynamic_type)
+      return false;
+    dynamic_address = maybe_addr_or_symbol->getOffset();
+  }
   if (use_local_buffer)
     PopLocalBuffer();
 
-  if (!pair) {
-    if (log)
-      log->Printf("Runtime failed to get dynamic type of existential");
-    return false;
-  }
-
-  const swift::reflection::TypeRef *typeref;
-  swift::remote::RemoteAddress out_address(nullptr);
-  std::tie(typeref, out_address) = *pair;
-  auto ts = tss->GetTypeSystemSwiftTypeRef();
-  if (!ts)
-    return false;
-  swift::Demangle::Demangler dem;
-  swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
-      existential_type.GetMangledTypeName());
-
-  class_type_or_name.SetCompilerType(ts->RemangleAsType(dem, node, flavor));
-  address.SetRawAddress(out_address.getAddressData());
+  class_type_or_name.SetCompilerType(dynamic_type);
+  address.SetRawAddress(dynamic_address);
 
 #ifndef NDEBUG
   if (ModuleList::GetGlobalModuleListProperties()
           .GetSwiftValidateTypeSystem()) {
     auto reference_pair = GetDynamicTypeAndAddress_ExistentialRemoteAST(
         in_value, existential_type, use_local_buffer, existential_address);
-    assert(pair.has_value() >= reference_pair.has_value() &&
-           "RemoteAST and runtime diverge");
 
     if (reference_pair) {
       CompilerType ref_type = std::get<CompilerType>(*reference_pair);

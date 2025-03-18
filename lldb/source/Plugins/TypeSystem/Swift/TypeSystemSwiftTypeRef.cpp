@@ -374,6 +374,18 @@ TypeSystemSwiftTypeRef::GetBaseName(swift::Demangle::NodePointer node) {
   }
 }
 
+CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
+    llvm::StringRef mangled_name) {
+  Demangler dem;
+  NodePointer node = dem.demangleSymbol(mangled_name);
+  NodePointer type = swift_demangle::NodeAtPath(
+      node, {Node::Kind::Global, Node::Kind::TypeMetadata, Node::Kind::Type});
+  if (!type)
+    return {};
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+  return RemangleAsType(dem, type, flavor);
+}
+
 TypeSP TypeSystemSwiftTypeRef::LookupClangType(StringRef name_ref) {
   llvm::SmallVector<CompilerContext, 2> decl_context;
   // Make up a decl context for non-nested types.
@@ -1653,6 +1665,47 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
 }
 
 static bool ProtocolCompositionContainsSingleObjcProtocol(
+  swift::Demangle::NodePointer node) {
+// Kind=ProtocolList
+// Kind=TypeList
+//   Kind=Type
+//     Kind=Protocol
+//       Kind=Module, text="__C"
+//       Kind=Identifier, text="SomeIdentifier"
+if (node->getKind() != Node::Kind::ProtocolList)
+  return false;
+NodePointer type_list = node->getFirstChild();
+if (type_list->getKind() != Node::Kind::TypeList ||
+    type_list->getNumChildren() != 1)
+  return false;
+NodePointer type = type_list->getFirstChild();
+return Contains(type, Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
+}
+
+/// Determine wether this demangle tree contains a node of kind \c kind and with
+/// text \c text (if provided).
+static bool Contains(swift::Demangle::NodePointer node,
+                     swift::Demangle::Node::Kind kind,
+                     llvm::StringRef text = "") {
+  if (!node)
+    return false;
+
+  if (node->getKind() == kind) {
+    if (text.empty())
+      return true;
+    if (!node->hasText())
+      return false;
+    return node->getText() == text;
+  }
+
+  for (swift::Demangle::NodePointer child : *node)
+    if (Contains(child, kind, text))
+      return true;
+
+  return false;
+}
+
+static bool ProtocolCompositionContainsSingleObjcProtocol(
     swift::Demangle::NodePointer node) {
   // Kind=ProtocolList
   // Kind=TypeList
@@ -1667,10 +1720,7 @@ static bool ProtocolCompositionContainsSingleObjcProtocol(
       type_list->getNumChildren() != 1)
     return false;
   NodePointer type = type_list->getFirstChild();
-  return swift_demangle::FindIf(type, [](NodePointer node) {
-    return node->getKind() == Node::Kind::Module && node->hasText() &&
-           node->getText() == swift::MANGLING_MODULE_OBJC;
-  });
+  return Contains(type, Node::Kind::Module, swift::MANGLING_MODULE_OBJC);
 }
 
 /// Determine wether this demangle tree contains a generic type parameter.

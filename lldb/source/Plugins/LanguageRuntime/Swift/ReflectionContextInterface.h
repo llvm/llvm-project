@@ -146,6 +146,8 @@ public:
   ReadTypeFromInstance(lldb::addr_t instance_address,
                        swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses = false) = 0;
+  virtual std::optional<swift::remote::RemoteAbsolutePointer>
+  ReadPointer(lldb::addr_t instance_address) = 0;
   virtual std::optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) = 0;
   virtual llvm::Expected<const swift::reflection::TypeRef &> ApplySubstitutions(
