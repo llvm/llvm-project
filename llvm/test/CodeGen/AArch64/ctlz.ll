@@ -302,10 +302,9 @@ define void @v2i16(ptr %p1) {
 ; CHECK-SD-NEXT:    mov v1.s[1], w9
 ; CHECK-SD-NEXT:    clz v1.2s, v1.2s
 ; CHECK-SD-NEXT:    sub v0.2s, v1.2s, v0.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [x0]
-; CHECK-SD-NEXT:    strh w8, [x0, #2]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    str h0, [x0]
+; CHECK-SD-NEXT:    str h1, [x0, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v2i16:

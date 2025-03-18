@@ -12,12 +12,10 @@
 #include "DAPForward.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
-#include "Handler/RequestHandler.h"
-#include "Handler/ResponseHandler.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
@@ -187,7 +185,7 @@ struct DAP {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  llvm::StringMap<std::unique_ptr<RequestHandler>> request_handlers;
+  llvm::StringMap<std::unique_ptr<BaseRequestHandler>> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
@@ -245,9 +243,11 @@ struct DAP {
   /// Stop event handler threads.
   void StopEventHandlers();
 
-  // Serialize the JSON value into a string and send the JSON packet to
-  // the "out" stream.
+  /// Serialize the JSON value into a string and send the JSON packet to the
+  /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
+  /// Send the given message to the client
+  void Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
@@ -324,10 +324,10 @@ struct DAP {
   bool HandleObject(const protocol::Message &M);
 
   /// Disconnect the DAP session.
-  lldb::SBError Disconnect();
+  llvm::Error Disconnect();
 
   /// Disconnect the DAP session and optionally terminate the debuggee.
-  lldb::SBError Disconnect(bool terminateDebuggee);
+  llvm::Error Disconnect(bool terminateDebuggee);
 
   /// Send a "terminated" event to indicate the process is done being debugged.
   void SendTerminatedEvent();

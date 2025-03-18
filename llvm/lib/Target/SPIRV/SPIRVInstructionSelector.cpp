@@ -2940,24 +2940,30 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_const_composite: {
     // If no values are attached, the composite is null constant.
     bool IsNull = I.getNumExplicitDefs() + 1 == I.getNumExplicitOperands();
-    // Select a proper instruction.
-    unsigned Opcode = SPIRV::OpConstantNull;
     SmallVector<Register> CompositeArgs;
-    if (!IsNull) {
-      Opcode = SPIRV::OpConstantComposite;
-      if (!wrapIntoSpecConstantOp(I, CompositeArgs))
-        return false;
-    }
     MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
-    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-                   .addDef(ResVReg)
-                   .addUse(GR.getSPIRVTypeID(ResType));
+
     // skip type MD node we already used when generated assign.type for this
     if (!IsNull) {
-      for (Register OpReg : CompositeArgs)
-        MIB.addUse(OpReg);
+      if (!wrapIntoSpecConstantOp(I, CompositeArgs))
+        return false;
+      MachineIRBuilder MIR(I);
+      SmallVector<MachineInstr *, 4> Instructions = createContinuedInstructions(
+          MIR, SPIRV::OpConstantComposite, 3,
+          SPIRV::OpConstantCompositeContinuedINTEL, CompositeArgs, ResVReg,
+          GR.getSPIRVTypeID(ResType));
+      for (auto *Instr : Instructions) {
+        Instr->setDebugLoc(I.getDebugLoc());
+        if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+          return false;
+      }
+      return true;
+    } else {
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType));
+      return MIB.constrainAllUses(TII, TRI, RBI);
     }
-    return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case Intrinsic::spv_assign_name: {
     auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpName));
