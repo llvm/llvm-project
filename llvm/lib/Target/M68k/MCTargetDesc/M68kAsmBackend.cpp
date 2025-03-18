@@ -52,7 +52,6 @@ public:
                               .CasesLower("m68020", "m68030", "m68040", true)
                               .Default(false)) {}
 
-  unsigned getNumFixupKinds() const override { return 0; }
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

@@ -3580,7 +3580,7 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
     return true;
 
   const Function *Func = nullptr;
-  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+  if (auto F = Ctx.getOrCreateObjCBlock(E))
     Func = F;
 
   if (!Func)
@@ -4791,8 +4791,12 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
   // Explicit calls to trivial destructors
   if (const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(FuncDecl);
-      DD && DD->isTrivial())
-    return true;
+      DD && DD->isTrivial()) {
+    const auto *MemberCall = cast<CXXMemberCallExpr>(E);
+    if (!this->visit(MemberCall->getImplicitObjectArgument()))
+      return false;
+    return this->emitCheckDestruction(E) && this->emitPopPtr(E);
+  }
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
@@ -5831,6 +5835,9 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
   }
 
   if (!this->emitThis(Dtor))
+    return false;
+
+  if (!this->emitCheckDestruction(Dtor))
     return false;
 
   assert(R);
