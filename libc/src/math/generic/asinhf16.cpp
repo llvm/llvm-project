@@ -40,7 +40,7 @@ static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{{
     // x = -0x1.c7cp+3, asinhf16(x) = -0x1.accp+1 (RZ)
     {0xcb1f, 0xc2b3, 0, 1, 0},
     // x = -0x1.26cp+4, asinhf16(x) = -0x1.cd8p+1 (RZ)
-    {0xcc9b, 0xc336, 0, 1, 1}
+    {0xcc9b, 0xc336, 0, 1, 1},
 }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
