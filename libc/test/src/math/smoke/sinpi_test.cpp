@@ -35,6 +35,8 @@ TEST_F(LlvmLibcSinpiTest, SpecialNumbers) {
 
 TEST_F(LlvmLibcSinpiTest, Integers) {
   EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpi(-0x1.0000000000003p52));
+  
+  ASSERT_FP_EQ(-1.0, LIBC_NAMESPACE::sinpi(4499003037990983.5));
 
   EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpi(-0x1.0000000000005p52));
 
