@@ -1293,8 +1293,15 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
     size_t Index = OutputPrefix.find_last_of(".");
     OutputPrefix = OutputPrefix.substr(0, Index);
 
-    // Bundler target and output names
-    for (auto Entry : ActionInfo->BundleEntryIDs) {
+    // TODO: Log Command (see linkBitcodeToBitcode() unbundling)
+    if (env::shouldEmitVerboseLogs()) {
+      LogS << "   Extracting Bundle:\n"
+           << "   Input Filename: " << BundlerConfig.InputFileNames[0] << "\n"
+           << "   Unbundled Files Extension: ." << FileExtension << "\n";
+    }
+
+    for (size_t I = 0; I < ActionInfo->BundleEntryIDs.size(); I++) {
+      auto Entry = ActionInfo->BundleEntryIDs[I];
       BundlerConfig.TargetNames.push_back(Entry);
 
       // Add an output file for each target
@@ -1304,20 +1311,16 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
       // TODO: Switch this to LLVM path APIs
       std::string OutputFilePath = OutputDir.str().str() + "/" + OutputFileName;
       BundlerConfig.OutputFileNames.push_back(OutputFilePath);
+
+      if (env::shouldEmitVerboseLogs()) {
+        LogS << "\tBundle Entry ID: " << BundlerConfig.TargetNames[I] << "\n"
+             << "\tOutput Filename: " << BundlerConfig.OutputFileNames[I]
+             << "\n";
+        LogS.flush();
+      }
     }
 
     OffloadBundler Bundler(BundlerConfig);
-
-    // TODO: log vectors, build clang command
-    if (env::shouldEmitVerboseLogs()) {
-      LogS << "Extracting Bundle:\n"
-           << "\t  Unbundled Files Extension: ." << FileExtension << "\n"
-           << "\t  Bundle Entry ID: " << BundlerConfig.TargetNames[0] << "\n"
-           << "\t   Input Filename: " << BundlerConfig.InputFileNames[0] << "\n"
-           << "\t  Output Filename: " << BundlerConfig.OutputFileNames[0]
-           << "\n";
-      LogS.flush();
-    }
 
     switch (Input->DataKind) {
     case AMD_COMGR_DATA_KIND_BC_BUNDLE: {
