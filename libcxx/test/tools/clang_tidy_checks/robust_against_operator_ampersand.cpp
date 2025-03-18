@@ -19,12 +19,9 @@
 namespace libcpp {
 robust_against_operator_ampersand::robust_against_operator_ampersand(
     llvm::StringRef name, clang::tidy::ClangTidyContext* context)
-    : clang::tidy::ClangTidyCheck(name, context), disabled_(!context->getLangOpts().CPlusPlus11) {}
+    : clang::tidy::ClangTidyCheck(name, context) {}
 
 void robust_against_operator_ampersand::registerMatchers(clang::ast_matchers::MatchFinder* finder) {
-  if (disabled_)
-    return;
-
   using namespace clang::ast_matchers;
   finder->addMatcher(
       cxxOperatorCallExpr(allOf(hasOperatorName("&"), argumentCountIs(1), isTypeDependent()),
