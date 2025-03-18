@@ -4620,7 +4620,7 @@ static bool isAlternating(std::array<std::pair<int, int>, 2> &SrcInfo,
   for (unsigned i = 0; i != Mask.size(); ++i) {
     int M = Mask[i];
     if (M < 0)
-        continue;
+      continue;
     int Src = M >= (int)NumElts;
     int Diff = (int)i - (M % NumElts);
     bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
@@ -4639,15 +4639,15 @@ static bool isZipEven(std::array<std::pair<int, int>, 2> &SrcInfo,
                       ArrayRef<int> Mask) {
   bool Polarity;
   return SrcInfo[0].second == 0 && SrcInfo[1].second == 1 &&
-    isAlternating(SrcInfo, Mask, Polarity) && Polarity;
-;
+         isAlternating(SrcInfo, Mask, Polarity) && Polarity;
+  ;
 }
 
 static bool isZipOdd(std::array<std::pair<int, int>, 2> &SrcInfo,
                      ArrayRef<int> Mask) {
   bool Polarity;
   return SrcInfo[0].second == 0 && SrcInfo[1].second == -1 &&
-    isAlternating(SrcInfo, Mask, Polarity) && !Polarity;
+         isAlternating(SrcInfo, Mask, Polarity) && !Polarity;
 }
 
 // Lower a deinterleave shuffle to SRL and TRUNC.  Factor must be
@@ -4931,8 +4931,7 @@ static SDValue lowerVIZIP(unsigned Opc, SDValue Op0, SDValue Op1,
 
   auto [Mask, VL] = getDefaultVLOps(IntVT, ContainerVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ContainerVT);
-  SDValue Res =
-    DAG.getNode(Opc, DL, ContainerVT, Op0, Op1, Passthru, Mask, VL);
+  SDValue Res = DAG.getNode(Opc, DL, ContainerVT, Op0, Op1, Passthru, Mask, VL);
   if (IntVT.isFixedLengthVector())
     Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
   Res = DAG.getBitcast(VT, Res);
@@ -5633,8 +5632,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
       1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
     MVT HalfVT = VT.getHalfNumVectorElementsVT();
-    unsigned Opc = Index == 0 ?
-        RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
+    unsigned Opc =
+        Index == 0 ? RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
     V1 = lowerVIZIP(Opc, V1, DAG.getUNDEF(VT), DL, DAG, Subtarget);
     V2 = lowerVIZIP(Opc, V2, DAG.getUNDEF(VT), DL, DAG, Subtarget);
 
@@ -5687,12 +5686,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
     // Prefer vzip2a if available.
     // TODO: Extend to matching zip2b if EvenSrc and OddSrc allow.
-    if (Subtarget.hasVendorXRivosVizip())  {
+    if (Subtarget.hasVendorXRivosVizip()) {
       EvenV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
                           EvenV, DAG.getVectorIdxConstant(0, DL));
-      OddV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
-                          OddV, DAG.getVectorIdxConstant(0, DL));
-      return lowerVIZIP(RISCVISD::RI_VZIP2A_VL, EvenV, OddV, DL, DAG, Subtarget);
+      OddV = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT), OddV,
+                         DAG.getVectorIdxConstant(0, DL));
+      return lowerVIZIP(RISCVISD::RI_VZIP2A_VL, EvenV, OddV, DL, DAG,
+                        Subtarget);
     }
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
@@ -5748,12 +5748,14 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     if (Subtarget.hasVendorXRivosVizip() && isZipEven(SrcInfo, Mask)) {
       SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
       SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
-      return lowerVIZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG, Subtarget);
+      return lowerVIZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG,
+                        Subtarget);
     }
     if (Subtarget.hasVendorXRivosVizip() && isZipOdd(SrcInfo, Mask)) {
       SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
       SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
-      return lowerVIZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG, Subtarget);
+      return lowerVIZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG,
+                        Subtarget);
     }
 
     // Build the mask.  Note that vslideup unconditionally preserves elements
