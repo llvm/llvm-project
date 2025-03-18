@@ -55,8 +55,7 @@ def : WriteRes<WriteInst_B, [ResX2]> {
     let ReleaseAtCycles = [1];
 }
 def : WriteRes<WriteInst_C, [ResX0]> {
-// Both AcquireAtCycle and ReleaseAtCycle are allowed
-// to be zero at the same time.
+// AcquireAtCycle and ReleaseAtCycle are allowed to be the same.
 // CORRECT-NEXT: { 1, 0, 0} // #5
     let ReleaseAtCycles = [0];
 }
