@@ -94,14 +94,14 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in
   // 32-bit mode, the address size prefix is jcxz and the unprefixed version is
   // jecxz.
   let Uses = [CX] in
-    def JCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+    def JCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins i8imm_brtarget:$dst),
                         "jcxz\t$dst", []>, AdSize16, Requires<[Not64BitMode]>;
   let Uses = [ECX] in
-    def JECXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+    def JECXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins i8imm_brtarget:$dst),
                         "jecxz\t$dst", []>, AdSize32;
 
   let Uses = [RCX] in
-    def JRCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins brtarget8:$dst),
+    def JRCXZ : Ii8PCRel<0xE3, RawFrm, (outs), (ins i8imm_brtarget:$dst),
                          "jrcxz\t$dst", []>, AdSize64, Requires<[In64BitMode]>;
 }
 
@@ -193,9 +193,12 @@ def JMPABS64i : Ii64<0xA1, RawFrm, (outs), (ins i64imm:$dst), "jmpabs\t$dst", []
 
 // Loop instructions
 let isBranch = 1, isTerminator = 1, SchedRW = [WriteJump] in {
-def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins brtarget8:$dst), "loop\t$dst", []>;
-def LOOPE  : Ii8PCRel<0xE1, RawFrm, (outs), (ins brtarget8:$dst), "loope\t$dst", []>;
-def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins brtarget8:$dst), "loopne\t$dst", []>;
+  def LOOP   : Ii8PCRel<0xE2, RawFrm, (outs), (ins i8imm_brtarget:$dst),
+                        "loop\t$dst", []>;
+  def LOOPE  : Ii8PCRel<0xE1, RawFrm, (outs), (ins i8imm_brtarget:$dst),
+                        "loope\t$dst", []>;
+  def LOOPNE : Ii8PCRel<0xE0, RawFrm, (outs), (ins i8imm_brtarget:$dst),
+                        "loopne\t$dst", []>;
 }
 
 //===----------------------------------------------------------------------===//

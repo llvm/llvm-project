@@ -13,7 +13,6 @@
 
 #include "LoongArchMCExpr.h"
 #include "LoongArchAsmBackend.h"
-#include "LoongArchFixupKinds.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -43,13 +42,13 @@ void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     OS << ')';
 }
 
-bool LoongArchMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                const MCAssembler *Asm,
-                                                const MCFixup *Fixup) const {
-  // Explicitly drop the layout and assembler to prevent any symbolic folding in
+bool LoongArchMCExpr::evaluateAsRelocatableImpl(
+    MCValue &Res,
+    const MCAssembler *Asm) const { // Explicitly drop the layout and assembler
+                                    // to prevent any symbolic folding in
   // the expression handling.  This is required to preserve symbolic difference
   // expressions to emit the paired relocations.
-  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr))
     return false;
 
   Res =

@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
 
-define void @PR24303(ptr %f) {
+define ptx_kernel void @PR24303(ptr %f) {
 ; CHECK-LABEL: .visible .entry PR24303(
 ; Do not use mov.f or mov.u to convert between float and int.
 ; CHECK-NOT: mov.{{f|u}}{{32|64}} %f{{[0-9]+}}, %r{{[0-9]+}}
@@ -217,7 +217,3 @@ _ZN12cuda_builtinmlIfEENS_7complexIT_EERKS3_S5_.exit: ; preds = %if.then.93.i, %
 }
 
 declare float @llvm.nvvm.fabs.f(float)
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @PR24303, !"kernel", i32 1}

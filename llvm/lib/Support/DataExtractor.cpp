@@ -227,7 +227,7 @@ int64_t DataExtractor::getSLEB128(uint64_t *offset_ptr, Error *Err) const {
 }
 
 void DataExtractor::skip(Cursor &C, uint64_t Length) const {
-  ErrorAsOutParameter ErrAsOut(&C.Err);
+  ErrorAsOutParameter ErrAsOut(C.Err);
   if (isError(&C.Err))
     return;
 

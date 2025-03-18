@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
-#include "Opcode.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;
@@ -18,11 +17,7 @@ using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
-  // Create a dummy frame for the interpreter which does not have locals.
-  S.Current =
-      new InterpFrame(S, /*Func=*/nullptr, /*Caller=*/nullptr, CodePtr(), 0);
-}
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
 
 EvalEmitter::~EvalEmitter() {
   for (auto &[K, V] : Locals) {
@@ -132,16 +127,36 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
-static bool checkReturnState(InterpState &S) {
-  return S.maybeDiagnoseDanglingAllocations();
+bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  size_t StackSizeBefore = S.Stk.size();
+  const Expr *Arg = E->getArg(0);
+  if (!this->visit(Arg)) {
+    S.Stk.clearTo(StackSizeBefore);
+
+    if (S.inConstantContext() || Arg->HasSideEffects(S.getASTContext()))
+      return this->emitBool(false, E);
+    return Invalid(S, OpPC);
+  }
+
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (T == PT_Ptr) {
+    const auto &Ptr = S.Stk.pop<Pointer>();
+    return this->emitBool(CheckBCPResult(S, Ptr), E);
+  } else if (T == PT_FnPtr) {
+    S.Stk.discard<FunctionPointer>();
+    // Never accepted
+    return this->emitBool(false, E);
+  }
+
+  // Otherwise, this is fine!
+  if (!this->emitPop(T, E))
+    return false;
+  return this->emitBool(true, E);
 }
 
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
-
-  if (!checkReturnState(S))
-    return false;
 
   using T = typename PrimConv<OpType>::T;
   EvalResult.setValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext()));
@@ -157,9 +172,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
-    return false;
-
-  if (!checkReturnState(S))
     return false;
 
   // Implicitly convert lvalue to rvalue, if requested.
@@ -185,6 +197,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
+    if (!Ptr.isLive() && !Ptr.isTemporary())
+      return false;
+
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
@@ -194,16 +209,12 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
 
-  if (!checkReturnState(S))
-    return false;
   // Function pointers cannot be converted to rvalues.
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 
 bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
-  if (!checkReturnState(S))
-    return false;
   EvalResult.setValid();
   return true;
 }
@@ -214,9 +225,6 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
-    return false;
-
-  if (!checkReturnState(S))
     return false;
 
   if (std::optional<APValue> APV =

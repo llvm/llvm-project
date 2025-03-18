@@ -22,8 +22,8 @@
  */
 
 #include <clc/clc.h>
-#include "../clcmacro.h"
-#include "math.h"
+#include <clc/clcmacro.h>
+#include <clc/math/math.h>
 
 _CLC_OVERLOAD _CLC_DEF int ilogb(float x) {
     uint ux = as_uint(x);

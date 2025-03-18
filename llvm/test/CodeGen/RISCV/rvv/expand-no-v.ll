@@ -18,24 +18,24 @@ define i32 @vpreduce_add_v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl) {
 ; RV32-NEXT:    lw a2, 12(a2)
 ; RV32-NEXT:    snez t2, a3
 ; RV32-NEXT:    sltiu t3, a3, 3
-; RV32-NEXT:    xori t3, t3, 1
 ; RV32-NEXT:    sltiu t4, a3, 4
-; RV32-NEXT:    xori t4, t4, 1
 ; RV32-NEXT:    sltiu a3, a3, 2
+; RV32-NEXT:    xori t3, t3, 1
+; RV32-NEXT:    xori t4, t4, 1
 ; RV32-NEXT:    xori a3, a3, 1
 ; RV32-NEXT:    and a3, a3, t0
 ; RV32-NEXT:    and a2, t4, a2
 ; RV32-NEXT:    and t0, t3, t1
 ; RV32-NEXT:    and a7, t2, a7
 ; RV32-NEXT:    neg a7, a7
-; RV32-NEXT:    and a4, a7, a4
-; RV32-NEXT:    neg a7, t0
-; RV32-NEXT:    and a6, a7, a6
+; RV32-NEXT:    neg t0, t0
 ; RV32-NEXT:    neg a2, a2
+; RV32-NEXT:    neg a3, a3
+; RV32-NEXT:    and a4, a7, a4
+; RV32-NEXT:    and a6, t0, a6
 ; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    neg a2, a3
-; RV32-NEXT:    and a2, a2, a5
-; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    and a3, a3, a5
+; RV32-NEXT:    add a1, a3, a1
 ; RV32-NEXT:    add a4, a4, a6
 ; RV32-NEXT:    add a1, a4, a1
 ; RV32-NEXT:    add a0, a1, a0
@@ -54,24 +54,24 @@ define i32 @vpreduce_add_v4i32(i32 %s, <4 x i32> %v, <4 x i1> %m, i32 %evl) {
 ; RV64-NEXT:    sext.w a3, a3
 ; RV64-NEXT:    snez t2, a3
 ; RV64-NEXT:    sltiu t3, a3, 3
-; RV64-NEXT:    xori t3, t3, 1
 ; RV64-NEXT:    sltiu t4, a3, 4
-; RV64-NEXT:    xori t4, t4, 1
 ; RV64-NEXT:    sltiu a3, a3, 2
+; RV64-NEXT:    xori t3, t3, 1
+; RV64-NEXT:    xori t4, t4, 1
 ; RV64-NEXT:    xori a3, a3, 1
 ; RV64-NEXT:    and a3, a3, t0
 ; RV64-NEXT:    and a2, t4, a2
 ; RV64-NEXT:    and t0, t3, t1
 ; RV64-NEXT:    and a7, t2, a7
 ; RV64-NEXT:    negw a7, a7
-; RV64-NEXT:    and a4, a7, a4
-; RV64-NEXT:    negw a7, t0
-; RV64-NEXT:    and a6, a7, a6
+; RV64-NEXT:    negw t0, t0
 ; RV64-NEXT:    negw a2, a2
+; RV64-NEXT:    negw a3, a3
+; RV64-NEXT:    and a4, a7, a4
+; RV64-NEXT:    and a6, t0, a6
 ; RV64-NEXT:    and a1, a2, a1
-; RV64-NEXT:    negw a2, a3
-; RV64-NEXT:    and a2, a2, a5
-; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    and a3, a3, a5
+; RV64-NEXT:    add a1, a3, a1
 ; RV64-NEXT:    add a4, a4, a6
 ; RV64-NEXT:    add a1, a4, a1
 ; RV64-NEXT:    addw a0, a1, a0

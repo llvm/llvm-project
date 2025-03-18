@@ -18,10 +18,12 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <queue>
+#include <tuple>
 
 namespace mlir {
 
@@ -51,22 +53,103 @@ class AnalysisState;
 
 /// Program point represents a specific location in the execution of a program.
 /// A sequence of program points can be combined into a control flow graph.
-struct ProgramPoint : public PointerUnion<Operation *, Block *> {
-  using ParentTy = PointerUnion<Operation *, Block *>;
-  /// Inherit constructors.
-  using ParentTy::PointerUnion;
-  /// Allow implicit conversion from the parent type.
-  ProgramPoint(ParentTy point = nullptr) : ParentTy(point) {}
-  /// Allow implicit conversions from operation wrappers.
-  /// TODO: For Windows only. Find a better solution.
-  template <typename OpT, typename = std::enable_if_t<
-                              std::is_convertible<OpT, Operation *>::value &&
-                              !std::is_same<OpT, Operation *>::value>>
-  ProgramPoint(OpT op) : ParentTy(op) {}
+struct ProgramPoint : public StorageUniquer::BaseStorage {
+  /// Creates a new program point at the given location.
+  ProgramPoint(Block *parentBlock, Block::iterator pp)
+      : block(parentBlock), point(pp) {}
+
+  /// Creates a new program point at the given operation.
+  ProgramPoint(Operation *op) : op(op) {}
+
+  /// The concrete key type used by the storage uniquer. This class is uniqued
+  /// by its contents.
+  using KeyTy = std::tuple<Block *, Block::iterator, Operation *>;
+
+  /// Create a empty program point.
+  ProgramPoint() {}
+
+  /// Create a new program point from the given program point.
+  ProgramPoint(const ProgramPoint &point) {
+    this->block = point.getBlock();
+    this->point = point.getPoint();
+    this->op = point.getOperation();
+  }
+
+  static ProgramPoint *construct(StorageUniquer::StorageAllocator &alloc,
+                                 KeyTy &&key) {
+    if (std::get<0>(key)) {
+      return new (alloc.allocate<ProgramPoint>())
+          ProgramPoint(std::get<0>(key), std::get<1>(key));
+    }
+    return new (alloc.allocate<ProgramPoint>()) ProgramPoint(std::get<2>(key));
+  }
+
+  /// Returns true if this program point is set.
+  bool isNull() const { return block == nullptr && op == nullptr; }
+
+  /// Two program points are equal if their block and iterator are equal.
+  bool operator==(const KeyTy &key) const {
+    return block == std::get<0>(key) && point == std::get<1>(key) &&
+           op == std::get<2>(key);
+  }
+
+  bool operator==(const ProgramPoint &pp) const {
+    return block == pp.block && point == pp.point && op == pp.op;
+  }
+
+  /// Get the block contains this program point.
+  Block *getBlock() const { return block; }
+
+  /// Get the the iterator this program point refers to.
+  Block::iterator getPoint() const { return point; }
+
+  /// Get the the iterator this program point refers to.
+  Operation *getOperation() const { return op; }
+
+  /// Get the next operation of this program point.
+  Operation *getNextOp() const {
+    assert(!isBlockEnd());
+    // If the current program point has no parent block, both the next op and
+    // the previous op point to the op corresponding to the current program
+    // point.
+    if (block == nullptr) {
+      return op;
+    }
+    return &*point;
+  }
+
+  /// Get the previous operation of this program point.
+  Operation *getPrevOp() const {
+    assert(!isBlockStart());
+    // If the current program point has no parent block, both the next op and
+    // the previous op point to the op corresponding to the current program
+    // point.
+    if (block == nullptr) {
+      return op;
+    }
+    return &*(--Block::iterator(point));
+  }
+
+  bool isBlockStart() const { return block && block->begin() == point; }
+
+  bool isBlockEnd() const { return block && block->end() == point; }
 
   /// Print the program point.
   void print(raw_ostream &os) const;
+
+private:
+  Block *block = nullptr;
+  Block::iterator point;
+
+  /// For operations without a parent block, we record the operation itself as
+  /// its program point.
+  Operation *op = nullptr;
 };
+
+inline raw_ostream &operator<<(raw_ostream &os, const ProgramPoint &point) {
+  point.print(os);
+  return os;
+}
 
 //===----------------------------------------------------------------------===//
 // GenericLatticeAnchor
@@ -165,21 +248,12 @@ private:
 
 /// Fundamental IR components are supported as first-class lattice anchor.
 struct LatticeAnchor
-    : public PointerUnion<GenericLatticeAnchor *, ProgramPoint, Value> {
-  using ParentTy = PointerUnion<GenericLatticeAnchor *, ProgramPoint, Value>;
+    : public PointerUnion<GenericLatticeAnchor *, ProgramPoint *, Value> {
+  using ParentTy = PointerUnion<GenericLatticeAnchor *, ProgramPoint *, Value>;
   /// Inherit constructors.
   using ParentTy::PointerUnion;
   /// Allow implicit conversion from the parent type.
   LatticeAnchor(ParentTy point = nullptr) : ParentTy(point) {}
-  /// Allow implicit conversions from operation wrappers.
-  /// TODO: For Windows only. Find a better solution.
-  template <typename OpT, typename = std::enable_if_t<
-                              std::is_convertible<OpT, Operation *>::value &&
-                              !std::is_same<OpT, Operation *>::value>>
-  LatticeAnchor(OpT op) : ParentTy(ProgramPoint(op)) {}
-
-  LatticeAnchor(Operation *op) : ParentTy(ProgramPoint(op)) {}
-  LatticeAnchor(Block *block) : ParentTy(ProgramPoint(block)) {}
 
   /// Print the lattice anchor.
   void print(raw_ostream &os) const;
@@ -234,11 +308,17 @@ private:
 ///    according to their dependency relations until a fixed point is reached.
 /// 3. Query analysis state results from the solver.
 ///
+/// Steps to re-run a data-flow analysis when IR changes:
+/// 1. Erase all analysis states as they are no longer valid.
+/// 2. Re-run the analysis using `initializeAndRun`.
+///
 /// TODO: Optimize the internal implementation of the solver.
 class DataFlowSolver {
 public:
   explicit DataFlowSolver(const DataFlowConfig &config = DataFlowConfig())
-      : config(config) {}
+      : config(config) {
+    uniquer.registerParametricStorageType<ProgramPoint>();
+  }
 
   /// Load an analysis into the solver. Return the analysis instance.
   template <typename AnalysisT, typename... Args>
@@ -252,9 +332,11 @@ public:
   /// does not exist.
   template <typename StateT, typename AnchorT>
   const StateT *lookupState(AnchorT anchor) const {
-    auto it =
-        analysisStates.find({LatticeAnchor(anchor), TypeID::get<StateT>()});
-    if (it == analysisStates.end())
+    const auto &mapIt = analysisStates.find(LatticeAnchor(anchor));
+    if (mapIt == analysisStates.end())
+      return nullptr;
+    auto it = mapIt->second.find(TypeID::get<StateT>());
+    if (it == mapIt->second.end())
       return nullptr;
     return static_cast<const StateT *>(it->second.get());
   }
@@ -263,12 +345,11 @@ public:
   template <typename AnchorT>
   void eraseState(AnchorT anchor) {
     LatticeAnchor la(anchor);
-
-    for (auto it = analysisStates.begin(); it != analysisStates.end(); ++it) {
-      if (it->first.first == la)
-        analysisStates.erase(it);
-    }
+    analysisStates.erase(LatticeAnchor(anchor));
   }
+
+  // Erase all analysis states
+  void eraseAllStates() { analysisStates.clear(); }
 
   /// Get a uniqued lattice anchor instance. If one is not present, it is
   /// created with the provided arguments.
@@ -277,10 +358,39 @@ public:
     return AnchorT::get(uniquer, std::forward<Args>(args)...);
   }
 
+  /// Get a uniqued program point instance.
+  ProgramPoint *getProgramPointBefore(Operation *op) {
+    if (op->getBlock())
+      return uniquer.get<ProgramPoint>(/*initFn*/ {}, op->getBlock(),
+                                       Block::iterator(op), nullptr);
+    else
+      return uniquer.get<ProgramPoint>(/*initFn*/ {}, nullptr,
+                                       Block::iterator(), op);
+  }
+
+  ProgramPoint *getProgramPointBefore(Block *block) {
+    return uniquer.get<ProgramPoint>(/*initFn*/ {}, block, block->begin(),
+                                     nullptr);
+  }
+
+  ProgramPoint *getProgramPointAfter(Operation *op) {
+    if (op->getBlock())
+      return uniquer.get<ProgramPoint>(/*initFn*/ {}, op->getBlock(),
+                                       ++Block::iterator(op), nullptr);
+    else
+      return uniquer.get<ProgramPoint>(/*initFn*/ {}, nullptr,
+                                       Block::iterator(), op);
+  }
+
+  ProgramPoint *getProgramPointAfter(Block *block) {
+    return uniquer.get<ProgramPoint>(/*initFn*/ {}, block, block->end(),
+                                     nullptr);
+  }
+
   /// A work item on the solver queue is a program point, child analysis pair.
   /// Each item is processed by invoking the child analysis at the program
   /// point.
-  using WorkItem = std::pair<ProgramPoint, DataFlowAnalysis *>;
+  using WorkItem = std::pair<ProgramPoint *, DataFlowAnalysis *>;
   /// Push a work item onto the worklist.
   void enqueue(WorkItem item) { worklist.push(std::move(item)); }
 
@@ -291,6 +401,8 @@ public:
 
   /// Propagate an update to an analysis state if it changed by pushing
   /// dependent work items to the back of the queue.
+  /// This should only be used when DataFlowSolver is running.
+  /// Otherwise, the solver won't process the work items.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
   /// Get the configuration of the solver.
@@ -299,6 +411,9 @@ public:
 private:
   /// Configuration of the dataflow solver.
   DataFlowConfig config;
+
+  /// The solver is working on the worklist.
+  bool isRunning = false;
 
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
@@ -314,7 +429,8 @@ private:
 
   /// A type-erased map of lattice anchors to associated analysis states for
   /// first-class lattice anchors.
-  DenseMap<std::pair<LatticeAnchor, TypeID>, std::unique_ptr<AnalysisState>>
+  DenseMap<LatticeAnchor, DenseMap<TypeID, std::unique_ptr<AnalysisState>>,
+           DenseMapInfo<LatticeAnchor::ParentTy>>
       analysisStates;
 
   /// Allow the base child analysis class to access the internals of the solver.
@@ -343,7 +459,7 @@ class AnalysisState {
 public:
   virtual ~AnalysisState();
 
-  /// Create the analysis state at the given lattice anchor.
+  /// Create the analysis state on the given lattice anchor.
   AnalysisState(LatticeAnchor anchor) : anchor(anchor) {}
 
   /// Returns the lattice anchor this state is located at.
@@ -356,7 +472,7 @@ public:
   /// Add a dependency to this analysis state on a lattice anchor and an
   /// analysis. If this state is updated, the analysis will be invoked on the
   /// given lattice anchor again (in onUpdate()).
-  void addDependency(ProgramPoint point, DataFlowAnalysis *analysis);
+  void addDependency(ProgramPoint *point, DataFlowAnalysis *analysis);
 
 protected:
   /// This function is called by the solver when the analysis state is updated
@@ -446,12 +562,12 @@ public:
   /// `visit` can add new dependencies, but these dependencies will not be
   /// dynamically added to the worklist because the solver doesn't know what
   /// will provide a value for then.
-  virtual LogicalResult visit(ProgramPoint point) = 0;
+  virtual LogicalResult visit(ProgramPoint *point) = 0;
 
 protected:
   /// Create a dependency between the given analysis state and lattice anchor
   /// on this analysis.
-  void addDependency(AnalysisState *state, ProgramPoint point);
+  void addDependency(AnalysisState *state, ProgramPoint *point);
 
   /// Propagate an update to a state if it changed.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
@@ -480,10 +596,27 @@ protected:
   /// on `dependent`. If the return state is updated elsewhere, this analysis is
   /// re-invoked on the dependent.
   template <typename StateT, typename AnchorT>
-  const StateT *getOrCreateFor(ProgramPoint dependent, AnchorT anchor) {
+  const StateT *getOrCreateFor(ProgramPoint *dependent, AnchorT anchor) {
     StateT *state = getOrCreate<StateT>(anchor);
     addDependency(state, dependent);
     return state;
+  }
+
+  /// Get a uniqued program point instance.
+  ProgramPoint *getProgramPointBefore(Operation *op) {
+    return solver.getProgramPointBefore(op);
+  }
+
+  ProgramPoint *getProgramPointBefore(Block *block) {
+    return solver.getProgramPointBefore(block);
+  }
+
+  ProgramPoint *getProgramPointAfter(Operation *op) {
+    return solver.getProgramPointAfter(op);
+  }
+
+  ProgramPoint *getProgramPointAfter(Block *block) {
+    return solver.getProgramPointAfter(block);
   }
 
   /// Return the configuration of the solver used for this analysis.
@@ -514,7 +647,7 @@ AnalysisT *DataFlowSolver::load(Args &&...args) {
 template <typename StateT, typename AnchorT>
 StateT *DataFlowSolver::getOrCreateState(AnchorT anchor) {
   std::unique_ptr<AnalysisState> &state =
-      analysisStates[{LatticeAnchor(anchor), TypeID::get<StateT>()}];
+      analysisStates[LatticeAnchor(anchor)][TypeID::get<StateT>()];
   if (!state) {
     state = std::unique_ptr<StateT>(new StateT(anchor));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -529,7 +662,7 @@ inline raw_ostream &operator<<(raw_ostream &os, const AnalysisState &state) {
   return os;
 }
 
-inline raw_ostream &operator<<(raw_ostream &os, LatticeAnchor anchor) {
+inline raw_ostream &operator<<(raw_ostream &os, const LatticeAnchor &anchor) {
   anchor.print(os);
   return os;
 }
@@ -539,12 +672,26 @@ inline raw_ostream &operator<<(raw_ostream &os, LatticeAnchor anchor) {
 namespace llvm {
 /// Allow hashing of lattice anchors and program points.
 template <>
-struct DenseMapInfo<mlir::LatticeAnchor>
-    : public DenseMapInfo<mlir::LatticeAnchor::ParentTy> {};
-
-template <>
-struct DenseMapInfo<mlir::ProgramPoint>
-    : public DenseMapInfo<mlir::ProgramPoint::ParentTy> {};
+struct DenseMapInfo<mlir::ProgramPoint> {
+  static mlir::ProgramPoint getEmptyKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    return mlir::ProgramPoint(
+        (mlir::Block *)pointer,
+        mlir::Block::iterator((mlir::Operation *)pointer));
+  }
+  static mlir::ProgramPoint getTombstoneKey() {
+    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    return mlir::ProgramPoint(
+        (mlir::Block *)pointer,
+        mlir::Block::iterator((mlir::Operation *)pointer));
+  }
+  static unsigned getHashValue(mlir::ProgramPoint pp) {
+    return hash_combine(pp.getBlock(), pp.getPoint().getNodePtr());
+  }
+  static bool isEqual(mlir::ProgramPoint lhs, mlir::ProgramPoint rhs) {
+    return lhs == rhs;
+  }
+};
 
 // Allow llvm::cast style functions.
 template <typename To>
@@ -554,19 +701,6 @@ struct CastInfo<To, mlir::LatticeAnchor>
 template <typename To>
 struct CastInfo<To, const mlir::LatticeAnchor>
     : public CastInfo<To, const mlir::LatticeAnchor::PointerUnion> {};
-
-template <typename To>
-struct CastInfo<To, mlir::ProgramPoint>
-    : public CastInfo<To, mlir::ProgramPoint::PointerUnion> {};
-
-template <typename To>
-struct CastInfo<To, const mlir::ProgramPoint>
-    : public CastInfo<To, const mlir::ProgramPoint::PointerUnion> {};
-
-/// Allow stealing the low bits of a ProgramPoint.
-template <>
-struct PointerLikeTypeTraits<mlir::ProgramPoint>
-    : public PointerLikeTypeTraits<mlir::ProgramPoint::ParentTy> {};
 
 } // end namespace llvm
 

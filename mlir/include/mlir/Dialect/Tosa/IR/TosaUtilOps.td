@@ -44,7 +44,7 @@ def Tosa_ApplyScaleOp :
     Tosa_IntLike:$value,
     Tosa_IntLike:$multiplier,
     Tosa_Int8Like:$shift,
-    BoolAttr:$double_round
+    Tosa_RoundingTypeAttr:$rounding_mode
   );
 
   let results = (outs
@@ -96,6 +96,11 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
     OptionalAttr<AnyAttr>:$initial_value
   );
 
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
+
   let assemblyFormat = [{
     $name
     attr-dict
@@ -117,6 +122,11 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
     SymbolNameAttr:$name,
     AnyType:$value
   );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
 
   let assemblyFormat = [{
     $name attr-dict `,` $value `:` type($value)
@@ -140,6 +150,11 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   let results = (outs
     AnyType:$value
   );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_VARIABLE]>,
+  ];
 
   let assemblyFormat = [{
     $name attr-dict `:` type($value)

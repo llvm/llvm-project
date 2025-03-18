@@ -113,13 +113,16 @@ struct AttributeLikeVariable : public VariableElement {
     return isa<VariableElement>(fe) && classof(cast<VariableElement>(fe));
   }
 
-  /// Returns true if the variable is a UnitAttr or a UnitProperty.
+  /// Returns true if the variable is a UnitAttr or a UnitProp.
   bool isUnit() const {
     if (const auto *attr = dyn_cast<AttributeVariable>(this))
       return attr->getVar()->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
     if (const auto *prop = dyn_cast<PropertyVariable>(this)) {
-      return prop->getVar()->prop.getBaseProperty().getPropertyDefName() ==
-             "UnitProperty";
+      StringRef baseDefName =
+          prop->getVar()->prop.getBaseProperty().getPropertyDefName();
+      // Note: remove the `UnitProperty` case once the deprecation period is
+      // over.
+      return baseDefName == "UnitProp" || baseDefName == "UnitProperty";
     }
     llvm_unreachable("Type that wasn't listed in classof()");
   }
@@ -229,10 +232,9 @@ public:
 
   /// Returns a range to iterate over the LiteralElements.
   auto getLiteralElements() const {
-    function_ref<LiteralElement *(FormatElement * el)>
-        literalElementCastConverter =
-            [](FormatElement *el) { return cast<LiteralElement>(el); };
-    return llvm::map_range(literalElements, literalElementCastConverter);
+    return llvm::map_range(literalElements, [](FormatElement *el) {
+      return cast<LiteralElement>(el);
+    });
   }
 
   /// Returns a range to iterate over the parsing elements corresponding to the
@@ -339,10 +341,8 @@ struct OperationFormat {
     Optional
   };
 
-  OperationFormat(const Operator &op)
-      : useProperties(op.getDialect().usePropertiesForAttributes() &&
-                      !op.getAttributes().empty()),
-        opCppClassName(op.getCppClassName()) {
+  OperationFormat(const Operator &op, bool hasProperties)
+      : useProperties(hasProperties), opCppClassName(op.getCppClassName()) {
     operandTypes.resize(op.getNumOperands(), TypeResolution());
     resultTypes.resize(op.getNumResults(), TypeResolution());
 
@@ -397,7 +397,7 @@ struct OperationFormat {
   /// A flag indicating if this operation has the SingleBlock trait.
   bool hasSingleBlockTrait;
 
-  /// Indicate whether attribute are stored in properties.
+  /// Indicate whether we need to use properties for the current operator.
   bool useProperties;
 
   /// Indicate whether prop-dict is used in the format
@@ -1275,8 +1275,8 @@ static void genAttrParser(AttributeVariable *attr, MethodBody &body,
 // 'prop-dict' dictionary attr.
 static void genParsedAttrPropertiesSetter(OperationFormat &fmt, Operator &op,
                                           OpClass &opClass) {
-  // Not required unless 'prop-dict' is present.
-  if (!fmt.hasPropDict)
+  // Not required unless 'prop-dict' is present or we are not using properties.
+  if (!fmt.hasPropDict || !fmt.useProperties)
     return;
 
   SmallVector<MethodParameter> paramList;
@@ -1312,7 +1312,7 @@ if (!attr && {2}) {{
              "Properties.";
   return ::mlir::failure();
 }
-if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
+if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
   return ::mlir::failure();
 )decl";
 
@@ -1621,8 +1621,10 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     body.unindent() << "}\n";
     body.unindent();
   } else if (isa<PropDictDirective>(element)) {
-    body << "  if (parseProperties(parser, result))\n"
-         << "    return ::mlir::failure();\n";
+    if (useProperties) {
+      body << "  if (parseProperties(parser, result))\n"
+           << "    return ::mlir::failure();\n";
+    }
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
     genCustomDirectiveParser(customDir, body, useProperties, opCppClassName);
   } else if (isa<OperandsDirective>(element)) {
@@ -1997,7 +1999,7 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
     fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
     body << getter << "Attr() != "
          << tgfmt(attr.getConstBuilderTemplate(), &fctx,
-                  attr.getDefaultValue());
+                  tgfmt(attr.getDefaultValue(), &fctx));
   }
   if (optionalAndDefault)
     body << ")";
@@ -2005,29 +2007,49 @@ static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
 
 static void genNonDefaultValueCheck(MethodBody &body, const Operator &op,
                                     PropertyVariable &propElement) {
-  body << op.getGetterName(propElement.getVar()->name)
-       << "() != " << propElement.getVar()->prop.getDefaultValue();
+  FmtContext fctx;
+  fctx.withBuilder("::mlir::OpBuilder((*this)->getContext())");
+  body << op.getGetterName(propElement.getVar()->name) << "() != "
+       << tgfmt(propElement.getVar()->prop.getDefaultValue(), &fctx);
+}
+
+/// Elide the variadic segment size attributes if necessary.
+/// This pushes elided attribute names in `elidedStorage`.
+static void genVariadicSegmentElision(OperationFormat &fmt, Operator &op,
+                                      MethodBody &body,
+                                      const char *elidedStorage) {
+  if (!fmt.allOperands &&
+      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
+    body << "  " << elidedStorage << ".push_back(\"operandSegmentSizes\");\n";
+  if (!fmt.allResultTypes &&
+      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
+    body << "  " << elidedStorage << ".push_back(\"resultSegmentSizes\");\n";
 }
 
 /// Generate the printer for the 'prop-dict' directive.
 static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedProps;\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedProps");
+
   for (const NamedProperty *namedProperty : fmt.usedProperties)
     body << "  elidedProps.push_back(\"" << namedProperty->name << "\");\n";
   for (const NamedAttribute *namedAttr : fmt.usedAttributes)
     body << "  elidedProps.push_back(\"" << namedAttr->name << "\");\n";
 
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -2040,43 +2062,46 @@ static void genPropDictPrinter(OperationFormat &fmt, Operator &op,
   // Similarly, elide default-valued properties.
   for (const NamedProperty &prop : op.getProperties()) {
     if (prop.prop.hasDefaultValue()) {
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
       body << "  if (" << op.getGetterName(prop.name)
-           << "() == " << prop.prop.getDefaultValue() << ") {";
+           << "() == " << tgfmt(prop.prop.getDefaultValue(), &fctx) << ") {";
       body << "    elidedProps.push_back(\"" << prop.name << "\");\n";
       body << "  }\n";
     }
   }
 
-  body << "  _odsPrinter << \" \";\n"
-       << "  printProperties(this->getContext(), _odsPrinter, "
-          "getProperties(), elidedProps);\n";
+  if (fmt.useProperties) {
+    body << "  _odsPrinter << \" \";\n"
+         << "  printProperties(this->getContext(), _odsPrinter, "
+            "getProperties(), elidedProps);\n";
+  }
 }
 
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
   body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
-  // Elide the variadic segment size attributes if necessary.
-  if (!fmt.allOperands &&
-      op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
-  if (!fmt.allResultTypes &&
-      op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
+
+  genVariadicSegmentElision(fmt, op, body, "elidedAttrs");
+
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
     body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
-  // Add code to check attributes for equality with the default value
-  // for attributes with the elidePrintingDefaultValue bit set.
+
+  // Add code to check attributes for equality with their default values.
+  // Default-valued attributes will not be printed when their value matches the
+  // default.
   for (const NamedAttribute &namedAttr : op.getAttributes()) {
     const Attribute &attr = namedAttr.attr;
     if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
       const StringRef &name = namedAttr.name;
       FmtContext fctx;
       fctx.withBuilder("odsBuilder");
-      std::string defaultValue = std::string(
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      std::string defaultValue =
+          std::string(tgfmt(attr.getConstBuilderTemplate(), &fctx,
+                            tgfmt(attr.getDefaultValue(), &fctx)));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
       body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
@@ -3771,7 +3796,8 @@ LogicalResult OpFormatParser::verifyOptionalGroupElement(SMLoc loc,
 // Interface
 //===----------------------------------------------------------------------===//
 
-void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
+void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
+                                    bool hasProperties) {
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
@@ -3782,7 +3808,7 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(op.getAssemblyFormat()), SMLoc());
-  OperationFormat format(op);
+  OperationFormat format(op, hasProperties);
   OpFormatParser parser(mgr, format, op);
   FailureOr<std::vector<FormatElement *>> elements = parser.parse();
   if (failed(elements)) {

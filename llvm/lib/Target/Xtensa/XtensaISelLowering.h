@@ -105,7 +105,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -147,6 +147,12 @@ private:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
 

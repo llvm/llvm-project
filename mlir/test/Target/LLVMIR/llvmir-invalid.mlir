@@ -188,7 +188,7 @@ llvm.func @sadd_overflow_intr_wrong_type(%arg0 : i32, %arg1 : f32) -> !llvm.stru
 
 llvm.func @assume_intr_wrong_type(%cond : i16) {
   // expected-error @below{{op operand #0 must be 1-bit signless integer, but got 'i16'}}
-  "llvm.intr.assume"(%cond) : (i16) -> ()
+  llvm.intr.assume %cond : i16
   llvm.return
 }
 
@@ -344,6 +344,20 @@ llvm.comdat @__llvm_comdat_1 {
 llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
   llvm.linker_options ["test"]
+}
+
+// -----
+
+llvm.func @foo() {
+  // expected-error @below{{must appear at the module level}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>]
+}
+
+// -----
+
+module attributes {} {
+  // expected-error @below{{expected a module flag attribute}}
+  llvm.module_flags [4 : i32]
 }
 
 // -----

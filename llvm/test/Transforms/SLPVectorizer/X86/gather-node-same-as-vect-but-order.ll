@@ -17,8 +17,8 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[I7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[RC21]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i32 3
-; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP11]], <2 x float> [[TMP8]], i64 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP9]], <2 x float> [[TMP8]], i64 0)
 ; CHECK-NEXT:    [[TMP12:%.*]] = fcmp olt <4 x float> [[TMP13]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP5]], <4 x float> zeroinitializer
@@ -42,7 +42,7 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    br label [[IF_END75]]
 ; CHECK:       if.end75:
 ; CHECK-NEXT:    [[TMP22:%.*]] = phi <4 x i32> [ [[TMP20]], [[IF_THEN74]] ], [ [[TMP21]], [[IF_END72]] ]
-; CHECK-NEXT:    [[TMP23:%.*]] = or <4 x i32> [[TMP22]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP23:%.*]] = or <4 x i32> [[TMP22]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul <4 x i32> [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = sitofp <4 x i32> [[TMP25]] to <4 x float>

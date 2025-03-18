@@ -35,7 +35,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MachineLocation.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -453,7 +452,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     // directives.
     for (const CalleeSavedInfo &I : CSI) {
       int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
 
       // If Reg is a double precision register, emit two cfa_offsets,
       // one for each of the paired single precision registers.
@@ -802,7 +801,7 @@ bool MipsSEFrameLowering::spillCalleeSavedRegisters(
     // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA || Reg == Mips::RA_64)
         && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
@@ -893,8 +892,8 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // it should be 32-bit.
     const TargetRegisterClass &RC = STI.isGP64bit() ?
       Mips::GPR64RegClass : Mips::GPR32RegClass;
-    int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
-                                                 TRI->getSpillAlign(RC), false);
+    int FI = MF.getFrameInfo().CreateSpillStackObject(TRI->getSpillSize(RC),
+                                                      TRI->getSpillAlign(RC));
     RS->addScavengingFrameIndex(FI);
   }
 
@@ -909,8 +908,8 @@ void MipsSEFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   const TargetRegisterClass &RC =
       ABI.ArePtrs64bit() ? Mips::GPR64RegClass : Mips::GPR32RegClass;
-  int FI = MF.getFrameInfo().CreateStackObject(TRI->getSpillSize(RC),
-                                               TRI->getSpillAlign(RC), false);
+  int FI = MF.getFrameInfo().CreateSpillStackObject(TRI->getSpillSize(RC),
+                                                    TRI->getSpillAlign(RC));
   RS->addScavengingFrameIndex(FI);
 }
 

@@ -13,7 +13,6 @@
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
-#include "X86AsmParserCommon.h"
 #include "X86Operand.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -3307,11 +3306,11 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   if ((PatchedName.starts_with("cmp") || PatchedName.starts_with("vcmp")) &&
       (PatchedName.ends_with("ss") || PatchedName.ends_with("sd") ||
        PatchedName.ends_with("sh") || PatchedName.ends_with("ph") ||
-       PatchedName.ends_with("pbf16") || PatchedName.ends_with("ps") ||
+       PatchedName.ends_with("bf16") || PatchedName.ends_with("ps") ||
        PatchedName.ends_with("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
-    unsigned suffixLength = PatchedName.ends_with("pbf16") ? 5 : 2;
+    unsigned suffixLength = PatchedName.ends_with("bf16") ? 5 : 2;
     unsigned CC = StringSwitch<unsigned>(
       PatchedName.slice(CCIdx, PatchedName.size() - suffixLength))
       .Case("eq",       0x00)
@@ -3376,8 +3375,8 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
         PatchedName = "vcmpsh";
       else if (PatchedName.ends_with("ph"))
         PatchedName = "vcmpph";
-      else if (PatchedName.ends_with("pbf16"))
-        PatchedName = "vcmppbf16";
+      else if (PatchedName.ends_with("bf16"))
+        PatchedName = "vcmpbf16";
       else
         llvm_unreachable("Unexpected suffix!");
 
@@ -4495,7 +4494,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
   // compatible with gas.
   StringRef Mnemonic = (static_cast<X86Operand &>(*Operands[0])).getToken();
   if (UnsizedMemOp) {
-    static const char *const PtrSizedInstrs[] = {"call", "jmp", "push"};
+    static const char *const PtrSizedInstrs[] = {"call", "jmp", "push", "pop"};
     for (const char *Instr : PtrSizedInstrs) {
       if (Mnemonic == Instr) {
         UnsizedMemOp->Mem.Size = getPointerWidth();
@@ -5031,7 +5030,7 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86AsmParser() {
+extern "C" LLVM_C_ABI void LLVMInitializeX86AsmParser() {
   RegisterMCAsmParser<X86AsmParser> X(getTheX86_32Target());
   RegisterMCAsmParser<X86AsmParser> Y(getTheX86_64Target());
 }

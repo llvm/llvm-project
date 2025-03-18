@@ -76,6 +76,32 @@ static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
     "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on AArch64"));
 
+static cl::opt<unsigned> AArch64StreamingHazardSize(
+    "aarch64-streaming-hazard-size",
+    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
+    cl::init(0), cl::Hidden);
+
+static cl::alias AArch64StreamingStackHazardSize(
+    "aarch64-stack-hazard-size",
+    cl::desc("alias for -aarch64-streaming-hazard-size"),
+    cl::aliasopt(AArch64StreamingHazardSize));
+
+static cl::opt<bool> EnableZPRPredicateSpills(
+    "aarch64-enable-zpr-predicate-spills", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
+
+// Subreg liveness tracking is disabled by default for now until all issues
+// are ironed out. This option allows the feature to be used in tests.
+static cl::opt<bool>
+    EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
+                                 cl::init(false), cl::Hidden,
+                                 cl::desc("Enable subreg liveness tracking"));
+
+static cl::opt<bool>
+    UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
+                   cl::desc("Prefer add+cnt over addvl/inc/dec"));
+
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
     return OverrideVectorInsertExtractBaseCost;
@@ -104,7 +130,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   // this in the future so we can specify it together with the subtarget
   // features.
   switch (ARMProcFamily) {
-  case Others:
+  case Generic:
+    // Using TuneCPU=generic we avoid ldapur instructions to line up with the
+    // cpus that use the AvoidLDAPUR feature. We don't want this to be on
+    // forever, so it is enabled between armv8.4 and armv8.7/armv9.2.
+    if (hasV8_4aOps() && !hasV8_8aOps())
+      AvoidLDAPUR = true;
     break;
   case Carmel:
     CacheLineSize = 64;
@@ -174,6 +205,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
     break;
+  case MONAKA:
+    VScaleForTuning = 2;
+    break;
   case AppleA7:
   case AppleA10:
   case AppleA11:
@@ -234,12 +268,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
-    // Specialize cost for Neoverse-V2.
+  case NeoverseV3:
+    EpilogueVectorizationMinVF = 8;
+    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     LLVM_FALLTHROUGH;
   case NeoverseN2:
   case NeoverseN3:
-  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -333,6 +368,10 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
+      StreamingHazardSize(
+          AArch64StreamingHazardSize.getNumOccurrences() > 0
+              ? std::optional<unsigned>(AArch64StreamingHazardSize)
+              : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
@@ -368,7 +407,21 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
 
-  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
+  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
+}
+
+unsigned AArch64Subtarget::getHwModeSet() const {
+  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
+
+  // Use a special hardware mode in streaming[-compatible] functions with
+  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
+  // alignment) for the predicate register class.
+  if (EnableZPRPredicateSpills.getValue() &&
+      (isStreaming() || isStreamingCompatible())) {
+    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
+  }
+
+  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -554,6 +607,14 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 }
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
+
+bool AArch64Subtarget::useScalarIncVL() const {
+  // If SVE2 or SME is present (we are not SVE-1 only) and UseScalarIncVL
+  // is not otherwise set, enable it by default.
+  if (UseScalarIncVL.getNumOccurrences())
+    return UseScalarIncVL;
+  return hasSVE2() || hasSME();
+}
 
 // If return address signing is enabled, tail calls are emitted as follows:
 //

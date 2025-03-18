@@ -2672,14 +2672,9 @@ define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
 ; CHECK-GI-LABEL: fcmal4xfloat:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w8
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
+; CHECK-GI-NEXT:    dup v0.2s, w8
+; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp true <4 x float> %A, %B
@@ -2723,14 +2718,10 @@ define <4 x i32> @fcmnv4xfloat(<4 x float> %A, <4 x float> %B) {
 ; CHECK-GI-LABEL: fcmnv4xfloat:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #0 // =0x0
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov v1.16b, v0.16b
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w8
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-GI-NEXT:    shl v0.4s, v1.4s, #31
+; CHECK-GI-NEXT:    mov v0.s[0], w8
+; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    sshr v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    ret
   %tmp3 = fcmp false <4 x float> %A, %B

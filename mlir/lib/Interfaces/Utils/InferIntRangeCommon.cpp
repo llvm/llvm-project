@@ -14,6 +14,7 @@
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Interfaces/ShapedOpInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -298,8 +299,14 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
     return minMaxBy(udiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
                     /*isSigned=*/false);
   }
-  // Otherwise, it's possible we might divide by 0.
-  return ConstantIntRanges::maxRange(rhsMin.getBitWidth());
+
+  APInt umin = APInt::getZero(rhsMin.getBitWidth());
+  if (lhsMin.uge(rhsMax) && !rhsMax.isZero())
+    umin = lhsMin.udiv(rhsMax);
+
+  // X u/ Y u<= X.
+  APInt umax = lhsMax;
+  return ConstantIntRanges::fromUnsigned(umin, umax);
 }
 
 ConstantIntRanges
@@ -313,9 +320,8 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivUIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto ceilDivUIFix = [](const APInt &lhs, const APInt &rhs,
+                         const APInt &result) -> std::optional<APInt> {
     if (!lhs.urem(rhs).isZero()) {
       bool overflowed = false;
       APInt corrected =
@@ -362,27 +368,42 @@ ConstantIntRanges
 mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn ceilDivSIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto ceilDivSIFix = [](const APInt &lhs, const APInt &rhs,
+                         const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() == rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
           result.sadd_ov(APInt(result.getBitWidth(), 1), overflowed);
       return overflowed ? std::optional<APInt>() : corrected;
     }
+    // Special case where the usual implementation of ceilDiv causes
+    // INT_MIN / [positive number] to be positive. This doesn't match the
+    // definition of signed ceiling division mathematically, but it prevents
+    // inconsistent constant-folding results. This arises because (-int_min) is
+    // still negative, so -(-int_min / b) is -(int_min / b), which is
+    // positive See #115293.
+    if (lhs.isMinSignedValue() && rhs.sgt(1)) {
+      return -result;
+    }
     return result;
   };
-  return inferDivSRange(lhs, rhs, ceilDivSIFix);
+  ConstantIntRanges result = inferDivSRange(lhs, rhs, ceilDivSIFix);
+  if (lhs.smin().isMinSignedValue() && lhs.smax().sgt(lhs.smin())) {
+    // If lhs range includes INT_MIN and lhs is not a single value, we can
+    // suddenly wrap to positive val, skipping entire negative range, add
+    // [INT_MIN + 1, smax()] range to the result to handle this.
+    auto newLhs = ConstantIntRanges::fromSigned(lhs.smin() + 1, lhs.smax());
+    result = result.rangeUnion(inferDivSRange(newLhs, rhs, ceilDivSIFix));
+  }
+  return result;
 }
 
 ConstantIntRanges
 mlir::intrange::inferFloorDivS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  DivisionFixupFn floorDivSIFix =
-      [](const APInt &lhs, const APInt &rhs,
-         const APInt &result) -> std::optional<APInt> {
+  auto floorDivSIFix = [](const APInt &lhs, const APInt &rhs,
+                          const APInt &result) -> std::optional<APInt> {
     if (!lhs.srem(rhs).isZero() && lhs.isNonNegative() != rhs.isNonNegative()) {
       bool overflowed = false;
       APInt corrected =
@@ -544,15 +565,25 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
                   /*isSigned=*/false);
 }
 
+/// Get bitmask of all bits which can change while iterating in
+/// [bound.umin(), bound.umax()].
+static APInt getVaryingBitsMask(const ConstantIntRanges &bound) {
+  APInt leftVal = bound.umin(), rightVal = bound.umax();
+  unsigned bitwidth = leftVal.getBitWidth();
+  unsigned differingBits = bitwidth - (leftVal ^ rightVal).countl_zero();
+  return APInt::getLowBitsSet(bitwidth, differingBits);
+}
+
 ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
-  auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
-  auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
-  auto xori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
-    return a ^ b;
-  };
-  return minMaxBy(xori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  // Construct mask of varying bits for both ranges, xor values and then replace
+  // masked bits with 0s and 1s to get min and max values respectively.
+  ConstantIntRanges lhs = argRanges[0], rhs = argRanges[1];
+  APInt mask = getVaryingBitsMask(lhs) | getVaryingBitsMask(rhs);
+  APInt res = lhs.umin() ^ rhs.umin();
+  APInt min = res & ~mask;
+  APInt max = res | mask;
+  return ConstantIntRanges::fromUnsigned(min, max);
 }
 
 //===----------------------------------------------------------------------===//
@@ -597,8 +628,7 @@ ConstantIntRanges
 mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn ashr = [](const APInt &l,
-                         const APInt &r) -> std::optional<APInt> {
+  auto ashr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.ashr(r);
   };
 
@@ -610,8 +640,7 @@ ConstantIntRanges
 mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
-  ConstArithFn lshr = [](const APInt &l,
-                         const APInt &r) -> std::optional<APInt> {
+  auto lshr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.lshr(r);
   };
   return minMaxBy(lshr, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
@@ -696,4 +725,47 @@ std::optional<bool> mlir::intrange::evaluatePred(CmpPredicate pred,
   if (isStaticallyTrue(invertPredicate(pred), lhs, rhs))
     return false;
   return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// Shaped type dimension accessors / ShapedDimOpInterface
+//===----------------------------------------------------------------------===//
+
+ConstantIntRanges
+mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
+                                          const IntegerValueRange &maybeDim) {
+  unsigned width =
+      ConstantIntRanges::getStorageBitwidth(op->getResult(0).getType());
+  APInt zero = APInt::getZero(width);
+  APInt typeMax = APInt::getSignedMaxValue(width);
+
+  auto shapedTy = cast<ShapedType>(op.getShapedValue().getType());
+  if (!shapedTy.hasRank())
+    return ConstantIntRanges::fromSigned(zero, typeMax);
+
+  int64_t rank = shapedTy.getRank();
+  int64_t minDim = 0;
+  int64_t maxDim = rank - 1;
+  if (!maybeDim.isUninitialized()) {
+    const ConstantIntRanges &dim = maybeDim.getValue();
+    minDim = std::max(minDim, dim.smin().getSExtValue());
+    maxDim = std::min(maxDim, dim.smax().getSExtValue());
+  }
+
+  std::optional<ConstantIntRanges> result;
+  auto joinResult = [&](const ConstantIntRanges &thisResult) {
+    if (!result.has_value())
+      result = thisResult;
+    else
+      result = result->rangeUnion(thisResult);
+  };
+  for (int64_t i = minDim; i <= maxDim; ++i) {
+    int64_t length = shapedTy.getDimSize(i);
+
+    if (ShapedType::isDynamic(length))
+      joinResult(ConstantIntRanges::fromSigned(zero, typeMax));
+    else
+      joinResult(ConstantIntRanges::constant(APInt(width, length)));
+  }
+  return result.value_or(ConstantIntRanges::fromSigned(zero, typeMax));
 }

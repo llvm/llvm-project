@@ -28,18 +28,31 @@ if [[ -n "${CLEAR_CACHE:-}" ]]; then
   ccache --clear
 fi
 
-function show-stats {
+function at-exit {
+  retcode=$?
+
   mkdir -p artifacts
   ccache --print-stats > artifacts/ccache_stats.txt
+
+  # If building fails there will be no results files.
+  shopt -s nullglob
+  if command -v buildkite-agent 2>&1 >/dev/null
+  then
+    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":linux: Linux x64 Test Results" \
+      "linux-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
+  fi
 }
-trap show-stats EXIT
+trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
 
+lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
+
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
@@ -47,11 +60,12 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
-      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --timeout=1200 --time-tests" \
+      -D LLVM_LIT_ARGS="${lit_args}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D LLVM_CCACHE_BUILD=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
+      -D FLANG_ENABLE_FLANG_RT=OFF \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"
@@ -82,12 +96,16 @@ if [[ "${runtimes}" != "" ]]; then
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
+      -D CMAKE_Fortran_COMPILER_WORKS=ON \
+      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="std=c++03" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++03"
+      -D LIBCXXABI_TEST_PARAMS="std=c++03" \
+      -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes C++03"
 
@@ -99,12 +117,16 @@ if [[ "${runtimes}" != "" ]]; then
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
+      -D CMAKE_Fortran_COMPILER_WORKS=ON \
+      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="std=c++26" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++26"
+      -D LIBCXXABI_TEST_PARAMS="std=c++26" \
+      -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes C++26"
 
@@ -116,12 +138,16 @@ if [[ "${runtimes}" != "" ]]; then
   cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
       -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
       -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D CMAKE_Fortran_COMPILER="${BUILD_DIR}/bin/flang" \
+      -D CMAKE_Fortran_COMPILER_WORKS=ON \
+      -D LLVM_BINARY_DIR="${BUILD_DIR}" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D CMAKE_BUILD_TYPE=RelWithDebInfo \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang"
+      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
+      -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes clang modules"
   

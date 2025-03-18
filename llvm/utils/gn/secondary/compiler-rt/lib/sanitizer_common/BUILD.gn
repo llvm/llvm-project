@@ -155,6 +155,7 @@ source_set("sources") {
     "sanitizer_symbolizer_win.cpp",
     "sanitizer_termination.cpp",
     "sanitizer_thread_arg_retval.cpp",
+    "sanitizer_thread_history.cpp",
     "sanitizer_thread_registry.cpp",
     "sanitizer_thread_registry.h",
     "sanitizer_thread_safety.h",

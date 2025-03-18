@@ -29,6 +29,73 @@ TEST(APIntTest, ValueInit) {
   EXPECT_TRUE(!Zero.sext(64));
 }
 
+// Test that 0^5 == 0
+TEST(APIntTest, PowZeroTo5) {
+  APInt Zero = APInt::getZero(32);
+  EXPECT_TRUE(!Zero);
+  APInt ZeroTo5 = APIntOps::pow(Zero, 5);
+  EXPECT_TRUE(!ZeroTo5);
+}
+
+// Test that 1^16 == 1
+TEST(APIntTest, PowOneTo16) {
+  APInt One(32, 1);
+  APInt OneTo16 = APIntOps::pow(One, 16);
+  EXPECT_EQ(One, OneTo16);
+}
+
+// Test that 2^10 == 1024
+TEST(APIntTest, PowerTwoTo10) {
+  APInt Two(32, 2);
+  APInt TwoTo20 = APIntOps::pow(Two, 10);
+  APInt V_1024(32, 1024);
+  EXPECT_EQ(TwoTo20, V_1024);
+}
+
+// Test that 3^3 == 27
+TEST(APIntTest, PowerThreeTo3) {
+  APInt Three(32, 3);
+  APInt ThreeTo3 = APIntOps::pow(Three, 3);
+  APInt V_27(32, 27);
+  EXPECT_EQ(ThreeTo3, V_27);
+}
+
+// Test that SignedMaxValue^3 == SignedMaxValue
+TEST(APIntTest, PowerSignedMaxValue) {
+  APInt SignedMaxValue = APInt::getSignedMaxValue(32);
+  APInt MaxTo3 = APIntOps::pow(SignedMaxValue, 3);
+  EXPECT_EQ(MaxTo3, SignedMaxValue);
+}
+
+// Test that MaxValue^3 == MaxValue
+TEST(APIntTest, PowerMaxValue) {
+  APInt MaxValue = APInt::getMaxValue(32);
+  APInt MaxTo3 = APIntOps::pow(MaxValue, 3);
+  EXPECT_EQ(MaxValue, MaxTo3);
+}
+
+// Test that SignedMinValue^3 == 0
+TEST(APIntTest, PowerSignedMinValueTo3) {
+  APInt SignedMinValue = APInt::getSignedMinValue(32);
+  APInt MinTo3 = APIntOps::pow(SignedMinValue, 3);
+  EXPECT_TRUE(MinTo3.isZero());
+}
+
+// Test that SignedMinValue^1 == SignedMinValue
+TEST(APIntTest, PowerSignedMinValueTo1) {
+  APInt SignedMinValue = APInt::getSignedMinValue(32);
+  APInt MinTo1 = APIntOps::pow(SignedMinValue, 1);
+  EXPECT_EQ(SignedMinValue, MinTo1);
+}
+
+// Test that MaxValue^3 == MaxValue
+TEST(APIntTest, ZeroToZero) {
+  APInt Zero = APInt::getZero(32);
+  APInt One(32, 1);
+  APInt ZeroToZero = APIntOps::pow(Zero, 0);
+  EXPECT_EQ(ZeroToZero, One);
+}
+
 // Test that APInt shift left works when bitwidth > 64 and shiftamt == 0
 TEST(APIntTest, ShiftLeftByZero) {
   APInt One = APInt::getZero(65) + 1;
@@ -3423,6 +3490,7 @@ TEST(APIntTest, ZeroWidth) {
   EXPECT_EQ(0U, ZW.getBitWidth());
   EXPECT_EQ(0U, APInt(0, ArrayRef<uint64_t>({0, 1, 2})).getBitWidth());
   EXPECT_EQ(0U, APInt(0, "0", 10).getBitWidth());
+  EXPECT_EQ(0U, APInt::getAllOnes(0).getBitWidth());
 
   // Default constructor is single bit wide.
   EXPECT_EQ(1U, APInt().getBitWidth());

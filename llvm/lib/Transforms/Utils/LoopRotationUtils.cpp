@@ -171,14 +171,14 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
       // Users in the OrigPreHeader need to use the value to which the
       // original definitions are mapped and anything else can be handled by
       // the SSAUpdater. To avoid adding PHINodes, check if the value is
-      // available in UserBB, if not substitute undef.
+      // available in UserBB, if not substitute poison.
       Value *NewVal;
       if (UserBB == OrigPreheader)
         NewVal = OrigPreHeaderVal;
       else if (SSA.HasValueForBlock(UserBB))
         NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
       else
-        NewVal = UndefValue::get(OrigHeaderVal->getType());
+        NewVal = PoisonValue::get(OrigHeaderVal->getType());
       DbgValue->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
 
@@ -194,14 +194,14 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
       // Users in the OrigPreHeader need to use the value to which the
       // original definitions are mapped and anything else can be handled by
       // the SSAUpdater. To avoid adding PHINodes, check if the value is
-      // available in UserBB, if not substitute undef.
+      // available in UserBB, if not substitute poison.
       Value *NewVal;
       if (UserBB == OrigPreheader)
         NewVal = OrigPreHeaderVal;
       else if (SSA.HasValueForBlock(UserBB))
         NewVal = SSA.GetValueInMiddleOfBlock(UserBB);
       else
-        NewVal = UndefValue::get(OrigHeaderVal->getType());
+        NewVal = PoisonValue::get(OrigHeaderVal->getType());
       DVR->replaceVariableLocationOp(OrigHeaderVal, NewVal);
     }
   }
@@ -650,7 +650,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
         NextDbgInsts = I->getDbgRecordRange();
 
-        Inst->moveBefore(LoopEntryBranch);
+        Inst->moveBefore(LoopEntryBranch->getIterator());
 
         ++NumInstrsHoisted;
         continue;
@@ -658,7 +658,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
       // Otherwise, create a duplicate of the instruction.
       Instruction *C = Inst->clone();
-      C->insertBefore(LoopEntryBranch);
+      C->insertBefore(LoopEntryBranch->getIterator());
 
       ++NumInstrsDuplicated;
 

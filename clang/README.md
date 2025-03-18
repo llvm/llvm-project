@@ -16,7 +16,7 @@ If you're interested in more (including how to build Clang) it is best to read t
 
 * Information on the LLVM project:    http://llvm.org/
 
-* If you have questions or comments about Clang, a great place to disucss them is on the Clang forums:    
+* If you have questions or comments about Clang, a great place to discuss them is on the Clang forums:    
   
   [Clang Frontend - LLVM Discussion Forums](https://discourse.llvm.org/c/clang/)
 

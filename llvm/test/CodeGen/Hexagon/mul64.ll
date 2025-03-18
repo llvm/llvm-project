@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This test checks for the generation of 64b mul instruction
 ; (dpmpyss_s0 and dpmpyuu_s0).
 

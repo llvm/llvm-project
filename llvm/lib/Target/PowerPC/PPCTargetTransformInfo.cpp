@@ -11,13 +11,11 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -114,8 +112,8 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       // Check that all of the elements are integer constants or undefs.
       bool AllEltsOk = true;
-      for (unsigned i = 0; i != 16; ++i) {
-        Constant *Elt = Mask->getAggregateElement(i);
+      for (unsigned I = 0; I != 16; ++I) {
+        Constant *Elt = Mask->getAggregateElement(I);
         if (!Elt || !(isa<ConstantInt>(Elt) || isa<UndefValue>(Elt))) {
           AllEltsOk = false;
           break;
@@ -134,11 +132,11 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Value *ExtractedElts[32];
         memset(ExtractedElts, 0, sizeof(ExtractedElts));
 
-        for (unsigned i = 0; i != 16; ++i) {
-          if (isa<UndefValue>(Mask->getAggregateElement(i)))
+        for (unsigned I = 0; I != 16; ++I) {
+          if (isa<UndefValue>(Mask->getAggregateElement(I)))
             continue;
           unsigned Idx =
-              cast<ConstantInt>(Mask->getAggregateElement(i))->getZExtValue();
+              cast<ConstantInt>(Mask->getAggregateElement(I))->getZExtValue();
           Idx &= 31; // Match the hardware behavior.
           if (DL.isLittleEndian())
             Idx = 31 - Idx;
@@ -152,7 +150,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
           // Insert this value into the result vector.
           Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
-                                                  IC.Builder.getInt32(i));
+                                                  IC.Builder.getInt32(I));
         }
         return CastInst::Create(Instruction::BitCast, Result, II.getType());
       }
@@ -459,16 +457,15 @@ unsigned PPCTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 unsigned PPCTTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
   if (Vector)
     return ST->hasVSX() ? VSXRC : VRRC;
-  else if (Ty && (Ty->getScalarType()->isFloatTy() ||
-                  Ty->getScalarType()->isDoubleTy()))
+  if (Ty &&
+      (Ty->getScalarType()->isFloatTy() || Ty->getScalarType()->isDoubleTy()))
     return ST->hasVSX() ? VSXRC : FPRRC;
-  else if (Ty && (Ty->getScalarType()->isFP128Ty() ||
-                  Ty->getScalarType()->isPPC_FP128Ty()))
+  if (Ty && (Ty->getScalarType()->isFP128Ty() ||
+             Ty->getScalarType()->isPPC_FP128Ty()))
     return VRRC;
-  else if (Ty && Ty->getScalarType()->isHalfTy())
+  if (Ty && Ty->getScalarType()->isHalfTy())
     return VSXRC;
-  else
-    return GPRRC;
+  return GPRRC;
 }
 
 const char* PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
@@ -696,8 +693,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return 0;
 
     return Cost;
-
-  } else if (Val->getScalarType()->isIntegerTy()) {
+  }
+  if (Val->getScalarType()->isIntegerTy()) {
     unsigned EltSize = Val->getScalarSizeInBits();
     // Computing on 1 bit values requires extra mask or compare operations.
     unsigned MaskCostForOneBitSize = (VecMaskCost && EltSize == 1) ? 1 : 0;
@@ -711,7 +708,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       if (ISD == ISD::INSERT_VECTOR_ELT) {
         if (ST->hasP10Vector())
           return CostFactor + MaskCostForIdx;
-        else if (Index != -1U)
+        if (Index != -1U)
           return 2 * CostFactor;
       } else if (ISD == ISD::EXTRACT_VECTOR_ELT) {
         // It's an extract.  Maybe we can do a cheap move-from VSR.
@@ -719,7 +716,7 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
         // P9 has both mfvsrd and mfvsrld for 64 bit integer.
         if (EltSize == 64 && Index != -1U)
           return 1;
-        else if (EltSize == 32) {
+        if (EltSize == 32) {
           unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
           if (Index == MfvsrwzIndex)
             return 1;
@@ -849,9 +846,9 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // stores, loads are expanded using the vector-load + permutation sequence,
   // which is much less expensive).
   if (Src->isVectorTy() && Opcode == Instruction::Store)
-    for (int i = 0, e = cast<FixedVectorType>(Src)->getNumElements(); i < e;
-         ++i)
-      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, i,
+    for (int I = 0, E = cast<FixedVectorType>(Src)->getNumElements(); I < E;
+         ++I)
+      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, I,
                                  nullptr, nullptr);
 
   return Cost;
@@ -895,6 +892,20 @@ InstructionCost
 PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) {
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
+                                     const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Check that targets features are exactly the same. We can revisit to see if
+  // we can improve this.
+  return CallerBits == CalleeBits;
 }
 
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
@@ -948,8 +959,7 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                     C1.NumBaseAdds, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
            std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost, C2.NumIVMuls,
                     C2.NumBaseAdds, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
-  else
-    return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
+  return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }
 
 bool PPCTTIImpl::isNumRegsMajorCostOfLSR() {

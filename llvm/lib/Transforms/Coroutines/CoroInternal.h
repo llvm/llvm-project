@@ -11,10 +11,10 @@
 #ifndef LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 #define LLVM_LIB_TRANSFORMS_COROUTINES_COROINTERNAL_H
 
-#include "CoroInstr.h"
-#include "CoroShape.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 namespace llvm {
 

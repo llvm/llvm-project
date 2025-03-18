@@ -12,50 +12,36 @@
 #include "Allocator.h"
 #include "Configuration.h"
 #include "DeviceTypes.h"
+#include "Shared/RPCOpcodes.h"
+#include "shared/rpc.h"
 
 #include "Debug.h"
-
-#pragma omp begin declare target device_type(nohost)
 
 namespace ompx {
 namespace impl {
 
-double getWTick();
-
-double getWTime();
-
 /// AMDGCN Implementation
 ///
 ///{
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 
 double getWTick() {
   // The number of ticks per second for the AMDGPU clock varies by card and can
-  // only be retrived by querying the driver. We rely on the device environment
+  // only be retrieved by querying the driver. We rely on the device environment
   // to inform us what the proper frequency is.
   return 1.0 / config::getClockFrequency();
 }
 
 double getWTime() {
-  uint64_t NumTicks = 0;
-  if constexpr (__has_builtin(__builtin_amdgcn_s_sendmsg_rtnl))
-    NumTicks = __builtin_amdgcn_s_sendmsg_rtnl(0x83);
-  else if constexpr (__has_builtin(__builtin_amdgcn_s_memrealtime))
-    NumTicks = __builtin_amdgcn_s_memrealtime();
-  else if constexpr (__has_builtin(__builtin_amdgcn_s_memtime))
-    NumTicks = __builtin_amdgcn_s_memtime();
-
-  return static_cast<double>(NumTicks) * getWTick();
+  return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
 }
 
-#pragma omp end declare variant
+#endif
 
 /// NVPTX Implementation
 ///
 ///{
-#pragma omp begin declare variant match(                                       \
-        device = {arch(nvptx, nvptx64)},                                       \
-            implementation = {extension(match_any)})
+#ifdef __NVPTX__
 
 double getWTick() {
   // Timer precision is 1ns
@@ -67,7 +53,7 @@ double getWTime() {
   return static_cast<double>(nsecs) * getWTick();
 }
 
-#pragma omp end declare variant
+#endif
 
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
@@ -109,6 +95,10 @@ void *indirectCallLookup(void *HstPtr) {
   // If we searched the whole table and found nothing this is a device pointer.
   return HstPtr;
 }
+
+/// The openmp client instance used to communicate with the server.
+[[gnu::visibility("protected"),
+  gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
 
 } // namespace impl
 } // namespace ompx
@@ -156,7 +146,20 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
     return;
   }
 }
+
+unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
+  rpc::Client::Port Port = ompx::impl::Client.open<OFFLOAD_HOST_CALL>();
+  Port.send_n(data, size);
+  Port.send([=](rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
+  });
+  unsigned long long Ret;
+  Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+    Ret = static_cast<unsigned long long>(Buffer->data[0]);
+  });
+  Port.close();
+  return Ret;
+}
 }
 
 ///}
-#pragma omp end declare target

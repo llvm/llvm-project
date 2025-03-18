@@ -30,9 +30,14 @@ class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
 
+struct AggregationData {
+  unsigned OverallCount;
+  std::map<std::string, unsigned> DetailedCounts;
+};
+
 class OutputCategoryAggregator {
 private:
-  std::map<std::string, unsigned> Aggregation;
+  std::map<std::string, AggregationData> Aggregation;
   bool IncludeDetail;
 
 public:
@@ -40,8 +45,13 @@ public:
       : IncludeDetail(includeDetail) {}
   void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
   size_t GetNumCategories() const { return Aggregation.size(); }
-  void Report(StringRef s, std::function<void()> detailCallback);
+  void Report(StringRef category, std::function<void()> detailCallback);
+  void Report(StringRef category, StringRef sub_category,
+              std::function<void()> detailCallback);
   void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+  void EnumerateDetailedResultsFor(
+      StringRef category,
+      std::function<void(StringRef, unsigned)> handleCounts);
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.
@@ -68,7 +78,9 @@ public:
 
     /// Inserts the address range. If the range overlaps with an existing
     /// range, the range that it overlaps with will be returned and the two
-    /// address ranges will be unioned together in "Ranges".
+    /// address ranges will be unioned together in "Ranges". If a duplicate
+    /// entry is attempted to be added, the duplicate range will not actually be
+    /// added and the returned iterator will point to end().
     ///
     /// This is used for finding overlapping ranges in the DW_AT_ranges
     /// attribute of a DIE. It is also used as a set of address ranges that
@@ -77,7 +89,9 @@ public:
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an
-    /// iterator to the overlapping range info.
+    /// iterator to the overlapping range info. If a duplicate entry is
+    /// attempted to be added, the duplicate range will not actually be added
+    /// and the returned iterator will point to end().
     ///
     /// This is used for finding overlapping children of the same DIE.
     die_range_info_iterator insert(const DieRangeInfo &RI);
@@ -86,7 +100,7 @@ public:
     bool contains(const DieRangeInfo &RHS) const;
 
     /// Return true if any range in this object intersects with any range in
-    /// RHS.
+    /// RHS. Identical ranges are not considered to be intersecting.
     bool intersects(const DieRangeInfo &RHS) const;
   };
 

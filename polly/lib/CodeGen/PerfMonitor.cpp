@@ -59,12 +59,12 @@ void PerfMonitor::addToGlobalConstructors(Function *Fn) {
 }
 
 Function *PerfMonitor::getRDTSCP() {
-  return Intrinsic::getDeclaration(M, Intrinsic::x86_rdtscp);
+  return Intrinsic::getOrInsertDeclaration(M, Intrinsic::x86_rdtscp);
 }
 
 PerfMonitor::PerfMonitor(const Scop &S, Module *M)
     : M(M), Builder(M->getContext()), S(S) {
-  if (Triple(M->getTargetTriple()).getArch() == llvm::Triple::x86_64)
+  if (M->getTargetTriple().getArch() == llvm::Triple::x86_64)
     Supported = true;
   else
     Supported = false;

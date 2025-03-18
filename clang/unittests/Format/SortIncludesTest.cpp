@@ -984,6 +984,18 @@ TEST_F(SortIncludesTest, SortAndDeduplicateIncludes) {
                     "#include <c>\n"
                     "#include <b>"));
 
+  verifyFormat("/* COPYRIGHT *\\\n"
+               "\\* (C) 2024  */\n"
+               "\n"
+               "#include <a>\n"
+               "#include <b>",
+               sort("/* COPYRIGHT *\\\n"
+                    "\\* (C) 2024  */\n"
+                    "\n"
+                    "#include <b>\n"
+                    "#include <a>\n"
+                    "#include <b>"));
+
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Merge;
   verifyFormat("#include <a>\n"
                "#include <b>\n"
@@ -1071,6 +1083,15 @@ TEST_F(SortIncludesTest, DoNotSortLikelyXml) {
                     "#include <a>\n"
                     "-->",
                     "input.h", 0));
+}
+
+TEST_F(SortIncludesTest, DoNotSortCSharp) {
+  constexpr StringRef Code{"const string expectedDataStruct = @\"\n"
+                           "            #include <b.h>\n"
+                           "            #include <a.h>\n"
+                           "        \";"};
+  FmtStyle.Language = FormatStyle::LK_CSharp;
+  EXPECT_TRUE(sortIncludes(FmtStyle, Code, GetCodeRange(Code), "a.cs").empty());
 }
 
 TEST_F(SortIncludesTest, DoNotOutputReplacementsForSortedBlocksWithRegrouping) {

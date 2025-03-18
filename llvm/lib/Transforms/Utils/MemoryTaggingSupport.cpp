@@ -154,9 +154,7 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     }
     return;
   }
-  auto *II = dyn_cast<IntrinsicInst>(&Inst);
-  if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-             II->getIntrinsicID() == Intrinsic::lifetime_end)) {
+  if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
     AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
     if (!AI) {
       Info.UnrecognizedLifetimes.push_back(&Inst);
@@ -261,19 +259,13 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   Info.AI = NewAI;
 }
 
-bool isLifetimeIntrinsic(Value *V) {
-  auto *II = dyn_cast<IntrinsicInst>(V);
-  return II && II->isLifetimeStartOrEnd();
-}
-
 Value *readRegister(IRBuilder<> &IRB, StringRef Name) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  Function *ReadRegister = Intrinsic::getDeclaration(
-      M, Intrinsic::read_register, IRB.getIntPtrTy(M->getDataLayout()));
   MDNode *MD =
       MDNode::get(M->getContext(), {MDString::get(M->getContext(), Name)});
   Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
-  return IRB.CreateCall(ReadRegister, Args);
+  return IRB.CreateIntrinsic(Intrinsic::read_register,
+                             IRB.getIntPtrTy(M->getDataLayout()), Args);
 }
 
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
@@ -287,12 +279,10 @@ Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB) {
 Value *getFP(IRBuilder<> &IRB) {
   Function *F = IRB.GetInsertBlock()->getParent();
   Module *M = F->getParent();
-  auto *GetStackPointerFn = Intrinsic::getDeclaration(
-      M, Intrinsic::frameaddress,
-      IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()));
   return IRB.CreatePtrToInt(
-      IRB.CreateCall(GetStackPointerFn,
-                     {Constant::getNullValue(IRB.getInt32Ty())}),
+      IRB.CreateIntrinsic(Intrinsic::frameaddress,
+                          IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
+                          {Constant::getNullValue(IRB.getInt32Ty())}),
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 
@@ -301,7 +291,7 @@ Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
   // in Bionic's libc/private/bionic_tls.h.
   Function *ThreadPointerFunc =
-      Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
 }
@@ -336,6 +326,40 @@ void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
 
   llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
   llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
+}
+
+Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
+                           unsigned int Inc) {
+  // Update the ring buffer. Top byte of ThreadLong defines the size of the
+  // buffer in pages, it must be a power of two, and the start of the buffer
+  // must be aligned by twice that much. Therefore wrap around of the ring
+  // buffer is simply Addr &= ~((ThreadLong >> 56) << 12).
+  // The use of AShr instead of LShr is due to
+  //   https://bugs.llvm.org/show_bug.cgi?id=39030
+  // Runtime library makes sure not to use the highest bit.
+  //
+  // Mechanical proof of this address calculation can be found at:
+  // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/prove_hwasanwrap.smt2
+  //
+  // Example of the wrap case for N = 1
+  // Pointer:   0x01AAAAAAAAAAAFF8
+  //                     +
+  //            0x0000000000000008
+  //                     =
+  //            0x01AAAAAAAAAAB000
+  //                     &
+  // WrapMask:  0xFFFFFFFFFFFFF000
+  //                     =
+  //            0x01AAAAAAAAAAA000
+  //
+  // Then the WrapMask will be a no-op until the next wrap case.
+  assert((4096 % Inc) == 0);
+  Value *WrapMask = IRB.CreateXor(
+      IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+      ConstantInt::get(ThreadLong->getType(), (uint64_t)-1));
+  return IRB.CreateAnd(
+      IRB.CreateAdd(ThreadLong, ConstantInt::get(ThreadLong->getType(), Inc)),
+      WrapMask);
 }
 
 } // namespace memtag

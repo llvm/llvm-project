@@ -34,7 +34,7 @@ using llvm::Record;
 using llvm::RecordKeeper;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
 
@@ -46,10 +46,10 @@ using DialectFilterIterator =
 } // namespace
 
 static void populateDiscardableAttributes(
-    Dialect &dialect, llvm::DagInit *discardableAttrDag,
+    Dialect &dialect, const llvm::DagInit *discardableAttrDag,
     SmallVector<std::pair<std::string, std::string>> &discardableAttributes) {
   for (int i : llvm::seq<int>(0, discardableAttrDag->getNumArgs())) {
-    llvm::Init *arg = discardableAttrDag->getArg(i);
+    const llvm::Init *arg = discardableAttrDag->getArg(i);
 
     StringRef givenName = discardableAttrDag->getArgNameStr(i);
     if (givenName.empty())
@@ -271,7 +271,8 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     if (dialect.hasOperationInterfaceFallback())
       os << operationInterfaceFallbackDecl;
 
-    llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
+    const llvm::DagInit *discardableAttrDag =
+        dialect.getDiscardableAttributes();
     SmallVector<std::pair<std::string, std::string>> discardableAttributes;
     populateDiscardableAttributes(dialect, discardableAttrDag,
                                   discardableAttributes);
@@ -370,7 +371,7 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
   StringRef superClassName =
       dialect.isExtensible() ? "ExtensibleDialect" : "Dialect";
 
-  llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
+  const llvm::DagInit *discardableAttrDag = dialect.getDiscardableAttributes();
   SmallVector<std::pair<std::string, std::string>> discardableAttributes;
   populateDiscardableAttributes(dialect, discardableAttrDag,
                                 discardableAttributes);

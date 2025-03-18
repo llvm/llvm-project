@@ -34,24 +34,29 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/TargetParser.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
-DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE"-forceexp",
+DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE "-forceexp",
               "Force emit s_waitcnt expcnt(0) instrs");
-DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE"-forcelgkm",
+DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE "-forcelgkm",
               "Force emit s_waitcnt lgkmcnt(0) instrs");
-DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE"-forcevm",
+DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE "-forcevm",
               "Force emit s_waitcnt vmcnt(0) instrs");
 
-static cl::opt<bool> ForceEmitZeroFlag(
-  "amdgpu-waitcnt-forcezero",
-  cl::desc("Force all waitcnt instrs to be emitted as s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
-  cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
+                      cl::desc("Force all waitcnt instrs to be emitted as "
+                               "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
+                      cl::init(false), cl::Hidden);
+
+static cl::opt<bool> ForceEmitZeroLoadFlag(
+    "amdgpu-waitcnt-load-forcezero",
+    cl::desc("Force all waitcnt load counters to wait until 0"),
+    cl::init(false), cl::Hidden);
 
 namespace {
 // Class of object that encapsulates latest instruction counter score
@@ -98,13 +103,6 @@ struct HardwareLimits {
   unsigned KmcntMax;     // gfx12+ only.
 };
 
-struct RegisterEncoding {
-  unsigned VGPR0;
-  unsigned VGPRL;
-  unsigned SGPR0;
-  unsigned SGPRL;
-};
-
 enum WaitEventType {
   VMEM_ACCESS,              // vector-memory read & write
   VMEM_READ_ACCESS,         // vector-memory read
@@ -132,10 +130,10 @@ enum WaitEventType {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
-  AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
+  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
+  AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
+  NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
   // unknown use the first slot. The first slot is also always updated in
@@ -249,11 +247,10 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
 class WaitcntBrackets {
 public:
   WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits, RegisterEncoding Encoding,
-                  const unsigned *WaitEventMaskForInst,
+                  HardwareLimits Limits, const unsigned *WaitEventMaskForInst,
                   InstCounterType SmemAccessCounter)
       : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        Encoding(Encoding), WaitEventMaskForInst(WaitEventMaskForInst),
+        WaitEventMaskForInst(WaitEventMaskForInst),
         SmemAccessCounter(SmemAccessCounter) {}
 
   unsigned getWaitCountMax(InstCounterType T) const {
@@ -423,7 +420,6 @@ private:
   const GCNSubtarget *ST = nullptr;
   InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
   HardwareLimits Limits = {};
-  RegisterEncoding Encoding = {};
   const unsigned *WaitEventMaskForInst;
   InstCounterType SmemAccessCounter;
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
@@ -611,9 +607,6 @@ private:
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
 
-  // ForceEmitZeroWaitcnts: force all waitcnts insts to be s_waitcnt 0
-  // because of amdgpu-waitcnt-forcezero flag
-  bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
   // In any given run of this pass, WCG will point to one of these two
@@ -755,29 +748,31 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST)) &
-                 AMDGPU::HWEncoding::REG_IDX_MASK;
-
-  if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
-    Result.first = Reg - Encoding.VGPR0;
-    if (TRI->isAGPR(*MRI, Op.getReg()))
-      Result.first += AGPR_OFFSET;
-    assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
-    assert(Result.first >= NUM_ALL_VGPRS &&
-           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
-  }
-  // TODO: Handle TTMP
-  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
-  else
-    return {-1, -1};
+  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *ST);
+  unsigned RegIdx = TRI->getHWRegIndex(MCReg);
+  assert(isUInt<8>(RegIdx));
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
-  Result.second = Result.first + ((Size + 16) / 32);
+
+  // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
+  if (TRI->isVectorRegister(*MRI, Op.getReg())) {
+    unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
+    assert(Reg < AGPR_OFFSET);
+    Result.first = Reg;
+    if (TRI->isAGPR(*MRI, Op.getReg()))
+      Result.first += AGPR_OFFSET;
+    assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
+    assert(Size % 16 == 0);
+    Result.second = Result.first + (Size / 16);
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && RegIdx < SQ_MAX_PGM_SGPRS) {
+    // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
+    // sources like SRC_PRIVATE_BASE.
+    Result.first = RegIdx + NUM_ALL_VGPRS;
+    Result.second = Result.first + divideCeil(Size, 32);
+  } else {
+    return {-1, -1};
+  }
 
   return Result;
 }
@@ -825,7 +820,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   if (T == EXP_CNT) {
     // Put score on the source vgprs. If this is a store, just use those
     // specific register(s).
-    if (TII->isDS(Inst) && (Inst.mayStore() || Inst.mayLoad())) {
+    if (TII->isDS(Inst) && Inst.mayLoadOrStore()) {
       // All GDS operations must protect their address register (same as
       // export.)
       if (const auto *AddrOp = TII->getNamedOperand(Inst, AMDGPU::OpName::addr))
@@ -1137,7 +1132,7 @@ FunctionPass *llvm::createSIInsertWaitcntsPass() {
   return new SIInsertWaitcnts();
 }
 
-static bool updateOperandIfDifferent(MachineInstr &MI, uint16_t OpName,
+static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
                                      unsigned NewEnc) {
   int OpIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName);
   assert(OpIdx >= 0);
@@ -1599,9 +1594,7 @@ static bool callWaitsOnFunctionEntry(const MachineInstr &MI) {
 
 /// \returns true if the callee is expected to wait for any outstanding waits
 /// before returning.
-static bool callWaitsOnFunctionReturn(const MachineInstr &MI) {
-  return true;
-}
+static bool callWaitsOnFunctionReturn(const MachineInstr &MI) { return true; }
 
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
@@ -1828,7 +1821,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // Verify that the wait is actually needed.
   ScoreBrackets.simplifyWaitcnt(Wait);
 
-  if (ForceEmitZeroWaitcnts)
+  // When forcing emit, we need to skip terminators because that would break the
+  // terminators of the MBB if we emit a waitcnt between terminators.
+  if (ForceEmitZeroFlag && !MI.isTerminator())
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   if (ForceEmitWaitcnt[LOAD_CNT])
@@ -1852,6 +1847,9 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     if (ScoreBrackets.hasPendingEvent(BVH_CNT))
       Wait.BvhCnt = 0;
   }
+
+  if (ForceEmitZeroLoadFlag && Wait.LoadCnt != ~0u)
+    Wait.LoadCnt = 0;
 
   return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,
                          OldWaitcntInstr);
@@ -2073,7 +2071,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     case AMDGPU::S_MEMREALTIME:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
-    case AMDGPU::S_BARRIER_LEAVE:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
@@ -2424,7 +2421,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     WCG = &WCGPreGFX12;
   }
 
-  ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
@@ -2446,18 +2442,10 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Limits.BvhcntMax = AMDGPU::getBvhcntBitMask(IV);
   Limits.KmcntMax = AMDGPU::getKmcntBitMask(IV);
 
-  unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
-  unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
+  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
-
-  RegisterEncoding Encoding = {};
-  Encoding.VGPR0 =
-      TRI->getEncodingValue(AMDGPU::VGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-  Encoding.SGPR0 =
-      TRI->getEncodingValue(AMDGPU::SGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
 
   BlockInfos.clear();
   bool Modified = false;
@@ -2492,8 +2480,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-        ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
-        SmemAccessCounter);
+        ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
@@ -2525,10 +2512,9 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       } else {
         if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(
-              ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
-              SmemAccessCounter);
+              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
         else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits, Encoding,
+          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits,
                                       WaitEventMaskForInst, SmemAccessCounter);
       }
 
@@ -2609,15 +2595,24 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
   // instructions.
-  for (MachineInstr *MI : ReleaseVGPRInsts) {
-    if (ST->requiresNopBeforeDeallocVGPRs()) {
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
-          .addImm(0);
+  // Skip deallocation if kernel is waveslot limited vs VGPR limited. A short
+  // waveslot limited kernel runs slower with the deallocation.
+  if (!ReleaseVGPRInsts.empty() &&
+      (MF.getFrameInfo().hasCalls() ||
+       ST->getOccupancyWithNumVGPRs(
+           TRI->getNumUsedPhysRegs(*MRI, AMDGPU::VGPR_32RegClass)) <
+           AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
+    for (MachineInstr *MI : ReleaseVGPRInsts) {
+      if (ST->requiresNopBeforeDeallocVGPRs()) {
+        BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                TII->get(AMDGPU::S_NOP))
+            .addImm(0);
+      }
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+              TII->get(AMDGPU::S_SENDMSG))
+          .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
+      Modified = true;
     }
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::S_SENDMSG))
-        .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
-    Modified = true;
   }
   ReleaseVGPRInsts.clear();
   PreheadersToFlush.clear();

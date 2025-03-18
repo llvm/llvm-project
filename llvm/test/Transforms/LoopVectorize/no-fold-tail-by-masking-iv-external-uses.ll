@@ -19,17 +19,11 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], -2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i8
-; CHECK-NEXT:    [[TMP3:%.*]] = add i8 1, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP1]], 255
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i8
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 2, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP8]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP1]], 255
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP6]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
@@ -45,14 +39,13 @@ define i32 @test(ptr %arr, i64 %n) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw i64 [[TMP13]], -1
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i32 0
-; CHECK-NEXT:    store <4 x i32> <i32 65, i32 65, i32 65, i32 65>, ptr [[TMP19]], align 4
+; CHECK-NEXT:    store <4 x i32> splat (i32 65), ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    [[CMO:%.*]] = sub i64 [[N_VEC]], 1
-; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = add i64 1, [[CMO]]
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOAD_VAL:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[PREHEADER]] ], [ 1, [[VECTOR_SCEVCHECK]] ]

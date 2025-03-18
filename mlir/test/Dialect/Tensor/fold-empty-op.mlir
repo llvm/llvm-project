@@ -10,7 +10,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
 // CHECK: #[[$MAP2:.+]] = affine_map<()[s0] -> (s0 * 28)>
 
 func.func @empty_reshape_expansion(%arg0 : index, %sz0: index) -> tensor<2x3x5x4x?x7xf32> {
@@ -19,11 +18,9 @@ func.func @empty_reshape_expansion(%arg0 : index, %sz0: index) -> tensor<2x3x5x4
   return %1 : tensor<2x3x5x4x?x7xf32>
 }
 // CHECK-LABEL: func @empty_reshape_expansion
-// CHECK-SAME:     %[[ARG0:.+]]: index
-// CHECK:        %[[OLD_INIT:.+]] = tensor.empty(%{{.*}}) : tensor<6x5x?xf32>
-// CHECK-NEXT:   %[[DIM:.*]] = tensor.dim %[[OLD_INIT]]
-// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[$MAP]]()[%[[DIM]]]
-// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index
+// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[ARG1]])
 // CHECK-NEXT:   return %[[INIT]]
 
 func.func @empty_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
@@ -63,79 +60,6 @@ func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tens
   %r = tensor.extract_slice %a[%idx, 0] [1, 2] [1, 1] : tensor<?x2xf32> to tensor<2xf32>
   return %r: tensor<2xf32>
 }
-
-func.func @pack_empty(%arg0: tensor<8x8x32x32xf32>) -> tensor<8x8x32x32xf32> {
-  %empty_unpacked = tensor.empty() : tensor<256x256xf32>
-  %packed = tensor.pack %empty_unpacked
-    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
-    into %arg0 : tensor<256x256xf32> -> tensor<8x8x32x32xf32>
-  return %packed : tensor<8x8x32x32xf32>
-}
-
-// CHECK-LABEL: func.func @pack_empty(
-// CHECK-SAME:   %[[T:.+]]: tensor<8x8x32x32xf32>
-// CHECK-NOT:    tensor.pack
-// CHECK:        return %[[T]] : tensor<8x8x32x32xf32>
-
-func.func @pack_empty_dynamic(%arg0: tensor<?x?x?x?xf32>, %dim0: index, %dim1: index) -> tensor<?x?x?x?xf32> {
-  %empty_unpacked = tensor.empty(%dim0, %dim1) : tensor<?x?xf32>
-  %packed = tensor.pack %empty_unpacked
-    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
-    into %arg0 : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
-  return %packed : tensor<?x?x?x?xf32>
-}
-
-// CHECK-LABEL: func.func @pack_empty_dynamic(
-// CHECK-SAME:   %[[T:.+]]: tensor<?x?x?x?xf32>,
-// CHECK-SAME:   %[[DIM0:[a-zA-Z0-9_]+]]: index,
-// CHECK-SAME:   %[[DIM1:[a-zA-Z0-9_]+]]: index
-// CHECK-NOT:    tensor.pack
-// CHECK:        return %[[T]] : tensor<?x?x?x?xf32>
-
-func.func @unpack_empty(%arg0: tensor<256x256xf32>) -> tensor<256x256xf32> {
-  %empty_packed = tensor.empty() : tensor<8x8x32x32xf32>
-  %unpacked = tensor.unpack %empty_packed
-    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
-    into %arg0 : tensor<8x8x32x32xf32> -> tensor<256x256xf32>
-  return %unpacked : tensor<256x256xf32>
-}
-
-// CHECK-LABEL: func.func @unpack_empty(
-// CHECK-SAME:   %[[T:.+]]: tensor<256x256xf32>
-// CHECK-NOT:    tensor.unpack
-// CHECK:        return %[[T]] : tensor<256x256xf32>
-
-func.func @unpack_empty_dynamic(%arg0: tensor<?x?xf32>, %dim0: index, %dim1: index, %dim2: index, %dim3: index) -> tensor<?x?xf32> {
-  %empty_packed = tensor.empty(%dim0, %dim1, %dim2, %dim3) : tensor<?x?x?x?xf32>
-  %unpacked = tensor.unpack %empty_packed
-    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
-    into %arg0 : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
-  return %unpacked : tensor<?x?xf32>
-}
-
-// CHECK-LABEL: func.func @unpack_empty_dynamic(
-// CHECK-SAME:   %[[T:.+]]: tensor<?x?xf32>,
-// CHECK-SAME:   %[[DIM0:[a-zA-Z0-9_]+]]: index,
-// CHECK-SAME:   %[[DIM1:[a-zA-Z0-9_]+]]: index,
-// CHECK-SAME:   %[[DIM2:[a-zA-Z0-9_]+]]: index,
-// CHECK-SAME:   %[[DIM3:[a-zA-Z0-9_]+]]: index
-// CHECK-NOT:    tensor.unpack
-// CHECK:        return %[[T]] : tensor<?x?xf32>
-
-func.func @pack_padded_empty(%arg0: tensor<8x8x32x32xf32>) -> tensor<8x8x32x32xf32> {
-  %pad = arith.constant 1.0 : f32
-  %empty_unpacked = tensor.empty() : tensor<256x256xf32>
-  %packed = tensor.pack %empty_unpacked
-    padding_value(%pad : f32)
-    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
-    into %arg0 : tensor<256x256xf32> -> tensor<8x8x32x32xf32>
-  return %packed : tensor<8x8x32x32xf32>
-}
-
-// CHECK-LABEL: func.func @pack_padded_empty(
-// CHECK-SAME:   %[[T:.+]]: tensor<8x8x32x32xf32>
-// CHECK:        %[[PACK:.+]] = tensor.pack
-// CHECK:        return %[[PACK]] : tensor<8x8x32x32xf32>
 
 // -----
 

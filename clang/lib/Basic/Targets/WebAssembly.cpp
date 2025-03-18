@@ -20,18 +20,25 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::WebAssembly::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsWebAssembly.def"
-};
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/BuiltinsWebAssembly.def"
+});
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
-    {"mvp"}, {"bleeding-edge"}, {"generic"}};
+    {"mvp"}, {"bleeding-edge"}, {"generic"}, {"lime1"}};
 
 StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }
 
@@ -47,6 +54,8 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("atomics", HasAtomics)
       .Case("bulk-memory", HasBulkMemory)
+      .Case("bulk-memory-opt", HasBulkMemoryOpt)
+      .Case("call-indirect-overlong", HasCallIndirectOverlong)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
       .Case("fp16", HasFP16)
@@ -59,6 +68,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("tail-call", HasTailCall)
+      .Case("wide-arithmetic", HasWideArithmetic)
       .Default(false);
 }
 
@@ -78,6 +88,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_atomics__");
   if (HasBulkMemory)
     Builder.defineMacro("__wasm_bulk_memory__");
+  if (HasBulkMemoryOpt)
+    Builder.defineMacro("__wasm_bulk_memory_opt__");
   if (HasExceptionHandling)
     Builder.defineMacro("__wasm_exception_handling__");
   if (HasExtendedConst)
@@ -102,6 +114,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_simd128__");
   if (HasTailCall)
     Builder.defineMacro("__wasm_tail_call__");
+  if (HasWideArithmetic)
+    Builder.defineMacro("__wasm_wide_arithmetic__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -151,25 +165,41 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
   auto addGenericFeatures = [&]() {
+    Features["bulk-memory"] = true;
+    Features["bulk-memory-opt"] = true;
+    Features["call-indirect-overlong"] = true;
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
+    Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
+    Features["sign-ext"] = true;
+  };
+  auto addLime1Features = [&]() {
+    // Lime1:
+    // <https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1>
+    Features["bulk-memory-opt"] = true;
+    Features["call-indirect-overlong"] = true;
+    Features["extended-const"] = true;
+    Features["multivalue"] = true;
+    Features["mutable-globals"] = true;
+    Features["nontrapping-fptoint"] = true;
     Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
-    Features["bulk-memory"] = true;
     Features["exception-handling"] = true;
     Features["extended-const"] = true;
     Features["fp16"] = true;
     Features["multimemory"] = true;
-    Features["nontrapping-fptoint"] = true;
     Features["tail-call"] = true;
+    Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
     addGenericFeatures();
+  } else if (CPU == "lime1") {
+    addLime1Features();
   } else if (CPU == "bleeding-edge") {
     addBleedingEdgeFeatures();
   }
@@ -194,6 +224,22 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-bulk-memory") {
       HasBulkMemory = false;
+      continue;
+    }
+    if (Feature == "+bulk-memory-opt") {
+      HasBulkMemoryOpt = true;
+      continue;
+    }
+    if (Feature == "-bulk-memory-opt") {
+      HasBulkMemoryOpt = false;
+      continue;
+    }
+    if (Feature == "+call-indirect-overlong") {
+      HasCallIndirectOverlong = true;
+      continue;
+    }
+    if (Feature == "-call-indirect-overlong") {
+      HasCallIndirectOverlong = false;
       continue;
     }
     if (Feature == "+exception-handling") {
@@ -293,17 +339,37 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasTailCall = false;
       continue;
     }
+    if (Feature == "+wide-arithmetic") {
+      HasWideArithmetic = true;
+      continue;
+    }
+    if (Feature == "-wide-arithmetic") {
+      HasWideArithmetic = false;
+      continue;
+    }
 
     Diags.Report(diag::err_opt_not_valid_with_opt)
         << Feature << "-target-feature";
     return false;
   }
+
+  // bulk-memory-opt is a subset of bulk-memory.
+  if (HasBulkMemory) {
+    HasBulkMemoryOpt = true;
+  }
+
+  // The reference-types feature included the change to `call_indirect`
+  // encodings to support overlong immediates.
+  if (HasReferenceTypes) {
+    HasCallIndirectOverlong = true;
+  }
+
   return true;
 }
 
-ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::WebAssembly::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+WebAssemblyTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,

@@ -133,7 +133,7 @@ void MyOp::setOtherValue(StringAttr newValue);
 
 ### Dependent Dialects
 
-MLIR has a very large ecosystem, and contains dialects that server many different purposes. It
+MLIR has a very large ecosystem, and contains dialects that serve many different purposes. It
 is quite common, given the above, that dialects may want to reuse certain components from other
 dialects. This may mean generating operations from those dialects during canonicalization, reusing
 attributes or types, etc. When a dialect has a dependency on another, i.e. when it constructs and/or

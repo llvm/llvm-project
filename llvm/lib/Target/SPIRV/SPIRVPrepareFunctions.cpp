@@ -22,6 +22,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
@@ -30,7 +31,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-#include <charconv>
 #include <regex>
 
 using namespace llvm;
@@ -228,9 +228,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
         } else {
           MDsItem.push_back(MDString::get(Ctx, Item));
         }
-      } else if (int32_t Num;
-                 std::from_chars(Item.data(), Item.data() + Item.size(), Num)
-                     .ec == std::errc{}) {
+      } else if (int32_t Num; llvm::to_integer(StringRef(Item), Num, 10)) {
         MDsItem.push_back(
             ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Num)));
       } else {
@@ -353,11 +351,11 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   // We need to lower this into a builtin and then the builtin into a SPIR-V
   // instruction.
   if (II->getIntrinsicID() == Intrinsic::assume) {
-    Function *F = Intrinsic::getDeclaration(
+    Function *F = Intrinsic::getOrInsertDeclaration(
         II->getModule(), Intrinsic::SPVIntrinsics::spv_assume);
     II->setCalledFunction(F);
   } else if (II->getIntrinsicID() == Intrinsic::expect) {
-    Function *F = Intrinsic::getDeclaration(
+    Function *F = Intrinsic::getOrInsertDeclaration(
         II->getModule(), Intrinsic::SPVIntrinsics::spv_expect,
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
@@ -372,12 +370,12 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
                                      ArrayRef<unsigned> OpNos) {
   Function *F = nullptr;
   if (OpNos.empty()) {
-    F = Intrinsic::getDeclaration(II->getModule(), NewID);
+    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID);
   } else {
     SmallVector<Type *, 4> Tys;
     for (unsigned OpNo : OpNos)
       Tys.push_back(II->getOperand(OpNo)->getType());
-    F = Intrinsic::getDeclaration(II->getModule(), NewID, Tys);
+    F = Intrinsic::getOrInsertDeclaration(II->getModule(), NewID, Tys);
   }
   II->setCalledFunction(F);
   return true;

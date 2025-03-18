@@ -22,21 +22,21 @@ include "mlir/IR/DialectBase.td"
 
 // Whether a type is a VectorType.
 // Explicitly disallow 0-D vectors for now until we have good enough coverage.
-def IsVectorTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
-                            CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
+def IsVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
+                                         CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
+def IsFixedVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::FixedVectorType>($_self)">,
+                                              CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
 
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 // TODO: Remove this when all ops support 0-D vectors.
 def IsVectorOfAnyRankTypePred : CPred<"::llvm::isa<::mlir::VectorType>($_self)">;
 
 // Whether a type is a fixed-length VectorType.
-def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
-                                  !::llvm::cast<VectorType>($_self).isScalable()}]>;
+def IsFixedVectorOfAnyRankTypePred : CPred<[{::llvm::isa<::mlir::FixedVectorType>($_self)}]>;
 
 // Whether a type is a scalable VectorType.
 def IsVectorTypeWithAnyDimScalablePred
-        : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
-                  ::llvm::cast<VectorType>($_self).isScalable()}]>;
+        : CPred<[{::llvm::isa<::mlir::ScalableVectorType>($_self)}]>;
 
 // Whether a type is a scalable VectorType, with a single trailing scalable dimension.
 // Examples:
@@ -53,7 +53,7 @@ def IsVectorTypeWithOnlyTrailingDimScalablePred : And<[
 
 // Whether a type is a VectorType and all dimensions are scalable.
 def IsVectorTypeWithAllDimsScalablePred : And<[
-  IsVectorTypePred,
+  IsVectorOfNonZeroRankTypePred,
   CPred<[{::llvm::cast<::mlir::VectorType>($_self).allDimsScalable()}]>
 ]>;
 
@@ -329,32 +329,32 @@ def F64 : F<64>;
 def F80 : F<80>;
 def F128 : F<128>;
 
-def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
-           BuildableType<"$_builder.getBF16Type()">;
-def TF32 : Type<CPred<"$_self.isTF32()">, "tf32 type">,
-           BuildableType<"$_builder.getTF32Type()">;
-def F8E4M3FN : Type<CPred<"$_self.isFloat8E4M3FN()">, "f8E4M3FN type">,
-               BuildableType<"$_builder.getFloat8E4M3FNType()">;
-def F8E5M2 : Type<CPred<"$_self.isFloat8E5M2()">, "f8E5M2 type">,
-             BuildableType<"$_builder.getFloat8E5M2Type()">;
-def F8E4M3 : Type<CPred<"$_self.isFloat8E4M3()">, "f8E4M3 type">,
-             BuildableType<"$_builder.getFloat8E4M3Type()">;
-def F8E4M3FNUZ : Type<CPred<"$_self.isFloat8E4M3FNUZ()">, "f8E4M3FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E4M3FNUZType()">;
-def F8E4M3B11FNUZ : Type<CPred<"$_self.isFloat8E4M3B11FNUZ()">, "f8E4M3B11FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E4M3B11FNUZType()">;
-def F8E5M2FNUZ : Type<CPred<"$_self.isFloat8E5M2FNUZ()">, "f8E5M2FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E5M2FNUZType()">;
-def F8E3M4 : Type<CPred<"$_self.isFloat8E3M4()">, "f8E3M4 type">,
-             BuildableType<"$_builder.getFloat8E3M4Type()">;
-def F4E2M1FN : Type<CPred<"$_self.isFloat4E2M1FN()">, "f4E2M1FN type">,
-               BuildableType<"$_builder.getFloat4E2M1FNType()">;
-def F6E2M3FN : Type<CPred<"$_self.isFloat6E2M3FN()">, "f6E2M3FN type">,
-               BuildableType<"$_builder.getFloat6E2M3FNType()">;
-def F6E3M2FN : Type<CPred<"$_self.isFloat6E3M2FN()">, "f6E3M2FN type">,
-               BuildableType<"$_builder.getFloat6E3M2FNType()">;
-def F8E8M0FNU : Type<CPred<"$_self.isFloat8E8M0FNU()">, "f8E8M0FNU type">,
-                BuildableType<"$_builder.getFloat8E8M0FNUType()">;
+def BF16 : Type<CPred<"::llvm::isa<::mlir::BFloat16Type>($_self)">, "bfloat16 type">,
+           BuildableType<"$_builder.getType<BFloat16Type>()">;
+def TF32 : Type<CPred<"::llvm::isa<::mlir::FloatTF32Type>($_self)">, "tf32 type">,
+           BuildableType<"$_builder.getType<FloatTF32Type>()">;
+def F8E4M3FN : Type<CPred<"::llvm::isa<::mlir::Float8E4M3FNType>($_self)">, "f8E4M3FN type">,
+               BuildableType<"$_builder.getType<Float8E4M3FNType>()">;
+def F8E5M2 : Type<CPred<"::llvm::isa<::mlir::Float8E5M2Type>($_self)">, "f8E5M2 type">,
+             BuildableType<"$_builder.getType<Float8E5M2Type>()">;
+def F8E4M3 : Type<CPred<"::llvm::isa<::mlir::Float8E4M3Type>($_self)">, "f8E4M3 type">,
+             BuildableType<"$_builder.getType<Float8E4M3Type>()">;
+def F8E4M3FNUZ : Type<CPred<"::llvm::isa<::mlir::Float8E4M3FNUZType>($_self)">, "f8E4M3FNUZ type">,
+                 BuildableType<"$_builder.getType<Float8E4M3FNUZType>()">;
+def F8E4M3B11FNUZ : Type<CPred<"::llvm::isa<::mlir::Float8E4M3B11FNUZType>($_self)">, "f8E4M3B11FNUZ type">,
+                 BuildableType<"$_builder.getType<Float8E4M3B11FNUZType>()">;
+def F8E5M2FNUZ : Type<CPred<"::llvm::isa<::mlir::Float8E5M2FNUZType>($_self)">, "f8E5M2FNUZ type">,
+                 BuildableType<"$_builder.getType<Float8E5M2FNUZType>()">;
+def F8E3M4 : Type<CPred<"::llvm::isa<::mlir::Float8E3M4Type>($_self)">, "f8E3M4 type">,
+             BuildableType<"$_builder.getType<Float8E3M4Type>()">;
+def F4E2M1FN : Type<CPred<"::llvm::isa<::mlir::Float4E2M1FNType>($_self)">, "f4E2M1FN type">,
+               BuildableType<"$_builder.getType<Float4E2M1FNType>()">;
+def F6E2M3FN : Type<CPred<"::llvm::isa<::mlir::Float6E2M3FNType>($_self)">, "f6E2M3FN type">,
+               BuildableType<"$_builder.getType<Float6E2M3FNType>()">;
+def F6E3M2FN : Type<CPred<"::llvm::isa<::mlir::Float6E3M2FNType>($_self)">, "f6E3M2FN type">,
+               BuildableType<"$_builder.getType<Float6E3M2FNType>()">;
+def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f8E8M0FNU type">,
+                BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
@@ -428,9 +428,13 @@ class ValueSemanticsContainerOf<list<Type> allowedTypes> :
 
 // Vector types.
 
-class VectorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsVectorTypePred, "vector",
+class VectorOfNonZeroRankOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsVectorOfNonZeroRankTypePred, "vector",
                       "::mlir::VectorType">;
+
+class FixedVectorOfNonZeroRankOf<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsFixedVectorOfNonZeroRankTypePred,
+                      "fixed-length vector", "::mlir::VectorType">;
 
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 // TODO: Remove this when all ops support 0-D vectors.
@@ -438,11 +442,11 @@ class VectorOfAnyRankOf<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorOfAnyRankTypePred, "vector",
                       "::mlir::VectorType">;
 
-class FixedVectorOf<list<Type> allowedTypes> :
-  ShapedContainerType<allowedTypes, IsFixedVectorTypePred,
+class FixedVectorOfAnyRank<list<Type> allowedTypes> :
+  ShapedContainerType<allowedTypes, IsFixedVectorOfAnyRankTypePred,
           "fixed-length vector", "::mlir::VectorType">;
 
-class ScalableVectorOf<list<Type> allowedTypes> :
+class ScalableVectorOfAnyRank<list<Type> allowedTypes> :
   ShapedContainerType<allowedTypes, IsVectorTypeWithAnyDimScalablePred,
           "scalable vector", "::mlir::VectorType">;
 
@@ -458,7 +462,7 @@ class VectorWithTrailingDimScalableOf<list<Type> allowedTypes> :
 // Whether the number of elements of a vector is from the given
 // `allowedRanks` list
 class IsVectorOfRankPred<list<int> allowedRanks> :
-  And<[IsVectorTypePred,
+  And<[IsVectorOfNonZeroRankTypePred,
        Or<!foreach(allowedlength, allowedRanks,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getRank()
                            == }]
@@ -467,7 +471,7 @@ class IsVectorOfRankPred<list<int> allowedRanks> :
 // Whether the number of elements of a fixed-length vector is from the given
 // `allowedRanks` list
 class IsFixedVectorOfRankPred<list<int> allowedRanks> :
-  And<[IsFixedVectorTypePred,
+  And<[IsFixedVectorOfAnyRankTypePred,
        Or<!foreach(allowedlength, allowedRanks,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getRank()
                            == }]
@@ -501,22 +505,22 @@ class ScalableVectorOfRank<list<int> allowedRanks> : Type<
 // is from the given `allowedTypes` list
 class VectorOfRankAndType<list<int> allowedRanks,
                           list<Type> allowedTypes> : AllOfType<
-  [VectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
-  VectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
+  [VectorOfNonZeroRankOf<allowedTypes>, VectorOfRank<allowedRanks>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Fixed-width vector where the rank is from the given `allowedRanks` list and
 // the type is from the given `allowedTypes` list
 class FixedVectorOfRankAndType<list<int> allowedRanks,
                           list<Type> allowedTypes> : AllOfType<
-  [FixedVectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
-  FixedVectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
+  [FixedVectorOfAnyRank<allowedTypes>, VectorOfRank<allowedRanks>],
+  FixedVectorOfAnyRank<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Whether the number of elements of a vector is from the given
 // `allowedLengths` list
 class IsVectorOfLengthPred<list<int> allowedLengths> :
-  And<[IsVectorTypePred,
+  And<[IsVectorOfNonZeroRankTypePred,
        Or<!foreach(allowedlength, allowedLengths,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
                            == }]
@@ -525,7 +529,7 @@ class IsVectorOfLengthPred<list<int> allowedLengths> :
 // Whether the number of elements of a fixed-length vector is from the given
 // `allowedLengths` list
 class IsFixedVectorOfLengthPred<list<int> allowedLengths> :
-  And<[IsFixedVectorTypePred,
+  And<[IsFixedVectorOfAnyRankTypePred,
        Or<!foreach(allowedlength, allowedLengths,
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
                            == }]
@@ -604,16 +608,16 @@ class ScalableVectorOfLength<list<int> allowedLengths> : Type<
 // list
 class VectorOfLengthAndType<list<int> allowedLengths,
                             list<Type> allowedTypes> : AllOfType<
-  [VectorOf<allowedTypes>, VectorOfLength<allowedLengths>],
-  VectorOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
+  [VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
                                  list<Type> allowedTypes> : AllOfType<
-  [FixedVectorOf<allowedTypes>, FixedVectorOfLength<allowedLengths>],
-  FixedVectorOf<allowedTypes>.summary #
+  [FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
+  FixedVectorOfAnyRank<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
@@ -621,8 +625,8 @@ class FixedVectorOfLengthAndType<list<int> allowedLengths,
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class ScalableVectorOfLengthAndType<list<int> allowedLengths,
                                     list<Type> allowedTypes> : AllOfType<
-  [ScalableVectorOf<allowedTypes>, ScalableVectorOfLength<allowedLengths>],
-  ScalableVectorOf<allowedTypes>.summary #
+  [ScalableVectorOfAnyRank<allowedTypes>, ScalableVectorOfLength<allowedLengths>],
+  ScalableVectorOfAnyRank<allowedTypes>.summary #
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
@@ -632,10 +636,10 @@ class ScalableVectorOfLengthAndType<list<int> allowedLengths,
 class ScalableVectorOfRankAndLengthAndType<list<int> allowedRanks,
                                            list<int> allowedLengths,
                                            list<Type> allowedTypes> : AllOfType<
-  [ScalableVectorOfRank<allowedRanks>, ScalableVectorOf<allowedTypes>,
+  [ScalableVectorOfRank<allowedRanks>, ScalableVectorOfAnyRank<allowedTypes>,
    ScalableVectorOfLength<allowedLengths>],
   ScalableVectorOfRank<allowedRanks>.summary #
-  ScalableVectorOf<allowedTypes>.summary #
+  ScalableVectorOfAnyRank<allowedTypes>.summary #
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
@@ -657,13 +661,16 @@ class VectorWithTrailingDimScalableOfSizeAndType<list<int> allowedTrailingSizes,
    ShapedTypeWithNthDimOfSize<-1, allowedTrailingSizes>.summary,
   "::mlir::VectorType">;
 
-def AnyVector : VectorOf<[AnyType]>;
-// Temporary vector type clone that allows gradual transition to 0-D vectors.
+// Unlike the following definitions, this one excludes 0-D vectors
+def AnyVectorOfNonZeroRank : VectorOfNonZeroRankOf<[AnyType]>;
+
+def AnyFixedVectorOfNonZeroRank : FixedVectorOfNonZeroRankOf<[AnyType]>;
+
 def AnyVectorOfAnyRank : VectorOfAnyRankOf<[AnyType]>;
 
-def AnyFixedVector : FixedVectorOf<[AnyType]>;
+def AnyFixedVectorOfAnyRank : FixedVectorOfAnyRank<[AnyType]>;
 
-def AnyScalableVector : ScalableVectorOf<[AnyType]>;
+def AnyScalableVectorOfAnyRank : ScalableVectorOfAnyRank<[AnyType]>;
 
 // Shaped types.
 
@@ -813,7 +820,7 @@ class StaticShapeMemRefOf<list<Type> allowedTypes> :
 def AnyStaticShapeMemRef : StaticShapeMemRefOf<[AnyType]>;
 
 // For a MemRefType, verify that it has strides.
-def HasStridesPred : CPred<[{ isStrided(::llvm::cast<::mlir::MemRefType>($_self)) }]>;
+def HasStridesPred : CPred<[{ ::llvm::cast<::mlir::MemRefType>($_self).isStrided() }]>;
 
 class StridedMemRefOf<list<Type> allowedTypes> :
     ConfinedType<MemRefOf<allowedTypes>, [HasStridesPred],
@@ -872,50 +879,41 @@ class NestedTupleOf<list<Type> allowedTypes> :
 //===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
-// Type constraint for types that are "like" some type or set of types T, that is
-// they're either a T, a vector of Ts, or a tensor of Ts.
-class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate,
-  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
-  name>;
 
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
 class TypeOrValueSemanticsContainer<Type allowedType, string name>
-    : TypeConstraint<Or<[
+    : Type<Or<[
   allowedType.predicate,
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
-  TensorOf<[allowedType]>.predicate]>,
-  name>;
-
-
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeOrContainer<I1, "bool-like">;
+def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
 
-def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
+// Type constraint for signless-integer-like types: signless integers or
+// value-semantics containers of signless integers.
+def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+    AnySignlessInteger, "signless-integer">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
-// vectors of signless integers or indices, tensors of signless integers.
-def SignlessIntegerLike : TypeOrValueSemanticsContainer<
+// or value-semantics containers of signless integers or indices.
+def SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
     AnySignlessIntegerOrIndex, "signless-integer-like">;
 
-def SignlessIntegerLikeOfAnyRank : TypeOrContainerOfAnyRank<
-    AnySignlessIntegerOrIndex,
-    "signless-integer-like">;
+// Type constraint for float-like types: floats or value-semantics containers
+// of floats.
+def FloatLike : TypeOrValueSemanticsContainer<AnyFloat, "floating-point-like">;
 
-// Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
-
-// Type constraint for signless-integer-like or float-like types.
+// Type constraint for signless-integer-or-index-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[
     SignlessIntegerLike.predicate, FloatLike.predicate]>,
     "signless-integer-like or floating-point-like">;
+
+// Type constraint for signless-integer-or-index-like or float-like types.
+def SignlessIntegerOrIndexOrFloatLike : TypeConstraint<Or<[
+    SignlessIntegerOrIndexLike.predicate, FloatLike.predicate]>,
+    "signless-integer-or-index-like or floating-point-like">;
 
 #endif // COMMON_TYPE_CONSTRAINTS_TD

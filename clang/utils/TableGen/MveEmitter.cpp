@@ -1,4 +1,4 @@
-//===- MveEmitter.cpp - Generate arm_mve.h for use with clang -*- C++ -*-=====//
+//===-- MveEmitter.cpp - Generate arm_mve.h for use with clang ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -209,9 +209,7 @@ public:
       Name = "const " + Name;
     return Name + " *";
   }
-  std::string llvmName() const override {
-    return "llvm::PointerType::getUnqual(" + Pointee->llvmName() + ")";
-  }
+  std::string llvmName() const override { return "Builder.getPtrTy()"; }
   const Type *getPointeeType() const { return Pointee; }
 
   static bool classof(const Type *T) {
@@ -471,7 +469,7 @@ private:
 
 public:
   virtual ~Result() = default;
-  using Scope = std::map<std::string, Ptr>;
+  using Scope = std::map<std::string, Ptr, std::less<>>;
   virtual void genCode(raw_ostream &OS, CodeGenParamAllocator &) const = 0;
   virtual bool hasIntegerConstantValue() const { return false; }
   virtual uint32_t integerConstantValue() const { return 0; }
@@ -1033,15 +1031,15 @@ public:
   // to expand Tablegen classes like 'Vector' which mean something different in
   // each member of a parametric family.
   const Type *getType(const Record *R, const Type *Param);
-  const Type *getType(DagInit *D, const Type *Param);
-  const Type *getType(Init *I, const Type *Param);
+  const Type *getType(const DagInit *D, const Type *Param);
+  const Type *getType(const Init *I, const Type *Param);
 
   // Functions that translate the Tablegen representation of an intrinsic's
   // code generation into a collection of Value objects (which will then be
   // reprocessed to read out the actual C++ code included by CGBuiltin.cpp).
-  Result::Ptr getCodeForDag(DagInit *D, const Result::Scope &Scope,
+  Result::Ptr getCodeForDag(const DagInit *D, const Result::Scope &Scope,
                             const Type *Param);
-  Result::Ptr getCodeForDagArg(DagInit *D, unsigned ArgNum,
+  Result::Ptr getCodeForDagArg(const DagInit *D, unsigned ArgNum,
                                const Result::Scope &Scope, const Type *Param);
   Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType, bool Promote,
                             bool Immediate);
@@ -1060,10 +1058,10 @@ public:
   void EmitBuiltinAliases(raw_ostream &OS);
 };
 
-const Type *EmitterBase::getType(Init *I, const Type *Param) {
-  if (auto Dag = dyn_cast<DagInit>(I))
+const Type *EmitterBase::getType(const Init *I, const Type *Param) {
+  if (const auto *Dag = dyn_cast<DagInit>(I))
     return getType(Dag, Param);
-  if (auto Def = dyn_cast<DefInit>(I))
+  if (const auto *Def = dyn_cast<DefInit>(I))
     return getType(Def->getDef(), Param);
 
   PrintFatalError("Could not convert this value into a type");
@@ -1088,7 +1086,7 @@ const Type *EmitterBase::getType(const Record *R, const Type *Param) {
   PrintFatalError(R->getLoc(), "Could not convert this record into a type");
 }
 
-const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
+const Type *EmitterBase::getType(const DagInit *D, const Type *Param) {
   // The meat of the getType system: types in the Tablegen are represented by a
   // dag whose operators select sub-cases of this function.
 
@@ -1156,7 +1154,8 @@ const Type *EmitterBase::getType(DagInit *D, const Type *Param) {
   PrintFatalError("Bad operator in type dag expression");
 }
 
-Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
+Result::Ptr EmitterBase::getCodeForDag(const DagInit *D,
+                                       const Result::Scope &Scope,
                                        const Type *Param) {
   const Record *Op = cast<DefInit>(D->getOperator())->getDef();
 
@@ -1199,14 +1198,14 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     Result::Ptr Arg = getCodeForDagArg(D, 0, Scope, Param);
 
     const Type *Ty = nullptr;
-    if (auto *DI = dyn_cast<DagInit>(D->getArg(0)))
+    if (const auto *DI = dyn_cast<DagInit>(D->getArg(0)))
       if (auto *PTy = dyn_cast<PointerType>(getType(DI->getOperator(), Param)))
         Ty = PTy->getPointeeType();
     if (!Ty)
       PrintFatalError("'address' pointer argument should be a pointer");
 
     unsigned Alignment;
-    if (auto *II = dyn_cast<IntInit>(D->getArg(1))) {
+    if (const auto *II = dyn_cast<IntInit>(D->getArg(1))) {
       Alignment = II->getValue();
     } else {
       PrintFatalError("'address' alignment argument should be an integer");
@@ -1267,17 +1266,17 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
   }
 }
 
-Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
+Result::Ptr EmitterBase::getCodeForDagArg(const DagInit *D, unsigned ArgNum,
                                           const Result::Scope &Scope,
                                           const Type *Param) {
-  Init *Arg = D->getArg(ArgNum);
+  const Init *Arg = D->getArg(ArgNum);
   StringRef Name = D->getArgNameStr(ArgNum);
 
   if (!Name.empty()) {
     if (!isa<UnsetInit>(Arg))
       PrintFatalError(
           "dag operator argument should not have both a value and a name");
-    auto it = Scope.find(std::string(Name));
+    auto it = Scope.find(Name);
     if (it == Scope.end())
       PrintFatalError("unrecognized variable name '" + Name + "'");
     return it->second;
@@ -1286,18 +1285,18 @@ Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
   // Sometimes the Arg is a bit. Prior to multiclass template argument
   // checking, integers would sneak through the bit declaration,
   // but now they really are bits.
-  if (auto *BI = dyn_cast<BitInit>(Arg))
+  if (const auto *BI = dyn_cast<BitInit>(Arg))
     return std::make_shared<IntLiteralResult>(getScalarType("u32"),
                                               BI->getValue());
 
-  if (auto *II = dyn_cast<IntInit>(Arg))
+  if (const auto *II = dyn_cast<IntInit>(Arg))
     return std::make_shared<IntLiteralResult>(getScalarType("u32"),
                                               II->getValue());
 
-  if (auto *DI = dyn_cast<DagInit>(Arg))
+  if (const auto *DI = dyn_cast<DagInit>(Arg))
     return getCodeForDag(DI, Scope, Param);
 
-  if (auto *DI = dyn_cast<DefInit>(Arg)) {
+  if (const auto *DI = dyn_cast<DefInit>(Arg)) {
     const Record *Rec = DI->getDef();
     if (Rec->isSubClassOf("Type")) {
       const Type *T = getType(Rec, Param);
@@ -1307,7 +1306,7 @@ Result::Ptr EmitterBase::getCodeForDagArg(DagInit *D, unsigned ArgNum,
 
   PrintError("bad DAG argument type for code generation");
   PrintNote("DAG: " + D->getAsString());
-  if (TypedInit *Typed = dyn_cast<TypedInit>(Arg))
+  if (const auto *Typed = dyn_cast<TypedInit>(Arg))
     PrintNote("argument type: " + Typed->getType()->getAsString());
   PrintFatalNote("argument number " + Twine(ArgNum) + ": " + Arg->getAsString());
 }
@@ -1379,13 +1378,13 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
   HeaderOnly = R->getValueAsBit("headerOnly");
 
   // Process the intrinsic's argument list.
-  DagInit *ArgsDag = R->getValueAsDag("args");
+  const DagInit *ArgsDag = R->getValueAsDag("args");
   Result::Scope Scope;
   for (unsigned i = 0, e = ArgsDag->getNumArgs(); i < e; ++i) {
-    Init *TypeInit = ArgsDag->getArg(i);
+    const Init *TypeInit = ArgsDag->getArg(i);
 
     bool Promote = true;
-    if (auto TypeDI = dyn_cast<DefInit>(TypeInit))
+    if (const auto *TypeDI = dyn_cast<DefInit>(TypeInit))
       if (TypeDI->getDef()->isSubClassOf("unpromoted"))
         Promote = false;
 
@@ -1397,7 +1396,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
     // If the argument is a subclass of Immediate, record the details about
     // what values it can take, for Sema checking.
     bool Immediate = false;
-    if (auto TypeDI = dyn_cast<DefInit>(TypeInit)) {
+    if (const auto *TypeDI = dyn_cast<DefInit>(TypeInit)) {
       const Record *TypeRec = TypeDI->getDef();
       if (TypeRec->isSubClassOf("Immediate")) {
         Immediate = true;
@@ -1444,7 +1443,7 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
 
   // Finally, go through the codegen dag and translate it into a Result object
   // (with an arbitrary DAG of depended-on Results hanging off it).
-  DagInit *CodeDag = R->getValueAsDag("codegen");
+  const DagInit *CodeDag = R->getValueAsDag("codegen");
   const Record *MainOp = cast<DefInit>(CodeDag->getOperator())->getDef();
   if (MainOp->isSubClassOf("CustomCodegen")) {
     // Or, if it's the special case of CustomCodegen, just accumulate
@@ -1456,9 +1455,9 @@ ACLEIntrinsic::ACLEIntrinsic(EmitterBase &ME, const Record *R,
       StringRef Name = CodeDag->getArgNameStr(i);
       if (Name.empty()) {
         PrintFatalError("Operands to CustomCodegen should have names");
-      } else if (auto *II = dyn_cast<IntInit>(CodeDag->getArg(i))) {
+      } else if (const auto *II = dyn_cast<IntInit>(CodeDag->getArg(i))) {
         CustomCodeGenArgs[std::string(Name)] = itostr(II->getValue());
-      } else if (auto *SI = dyn_cast<StringInit>(CodeDag->getArg(i))) {
+      } else if (const auto *SI = dyn_cast<StringInit>(CodeDag->getArg(i))) {
         CustomCodeGenArgs[std::string(Name)] = std::string(SI->getValue());
       } else {
         PrintFatalError("Operands to CustomCodegen should be integers");
@@ -1630,17 +1629,10 @@ void EmitterBase::EmitBuiltinCG(raw_ostream &OS) {
       for (const auto &OI : kv.second)
         key.push_back(OI.ParamValues[i]);
 
-      auto Found = ParamNumberMap.find(key);
-      if (Found != ParamNumberMap.end()) {
-        // Yes, an existing parameter variable can be reused for this.
-        ParamNumbers.push_back(Found->second);
-        continue;
-      }
-
-      // No, we need a new parameter variable.
-      int ExistingIndex = ParamNumberMap.size();
-      ParamNumberMap[key] = ExistingIndex;
-      ParamNumbers.push_back(ExistingIndex);
+      // Obtain a new parameter variable if we don't have one.
+      int ParamNum =
+          ParamNumberMap.try_emplace(key, ParamNumberMap.size()).first->second;
+      ParamNumbers.push_back(ParamNum);
     }
 
     // Now we're ready to do the pass 2 code generation, which will emit the
@@ -1948,27 +1940,53 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
 }
 
 void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "BUILTIN(__builtin_arm_mve_" << Int.fullName()
-       << ", \"\", \"n\")\n";
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("n");
+  Table.GetOrAddStringOffset("nt");
+  Table.GetOrAddStringOffset("ntu");
+  Table.GetOrAddStringOffset("vi.");
+
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    Table.GetOrAddStringOffset(Int->fullName());
+
+  std::map<std::string, ACLEIntrinsic *> ShortNameIntrinsics;
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    if (!Int->polymorphic())
+      continue;
+
+    StringRef Name = Int->shortName();
+    if (ShortNameIntrinsics.insert({Name.str(), Int.get()}).second)
+      Table.GetOrAddStringOffset(Name);
   }
 
-  std::set<std::string> ShortNamesSeen;
-
-  for (const auto &kv : ACLEIntrinsics) {
-    const ACLEIntrinsic &Int = *kv.second;
-    if (Int.polymorphic()) {
-      StringRef Name = Int.shortName();
-      if (ShortNamesSeen.find(std::string(Name)) == ShortNamesSeen.end()) {
-        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
-        if (Int.nonEvaluating())
-          OS << "u"; // indicate that this builtin doesn't evaluate its args
-        OS << "\")\n";
-        ShortNamesSeen.insert(std::string(Name));
-      }
-    }
+  OS << "#ifdef GET_MVE_BUILTIN_ENUMERATORS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    OS << "  BI__builtin_arm_mve_" << Int->fullName() << ",\n";
   }
+  for (const auto &[Name, _] : ShortNameIntrinsics) {
+    OS << "  BI__builtin_arm_mve_" << Name << ",\n";
+  }
+  OS << "#endif // GET_MVE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_MVE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_MVE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_MVE_BUILTIN_INFOS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics) {
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Int->fullName()) << " /* " << Int->fullName()
+       << " */, " << Table.GetStringOffset("") << ", "
+       << Table.GetStringOffset("n") << " /* n */}},\n";
+  }
+  for (const auto &[Name, Int] : ShortNameIntrinsics) {
+    StringRef Attrs = Int->nonEvaluating() ? "ntu" : "nt";
+    OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+       << Table.GetStringOffset(Name) << " /* " << Name << " */, "
+       << Table.GetStringOffset("vi.") << " /* vi. */, "
+       << Table.GetStringOffset(Attrs) << " /* " << Attrs << " */}},\n";
+  }
+  OS << "#endif // GET_MVE_BUILTIN_INFOS\n\n";
 }
 
 void MveEmitter::EmitBuiltinSema(raw_ostream &OS) {
@@ -2156,13 +2174,31 @@ void CdeEmitter::EmitHeader(raw_ostream &OS) {
 }
 
 void CdeEmitter::EmitBuiltinDef(raw_ostream &OS) {
-  for (const auto &kv : ACLEIntrinsics) {
-    if (kv.second->headerOnly())
-      continue;
-    const ACLEIntrinsic &Int = *kv.second;
-    OS << "BUILTIN(__builtin_arm_cde_" << Int.fullName()
-       << ", \"\", \"ncU\")\n";
-  }
+  llvm::StringToOffsetTable Table;
+  Table.GetOrAddStringOffset("ncU");
+
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      Table.GetOrAddStringOffset(Int->fullName());
+
+  OS << "#ifdef GET_CDE_BUILTIN_ENUMERATORS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      OS << "  BI__builtin_arm_cde_" << Int->fullName() << ",\n";
+  OS << "#endif // GET_CDE_BUILTIN_ENUMERATORS\n\n";
+
+  OS << "#ifdef GET_CDE_BUILTIN_STR_TABLE\n";
+  Table.EmitStringTableDef(OS, "BuiltinStrings");
+  OS << "#endif // GET_CDE_BUILTIN_STR_TABLE\n\n";
+
+  OS << "#ifdef GET_CDE_BUILTIN_INFOS\n";
+  for (const auto &[_, Int] : ACLEIntrinsics)
+    if (!Int->headerOnly())
+      OS << "    Builtin::Info{Builtin::Info::StrOffsets{"
+         << Table.GetStringOffset(Int->fullName()) << " /* " << Int->fullName()
+         << " */, " << Table.GetStringOffset("") << ", "
+         << Table.GetStringOffset("ncU") << " /* ncU */}},\n";
+  OS << "#endif // GET_CDE_BUILTIN_INFOS\n\n";
 }
 
 void CdeEmitter::EmitBuiltinSema(raw_ostream &OS) {

@@ -10,7 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-def SDT_CMPFP0  : SDTypeProfile<0, 1, [SDTCisFP<0>]>;
+def SDT_CMPFP : SDTypeProfile<1, 2, [
+  SDTCisVT<0, FlagsVT>, // out flags
+  SDTCisFP<1>,          // lhs
+  SDTCisSameAs<2, 1>    // rhs
+]>;
+
+def SDT_CMPFP0 : SDTypeProfile<1, 1, [
+  SDTCisVT<0, FlagsVT>, // out flags
+  SDTCisFP<1>           // operand
+]>;
+
 def SDT_VMOVDRR : SDTypeProfile<1, 2, [SDTCisVT<0, f64>, SDTCisVT<1, i32>,
                                        SDTCisSameAs<1, 2>]>;
 def SDT_VMOVRRD : SDTypeProfile<2, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>,
@@ -18,11 +28,18 @@ def SDT_VMOVRRD : SDTypeProfile<2, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0, 1>,
 
 def SDT_VMOVSR : SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, i32>]>;
 
-def arm_fmstat : SDNode<"ARMISD::FMSTAT",  SDTNone, [SDNPInGlue, SDNPOutGlue]>;
-def arm_cmpfp  : SDNode<"ARMISD::CMPFP",   SDT_ARMCmp, [SDNPOutGlue]>;
-def arm_cmpfp0 : SDNode<"ARMISD::CMPFPw0", SDT_CMPFP0, [SDNPOutGlue]>;
-def arm_cmpfpe : SDNode<"ARMISD::CMPFPE",  SDT_ARMCmp, [SDNPOutGlue]>;
-def arm_cmpfpe0: SDNode<"ARMISD::CMPFPEw0",SDT_CMPFP0, [SDNPOutGlue]>;
+def arm_cmpfp   : SDNode<"ARMISD::CMPFP",    SDT_CMPFP>;
+def arm_cmpfp0  : SDNode<"ARMISD::CMPFPw0",  SDT_CMPFP0>;
+def arm_cmpfpe  : SDNode<"ARMISD::CMPFPE",   SDT_CMPFP>;
+def arm_cmpfpe0 : SDNode<"ARMISD::CMPFPEw0", SDT_CMPFP0>;
+
+def arm_fmstat : SDNode<"ARMISD::FMSTAT",
+  SDTypeProfile<1, 1, [
+    SDTCisVT<0, FlagsVT>, // out flags
+    SDTCisVT<1, FlagsVT>  // in flags
+  ]>
+>;
+
 def arm_fmdrr  : SDNode<"ARMISD::VMOVDRR", SDT_VMOVDRR>;
 def arm_fmrrd  : SDNode<"ARMISD::VMOVRRD", SDT_VMOVRRD>;
 def arm_vmovsr  : SDNode<"ARMISD::VMOVSR", SDT_VMOVSR>;
@@ -46,18 +63,16 @@ def vfp_f16imm : Operand<f16>,
                  PatLeaf<(f16 fpimm), [{
       return ARM_AM::getFP16Imm(N->getValueAPF()) != -1;
     }], SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP16Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP16Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>> {
   let PrintMethod = "printFPImmOperand";
   let ParserMatchClass = FPImmOperand;
 }
 
 def vfp_f32f16imm_xform : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP32FP16Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP32FP16Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def vfp_f32f16imm : PatLeaf<(f32 fpimm), [{
@@ -65,9 +80,8 @@ def vfp_f32f16imm : PatLeaf<(f32 fpimm), [{
     }], vfp_f32f16imm_xform>;
 
 def vfp_f32imm_xform : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP32Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP32Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def gi_vfp_f32imm : GICustomOperandRenderer<"renderVFPF32Imm">,
@@ -88,9 +102,8 @@ def vfp_f32imm : Operand<f32>,
 }
 
 def vfp_f64imm_xform : SDNodeXForm<fpimm, [{
-      APFloat InVal = N->getValueAPF();
-      uint32_t enc = ARM_AM::getFP64Imm(InVal);
-      return CurDAG->getTargetConstant(enc, SDLoc(N), MVT::i32);
+      uint32_t Enc = ARM_AM::getFP64Imm(N->getValueAPF());
+      return CurDAG->getTargetConstant(Enc, SDLoc(N), MVT::i32);
     }]>;
 
 def gi_vfp_f64imm : GICustomOperandRenderer<"renderVFPF64Imm">,
@@ -549,19 +562,21 @@ multiclass vsel_inst<string op, bits<2> opc, int CC> {
     def H : AHbInp<0b11100, opc, 0,
                    (outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm),
                    NoItinerary, !strconcat("vsel", op, ".f16\t$Sd, $Sn, $Sm"),
-                   [(set (f16 HPR:$Sd), (ARMcmov (f16 HPR:$Sm), (f16 HPR:$Sn), CC))]>,
+                   [(set (f16 HPR:$Sd),
+                         (ARMcmov (f16 HPR:$Sm), (f16 HPR:$Sn), CC, CPSR))]>,
                    Requires<[HasFullFP16]>;
 
     def S : ASbInp<0b11100, opc, 0,
                    (outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm),
                    NoItinerary, !strconcat("vsel", op, ".f32\t$Sd, $Sn, $Sm"),
-                   [(set SPR:$Sd, (ARMcmov SPR:$Sm, SPR:$Sn, CC))]>,
+                   [(set SPR:$Sd, (ARMcmov SPR:$Sm, SPR:$Sn, CC, CPSR))]>,
                    Requires<[HasFPARMv8]>;
 
     def D : ADbInp<0b11100, opc, 0,
                    (outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm),
                    NoItinerary, !strconcat("vsel", op, ".f64\t$Dd, $Dn, $Dm"),
-                   [(set DPR:$Dd, (ARMcmov (f64 DPR:$Dm), (f64 DPR:$Dn), CC))]>,
+                   [(set DPR:$Dd,
+                         (ARMcmov (f64 DPR:$Dm), (f64 DPR:$Dn), CC, CPSR))]>,
                    Requires<[HasFPARMv8, HasDPVFP]>;
   }
 }
@@ -610,12 +625,12 @@ let Defs = [FPSCR_NZCV] in {
 def VCMPED : ADuI<0b11101, 0b11, 0b0100, 0b11, 0,
                   (outs), (ins DPR:$Dd, DPR:$Dm),
                   IIC_fpCMP64, "vcmpe", ".f64\t$Dd, $Dm", "",
-                  [(arm_cmpfpe DPR:$Dd, (f64 DPR:$Dm))]>;
+                  [(set FPSCR_NZCV, (arm_cmpfpe DPR:$Dd, (f64 DPR:$Dm)))]>;
 
 def VCMPES : ASuI<0b11101, 0b11, 0b0100, 0b11, 0,
                   (outs), (ins SPR:$Sd, SPR:$Sm),
                   IIC_fpCMP32, "vcmpe", ".f32\t$Sd, $Sm", "",
-                  [(arm_cmpfpe SPR:$Sd, SPR:$Sm)]> {
+                  [(set FPSCR_NZCV, (arm_cmpfpe SPR:$Sd, SPR:$Sm))]> {
   // Some single precision VFP instructions may be executed on both NEON and
   // VFP pipelines on A8.
   let D = VFPNeonA8Domain;
@@ -624,17 +639,17 @@ def VCMPES : ASuI<0b11101, 0b11, 0b0100, 0b11, 0,
 def VCMPEH : AHuI<0b11101, 0b11, 0b0100, 0b11, 0,
                   (outs), (ins HPR:$Sd, HPR:$Sm),
                   IIC_fpCMP16, "vcmpe", ".f16\t$Sd, $Sm",
-                  [(arm_cmpfpe (f16 HPR:$Sd), (f16 HPR:$Sm))]>;
+                  [(set FPSCR_NZCV, (arm_cmpfpe (f16 HPR:$Sd), (f16 HPR:$Sm)))]>;
 
 def VCMPD  : ADuI<0b11101, 0b11, 0b0100, 0b01, 0,
                   (outs), (ins DPR:$Dd, DPR:$Dm),
                   IIC_fpCMP64, "vcmp", ".f64\t$Dd, $Dm", "",
-                  [(arm_cmpfp DPR:$Dd, (f64 DPR:$Dm))]>;
+                  [(set FPSCR_NZCV, (arm_cmpfp DPR:$Dd, (f64 DPR:$Dm)))]>;
 
 def VCMPS  : ASuI<0b11101, 0b11, 0b0100, 0b01, 0,
                   (outs), (ins SPR:$Sd, SPR:$Sm),
                   IIC_fpCMP32, "vcmp", ".f32\t$Sd, $Sm", "",
-                  [(arm_cmpfp SPR:$Sd, SPR:$Sm)]> {
+                  [(set FPSCR_NZCV, (arm_cmpfp SPR:$Sd, SPR:$Sm))]> {
   // Some single precision VFP instructions may be executed on both NEON and
   // VFP pipelines on A8.
   let D = VFPNeonA8Domain;
@@ -643,7 +658,7 @@ def VCMPS  : ASuI<0b11101, 0b11, 0b0100, 0b01, 0,
 def VCMPH  : AHuI<0b11101, 0b11, 0b0100, 0b01, 0,
                   (outs), (ins HPR:$Sd, HPR:$Sm),
                   IIC_fpCMP16, "vcmp", ".f16\t$Sd, $Sm",
-                  [(arm_cmpfp (f16 HPR:$Sd), (f16 HPR:$Sm))]>;
+                  [(set FPSCR_NZCV, (arm_cmpfp (f16 HPR:$Sd), (f16 HPR:$Sm)))]>;
 } // Defs = [FPSCR_NZCV]
 
 //===----------------------------------------------------------------------===//
@@ -673,7 +688,7 @@ let Defs = [FPSCR_NZCV] in {
 def VCMPEZD : ADuI<0b11101, 0b11, 0b0101, 0b11, 0,
                    (outs), (ins DPR:$Dd),
                    IIC_fpCMP64, "vcmpe", ".f64\t$Dd, #0", "",
-                   [(arm_cmpfpe0 (f64 DPR:$Dd))]> {
+                   [(set FPSCR_NZCV, (arm_cmpfpe0 (f64 DPR:$Dd)))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 }
@@ -681,7 +696,7 @@ def VCMPEZD : ADuI<0b11101, 0b11, 0b0101, 0b11, 0,
 def VCMPEZS : ASuI<0b11101, 0b11, 0b0101, 0b11, 0,
                    (outs), (ins SPR:$Sd),
                    IIC_fpCMP32, "vcmpe", ".f32\t$Sd, #0", "",
-                   [(arm_cmpfpe0 SPR:$Sd)]> {
+                   [(set FPSCR_NZCV, (arm_cmpfpe0 SPR:$Sd))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 
@@ -693,7 +708,7 @@ def VCMPEZS : ASuI<0b11101, 0b11, 0b0101, 0b11, 0,
 def VCMPEZH : AHuI<0b11101, 0b11, 0b0101, 0b11, 0,
                    (outs), (ins HPR:$Sd),
                    IIC_fpCMP16, "vcmpe", ".f16\t$Sd, #0",
-                   [(arm_cmpfpe0 (f16 HPR:$Sd))]> {
+                   [(set FPSCR_NZCV, (arm_cmpfpe0 (f16 HPR:$Sd)))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 }
@@ -701,7 +716,7 @@ def VCMPEZH : AHuI<0b11101, 0b11, 0b0101, 0b11, 0,
 def VCMPZD  : ADuI<0b11101, 0b11, 0b0101, 0b01, 0,
                    (outs), (ins DPR:$Dd),
                    IIC_fpCMP64, "vcmp", ".f64\t$Dd, #0", "",
-                   [(arm_cmpfp0 (f64 DPR:$Dd))]> {
+                   [(set FPSCR_NZCV, (arm_cmpfp0 (f64 DPR:$Dd)))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 }
@@ -709,7 +724,7 @@ def VCMPZD  : ADuI<0b11101, 0b11, 0b0101, 0b01, 0,
 def VCMPZS  : ASuI<0b11101, 0b11, 0b0101, 0b01, 0,
                    (outs), (ins SPR:$Sd),
                    IIC_fpCMP32, "vcmp", ".f32\t$Sd, #0", "",
-                   [(arm_cmpfp0 SPR:$Sd)]> {
+                   [(set FPSCR_NZCV, (arm_cmpfp0 SPR:$Sd))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 
@@ -721,7 +736,7 @@ def VCMPZS  : ASuI<0b11101, 0b11, 0b0101, 0b01, 0,
 def VCMPZH  : AHuI<0b11101, 0b11, 0b0101, 0b01, 0,
                    (outs), (ins HPR:$Sd),
                    IIC_fpCMP16, "vcmp", ".f16\t$Sd, #0",
-                   [(arm_cmpfp0 (f16 HPR:$Sd))]> {
+                   [(set FPSCR_NZCV, (arm_cmpfp0 (f16 HPR:$Sd)))]> {
   let Inst{3-0} = 0b0000;
   let Inst{5}   = 0;
 }
@@ -2448,24 +2463,34 @@ def : Pat<(fneg (f16 (fma (fneg (f16 HPR:$Sn)), (f16 HPR:$Sm), (f16 HPR:$Sdin)))
 //
 
 let hasSideEffects = 0 in {
-def VMOVDcc  : PseudoInst<(outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm, cmovpred:$p),
-                    IIC_fpUNA64,
-                    [(set (f64 DPR:$Dd),
-                          (ARMcmov DPR:$Dn, DPR:$Dm, cmovpred:$p))]>,
+def VMOVDcc  : PseudoInst<(outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm, pred:$p),
+                          IIC_fpUNA64, []>,
                RegConstraint<"$Dn = $Dd">, Requires<[HasFPRegs64]>;
 
-def VMOVScc  : PseudoInst<(outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm, cmovpred:$p),
-                    IIC_fpUNA32,
-                    [(set (f32 SPR:$Sd),
-                          (ARMcmov SPR:$Sn, SPR:$Sm, cmovpred:$p))]>,
+def VMOVScc  : PseudoInst<(outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm, pred:$p),
+                          IIC_fpUNA32, []>,
                RegConstraint<"$Sn = $Sd">, Requires<[HasFPRegs]>;
 
-def VMOVHcc  : PseudoInst<(outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm, cmovpred:$p),
-                    IIC_fpUNA16,
-                    [(set (f16 HPR:$Sd),
-                          (ARMcmov (f16 HPR:$Sn), (f16 HPR:$Sm), cmovpred:$p))]>,
+def VMOVHcc  : PseudoInst<(outs HPR:$Sd), (ins HPR:$Sn, HPR:$Sm, pred:$p),
+                          IIC_fpUNA16, []>,
                RegConstraint<"$Sd = $Sn">, Requires<[HasFPRegs]>;
 } // hasSideEffects
+
+// The following patterns have to be defined out-of-line because the number
+// of instruction operands does not match the number of SDNode operands
+// (`pred` counts as one operand).
+
+def : Pat<(ARMcmov f64:$Dn, f64:$Dm, imm:$cc, CPSR),
+          (VMOVDcc $Dn, $Dm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs64]>;
+
+def : Pat<(ARMcmov f32:$Sn, f32:$Sm, imm:$cc, CPSR),
+          (VMOVScc $Sn, $Sm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs]>;
+
+def : Pat<(ARMcmov f16:$Sn, f16:$Sm, imm:$cc, CPSR),
+          (VMOVHcc $Sn, $Sm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs]>; // FIXME: Shouldn't this be HasFPRegs16?
 
 //===----------------------------------------------------------------------===//
 // Move from VFP System Register to ARM core register.
@@ -2496,7 +2521,8 @@ let DecoderMethod = "DecodeForVMRSandVMSR" in {
  let Defs = [CPSR], Uses = [FPSCR_NZCV], Predicates = [HasFPRegs],
      Rt = 0b1111 /* apsr_nzcv */ in
  def FMSTAT : MovFromVFP<0b0001 /* fpscr */, (outs), (ins),
-                         "vmrs", "\tAPSR_nzcv, fpscr", [(arm_fmstat)]>;
+                         "vmrs", "\tAPSR_nzcv, fpscr",
+                         [(set CPSR, (arm_fmstat FPSCR_NZCV))]>;
 
  // Application level FPSCR -> GPR
  let hasSideEffects = 1, Uses = [FPSCR], Predicates = [HasFPRegs] in
@@ -2898,9 +2924,8 @@ multiclass vfp_vstrldr_sysreg<bit opc, bits<4> SysReg, string sysreg,
  }
 }
 
-let Defs = [FPSCR] in {
+let Uses = [FPSCR] in {
   defm VSTR_FPSCR          : vfp_vstrldr_sysreg<0b0,0b0001, "fpscr">;
-  defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc">;
 
   let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
     defm VSTR_FPCXTNS      : vfp_vstrldr_sysreg<0b0,0b1110, "fpcxtns">;
@@ -2922,12 +2947,18 @@ let Predicates = [HasV8_1MMainline, HasMVEInt] in {
                                                 (outs VCCR:$P0), (ins)>;
 }
 
-let Uses = [FPSCR] in {
+let Defs = [FPSCR] in {
   defm VLDR_FPSCR          : vfp_vstrldr_sysreg<0b1,0b0001, "fpscr">;
-  defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc">;
 
   let Predicates = [HasV8_1MMainline, Has8MSecExt] in {
     defm VLDR_FPCXTNS      : vfp_vstrldr_sysreg<0b1,0b1110, "fpcxtns">;
     defm VLDR_FPCXTS       : vfp_vstrldr_sysreg<0b1,0b1111, "fpcxts">;
   }
+}
+
+defm VSTR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b0,0b0010, "fpscr_nzcvqc",
+                                              (outs), (ins cl_FPSCR_NZCV:$fpscr)>;
+let canFoldAsLoad = 1, isReMaterializable = 1 in {
+defm VLDR_FPSCR_NZCVQC   : vfp_vstrldr_sysreg<0b1,0b0010, "fpscr_nzcvqc",
+                                              (outs cl_FPSCR_NZCV:$fpscr), (ins)>;
 }

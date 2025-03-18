@@ -15,7 +15,7 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
 
 namespace cpp = LIBC_NAMESPACE::cpp;
 
@@ -48,5 +48,5 @@ TEST(LlvmLibcReadlinkatTest, ReadlinkInNonExistentPath) {
   char buf[LEN];
   ASSERT_THAT(
       LIBC_NAMESPACE::readlinkat(AT_FDCWD, "non-existent-link", buf, LEN),
-      Fails(ENOENT));
+      Fails<ssize_t>(ENOENT));
 }

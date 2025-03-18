@@ -180,6 +180,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
       return OMPC_NUMTASKS_unknown;
     return Type;
   }
+  case OMPC_allocate:
+    return llvm::StringSwitch<OpenMPAllocateClauseModifier>(Str)
+#define OPENMP_ALLOCATE_MODIFIER(Name) .Case(#Name, OMPC_ALLOCATE_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_ALLOCATE_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -188,8 +193,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_permutation:
   case OMPC_allocator:
-  case OMPC_allocate:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_firstprivate:
@@ -230,6 +235,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_self_maps:
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
@@ -504,6 +510,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'num_tasks' clause modifier");
+  case OMPC_allocate:
+    switch (Type) {
+    case OMPC_ALLOCATE_unknown:
+      return "unknown";
+#define OPENMP_ALLOCATE_MODIFIER(Name)                                         \
+  case OMPC_ALLOCATE_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'allocate' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -512,8 +528,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_permutation:
   case OMPC_allocator:
-  case OMPC_allocate:
   case OMPC_collapse:
   case OMPC_private:
   case OMPC_firstprivate:
@@ -554,6 +570,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_self_maps:
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
@@ -685,7 +702,7 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
-         DKind == OMPD_interchange;
+         DKind == OMPD_interchange || DKind == OMPD_stripe;
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
@@ -750,6 +767,12 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
   return false;
 }
 
+bool clang::isOpenMPOrderConcurrentNestableDirective(
+    OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_atomic || DKind == OMPD_loop || DKind == OMPD_simd ||
+         DKind == OMPD_parallel || isOpenMPLoopTransformationDirective(DKind);
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
@@ -806,6 +829,7 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_single:
     case OMPD_target_data:
     case OMPD_taskgroup:
+    case OMPD_stripe:
       // These directives (when standalone) use OMPD_unknown as the region,
       // but when they're constituents of a compound directive, and other
       // leafs from that directive have specific regions, then these directives

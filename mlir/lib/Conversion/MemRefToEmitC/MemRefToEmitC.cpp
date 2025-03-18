@@ -167,7 +167,9 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
   typeConverter.addConversion(
       [&](MemRefType memRefType) -> std::optional<Type> {
         if (!memRefType.hasStaticShape() ||
-            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0) {
+            !memRefType.getLayout().isIdentity() || memRefType.getRank() == 0 ||
+            llvm::any_of(memRefType.getShape(),
+                         [](int64_t dim) { return dim == 0; })) {
           return {};
         }
         Type convertedElementType =

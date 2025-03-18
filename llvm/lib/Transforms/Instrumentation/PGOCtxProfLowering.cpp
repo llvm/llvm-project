@@ -12,6 +12,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -53,6 +54,7 @@ class CtxInstrumentationLowerer final {
   ModuleAnalysisManager &MAM;
   Type *ContextNodeTy = nullptr;
   Type *ContextRootTy = nullptr;
+  Type *FunctionDataTy = nullptr;
 
   DenseMap<const Function *, Constant *> ContextRootMap;
   Function *StartCtx = nullptr;
@@ -118,8 +120,16 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                           PointerTy,          /*FirstNode*/
                                           PointerTy,          /*FirstMemBlock*/
                                           PointerTy,          /*CurrentMem*/
+                                          I64Ty,              /*TotalEntries*/
                                           SanitizerMutexType, /*Taken*/
                                       });
+  FunctionDataTy =
+      StructType::get(M.getContext(), {
+                                          PointerTy,          /*Next*/
+                                          PointerTy,          /*FlatCtx*/
+                                          SanitizerMutexType, /*Mutex*/
+                                      });
+
   // The Context header.
   ContextNodeTy = StructType::get(M.getContext(), {
                                                       I64Ty,     /*Guid*/
@@ -154,29 +164,29 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   StartCtx = cast<Function>(
       M.getOrInsertFunction(
            CompilerRtAPINames::StartCtx,
-           FunctionType::get(ContextNodeTy->getPointerTo(),
-                             {ContextRootTy->getPointerTo(), /*ContextRoot*/
+           FunctionType::get(PointerTy,
+                             {PointerTy, /*ContextRoot*/
                               I64Ty, /*Guid*/ I32Ty,
                               /*NumCounters*/ I32Ty /*NumCallsites*/},
                              false))
           .getCallee());
   GetCtx = cast<Function>(
       M.getOrInsertFunction(CompilerRtAPINames::GetCtx,
-                            FunctionType::get(ContextNodeTy->getPointerTo(),
-                                              {PointerTy, /*Callee*/
+                            FunctionType::get(PointerTy,
+                                              {PointerTy, /*FunctionData*/
+                                               PointerTy, /*Callee*/
                                                I64Ty,     /*Guid*/
                                                I32Ty,     /*NumCounters*/
                                                I32Ty},    /*NumCallsites*/
                                               false))
           .getCallee());
   ReleaseCtx = cast<Function>(
-      M.getOrInsertFunction(
-           CompilerRtAPINames::ReleaseCtx,
-           FunctionType::get(Type::getVoidTy(M.getContext()),
-                             {
-                                 ContextRootTy->getPointerTo(), /*ContextRoot*/
-                             },
-                             false))
+      M.getOrInsertFunction(CompilerRtAPINames::ReleaseCtx,
+                            FunctionType::get(Type::getVoidTy(M.getContext()),
+                                              {
+                                                  PointerTy, /*ContextRoot*/
+                                              },
+                                              false))
           .getCallee());
 
   // Declare the TLSes we will need to use.
@@ -225,7 +235,6 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
-
       Guid = Builder.getInt64(
           AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
       // The type of the context of this function is now knowable since we have
@@ -249,9 +258,14 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        Context =
-            Builder.CreateCall(GetCtx, {&F, Guid, Builder.getInt32(NumCounters),
-                                        Builder.getInt32(NumCallsites)});
+        // Make up a compact name, these names end up taking up a lot of space
+        // in the binary.
+        auto *FData = new GlobalVariable(
+            M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
+            Constant::getNullValue(FunctionDataTy));
+        Context = Builder.CreateCall(GetCtx, {FData, &F, Guid,
+                                              Builder.getInt32(NumCounters),
+                                              Builder.getInt32(NumCallsites)});
         ORE.emit([&] {
           return OptimizationRemark(DEBUG_TYPE, "RegularFunction", &F);
         });
@@ -264,7 +278,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         auto *Index = Builder.CreateAnd(CtxAsInt, Builder.getInt64(1));
         // The GEPs corresponding to that index, in the respective TLS.
         ExpectedCalleeTLSAddr = Builder.CreateGEP(
-            Builder.getInt8Ty()->getPointerTo(),
+            PointerType::getUnqual(F.getContext()),
             Builder.CreateThreadLocalAddress(ExpectedCalleeTLS), {Index});
         CallsiteInfoTLSAddr = Builder.CreateGEP(
             Builder.getInt32Ty(),
@@ -277,7 +291,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // with counters) stays the same.
       RealContext = Builder.CreateIntToPtr(
           Builder.CreateAnd(CtxAsInt, Builder.getInt64(-2)),
-          ThisContextType->getPointerTo());
+          PointerType::getUnqual(F.getContext()));
       I.eraseFromParent();
       break;
     }
@@ -351,4 +365,26 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         "instructions above which to release the context: " +
         F.getName());
   return true;
+}
+
+PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  bool Changed = false;
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (F.hasFnAttribute(Attribute::NoInline))
+      continue;
+    if (!F.isWeakForLinker())
+      continue;
+
+    if (F.hasFnAttribute(Attribute::AlwaysInline))
+      F.removeFnAttr(Attribute::AlwaysInline);
+
+    F.addFnAttr(Attribute::NoInline);
+    Changed = true;
+  }
+  if (Changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }

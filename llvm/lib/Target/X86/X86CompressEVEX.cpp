@@ -37,7 +37,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86InstComments.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
@@ -84,7 +83,7 @@ public:
 char CompressEVEXPass::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
-  auto isHiRegIdx = [](unsigned Reg) {
+  auto isHiRegIdx = [](MCRegister Reg) {
     // Check for XMM register with indexes between 16 - 31.
     if (Reg >= X86::XMM16 && Reg <= X86::XMM31)
       return true;
@@ -103,7 +102,7 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
     if (!MO.isReg())
       continue;
 
-    Register Reg = MO.getReg();
+    MCRegister Reg = MO.getReg().asMCReg();
     assert(!X86II::isZMMReg(Reg) &&
            "ZMM instructions should not be in the EVEX->VEX tables");
     if (isHiRegIdx(Reg))
@@ -155,14 +154,14 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   case X86::VRNDSCALEPDZ256rmi:
   case X86::VRNDSCALEPSZ256rri:
   case X86::VRNDSCALEPSZ256rmi:
-  case X86::VRNDSCALESDZr:
-  case X86::VRNDSCALESDZm:
-  case X86::VRNDSCALESSZr:
-  case X86::VRNDSCALESSZm:
-  case X86::VRNDSCALESDZr_Int:
-  case X86::VRNDSCALESDZm_Int:
-  case X86::VRNDSCALESSZr_Int:
-  case X86::VRNDSCALESSZm_Int:
+  case X86::VRNDSCALESDZrri:
+  case X86::VRNDSCALESDZrmi:
+  case X86::VRNDSCALESSZrri:
+  case X86::VRNDSCALESSZrmi:
+  case X86::VRNDSCALESDZrri_Int:
+  case X86::VRNDSCALESDZrmi_Int:
+  case X86::VRNDSCALESSZrri_Int:
+  case X86::VRNDSCALESSZrmi_Int:
     const MachineOperand &Imm = MI.getOperand(MI.getNumExplicitOperands() - 1);
     int64_t ImmVal = Imm.getImm();
     // Ensure that only bits 3:0 of the immediate are used.

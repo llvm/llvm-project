@@ -235,11 +235,6 @@ void populateVectorExtractStridedSliceToExtractInsertChainPatterns(
     std::function<bool(ExtractStridedSliceOp)> controlFn = nullptr,
     PatternBenefit benefit = 1);
 
-/// Pattern to rewrite simple cases of N-D extract_strided_slice, where the
-/// slice is contiguous, into extract and shape_cast.
-void populateVectorContiguousExtractStridedSliceToExtractPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit = 1);
-
 /// Populate `patterns` with a pattern to break down 1-D vector.bitcast ops
 /// based on the destination vector shape. Bitcasts from a lower bitwidth
 /// element type to a higher bitwidth one are extracted from the lower bitwidth
@@ -369,10 +364,12 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
                                                PatternBenefit benefit = 1);
 
 /// Appends patterns for emulating vector operations over narrow types with ops
-/// over wider types.
+/// over wider types. The `disableAtomicRMW` indicates whether to use a normal
+/// read-modify-write sequence instead of using `memref.generic_atomic_rmw` to
+/// perform subbyte storing.
 void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false);
 
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
 /// vector operations comprising `shuffle` and `bitwise` ops.

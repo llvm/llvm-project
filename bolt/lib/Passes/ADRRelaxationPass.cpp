@@ -56,13 +56,14 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
           continue;
       }
 
-      // Don't relax adr if it points to the same function and it is not split
-      // and BF initial size is < 1MB.
+      // Don't relax ADR if it points to the same function and is in the main
+      // fragment and BF initial size is < 1MB.
       const unsigned OneMB = 0x100000;
       if (BF.getSize() < OneMB) {
         BinaryFunction *TargetBF = BC.getFunctionForSymbol(Symbol);
-        if (TargetBF == &BF && !BF.isSplit())
+        if (TargetBF == &BF && !BB.isSplit())
           continue;
+
         // No relaxation needed if ADR references a basic block in the same
         // fragment.
         if (BinaryBasicBlock *TargetBB = BF.getBasicBlockForLabel(Symbol))
@@ -70,14 +71,10 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
             continue;
       }
 
-      MCPhysReg Reg;
-      BC.MIB->getADRReg(Inst, Reg);
-      int64_t Addend = BC.MIB->getTargetAddend(Inst);
-      InstructionListType Addr;
-
+      InstructionListType AdrpAdd;
       {
         auto L = BC.scopeLock();
-        Addr = BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
+        AdrpAdd = BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
@@ -98,7 +95,7 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
         PassFailed = true;
         return;
       }
-      It = BB.replaceInstruction(It, Addr);
+      It = BB.replaceInstruction(It, AdrpAdd);
     }
   }
 }

@@ -161,7 +161,8 @@ endmacro()
 #                         LINK_LIBS <linked libraries> (only for shared library)
 #                         OBJECT_LIBS <object libraries to use as sources>
 #                         PARENT_TARGET <convenience parent target>
-#                         ADDITIONAL_HEADERS <header files>)
+#                         ADDITIONAL_HEADERS <header files>
+#                         EXTENSIONS <boolean>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
     message(FATAL_ERROR
@@ -171,7 +172,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -388,7 +389,8 @@ function(add_compiler_rt_runtime name type)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
         set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
       endif()
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+      find_program(CODESIGN codesign)
+      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -403,7 +405,7 @@ function(add_compiler_rt_runtime name type)
         # argument and looking for `invalid argument "linker-signed"` in its output.
         # FIXME: Remove this once all supported toolchains support `-o linker-signed`.
         execute_process(
-          COMMAND sh -c "codesign -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
+          COMMAND sh -c "${CODESIGN} -f -s - -o linker-signed this-does-not-exist 2>&1 | grep -q linker-signed"
           RESULT_VARIABLE CODESIGN_SUPPORTS_LINKER_SIGNED
         )
 
@@ -414,7 +416,7 @@ function(add_compiler_rt_runtime name type)
 
         add_custom_command(TARGET ${libname}
           POST_BUILD
-          COMMAND codesign --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
+          COMMAND ${CODESIGN} --sign - ${EXTRA_CODESIGN_ARGUMENTS} $<TARGET_FILE:${libname}>
           WORKING_DIRECTORY ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
           COMMAND_EXPAND_LISTS
         )
@@ -434,6 +436,10 @@ function(add_compiler_rt_runtime name type)
 
     if(type STREQUAL "SHARED")
       rt_externalize_debuginfo(${libname})
+    endif()
+
+    if(DEFINED LIB_EXTENSIONS)
+      set_target_properties(${libname} PROPERTIES C_EXTENSIONS ${LIB_EXTENSIONS})
     endif()
   endforeach()
   if(LIB_PARENT_TARGET)
@@ -675,17 +681,18 @@ macro(add_custom_libcxx name prefix)
 
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
+    PREFIX ${prefix}
     SOURCE_DIR ${LLVM_MAIN_SRC_DIR}/../runtimes
-    BINARY_DIR ${prefix}
+    BINARY_DIR ${prefix}/build
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
                ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
+               -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+               -DCMAKE_INSTALL_MESSAGE=LAZY
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
-               -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
                -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
                -DLIBCXXABI_ENABLE_SHARED=OFF
@@ -697,8 +704,9 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXX_INCLUDE_BENCHMARKS=OFF
                -DLIBCXX_INCLUDE_TESTS=OFF
                -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
+               -DLLVM_INCLUDE_TESTS=OFF
+               -DLLVM_INCLUDE_DOCS=OFF
                ${LIBCXX_CMAKE_ARGS}
-    INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
     USES_TERMINAL_CONFIGURE 1
@@ -706,8 +714,23 @@ macro(add_custom_libcxx name prefix)
     USES_TERMINAL_INSTALL 1
     LIST_SEPARATOR |
     EXCLUDE_FROM_ALL TRUE
-    BUILD_BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
     )
+
+  # Once we depend on CMake 3.26, we can use the INSTALL_BYPRODUCTS argument
+  # instead of having to fall back to ExternalProject_Add_Step()
+  # Note: We can't use the normal name "install" here since that interferes
+  # with the default ExternalProject_Add() logic and causes errors.
+  ExternalProject_Add_Step(${name} install-cmake326-workaround
+    # Ensure that DESTDIR=... set in the out environment does not affect this
+    # target (we always need to install to the build directory).
+    COMMAND env DESTDIR= ${CMAKE_COMMAND} --build ${prefix}/build --target install
+    COMMENT "Installing ${name}..."
+    BYPRODUCTS "${prefix}/lib/libc++.a" "${prefix}/lib/libc++abi.a"
+    DEPENDEES build
+    EXCLUDE_FROM_MAIN 1
+    USES_TERMINAL 1
+  )
+  ExternalProject_Add_StepTargets(${name} install-cmake326-workaround)
 
   if (CMAKE_GENERATOR MATCHES "Make")
     set(run_clean "$(MAKE)" "-C" "${prefix}" "clean")
@@ -768,6 +791,7 @@ function(configure_compiler_rt_lit_site_cfg input output)
 
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_EXEC_OUTPUT_DIR ${COMPILER_RT_EXEC_OUTPUT_DIR})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})

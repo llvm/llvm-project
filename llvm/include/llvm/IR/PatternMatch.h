@@ -688,7 +688,7 @@ inline api_pred_ty<is_lowbit_mask_or_zero> m_LowBitMaskOrZero(const APInt *&V) {
 }
 
 struct icmp_pred_with_threshold {
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   const APInt *Thr;
   bool isValue(const APInt &C) { return ICmpInst::compare(C, *Thr, Pred); }
 };
@@ -790,6 +790,16 @@ struct is_non_zero_fp {
 /// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_non_zero_fp> m_NonZeroFP() {
   return cstfp_pred_ty<is_non_zero_fp>();
+}
+
+struct is_non_zero_not_denormal_fp {
+  bool isValue(const APFloat &C) { return !C.isDenormal() && C.isNonZero(); }
+};
+
+/// Match a floating-point non-zero that is not a denormal.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
+  return cstfp_pred_ty<is_non_zero_not_denormal_fp>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1420,6 +1430,34 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
+template <typename LHS, typename RHS>
+struct XorLike_match {
+  LHS L;
+  RHS R;
+
+  XorLike_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      if (Op->getOpcode() == Instruction::Sub && Op->hasNoUnsignedWrap() &&
+          PatternMatch::match(Op->getOperand(0), m_LowBitMask()))
+		  ; // Pass
+      else if (Op->getOpcode() != Instruction::Xor)
+        return false;
+      return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||
+             (L.match(Op->getOperand(1)) && R.match(Op->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+/// Match either `(xor L, R)`, `(xor R, L)` or `(sub nuw R, L)` iff `R.isMask()`
+/// Only commutative matcher as the `sub` will need to swap the L and R.
+template <typename LHS, typename RHS>
+inline auto m_c_XorLike(const LHS &L, const RHS &R) {
+  return XorLike_match<LHS, RHS>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //
@@ -1547,16 +1585,16 @@ template <typename T> inline Exact_match<T> m_Exact(const T &SubPattern) {
 // Matchers for CmpInst classes
 //
 
-template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy,
+template <typename LHS_t, typename RHS_t, typename Class,
           bool Commutable = false>
 struct CmpClass_match {
-  PredicateTy *Predicate;
+  CmpPredicate *Predicate;
   LHS_t L;
   RHS_t R;
 
   // The evaluation order is always stable, regardless of Commutability.
   // The LHS is always matched first.
-  CmpClass_match(PredicateTy &Pred, const LHS_t &LHS, const RHS_t &RHS)
+  CmpClass_match(CmpPredicate &Pred, const LHS_t &LHS, const RHS_t &RHS)
       : Predicate(&Pred), L(LHS), R(RHS) {}
   CmpClass_match(const LHS_t &LHS, const RHS_t &RHS)
       : Predicate(nullptr), L(LHS), R(RHS) {}
@@ -1565,12 +1603,13 @@ struct CmpClass_match {
     if (auto *I = dyn_cast<Class>(V)) {
       if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
         if (Predicate)
-          *Predicate = I->getPredicate();
+          *Predicate = CmpPredicate::get(I);
         return true;
-      } else if (Commutable && L.match(I->getOperand(1)) &&
-                 R.match(I->getOperand(0))) {
+      }
+      if (Commutable && L.match(I->getOperand(1)) &&
+          R.match(I->getOperand(0))) {
         if (Predicate)
-          *Predicate = I->getSwappedPredicate();
+          *Predicate = CmpPredicate::getSwapped(I);
         return true;
       }
     }
@@ -1579,60 +1618,58 @@ struct CmpClass_match {
 };
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>
-m_Cmp(CmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(Pred, L, R);
+inline CmpClass_match<LHS, RHS, CmpInst> m_Cmp(CmpPredicate &Pred, const LHS &L,
+                                               const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst>(Pred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
-m_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(Pred, L, R);
+inline CmpClass_match<LHS, RHS, ICmpInst> m_ICmp(CmpPredicate &Pred,
+                                                 const LHS &L, const RHS &R) {
+  return CmpClass_match<LHS, RHS, ICmpInst>(Pred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>
-m_FCmp(FCmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(Pred, L, R);
+inline CmpClass_match<LHS, RHS, FCmpInst> m_FCmp(CmpPredicate &Pred,
+                                                 const LHS &L, const RHS &R) {
+  return CmpClass_match<LHS, RHS, FCmpInst>(Pred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>
-m_Cmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(L, R);
+inline CmpClass_match<LHS, RHS, CmpInst> m_Cmp(const LHS &L, const RHS &R) {
+  return CmpClass_match<LHS, RHS, CmpInst>(L, R);
 }
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
-m_ICmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(L, R);
+inline CmpClass_match<LHS, RHS, ICmpInst> m_ICmp(const LHS &L, const RHS &R) {
+  return CmpClass_match<LHS, RHS, ICmpInst>(L, R);
 }
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>
-m_FCmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(L, R);
+inline CmpClass_match<LHS, RHS, FCmpInst> m_FCmp(const LHS &L, const RHS &R) {
+  return CmpClass_match<LHS, RHS, FCmpInst>(L, R);
 }
 
 // Same as CmpClass, but instead of saving Pred as out output variable, match a
 // specific input pred for equality.
-template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy,
+template <typename LHS_t, typename RHS_t, typename Class,
           bool Commutable = false>
 struct SpecificCmpClass_match {
-  const PredicateTy Predicate;
+  const CmpPredicate Predicate;
   LHS_t L;
   RHS_t R;
 
-  SpecificCmpClass_match(PredicateTy Pred, const LHS_t &LHS, const RHS_t &RHS)
+  SpecificCmpClass_match(CmpPredicate Pred, const LHS_t &LHS, const RHS_t &RHS)
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
     if (auto *I = dyn_cast<Class>(V)) {
-      if (I->getPredicate() == Predicate && L.match(I->getOperand(0)) &&
-          R.match(I->getOperand(1)))
+      if (CmpPredicate::getMatching(CmpPredicate::get(I), Predicate) &&
+          L.match(I->getOperand(0)) && R.match(I->getOperand(1)))
         return true;
       if constexpr (Commutable) {
-        if (I->getPredicate() == Class::getSwappedPredicate(Predicate) &&
+        if (CmpPredicate::getMatching(CmpPredicate::get(I),
+                                      CmpPredicate::getSwapped(Predicate)) &&
             L.match(I->getOperand(1)) && R.match(I->getOperand(0)))
           return true;
       }
@@ -1643,31 +1680,27 @@ struct SpecificCmpClass_match {
 };
 
 template <typename LHS, typename RHS>
-inline SpecificCmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>
-m_SpecificCmp(CmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
-  return SpecificCmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(
-      MatchPred, L, R);
+inline SpecificCmpClass_match<LHS, RHS, CmpInst>
+m_SpecificCmp(CmpPredicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, CmpInst>(MatchPred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
-m_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
-  return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(
-      MatchPred, L, R);
+inline SpecificCmpClass_match<LHS, RHS, ICmpInst>
+m_SpecificICmp(CmpPredicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, ICmpInst>(MatchPred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
-m_c_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
-  return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(
-      MatchPred, L, R);
+inline SpecificCmpClass_match<LHS, RHS, ICmpInst, true>
+m_c_SpecificICmp(CmpPredicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, ICmpInst, true>(MatchPred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline SpecificCmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>
-m_SpecificFCmp(FCmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
-  return SpecificCmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(
-      MatchPred, L, R);
+inline SpecificCmpClass_match<LHS, RHS, FCmpInst>
+m_SpecificFCmp(CmpPredicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, FCmpInst>(MatchPred, L, R);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1706,7 +1739,8 @@ template <typename T0, typename T1, unsigned Opcode> struct TwoOps_match {
 };
 
 /// Matches instructions with Opcode and three operands.
-template <typename T0, typename T1, typename T2, unsigned Opcode>
+template <typename T0, typename T1, typename T2, unsigned Opcode,
+          bool CommutableOp2Op3 = false>
 struct ThreeOps_match {
   T0 Op1;
   T1 Op2;
@@ -1718,8 +1752,12 @@ struct ThreeOps_match {
   template <typename OpTy> bool match(OpTy *V) {
     if (V->getValueID() == Value::InstructionVal + Opcode) {
       auto *I = cast<Instruction>(V);
-      return Op1.match(I->getOperand(0)) && Op2.match(I->getOperand(1)) &&
-             Op3.match(I->getOperand(2));
+      if (!Op1.match(I->getOperand(0)))
+        return false;
+      if (Op2.match(I->getOperand(1)) && Op3.match(I->getOperand(2)))
+        return true;
+      return CommutableOp2Op3 && Op2.match(I->getOperand(2)) &&
+             Op3.match(I->getOperand(1));
     }
     return false;
   }
@@ -1769,6 +1807,14 @@ inline ThreeOps_match<Cond, constantint_match<L>, constantint_match<R>,
                       Instruction::Select>
 m_SelectCst(const Cond &C) {
   return m_Select(C, m_ConstantInt<L>(), m_ConstantInt<R>());
+}
+
+/// Match Select(C, LHS, RHS) or Select(C, RHS, LHS)
+template <typename LHS, typename RHS>
+inline ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select, true>
+m_c_Select(const LHS &L, const RHS &R) {
+  return ThreeOps_match<decltype(m_Value()), LHS, RHS, Instruction::Select,
+                        true>(m_Value(), L, R);
 }
 
 /// Matches FreezeInst.
@@ -1826,9 +1872,9 @@ struct m_ZeroMask {
 };
 
 struct m_SpecificMask {
-  ArrayRef<int> &MaskRef;
-  m_SpecificMask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
-  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+  ArrayRef<int> Val;
+  m_SpecificMask(ArrayRef<int> Val) : Val(Val) {}
+  bool match(ArrayRef<int> Mask) { return Val == Mask; }
 };
 
 struct m_SplatOrPoisonMask {
@@ -2387,6 +2433,32 @@ m_UnordFMin(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
+/// Match an 'ordered' or 'unordered' floating point maximum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+}
+
+/// Match an 'ordered' or 'unordered' floating point minimum function.
+/// Floating point has one special value 'NaN'. Therefore, there is no total
+/// order. However, if we can ignore the 'NaN' value (for example, because of a
+/// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
+/// semantics.
+template <typename LHS, typename RHS>
+inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
+                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
+                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
+}
+
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
 /// NOTE: we first match the 'Not' (by matching '-1'),
 /// and only then match the inner matcher!
@@ -2419,7 +2491,7 @@ struct UAddWithOverflow_match {
 
   template <typename OpTy> bool match(OpTy *V) {
     Value *ICmpLHS, *ICmpRHS;
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!m_ICmp(Pred, m_Value(ICmpLHS), m_Value(ICmpRHS)).match(V))
       return false;
 
@@ -2689,16 +2761,15 @@ inline AnyBinaryOp_match<LHS, RHS, true> m_c_BinOp(const LHS &L, const RHS &R) {
 /// Matches an ICmp with a predicate over LHS and RHS in either order.
 /// Swaps the predicate if operands are commuted.
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
-m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(Pred, L,
-                                                                       R);
+inline CmpClass_match<LHS, RHS, ICmpInst, true>
+m_c_ICmp(CmpPredicate &Pred, const LHS &L, const RHS &R) {
+  return CmpClass_match<LHS, RHS, ICmpInst, true>(Pred, L, R);
 }
 
 template <typename LHS, typename RHS>
-inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
-m_c_ICmp(const LHS &L, const RHS &R) {
-  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(L, R);
+inline CmpClass_match<LHS, RHS, ICmpInst, true> m_c_ICmp(const LHS &L,
+                                                         const RHS &R) {
+  return CmpClass_match<LHS, RHS, ICmpInst, true>(L, R);
 }
 
 /// Matches a specific opcode with LHS and RHS in either order.
@@ -2827,7 +2898,7 @@ template <typename Opnd_t> struct Signum_match {
       return false;
 
     unsigned ShiftWidth = TypeSize - 1;
-    Value *OpL = nullptr, *OpR = nullptr;
+    Value *Op;
 
     // This is the representation of signum we match:
     //
@@ -2839,11 +2910,11 @@ template <typename Opnd_t> struct Signum_match {
     //
     // for i1 values.
 
-    auto LHS = m_AShr(m_Value(OpL), m_SpecificInt(ShiftWidth));
-    auto RHS = m_LShr(m_Neg(m_Value(OpR)), m_SpecificInt(ShiftWidth));
-    auto Signum = m_Or(LHS, RHS);
+    auto LHS = m_AShr(m_Value(Op), m_SpecificInt(ShiftWidth));
+    auto RHS = m_LShr(m_Neg(m_Deferred(Op)), m_SpecificInt(ShiftWidth));
+    auto Signum = m_c_Or(LHS, RHS);
 
-    return Signum.match(V) && OpL == OpR && Val.match(OpL);
+    return Signum.match(V) && Val.match(Op);
   }
 };
 

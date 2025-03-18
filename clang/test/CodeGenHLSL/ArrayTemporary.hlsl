@@ -1,3 +1,4 @@
+
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 void fn(float x[2]) { }
@@ -27,7 +28,7 @@ void fn2(Obj O[4]) { }
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[Arr]], i32 32, i1 false)
 // CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 4 [[Tmp]])
 void call2() {
-  Obj Arr[4] = {};
+  Obj Arr[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
   fn2(Arr);
 }
 
@@ -68,11 +69,11 @@ void call4(float Arr[2][2]) {
 // CHECK: [[Tmp2:%.*]] = alloca [4 x float]
 // CHECK: [[Tmp3:%.*]] = alloca [3 x i32]
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp1]], ptr align 4 [[FA2]], i32 8, i1 false)
-// CHECK: call void @"??$template_fn@$$BY01M@@YAXY01M@Z"(ptr noundef byval([2 x float]) align 4 [[Tmp1]])
+// CHECK: call void @_Z11template_fnIA2_fEvT_(ptr noundef byval([2 x float]) align 4 [[Tmp1]])
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp2]], ptr align 4 [[FA4]], i32 16, i1 false)
-// CHECK: call void @"??$template_fn@$$BY03M@@YAXY03M@Z"(ptr noundef byval([4 x float]) align 4 [[Tmp2]])
+// CHECK: call void @_Z11template_fnIA4_fEvT_(ptr noundef byval([4 x float]) align 4 [[Tmp2]])
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp3]], ptr align 4 [[IA3]], i32 12, i1 false)
-// CHECK: call void @"??$template_fn@$$BY02H@@YAXY02H@Z"(ptr noundef byval([3 x i32]) align 4 [[Tmp3]])
+// CHECK: call void @_Z11template_fnIA3_iEvT_(ptr noundef byval([3 x i32]) align 4 [[Tmp3]])
 
 template<typename T>
 void template_fn(T Val) {}
@@ -90,11 +91,11 @@ void template_call(float FA2[2], float FA4[4], int IA3[3]) {
 
 // CHECK: [[Addr:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Tmp:%.*]] = load float, ptr [[Addr]]
-// CHECK: call void @"??$template_fn@M@@YAXM@Z"(float noundef [[Tmp]])
+// CHECK: call void @_Z11template_fnIfEvT_(float noundef nofpclass(nan inf) [[Tmp]])
 
 // CHECK: [[Idx0:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Val0:%.*]] = load float, ptr [[Idx0]]
-// CHECK: [[Sum:%.*]] = fadd float [[Val0]], 5.000000e+00
+// CHECK: [[Sum:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[Val0]], 5.000000e+00
 // CHECK: [[Idx1:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 1
 // CHECK: store float [[Sum]], ptr [[Idx1]]
 

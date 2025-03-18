@@ -10,7 +10,6 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Config/config.h"
-#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -136,12 +135,10 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
       // Otherwise check if we previously had exactly one relocation at this
       // offset. If so, we now have a second one and move it from the TargetMap
       // into the Multiple set.
-      auto It = BlockEdges.TargetMap.find(E.getOffset());
-      if (It != BlockEdges.TargetMap.end()) {
+      auto [It, Inserted] = BlockEdges.TargetMap.try_emplace(E.getOffset(), E);
+      if (!Inserted) {
         BlockEdges.TargetMap.erase(It);
         BlockEdges.Multiple.insert(E.getOffset());
-      } else {
-        BlockEdges.TargetMap[E.getOffset()] = EdgeTarget(E);
       }
     }
 
@@ -364,14 +361,14 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
       // Add a keep-alive edge from the FDE target to the FDE to ensure that the
       // FDE is kept alive if its target is.
       LLVM_DEBUG({
-        dbgs() << "      Adding keep-alive edge from target at "
+        dbgs() << "        Adding keep-alive edge from target at "
                << (*PCBegin)->getBlock().getAddress() << " to FDE at "
                << RecordAddress << "\n";
       });
       (*PCBegin)->getBlock().addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
     } else {
       LLVM_DEBUG({
-        dbgs() << "      WARNING: Not adding keep-alive edge to FDE at "
+        dbgs() << "        WARNING: Not adding keep-alive edge to FDE at "
                << RecordAddress << ", which points to "
                << ((*PCBegin)->isExternal() ? "external" : "absolute")
                << " symbol \"" << (*PCBegin)->getName()
@@ -398,7 +395,7 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
                          .takeError())
         return Err;
   } else {
-    LLVM_DEBUG(dbgs() << "      Record does not have LSDA field.\n");
+    LLVM_DEBUG(dbgs() << "        Record does not have LSDA field.\n");
   }
 
   return Error::success();
@@ -642,20 +639,6 @@ Error EHFrameNullTerminator::operator()(LinkGraph &G) {
   return Error::success();
 }
 
-EHFrameRegistrar::~EHFrameRegistrar() = default;
-
-Error InProcessEHFrameRegistrar::registerEHFrames(
-    orc::ExecutorAddrRange EHFrameSection) {
-  return orc::registerEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
-                                     EHFrameSection.size());
-}
-
-Error InProcessEHFrameRegistrar::deregisterEHFrames(
-    orc::ExecutorAddrRange EHFrameSection) {
-  return orc::deregisterEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
-                                       EHFrameSection.size());
-}
-
 EHFrameCFIBlockInspector EHFrameCFIBlockInspector::FromEdgeScan(Block &B) {
   if (B.edges_empty())
     return EHFrameCFIBlockInspector(nullptr);
@@ -681,36 +664,24 @@ EHFrameCFIBlockInspector::EHFrameCFIBlockInspector(Edge &CIEEdge,
                                                    Edge *LSDAEdge)
     : CIEEdge(&CIEEdge), PCBeginEdge(&PCBeginEdge), LSDAEdge(LSDAEdge) {}
 
-LinkGraphPassFunction
-createEHFrameRecorderPass(const Triple &TT,
-                          StoreFrameRangeFunction StoreRangeAddress) {
+Section *getEHFrameSection(LinkGraph &G) {
   const char *EHFrameSectionName = nullptr;
-  if (TT.getObjectFormat() == Triple::MachO)
+  switch (G.getTargetTriple().getObjectFormat()) {
+  case Triple::MachO:
     EHFrameSectionName = "__TEXT,__eh_frame";
-  else
+    break;
+  case Triple::ELF:
     EHFrameSectionName = ".eh_frame";
+    break;
+  default:
+    return nullptr;
+  }
 
-  auto RecordEHFrame =
-      [EHFrameSectionName,
-       StoreFrameRange = std::move(StoreRangeAddress)](LinkGraph &G) -> Error {
-    // Search for a non-empty eh-frame and record the address of the first
-    // symbol in it.
-    orc::ExecutorAddr Addr;
-    size_t Size = 0;
-    if (auto *S = G.findSectionByName(EHFrameSectionName)) {
-      auto R = SectionRange(*S);
-      Addr = R.getStart();
-      Size = R.getSize();
-    }
-    if (!Addr && Size != 0)
-      return make_error<JITLinkError>(
-          StringRef(EHFrameSectionName) +
-          " section can not have zero address with non-zero size");
-    StoreFrameRange(Addr, Size);
-    return Error::success();
-  };
+  if (auto *S = G.findSectionByName(EHFrameSectionName))
+    if (!S->empty())
+      return S;
 
-  return RecordEHFrame;
+  return nullptr;
 }
 
 } // end namespace jitlink

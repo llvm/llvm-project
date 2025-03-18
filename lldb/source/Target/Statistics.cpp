@@ -201,6 +201,24 @@ TargetStats::ToJSON(Target &target,
   return target_metrics_json;
 }
 
+void TargetStats::Reset(Target &target) {
+  m_launch_or_attach_time.reset();
+  m_first_private_stop_time.reset();
+  m_first_public_stop_time.reset();
+  // Report both the normal breakpoint list and the internal breakpoint list.
+  for (int i = 0; i < 2; ++i) {
+    BreakpointList &breakpoints = target.GetBreakpointList(i == 1);
+    std::unique_lock<std::recursive_mutex> lock;
+    breakpoints.GetListMutex(lock);
+    size_t num_breakpoints = breakpoints.GetSize();
+    for (size_t i = 0; i < num_breakpoints; i++) {
+      Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
+      bp->ResetStatistics();
+    }
+  }
+  target.GetSummaryStatisticsCache().Reset();
+}
+
 void TargetStats::SetLaunchOrAttachTime() {
   m_launch_or_attach_time = StatsClock::now();
   m_first_private_stop_time = std::nullopt;
@@ -236,6 +254,28 @@ void TargetStats::IncreaseSourceRealpathCompatibleCount(uint32_t count) {
 
 bool DebuggerStats::g_collecting_stats = false;
 
+void DebuggerStats::ResetStatistics(Debugger &debugger, Target *target) {
+  std::lock_guard<std::recursive_mutex> guard(
+      Module::GetAllocationModuleCollectionMutex());
+  const uint64_t num_modules = target != nullptr
+                                   ? target->GetImages().GetSize()
+                                   : Module::GetNumberAllocatedModules();
+  for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
+    Module *module = target != nullptr
+                         ? target->GetImages().GetModuleAtIndex(image_idx).get()
+                         : Module::GetAllocatedModuleAtIndex(image_idx);
+    if (module == nullptr)
+      continue;
+    module->ResetStatistics();
+  }
+  if (target)
+    target->ResetStatistics();
+  else {
+    for (const auto &target : debugger.GetTargetList().Targets())
+      target->ResetStatistics();
+  }
+}
+
 llvm::json::Value DebuggerStats::ReportStatistics(
     Debugger &debugger, Target *target,
     const lldb_private::StatisticsOptions &options) {
@@ -261,18 +301,22 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
-  const uint64_t num_modules = Module::GetNumberAllocatedModules();
+  const uint64_t num_modules = target != nullptr
+                                   ? target->GetImages().GetSize()
+                                   : Module::GetNumberAllocatedModules();
   uint32_t num_debug_info_enabled_modules = 0;
   uint32_t num_modules_has_debug_info = 0;
   uint32_t num_modules_with_variable_errors = 0;
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-    Module *module = Module::GetAllocatedModuleAtIndex(image_idx);
+    Module *module = target != nullptr
+                         ? target->GetImages().GetModuleAtIndex(image_idx).get()
+                         : Module::GetAllocatedModuleAtIndex(image_idx);
     ModuleStats module_stat;
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
-    Symtab *symtab = module->GetSymtab();
+    Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
@@ -281,7 +325,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (module_stat.symtab_saved_to_cache)
         ++symtabs_saved;
     }
-    SymbolFile *sym_file = module->GetSymbolFile();
+    SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
       if (!summary_only) {
         if (sym_file->GetObjectFile() != module->GetObjectFile())
@@ -439,4 +483,9 @@ json::Value SummaryStatisticsCache::ToJSON() {
     json_summary_stats.emplace_back(summary_stat.second->ToJSON());
 
   return json_summary_stats;
+}
+
+void SummaryStatisticsCache::Reset() {
+  for (const auto &summary_stat : m_summary_stats_map)
+    summary_stat.second->Reset();
 }

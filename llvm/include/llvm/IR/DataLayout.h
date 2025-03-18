@@ -78,7 +78,11 @@ public:
     Align ABIAlign;
     Align PrefAlign;
     uint32_t IndexBitWidth;
-
+    /// Pointers in this address space don't have a well-defined bitwise
+    /// representation (e.g. may be relocated by a copying garbage collector).
+    /// Additionally, they may also be non-integral (i.e. containing additional
+    /// metadata such as bounds information/permissions).
+    bool IsNonIntegral;
     bool operator==(const PointerSpec &Other) const;
   };
 
@@ -133,10 +137,6 @@ private:
   // The StructType -> StructLayout map.
   mutable void *LayoutMap = nullptr;
 
-  /// Pointers in these address spaces are non-integral, and don't have a
-  /// well-defined bitwise representation.
-  SmallVector<unsigned, 8> NonIntegralAddressSpaces;
-
   /// Sets or updates the specification for the given primitive type.
   void setPrimitiveSpec(char Specifier, uint32_t BitWidth, Align ABIAlign,
                         Align PrefAlign);
@@ -147,7 +147,8 @@ private:
 
   /// Sets or updates the specification for pointer in the given address space.
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
-                      Align PrefAlign, uint32_t IndexBitWidth);
+                      Align PrefAlign, uint32_t IndexBitWidth,
+                      bool IsNonIntegral);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
@@ -165,7 +166,8 @@ private:
   Error parsePointerSpec(StringRef Spec);
 
   /// Attempts to parse a single specification.
-  Error parseSpecification(StringRef Spec);
+  Error parseSpecification(StringRef Spec,
+                           SmallVectorImpl<unsigned> &NonIntegralAddressSpaces);
 
   /// Attempts to parse a data layout string.
   Error parseLayoutString(StringRef LayoutString);
@@ -328,22 +330,23 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSize(unsigned AS = 0) const;
 
-  /// Returns the maximum index size over all address spaces.
-  unsigned getMaxIndexSize() const;
-
   // Index size in bytes used for address calculation,
   /// rounded up to a whole number of bytes.
   unsigned getIndexSize(unsigned AS) const;
 
   /// Return the address spaces containing non-integral pointers.  Pointers in
   /// this address space don't have a well-defined bitwise representation.
-  ArrayRef<unsigned> getNonIntegralAddressSpaces() const {
-    return NonIntegralAddressSpaces;
+  SmallVector<unsigned, 8> getNonIntegralAddressSpaces() const {
+    SmallVector<unsigned, 8> AddrSpaces;
+    for (const PointerSpec &PS : PointerSpecs) {
+      if (PS.IsNonIntegral)
+        AddrSpaces.push_back(PS.AddrSpace);
+    }
+    return AddrSpaces;
   }
 
   bool isNonIntegralAddressSpace(unsigned AddrSpace) const {
-    ArrayRef<unsigned> NonIntegralSpaces = getNonIntegralAddressSpaces();
-    return is_contained(NonIntegralSpaces, AddrSpace);
+    return getPointerSpec(AddrSpace).IsNonIntegral;
   }
 
   bool isNonIntegralPointerType(PointerType *PT) const {
@@ -360,11 +363,6 @@ public:
   /// the backends/clients are updated.
   unsigned getPointerSizeInBits(unsigned AS = 0) const {
     return getPointerSpec(AS).BitWidth;
-  }
-
-  /// Returns the maximum index size over all address spaces.
-  unsigned getMaxIndexSizeInBits() const {
-    return getMaxIndexSize() * 8;
   }
 
   /// Size in bits of index used for address calculation in getelementptr.

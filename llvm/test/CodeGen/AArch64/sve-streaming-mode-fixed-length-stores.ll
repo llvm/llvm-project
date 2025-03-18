@@ -93,8 +93,7 @@ define void @store_v2f16(ptr %a) {
 ; CHECK-LABEL: store_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: store_v2f16:

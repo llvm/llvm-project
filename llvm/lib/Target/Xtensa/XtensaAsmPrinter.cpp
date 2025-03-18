@@ -69,6 +69,9 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
     const BlockAddress *BA =
         cast<XtensaConstantPoolConstant>(ACPV)->getBlockAddress();
     MCSym = GetBlockAddressSymbol(BA);
+  } else if (ACPV->isMachineBasicBlock()) {
+    const MachineBasicBlock *MBB = cast<XtensaConstantPoolMBB>(ACPV)->getMBB();
+    MCSym = MBB->getSymbol();
   } else if (ACPV->isJumpTable()) {
     unsigned Idx = cast<XtensaConstantPoolJumpTable>(ACPV)->getIndex();
     MCSym = this->GetJTISymbol(Idx, false);
@@ -253,8 +256,7 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
     report_fatal_error("<unknown operand type>");
   }
 
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *ME = MCSymbolRefExpr::create(Symbol, OutContext);
   ME = XtensaMCExpr::create(ME, Kind, OutContext);
 
   if (Offset) {

@@ -115,8 +115,9 @@ class CompressInstEmitter {
     CompressPat(const CodeGenInstruction &S, const CodeGenInstruction &D,
                 std::vector<const Record *> RF, IndexedMap<OpData> &SourceMap,
                 IndexedMap<OpData> &DestMap, bool IsCompressOnly)
-        : Source(S), Dest(D), PatReqFeatures(RF), SourceOperandMap(SourceMap),
-          DestOperandMap(DestMap), IsCompressOnly(IsCompressOnly) {}
+        : Source(S), Dest(D), PatReqFeatures(std::move(RF)),
+          SourceOperandMap(SourceMap), DestOperandMap(DestMap),
+          IsCompressOnly(IsCompressOnly) {}
   };
   enum EmitterType { Compress, Uncompress, CheckCompress };
   const RecordKeeper &Records;
@@ -248,7 +249,8 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                             "' in the corresponding instruction operand!");
 
       OperandMap[I].Kind = OpData::Operand;
-    } else if (IntInit *II = dyn_cast<IntInit>(Dag->getArg(I - TiedCount))) {
+    } else if (const IntInit *II =
+                   dyn_cast<IntInit>(Dag->getArg(I - TiedCount))) {
       // Validate that corresponding instruction operand expects an immediate.
       if (Inst.Operands[I].Rec->isSubClassOf("RegisterClass"))
         PrintFatalError(
@@ -428,7 +430,7 @@ void CompressInstEmitter::createInstOperandMapping(
 ///   Instruction type and generate a warning.
 void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   // Validate input Dag operands.
-  DagInit *SourceDag = Rec->getValueAsDag("Input");
+  const DagInit *SourceDag = Rec->getValueAsDag("Input");
   assert(SourceDag && "Missing 'Input' in compress pattern!");
   LLVM_DEBUG(dbgs() << "Input: " << *SourceDag << "\n");
 
@@ -438,7 +440,7 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   verifyDagOpCount(SourceInst, SourceDag, true);
 
   // Validate output Dag operands.
-  DagInit *DestDag = Rec->getValueAsDag("Output");
+  const DagInit *DestDag = Rec->getValueAsDag("Output");
   assert(DestDag && "Missing 'Output' in compress pattern!");
   LLVM_DEBUG(dbgs() << "Output: " << *DestDag << "\n");
 
@@ -484,9 +486,9 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
     return R->getValueAsBit("AssemblerMatcherPredicate");
   });
 
-  CompressPatterns.push_back(CompressPat(SourceInst, DestInst, PatReqFeatures,
-                                         SourceOperandMap, DestOperandMap,
-                                         Rec->getValueAsBit("isCompressOnly")));
+  CompressPatterns.push_back(CompressPat(
+      SourceInst, DestInst, std::move(PatReqFeatures), SourceOperandMap,
+      DestOperandMap, Rec->getValueAsBit("isCompressOnly")));
 }
 
 static void
@@ -522,7 +524,7 @@ getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
     }
 
     if (IsOr)
-      AnyOfFeatureSets.insert(AnyOfSet);
+      AnyOfFeatureSets.insert(std::move(AnyOfSet));
   }
 }
 
@@ -771,13 +773,17 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           // This is a register operand. Check the register class.
           // Don't check register class if this is a tied operand, it was done
           // for the operand its tied to.
-          if (DestOperand.getTiedRegister() == -1)
-            CondStream.indent(6)
-                << "(MI.getOperand(" << OpIdx << ").isReg()) &&\n"
-                << "      (" << TargetName << "MCRegisterClasses[" << TargetName
-                << "::" << ClassRec->getName()
-                << "RegClassID].contains(MI.getOperand(" << OpIdx
-                << ").getReg())) &&\n";
+          if (DestOperand.getTiedRegister() == -1) {
+            CondStream.indent(6) << "MI.getOperand(" << OpIdx << ").isReg()";
+            if (EType == EmitterType::CheckCompress)
+              CondStream << " && MI.getOperand(" << OpIdx
+                         << ").getReg().isPhysical()";
+            CondStream << " &&\n"
+                       << indent(6) << TargetName << "MCRegisterClasses["
+                       << TargetName << "::" << ClassRec->getName()
+                       << "RegClassID].contains(MI.getOperand(" << OpIdx
+                       << ").getReg()) &&\n";
+          }
 
           if (CompressOrUncompress)
             CodeStream.indent(6)

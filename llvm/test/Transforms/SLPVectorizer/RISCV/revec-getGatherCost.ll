@@ -8,7 +8,7 @@
 ; YAML: Function:        test1
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '6'
+; YAML:   - Cost:            '5'
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '5'
 
@@ -19,8 +19,7 @@ define void @test1(<4 x float> %load6, <4 x float> %load7, <4 x float> %load8, <
 ; CHECK-NEXT:    [[VEXT309_I:%.*]] = shufflevector <4 x float> [[LOAD7]], <4 x float> [[LOAD8:%.*]], <4 x i32> <i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[VEXT165_I]], i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP0]], <4 x float> [[VEXT309_I]], i64 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> poison, i64 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP2]], <4 x float> [[LOAD17:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[LOAD17:%.*]], i64 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[FMULADD7:%.*]], i64 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP5]], <4 x float> [[FMULADD16:%.*]], i64 4)
@@ -47,7 +46,7 @@ declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
 ; YAML: Function:        test2
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '16'
+; YAML:   - Cost:            '14'
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '5'
 
@@ -58,8 +57,7 @@ define void @test2(<8 x float> %load6, <8 x float> %load7, <8 x float> %load8, <
 ; CHECK-NEXT:    [[VEXT309_I:%.*]] = shufflevector <8 x float> [[LOAD7]], <8 x float> [[LOAD8:%.*]], <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> [[VEXT165_I]], i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP0]], <8 x float> [[VEXT309_I]], i64 8)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> poison, i64 8)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP2]], <8 x float> [[LOAD17:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> [[LOAD17:%.*]], i64 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x float> [[TMP3]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> [[FMULADD7:%.*]], i64 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP5]], <8 x float> [[FMULADD16:%.*]], i64 8)

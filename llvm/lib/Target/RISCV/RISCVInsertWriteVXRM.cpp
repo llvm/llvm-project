@@ -109,6 +109,35 @@ public:
     return VXRMInfo::getUnknown();
   }
 
+  // Calculate the VXRMInfo visible to a block assuming this and Other
+  // are both predecessors. To allow speculatively running WriteVXRM
+  // we will ignore Unknowns if one of this and Other have valid
+  // WriteVXRM. Rationale: WriteVXRM causes a pipeline flush in some
+  // uarchs and moving it outside loops is very important for some
+  // workloads.
+  VXRMInfo intersectAnticipated(const VXRMInfo &Other) const {
+    // If the new value isn't valid, ignore it.
+    if (!Other.isValid())
+      return *this;
+
+    // If this value isn't valid, this must be the first predecessor, use it.
+    if (!isValid())
+      return Other;
+
+    // If either is unknown, the result is the other one.
+    if (isUnknown())
+      return Other;
+    if (Other.isUnknown())
+      return *this;
+
+    // If we have an exact match, return this.
+    if (*this == Other)
+      return *this;
+
+    // Otherwise the result is unknown.
+    return VXRMInfo::getUnknown();
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
@@ -141,10 +170,10 @@ struct BlockData {
   // Indicates if the block uses VXRM. Uninitialized means no use.
   VXRMInfo VXRMUse;
 
-  // Indicates the VXRM output from the block. Unitialized means transparent.
+  // Indicates the VXRM output from the block. Uninitialized means transparent.
   VXRMInfo VXRMOut;
 
-  // Keeps track of the available VXRM value at the start of the basic bloc.
+  // Keeps track of the available VXRM value at the start of the basic block.
   VXRMInfo AvailableIn;
 
   // Keeps track of the available VXRM value at the end of the basic block.
@@ -187,7 +216,7 @@ public:
 private:
   bool computeVXRMChanges(const MachineBasicBlock &MBB);
   void computeAvailable(const MachineBasicBlock &MBB);
-  void computeAnticipated(const MachineBasicBlock &MBB);
+  void computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB);
   void emitWriteVXRM(MachineBasicBlock &MBB);
 };
 
@@ -279,8 +308,9 @@ void RISCVInsertWriteVXRM::computeAvailable(const MachineBasicBlock &MBB) {
   }
 }
 
-void RISCVInsertWriteVXRM::computeAnticipated(const MachineBasicBlock &MBB) {
+void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
 
   BBInfo.InQueue = false;
 
@@ -289,7 +319,11 @@ void RISCVInsertWriteVXRM::computeAnticipated(const MachineBasicBlock &MBB) {
     Anticipated.setUnknown();
   } else {
     for (const MachineBasicBlock *S : MBB.successors())
-      Anticipated =
+      if (ST.hasVXRMPipelineFlush())
+        Anticipated =
+          Anticipated.intersectAnticipated(BlockInfo[S->getNumber()].AnticipatedIn);
+      else
+        Anticipated =
           Anticipated.intersect(BlockInfo[S->getNumber()].AnticipatedIn);
   }
 
@@ -350,8 +384,8 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
             PInfo.AvailableOut.getVXRMImm() ==
                 BBInfo.AnticipatedIn.getVXRMImm())
           continue;
-        // If the predecessor anticipates this value for all its succesors,
-        // then a write to VXRM would have already occured before this block is
+        // If the predecessor anticipates this value for all its successors,
+        // then a write to VXRM would have already occurred before this block is
         // executed.
         if (PInfo.AnticipatedOut.isStatic() &&
             PInfo.AnticipatedOut.getVXRMImm() ==
@@ -395,7 +429,7 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
   // If all our successors anticipate a value, do the insert.
   // NOTE: It's possible that not all predecessors of our successor provide the
   // correct value. This can occur on critical edges. If we don't split the
-  // critical edge we'll also have a write vxrm in the succesor that is
+  // critical edge we'll also have a write vxrm in the successor that is
   // redundant with this one.
   if (PendingInsert ||
       (BBInfo.AnticipatedOut.isStatic() &&
@@ -453,7 +487,7 @@ bool RISCVInsertWriteVXRM::runOnMachineFunction(MachineFunction &MF) {
   while (!WorkList.empty()) {
     const MachineBasicBlock &MBB = *WorkList.front();
     WorkList.pop();
-    computeAnticipated(MBB);
+    computeAnticipated(MF, MBB);
   }
 
   // Phase 4 - Emit VXRM writes at the earliest place possible.

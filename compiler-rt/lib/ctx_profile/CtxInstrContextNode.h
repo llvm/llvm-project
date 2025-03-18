@@ -8,9 +8,9 @@
 //==============================================================================
 //
 // NOTE!
-// llvm/lib/ProfileData/CtxInstrContextNode.h and
+// llvm/include/llvm/ProfileData/CtxInstrContextNode.h and
 //   compiler-rt/lib/ctx_profile/CtxInstrContextNode.h
-// must be exact copies of eachother
+// must be exact copies of each other.
 //
 // compiler-rt creates these objects as part of the instrumentation runtime for
 // contextual profiling. LLVM only consumes them to convert a contextual tree
@@ -111,6 +111,25 @@ public:
   size_t size() const { return getAllocSize(NumCounters, NumCallsites); }
 
   uint64_t entrycount() const { return counters()[0]; }
+};
+
+/// Abstraction for the parameter passed to `__llvm_ctx_profile_fetch`.
+/// `startContextSection` is called before any context roots are sent for
+/// writing. Then one or more `writeContextual` calls are made; finally,
+/// `endContextSection` is called.
+class ProfileWriter {
+public:
+  virtual void startContextSection() = 0;
+  virtual void writeContextual(const ctx_profile::ContextNode &RootNode,
+                               uint64_t TotalRootEntryCount) = 0;
+  virtual void endContextSection() = 0;
+
+  virtual void startFlatSection() = 0;
+  virtual void writeFlat(ctx_profile::GUID Guid, const uint64_t *Buffer,
+                         size_t BufferSize) = 0;
+  virtual void endFlatSection() = 0;
+
+  virtual ~ProfileWriter() = default;
 };
 } // namespace ctx_profile
 } // namespace llvm
