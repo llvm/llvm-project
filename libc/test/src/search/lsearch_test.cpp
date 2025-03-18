@@ -52,19 +52,15 @@ TEST(LlvmLibcLsearchTest, SearchExceptional) {
   size_t len = 3;
   size_t max_len = ~0;
   int key = 3;
-  void *ret_key =
-      LIBC_NAMESPACE::lsearch(nullptr, list, &len, sizeof(int), compar);
-  ASSERT_TRUE(ret_key == nullptr);
-  void *ret_base =
-      LIBC_NAMESPACE::lsearch(&key, nullptr, &len, sizeof(int), compar);
-  ASSERT_TRUE(ret_base == nullptr);
-  void *ret_nmemb =
-      LIBC_NAMESPACE::lsearch(&key, list, nullptr, sizeof(int), compar);
-  ASSERT_TRUE(ret_nmemb == nullptr);
-  void *ret_size =
-      LIBC_NAMESPACE::lsearch(&key, list, &max_len, sizeof(int), compar);
-  ASSERT_TRUE(ret_size == nullptr);
-  void *ret_compar =
-      LIBC_NAMESPACE::lsearch(&key, list, &len, sizeof(int), nullptr);
-  ASSERT_TRUE(ret_compar == nullptr);
+
+  ASSERT_EQ(LIBC_NAMESPACE::lsearch(nullptr, list, &len, sizeof(int), compar),
+            nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::lsearch(&key, nullptr, &len, sizeof(int), compar),
+            nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::lsearch(&key, list, nullptr, sizeof(int), compar),
+            nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::lsearch(&key, list, &max_len, sizeof(int), compar),
+            nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::lsearch(&key, list, &len, sizeof(int), nullptr),
+            nullptr);
 }
