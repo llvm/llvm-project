@@ -178,7 +178,7 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 /// but replaces each argument type with the variable name
 /// and the corresponding pretty-printed value
 static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
-                                            char const *full_name,
+                                            llvm::StringRef full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
   CPlusPlusLanguage::MethodName cpp_method{ConstString(full_name)};
@@ -204,6 +204,42 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
     out_stream.PutChar(' ');
     out_stream.PutCString(qualifiers);
   }
+
+  return true;
+}
+
+static bool PrettyPrintFunctionNameWithArgs(
+    Stream &out_stream, llvm::StringRef full_name,
+    ExecutionContextScope *exe_scope, VariableList const &args,
+    const Mangled::DemangledInfo &demangled_info,
+    const FormatEntity::Entry::HighlightSettings &settings) {
+  if (settings.kind == FormatEntity::Entry::HighlightSettings::Kind::None ||
+      !demangled_info.hasBasename())
+    return PrettyPrintFunctionNameWithArgs(out_stream, full_name, exe_scope,
+                                           args);
+
+  auto [base_start, base_end] = demangled_info.BasenameLocs;
+
+  // Dump anything before the basename.
+  out_stream.PutCString(full_name.substr(0, base_start));
+
+  // Highlight the basename.
+  out_stream.PutCString(settings.prefix);
+  out_stream.PutCString(full_name.substr(base_start, base_end - base_start));
+  out_stream.PutCString(settings.suffix);
+
+  // Dump anything between the basename and the argument list.
+  if (demangled_info.ArgumentLocs.first > base_end)
+    out_stream.PutCString(full_name.substr(
+        base_end, demangled_info.ArgumentLocs.first - base_end));
+
+  // Dump arguments.
+  out_stream.PutChar('(');
+  FormatEntity::PrettyPrintFunctionArguments(out_stream, args, exe_scope);
+  out_stream.PutChar(')');
+
+  // Dump anything after the argument list.
+  out_stream.PutCString(full_name.substr(demangled_info.ArgumentLocs.second));
 
   return true;
 }
@@ -1699,7 +1735,8 @@ bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
 
 bool CPlusPlusLanguage::GetFunctionDisplayName(
     const SymbolContext *sc, const ExecutionContext *exe_ctx,
-    FunctionNameRepresentation representation, Stream &s) {
+    FunctionNameRepresentation representation, Stream &s,
+    const FormatEntity::Entry::HighlightSettings &settings) {
   switch (representation) {
   case FunctionNameRepresentation::eNameWithArgs: {
     // Print the function name with arguments in it
@@ -1738,7 +1775,9 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
           variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
                                                      args);
         if (args.GetSize() > 0) {
-          if (!PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args))
+          if (!PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args,
+                                               sc->function->GetDemangledInfo(),
+                                               settings))
             return false;
         } else {
           s.PutCString(cstr);
