@@ -14315,39 +14315,46 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
 
 // Check if this SDValue is an add immediate that is fed by a shift of 1, 2,
 // or 3.
-static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
-                              int64_t &ShlConst) {
+static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
+                                     SelectionDAG &DAG) {
   using namespace llvm::SDPatternMatch;
+
+  // Loooking for a reg-reg add and not an addi.
+  if (isa<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+
   // Based on testing it seems that performance degrades if the ADDI has
   // more than 2 uses.
   if (AddI->use_size() > 2)
-    return false;
+    return SDValue();
 
   APInt AddVal;
   SDValue SHLVal;
-  assert(sd_match(AddI, m_Add(m_Value(SHLVal), m_ConstInt(AddVal))) &&
-         "Expected an addi with a constant addition.");
+  if (!sd_match(AddI, m_Add(m_Value(SHLVal), m_ConstInt(AddVal))))
+    return SDValue();
 
   APInt VShift;
   if (!sd_match(SHLVal, m_BinOp(ISD::SHL, m_Value(), m_ConstInt(VShift))))
-    return false;
+    return SDValue();
 
   if (VShift.slt(1) || VShift.sgt(3))
-    return false;
+    return SDValue();
 
-  // Set the values at the end when we know that the function will return
-  // true.
-  ShlConst = VShift.getSExtValue();
-  AddConst = AddVal.getSExtValue();
-  return true;
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  int64_t ShlConst = VShift.getSExtValue();
+  int64_t AddConst = AddVal.getSExtValue();
+
+  SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
+                              DAG.getConstant(ShlConst, DL, VT), Other);
+  return DAG.getNode(ISD::ADD, DL, VT, SHADD,
+                     DAG.getConstant(AddConst, DL, VT));
 }
 
 // Optimize (add (add (shl x, c0),  c1), y) ->
 //          (ADDI (SH*ADD y, x), c1), if c0 equals to [1|2|3].
 static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
-  using namespace llvm::SDPatternMatch;
-
   // Perform this optimization only in the zba extension.
   if (!ReassocShlAddiAdd || !Subtarget.hasStdExtZba())
     return SDValue();
@@ -14357,38 +14364,13 @@ static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  // Looking for a reg-reg add and not an addi.
-  if (isa<ConstantSDNode>(N->getOperand(1)))
-    return SDValue();
-
   SDValue AddI = N->getOperand(0);
   SDValue Other = N->getOperand(1);
-  bool LHSIsAddI = sd_match(AddI, m_Add(m_Value(), m_ConstInt()));
-  bool RHSIsAddI = sd_match(Other, m_Add(m_Value(), m_ConstInt()));
-  int64_t AddConst = 0;
-  int64_t ShlConst = 0;
-
-  // At least one addi is required.
-  if (!LHSIsAddI && !RHSIsAddI)
-    return SDValue();
-
-  // If the LHS is not the result of an add or both sides are results of an add,
-  // but the LHS does not have the desired structure with a shift, swap the
-  // operands.
-  if (!LHSIsAddI || (RHSIsAddI && !checkAddiForShift(AddI, AddConst, ShlConst)))
-    std::swap(AddI, Other);
-
-  // We simply need to ensure AddI has the desired structure.
-  if (!checkAddiForShift(AddI, AddConst, ShlConst))
-    return SDValue();
-
-  SDValue SHLVal = AddI->getOperand(0);
-  SDLoc DL(N);
-
-  SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
-                              DAG.getConstant(ShlConst, DL, VT), Other);
-  return DAG.getNode(ISD::ADD, DL, VT, SHADD,
-                     DAG.getConstant(AddConst, DL, VT));
+  if (SDValue V = combineShlAddIAddImpl(N, AddI, Other, DAG))
+    return V;
+  if (SDValue V = combineShlAddIAddImpl(N, Other, AddI, DAG))
+    return V;
+  return SDValue();
 }
 
 // Combine a constant select operand into its use:
