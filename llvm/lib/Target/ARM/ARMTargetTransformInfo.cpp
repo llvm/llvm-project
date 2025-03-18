@@ -1479,17 +1479,16 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     if (Ty->isVectorTy())
       return false;
 
-    auto IsSExtInst = [](const Value *V) -> bool { return isa<SExtInst>(V); };
-    auto IsZExtInst = [](const Value *V) -> bool { return isa<ZExtInst>(V); };
-    auto IsExtInst = [&, IsSExtInst, IsZExtInst](const Value *V) -> bool {
-      return IsSExtInst(V) || IsZExtInst(V);
+    auto ValueOpcodesEqual = [](const Value *LHS, const Value *RHS) -> bool {
+      return cast<Instruction>(LHS)->getOpcode() ==
+             cast<Instruction>(RHS)->getOpcode();
     };
-    auto IsExtensionFromHalf = [&, IsSExtInst,
-                                IsZExtInst](const Value *V) -> bool {
-      if (IsSExtInst(V))
-        return dyn_cast<SExtInst>(V)->getOperand(0)->getType()->isIntegerTy(16);
-      if (IsZExtInst(V))
-        return dyn_cast<ZExtInst>(V)->getOperand(0)->getType()->isIntegerTy(16);
+    auto IsExtInst = [](const Value *V) -> bool {
+      return isa<ZExtInst>(V) || isa<SExtInst>(V);
+    };
+    auto IsExtensionFromHalf = [&, IsExtInst](const Value *V) -> bool {
+      if (IsExtInst(V))
+        return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
       return false;
     };
 
@@ -1499,7 +1498,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
       return false;
     Value *Op0 = BinOp->getOperand(0);
     Value *Op1 = BinOp->getOperand(1);
-    if (IsExtInst(Op0) && IsExtInst(Op1)) {
+    if (IsExtInst(Op0) && IsExtInst(Op1) && ValueOpcodesEqual(Op0, Op1)) {
       // We're interested in an ext of an i16
       if (!I->getType()->isIntegerTy(32) || !IsExtensionFromHalf(Op0) ||
           !IsExtensionFromHalf(Op1))
@@ -1507,7 +1506,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
       // We need to check if this result will be further extended to i64
       // and that all these uses are SExt
       for (auto *U : I->users())
-        if (!IsExtInst(dyn_cast<Value>(U)))
+        if (!IsExtInst(U))
           return false;
       return true;
     }
