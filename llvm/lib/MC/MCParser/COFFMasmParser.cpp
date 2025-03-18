@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/MC/MCContext.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
