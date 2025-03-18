@@ -208,13 +208,15 @@ class CallbackActionController : public DependencyActionController {
 public:
   virtual ~CallbackActionController();
 
+  static std::string lookupUnreachableModuleOutput(const ModuleDeps &MD,
+                                                   ModuleOutputKind Kind) {
+    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+  };
+
   CallbackActionController(LookupModuleOutputCallback LMO)
       : LookupModuleOutput(std::move(LMO)) {
     if (!LookupModuleOutput) {
-      LookupModuleOutput = [](const ModuleDeps &,
-                              ModuleOutputKind) -> std::string {
-        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-      };
+      LookupModuleOutput = lookupUnreachableModuleOutput;
     }
   }
 
