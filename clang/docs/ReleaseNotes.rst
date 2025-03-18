@@ -127,8 +127,7 @@ C2y Feature Support
   that ``_Generic`` selection associations may now have ``void`` type, but it
   also removes UB with code like ``(void)(void)1;``.
 - Implemented `WG14 N3411 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3411.pdf>`_
-  which allows a source file to not end with a newline character. This is still
-  reported as a conforming extension in earlier language modes. Note,
+  which allows a source file to not end with a newline character. Note,
   ``-pedantic`` will no longer diagnose this in either C or C++ modes as an
   extension. This feature was adopted as applying to obsolete versions of C in
   WG14 and as a defect report in WG21 (CWG787).
