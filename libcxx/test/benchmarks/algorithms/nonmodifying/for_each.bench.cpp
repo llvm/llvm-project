@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
             auto first = c.begin();
             auto last  = c.end();
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               auto result = for_each(first, last, [](int& x) { x = std::clamp(x, 10, 100); });
               benchmark::DoNotOptimize(result);

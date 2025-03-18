@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
             assert(n > 0);
             Container needle(n, y);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = std::ranges::contains_subrange(haystack, needle);
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
             Container haystack(size, x);
             Container needle(size, x);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = std::ranges::contains_subrange(haystack, needle);
@@ -137,7 +137,7 @@ int main(int argc, char** argv) {
             Container haystack(size, x);
             Container needle(1, y);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = std::ranges::contains_subrange(haystack, needle);

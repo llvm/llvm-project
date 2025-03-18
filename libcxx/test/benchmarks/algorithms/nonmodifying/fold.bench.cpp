@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
               return x + y;
             };
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(init);
               auto result = fold(c.begin(), c.end(), init, f);

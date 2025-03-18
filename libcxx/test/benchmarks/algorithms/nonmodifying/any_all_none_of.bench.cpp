@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
             ValueType y            = random_different_from({x});
             Container c(size, x);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               auto result = any_of(c.begin(), c.end(), [&](auto element) {
                 benchmark::DoNotOptimize(element);

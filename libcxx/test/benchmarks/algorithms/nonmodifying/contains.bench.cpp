@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
             auto first = c.begin();
             auto last  = c.end();
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
               benchmark::DoNotOptimize(y);
               auto result = std::ranges::contains(first, last, y);

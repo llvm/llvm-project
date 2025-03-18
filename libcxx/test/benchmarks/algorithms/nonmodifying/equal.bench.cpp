@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
             auto last1  = c1.end();
             auto first2 = aligned ? c2.begin() : c2.begin() + 4;
             auto last2  = aligned ? c2.end() : c2.end() - 4;
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c1);
               benchmark::DoNotOptimize(c2);
               auto result = equal(first1, last1, first2, last2);

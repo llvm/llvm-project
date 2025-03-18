@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
             assert(n > 0);
             Container needle(n, y);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = find_end(haystack.begin(), haystack.end(), needle.begin(), needle.end());
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
             Container haystack(size, x);
             Container needle(size, x);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = find_end(haystack.begin(), haystack.end(), needle.begin(), needle.end());
@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
             Container haystack(size, x);
             Container needle(1, y);
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = find_end(haystack.begin(), haystack.end(), needle.begin(), needle.end());
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
             // put the needle at 90% of the haystack
             std::ranges::copy(needle, std::next(haystack.begin(), (9 * size) / 10));
 
-            for (auto _ : st) {
+            for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(haystack);
               benchmark::DoNotOptimize(needle);
               auto result = find_end(haystack.begin(), haystack.end(), needle.begin(), needle.end());
