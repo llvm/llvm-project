@@ -7,11 +7,11 @@
 ; CHECK-MIR-DAG:   [[i32type:%[0-9]+\:type]] = OpTypeInt 32, 0
 ; CHECK-MIR-DAG:   [[void_type:%[0-9]+\:type\(s64\)]] = OpTypeVoid
 ; CHECK-MIR-DAG:   [[i32_8:%[0-9]+\:iid]] = OpConstantI [[i32type]], 8{{$}}
-; CHECK-MIR-DAG:   [[i32_0:%[0-9]+\:iid\(s32\)]] = OpConstantNull [[i32type]]
+; CHECK-MIR-DAG:   [[i32_0:%[0-9]+\:iid(\(s32\))?]] = OpConstantNull [[i32type]]
 ; CHECK-MIR-DAG:   [[i32_5:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 5{{$}}
 ; CHECK-MIR-DAG:   [[enc_float:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 3{{$}}
 ; CHECK-MIR-DAG:   [[enc_boolean:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 2{{$}}
-; CHECK-MIR-DAG:   [[bool:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, %[[#]], [[i32_8]], [[enc_boolean]], [[i32_0]]
+; CHECK-MIR-DAG:   [[bool:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_8]], [[enc_boolean]], [[i32_0]]
 ; CHECK-MIR-DAG:   [[i32_16:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 16{{$}}
 ; CHECK-MIR-DAG:   [[enc_signed:%[0-9]+\:iid\(s32\)]] = OpConstantI [[i32type]], 4{{$}}
 ; CHECK-MIR-DAG:   [[short:%[0-9]+\:id\(s32\)]] = OpExtInst [[void_type]], 3, 2, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[i32_16]], [[enc_signed]], [[i32_0]]
@@ -44,7 +44,7 @@
 
 ; CHECK-SPIRV:	[[i32type:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8{{$}}
-; CHECK-SPIRV-DAG:	[[i32_0:%[0-9]+]] = OpConstant [[i32type]] 0{{$}}
+; CHECK-SPIRV-DAG:	[[i32_0:%[0-9]+]] = OpConstantNull [[i32type]]{{$}}
 ; CHECK-SPIRV-DAG:	[[i32_5:%[0-9]+]] = OpConstant [[i32type]] 5{{$}}
 ; CHECK-SPIRV-DAG:	[[enc_float:%[0-9]+]] = OpConstant [[i32type]] 3{{$}}
 ; CHECK-SPIRV-DAG:	[[enc_boolean:%[0-9]+]] = OpConstant [[i32type]] 2{{$}}

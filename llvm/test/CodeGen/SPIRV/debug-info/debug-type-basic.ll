@@ -60,7 +60,7 @@
 ; CHECK-SPIRV-DAG: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
 ; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[encoding_signedchar:%[0-9]+]] = OpConstant [[type_int32]] 5{{$}}
-; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstantNull [[type_int32]]
+; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
 ; CHECK-SPIRV-DAG: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3{{$}}
 ; CHECK-SPIRV-DAG: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8{{$}}
 ; CHECK-SPIRV-DAG: [[encoding_boolean:%[0-9]+]] = OpConstant [[type_int32]] 2{{$}}
