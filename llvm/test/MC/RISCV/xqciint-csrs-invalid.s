@@ -5,12 +5,6 @@
 csrrs t2, qc.mmcr, zero
 // CHECK-FEATURE: :[[@LINE-1]]:11: error: system register 'qc.mmcr' requires 'experimental-xqciint' to be enabled
 
-csrrs t2, qc.mnepc, zero
-// CHECK-FEATURE: :[[@LINE-1]]:11: error: system register 'qc.mnepc' requires 'experimental-xqciint' to be enabled
-
-csrrs t2, qc.mncause, zero
-// CHECK-FEATURE: :[[@LINE-1]]:11: error: system register 'qc.mncause' requires 'experimental-xqciint' to be enabled
-
 csrrs t2, qc.mntvec, zero
 // CHECK-FEATURE: :[[@LINE-1]]:11: error: system register 'qc.mntvec' requires 'experimental-xqciint' to be enabled
 

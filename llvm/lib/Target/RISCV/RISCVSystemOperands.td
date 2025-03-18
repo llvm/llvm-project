@@ -479,8 +479,6 @@ def : SysReg<"mctrctl", 0x34e>;
 // Xqciint
 let FeaturesRequired = [{ {RISCV::FeatureVendorXqciint} }], isRV32Only = 1 in {
 def : SysReg<"qc.mmcr", 0x7C0>;
-def : SysReg<"qc.mnepc", 0x7C1>;
-def : SysReg<"qc.mncause", 0x7C2>;
 def : SysReg<"qc.mntvec", 0x7C3>;
 def : SysReg<"qc.mstktopaddr", 0x7C4>;
 def : SysReg<"qc.mstkbottomaddr", 0x7C5>;

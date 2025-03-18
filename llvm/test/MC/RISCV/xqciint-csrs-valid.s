@@ -12,20 +12,6 @@ csrrs t2, 0x7C0, zero
 // CHECK-ENC: encoding: [0xf3,0x23,0x00,0x7c]
 // CHECK-INST: csrrs t2, qc.mmcr, zero
 
-csrrs t2, qc.mnepc, zero
-// CHECK-ENC: encoding: [0xf3,0x23,0x10,0x7c]
-// CHECK-INST: csrrs    t2, qc.mnepc, zero
-csrrs t2, 0x7C1, zero
-// CHECK-ENC: encoding: [0xf3,0x23,0x10,0x7c]
-// CHECK-INST: csrrs    t2, qc.mnepc, zero
-
-csrrs t2, qc.mncause, zero
-// CHECK-ENC: encoding: [0xf3,0x23,0x20,0x7c]
-// CHECK-INST: csrrs    t2, qc.mncause, zero
-csrrs t2, 0x7C2, zero
-// CHECK-ENC: encoding: [0xf3,0x23,0x20,0x7c]
-// CHECK-INST: csrrs    t2, qc.mncause, zero
-
 csrrs t2, qc.mntvec, zero
 // CHECK-ENC: encoding: [0xf3,0x23,0x30,0x7c]
 // CHECK-INST: csrrs    t2, qc.mntvec, zero
