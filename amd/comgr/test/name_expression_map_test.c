@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   size_t Count;
   const char *CompileOptions[] = {"-nogpulib", "-nogpuinc"};
   size_t CompileOptionsCount =
-    sizeof(CompileOptions) / sizeof(CompileOptions[0]);
+      sizeof(CompileOptions) / sizeof(CompileOptions[0]);
 
   SizeSource = setBuf(TEST_OBJ_DIR "/name-expression.hip", &BufSource);
 

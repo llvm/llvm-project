@@ -47,9 +47,9 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   const char *CompileOptions[] = {"-fno-slp-vectorize", "-nogpulib",
-    "-nogpuinc"};
+                                  "-nogpuinc"};
   size_t CompileOptionsCount =
-    sizeof(CompileOptions) / sizeof(CompileOptions[0]);
+      sizeof(CompileOptions) / sizeof(CompileOptions[0]);
 
   SizeSource = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource);
 
