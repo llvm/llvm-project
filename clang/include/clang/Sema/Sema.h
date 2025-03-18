@@ -2353,9 +2353,18 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
+  enum class EltwiseBuiltinArgTyRestriction {
+    None,
+    FloatTy,
+    IntegerTy,
+    SignedIntOrFloatTy,
+  };
+
   /// \param FPOnly restricts the arguments to floating-point types.
-  std::optional<QualType> BuiltinVectorMath(CallExpr *TheCall,
-                                            bool FPOnly = false);
+  std::optional<QualType>
+  BuiltinVectorMath(CallExpr *TheCall,
+                    EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                        EltwiseBuiltinArgTyRestriction::None);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
@@ -2459,9 +2468,13 @@ public:
                                bool *ICContext = nullptr,
                                bool IsListInit = false);
 
-  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                     bool CheckForFloatArgs = true);
-  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
+  bool
+  BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                                    EltwiseBuiltinArgTyRestriction::FloatTy);
+  bool PrepareBuiltinElementwiseMathOneArgCall(
+      CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                             EltwiseBuiltinArgTyRestriction::None);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2570,7 +2583,9 @@ private:
                                  AtomicExpr::AtomicOp Op);
 
   /// \param FPOnly restricts the arguments to floating-point types.
-  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
+  bool BuiltinElementwiseMath(CallExpr *TheCall,
+                              EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                                  EltwiseBuiltinArgTyRestriction::None);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -5585,9 +5600,15 @@ public:
   void ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
 
-  bool EvaluateStaticAssertMessageAsString(Expr *Message, std::string &Result,
-                                           ASTContext &Ctx,
-                                           bool ErrorOnInvalidMessage);
+  enum class StringEvaluationContext { StaticAssert = 0, Asm = 1 };
+
+  bool EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+  bool EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc);
@@ -6095,7 +6116,8 @@ public:
                                          RecordDecl *ClassDecl,
                                          const IdentifierInfo *Name);
 
-  unsigned GetDecompositionElementCount(QualType DecompType);
+  std::optional<unsigned int> GetDecompositionElementCount(QualType DecompType,
+                                                           SourceLocation Loc);
   void CheckCompleteDecompositionDeclaration(DecompositionDecl *DD);
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -11035,6 +11057,7 @@ private:
   ///@{
 
 public:
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -15323,6 +15346,13 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
+  DB << llvm::to_underlying(Ctx);
+  return DB;
+}
+
 } // end namespace clang
 
 #endif
