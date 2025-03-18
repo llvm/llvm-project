@@ -123,6 +123,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdio.h entrypoints
+    libc.src.stdio.asprintf
     libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
@@ -132,6 +133,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
     libc.src.stdio.sscanf
+    libc.src.stdio.vasprintf
     libc.src.stdio.vprintf
     libc.src.stdio.vscanf
     libc.src.stdio.vsnprintf
