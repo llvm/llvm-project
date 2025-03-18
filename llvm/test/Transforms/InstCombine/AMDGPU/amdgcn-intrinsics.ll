@@ -3232,7 +3232,7 @@ define amdgpu_kernel void @update_dpp_no_combine(ptr addrspace(1) %out, i32 %in1
 
 define amdgpu_kernel void @update_dpp_drop_old(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; CHECK-LABEL: @update_dpp_drop_old(
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 [[IN2:%.*]], i32 3, i32 15, i32 15, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[IN2:%.*]], i32 3, i32 15, i32 15, i1 true)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -3243,7 +3243,7 @@ define amdgpu_kernel void @update_dpp_drop_old(ptr addrspace(1) %out, i32 %in1, 
 
 define amdgpu_kernel void @update_dpp_undef_old(ptr addrspace(1) %out, i32 %in1) {
 ; CHECK-LABEL: @update_dpp_undef_old(
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 [[IN1:%.*]], i32 4, i32 15, i32 15, i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[IN1:%.*]], i32 4, i32 15, i32 15, i1 true)
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
