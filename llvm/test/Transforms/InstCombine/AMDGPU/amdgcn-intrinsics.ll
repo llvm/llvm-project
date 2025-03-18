@@ -1776,18 +1776,18 @@ declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, f
 define void @exp_disabled_inputs_to_undef(float %x, float %y, float %z, float %w) {
   ; enable src0..src3 constants
 ; CHECK-LABEL: @exp_disabled_inputs_to_undef(
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float 4.000000e+00, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float [[X:%.*]], float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float undef, float [[Y:%.*]], float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float undef, float undef, float [[Z:%.*]], float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float undef, float undef, float undef, float [[W:%.*]], i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float undef, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float undef, float 5.000000e-01, float undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float undef, float undef, float 4.000000e+00, i1 false, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float 1.000000e+00, float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float poison, float 2.000000e+00, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float poison, float poison, float 5.000000e-01, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float poison, float poison, float poison, float 4.000000e+00, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 1, float [[X:%.*]], float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float poison, float [[Y:%.*]], float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 4, float poison, float poison, float [[Z:%.*]], float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 8, float poison, float poison, float poison, float [[W:%.*]], i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 3, float 1.000000e+00, float 2.000000e+00, float poison, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 5, float 1.000000e+00, float poison, float 5.000000e-01, float poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 9, float 1.000000e+00, float poison, float poison, float 4.000000e+00, i1 false, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float 1.000000e+00, float 2.000000e+00, float 5.000000e-01, float 4.000000e+00, i1 false, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -1824,15 +1824,15 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2
 
 define void @exp_compr_disabled_inputs_to_undef(<2 x half> %xy, <2 x half> %zw) {
 ; CHECK-LABEL: @exp_compr_disabled_inputs_to_undef(
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> undef, <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> [[XY]], <2 x half> undef, i1 true, i1 false)
-; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> undef, <2 x half> [[ZW:%.*]], i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> <half 0xH3C00, half 0xH4000>, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 0, <2 x half> poison, <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 1, <2 x half> [[XY:%.*]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 2, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 3, <2 x half> [[XY]], <2 x half> poison, i1 true, i1 false)
+; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 12, <2 x half> poison, <2 x half> [[ZW:%.*]], i1 true, i1 false)
 ; CHECK-NEXT:    call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> [[XY]], <2 x half> [[ZW]], i1 true, i1 false)
 ; CHECK-NEXT:    ret void
 ;
