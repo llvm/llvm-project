@@ -267,7 +267,7 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
-- The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
+- The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers 
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
 - The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
