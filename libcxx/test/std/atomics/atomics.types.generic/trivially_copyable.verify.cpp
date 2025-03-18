@@ -20,12 +20,13 @@
 #include <atomic>
 
 struct NotTriviallyCopyable {
-  explicit NotTriviallyCopyable(int i) : i_(i) { }
-  NotTriviallyCopyable(const NotTriviallyCopyable &rhs) : i_(rhs.i_) { }
+  explicit NotTriviallyCopyable(int i) : i_(i) {}
+  NotTriviallyCopyable(const NotTriviallyCopyable& rhs) : i_(rhs.i_) {}
   int i_;
 };
 
 void f() {
   NotTriviallyCopyable x(42);
-  std::atomic<NotTriviallyCopyable> a(x); // expected-error@*:* {{std::atomic<T> requires that 'T' be a trivially copyable type}}
+  std::atomic<NotTriviallyCopyable> a(
+      x); // expected-error@*:* {{std::atomic<T> requires that 'T' be a trivially copyable type}}
 }
