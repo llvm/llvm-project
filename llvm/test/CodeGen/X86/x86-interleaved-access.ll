@@ -1838,14 +1838,13 @@ define void @splat4_v4f64_load_store(ptr %s, ptr %d) nounwind {
 ;
 ; AVX512-LABEL: splat4_v4f64_load_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX512-NEXT:    vbroadcastsd 16(%rdi), %ymm1
-; AVX512-NEXT:    vbroadcastsd 8(%rdi), %ymm2
-; AVX512-NEXT:    vbroadcastsd 24(%rdi), %ymm3
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512-NEXT:    vmovups %zmm1, 64(%rsi)
-; AVX512-NEXT:    vmovups %zmm0, (%rsi)
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,0,0,0,5,5,5,5]
+; AVX512-NEXT:    vbroadcastf64x4 (%rdi), %zmm1 # zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vpermq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [2,2,2,2,7,7,7,7]
+; AVX512-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512-NEXT:    vmovdqu64 %zmm1, 64(%rsi)
+; AVX512-NEXT:    vmovdqu64 %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = load <4 x double>, ptr %s, align 8
@@ -1872,14 +1871,13 @@ define void @splat4_v4i64_load_store(ptr %s, ptr %d) nounwind {
 ;
 ; AVX512-LABEL: splat4_v4i64_load_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX512-NEXT:    vbroadcastsd 16(%rdi), %ymm1
-; AVX512-NEXT:    vbroadcastsd 8(%rdi), %ymm2
-; AVX512-NEXT:    vbroadcastsd 24(%rdi), %ymm3
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512-NEXT:    vmovups %zmm1, 64(%rsi)
-; AVX512-NEXT:    vmovups %zmm0, (%rsi)
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [0,0,0,0,5,5,5,5]
+; AVX512-NEXT:    vbroadcasti64x4 (%rdi), %zmm1 # zmm1 = mem[0,1,2,3,0,1,2,3]
+; AVX512-NEXT:    vpermq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [2,2,2,2,7,7,7,7]
+; AVX512-NEXT:    vpermq %zmm1, %zmm2, %zmm1
+; AVX512-NEXT:    vmovdqu64 %zmm1, 64(%rsi)
+; AVX512-NEXT:    vmovdqu64 %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %x = load <4 x i64>, ptr %s, align 8

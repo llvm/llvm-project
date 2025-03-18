@@ -9,15 +9,13 @@
 #define LLVM_SUPPORT_LOCKFILEMANAGER_H
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AdvisoryLock.h"
 #include <optional>
 #include <string>
-#include <system_error>
 #include <variant>
 
 namespace llvm {
-class StringRef;
-
 /// Class that manages the creation of a lock file to aid implicit coordination
 /// between different processes.
 ///
@@ -25,19 +23,7 @@ class StringRef;
 /// atomicity of the file system to ensure that only a single process can create
 /// that ".lock" file. When the lock file is removed, the owning process has
 /// finished the operation.
-class LockFileManager {
-public:
-  /// Describes the result of waiting for the owner to release the lock.
-  enum WaitForUnlockResult {
-    /// The lock was released successfully.
-    Res_Success,
-    /// Owner died while holding the lock.
-    Res_OwnerDied,
-    /// Reached timeout while waiting for the owner to release the lock.
-    Res_Timeout
-  };
-
-private:
+class LockFileManager : public AdvisoryLock {
   SmallString<128> FileName;
   SmallString<128> LockFileName;
   SmallString<128> UniqueLockFileName;
@@ -61,24 +47,24 @@ public:
   /// Does not try to acquire the lock.
   LockFileManager(StringRef FileName);
 
-  /// Unlocks the lock if previously acquired by \c tryLock().
-  ~LockFileManager();
-
   /// Tries to acquire the lock without blocking.
   /// \returns true if the lock was successfully acquired, false if the lock is
   /// already held by someone else, or \c Error in case of unexpected failure.
-  Expected<bool> tryLock();
+  Expected<bool> tryLock() override;
 
   /// For a shared lock, wait until the owner releases the lock.
-  /// Total timeout for the file to appear is ~1.5 minutes.
+  ///
   /// \param MaxSeconds the maximum total wait time in seconds.
-  WaitForUnlockResult waitForUnlock(const unsigned MaxSeconds = 90);
+  WaitForUnlockResult
+  waitForUnlockFor(std::chrono::seconds MaxSeconds) override;
 
   /// Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
-  std::error_code unsafeRemoveLockFile();
-};
+  std::error_code unsafeMaybeUnlock() override;
 
+  /// Unlocks the lock if previously acquired by \c tryLock().
+  ~LockFileManager() override;
+};
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_LOCKFILEMANAGER_H
