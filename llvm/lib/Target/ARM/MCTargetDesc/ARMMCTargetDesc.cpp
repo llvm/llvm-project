@@ -694,13 +694,13 @@ ARMMCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
           0xe7fc,         // b . -4
       };
 
-      if (instructionsMatch(Insns, PltContents.data() + Byte + 8,
-                            InstrEndianness)) {
-        // add ip, pc at Byte + 8 + thumb-pc-bias = 12
-        uint64_t Offset =
-            (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
-        Result.emplace_back(PltSectionVA + Byte, Offset);
-      }
+      if (!instructionsMatch(Insns, PltContents.data() + Byte + 8,
+                             InstrEndianness))
+        continue;
+
+      // add ip, pc at Byte + 8 + thumb-pc-bias = 12
+      uint64_t Offset = (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
+      Result.emplace_back(PltSectionVA + Byte, Offset);
     }
   } else {
     const uint32_t LongEntryInsns[] = {
