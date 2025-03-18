@@ -1391,12 +1391,6 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
-def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
-  "DynamicVGPR",
-  "true",
-  "Enable dynamic VGPR mode"
->;
-
 def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
   "DynamicVGPRBlockSize32",
   "true",
@@ -1441,6 +1435,12 @@ def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
   "HasParallelBitInsts",
   "true",
   "Has v_pdep_b32 and v_pext_b32 instructions"
+>;
+
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
 >;
 
 // Dummy feature used to disable assembler instructions.
