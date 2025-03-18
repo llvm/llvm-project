@@ -379,8 +379,9 @@ bool CombinerHelper::matchCastOfInteger(const MachineInstr &CastMI,
   }
 }
 
-void CombinerHelper::applyRedundantSextInReg(MachineInstr &Root,
-                                             MachineInstr &Other) const {
+bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
+                                             MachineInstr &Other,
+                                             BuildFnTy &MatchInfo) const {
   assert(Root.getOpcode() == TargetOpcode::G_SEXT_INREG &&
          Other.getOpcode() == TargetOpcode::G_SEXT_INREG);
 
@@ -394,14 +395,19 @@ void CombinerHelper::applyRedundantSextInReg(MachineInstr &Root,
   if (RootWidth >= OtherWidth) {
     // The root sext_inreg is entirely redundant because the other one
     // is narrower.
-    Observer.changingAllUsesOfReg(MRI, Dst);
-    MRI.replaceRegWith(Dst, OtherDst);
-    Observer.finishedChangingAllUsesOfReg();
+    if (!canReplaceReg(Dst, OtherDst, MRI))
+      return false;
+
+    MatchInfo = [=](MachineIRBuilder &B) {
+      Observer.changingAllUsesOfReg(MRI, Dst);
+      MRI.replaceRegWith(Dst, OtherDst);
+      Observer.finishedChangingAllUsesOfReg();
+    };
   } else {
     // RootWidth < OtherWidth, rewrite this G_SEXT_INREG with the source of the
     // other G_SEXT_INREG.
-    Builder.buildSExtInReg(Dst, Src, RootWidth);
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildSExtInReg(Dst, Src, RootWidth);
+    };
   }
-
-  Root.eraseFromParent();
 }

@@ -1868,10 +1868,11 @@ def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
 def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;
 
 def sext_inreg_of_sext_inreg : GICombineRule<
-   (defs root:$dst),
+   (defs root:$dst, build_fn_matchinfo:$matchinfo),
    (match (G_SEXT_INREG $x, $src, $a):$other,
-          (G_SEXT_INREG $dst, $x, $b):$root),
-   (apply [{ Helper.applyRedundantSextInReg(*${root}, *${other}); }])>;
+          (G_SEXT_INREG $dst, $x, $b):$root,
+          [{ return Helper.matchRedundantSextInReg(*${root}, *${other}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // Push cast through build vector.
 class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
