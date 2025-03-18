@@ -5723,7 +5723,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
            isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   }
-  case ISD::EXTRACT_VECTOR_ELT: {
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::EXTRACT_SUBVECTOR: {
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
   }
   case ISD::BUILD_VECTOR: {

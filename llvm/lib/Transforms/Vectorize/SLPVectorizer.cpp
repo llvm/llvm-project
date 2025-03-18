@@ -795,7 +795,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 }
 
 /// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(Instruction *E) {
+static std::optional<unsigned> getExtractIndex(const Instruction *E) {
   unsigned Opcode = E->getOpcode();
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
@@ -22715,8 +22715,38 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-          if (S && !S.isAltShuffle())
+          if (S && !S.isAltShuffle()) {
+            const auto *E1 = dyn_cast<ExtractElementInst>(I1);
+            const auto *E2 = dyn_cast<ExtractElementInst>(I2);
+            if (!E1 || !E2)
+              continue;
+
+            // Sort on ExtractElementInsts primarily by vector operands. Prefer
+            // program order of the vector operands.
+            const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
+            const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+            if (V1 != V2) {
+              if (!V1 || !V2)
+                continue;
+              if (V1->getParent() != V2->getParent())
+                continue;
+              return V1->comesBefore(V2);
+            }
+            // If we have the same vector operand, try to sort by constant
+            // index.
+            std::optional<unsigned> Id1 = getExtractIndex(E1);
+            std::optional<unsigned> Id2 = getExtractIndex(E2);
+            // Bring constants to the top
+            if (Id1 && !Id2)
+              return true;
+            if (!Id1 && Id2)
+              return false;
+            // First elements come first.
+            if (Id1 && Id2)
+              return *Id1 < *Id2;
+
             continue;
+          }
           return I1->getOpcode() < I2->getOpcode();
         }
         if (I1)
