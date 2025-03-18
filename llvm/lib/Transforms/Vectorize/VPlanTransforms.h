@@ -175,7 +175,8 @@ struct VPlanTransforms {
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  /// Lower abstract recipes to concrete ones, that can be codegen'd and replace
+  /// loop regions with explicit CFG.
   static void convertToConcreteRecipes(VPlan &Plan);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
