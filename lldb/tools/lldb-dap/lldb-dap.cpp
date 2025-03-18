@@ -281,7 +281,7 @@ validateConnection(llvm::StringRef conn) {
 
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
-                std::ofstream *log, llvm::StringRef program_path,
+                Log *log, llvm::StringRef program_path,
                 const ReplMode default_repl_mode,
                 const std::vector<std::string> &pre_init_commands) {
   Status status;
@@ -484,10 +484,10 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  std::unique_ptr<std::ofstream> log = nullptr;
+  std::unique_ptr<Log> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
   if (log_file_path)
-    log = std::make_unique<std::ofstream>(log_file_path);
+    log = std::make_unique<Log>(std::ofstream(log_file_path));
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();

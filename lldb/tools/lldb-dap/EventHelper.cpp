@@ -178,15 +178,13 @@ void SendThreadStoppedEvent(DAP &dap) {
           SendThreadExitedEvent(dap, tid);
       }
     } else {
-      if (dap.log)
-        *dap.log << "error: SendThreadStoppedEvent() when process"
-                    " isn't stopped ("
-                 << lldb::SBDebugger::StateAsCString(state) << ')' << std::endl;
+      DAP_LOG(
+          dap.log,
+          "error: SendThreadStoppedEvent() when process isn't stopped ({0})",
+          lldb::SBDebugger::StateAsCString(state));
     }
   } else {
-    if (dap.log)
-      *dap.log << "error: SendThreadStoppedEvent() invalid process"
-               << std::endl;
+    DAP_LOG(dap.log, "error: SendThreadStoppedEvent() invalid process");
   }
   dap.RunStopCommands();
 }
