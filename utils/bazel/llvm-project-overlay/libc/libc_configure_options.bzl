@@ -44,11 +44,6 @@ LIBC_CONFIGURE_OPTIONS = [
     # "LIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE",
     # "LIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION",
 
-    # Documentation in libc/src/errno/...
-    # Since we're only using Bazel for overlay build for now, explicitly
-    # enforce using the system-provided errno in both tests and release build.
-    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM",
-
     # Documentation in libc/src/__support/libc_assert.h
     # "LIBC_COPT_USE_C_ASSERT",
 ]

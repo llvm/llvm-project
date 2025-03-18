@@ -72,6 +72,10 @@ struct MissingFeatures {
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
 
+  // Unary operator handling
+  static bool opUnarySignedOverflow() { return false; }
+  static bool opUnaryPromotionType() { return false; }
+
   // Misc
   static bool scalarConversionOpts() { return false; }
   static bool tryEmitAsConstant() { return false; }
@@ -86,6 +90,11 @@ struct MissingFeatures {
   static bool aggValueSlot() { return false; }
 
   static bool unsizedTypes() { return false; }
+  static bool sanitizers() { return false; }
+  static bool CGFPOptionsRAII() { return false; }
+
+  // Missing types
+  static bool vectorType() { return false; }
 };
 
 } // namespace cir
