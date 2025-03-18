@@ -206,12 +206,19 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   trace::Span S("AdjustCompileFlags");
   
   // Add uCPP code to the include path
-  
   std::filesystem::path extensionDirPath = std::filesystem::path(clang::clangd::ClangdBinaryPath).parent_path();
   std::filesystem::path ucppIncludePath = (extensionDirPath / "uCPP/source/src/library");
-
   Cmd.push_back("-I" + ucppIncludePath.string());
-  Cmd.push_back("-ferror-limit=0"); //"-ferror-limit=0"
+  
+  // Disable error limit
+  // This is kind of corner cutting but this helps us to ignore error diagnostics present in uC++ files
+  Cmd.push_back("-ferror-limit=0");
+
+  // "mock" the import injection done by uC++
+  std::filesystem::path ucppKernelHeaderPath = (extensionDirPath / "uCPP/source/src/kernel/uC++.h");
+  Cmd.push_back("-include");
+  Cmd.push_back(ucppKernelHeaderPath.string());
+
 
   // Most of the modifications below assumes the Cmd starts with a driver name.
   // We might consider injecting a generic driver name like "cc" or "c++", but

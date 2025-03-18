@@ -307,9 +307,17 @@ struct CompletionCandidate {
           return std::nullopt;
     }
     Symbol::IncludeDirective Directive = insertionDirective(Opts);
-    for (const auto &Inc : RankedIncludeHeaders)
-      if ((Inc.Directive & Directive) != 0)
+
+    // This file is appended to our include path but we NEVER want to auto import it
+    // This (sort of) mimics the import injection actually done by uC++
+    const auto ucppIgnorePath = "source/src/kernel/uC%2B%2B.h";
+
+    for (const auto &Inc : RankedIncludeHeaders) {
+      if ( ((Inc.Directive & Directive) != 0) && !Inc.Header.contains(ucppIgnorePath)) {
         return Inc.Header;
+      }
+    }
+
     return std::nullopt;
   }
 
