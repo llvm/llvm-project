@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/acoshf16.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -33,9 +34,11 @@ TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(float16(0.0f), LIBC_NAMESPACE::acoshf16(float16(1.0f)));
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::acoshf16(
+                         LIBC_NAMESPACE::fputil::cast<float16>(1.0)));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(float16(0.5f)));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(
+                         LIBC_NAMESPACE::fputil::cast<float16>(0.5)));
   EXPECT_MATH_ERRNO(EDOM);
 }
