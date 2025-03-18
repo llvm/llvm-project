@@ -289,17 +289,17 @@ define void @test_many_matching_constraints(i32 %a, i32 %b, i32 %c) nounwind {
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY %11
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY %12
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY %13
-  ; CHECK-NEXT:   G_STORE [[COPY6]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   G_STORE [[COPY7]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   G_STORE [[COPY8]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY6]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY7]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[COPY8]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %asm = call {i32, i32, i32} asm sideeffect "; ", "=v,=v,=v,0,2,1"(i32 %c, i32 %a, i32 %b)
   %asmresult0 = extractvalue  {i32, i32, i32} %asm, 0
-  store i32 %asmresult0, ptr addrspace(1) undef
+  store i32 %asmresult0, ptr addrspace(1) poison
   %asmresult1 = extractvalue  {i32, i32, i32} %asm, 1
-  store i32 %asmresult1, ptr addrspace(1) undef
+  store i32 %asmresult1, ptr addrspace(1) poison
   %asmresult2 = extractvalue  {i32, i32, i32} %asm, 2
-  store i32 %asmresult2, ptr addrspace(1) undef
+  store i32 %asmresult2, ptr addrspace(1) poison
   ret void
 }
 

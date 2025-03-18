@@ -303,7 +303,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
   /// Checks if an omp::Object is an array expression with a subscript, e.g.
   /// array(1,2).
   auto isArrayExprWithSubscript = [](omp::Object obj) {
-    if (auto maybeRef = evaluate::ExtractDataRef(*obj.ref())) {
+    if (auto maybeRef = evaluate::ExtractDataRef(obj.ref())) {
       evaluate::DataRef ref = *maybeRef;
       if (auto *arr = std::get_if<evaluate::ArrayRef>(&ref.u))
         return !arr->subscript().empty();
@@ -454,7 +454,7 @@ getComponentObject(std::optional<Object> object,
   if (!object)
     return std::nullopt;
 
-  auto ref = evaluate::ExtractDataRef(*object.value().ref());
+  auto ref = evaluate::ExtractDataRef(object.value().ref());
   if (!ref)
     return std::nullopt;
 
