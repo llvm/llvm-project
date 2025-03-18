@@ -26,6 +26,12 @@ mlir_tablegen(MemorySlotTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIRMemorySlotInterfacesIncGen)
 add_dependencies(mlir-generic-headers MLIRMemorySlotInterfacesIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LoopAnnotationAttrInterface.td)
+mlir_tablegen(LoopAnnotationAttrInterface.h.inc -gen-attr-interface-decls)
+mlir_tablegen(LoopAnnotationAttrInterface.cpp.inc -gen-attr-interface-defs)
+add_public_tablegen_target(MLIRLoopAnnotationAttrInterfaceIncGen)
+add_dependencies(mlir-generic-headers MLIRLoopAnnotationAttrInterfaceIncGen)
+
 set(LLVM_TARGET_DEFINITIONS DataLayoutInterfaces.td)
 mlir_tablegen(DataLayoutAttrInterface.h.inc -gen-attr-interface-decls)
 mlir_tablegen(DataLayoutAttrInterface.cpp.inc -gen-attr-interface-defs)

@@ -14,6 +14,7 @@
 #define MLIR_INTERFACES_LOOPLIKEINTERFACE
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/LoopAnnotationAttrInterface.td"
 
 //===----------------------------------------------------------------------===//
 // Interfaces
@@ -231,6 +232,22 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
+        Returns the loop annotation attributes.
+      }],
+      /*retTy=*/"::mlir::SmallVector<::mlir::NamedAttribute>",
+      /*methodName=*/"getLoopAnnotationAttributes",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        SmallVector<NamedAttribute> loopAnnotationAttrs;
+        llvm::copy_if($_op->getAttrs(), std::back_inserter(loopAnnotationAttrs),
+                      [](auto attr) -> bool {
+                        return mlir::isa<mlir::LoopAnnotationAttrInterface>(attr.getValue());
+                      });
+        return loopAnnotationAttrs;
       }]
     >
   ];
