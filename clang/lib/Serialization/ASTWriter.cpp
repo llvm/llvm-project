@@ -8871,3 +8871,10 @@ void ASTRecordWriter::writeOpenACCClauseList(
   for (const OpenACCClause *Clause : Clauses)
     writeOpenACCClause(Clause);
 }
+void ASTRecordWriter::AddOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  // We have to write the size so that the reader can do a resize. Unlike the
+  // Decl version of this, we can't count on trailing storage to get this right.
+  writeUInt32(A->Clauses.size());
+  writeOpenACCClauseList(A->Clauses);
+}
