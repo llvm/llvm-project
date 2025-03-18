@@ -1,4 +1,3 @@
-
 #include "src/math/sinpi.h"
 #include "sincos_eval.h"
 #include "src/__support/FPUtil/BasicOperations.h"
@@ -7,15 +6,14 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-// #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/math/pow.h"
-// #include "src/math/generic/range_reduction_double_common.h"
 #include "range_reduction_double_nofma.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include <iostream>
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
@@ -43,8 +41,10 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   [[maybe_unused]] Float128 ggg = range_reduction_small_f128(fff);
 
   double y = (x * 128) - k;
-  double pi = 3.14 / 128;
-  DoubleDouble yy = fputil::exact_mult(y, pi);
+  constexpr DoubleDouble PI_OVER_128_DD = {0x1.1a62633145c07p-60,
+                                           0x1.921fb54442d18p-6};
+  double pi_over_128 = PI_OVER_128_DD.hi;
+  DoubleDouble yy = fputil::exact_mult(y, pi_over_128);
 
   uint64_t abs_u = xbits.uintval();
 
@@ -53,7 +53,7 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
 
-  if (x_abs >= 0x1p52) {
+  if (x_abs >= 0x4330000000000000) {
     if (xbits.is_nan())
       return x;
     if (xbits.is_inf()) {
