@@ -4304,7 +4304,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The NEON vector load instructions handled by this function all have
     // integer variants. It is easier to use those rather than trying to cast
     // a struct of vectors of floats into a struct of vectors of integers.
-    CallInst *CI = IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI =
+        IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
     if (!MS.TrackOrigins)
