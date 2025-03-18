@@ -9,13 +9,10 @@ commands to run the tests in the debuginfo-tests repository with lldb.
 import subprocess, platform, os, sys
 
 # Set the path to look first for the built lldb (in case it exists).
-llvm_libs_dir = os.environ["LLVM_LIBS_DIR"]
-built_lldb_path = os.path.join(
-    llvm_libs_dir,
-    f"python{sys.version_info.major}.{sys.version_info.minor}",
-    "site-packages",
-)
-sys.path.insert(0, built_lldb_path)
+lldb_python_path = os.environ["LLDB_PYTHON_PATH"]
+if len(lldb_python_path) > 0:
+    sys.path.insert(0, lldb_python_path)
+
 try:
     # Just try for LLDB in case PYTHONPATH is already correctly setup.
     import lldb
