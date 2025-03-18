@@ -53,7 +53,7 @@ using LlvmLibcHypotfExhaustiveTest = LlvmLibcExhaustiveMathTest<HypotfChecker>;
 
 // Range of the first input: [2^23, 2^24);
 static constexpr uint32_t START = (23U + 127U) << 23;
-static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1;
+static constexpr uint32_t STOP = (24U + 127U) << 23;
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(START, STOP);
