@@ -218,7 +218,7 @@ DEFAULT_PARAMETERS = [
 
             # Note: AppleClang disregards -fmodules entirely when compiling C++, so we also pass -fcxx-modules
             #       to enable modules for C++.
-            AddCompileFlag("-fmodules -fcxx-modules")   if modules == "clang") else None,
+            AddCompileFlag("-fmodules -fcxx-modules")   if modules == "clang" else None,
 
             # Note: We use a custom modules cache path to make sure that we don't reuse
             #       the default one, which can be shared across CI builds with different
