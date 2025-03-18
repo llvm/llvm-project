@@ -154,22 +154,23 @@ public:
     if (find(V, MF).isValid())
       return;
 
-    Storage[V][MF] = R;
+    auto &S = Storage[V];
+    S[MF] = R;
     if (std::is_same<Function,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>() ||
         std::is_same<Argument,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsFunc(true);
+      S.setIsFunc(true);
     if (std::is_same<GlobalVariable,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsGV(true);
+      S.setIsGV(true);
     if (std::is_same<Constant,
                      typename std::remove_const<
                          typename std::remove_pointer<KeyTy>::type>::type>())
-      Storage[V].setIsConst(true);
+      S.setIsConst(true);
   }
 
   Register find(KeyTy V, const MachineFunction *MF) const {

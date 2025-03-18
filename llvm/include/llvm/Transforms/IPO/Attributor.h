@@ -1208,7 +1208,8 @@ struct InformationCache {
         TargetTriple(M.getTargetTriple()) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
-          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreInterBlock */
+          true, /* ExploreCFGForward */ true,
           /* ExploreCFGBackward */ true,
           /* LIGetter */
           [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },

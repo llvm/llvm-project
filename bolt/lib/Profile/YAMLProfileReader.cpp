@@ -28,7 +28,7 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
 extern cl::opt<bool> Lite;
 
-cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
+static cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
     "name-similarity-function-matching-threshold",
     cl::desc("Match functions using namespace and edit distance"), cl::init(0),
     cl::Hidden, cl::cat(BoltOptCategory));
@@ -38,11 +38,11 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchProfileWithFunctionHash("match-profile-with-function-hash",
                                  cl::desc("Match profile with function hash"),
                                  cl::Hidden, cl::cat(BoltOptCategory));
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchWithCallGraph("match-with-call-graph",
                        cl::desc("Match functions with call graph"), cl::Hidden,
                        cl::cat(BoltOptCategory));

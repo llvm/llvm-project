@@ -143,6 +143,8 @@ STOPPED_DUE_TO_STEP_IN = "Process state is stopped due to step in"
 
 STOPPED_DUE_TO_WATCHPOINT = "Process should be stopped due to watchpoint"
 
+STOPPED_DUE_TO_HISTORY_BOUNDARY = "Process should be stopped due to history boundary"
+
 DATA_TYPES_DISPLAYED_CORRECTLY = "Data type(s) displayed correctly"
 
 VALID_BREAKPOINT = "Got a valid breakpoint"
@@ -1344,6 +1346,13 @@ class Base(unittest.TestCase):
         arch = self.getArchitecture().lower()
         return arch in ["aarch64", "arm64", "arm64e"]
 
+    def isARM(self):
+        """Returns true if the architecture is ARM, meaning 32-bit ARM. Which could
+        be M profile, A profile Armv7-a, or the AArch32 mode of Armv8-a."""
+        return not self.isAArch64() and (
+            self.getArchitecture().lower().startswith("arm")
+        )
+
     def isAArch64SVE(self):
         return self.isAArch64() and "sve" in self.getCPUInfo()
 
@@ -1392,6 +1401,10 @@ class Base(unittest.TestCase):
 
     def isLoongArchLASX(self):
         return self.isLoongArch() and "lasx" in self.getCPUInfo()
+
+    def isRISCV(self):
+        """Returns true if the architecture is RISCV64 or RISCV32."""
+        return self.getArchitecture() in ["riscv64", "riscv32"]
 
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
@@ -2345,8 +2358,9 @@ FileCheck output:
         matches the patterns contained in 'patterns'.
 
         When matching is true and ordered is true, which are both the default,
-        the strings in the substrs array have to appear in the command output
-        in the order in which they appear in the array.
+        the strings in the substrs array, and regex in the patterns array, have
+        to appear in the command output in the order in which they appear in
+        their respective array.
 
         If the keyword argument error is set to True, it signifies that the API
         client is expecting the command to fail.  In this case, the error stream
@@ -2449,9 +2463,9 @@ FileCheck output:
         if substrs and matched == matching:
             start = 0
             for substr in substrs:
-                index = output[start:].find(substr)
-                start = start + index + len(substr) if ordered and matching else 0
+                index = output.find(substr, start)
                 matched = index != -1
+                start = index + len(substr) if ordered and matched else 0
                 log_lines.append(
                     '{} sub string: "{}" ({})'.format(
                         expecting_str, substr, found_str(matched)
@@ -2462,20 +2476,21 @@ FileCheck output:
                     break
 
         if patterns and matched == matching:
+            start = 0
             for pattern in patterns:
-                matched = re.search(pattern, output)
+                pat = re.compile(pattern)
+                match = pat.search(output, start)
+                matched = bool(match)
+                start = match.end() if ordered and matched else 0
 
                 pattern_line = '{} regex pattern: "{}" ({}'.format(
                     expecting_str, pattern, found_str(matched)
                 )
-                if matched:
-                    pattern_line += ', matched "{}"'.format(matched.group(0))
+                if match:
+                    pattern_line += ', matched "{}"'.format(match.group(0))
                 pattern_line += ")"
                 log_lines.append(pattern_line)
 
-                # Convert to bool because match objects
-                # are True-ish but is not True itself
-                matched = bool(matched)
                 if matched != matching:
                     break
 

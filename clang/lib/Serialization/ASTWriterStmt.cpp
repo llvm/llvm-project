@@ -361,25 +361,25 @@ void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   VisitAsmStmt(S);
   Record.push_back(S->getNumLabels());
   Record.AddSourceLocation(S->getRParenLoc());
-  Record.AddStmt(S->getAsmString());
+  Record.AddStmt(S->getAsmStringExpr());
 
   // Outputs
   for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     Record.AddIdentifierRef(S->getOutputIdentifier(I));
-    Record.AddStmt(S->getOutputConstraintLiteral(I));
+    Record.AddStmt(S->getOutputConstraintExpr(I));
     Record.AddStmt(S->getOutputExpr(I));
   }
 
   // Inputs
   for (unsigned I = 0, N = S->getNumInputs(); I != N; ++I) {
     Record.AddIdentifierRef(S->getInputIdentifier(I));
-    Record.AddStmt(S->getInputConstraintLiteral(I));
+    Record.AddStmt(S->getInputConstraintExpr(I));
     Record.AddStmt(S->getInputExpr(I));
   }
 
   // Clobbers
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
-    Record.AddStmt(S->getClobberStringLiteral(I));
+    Record.AddStmt(S->getClobberExpr(I));
 
   // Labels
   for (unsigned I = 0, N = S->getNumLabels(); I != N; ++I) {
@@ -1335,11 +1335,15 @@ void ASTStmtWriter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
 void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
+  bool HasFPFeatures = E->hasStoredFPFeatures();
+  CurrentPackingBits.addBit(HasFPFeatures);
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
   Record.AddStmt(E->getSrcExpr());
   Code = serialization::EXPR_CONVERT_VECTOR;
+  if (HasFPFeatures)
+    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 }
 
 void ASTStmtWriter::VisitBlockExpr(BlockExpr *E) {
@@ -3011,6 +3015,18 @@ void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   Record.AddStmt(S->getAssociatedStmt());
 
   Code = serialization::STMT_OPENACC_ATOMIC_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
+  VisitStmt(S);
+  Record.push_back(S->getVarList().size());
+  VisitOpenACCConstructStmt(S);
+  Record.AddSourceRange(S->ParensLoc);
+  Record.AddSourceLocation(S->ReadOnlyLoc);
+
+  for (Expr *E : S->getVarList())
+    Record.AddStmt(E);
+  Code = serialization::STMT_OPENACC_CACHE_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

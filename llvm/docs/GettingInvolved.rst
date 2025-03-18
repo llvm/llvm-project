@@ -204,13 +204,8 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
-   * - Floating Point Working Group
-     - Every 3rd Wednesday of the month
-     - `ics <https://calendar.google.com/calendar/ical/02582507bac79d186900712566ec3fc69b33ac24d7de0a8c76c7b19976f190c0%40group.calendar.google.com/private-6e35506dbfe13812e92e9aa8cd5d761d/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
-     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
    * - Vectorizer Improvement Working Group
-     - Every 3rd Thursday of the month
+     - 3rd Tuesday of the month
      - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
 

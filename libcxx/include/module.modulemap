@@ -369,6 +369,14 @@ module std_core [system] {
     module negation                                   { header "__type_traits/negation.h" }
     module promote                                    { header "__type_traits/promote.h" }
     module rank                                       { header "__type_traits/rank.h" }
+    module reference_constructs_from_temporary {
+      header "__type_traits/reference_constructs_from_temporary.h"
+      export std_core.type_traits.integral_constant
+    }
+    module reference_converts_from_temporary {
+      header "__type_traits/reference_converts_from_temporary.h"
+      export std_core.type_traits.integral_constant
+    }
     module remove_all_extents                         { header "__type_traits/remove_all_extents.h" }
     module remove_const_ref                           { header "__type_traits/remove_const_ref.h" }
     module remove_const                               { header "__type_traits/remove_const.h" }
@@ -700,6 +708,7 @@ module std [system] {
     }
     module ranges_remove {
       header "__algorithm/ranges_remove.h"
+      export std.ranges.subrange // return type
     }
     module ranges_replace_copy_if {
       header "__algorithm/ranges_replace_copy_if.h"
@@ -724,7 +733,7 @@ module std [system] {
     }
     module ranges_rotate_copy {
       header "__algorithm/ranges_rotate_copy.h"
-      export std.algorithm.in_out_result
+      export std.ranges.subrange // return type
     }
     module ranges_rotate                          { header "__algorithm/ranges_rotate.h" }
     module ranges_sample                          { header "__algorithm/ranges_sample.h" }
@@ -935,6 +944,10 @@ module std [system] {
     module exception                  { header "__chrono/exception.h" }
     module file_clock                 { header "__chrono/file_clock.h" }
     module formatter                  { header "__chrono/formatter.h" }
+    module gps_clock {
+      header "__chrono/gps_clock.h"
+      export std.chrono.time_point
+    }
     module hh_mm_ss                   { header "__chrono/hh_mm_ss.h" }
     module high_resolution_clock {
       header "__chrono/high_resolution_clock.h"
@@ -1225,7 +1238,11 @@ module std [system] {
   module filesystem {
     module copy_options                   { header "__filesystem/copy_options.h" }
     module directory_entry                { header "__filesystem/directory_entry.h" }
-    module directory_iterator             { header "__filesystem/directory_iterator.h" }
+    module directory_iterator             {
+      header "__filesystem/directory_iterator.h"
+      // This is a workaround for https://github.com/llvm/llvm-project/issues/120108.
+      export *
+    }
     module directory_options              { header "__filesystem/directory_options.h" }
     module file_status                    { header "__filesystem/file_status.h" }
     module file_time_type                 { header "__filesystem/file_time_type.h" }
@@ -1506,6 +1523,7 @@ module std [system] {
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
+      textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"

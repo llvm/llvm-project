@@ -1595,6 +1595,39 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
   EXPECT_NE(N, DISubrange::get(Context, nullptr, LVother, UE, SE));
 }
 
+typedef MetadataTest DISubrangeTypeTest;
+
+TEST_F(DISubrangeTypeTest, get) {
+  auto *Base =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "test_integer", 32, 0,
+                       dwarf::DW_ATE_signed, 100, DINode::FlagZero);
+
+  DILocalScope *Scope = getSubprogram();
+  DIFile *File = getFile();
+
+  ConstantInt *Lower = ConstantInt::get(Context, APInt(32, -7, true));
+  ConstantAsMetadata *LowerConst = ConstantAsMetadata::get(Lower);
+  ConstantInt *Upper = ConstantInt::get(Context, APInt(32, 23, true));
+  ConstantAsMetadata *UpperConst = ConstantAsMetadata::get(Upper);
+
+  auto *N = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
+                                DINode::FlagZero, Base, LowerConst, UpperConst,
+                                nullptr, LowerConst);
+  EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
+
+  auto L = N->getLowerBound();
+  EXPECT_EQ(-7, cast<ConstantInt *>(L)->getSExtValue());
+
+  auto U = N->getUpperBound();
+  EXPECT_EQ(23, cast<ConstantInt *>(U)->getSExtValue());
+
+  EXPECT_EQ(101u, N->getLine());
+  EXPECT_EQ(32u, N->getSizeInBits());
+
+  TempDISubrangeType Temp = N->clone();
+  EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
 typedef MetadataTest DIGenericSubrangeTest;
 
 TEST_F(DIGenericSubrangeTest, fortranAssumedRankInt) {

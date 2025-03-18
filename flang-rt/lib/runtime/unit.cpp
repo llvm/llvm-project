@@ -511,7 +511,7 @@ void ExternalFileUnit::EndIoStatement() {
 void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, access == Access::Sequential);
-  std::int32_t header{0}, footer{0};
+  std::uint32_t header{0}, footer{0};
   std::size_t need{recordOffsetInFrame_ + sizeof header};
   std::size_t got{ReadFrame(frameOffsetInFile_, need, handler)};
   // Try to emit informative errors to help debug corrupted files.
@@ -528,17 +528,41 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     recordLength = sizeof header + header; // does not include footer
     need = recordOffsetInFrame_ + *recordLength + sizeof footer;
     got = ReadFrame(frameOffsetInFile_, need, handler);
-    if (got < need) {
+    if (got >= need) {
+      footer = ReadHeaderOrFooter(recordOffsetInFrame_ + *recordLength);
+    }
+    if (frameOffsetInFile_ == 0 && recordOffsetInFrame_ == 0 &&
+        (got < need || footer != header)) {
+      // Maybe an omitted or incorrect byte swap flag setting?
+      // Try it the other way, since this is the first record.
+      // (N.B. Won't work on files starting with empty records, but there's
+      // no good way to know later if all preceding records were empty.)
+      swapEndianness_ = !swapEndianness_;
+      std::uint32_t header2{ReadHeaderOrFooter(0)};
+      std::size_t recordLength2{sizeof header2 + header2};
+      std::size_t need2{recordLength2 + sizeof footer};
+      std::size_t got2{ReadFrame(0, need2, handler)};
+      if (got2 >= need2) {
+        std::uint32_t footer2{ReadHeaderOrFooter(recordLength2)};
+        if (footer2 == header2) {
+          error = "Unformatted variable-length sequential file input "
+                  "failed on the first record, probably due to a need "
+                  "for byte order data conversion; consider adding "
+                  "CONVERT='SWAP' to the OPEN statement or adding "
+                  "FORT_CONVERT=SWAP to the execution environment";
+        }
+      }
+      swapEndianness_ = !swapEndianness_;
+    }
+    if (error) {
+    } else if (got < need) {
       error = "Unformatted variable-length sequential file input failed at "
               "record #%jd (file offset %jd): hit EOF reading record with "
               "length %jd bytes";
-    } else {
-      footer = ReadHeaderOrFooter(recordOffsetInFrame_ + *recordLength);
-      if (footer != header) {
-        error = "Unformatted variable-length sequential file input failed at "
-                "record #%jd (file offset %jd): record header has length %jd "
-                "that does not match record footer (%jd)";
-      }
+    } else if (footer != header) {
+      error = "Unformatted variable-length sequential file input failed at "
+              "record #%jd (file offset %jd): record header has length %jd "
+              "that does not match record footer (%jd)";
     }
   }
   if (error) {
@@ -590,7 +614,7 @@ void ExternalFileUnit::BackspaceFixedRecord(IoErrorHandler &handler) {
 
 void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     IoErrorHandler &handler) {
-  std::int32_t header{0};
+  std::uint32_t header{0};
   auto headerBytes{static_cast<std::int64_t>(sizeof header)};
   frameOffsetInFile_ += recordOffsetInFrame_;
   recordOffsetInFrame_ = 0;
@@ -775,8 +799,8 @@ void ExternalFileUnit::PopChildIo(ChildIo &child) {
   child_.reset(child.AcquirePrevious().release()); // deletes top child
 }
 
-std::int32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
-  std::int32_t word;
+std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
+  std::uint32_t word;
   char *wordPtr{reinterpret_cast<char *>(&word)};
   std::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
   if (swapEndianness_) {

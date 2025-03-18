@@ -288,6 +288,10 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   SmallVector<MCInst, 4> PendingConditionalInsts;
 
+  void onEndOfFile() override {
+    flushPendingInstructions(getParser().getStreamer());
+  }
+
   void flushPendingInstructions(MCStreamer &Out) override {
     if (!inImplicitITBlock()) {
       assert(PendingConditionalInsts.size() == 0);
@@ -744,9 +748,6 @@ public:
                         SMLoc IDLoc, OperandVector &Operands);
   void ReportNearMisses(SmallVectorImpl<NearMissInfo> &NearMisses, SMLoc IDLoc,
                         OperandVector &Operands);
-
-  MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const override;
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override;
 
@@ -9065,7 +9066,6 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
       Out.emitLabel(Dot);
       const MCExpr *OpExpr = Inst.getOperand(2).getExpr();
       const MCExpr *InstPC = MCSymbolRefExpr::create(Dot,
-                                                     MCSymbolRefExpr::VK_None,
                                                      getContext());
       const MCExpr *Const8 = MCConstantExpr::create(8, getContext());
       const MCExpr *ReadPC = MCBinaryExpr::createAdd(InstPC, Const8,
@@ -11673,37 +11673,6 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   return false;
 }
 
-MCSymbolRefExpr::VariantKind
-ARMAsmParser::getVariantKindForName(StringRef Name) const {
-  return StringSwitch<MCSymbolRefExpr::VariantKind>(Name.lower())
-      .Case("funcdesc", MCSymbolRefExpr::VK_FUNCDESC)
-      .Case("got", MCSymbolRefExpr::VK_GOT)
-      .Case("got_prel", MCSymbolRefExpr::VK_ARM_GOT_PREL)
-      .Case("gotfuncdesc", MCSymbolRefExpr::VK_GOTFUNCDESC)
-      .Case("gotoff", MCSymbolRefExpr::VK_GOTOFF)
-      .Case("gotofffuncdesc", MCSymbolRefExpr::VK_GOTOFFFUNCDESC)
-      .Case("gottpoff", MCSymbolRefExpr::VK_GOTTPOFF)
-      .Case("gottpoff_fdpic", MCSymbolRefExpr::VK_GOTTPOFF_FDPIC)
-      .Case("imgrel", MCSymbolRefExpr::VK_COFF_IMGREL32)
-      .Case("none", MCSymbolRefExpr::VK_ARM_NONE)
-      .Case("plt", MCSymbolRefExpr::VK_PLT)
-      .Case("prel31", MCSymbolRefExpr::VK_ARM_PREL31)
-      .Case("sbrel", MCSymbolRefExpr::VK_ARM_SBREL)
-      .Case("secrel32", MCSymbolRefExpr::VK_SECREL)
-      .Case("target1", MCSymbolRefExpr::VK_ARM_TARGET1)
-      .Case("target2", MCSymbolRefExpr::VK_ARM_TARGET2)
-      .Case("tlscall", MCSymbolRefExpr::VK_TLSCALL)
-      .Case("tlsdesc", MCSymbolRefExpr::VK_TLSDESC)
-      .Case("tlsgd", MCSymbolRefExpr::VK_TLSGD)
-      .Case("tlsgd_fdpic", MCSymbolRefExpr::VK_TLSGD_FDPIC)
-      .Case("tlsld", MCSymbolRefExpr::VK_TLSLD)
-      .Case("tlsldm", MCSymbolRefExpr::VK_TLSLDM)
-      .Case("tlsldm_fdpic", MCSymbolRefExpr::VK_TLSLDM_FDPIC)
-      .Case("tlsldo", MCSymbolRefExpr::VK_ARM_TLSLDO)
-      .Case("tpoff", MCSymbolRefExpr::VK_TPOFF)
-      .Default(MCSymbolRefExpr::VK_Invalid);
-}
-
 void ARMAsmParser::doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {
   // We need to flush the current implicit IT block on a label, because it is
   // not legal to branch into an IT block.
@@ -12468,9 +12437,9 @@ bool ARMAsmParser::parseDirectiveTLSDescSeq(SMLoc L) {
   if (getLexer().isNot(AsmToken::Identifier))
     return TokError("expected variable after '.tlsdescseq' directive");
 
-  const MCSymbolRefExpr *SRE =
-    MCSymbolRefExpr::create(Parser.getTok().getIdentifier(),
-                            MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
+  auto *Sym = getContext().getOrCreateSymbol(Parser.getTok().getIdentifier());
+  const auto *SRE = MCSymbolRefExpr::create(
+      Sym, MCSymbolRefExpr::VK_ARM_TLSDESCSEQ, getContext());
   Lex();
 
   if (parseEOL())

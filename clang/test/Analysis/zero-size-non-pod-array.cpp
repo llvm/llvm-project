@@ -124,7 +124,7 @@ void zeroSizeArrayLambdaCaptureUndefined1() {
     int n;
 
     auto l = [arr, n]{
-        int x = n; //expected-warning{{Assigned value is garbage or undefined}}
+        int x = n; //expected-warning{{Assigned value is uninitialized}}
         (void) x;
     };
 
@@ -137,7 +137,7 @@ void zeroSizeArrayLambdaCaptureUndefined2() {
     int n;
 
     [arr, n]{
-        int x = n; //expected-warning{{Assigned value is garbage or undefined}}
+        int x = n; //expected-warning{{Assigned value is uninitialized}}
         (void) x;
     }();
 }

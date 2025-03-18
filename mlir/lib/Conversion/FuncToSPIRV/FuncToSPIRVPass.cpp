@@ -27,7 +27,7 @@ namespace {
 /// A pass converting MLIR Func operations into the SPIR-V dialect.
 class ConvertFuncToSPIRVPass
     : public impl::ConvertFuncToSPIRVPassBase<ConvertFuncToSPIRVPass> {
-  using ConvertFuncToSPIRVPassBase::ConvertFuncToSPIRVPassBase;
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace

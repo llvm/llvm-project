@@ -593,7 +593,7 @@ public:
 
   /// Returns true if PhysReg cannot be written to in inline asm statements.
   virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                      unsigned PhysReg) const {
+                                      MCRegister PhysReg) const {
     return false;
   }
 
@@ -958,6 +958,9 @@ public:
   /// Returns a -1 terminated array of pressure set IDs.
   virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
 
+  /// Get the scale factor of spill weight for this register class.
+  virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
+
   /// Get a list of 'hint' registers that the register allocator should try
   /// first when allocating a physical register for the virtual register
   /// VirtReg. These registers are effectively moved to the front of the
@@ -1111,6 +1114,10 @@ public:
   prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
                           const StackOffset &Offset) const;
 
+  virtual int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const {
+    llvm_unreachable("getDwarfRegNumForVirtReg does not exist on this target");
+  }
+
   /// Spill the register so it can be used by the register scavenger.
   /// Return true if the register was spilled, false otherwise.
   /// If this function does not spill the register, the scavenger
@@ -1230,13 +1237,6 @@ public:
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                    const MachineRegisterInfo &MRI) const {
     return nullptr;
-  }
-
-  /// Returns the physical register number of sub-register "Index"
-  /// for physical register RegNo. Return zero if the sub-register does not
-  /// exist.
-  inline MCRegister getSubReg(MCRegister Reg, unsigned Idx) const {
-    return static_cast<const MCRegisterInfo *>(this)->getSubReg(Reg, Idx);
   }
 
   /// Some targets have non-allocatable registers that aren't technically part

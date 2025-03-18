@@ -116,7 +116,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysisLegacy>();
-    AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
+    AU.addRequired<RegAllocPriorityAdvisorAnalysisLegacy>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -860,6 +860,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // Regs[CandidatePos].second)
   assert(Regs[CandidatePos].second);
   if (CandidatePos == CandidateVirtRegPos) {
+    onEviction(VirtReg.reg());
     assert(!MustFindEviction);
     return MCRegister::NoRegister;
   }
@@ -869,15 +870,11 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // Update information about how many times the virtual registers being
   // evicted have been evicted so that we can prevent the model from evicting
   // the same ranges continually and eating compile time.
-  if (CandidatePos == CandidateVirtRegPos) {
-    onEviction(VirtReg.reg());
-  } else {
-    for (MCRegUnit Unit : TRI->regunits(Regs[CandidatePos].first)) {
-      LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
-      const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
-      for (const LiveInterval *Intf : reverse(IFIntervals)) {
-        onEviction(Intf->reg());
-      }
+  for (MCRegUnit Unit : TRI->regunits(Regs[CandidatePos].first)) {
+    LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
+    const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
+    for (const LiveInterval *Intf : reverse(IFIntervals)) {
+      onEviction(Intf->reg());
     }
   }
 
@@ -1242,8 +1239,8 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 
   getAnalysis<RegAllocEvictionAdvisorAnalysisLegacy>().logRewardIfNeeded(
       MF, GetReward);
-  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF,
-                                                                   GetReward);
+  getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().logRewardIfNeeded(
+      MF, GetReward);
   return false;
 }
 #endif // #ifdef LLVM_HAVE_TFLITE

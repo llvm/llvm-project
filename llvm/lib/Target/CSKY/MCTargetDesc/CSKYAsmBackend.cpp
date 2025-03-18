@@ -71,7 +71,7 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
          "Not all fixup kinds added to Infos array");
 
   if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < CSKY::NumTargetFixupKinds &&
            "Invalid kind!");
 
     return Infos[Kind];
@@ -262,7 +262,6 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
 bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const uint64_t /*Value*/,
                                            const MCSubtargetInfo * /*STI*/) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;

@@ -1167,6 +1167,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),
+                      AArch64CPUTestParams("grace", "armv9-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
                       AArch64CPUTestParams("oryon-1", "armv8.6-a")),
     AArch64CPUTestParams::PrintToStringParamName);
@@ -1247,7 +1248,6 @@ TEST_P(AArch64CPUAliasTestFixture, testCPUAlias) {
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTests, AArch64CPUAliasTestFixture,
     ::testing::Values(AArch64CPUAliasTestParams({"neoverse-n2", "cobalt-100"}),
-                      AArch64CPUAliasTestParams({"neoverse-v2", "grace"}),
                       AArch64CPUAliasTestParams({"apple-a7", "cyclone",
                                                  "apple-a8", "apple-a9"}),
                       AArch64CPUAliasTestParams({"apple-a12", "apple-s4",
