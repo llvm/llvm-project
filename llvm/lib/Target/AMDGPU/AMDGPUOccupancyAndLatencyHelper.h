@@ -15,6 +15,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCInstrItineraries.h"
 
+#include <cmath>
+
 namespace llvm {
 
 class MachineFunction;
