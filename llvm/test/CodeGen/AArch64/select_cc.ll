@@ -2,12 +2,19 @@
 ; RUN: llc < %s -mtriple=aarch64 | FileCheck %s
 
 define i64 @select_ogt_float(float %a, float %b) {
-; CHECK-LABEL: select_ogt_float:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    ubfiz x0, x8, #2, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: select_ogt_float:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcmp s0, s1
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    csel x0, x8, xzr, gt
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: select_ogt_float:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fcmp s0, s1
+; CHECK-GI-NEXT:    cset w8, gt
+; CHECK-GI-NEXT:    lsl x0, x8, #2
+; CHECK-GI-NEXT:    ret
 entry:
   %cc = fcmp ogt float %a, %b
   %sel = select i1 %cc, i64 4, i64 0
@@ -15,12 +22,19 @@ entry:
 }
 
 define i64 @select_ule_float_inverse(float %a, float %b) {
-; CHECK-LABEL: select_ule_float_inverse:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    ubfiz x0, x8, #2, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: select_ule_float_inverse:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcmp s0, s1
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    csel x0, xzr, x8, le
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: select_ule_float_inverse:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fcmp s0, s1
+; CHECK-GI-NEXT:    cset w8, gt
+; CHECK-GI-NEXT:    lsl x0, x8, #2
+; CHECK-GI-NEXT:    ret
 entry:
   %cc = fcmp ule float %a, %b
   %sel = select i1 %cc, i64 0, i64 4
@@ -28,12 +42,19 @@ entry:
 }
 
 define i64 @select_eq_i32(i32 %a, i32 %b) {
-; CHECK-LABEL: select_eq_i32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    ubfiz x0, x8, #2, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: select_eq_i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    csel x0, x8, xzr, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: select_eq_i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    cset w8, eq
+; CHECK-GI-NEXT:    lsl x0, x8, #2
+; CHECK-GI-NEXT:    ret
 entry:
   %cc = icmp eq i32 %a, %b
   %sel = select i1 %cc, i64 4, i64 0
@@ -41,12 +62,19 @@ entry:
 }
 
 define i64 @select_ne_i32_inverse(i32 %a, i32 %b) {
-; CHECK-LABEL: select_ne_i32_inverse:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    ubfiz x0, x8, #2, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: select_ne_i32_inverse:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #4 // =0x4
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    csel x0, xzr, x8, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: select_ne_i32_inverse:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    cset w8, eq
+; CHECK-GI-NEXT:    lsl x0, x8, #2
+; CHECK-GI-NEXT:    ret
 entry:
   %cc = icmp ne i32 %a, %b
   %sel = select i1 %cc, i64 0, i64 4
