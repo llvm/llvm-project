@@ -30,6 +30,6 @@ void f(X x, Z z) {
   operator co_await(z);
 }
 
-void operator co_await(); // expected-error {{must have at least one parameter}}
+void operator co_await(); // expected-error {{must be a unary operator}}
 void operator co_await(X, Y, Z); // expected-error {{must be a unary operator}}
 void operator co_await(int); // expected-error {{parameter of class or enumeration type}}

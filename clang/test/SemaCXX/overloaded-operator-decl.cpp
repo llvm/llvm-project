@@ -21,6 +21,8 @@ void f(X x) {
   x = operator+(x, x);
 }
 
+X operator+(); // expected-error {{overloaded 'operator+' must be a unary or binary operator}}
+
 X operator+(int, float); // expected-error{{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
 
 X operator*(X, X = 5); // expected-error{{parameter of overloaded 'operator*' cannot have a default argument}}
@@ -69,33 +71,33 @@ class E {
 void operator+(E, ...) {} // expected-error{{overloaded 'operator+' cannot be variadic}}
 void operator-(E, ...) {} // expected-error{{overloaded 'operator-' cannot be variadic}}
 void operator*(E, ...) {} // expected-error{{overloaded 'operator*' cannot be variadic}}
-void operator/(E, ...) {} // expected-error{{overloaded 'operator/' must be a binary operator}}
+void operator/(E, ...) {} // expected-error{{overloaded 'operator/' cannot be variadic}}
 void operator/(E, E, ...) {} // expected-error{{overloaded 'operator/' cannot be variadic}}
-void operator%(E, ...) {} // expected-error{{overloaded 'operator%' must be a binary operator}}
+void operator%(E, ...) {} // expected-error{{overloaded 'operator%' cannot be variadic}}
 void operator%(E, E, ...) {} // expected-error{{overloaded 'operator%' cannot be variadic}}
 E& operator++(E&, ...); // expected-error{{overloaded 'operator++' cannot be variadic}}
 E& operator--(E&, ...); // expected-error{{overloaded 'operator--' cannot be variadic}}
-bool operator<(const E& lhs, ...); // expected-error{{overloaded 'operator<' must be a binary operator}}
+bool operator<(const E& lhs, ...); // expected-error{{overloaded 'operator<' cannot be variadic}}
 bool operator<(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator>(const E& lhs, ...); // expected-error{{overloaded 'operator>' must be a binary operator}}
+bool operator>(const E& lhs, ...); // expected-error{{overloaded 'operator>' cannot be variadic}}
 bool operator>(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator>=(const E& lhs, ...); // expected-error{{overloaded 'operator>=' must be a binary operator}}
+bool operator>=(const E& lhs, ...); // expected-error{{overloaded 'operator>=' cannot be variadic}}
 bool operator>=(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator<=(const E& lhs, ...); // expected-error{{overloaded 'operator<=' must be a binary operator}}
+bool operator<=(const E& lhs, ...); // expected-error{{overloaded 'operator<=' cannot be variadic}}
 bool operator<=(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator==(const E& lhs, ...); // expected-error{{overloaded 'operator==' must be a binary operator}}
+bool operator==(const E& lhs, ...); // expected-error{{overloaded 'operator==' cannot be variadic}}
 bool operator==(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator!=(const E& lhs, ...); // expected-error{{overloaded 'operator!=' must be a binary operator}}
+bool operator!=(const E& lhs, ...); // expected-error{{overloaded 'operator!=' cannot be variadic}}
 bool operator!=(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator&&(const E& lhs, ...); // expected-error{{overloaded 'operator&&' must be a binary operator}}
+bool operator&&(const E& lhs, ...); // expected-error{{overloaded 'operator&&' cannot be variadic}}
 bool operator&&(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator||(const E& lhs, ...); // expected-error{{overloaded 'operator||' must be a binary operator}}
+bool operator||(const E& lhs, ...); // expected-error{{overloaded 'operator||' cannot be variadic}}
 bool operator||(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
-bool operator>>(const E& lhs, ...); // expected-error{{overloaded 'operator>>' must be a binary operator}}
+bool operator>>(const E& lhs, ...); // expected-error{{overloaded 'operator>>' cannot be variadic}}
 bool operator>>(const E& lhs, const E& rhs, ...); // expected-error{{cannot be variadic}}
 bool operator&(const E& lhs, ...); // expected-error{{cannot be variadic}}
 #if __cplusplus >= 202002L
-auto operator<=>(const E& lhs, ...);  // expected-error{{overloaded 'operator<=>' must be a binary operator}}
+auto operator<=>(const E& lhs, ...);  // expected-error{{overloaded 'operator<=>' cannot be variadic}}
 #endif
 void d() {
   E() + E();
