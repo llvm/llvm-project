@@ -7,7 +7,6 @@
 
 ; CHECK-DAG:        OpEntryPoint GLCompute {{.*}} %[[#LocalInvocationIndex]]
 ; CHECK-DAG:        OpName %[[#LocalInvocationIndex]] "__spirv_BuiltInLocalInvocationIndex"
-; CHECK-DAG:        OpDecorate %[[#LocalInvocationIndex]] LinkageAttributes "__spirv_BuiltInLocalInvocationIndex" Import
 ; CHECK-DAG:        OpDecorate %[[#LocalInvocationIndex]] BuiltIn LocalInvocationIndex
 
 target triple = "spirv-unknown-vulkan-library"
