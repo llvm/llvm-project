@@ -23,8 +23,12 @@
     if (log_private) {                                                         \
       ::std::chrono::duration<double> now{                                     \
           ::std::chrono::system_clock::now().time_since_epoch()};              \
-      *log_private << ::llvm::formatv("{0:f9} ", now.count()).str()            \
-                   << ::llvm::formatv(__VA_ARGS__).str() << std::endl;         \
+      ::std::string out;                                                       \
+      ::llvm::raw_string_ostream os(out);                                      \
+      os << ::llvm::formatv("{0:f9} ", now.count()).str()                      \
+         << ::llvm::formatv(__VA_ARGS__).str() << "\n";                        \
+      *log_private << out;                                                     \
+      log_private->flush();                                                    \
     }                                                                          \
   } while (0)
 
@@ -37,10 +41,13 @@
     if (log_private && error_private) {                                        \
       ::std::chrono::duration<double> now{                                     \
           std::chrono::system_clock::now().time_since_epoch()};                \
-      *log_private << ::llvm::formatv("{0:f9} ", now.count()).str()            \
-                   << ::lldb_dap::FormatError(::std::move(error_private),      \
-                                              __VA_ARGS__)                     \
-                   << std::endl;                                               \
+      ::std::string out;                                                       \
+      ::llvm::raw_string_ostream os(out);                                      \
+      os << ::llvm::formatv("{0:f9} ", now.count()).str()                      \
+         << ::lldb_dap::FormatError(::std::move(error_private), __VA_ARGS__)   \
+         << "\n";                                                              \
+      *log_private << out;                                                     \
+      log_private->flush();                                                    \
     } else                                                                     \
       ::llvm::consumeError(::std::move(error_private));                        \
   } while (0)
