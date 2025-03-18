@@ -2274,7 +2274,6 @@ static unsigned getPaddingDiagFromTagKind(TagTypeKind Tag) {
   }
 }
 
-// Function based on ItaniumRecordLayoutBuilder::CheckFieldPadding.
 static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
                               uint64_t Offset, uint64_t UnpaddedOffset,
                               const FieldDecl *D) {
