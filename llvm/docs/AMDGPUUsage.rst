@@ -1156,6 +1156,10 @@ is conservatively correct for OpenCL.
                              - ``wavefront`` and executed by a thread in the
                                same wavefront.
 
+     ``workgroup-rts``       In addition to ``workgroup``, also establish
+                             orderings with operations that the raytracing unit
+                             performs on behalf of the thread.
+
      ``workgroup``           Synchronizes with, and participates in modification
                              and seq_cst total orderings with, other operations
                              (except image operations) for all address spaces
@@ -6564,6 +6568,173 @@ The AMDGPU backend recognizes the following tags on fences:
   code generation. Optimizations are free to drop the tags to allow for
   better code optimization, at the cost of synchronizing additional address
   spaces.
+
+Ray Tracing
++++++++++++
+
+Some AMD GPUs have dedicated hardware to accelerate tracing a ray against a
+`Bounding Volume Hierarchy (BVH) <https://en.wikipedia.org/wiki/Bounding_volume_hierarchy>`_.
+
+In GFX10.3-GFX12, there is a family of instructions that intersect a ray
+against one node of a BVH (``image_bvh*``).
+From the perspective of the memory model, these instructions behave like regular,
+non-atomic loads.
+
+In GFX13, traversal is accelerated by a fixed function *raytracing units* built
+into each WGP.
+The raytracing unit traverses the BVH autonomously and asynchronously
+while the shader continues to execute instructions to implement programmable
+aspects of BVH traversal in coordination with the raytracing unit.
+
+The raytracing unit communicates with user-space software in three ways:
+
+* It services direct requests made by the shader via the ``rts_*`` family of
+  instructions and responds to them through VGPRs.
+* It loads BVH data from global memory.
+* It loads and stores information about the state of BVH traversal from and into
+  a buffer in global memory called the *hit buffer*.
+
+The raytracing unit's accesses to global memory are not program-ordered against
+instructions executed by the shader.
+
+.. note::
+
+  This is true even for the sub-family of instructions that read BVH data
+  directly, e.g. ``rts_read_vertex``. This matters in the unusual case where
+  a shader program wants to write to a BVH node using global memory stores and
+  then have the raytracing unit read from it via this sub-family of instructions.
+
+The ``rts_*`` family of instructions fill a role similar to relaxed atomics
+in that they can be combined with fences to establish an ordering between the
+shader program's memory accesses and those of the raytracing unit, as explained
+in the following.
+
+Instructions from the ``rts_*`` family are executed in three phases:
+
+1. The instruction is *issued* to the raytracing unit along with any operand data.
+2. Synchronous operations associated to the instruction are performed inside the raytracing unit.
+3. A *completion signal* is sent back to the shader together with any data that is
+   written to VGPRs.
+
+Additionally, the raytracing unit typically performs asynchronous operations associated to
+these instructions. For example, the raytracing unit typically continues to perform
+BVH traversal associated to an ``rts_trace_ray*`` instruction long after sending that
+instruction's completion signal back to the shader.
+
+As such, we treat memory accesses performed by the raytracing unit not as "part of"
+an instruction but as happening asynchronously. Nevertheless, every memory access
+performed by the raytracing unit is *associated with* one or more ``rts_*`` instructions.
+For example:
+
+* Loads of BVH data in the course of one traversal are associated with the
+  ``rts_trace_ray*`` instruction that starts that traversal and the ``rts_read_result*``
+  instruction(s) that read state of that traversal.
+
+  * ``rts_read_result*`` is commonly used multiple times for a single traversal.
+    A raytracing unit load ``L`` of encoded BVH data ``D`` is only associated with
+    ``rts_read_result*`` instructions which read the state of traversal from after ``D``
+    has been traversed.
+
+* Accesses to the hit buffer in the course of one traversal are similarly associated with
+  ``rts_trace_ray*`` and ``rts_read_result*`` instructions and are also associated with the
+  ``rts_update_ray`` instruction for hits that are written after the state update.
+
+Memory accesses by the raytracing unit can occur *before-completion-of* or *after-issue-of*
+the associated ``rts_*`` instruction(s).
+
+  .. table:: Raytracing unit memory accesses
+     :name: raytracing-unit-memory-accesses
+
+    +--------------+-------------------+--------------------------------------+
+    | Memory       | Order             | Instruction / Intrinsic              |
+    +==============+===================+======================================+
+    | * Hit Buffer | after-issue       | * ``rts_trace_ray*``                 |
+    |              |                   | * ``rts_update_ray``                 |
+    +--------------+-------------------+--------------------------------------+
+    | * BVH        | no ordering       | * ``rts_trace_ray*``                 |
+    |              |                   | * ``rts_update_ray``                 |
+    +--------------+-------------------+--------------------------------------+
+    | * Hit Buffer | before-completion | * ``rts_read_result*``               |
+    | * BVH        |                   | * ``rts_ray_save``                   |
+    +--------------+-------------------+--------------------------------------+
+    | * BVH        | before-completion | * ``rts_read_vertex``                |
+    +--------------+-------------------+--------------------------------------+
+    | * BVH        | after-issue       | * ``llvm.amdgcn.rts.invalidate.bvh`` |
+    +--------------+-------------------+--------------------------------------+
+
+.. note::
+
+  ``rts_flush`` and ``rts_ray_restore`` instructions by themselves do not cause
+  the raytracing unit to access global memory.
+
+  For more detail on the ordering of loads of BVH data, see
+  :ref:`amdgpu-bvh-invalidation`.
+
+Let ``X`` be a memory access by the raytracing unit that occurs after-issue-of
+an associated ``rts_*`` instruction ``R``. If there is a release fence ``F``
+before ``R`` in program order, then all memory accesses that are in program order
+before ``F`` happen-before ``X``.
+
+Let ``X`` be a memory access by the raytracing unit that occurs before-completion-of
+an associated ``rts_*`` instruction ``R``. If there is an acquire fence ``F``
+after ``R`` in program order, then ``X`` happens-before all memory accesses that
+are in program order after ``F``.
+
+The above two rules apply if the scope of the relevant fence ``F`` is at least
+``workgroup-rts``.
+
+Example
+#######
+
+It is common to load from the hit buffer after an ``rts_read_result*`` and
+then update the traversal state with ``rts_update_ray``. Fences must be used
+to safely synchronize accesses to the hit buffer, for example as follows:
+
+::
+
+      %r = call i64 @llvm.amdgcn.rts.read.result.all.stop()
+      fence syncscope("workgroup-rts") acquire
+      ...
+      %x = load i32, ptr addrspace(1) %hit_buffer_ptr
+      ...
+      fence syncscope("workgroup-rts") release
+      call void @llvm.amdgcn.rts.update.ray(...)
+
+.. _amdgpu-bvh-invalidation
+
+BVH invalidation
+################
+
+The raytracing unit has its own cache for BVH data which we don't consider to
+be part of the global memory cache hierarchy. LLVM fences never invalidate this cache
+on purpose.
+
+Therefore, loads of BVH data are *not* considered to occur after-issue-of
+their associated ``rts_*`` instruction. Put differently, an ``rts_*``
+instruction may hit in the raytracing unit's internal cache. In that case,
+the load of BVH data from global memory happened "before" the issue of the
+instruction.
+
+However, a program may still want to store BVH data in memory and then access
+that BVH data via the raytracing unit. Such a program must explicitly invalidate the
+cache using the ``llvm.amdgcn.rts.invalidate.bvh`` intrinsic.
+
+Let ``I`` be a use of this intrinsic. The loads of BVH data associated with
+``rts_*`` instructions that are after ``I`` in program order occur after-issue-of ``I``.
+
+Therefore, a sequence like the following in LLVM IR can be used to safely
+synchronize accesses to the BVH:
+
+::
+
+      store i32 %x, ptr %bvh_node_ptr
+      fence syncscope("workgroup-rts") release
+      call void @llvm.amdgcn.rts.invalidate.bvh()
+      call void @llvm.amdgcn.rts.trace.ray(...)
+
+If a program wants to safely modify BVH data after a traversal has finished
+or after ``rts_read_vertex`` has been used, a corresponding acquire fence
+is sufficient.
 
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
 
