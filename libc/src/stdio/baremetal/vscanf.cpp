@@ -21,10 +21,12 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
-struct StreamBuffer : scanf_core::ReadBuffer<StreamBuffer> {
+struct StreamReader : scanf_core::Reader<StreamReader> {
   LIBC_INLINE char getc() {
     char buf[1];
-    read_from_stdin(buf, sizeof(buf));
+    auto result = read_from_stdin(buf, sizeof(buf));
+    if (result <= 0)
+      return EOF;
     return buf[0];
   }
   LIBC_INLINE void ungetc(int) {}
@@ -39,9 +41,7 @@ LLVM_LIBC_FUNCTION(int, vscanf,
                                  // destruction automatically.
   va_end(vlist);
 
-  StreamBuffer buffer;
-  scanf_core::Reader<StreamBuffer> reader(&buffer);
-
+  StreamReader reader;
   int retval = scanf_core::scanf_main(&reader, format, args);
   // This is done to avoid including stdio.h in the internals. On most systems
   // EOF is -1, so this will be transformed into just "return retval".
