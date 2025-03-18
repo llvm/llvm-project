@@ -945,9 +945,9 @@ module std [system] {
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
     module to_chars_floating_point    { header "__charconv/to_chars_floating_point.h" }
-    module to_chars_integral          {
+    module to_chars_integral {
       header "__charconv/to_chars_integral.h"
-      export std.charconv.to_chars_result
+      export *  // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     }
     module to_chars_result            { header "__charconv/to_chars_result.h" }
     module traits                     { header "__charconv/traits.h" }
@@ -1354,7 +1354,10 @@ module std [system] {
     module formatter_char                     { header "__format/formatter_char.h" }
     module formatter_floating_point           { header "__format/formatter_floating_point.h" }
     module formatter_integer                  { header "__format/formatter_integer.h" }
-    module formatter_integral                 { header "__format/formatter_integral.h" }
+    module formatter_integral {
+      header "__format/formatter_integral.h"
+      export * // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+    }
     module formatter_output                   { header "__format/formatter_output.h" }
     module formatter_pointer                  { header "__format/formatter_pointer.h" }
     module formatter_string                   { header "__format/formatter_string.h" }
