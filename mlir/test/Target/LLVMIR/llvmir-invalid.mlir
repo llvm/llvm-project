@@ -348,6 +348,20 @@ llvm.func @foo() {
 
 // -----
 
+llvm.func @foo() {
+  // expected-error @below{{must appear at the module level}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>]
+}
+
+// -----
+
+module attributes {} {
+  // expected-error @below{{expected a module flag attribute}}
+  llvm.module_flags [4 : i32]
+}
+
+// -----
+
 module @does_not_exist {
   // expected-error @below{{resource does not exist}}
   llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xf32>) : !llvm.array<4 x f32>

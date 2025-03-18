@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Transforms/CUFOpConversion.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -904,16 +905,7 @@ struct CUFSyncDescriptorOpConversion
 
     auto hostAddr = builder.create<fir::AddrOfOp>(
         loc, fir::ReferenceType::get(globalOp.getType()), op.getGlobalName());
-    mlir::func::FuncOp callee =
-        fir::runtime::getRuntimeFunc<mkRTKey(CUFSyncGlobalDescriptor)>(loc,
-                                                                       builder);
-    auto fTy = callee.getFunctionType();
-    mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-    mlir::Value sourceLine =
-        fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-    llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-        builder, loc, fTy, hostAddr, sourceFile, sourceLine)};
-    builder.create<fir::CallOp>(loc, callee, args);
+    fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc, hostAddr);
     op.erase();
     return mlir::success();
   }

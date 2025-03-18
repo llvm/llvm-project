@@ -15,6 +15,9 @@ set(link_libs
 set(deps)
 
 if(CLANG_ENABLE_CIR)
+  list(APPEND deps
+    MLIRBuiltinOpsIncGen
+  )
   list(APPEND link_libs
     clangCIRFrontendAction
     MLIRIR

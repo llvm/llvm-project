@@ -318,9 +318,8 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// Returns a loop's estimated trip count based on branch weight metadata.
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
 /// initialized with weight of loop's latch leading to the exit.
-/// Returns a valid positive trip count, or std::nullopt when a meaningful
-/// estimate cannot be made (including when the trip count wouldn't fit in the
-/// result type).
+/// Returns a valid positive trip count, saturated at UINT_MAX, or std::nullopt
+/// when a meaningful estimate cannot be made.
 std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
@@ -427,11 +426,6 @@ Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
 /// operation is described by \p Desc.
 Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
                                  const RecurrenceDescriptor &Desc);
-
-/// Create a generic reduction using a recurrence descriptor \p Desc
-/// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                       Value *Src, PHINode *OrigPhi = nullptr);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.

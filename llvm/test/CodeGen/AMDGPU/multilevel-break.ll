@@ -5,42 +5,43 @@
 ; Ensure two if.break calls, for both the inner and outer loops
 ; FIXME: duplicate comparison
 define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
-; OPT-LABEL: @multi_else_break(
-; OPT-NEXT:  main_body:
-; OPT-NEXT:    br label [[LOOP_OUTER:%.*]]
-; OPT:       LOOP.outer:
-; OPT-NEXT:    [[PHI_BROKEN2:%.*]] = phi i64 [ [[TMP8:%.*]], [[FLOW1:%.*]] ], [ 0, [[MAIN_BODY:%.*]] ]
-; OPT-NEXT:    [[TMP43:%.*]] = phi i32 [ 0, [[MAIN_BODY]] ], [ [[TMP3:%.*]], [[FLOW1]] ]
-; OPT-NEXT:    br label [[LOOP:%.*]]
-; OPT:       LOOP:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP6:%.*]], [[FLOW:%.*]] ], [ 0, [[LOOP_OUTER]] ]
-; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], [[LOOP_OUTER]] ], [ [[TMP3]], [[FLOW]] ]
-; OPT-NEXT:    [[TMP48:%.*]] = icmp slt i32 [[TMP45]], [[UB:%.*]]
+; OPT-LABEL: define amdgpu_vs void @multi_else_break(
+; OPT-SAME: <4 x float> [[VEC:%.*]], i32 [[UB:%.*]], i32 [[CONT:%.*]]) {
+; OPT-NEXT:  [[MAIN_BODY:.*]]:
+; OPT-NEXT:    br label %[[LOOP_OUTER:.*]]
+; OPT:       [[LOOP_OUTER]]:
+; OPT-NEXT:    [[PHI_BROKEN2:%.*]] = phi i64 [ [[TMP8:%.*]], %[[FLOW1:.*]] ], [ 0, %[[MAIN_BODY]] ]
+; OPT-NEXT:    [[TMP43:%.*]] = phi i32 [ 0, %[[MAIN_BODY]] ], [ [[TMP3:%.*]], %[[FLOW1]] ]
+; OPT-NEXT:    br label %[[LOOP:.*]]
+; OPT:       [[LOOP]]:
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP6:%.*]], %[[FLOW:.*]] ], [ 0, %[[LOOP_OUTER]] ]
+; OPT-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP43]], %[[LOOP_OUTER]] ], [ [[TMP3]], %[[FLOW]] ]
+; OPT-NEXT:    [[TMP48:%.*]] = icmp slt i32 [[TMP45]], [[UB]]
 ; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[TMP48]])
 ; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
 ; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
-; OPT-NEXT:    br i1 [[TMP1]], label [[ENDIF:%.*]], label [[FLOW]]
-; OPT:       Flow:
-; OPT-NEXT:    [[TMP3]] = phi i32 [ [[TMP47:%.*]], [[ENDIF]] ], [ undef, [[LOOP]] ]
-; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP51_INV:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
+; OPT-NEXT:    br i1 [[TMP1]], label %[[ENDIF:.*]], label %[[FLOW]]
+; OPT:       [[FLOW]]:
+; OPT-NEXT:    [[TMP3]] = phi i32 [ [[TMP47:%.*]], %[[ENDIF]] ], [ poison, %[[LOOP]] ]
+; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP51:%.*]], %[[ENDIF]] ], [ true, %[[LOOP]] ]
+; OPT-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP51_INV:%.*]], %[[ENDIF]] ], [ true, %[[LOOP]] ]
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
 ; OPT-NEXT:    [[TMP6]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP5]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP7:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP6]])
-; OPT-NEXT:    br i1 [[TMP7]], label [[FLOW1]], label [[LOOP]]
-; OPT:       Flow1:
+; OPT-NEXT:    br i1 [[TMP7]], label %[[FLOW1]], label %[[LOOP]]
+; OPT:       [[FLOW1]]:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
 ; OPT-NEXT:    [[TMP8]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN2]])
 ; OPT-NEXT:    [[TMP9:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP8]])
-; OPT-NEXT:    br i1 [[TMP9]], label [[IF:%.*]], label [[LOOP_OUTER]]
-; OPT:       IF:
+; OPT-NEXT:    br i1 [[TMP9]], label %[[IF:.*]], label %[[LOOP_OUTER]]
+; OPT:       [[IF]]:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
 ; OPT-NEXT:    ret void
-; OPT:       ENDIF:
+; OPT:       [[ENDIF]]:
 ; OPT-NEXT:    [[TMP47]] = add i32 [[TMP45]], 1
-; OPT-NEXT:    [[TMP51]] = icmp eq i32 [[TMP47]], [[CONT:%.*]]
+; OPT-NEXT:    [[TMP51]] = icmp eq i32 [[TMP47]], [[CONT]]
 ; OPT-NEXT:    [[TMP51_INV]] = xor i1 [[TMP51]], true
-; OPT-NEXT:    br label [[FLOW]]
+; OPT-NEXT:    br label %[[FLOW]]
 ;
 ; GCN-LABEL: multi_else_break:
 ; GCN:       ; %bb.0: ; %main_body
@@ -113,55 +114,52 @@ ENDIF:                                            ; preds = %LOOP
 }
 
 define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
-; OPT-LABEL: @multi_if_break_loop(
-; OPT-NEXT:  bb:
+; OPT-LABEL: define amdgpu_kernel void @multi_if_break_loop(
+; OPT-SAME: i32 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; OPT-NEXT:  [[BB:.*]]:
 ; OPT-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; OPT-NEXT:    [[TMP:%.*]] = sub i32 [[ID]], [[ARG:%.*]]
-; OPT-NEXT:    br label [[BB1:%.*]]
-; OPT:       bb1:
-; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP4:%.*]], [[FLOW4:%.*]] ], [ 0, [[BB:%.*]] ]
-; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, [[BB]] ], [ [[TMP2:%.*]], [[FLOW4]] ]
-; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
-; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
-; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
-; OPT-NEXT:    br label [[NODEBLOCK:%.*]]
-; OPT:       NodeBlock:
+; OPT-NEXT:    [[TMP:%.*]] = sub i32 [[ID]], [[ARG]]
+; OPT-NEXT:    br label %[[BB1:.*]]
+; OPT:       [[BB1]]:
+; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP4:%.*]], %[[FLOW4:.*]] ], [ 0, %[[BB]] ]
+; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ poison, %[[BB]] ], [ [[TMP2:%.*]], %[[FLOW4]] ]
+; OPT-NEXT:    [[TMP2]] = add i32 [[LSR_IV]], 1
+; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[TMP2]], 0
+; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, ptr addrspace(1) poison, align 4
+; OPT-NEXT:    br label %[[NODEBLOCK:.*]]
+; OPT:       [[NODEBLOCK]]:
 ; OPT-NEXT:    [[PIVOT:%.*]] = icmp sge i32 [[LOAD0]], 1
-; OPT-NEXT:    br i1 [[PIVOT]], label [[LEAFBLOCK1:%.*]], label [[FLOW:%.*]]
-; OPT:       LeafBlock1:
+; OPT-NEXT:    br i1 [[PIVOT]], label %[[LEAFBLOCK1:.*]], label %[[FLOW:.*]]
+; OPT:       [[LEAFBLOCK1]]:
 ; OPT-NEXT:    [[SWITCHLEAF2:%.*]] = icmp eq i32 [[LOAD0]], 1
-; OPT-NEXT:    br i1 [[SWITCHLEAF2]], label [[CASE1:%.*]], label [[FLOW3:%.*]]
-; OPT:       Flow3:
-; OPT-NEXT:    [[TMP0:%.*]] = phi i32 [ [[LSR_IV_NEXT]], [[CASE1]] ], [ undef, [[LEAFBLOCK1]] ]
-; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ [[CMP2:%.*]], [[CASE1]] ], [ true, [[LEAFBLOCK1]] ]
-; OPT-NEXT:    br label [[FLOW]]
-; OPT:       LeafBlock:
+; OPT-NEXT:    br i1 [[SWITCHLEAF2]], label %[[CASE1:.*]], label %[[FLOW3:.*]]
+; OPT:       [[FLOW3]]:
+; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ [[CMP2:%.*]], %[[CASE1]] ], [ true, %[[LEAFBLOCK1]] ]
+; OPT-NEXT:    br label %[[FLOW]]
+; OPT:       [[LEAFBLOCK:.*]]:
 ; OPT-NEXT:    [[SWITCHLEAF:%.*]] = icmp eq i32 [[LOAD0]], 0
-; OPT-NEXT:    br i1 [[SWITCHLEAF]], label [[CASE0:%.*]], label [[FLOW5:%.*]]
-; OPT:       Flow4:
-; OPT-NEXT:    [[TMP2]] = phi i32 [ [[TMP9:%.*]], [[FLOW5]] ], [ [[TMP6:%.*]], [[FLOW]] ]
-; OPT-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP10:%.*]], [[FLOW5]] ], [ [[TMP7:%.*]], [[FLOW]] ]
+; OPT-NEXT:    br i1 [[SWITCHLEAF]], label %[[CASE0:.*]], label %[[FLOW5:.*]]
+; OPT:       [[FLOW4]]:
+; OPT-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP10:%.*]], %[[FLOW5]] ], [ [[TMP7:%.*]], %[[FLOW]] ]
 ; OPT-NEXT:    [[TMP4]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP3]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP5:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP4]])
-; OPT-NEXT:    br i1 [[TMP5]], label [[BB9:%.*]], label [[BB1]]
-; OPT:       case0:
-; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
+; OPT-NEXT:    br i1 [[TMP5]], label %[[BB9:.*]], label %[[BB1]]
+; OPT:       [[CASE0]]:
+; OPT-NEXT:    [[LOAD1:%.*]] = load volatile i32, ptr addrspace(1) poison, align 4
 ; OPT-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[TMP]], [[LOAD1]]
-; OPT-NEXT:    br label [[FLOW5]]
-; OPT:       Flow:
-; OPT-NEXT:    [[TMP6]] = phi i32 [ [[TMP0]], [[FLOW3]] ], [ undef, [[NODEBLOCK]] ]
-; OPT-NEXT:    [[TMP7]] = phi i1 [ [[TMP1]], [[FLOW3]] ], [ true, [[NODEBLOCK]] ]
-; OPT-NEXT:    [[TMP8:%.*]] = phi i1 [ false, [[FLOW3]] ], [ true, [[NODEBLOCK]] ]
-; OPT-NEXT:    br i1 [[TMP8]], label [[LEAFBLOCK:%.*]], label [[FLOW4]]
-; OPT:       case1:
-; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
+; OPT-NEXT:    br label %[[FLOW5]]
+; OPT:       [[FLOW]]:
+; OPT-NEXT:    [[TMP7]] = phi i1 [ [[TMP1]], %[[FLOW3]] ], [ true, %[[NODEBLOCK]] ]
+; OPT-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[FLOW3]] ], [ true, %[[NODEBLOCK]] ]
+; OPT-NEXT:    br i1 [[TMP8]], label %[[LEAFBLOCK]], label %[[FLOW4]]
+; OPT:       [[CASE1]]:
+; OPT-NEXT:    [[LOAD2:%.*]] = load volatile i32, ptr addrspace(1) poison, align 4
 ; OPT-NEXT:    [[CMP2]] = icmp sge i32 [[TMP]], [[LOAD2]]
-; OPT-NEXT:    br label [[FLOW3]]
-; OPT:       Flow5:
-; OPT-NEXT:    [[TMP9]] = phi i32 [ [[LSR_IV_NEXT]], [[CASE0]] ], [ undef, [[LEAFBLOCK]] ]
-; OPT-NEXT:    [[TMP10]] = phi i1 [ [[CMP1]], [[CASE0]] ], [ [[TMP7]], [[LEAFBLOCK]] ]
-; OPT-NEXT:    br label [[FLOW4]]
-; OPT:       bb9:
+; OPT-NEXT:    br label %[[FLOW3]]
+; OPT:       [[FLOW5]]:
+; OPT-NEXT:    [[TMP10]] = phi i1 [ [[CMP1]], %[[CASE0]] ], [ [[TMP7]], %[[LEAFBLOCK]] ]
+; OPT-NEXT:    br label %[[FLOW4]]
+; OPT:       [[BB9]]:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP4]])
 ; OPT-NEXT:    ret void
 ;
@@ -227,22 +225,22 @@ bb:
   br label %bb1
 
 bb1:
-  %lsr.iv = phi i32 [ undef, %bb ], [ %lsr.iv.next, %case0 ], [ %lsr.iv.next, %case1 ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %lsr.iv.next, %case0 ], [ %lsr.iv.next, %case1 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
-  %load0 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load0 = load volatile i32, ptr addrspace(1) poison, align 4
   switch i32 %load0, label %bb9 [
   i32 0, label %case0
   i32 1, label %case1
   ]
 
 case0:
-  %load1 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load1 = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp1 = icmp slt i32 %tmp, %load1
   br i1 %cmp1, label %bb1, label %bb9
 
 case1:
-  %load2 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load2 = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp2 = icmp slt i32 %tmp, %load2
   br i1 %cmp2, label %bb1, label %bb9
 

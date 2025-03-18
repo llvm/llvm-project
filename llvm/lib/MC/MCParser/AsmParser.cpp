@@ -1187,8 +1187,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         // Emit a temporary label to the streamer and refer to it.
         MCSymbol *Sym = Ctx.createTempSymbol();
         Out.emitLabel(Sym);
-        Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                      getContext());
+        Res = MCSymbolRefExpr::create(Sym, getContext());
         EndLoc = FirstTokenLoc;
         return false;
       }
@@ -1229,10 +1228,10 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
 
     // Lookup the symbol variant if used.
     if (!Split.second.empty()) {
-      Variant =
-          MCSymbolRefExpr::VariantKind(MAI.getVariantKindForName(Split.second));
-      if (Variant != MCSymbolRefExpr::VK_Invalid) {
+      auto MaybeVariant = MAI.getVariantKindForName(Split.second);
+      if (MaybeVariant) {
         SymbolName = Split.first;
+        Variant = MCSymbolRefExpr::VariantKind(*MaybeVariant);
       } else if (MAI.doesAllowAtInName() && !MAI.useParensForSymbolVariant()) {
         Variant = MCSymbolRefExpr::VK_None;
       } else {
@@ -1280,11 +1279,11 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       std::pair<StringRef, StringRef> Split = IDVal.split('@');
       MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
       if (Split.first.size() != IDVal.size()) {
-        Variant = MCSymbolRefExpr::VariantKind(
-            MAI.getVariantKindForName(Split.second));
-        if (Variant == MCSymbolRefExpr::VK_Invalid)
+        auto MaybeVariant = MAI.getVariantKindForName(Split.second);
+        if (!MaybeVariant)
           return TokError("invalid variant '" + Split.second + "'");
         IDVal = Split.first;
+        Variant = MCSymbolRefExpr::VariantKind(*MaybeVariant);
       }
       if (IDVal == "f" || IDVal == "b") {
         MCSymbol *Sym =
@@ -1315,7 +1314,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // temporary label to the streamer and refer to it.
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.emitLabel(Sym);
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
     EndLoc = Lexer.getTok().getEndLoc();
     Lex(); // Eat identifier.
     return false;
@@ -1471,12 +1470,12 @@ bool AsmParser::parseExpression(const MCExpr *&Res, SMLoc &EndLoc) {
     if (Lexer.isNot(AsmToken::Identifier))
       return TokError("unexpected symbol modifier following '@'");
 
-    auto Variant = MCSymbolRefExpr::VariantKind(
-        MAI.getVariantKindForName(getTok().getIdentifier()));
-    if (Variant == MCSymbolRefExpr::VK_Invalid)
+    auto Variant = MAI.getVariantKindForName(getTok().getIdentifier());
+    if (!Variant)
       return TokError("invalid variant '" + getTok().getIdentifier() + "'");
 
-    const MCExpr *ModifiedRes = applyModifierToExpr(Res, Variant);
+    const MCExpr *ModifiedRes =
+        applyModifierToExpr(Res, MCSymbolRefExpr::VariantKind(*Variant));
     if (!ModifiedRes) {
       return TokError("invalid modifier '" + getTok().getIdentifier() +
                       "' (no symbols present)");
@@ -3126,7 +3125,7 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
       return true;
 
     MCValue Value;
-    if (!Expr->evaluateAsRelocatable(Value, nullptr, nullptr))
+    if (!Expr->evaluateAsRelocatable(Value, nullptr))
       return Error(ExprLoc, "expression must be relocatable");
   }
 

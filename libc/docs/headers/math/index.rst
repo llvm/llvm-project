@@ -16,7 +16,6 @@ math.h
   :hidden:
 
   log.rst
-  stdfix.rst
 
 
 .. contents:: Table of Contents
@@ -446,7 +445,7 @@ Algorithms + Implementation Details
 Fixed-point Arithmetics
 =======================
 
-* :doc:`stdfix`
+* :doc:`../stdfix`
 
 References
 ==========

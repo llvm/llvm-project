@@ -56,6 +56,7 @@ def HandleTy : DXILOpParamType;
 def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
 def SplitDoubleTy : DXILOpParamType;
+def BinaryWithCarryTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -740,6 +741,16 @@ def UMin : DXILOp<40, binary> {
   let arguments = [OverloadTy, OverloadTy];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def UAddc : DXILOp<44, binaryWithCarryOrBorrow > {
+  let Doc = "unsigned add of 32-bit operand with the carry";
+  let intrinsics = [IntrinSelect<int_uadd_with_overflow>];
+  let arguments = [OverloadTy, OverloadTy];
+  let result = BinaryWithCarryTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }

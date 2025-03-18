@@ -57,7 +57,7 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
   }
   const TargetOptions Options;
   std::unique_ptr<const TargetMachine> TM(TheTarget->createTargetMachine(
-      TripleName, CpuName, Features, Options, Reloc::Model::Static));
+      TheTriple, CpuName, Features, Options, Reloc::Model::Static));
   if (!TM) {
     return make_error<StringError>("unable to create target machine",
                                    inconvertibleErrorCode());
@@ -93,7 +93,7 @@ LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
 std::unique_ptr<TargetMachine> LLVMState::createTargetMachine() const {
   return std::unique_ptr<TargetMachine>(
       TheTargetMachine->getTarget().createTargetMachine(
-          TheTargetMachine->getTargetTriple().normalize(),
+          Triple(TheTargetMachine->getTargetTriple().normalize()),
           TheTargetMachine->getTargetCPU(),
           TheTargetMachine->getTargetFeatureString(), TheTargetMachine->Options,
           Reloc::Model::Static));

@@ -1679,8 +1679,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *PHI = dyn_cast<PHINode>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
-      bool IsFirstPHIUser = !OffsetInfoMap.count(PHI);
-      auto &UsrOI = OffsetInfoMap[PHI];
+      auto [PhiIt, IsFirstPHIUser] = OffsetInfoMap.try_emplace(PHI);
+      auto &UsrOI = PhiIt->second;
       auto &PtrOI = OffsetInfoMap[CurPtr];
 
       // Check if the PHI operand has already an unknown offset as we can't

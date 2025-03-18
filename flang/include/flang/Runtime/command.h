@@ -12,7 +12,7 @@
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
 typedef std::uint32_t pid_t;
 #else

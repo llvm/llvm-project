@@ -101,6 +101,61 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == OpenACCDeclare; }
 };
+
+class OpenACCRoutineDecl final
+    : public OpenACCConstructDecl,
+      private llvm::TrailingObjects<OpenACCRoutineDecl, const OpenACCClause *> {
+  friend TrailingObjects;
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  Expr *FuncRef = nullptr;
+  SourceRange ParensLoc;
+
+  OpenACCRoutineDecl(unsigned NumClauses)
+      : OpenACCConstructDecl(OpenACCRoutine) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+
+  OpenACCRoutineDecl(DeclContext *DC, SourceLocation StartLoc,
+                     SourceLocation DirLoc, SourceLocation LParenLoc,
+                     Expr *FuncRef, SourceLocation RParenLoc,
+                     SourceLocation EndLoc,
+                     ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructDecl(OpenACCRoutine, DC, OpenACCDirectiveKind::Routine,
+                             StartLoc, DirLoc, EndLoc),
+        FuncRef(FuncRef), ParensLoc(LParenLoc, RParenLoc) {
+    // Initialize the trailing storage.
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static OpenACCRoutineDecl *
+  Create(ASTContext &Ctx, DeclContext *DC, SourceLocation StartLoc,
+         SourceLocation DirLoc, SourceLocation LParenLoc, Expr *FuncRef,
+         SourceLocation RParenLoc, SourceLocation EndLoc,
+         ArrayRef<const OpenACCClause *> Clauses);
+  static OpenACCRoutineDecl *
+  CreateDeserialized(ASTContext &Ctx, GlobalDeclID ID, unsigned NumClauses);
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OpenACCRoutine; }
+
+  const Expr *getFunctionReference() const { return FuncRef; }
+
+  Expr *getFunctionReference() { return FuncRef; }
+
+  SourceLocation getLParenLoc() const { return ParensLoc.getBegin(); }
+  SourceLocation getRParenLoc() const { return ParensLoc.getEnd(); }
+
+  bool hasNameSpecified() const { return !ParensLoc.getBegin().isInvalid(); }
+};
 } // namespace clang
 
 #endif

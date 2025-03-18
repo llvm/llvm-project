@@ -67,7 +67,8 @@ protected:
   }
 
   std::unique_ptr<TargetMachine>
-  createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+  createTargetMachine(std::string TargetStr, StringRef CPU, StringRef FS) {
+    Triple TT(TargetStr);
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)

@@ -13,6 +13,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  ffs_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffs_test.cpp
+  DEPENDS
+    libc.src.strings.ffs
+)
+
+add_libc_test(
+  ffsl_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffsl_test.cpp
+  DEPENDS
+    libc.src.strings.ffsl
+)
+
+add_libc_test(
+  ffsll_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffsll_test.cpp
+  DEPENDS
+    libc.src.strings.ffsll
+)
+
+add_libc_test(
   index_test
   SUITE
     libc-strings-tests
@@ -45,6 +75,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  strcasecmp_l_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    strcasecmp_l_test.cpp
+  DEPENDS
+    libc.hdr.locale_macros
+    libc.src.locale.freelocale
+    libc.src.locale.newlocale
+    libc.src.strings.strcasecmp_l
+)
+
+add_libc_test(
   strncasecmp_test
   SUITE
     libc-strings-tests
@@ -52,6 +95,19 @@ add_libc_test(
     strncasecmp_test.cpp
   DEPENDS
     libc.src.strings.strncasecmp
+)
+
+add_libc_test(
+  strncasecmp_l_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    strncasecmp_l_test.cpp
+  DEPENDS
+    libc.hdr.locale_macros
+    libc.src.locale.freelocale
+    libc.src.locale.newlocale
+    libc.src.strings.strncasecmp_l
 )
 
 add_libc_multi_impl_test(bcmp libc-strings-tests SRCS bcmp_test.cpp)

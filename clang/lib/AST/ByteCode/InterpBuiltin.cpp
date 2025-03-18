@@ -1483,80 +1483,6 @@ static bool interp__builtin_ptrauth_string_discriminator(
   return true;
 }
 
-// FIXME: This implementation is not complete.
-// The Compiler instance we create cannot access the current stack frame, local
-// variables, function parameters, etc. We also need protection from
-// side-effects, fatal errors, etc.
-static bool interp__builtin_constant_p(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const Function *Func,
-                                       const CallExpr *Call) {
-  const Expr *Arg = Call->getArg(0);
-  QualType ArgType = Arg->getType();
-
-  auto returnInt = [&S, Call](bool Value) -> bool {
-    pushInteger(S, Value, Call->getType());
-    return true;
-  };
-
-  // __builtin_constant_p always has one operand. The rules which gcc follows
-  // are not precisely documented, but are as follows:
-  //
-  //  - If the operand is of integral, floating, complex or enumeration type,
-  //    and can be folded to a known value of that type, it returns 1.
-  //  - If the operand can be folded to a pointer to the first character
-  //    of a string literal (or such a pointer cast to an integral type)
-  //    or to a null pointer or an integer cast to a pointer, it returns 1.
-  //
-  // Otherwise, it returns 0.
-  //
-  // FIXME: GCC also intends to return 1 for literals of aggregate types, but
-  // its support for this did not work prior to GCC 9 and is not yet well
-  // understood.
-  if (ArgType->isIntegralOrEnumerationType() || ArgType->isFloatingType() ||
-      ArgType->isAnyComplexType() || ArgType->isPointerType() ||
-      ArgType->isNullPtrType()) {
-    auto PrevDiags = S.getEvalStatus().Diag;
-    S.getEvalStatus().Diag = nullptr;
-    InterpStack Stk;
-    Compiler<EvalEmitter> C(S.Ctx, S.P, S, Stk);
-    auto Res = C.interpretExpr(Arg, /*ConvertResultToRValue=*/Arg->isGLValue());
-    S.getEvalStatus().Diag = PrevDiags;
-    if (Res.isInvalid()) {
-      C.cleanup();
-      Stk.clear();
-      return returnInt(false);
-    }
-
-    if (!Res.empty()) {
-      const APValue &LV = Res.toAPValue();
-      if (LV.isLValue()) {
-        APValue::LValueBase Base = LV.getLValueBase();
-        if (Base.isNull()) {
-          // A null base is acceptable.
-          return returnInt(true);
-        } else if (const auto *E = Base.dyn_cast<const Expr *>()) {
-          if (!isa<StringLiteral>(E))
-            return returnInt(false);
-          return returnInt(LV.getLValueOffset().isZero());
-        } else if (Base.is<TypeInfoLValue>()) {
-          // Surprisingly, GCC considers __builtin_constant_p(&typeid(int)) to
-          // evaluate to true.
-          return returnInt(true);
-        } else {
-          // Any other base is not constant enough for GCC.
-          return returnInt(false);
-        }
-      }
-    }
-
-    // Otherwise, any constant value is good enough.
-    return returnInt(true);
-  }
-
-  return returnInt(false);
-}
-
 static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
                                          const InterpFrame *Frame,
                                          const Function *Func,
@@ -1955,11 +1881,23 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
+  auto getElemType = [](const Pointer &P) -> QualType {
+    const Descriptor *Desc = P.getFieldDesc();
+    QualType T = Desc->getType();
+    if (T->isPointerType())
+      return T->getAs<PointerType>()->getPointeeType();
+    if (Desc->isArray())
+      return Desc->getElemQualType();
+    return T;
+  };
+
   const ASTContext &ASTCtx = S.getASTContext();
+  QualType ElemTypeA = getElemType(PtrA);
+  QualType ElemTypeB = getElemType(PtrB);
   // FIXME: This is an arbitrary limitation the current constant interpreter
   // had. We could remove this.
-  if (!IsWide && (!isOneByteCharacterType(PtrA.getType()) ||
-                  !isOneByteCharacterType(PtrB.getType()))) {
+  if (!IsWide && (!isOneByteCharacterType(ElemTypeA) ||
+                  !isOneByteCharacterType(ElemTypeB))) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcmp_unsupported)
         << ASTCtx.BuiltinInfo.getQuotedName(ID) << PtrA.getType()
@@ -1972,7 +1910,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
-      Bits(ASTCtx.getTypeSize(PtrA.getFieldDesc()->getType())));
+      Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
   readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
@@ -1980,7 +1918,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     swapBytes(BufferA.Data.get(), BufferA.byteSize().getQuantity());
 
   BitcastBuffer BufferB(
-      Bits(ASTCtx.getTypeSize(PtrB.getFieldDesc()->getType())));
+      Bits(ASTCtx.getTypeSize(ElemTypeB) * PtrB.getNumElems()));
   readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
@@ -2034,15 +1972,110 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   // However, if we read all the available bytes but were instructed to read
   // even more, diagnose this as a "read of dereferenced one-past-the-end
-  // pointer". This is what would happen if we called CheckRead() on every array
+  // pointer". This is what would happen if we called CheckLoad() on every array
   // element.
   S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
       << AK_Read << S.Current->getRange(OpPC);
   return false;
 }
 
+static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame,
+                                   const Function *Func, const CallExpr *Call) {
+  unsigned ID = Func->getBuiltinID();
+  if (ID == Builtin::BImemchr || ID == Builtin::BIwcschr ||
+      ID == Builtin::BIstrchr || ID == Builtin::BIwmemchr)
+    diagnoseNonConstexprBuiltin(S, OpPC, ID);
+
+  const Pointer &Ptr = getParam<Pointer>(Frame, 0);
+  APSInt Desired;
+  std::optional<APSInt> MaxLength;
+  if (Call->getNumArgs() == 3) {
+    MaxLength =
+        peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)), 0);
+    Desired = peekToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(1)),
+        align(primSize(*S.getContext().classify(Call->getArg(2)))) +
+            align(primSize(*S.getContext().classify(Call->getArg(1)))));
+  } else {
+    Desired = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(1)));
+  }
+
+  if (MaxLength && MaxLength->isZero()) {
+    S.Stk.push<Pointer>();
+    return true;
+  }
+
+  if (Ptr.isDummy())
+    return false;
+
+  // Null is only okay if the given size is 0.
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Read;
+    return false;
+  }
+
+  QualType ElemTy = Ptr.getFieldDesc()->isArray()
+                        ? Ptr.getFieldDesc()->getElemQualType()
+                        : Ptr.getFieldDesc()->getType();
+  bool IsRawByte = ID == Builtin::BImemchr || ID == Builtin::BI__builtin_memchr;
+
+  // Give up on byte-oriented matching against multibyte elements.
+  if (IsRawByte && !isOneByteCharacterType(ElemTy)) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memchr_unsupported)
+        << S.getASTContext().BuiltinInfo.getQuotedName(ID) << ElemTy;
+    return false;
+  }
+
+  if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
+    // strchr compares directly to the passed integer, and therefore
+    // always fails if given an int that is not a char.
+    if (Desired !=
+        Desired.trunc(S.getASTContext().getCharWidth()).getSExtValue()) {
+      S.Stk.push<Pointer>();
+      return true;
+    }
+  }
+
+  uint64_t DesiredVal =
+      Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
+  bool StopAtZero =
+      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
+
+  size_t Index = Ptr.getIndex();
+  size_t Step = 0;
+  for (;;) {
+    const Pointer &ElemPtr =
+        (Index + Step) > 0 ? Ptr.atIndex(Index + Step) : Ptr;
+
+    if (!CheckLoad(S, OpPC, ElemPtr))
+      return false;
+
+    unsigned char V = static_cast<unsigned char>(ElemPtr.deref<char>());
+    if (V == DesiredVal) {
+      S.Stk.push<Pointer>(ElemPtr);
+      return true;
+    }
+
+    if (StopAtZero && V == 0)
+      break;
+
+    ++Step;
+    if (MaxLength && Step == MaxLength->getZExtValue())
+      break;
+  }
+
+  S.Stk.push<Pointer>();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
+  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+    return false;
+
   const InterpFrame *Frame = S.Current;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
@@ -2468,11 +2501,6 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
       return false;
     break;
 
-  case Builtin::BI__builtin_constant_p:
-    if (!interp__builtin_constant_p(S, OpPC, Frame, F, Call))
-      return false;
-    break;
-
   case Builtin::BI__noop:
     pushInteger(S, 0, Call->getType());
     break;
@@ -2521,6 +2549,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_wmemcmp:
   case Builtin::BIwmemcmp:
     if (!interp__builtin_memcmp(S, OpPC, Frame, F, Call))
+      return false;
+    break;
+
+  case Builtin::BImemchr:
+  case Builtin::BI__builtin_memchr:
+  case Builtin::BIstrchr:
+  case Builtin::BI__builtin_strchr:
+#if 0
+  case Builtin::BIwcschr:
+  case Builtin::BI__builtin_wcschr:
+  case Builtin::BImemchr:
+  case Builtin::BI__builtin_wmemchr:
+#endif
+  case Builtin::BI__builtin_char_memchr:
+    if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
       return false;
     break;
 

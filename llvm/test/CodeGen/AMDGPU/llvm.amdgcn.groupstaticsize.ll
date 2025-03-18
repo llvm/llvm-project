@@ -6,10 +6,10 @@
 ; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
 ; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
-@lds0 = addrspace(3) global [512 x float] undef, align 4
-@lds1 = addrspace(3) global [256 x float] undef, align 4
+@lds0 = addrspace(3) global [512 x float] poison, align 4
+@lds1 = addrspace(3) global [256 x float] poison, align 4
 
-@large = addrspace(3) global [4096 x i32] undef, align 4
+@large = addrspace(3) global [4096 x i32] poison, align 4
 
 ; CHECK-LABEL: {{^}}groupstaticsize_test0:
 ; NOHSA: v_mov_b32_e32 v{{[0-9]+}}, llvm.amdgcn.groupstaticsize@abs32@lo

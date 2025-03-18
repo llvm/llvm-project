@@ -35,6 +35,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -1385,6 +1386,51 @@ llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
                : GET_TCGEN05_CP_ID(_64x128b_warpx2_02_13, srcFmt, is2CTA);
   }
   llvm_unreachable("Invalid shape in tcgen05 cp Op");
+}
+
+// Returns the valid vector length for a given shape and vector length, the
+// function models the table mentioned in the tcgen05.{ld, st} Op description
+static unsigned isValidVectorLength(NVVM::Tcgen05LdStShape Shape,
+                                    unsigned VecLen) {
+  if (Shape == NVVM::Tcgen05LdStShape::SHAPE_16X128B)
+    return VecLen >= 2;
+  if (Shape == NVVM::Tcgen05LdStShape::SHAPE_16X256B)
+    return VecLen >= 4;
+  return true;
+}
+
+LogicalResult Tcgen05LdOp::verify() {
+  LogicalResult Result = success();
+  if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
+    Result = emitError("shape 16x32bx2 requires offset argument");
+
+  auto ResTy = getRes().getType();
+  unsigned ResLen = isa<VectorType>(ResTy)
+                        ? llvm::cast<VectorType>(ResTy).getNumElements()
+                        : 1;
+  if (!isValidVectorLength(getShape(), ResLen))
+    Result = emitError(llvm::formatv("invalid result type length {0} for shape "
+                                     "{1} in tcgen05.ld Op",
+                                     ResLen, stringifyEnum(getShape())));
+
+  return Result;
+}
+
+LogicalResult Tcgen05StOp::verify() {
+  LogicalResult Result = success();
+  if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
+    Result = emitError("shape 16x32bx2 requires offset argument");
+
+  auto ValTy = getVal().getType();
+  unsigned ValLen = isa<VectorType>(ValTy)
+                        ? llvm::cast<VectorType>(ValTy).getNumElements()
+                        : 1;
+  if (!isValidVectorLength(getShape(), ValLen))
+    Result = emitError(llvm::formatv("invalid input length {0} for shape "
+                                     "{1} in tcgen05.st Op",
+                                     ValLen, stringifyEnum(getShape())));
+
+  return Result;
 }
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might

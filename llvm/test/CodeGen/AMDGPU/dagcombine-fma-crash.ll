@@ -64,8 +64,8 @@ bb2:
   br label %bb11
 
 bb11:
-  %i12 = phi float [ %i6, %bb2 ], [ undef, %bb ]
-  %i13 = phi float [ %i10, %bb2 ], [ undef, %bb ]
+  %i12 = phi float [ %i6, %bb2 ], [ poison, %bb ]
+  %i13 = phi float [ %i10, %bb2 ], [ poison, %bb ]
   %i14 = phi i1 [ false, %bb2 ], [ true, %bb ]
   br i1 %i14, label %bb15, label %bb17
 

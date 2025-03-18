@@ -236,7 +236,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 // 2.7 teams Construct
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
-    AttrSizedOperandSegments, RecursiveMemoryEffects
+    AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
     OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
@@ -284,8 +284,8 @@ def SectionOp : OpenMP_Op<"section", traits = [
     // Override BlockArgOpenMPOpInterface methods based on the parent
     // omp.sections operation. Only forward-declare here because SectionsOp is
     // not completely defined at this point.
-    unsigned numPrivateBlockArgs();
-    unsigned numReductionBlockArgs();
+    OperandRange getPrivateVars();
+    OperandRange getReductionVars();
   }] # clausesExtraClassDeclaration;
   let assemblyFormat = "$region attr-dict";
 }
@@ -751,11 +751,9 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
-    OpenMP_IfClause, OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
-    OpenMP_PriorityClause, OpenMP_PrivateClause,
-    OpenMP_ReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_UntiedClause
+    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
+    OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
+    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
@@ -821,14 +819,6 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let extraClassDeclaration = [{
-    /// Returns the reduction variables
-    SmallVector<Value> getAllReductionVars();
-
-    // Define BlockArgOpenMPOpInterface methods here because they are not
-    // inherited from the respective clauses.
-    unsigned numInReductionBlockArgs() { return getInReductionVars().size(); }
-    unsigned numReductionBlockArgs() { return getReductionVars().size(); }
-
     void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
   }] # clausesExtraClassDeclaration;
 
@@ -1151,6 +1141,14 @@ def TargetDataOp: OpenMP_Op<"target_data", traits = [
     OpBuilder<(ins CArg<"const TargetDataOperands &">:$clauses)>
   ];
 
+  let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
+    // associated entry block arguments in this operation.
+    unsigned numMapBlockArgs() {
+      return 0;
+    }
+  }] # clausesExtraClassDeclaration;
+
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<UseDeviceAddrUseDevicePtrRegion>(
         $region, $use_device_addr_vars, type($use_device_addr_vars),
@@ -1185,6 +1183,14 @@ def TargetEnterDataOp: OpenMP_Op<"target_enter_data", traits = [
     OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataOperands &">:$clauses)>
   ];
 
+  let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
+    // associated entry block arguments in this operation.
+    unsigned numMapBlockArgs() {
+      return 0;
+    }
+  }] # clausesExtraClassDeclaration;
+
   let hasVerifier = 1;
 }
 
@@ -1212,6 +1218,14 @@ def TargetExitDataOp: OpenMP_Op<"target_exit_data", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataOperands &">:$clauses)>
   ];
+
+  let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
+    // associated entry block arguments in this operation.
+    unsigned numMapBlockArgs() {
+      return 0;
+    }
+  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1248,6 +1262,14 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataOperands &">:$clauses)>
   ];
+
+  let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
+    // associated entry block arguments in this operation.
+    unsigned numMapBlockArgs() {
+      return 0;
+    }
+  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1292,8 +1314,6 @@ def TargetOp : OpenMP_Op<"target", traits = [
   ];
 
   let extraClassDeclaration = [{
-    unsigned numMapBlockArgs() { return getMapVars().size(); }
-
     mlir::Value getMappedValueForPrivateVar(unsigned privVarIdx) {
       std::optional<DenseI64ArrayAttr> privateMapIdices = getPrivateMapsAttr();
 
@@ -1322,12 +1342,17 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
     /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
     /// contents of the target region.
-    llvm::omp::OMPTgtExecModeFlags getKernelExecFlags();
+    ///
+    /// \param capturedOp result of a still valid (no modifications made to any
+    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
+    static llvm::omp::OMPTgtExecModeFlags
+    getKernelExecFlags(Operation *capturedOp);
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
-    custom<HostEvalInReductionMapPrivateRegion>(
-        $region, $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
+    custom<TargetOpRegion>(
+        $region, $has_device_addr_vars, type($has_device_addr_vars),
+        $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
         type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
         $map_vars, type($map_vars), $private_vars, type($private_vars),
         $private_syms, $private_maps) attr-dict
@@ -1816,6 +1841,14 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
   let builders = [
     OpBuilder<(ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>
   ];
+
+  let extraClassDeclaration = [{
+    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
+    // associated entry block arguments in this operation.
+    unsigned numMapBlockArgs() {
+      return 0;
+    }
+  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }

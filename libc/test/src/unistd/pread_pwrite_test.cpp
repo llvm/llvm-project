@@ -25,10 +25,10 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   // file again and pread at an offset and make sure that only expected data
   // is being read back. This also confirms that pwrite happened successfully.
   constexpr const char HELLO[] = "hello";
-  constexpr int HELLO_SIZE = sizeof(HELLO);
+  constexpr ssize_t HELLO_SIZE = sizeof(HELLO);
   constexpr off_t OFFSET = 3;
   constexpr const char OFFSET_TEXT[] = "helhello";
-  constexpr int OFFSET_TEXT_SIZE = sizeof(OFFSET_TEXT);
+  constexpr ssize_t OFFSET_TEXT_SIZE = sizeof(OFFSET_TEXT);
 
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -67,10 +67,10 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
 
 TEST(LlvmLibcUniStd, PWriteFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  EXPECT_THAT(LIBC_NAMESPACE::pwrite(-1, "", 1, 0), Fails(EBADF));
+  EXPECT_THAT(LIBC_NAMESPACE::pwrite(-1, "", 1, 0), Fails<ssize_t>(EBADF));
 }
 
 TEST(LlvmLibcUniStd, PReadFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-  EXPECT_THAT(LIBC_NAMESPACE::pread(-1, nullptr, 1, 0), Fails(EBADF));
+  EXPECT_THAT(LIBC_NAMESPACE::pread(-1, nullptr, 1, 0), Fails<ssize_t>(EBADF));
 }

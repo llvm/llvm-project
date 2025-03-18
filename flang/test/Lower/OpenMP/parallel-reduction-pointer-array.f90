@@ -113,7 +113,7 @@ end program
 ! CHECK:               omp.loop_nest (%[[VAL_28:.*]]) : i32 = (%[[VAL_24]]) to (%[[VAL_25]]) inclusive step (%[[VAL_26]]) {
 ! CHECK:                 %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_22]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_27]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-! CHECK:                 fir.store %[[VAL_28]] to %[[VAL_23]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_28]] to %[[VAL_23]]#1 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_30:.*]] = fir.load %[[VAL_23]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_31:.*]] = fir.load %[[VAL_29]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:                 %[[VAL_32:.*]] = arith.constant 1 : index

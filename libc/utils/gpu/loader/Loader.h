@@ -13,6 +13,7 @@
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
+#include "shared/rpc_server.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -181,7 +182,7 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
     break;
   }
   default:
-    status = handle_libc_opcodes(*port, num_lanes);
+    status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*port, num_lanes);
     break;
   }
 

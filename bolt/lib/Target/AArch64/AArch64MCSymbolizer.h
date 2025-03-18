@@ -11,6 +11,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+#include <optional>
 
 namespace llvm {
 namespace bolt {
@@ -19,6 +20,13 @@ class AArch64MCSymbolizer : public MCSymbolizer {
 protected:
   BinaryFunction &Function;
   bool CreateNewSymbols{true};
+
+  /// Modify relocation \p Rel based on type of the relocation and the
+  /// instruction it was applied to. Return the new relocation info, or
+  /// std::nullopt if the relocation should be ignored, e.g. in the case the
+  /// instruction was modified by the linker.
+  std::optional<Relocation> adjustRelocation(const Relocation &Rel,
+                                             const MCInst &Inst) const;
 
 public:
   AArch64MCSymbolizer(BinaryFunction &Function, bool CreateNewSymbols = true)

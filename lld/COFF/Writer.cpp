@@ -1282,12 +1282,13 @@ void Writer::createImportTables() {
       ctx.config.dllOrder[dll] = ctx.config.dllOrder.size();
 
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
-      Fatal(ctx) << file->impSym << " was replaced";
+      Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
     if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
-                   << " due to import of data: " << impSym;
+                   << " due to import of data: "
+                   << file->symtab.printSymbol(impSym);
       delayIdata.add(impSym);
     } else {
       idata.add(impSym);
@@ -1306,7 +1307,8 @@ void Writer::appendImportThunks() {
 
     if (file->thunkSym) {
       if (!isa<DefinedImportThunk>(file->thunkSym))
-        Fatal(ctx) << file->thunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->thunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->thunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);
@@ -1314,7 +1316,8 @@ void Writer::appendImportThunks() {
 
     if (file->auxThunkSym) {
       if (!isa<DefinedImportThunk>(file->auxThunkSym))
-        Fatal(ctx) << file->auxThunkSym << " was replaced";
+        Fatal(ctx) << file->symtab.printSymbol(file->auxThunkSym)
+                   << " was replaced";
       auto *chunk = cast<DefinedImportThunk>(file->auxThunkSym)->getChunk();
       if (chunk->live)
         textSec->addChunk(chunk);

@@ -1404,8 +1404,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
           // temporary label to the streamer and refer to it.
           MCSymbol *Sym = Ctx.createTempSymbol();
           Out.emitLabel(Sym);
-          Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                        getContext());
+          Res = MCSymbolRefExpr::create(Sym, getContext());
           EndLoc = FirstTokenLoc;
           return false;
         }
@@ -1491,8 +1490,8 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     }
 
     // Otherwise create a symbol ref.
-    const MCExpr *SymRef = MCSymbolRefExpr::create(
-        Sym, MCSymbolRefExpr::VK_None, getContext(), FirstTokenLoc);
+    const MCExpr *SymRef =
+        MCSymbolRefExpr::create(Sym, getContext(), FirstTokenLoc);
     if (Info.Offset) {
       Res = MCBinaryExpr::create(
           MCBinaryExpr::Add, SymRef,
@@ -1548,7 +1547,7 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // temporary label to the streamer and refer to it.
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.emitLabel(Sym);
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
     EndLoc = Lexer.getTok().getEndLoc();
     Lex(); // Eat identifier.
     return false;
@@ -1986,7 +1985,10 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
 
   // If macros are enabled, check to see if this is a macro instantiation.
   if (const MCAsmMacro *M = getContext().lookupMacro(IDVal.lower())) {
-    return handleMacroEntry(M, IDLoc);
+    AsmToken::TokenKind ArgumentEndTok = parseOptionalToken(AsmToken::LParen)
+                                             ? AsmToken::RParen
+                                             : AsmToken::EndOfStatement;
+    return handleMacroEntry(M, IDLoc, ArgumentEndTok);
   }
 
   // Otherwise, we have a normal instruction or directive.
@@ -2830,7 +2832,7 @@ bool MasmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc,
   }
 
   MCAsmMacroArguments A;
-  if (parseMacroArguments(M, A, ArgumentEndTok))
+  if (parseMacroArguments(M, A, ArgumentEndTok) || parseToken(ArgumentEndTok))
     return true;
 
   // Macro instantiation is lexical, unfortunately. We construct a new buffer
@@ -2913,10 +2915,6 @@ bool MasmParser::handleMacroInvocation(const MCAsmMacro *M, SMLoc NameLoc) {
     if (Parsed && !getLexer().isAtStartOfStatement())
       eatToEndOfStatement();
   }
-
-  // Consume the right-parenthesis on the other side of the arguments.
-  if (parseRParen())
-    return true;
 
   // Exit values may require lexing, unfortunately. We construct a new buffer to
   // hold the exit value.

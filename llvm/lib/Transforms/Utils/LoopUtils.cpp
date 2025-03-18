@@ -843,9 +843,9 @@ static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
 
-  // When ExitCount + 1 would wrap in unsigned, return std::nullopt instead.
+  // When ExitCount + 1 would wrap in unsigned, saturate at UINT_MAX.
   if (ExitCount >= std::numeric_limits<unsigned>::max())
-    return std::nullopt;
+    return std::numeric_limits<unsigned>::max();
 
   // Estimated trip count is one plus estimated exit count.
   return ExitCount + 1;
@@ -1336,31 +1336,14 @@ Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
                                    const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "AnyOf reduction is not supported.");
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+         "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
   return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
-}
-
-Value *llvm::createReduction(IRBuilderBase &B,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi) {
-  // TODO: Support in-order reductions based on the recurrence descriptor.
-  // All ops in the reduction inherit fast-math-flags from the recurrence
-  // descriptor.
-  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
-  B.setFastMathFlags(Desc.getFastMathFlags());
-
-  RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfReduction(B, Src, Desc, OrigPhi);
-  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-    return createFindLastIVReduction(B, Src, Desc);
-
-  return createSimpleReduction(B, Src, RK);
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
@@ -2051,7 +2034,7 @@ Value *llvm::addDiffRuntimeChecks(
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
-    auto *VFTimesUFTimesSize =
+    auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
     Value *Diff =
@@ -2059,13 +2042,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

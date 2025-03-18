@@ -35,24 +35,24 @@ define i32 @addrspacecast_insert_pos_assert() {
 define void @bitcast_insert_pos_assert_1() {
 ; CHECK-LABEL: @bitcast_insert_pos_assert_1(
 ; CHECK-NEXT:  bb.0:
-; CHECK-NEXT:    [[ASC0:%.*]] = addrspacecast ptr addrspace(5) undef to ptr
+; CHECK-NEXT:    [[ASC0:%.*]] = addrspacecast ptr addrspace(5) poison to ptr
 ; CHECK-NEXT:    [[PTI0:%.*]] = ptrtoint ptr [[ASC0]] to i64
 ; CHECK-NEXT:    br label [[BB_1:%.*]]
 ; CHECK:       bb.1:
-; CHECK-NEXT:    br i1 undef, label [[BB_2:%.*]], label [[BB_3:%.*]]
+; CHECK-NEXT:    br i1 poison, label [[BB_2:%.*]], label [[BB_3:%.*]]
 ; CHECK:       bb.2:
-; CHECK-NEXT:    [[LOAD0:%.*]] = load ptr, ptr addrspace(5) undef, align 8
+; CHECK-NEXT:    [[LOAD0:%.*]] = load ptr, ptr addrspace(5) poison, align 8
 ; CHECK-NEXT:    br label [[BB_3]]
 ; CHECK:       bb.3:
 ; CHECK-NEXT:    ret void
 ;
 bb.0:
-  %asc0 = addrspacecast ptr addrspace(5) undef to ptr
+  %asc0 = addrspacecast ptr addrspace(5) poison to ptr
   %pti0 = ptrtoint ptr %asc0 to i64
   br label %bb.1
 
 bb.1:
-  br i1 undef, label %bb.2, label %bb.3
+  br i1 poison, label %bb.2, label %bb.3
 
 bb.2:
   %pti1 = ptrtoint ptr %asc0 to i64

@@ -140,6 +140,25 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let UseNamedOperandTable = 1;
 }
 
+// 32-bit materialize immediate which supports AGPR or VGPR. Typically
+// this should just expand to V_MOV_B32, unless $vdst happens to be
+// allocated to an AGPR in which case it will lower to
+// V_ACCVGPR_WRITE_B32. This should always use an inline immediate
+// operand, as v_accvgpr_write_b32 does not support literal constants.
+def AV_MOV_B32_IMM_PSEUDO
+    : VPseudoInstSI<(outs AV_32:$vdst), (ins VCSrc_b32:$src0)> {
+  let isReMaterializable = 1;
+  let isAsCheapAsAMove = 1;
+
+  // Imprecise, technically if AGPR it's VOP3 and VOP1 for AGPR. But
+  // this tricks the rematerialize logic into working for it.
+  let VOP3 = 1;
+  let isMoveImm = 1;
+  let SchedRW = [Write32Bit];
+  let Size = 4;
+  let UseNamedOperandTable = 1;
+}
+
 // 64-bit vector move with dpp. Expanded post-RA.
 def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64> {
   let Size = 16; // Requires two 8-byte v_mov_b32_dpp to complete.
@@ -2249,7 +2268,7 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
 
   foreach vt = [f16, bf16] in {
     def : GCNPat <
-      (VGPRImm<(f16 fpimm)>:$imm),
+      (VGPRImm<(vt fpimm)>:$imm),
       (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
     >;
   }
@@ -2510,6 +2529,33 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
 } // end True16Predicate = NotHasTrue16BitInsts
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (rotr i32:$src0, i32:$src1),
+  (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                          /* src1_modifiers */ 0, $src0,
+                          /* src2_modifiers */ 0,
+                          (EXTRACT_SUBREG $src1, lo16),
+                          /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+          (V_ALIGNBIT_B32_t16_e64 0, /* src0_modifiers */
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                          0, /* src1_modifiers */
+                          (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                          0, /* src2_modifiers */
+                          (i16 (EXTRACT_SUBREG VGPR_32:$src1, lo16)),
+                          /* clamp */ 0, /* op_sel */ 0)>;
+
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+          (V_ALIGNBIT_B32_t16_e64 /* src0_modifiers */ 0, $src0,
+                          /* src1_modifiers */ 0, $src1,
+                          /* src2_modifiers */ 0,
+                          (EXTRACT_SUBREG VGPR_32:$src2, lo16),
+                          /* clamp */ 0, /* op_sel */ 0)>;
+} // end True16Predicate = UseRealTrue16Insts
 
 let True16Predicate = UseFakeTrue16Insts in {
 def : GCNPat <
@@ -4314,7 +4360,7 @@ def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
-def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
+def G_AMDGPU_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = 0;

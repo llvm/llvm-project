@@ -56,13 +56,13 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -396,18 +396,20 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z pac-plt only supported on AArch64";
     if (ctx.arg.zForceBti)
       ErrAlways(ctx) << "-z force-bti only supported on AArch64";
-    if (ctx.arg.zBtiReport != "none")
+    if (ctx.arg.zBtiReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z bti-report only supported on AArch64";
-    if (ctx.arg.zPauthReport != "none")
+    if (ctx.arg.zPauthReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
+    if (ctx.arg.zGcsReport != ReportPolicy::None)
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcsReportDynamic != ReportPolicy::None)
+      ErrAlways(ctx) << "-z gcs-report-dynamic only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
 
   if (ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.zExecuteOnlyReport != "none")
+      ctx.arg.zExecuteOnlyReport != ReportPolicy::None)
     ErrAlways(ctx)
         << "-z execute-only-report only supported on AArch64 and ARM";
 
@@ -423,7 +425,7 @@ static void checkOptions(Ctx &ctx) {
     ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.zCetReport != "none")
+      ctx.arg.zCetReport != ReportPolicy::None)
     ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
 
   if (ctx.arg.pie && ctx.arg.shared)
@@ -1272,11 +1274,6 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
 
-// Checks the parameter of the bti-report and cet-report options.
-static bool isValidReportString(StringRef arg) {
-  return arg == "none" || arg == "warning" || arg == "error";
-}
-
 // Process a remap pattern 'from-glob=to-file'.
 static bool remapInputs(Ctx &ctx, StringRef line, const Twine &location) {
   SmallVector<StringRef, 0> fields;
@@ -1630,7 +1627,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       std::make_pair("cet-report", &ctx.arg.zCetReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
       std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  bool hasGcsReportDynamic = false;
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1638,14 +1637,26 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       if (option.first != reportArg.first)
         continue;
       arg->claim();
-      if (!isValidReportString(option.second)) {
+      if (option.second == "none")
+        *reportArg.second = ReportPolicy::None;
+      else if (option.second == "warning")
+        *reportArg.second = ReportPolicy::Warning;
+      else if (option.second == "error")
+        *reportArg.second = ReportPolicy::Error;
+      else {
         ErrAlways(ctx) << "unknown -z " << reportArg.first
                        << "= value: " << option.second;
         continue;
       }
-      *reportArg.second = option.second;
+      hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
     }
   }
+
+  // When -zgcs-report-dynamic is unspecified, it inherits -zgcs-report
+  // but is capped at warning to avoid needing to rebuild the shared library
+  // with GCS enabled.
+  if (!hasGcsReportDynamic && ctx.arg.zGcsReport != ReportPolicy::None)
+    ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
 
   for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
     SmallVector<StringRef, 0> fields;
@@ -2820,17 +2831,13 @@ static void readSecurityNotes(Ctx &ctx) {
   bool hasValidPauthAbiCoreInfo = llvm::any_of(
       ctx.aarch64PauthAbiCoreInfo, [](uint8_t c) { return c != 0; });
 
-  auto report = [&](StringRef config) -> ELFSyncStream {
-    if (config == "error")
-      return {ctx, DiagLevel::Err};
-    else if (config == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
+  auto report = [&](ReportPolicy policy) -> ELFSyncStream {
+    return {ctx, toDiagLevel(policy)};
   };
-  auto reportUnless = [&](StringRef config, bool cond) -> ELFSyncStream {
+  auto reportUnless = [&](ReportPolicy policy, bool cond) -> ELFSyncStream {
     if (cond)
       return {ctx, DiagLevel::None};
-    return report(config);
+    return {ctx, toDiagLevel(policy)};
   };
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
@@ -2860,13 +2867,13 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == "none")
+      if (ctx.arg.zBtiReport == ReportPolicy::None)
         Warn(ctx) << f
                   << ": -z force-bti: file does not have "
                      "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-      if (ctx.arg.zCetReport == "none")
+      if (ctx.arg.zCetReport == ReportPolicy::None)
         Warn(ctx) << f
                   << ": -z force-ibt: file does not have "
                      "GNU_PROPERTY_X86_FEATURE_1_IBT property";
@@ -2911,6 +2918,22 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  // If we are utilising GCS at any stage, the sharedFiles should be checked to
+  // ensure they also support this feature. The gcs-report-dynamic option is
+  // used to indicate if the user wants information relating to this, and will
+  // be set depending on the user's input, or warning if gcs-report is set to
+  // either `warning` or `error`.
+  if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+    for (SharedFile *f : ctx.sharedFiles)
+      reportUnless(ctx.arg.zGcsReportDynamic,
+                   f->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+          << f
+          << ": GCS is required by -z gcs, but this shared library lacks the "
+             "necessary property note. The "
+          << "dynamic loader might not enable GCS or refuse to load the "
+             "program unless all shared library "
+          << "dependencies have the GCS marking.";
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
