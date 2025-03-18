@@ -395,4 +395,14 @@ def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   let assemblyFormat = "`<` $file `*` $line `>`";
 }
 
+// Test OpAsmAttrInterface.
+def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
+    [DeclareAttrInterfaceMethods<OpAsmAttrInterface, ["getAlias"]>]> {
+  let mnemonic = "op_asm_attr_interface";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
+}
+
 #endif // TEST_ATTRDEFS

@@ -431,6 +431,12 @@ bool MachineFunction::verify(Pass *p, const char *Banner, raw_ostream *OS,
   return MachineVerifier(p, Banner, OS, AbortOnError).verify(*this);
 }
 
+bool MachineFunction::verify(MachineFunctionAnalysisManager &MFAM,
+                             const char *Banner, raw_ostream *OS,
+                             bool AbortOnError) const {
+  return MachineVerifier(MFAM, Banner, OS, AbortOnError).verify(*this);
+}
+
 bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
                              const char *Banner, raw_ostream *OS,
                              bool AbortOnError) const {
@@ -1281,6 +1287,19 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
         if (TypeSize::isKnownGT(MMO.getSize().getValue(),
                                 ValTy.getSizeInBytes()))
           report("load memory size cannot exceed result size", MI);
+
+        if (MMO.getRanges()) {
+          ConstantInt *i =
+              mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
+          const LLT RangeTy = LLT::scalar(i->getIntegerType()->getBitWidth());
+          const LLT MemTy = MMO.getMemoryType();
+          if (MemTy.getScalarType() != RangeTy ||
+              ValTy.isScalar() != MemTy.isScalar() ||
+              (ValTy.isVector() &&
+               ValTy.getNumElements() != MemTy.getNumElements())) {
+            report("range is incompatible with the result type", MI);
+          }
+        }
       } else if (MI->getOpcode() == TargetOpcode::G_STORE) {
         if (TypeSize::isKnownLT(ValTy.getSizeInBytes(),
                                 MMO.getSize().getValue()))
@@ -1974,8 +1993,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     auto TLI = MF->getSubtarget().getTargetLowering();
-    if (IdxTy.getSizeInBits() !=
-        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+    if (IdxTy.getSizeInBits() != TLI->getVectorIdxWidth(MF->getDataLayout())) {
       report("Index type must match VectorIdxTy", MI);
       break;
     }
@@ -2004,8 +2022,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     auto TLI = MF->getSubtarget().getTargetLowering();
-    if (IdxTy.getSizeInBits() !=
-        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+    if (IdxTy.getSizeInBits() != TLI->getVectorIdxWidth(MF->getDataLayout())) {
       report("Index type must match VectorIdxTy", MI);
       break;
     }
@@ -2730,13 +2747,15 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         if (!SRC) {
           report("Invalid subregister index for virtual register", MO, MONum);
           OS << "Register class " << TRI->getRegClassName(RC)
-             << " does not support subreg index " << SubIdx << '\n';
+             << " does not support subreg index "
+             << TRI->getSubRegIndexName(SubIdx) << '\n';
           return;
         }
         if (RC != SRC) {
           report("Invalid register class for subregister index", MO, MONum);
           OS << "Register class " << TRI->getRegClassName(RC)
-             << " does not fully support subreg index " << SubIdx << '\n';
+             << " does not fully support subreg index "
+             << TRI->getSubRegIndexName(SubIdx) << '\n';
           return;
         }
       }
@@ -3165,7 +3184,7 @@ struct VRegFilter {
     for (Register Reg : FromRegSet) {
       if (!Reg.isVirtual())
         continue;
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax) {
         if (Index < SparseUniverse && Sparse.test(Index))
           continue;
@@ -3188,7 +3207,7 @@ struct VRegFilter {
     Dense.reserve(NewDenseSize);
     for (unsigned I = Begin; I < End; ++I) {
       Register Reg = ToVRegs[I];
-      unsigned Index = Register::virtReg2Index(Reg);
+      unsigned Index = Reg.virtRegIndex();
       if (Index < SparseUniverseMax)
         Sparse.set(Index);
       else
@@ -3209,7 +3228,7 @@ private:
   // worst-case memory usage within 2x of figures determined empirically for
   // "all Dense" scenario in such worst-by-execution-time cases.
   BitVector Sparse;
-  DenseSet<unsigned> Dense;
+  DenseSet<Register> Dense;
 };
 
 // Implements both a transfer function and a (binary, in-place) join operator

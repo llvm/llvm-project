@@ -15,12 +15,12 @@ define ptr addrspace(1) @call_assert_align() {
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, ext@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, ext@rel32@hi+12
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
@@ -45,11 +45,11 @@ define ptr addrspace(1) @tail_call_assert_align() {
 ; CHECK-LABEL: tail_call_assert_align:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, ext@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, ext@rel32@hi+12
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
 entry:
   %call = tail call align 4 ptr addrspace(1) @ext(ptr addrspace(1) null)

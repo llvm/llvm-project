@@ -14,8 +14,10 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -46,24 +48,21 @@ StringRef getTextureName(const Value &);
 StringRef getSurfaceName(const Value &);
 StringRef getSamplerName(const Value &);
 
-std::optional<unsigned> getMaxNTIDx(const Function &);
-std::optional<unsigned> getMaxNTIDy(const Function &);
-std::optional<unsigned> getMaxNTIDz(const Function &);
-std::optional<unsigned> getMaxNTID(const Function &);
+SmallVector<unsigned, 3> getMaxNTID(const Function &);
+SmallVector<unsigned, 3> getReqNTID(const Function &);
+SmallVector<unsigned, 3> getClusterDim(const Function &);
 
-std::optional<unsigned> getReqNTIDx(const Function &);
-std::optional<unsigned> getReqNTIDy(const Function &);
-std::optional<unsigned> getReqNTIDz(const Function &);
-std::optional<unsigned> getReqNTID(const Function &);
-
-std::optional<unsigned> getClusterDimx(const Function &);
-std::optional<unsigned> getClusterDimy(const Function &);
-std::optional<unsigned> getClusterDimz(const Function &);
+std::optional<uint64_t> getOverallMaxNTID(const Function &);
+std::optional<uint64_t> getOverallReqNTID(const Function &);
 
 std::optional<unsigned> getMaxClusterRank(const Function &);
 std::optional<unsigned> getMinCTASm(const Function &);
 std::optional<unsigned> getMaxNReg(const Function &);
-bool isKernelFunction(const Function &);
+
+inline bool isKernelFunction(const Function &F) {
+  return F.getCallingConv() == CallingConv::PTX_Kernel;
+}
+
 bool isParamGridConstant(const Value &);
 
 MaybeAlign getAlign(const Function &, unsigned);

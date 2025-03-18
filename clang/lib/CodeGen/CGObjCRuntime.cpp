@@ -31,15 +31,14 @@ using namespace CodeGen;
 uint64_t CGObjCRuntime::ComputeIvarBaseOffset(CodeGen::CodeGenModule &CGM,
                                               const ObjCInterfaceDecl *OID,
                                               const ObjCIvarDecl *Ivar) {
-  return CGM.getContext().lookupFieldBitOffset(OID, nullptr, Ivar) /
+  return CGM.getContext().lookupFieldBitOffset(OID, Ivar) /
          CGM.getContext().getCharWidth();
 }
 
 uint64_t CGObjCRuntime::ComputeIvarBaseOffset(CodeGen::CodeGenModule &CGM,
                                               const ObjCImplementationDecl *OID,
                                               const ObjCIvarDecl *Ivar) {
-  return CGM.getContext().lookupFieldBitOffset(OID->getClassInterface(), OID,
-                                               Ivar) /
+  return CGM.getContext().lookupFieldBitOffset(OID->getClassInterface(), Ivar) /
          CGM.getContext().getCharWidth();
 }
 
@@ -47,8 +46,7 @@ unsigned CGObjCRuntime::ComputeBitfieldBitOffset(
     CodeGen::CodeGenModule &CGM,
     const ObjCInterfaceDecl *ID,
     const ObjCIvarDecl *Ivar) {
-  return CGM.getContext().lookupFieldBitOffset(ID, ID->getImplementation(),
-                                               Ivar);
+  return CGM.getContext().lookupFieldBitOffset(ID, Ivar);
 }
 
 LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
@@ -86,7 +84,7 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
   // non-synthesized ivars but we may be called for synthesized ivars.  However,
   // a synthesized ivar can never be a bit-field, so this is safe.
   uint64_t FieldBitOffset =
-      CGF.CGM.getContext().lookupFieldBitOffset(OID, nullptr, Ivar);
+      CGF.CGM.getContext().lookupFieldBitOffset(OID, Ivar);
   uint64_t BitOffset = FieldBitOffset % CGF.CGM.getContext().getCharWidth();
   uint64_t AlignmentBits = CGF.CGM.getTarget().getCharAlign();
   uint64_t BitFieldSize = Ivar->getBitWidthValue();
@@ -230,11 +228,14 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
     SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
     if (useFunclets) {
-      llvm::Instruction *CPICandidate = Handler.Block->getFirstNonPHI();
-      if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
-        CGF.CurrentFuncletPad = CPI;
-        CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
-        CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
+      llvm::BasicBlock::iterator CPICandidate =
+          Handler.Block->getFirstNonPHIIt();
+      if (CPICandidate != Handler.Block->end()) {
+        if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
+          CGF.CurrentFuncletPad = CPI;
+          CPI->setOperand(2, CGF.getExceptionSlot().emitRawPointer(CGF));
+          CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
+        }
       }
     }
 

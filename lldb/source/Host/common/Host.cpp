@@ -21,9 +21,7 @@
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#if !defined(__ANDROID__)
 #include <spawn.h>
-#endif
 #endif
 
 #if defined(__APPLE__)

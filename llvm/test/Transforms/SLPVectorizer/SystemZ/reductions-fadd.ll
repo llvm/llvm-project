@@ -7,7 +7,7 @@
 
 define double @fadd_double_4_addends_seq(ptr nocapture noundef readonly %x) {
 ; CHECK-LABEL: define double @fadd_double_4_addends_seq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
@@ -29,7 +29,7 @@ entry:
 
 define double @fadd_double_8_addends_nonseq(ptr nocapture noundef readonly %x)  {
 ; CHECK-LABEL: define double @fadd_double_8_addends_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[X]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds double, ptr [[X]], i64 2
@@ -85,7 +85,7 @@ entry:
 
 define float @fadd_float_16_addends_nonseq(ptr nocapture noundef readonly %x)  {
 ; CHECK-LABEL: define float @fadd_float_16_addends_nonseq(
-; CHECK-SAME: ptr nocapture noundef readonly [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr noundef readonly captures(none) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[X]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2

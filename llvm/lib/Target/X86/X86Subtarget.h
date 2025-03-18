@@ -280,6 +280,9 @@ public:
   /// supports it.
   bool hasMFence() const { return hasSSE2() || is64Bit(); }
 
+  /// Avoid use of `mfence` for`fence seq_cst`, and instead use `lock or`.
+  bool avoidMFence() const { return is64Bit(); }
+
   const Triple &getTargetTriple() const { return TargetTriple; }
 
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
@@ -324,7 +327,11 @@ public:
 
   bool isTargetCygMing() const { return TargetTriple.isOSCygMing(); }
 
+  bool isUEFI() const { return TargetTriple.isUEFI(); }
+
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
+
+  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 

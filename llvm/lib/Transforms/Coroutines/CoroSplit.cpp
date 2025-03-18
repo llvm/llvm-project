@@ -78,24 +78,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "coro-split"
 
-namespace {
-/// Collect (a known) subset of global debug info metadata potentially used by
-/// the function \p F.
-///
-/// This metadata set can be used to avoid cloning debug info not owned by \p F
-/// and is shared among all potential clones \p F.
-MetadataSetTy collectCommonDebugInfo(Function &F) {
-  TimeTraceScope FunctionScope("CollectCommonDebugInfo");
-
-  DebugInfoFinder DIFinder;
-  DISubprogram *SPClonedWithinModule = CollectDebugInfoForCloning(
-      F, CloneFunctionChangeType::LocalChangesOnly, DIFinder);
-
-  return FindDebugInfoToIdentityMap(CloneFunctionChangeType::LocalChangesOnly,
-                                    DIFinder, SPClonedWithinModule);
-}
-} // end anonymous namespace
-
 // FIXME:
 // Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
 // and it is known that other transformations, for example, sanitizers
@@ -597,7 +579,8 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     }
 
     // Create a swifterror alloca.
-    IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
+    IRBuilder<> Builder(&F.getEntryBlock(),
+                        F.getEntryBlock().getFirstNonPHIOrDbg());
     auto Alloca = Builder.CreateAlloca(ValueTy);
     Alloca->setSwiftError(true);
 
@@ -658,8 +641,7 @@ void coro::BaseCloner::salvageDebugInfo() {
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Only 64-bit ABIs have a register we can refer to with the entry value.
-  bool UseEntryValue =
-      llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
+  bool UseEntryValue = OrigF.getParent()->getTargetTriple().isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
@@ -823,7 +805,16 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   if (!ActiveSuspend)
     return;
 
-  auto *Successor = ActiveSuspend->getNextNonDebugInstruction();
+  // No subsequent instruction -> fallback to the location of ActiveSuspend.
+  if (!ActiveSuspend->getNextNonDebugInstruction()) {
+    if (auto DL = ActiveSuspend->getDebugLoc())
+      if (SPToUpdate.getFile() == DL->getFile())
+        SPToUpdate.setScopeLine(DL->getLine());
+    return;
+  }
+
+  BasicBlock::iterator Successor =
+      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
   if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
@@ -832,7 +823,9 @@ static void updateScopeLine(Instruction *ActiveSuspend,
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
   // If that matches the file of ActiveSuspend, use it.
-  for (; Successor; Successor = Successor->getNextNonDebugInstruction()) {
+  BasicBlock *PBB = Successor->getParent();
+  for (; Successor != PBB->end(); Successor = std::next(Successor)) {
+    Successor = skipDebugIntrinsics(Successor);
     auto DL = Successor->getDebugLoc();
     if (!DL || DL.getLine() == 0)
       continue;
@@ -910,11 +903,8 @@ void coro::BaseCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
-  CloneFunctionAttributesInto(NewF, &OrigF, VMap, false);
-  CloneFunctionMetadataInto(*NewF, OrigF, VMap, RF_None, nullptr, nullptr,
-                            &CommonDebugInfo);
-  CloneFunctionBodyInto(*NewF, OrigF, VMap, RF_None, Returns, "", nullptr,
-                        nullptr, nullptr, &CommonDebugInfo);
+  CloneFunctionInto(NewF, &OrigF, VMap,
+                    CloneFunctionChangeType::LocalChangesOnly, Returns);
 
   auto &Context = NewF->getContext();
 
@@ -1398,21 +1388,16 @@ struct SwitchCoroutineSplitter {
                     TargetTransformInfo &TTI) {
     assert(Shape.ABI == coro::ABI::Switch);
 
-    MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
-
     // Create a resume clone by cloning the body of the original function,
     // setting new entry block and replacing coro.suspend an appropriate value
     // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
     auto *ResumeClone = coro::SwitchCloner::createClone(
-        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI,
-        CommonDebugInfo);
+        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI);
     auto *DestroyClone = coro::SwitchCloner::createClone(
-        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI,
-        CommonDebugInfo);
+        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI);
     auto *CleanupClone = coro::SwitchCloner::createClone(
-        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI,
-        CommonDebugInfo);
+        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
 
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
@@ -1798,14 +1783,12 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   assert(Clones.size() == Shape.CoroSuspends.size());
 
-  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
-
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto *Suspend = CS;
     auto *Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI, CommonDebugInfo);
+                                  Suspend, TTI);
   }
 }
 
@@ -1932,14 +1915,12 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
   assert(Clones.size() == Shape.CoroSuspends.size());
 
-  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
-
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto Suspend = CS;
     auto Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI, CommonDebugInfo);
+                                  Suspend, TTI);
   }
 }
 

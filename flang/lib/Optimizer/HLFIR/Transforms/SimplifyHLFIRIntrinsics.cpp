@@ -415,15 +415,13 @@ private:
   }
 };
 
-class CShiftAsElementalConversion
-    : public mlir::OpRewritePattern<hlfir::CShiftOp> {
+class CShiftConversion : public mlir::OpRewritePattern<hlfir::CShiftOp> {
 public:
   using mlir::OpRewritePattern<hlfir::CShiftOp>::OpRewritePattern;
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::CShiftOp cshift,
                   mlir::PatternRewriter &rewriter) const override {
-    using Fortran::common::maxRank;
 
     hlfir::ExprType expr = mlir::dyn_cast<hlfir::ExprType>(cshift.getType());
     assert(expr &&
@@ -445,31 +443,88 @@ public:
     if (dimVal <= 0 || dimVal > arrayRank)
       return rewriter.notifyMatchFailure(cshift, "Invalid DIM for CSHIFT");
 
+    // When DIM==1 and the contiguity of the input array is not statically
+    // known, try to exploit the fact that the leading dimension might be
+    // contiguous. We can do this now using hlfir.eval_in_mem with
+    // a dynamic check for the leading dimension contiguity.
+    // Otherwise, convert hlfir.cshift to hlfir.elemental.
+    //
+    // Note that the hlfir.elemental can be inlined into other hlfir.elemental,
+    // while hlfir.eval_in_mem prevents this, and we will end up creating
+    // a temporary array for the result. We may need to come up with
+    // a more sophisticated logic for picking the most efficient
+    // representation.
+    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+    mlir::Type elementType = array.getFortranElementType();
+    if (dimVal == 1 && fir::isa_trivial(elementType) &&
+        // genInMemCShift() only works for variables currently.
+        array.isVariable())
+      rewriter.replaceOp(cshift, genInMemCShift(rewriter, cshift, dimVal));
+    else
+      rewriter.replaceOp(cshift, genElementalCShift(rewriter, cshift, dimVal));
+    return mlir::success();
+  }
+
+private:
+  /// Generate MODULO(\p shiftVal, \p extent).
+  static mlir::Value normalizeShiftValue(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         mlir::Value shiftVal,
+                                         mlir::Value extent,
+                                         mlir::Type calcType) {
+    shiftVal = builder.createConvert(loc, calcType, shiftVal);
+    extent = builder.createConvert(loc, calcType, extent);
+    // Make sure that we do not divide by zero. When the dimension
+    // has zero size, turn the extent into 1. Note that the computed
+    // MODULO value won't be used in this case, so it does not matter
+    // which extent value we use.
+    mlir::Value zero = builder.createIntegerConstant(loc, calcType, 0);
+    mlir::Value one = builder.createIntegerConstant(loc, calcType, 1);
+    mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+    extent = builder.create<mlir::arith::SelectOp>(loc, isZero, one, extent);
+    shiftVal = fir::IntrinsicLibrary{builder, loc}.genModulo(
+        calcType, {shiftVal, extent});
+    return builder.createConvert(loc, calcType, shiftVal);
+  }
+
+  /// Convert \p cshift into an hlfir.elemental using
+  /// the pre-computed constant \p dimVal.
+  static mlir::Operation *genElementalCShift(mlir::PatternRewriter &rewriter,
+                                             hlfir::CShiftOp cshift,
+                                             int64_t dimVal) {
+    using Fortran::common::maxRank;
+    hlfir::Entity shift = hlfir::Entity{cshift.getShift()};
+    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+
     mlir::Location loc = cshift.getLoc();
     fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
-    mlir::Type elementType = expr.getElementType();
-    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
-    mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
-    llvm::SmallVector<mlir::Value> arrayExtents =
-        hlfir::getExplicitExtentsFromShape(arrayShape, builder);
-    llvm::SmallVector<mlir::Value, 1> typeParams;
-    hlfir::genLengthParameters(loc, builder, array, typeParams);
-    hlfir::Entity shift = hlfir::Entity{cshift.getShift()};
     // The new index computation involves MODULO, which is not implemented
     // for IndexType, so use I64 instead.
     mlir::Type calcType = builder.getI64Type();
+    // All the indices arithmetic used below does not overflow
+    // signed and unsigned I64.
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
+                                    mlir::arith::IntegerOverflowFlags::nuw);
 
-    mlir::Value one = builder.createIntegerConstant(loc, calcType, 1);
+    mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
+    llvm::SmallVector<mlir::Value, maxRank> arrayExtents =
+        hlfir::getExplicitExtentsFromShape(arrayShape, builder);
+    llvm::SmallVector<mlir::Value, 1> typeParams;
+    hlfir::genLengthParameters(loc, builder, array, typeParams);
+    mlir::Value shiftDimExtent =
+        builder.createConvert(loc, calcType, arrayExtents[dimVal - 1]);
     mlir::Value shiftVal;
     if (shift.isScalar()) {
       shiftVal = hlfir::loadTrivialScalar(loc, builder, shift);
-      shiftVal = builder.createConvert(loc, calcType, shiftVal);
+      shiftVal =
+          normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent, calcType);
     }
 
     auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                          mlir::ValueRange inputIndices) -> hlfir::Entity {
       llvm::SmallVector<mlir::Value, maxRank> indices{inputIndices};
-      if (!shift.isScalar()) {
+      if (!shiftVal) {
         // When the array is not a vector, section
         // (s(1), s(2), ..., s(dim-1), :, s(dim+1), ..., s(n)
         // of the result has a value equal to:
@@ -482,35 +537,281 @@ public:
         hlfir::Entity shiftElement =
             hlfir::getElementAt(loc, builder, shift, shiftIndices);
         shiftVal = hlfir::loadTrivialScalar(loc, builder, shiftElement);
-        shiftVal = builder.createConvert(loc, calcType, shiftVal);
+        shiftVal = normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent,
+                                       calcType);
       }
 
       // Element i of the result (1-based) is element
-      // 'MODULO(i + SH - 1, SIZE(ARRAY)) + 1' (1-based) of the original
+      // 'MODULO(i + SH - 1, SIZE(ARRAY,DIM)) + 1' (1-based) of the original
       // ARRAY (or its section, when ARRAY is not a vector).
+
+      // Compute the index into the original array using the normalized
+      // shift value, which satisfies (SH >= 0 && SH < SIZE(ARRAY,DIM)):
+      //   newIndex =
+      //     i + ((i <= SIZE(ARRAY,DIM) - SH) ? SH : SH - SIZE(ARRAY,DIM))
+      //
+      // Such index computation allows for further loop vectorization
+      // in LLVM.
+      mlir::Value wrapBound =
+          builder.create<mlir::arith::SubIOp>(loc, shiftDimExtent, shiftVal);
+      mlir::Value adjustedShiftVal =
+          builder.create<mlir::arith::SubIOp>(loc, shiftVal, shiftDimExtent);
       mlir::Value index =
           builder.createConvert(loc, calcType, inputIndices[dimVal - 1]);
-      mlir::Value extent = arrayExtents[dimVal - 1];
+      mlir::Value wrapCheck = builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::sle, index, wrapBound);
+      mlir::Value actualShift = builder.create<mlir::arith::SelectOp>(
+          loc, wrapCheck, shiftVal, adjustedShiftVal);
       mlir::Value newIndex =
-          builder.create<mlir::arith::AddIOp>(loc, index, shiftVal);
-      newIndex = builder.create<mlir::arith::SubIOp>(loc, newIndex, one);
-      newIndex = fir::IntrinsicLibrary{builder, loc}.genModulo(
-          calcType, {newIndex, builder.createConvert(loc, calcType, extent)});
-      newIndex = builder.create<mlir::arith::AddIOp>(loc, newIndex, one);
+          builder.create<mlir::arith::AddIOp>(loc, index, actualShift);
       newIndex = builder.createConvert(loc, builder.getIndexType(), newIndex);
-
       indices[dimVal - 1] = newIndex;
       hlfir::Entity element = hlfir::getElementAt(loc, builder, array, indices);
       return hlfir::loadTrivialScalar(loc, builder, element);
     };
 
+    mlir::Type elementType = array.getFortranElementType();
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, arrayShape, typeParams, genKernel,
         /*isUnordered=*/true,
         array.isPolymorphic() ? static_cast<mlir::Value>(array) : nullptr,
         cshift.getResult().getType());
-    rewriter.replaceOp(cshift, elementalOp);
-    return mlir::success();
+    return elementalOp.getOperation();
+  }
+
+  /// Convert \p cshift into an hlfir.eval_in_mem using the pre-computed
+  /// constant \p dimVal.
+  /// The converted code looks like this:
+  ///   do i=1,SH
+  ///     result(i + (SIZE(ARRAY,DIM) - SH)) = array(i)
+  ///   end
+  ///   do i=1,SIZE(ARRAY,DIM) - SH
+  ///     result(i) = array(i + SH)
+  ///   end
+  ///
+  /// When \p dimVal is 1, we generate the same code twice
+  /// under a dynamic check for the contiguity of the leading
+  /// dimension. In the code corresponding to the contiguous
+  /// leading dimension, the shift dimension is represented
+  /// as a contiguous slice of the original array.
+  /// This allows recognizing the above two loops as memcpy
+  /// loop idioms in LLVM.
+  static mlir::Operation *genInMemCShift(mlir::PatternRewriter &rewriter,
+                                         hlfir::CShiftOp cshift,
+                                         int64_t dimVal) {
+    using Fortran::common::maxRank;
+    hlfir::Entity shift = hlfir::Entity{cshift.getShift()};
+    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+    assert(array.isVariable() && "array must be a variable");
+    assert(!array.isPolymorphic() &&
+           "genInMemCShift does not support polymorphic types");
+    mlir::Location loc = cshift.getLoc();
+    fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
+    // The new index computation involves MODULO, which is not implemented
+    // for IndexType, so use I64 instead.
+    mlir::Type calcType = builder.getI64Type();
+    // All the indices arithmetic used below does not overflow
+    // signed and unsigned I64.
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
+                                    mlir::arith::IntegerOverflowFlags::nuw);
+
+    mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
+    llvm::SmallVector<mlir::Value, maxRank> arrayExtents =
+        hlfir::getExplicitExtentsFromShape(arrayShape, builder);
+    llvm::SmallVector<mlir::Value, 1> typeParams;
+    hlfir::genLengthParameters(loc, builder, array, typeParams);
+    mlir::Value shiftDimExtent =
+        builder.createConvert(loc, calcType, arrayExtents[dimVal - 1]);
+    mlir::Value shiftVal;
+    if (shift.isScalar()) {
+      shiftVal = hlfir::loadTrivialScalar(loc, builder, shift);
+      shiftVal =
+          normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent, calcType);
+    }
+
+    hlfir::EvaluateInMemoryOp evalOp =
+        builder.create<hlfir::EvaluateInMemoryOp>(
+            loc, mlir::cast<hlfir::ExprType>(cshift.getType()), arrayShape);
+    builder.setInsertionPointToStart(&evalOp.getBody().front());
+
+    mlir::Value resultArray = evalOp.getMemory();
+    mlir::Type arrayType = fir::dyn_cast_ptrEleTy(resultArray.getType());
+    resultArray = builder.createBox(loc, fir::BoxType::get(arrayType),
+                                    resultArray, arrayShape, /*slice=*/nullptr,
+                                    typeParams, /*tdesc=*/nullptr);
+
+    // This is a generator of the dimension shift code.
+    // The code is inserted inside a loop nest over the other dimensions
+    // (if any). If exposeContiguity is true, the array's section
+    // array(s(1), ..., s(dim-1), :, s(dim+1), ..., s(n)) is represented
+    // as a contiguous 1D array.
+    // shiftVal is the normalized shift value that satisfies (SH >= 0 && SH <
+    // SIZE(ARRAY,DIM)).
+    //
+    auto genDimensionShift = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                                 mlir::Value shiftVal, bool exposeContiguity,
+                                 mlir::ValueRange oneBasedIndices)
+        -> llvm::SmallVector<mlir::Value, 0> {
+      // Create a vector of indices (s(1), ..., s(dim-1), nullptr, s(dim+1),
+      // ..., s(n)) so that we can update the dimVal index as needed.
+      llvm::SmallVector<mlir::Value, maxRank> srcIndices(
+          oneBasedIndices.begin(), oneBasedIndices.begin() + (dimVal - 1));
+      srcIndices.push_back(nullptr);
+      srcIndices.append(oneBasedIndices.begin() + (dimVal - 1),
+                        oneBasedIndices.end());
+      llvm::SmallVector<mlir::Value, maxRank> dstIndices(srcIndices);
+
+      hlfir::Entity srcArray = array;
+      if (exposeContiguity && mlir::isa<fir::BaseBoxType>(srcArray.getType())) {
+        assert(dimVal == 1 && "can expose contiguity only for dim 1");
+        llvm::SmallVector<mlir::Value, maxRank> arrayLbounds =
+            hlfir::genLowerbounds(loc, builder, arrayShape, array.getRank());
+        hlfir::Entity section =
+            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayLbounds,
+                                arrayExtents, oneBasedIndices, typeParams);
+        mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, section);
+        mlir::Value shape = hlfir::genShape(loc, builder, section);
+        mlir::Type boxType = fir::wrapInClassOrBoxType(
+            hlfir::getFortranElementOrSequenceType(section.getType()),
+            section.isPolymorphic());
+        srcArray = hlfir::Entity{
+            builder.createBox(loc, boxType, addr, shape, /*slice=*/nullptr,
+                              /*lengths=*/{}, /*tdesc=*/nullptr)};
+        // When shifting the dimension as a 1D section of the original
+        // array, we only need one index for addressing.
+        srcIndices.resize(1);
+      }
+
+      // Copy first portion of the array:
+      // do i=1,SH
+      //   result(i + (SIZE(ARRAY,DIM) - SH)) = array(i)
+      // end
+      auto genAssign1 = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                            mlir::ValueRange index,
+                            mlir::ValueRange reductionArgs)
+          -> llvm::SmallVector<mlir::Value, 0> {
+        assert(index.size() == 1 && "expected single loop");
+        mlir::Value srcIndex = builder.createConvert(loc, calcType, index[0]);
+        srcIndices[dimVal - 1] = srcIndex;
+        hlfir::Entity srcElementValue =
+            hlfir::loadElementAt(loc, builder, srcArray, srcIndices);
+        mlir::Value dstIndex = builder.create<mlir::arith::AddIOp>(
+            loc, srcIndex,
+            builder.create<mlir::arith::SubIOp>(loc, shiftDimExtent, shiftVal));
+        dstIndices[dimVal - 1] = dstIndex;
+        hlfir::Entity dstElement = hlfir::getElementAt(
+            loc, builder, hlfir::Entity{resultArray}, dstIndices);
+        builder.create<hlfir::AssignOp>(loc, srcElementValue, dstElement);
+        return {};
+      };
+
+      // Generate the first loop.
+      hlfir::genLoopNestWithReductions(loc, builder, {shiftVal},
+                                       /*reductionInits=*/{}, genAssign1,
+                                       /*isUnordered=*/true);
+
+      // Copy second portion of the array:
+      // do i=1,SIZE(ARRAY,DIM)-SH
+      //   result(i) = array(i + SH)
+      // end
+      auto genAssign2 = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                            mlir::ValueRange index,
+                            mlir::ValueRange reductionArgs)
+          -> llvm::SmallVector<mlir::Value, 0> {
+        assert(index.size() == 1 && "expected single loop");
+        mlir::Value dstIndex = builder.createConvert(loc, calcType, index[0]);
+        mlir::Value srcIndex =
+            builder.create<mlir::arith::AddIOp>(loc, dstIndex, shiftVal);
+        srcIndices[dimVal - 1] = srcIndex;
+        hlfir::Entity srcElementValue =
+            hlfir::loadElementAt(loc, builder, srcArray, srcIndices);
+        dstIndices[dimVal - 1] = dstIndex;
+        hlfir::Entity dstElement = hlfir::getElementAt(
+            loc, builder, hlfir::Entity{resultArray}, dstIndices);
+        builder.create<hlfir::AssignOp>(loc, srcElementValue, dstElement);
+        return {};
+      };
+
+      // Generate the second loop.
+      mlir::Value bound =
+          builder.create<mlir::arith::SubIOp>(loc, shiftDimExtent, shiftVal);
+      hlfir::genLoopNestWithReductions(loc, builder, {bound},
+                                       /*reductionInits=*/{}, genAssign2,
+                                       /*isUnordered=*/true);
+      return {};
+    };
+
+    // A wrapper around genDimensionShift that computes the normalized
+    // shift value and manages the insertion of the multiple versions
+    // of the shift based on the dynamic check of the leading dimension's
+    // contiguity (when dimVal == 1).
+    auto genShiftBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                            mlir::ValueRange oneBasedIndices,
+                            mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 0> {
+      // Copy the dimension with a shift:
+      // SH is either SHIFT (if scalar) or SHIFT(oneBasedIndices).
+      if (!shiftVal) {
+        assert(!oneBasedIndices.empty() && "scalar shift must be precomputed");
+        hlfir::Entity shiftElement =
+            hlfir::getElementAt(loc, builder, shift, oneBasedIndices);
+        shiftVal = hlfir::loadTrivialScalar(loc, builder, shiftElement);
+        shiftVal = normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent,
+                                       calcType);
+      }
+
+      // If we can fetch the byte stride of the leading dimension,
+      // and the byte size of the element, then we can generate
+      // a dynamic contiguity check and expose the leading dimension's
+      // contiguity in FIR, making memcpy loop idiom recognition
+      // possible.
+      mlir::Value elemSize;
+      mlir::Value stride;
+      if (dimVal == 1 && mlir::isa<fir::BaseBoxType>(array.getType())) {
+        mlir::Type indexType = builder.getIndexType();
+        elemSize =
+            builder.create<fir::BoxEleSizeOp>(loc, indexType, array.getBase());
+        mlir::Value dimIdx =
+            builder.createIntegerConstant(loc, indexType, dimVal - 1);
+        auto boxDim = builder.create<fir::BoxDimsOp>(
+            loc, indexType, indexType, indexType, array.getBase(), dimIdx);
+        stride = boxDim.getByteStride();
+      }
+
+      if (array.isSimplyContiguous() || !elemSize || !stride) {
+        genDimensionShift(loc, builder, shiftVal, /*exposeContiguity=*/false,
+                          oneBasedIndices);
+        return {};
+      }
+
+      mlir::Value isContiguous = builder.create<mlir::arith::CmpIOp>(
+          loc, mlir::arith::CmpIPredicate::eq, elemSize, stride);
+      builder.genIfOp(loc, {}, isContiguous, /*withElseRegion=*/true)
+          .genThen([&]() {
+            genDimensionShift(loc, builder, shiftVal, /*exposeContiguity=*/true,
+                              oneBasedIndices);
+          })
+          .genElse([&]() {
+            genDimensionShift(loc, builder, shiftVal,
+                              /*exposeContiguity=*/false, oneBasedIndices);
+          });
+
+      return {};
+    };
+
+    // For 1D case, generate a single loop.
+    // For ND case, generate a loop nest over the other dimensions
+    // with a single loop inside (generated separately).
+    llvm::SmallVector<mlir::Value, maxRank> newExtents(arrayExtents);
+    newExtents.erase(newExtents.begin() + (dimVal - 1));
+    if (!newExtents.empty())
+      hlfir::genLoopNestWithReductions(loc, builder, newExtents,
+                                       /*reductionInits=*/{}, genShiftBody,
+                                       /*isUnordered=*/true);
+    else
+      genShiftBody(loc, builder, {}, {});
+
+    return evalOp.getOperation();
   }
 };
 
@@ -951,6 +1252,219 @@ private:
   }
 };
 
+class ReshapeAsElementalConversion
+    : public mlir::OpRewritePattern<hlfir::ReshapeOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::ReshapeOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ReshapeOp reshape,
+                  mlir::PatternRewriter &rewriter) const override {
+    // Do not inline RESHAPE with ORDER yet. The runtime implementation
+    // may be good enough, unless the temporary creation overhead
+    // is high.
+    // TODO: If ORDER is constant, then we can still easily inline.
+    // TODO: If the result's rank is 1, then we can assume ORDER == (/1/).
+    if (reshape.getOrder())
+      return rewriter.notifyMatchFailure(reshape,
+                                         "RESHAPE with ORDER argument");
+
+    // Verify that the element types of ARRAY, PAD and the result
+    // match before doing any transformations. For example,
+    // the character types of different lengths may appear in the dead
+    // code, and it just does not make sense to inline hlfir.reshape
+    // in this case (a runtime call might have less code size footprint).
+    hlfir::Entity result = hlfir::Entity{reshape};
+    hlfir::Entity array = hlfir::Entity{reshape.getArray()};
+    mlir::Type elementType = array.getFortranElementType();
+    if (result.getFortranElementType() != elementType)
+      return rewriter.notifyMatchFailure(
+          reshape, "ARRAY and result have different types");
+    mlir::Value pad = reshape.getPad();
+    if (pad && hlfir::getFortranElementType(pad.getType()) != elementType)
+      return rewriter.notifyMatchFailure(reshape,
+                                         "ARRAY and PAD have different types");
+
+    // TODO: selecting between ARRAY and PAD of non-trivial element types
+    // requires more work. We have to select between two references
+    // to elements in ARRAY and PAD. This requires conditional
+    // bufferization of the element, if ARRAY/PAD is an expression.
+    if (pad && !fir::isa_trivial(elementType))
+      return rewriter.notifyMatchFailure(reshape,
+                                         "PAD present with non-trivial type");
+
+    mlir::Location loc = reshape.getLoc();
+    fir::FirOpBuilder builder{rewriter, reshape.getOperation()};
+    // Assume that all the indices arithmetic does not overflow
+    // the IndexType.
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nuw);
+
+    llvm::SmallVector<mlir::Value, 1> typeParams;
+    hlfir::genLengthParameters(loc, builder, array, typeParams);
+
+    // Fetch the extents of ARRAY, PAD and result beforehand.
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayExtents =
+        hlfir::genExtentsVector(loc, builder, array);
+
+    // If PAD is present, we have to use array size to start taking
+    // elements from the PAD array.
+    mlir::Value arraySize =
+        pad ? computeArraySize(loc, builder, arrayExtents) : nullptr;
+    hlfir::Entity shape = hlfir::Entity{reshape.getShape()};
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> resultExtents;
+    mlir::Type indexType = builder.getIndexType();
+    for (int idx = 0; idx < result.getRank(); ++idx)
+      resultExtents.push_back(hlfir::loadElementAt(
+          loc, builder, shape,
+          builder.createIntegerConstant(loc, indexType, idx + 1)));
+    auto resultShape = builder.create<fir::ShapeOp>(loc, resultExtents);
+
+    auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                         mlir::ValueRange inputIndices) -> hlfir::Entity {
+      mlir::Value linearIndex =
+          computeLinearIndex(loc, builder, resultExtents, inputIndices);
+      fir::IfOp ifOp;
+      if (pad) {
+        // PAD is present. Check if this element comes from the PAD array.
+        mlir::Value isInsideArray = builder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::ult, linearIndex, arraySize);
+        ifOp = builder.create<fir::IfOp>(loc, elementType, isInsideArray,
+                                         /*withElseRegion=*/true);
+
+        // In the 'else' block, return an element from the PAD.
+        builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+        // PAD is dynamically optional, but we can unconditionally access it
+        // in the 'else' block. If we have to start taking elements from it,
+        // then it must be present in a valid program.
+        llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padExtents =
+            hlfir::genExtentsVector(loc, builder, hlfir::Entity{pad});
+        // Subtract the ARRAY size from the zero-based linear index
+        // to get the zero-based linear index into PAD.
+        mlir::Value padLinearIndex =
+            builder.create<mlir::arith::SubIOp>(loc, linearIndex, arraySize);
+        llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padIndices =
+            delinearizeIndex(loc, builder, padExtents, padLinearIndex,
+                             /*wrapAround=*/true);
+        mlir::Value padElement =
+            hlfir::loadElementAt(loc, builder, hlfir::Entity{pad}, padIndices);
+        builder.create<fir::ResultOp>(loc, padElement);
+
+        // In the 'then' block, return an element from the ARRAY.
+        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      }
+
+      llvm::SmallVector<mlir::Value, Fortran::common::maxRank> arrayIndices =
+          delinearizeIndex(loc, builder, arrayExtents, linearIndex,
+                           /*wrapAround=*/false);
+      mlir::Value arrayElement =
+          hlfir::loadElementAt(loc, builder, array, arrayIndices);
+
+      if (ifOp) {
+        builder.create<fir::ResultOp>(loc, arrayElement);
+        builder.setInsertionPointAfter(ifOp);
+        arrayElement = ifOp.getResult(0);
+      }
+
+      return hlfir::Entity{arrayElement};
+    };
+    hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
+        loc, builder, elementType, resultShape, typeParams, genKernel,
+        /*isUnordered=*/true,
+        /*polymorphicMold=*/result.isPolymorphic() ? array : mlir::Value{},
+        reshape.getResult().getType());
+    assert(elementalOp.getResult().getType() == reshape.getResult().getType());
+    rewriter.replaceOp(reshape, elementalOp);
+    return mlir::success();
+  }
+
+private:
+  /// Compute zero-based linear index given an array extents
+  /// and one-based indices:
+  ///   \p extents: [e0, e1, ..., en]
+  ///   \p indices: [i0, i1, ..., in]
+  ///
+  /// linear-index :=
+  ///   (...((in-1)*e(n-1)+(i(n-1)-1))*e(n-2)+...)*e0+(i0-1)
+  static mlir::Value computeLinearIndex(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        mlir::ValueRange extents,
+                                        mlir::ValueRange indices) {
+    std::size_t rank = extents.size();
+    assert(rank == indices.size());
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
+    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
+    mlir::Value linearIndex = zero;
+    std::size_t idx = 0;
+    for (auto index : llvm::reverse(indices)) {
+      mlir::Value tmp = builder.create<mlir::arith::SubIOp>(
+          loc, builder.createConvert(loc, indexType, index), one);
+      tmp = builder.create<mlir::arith::AddIOp>(loc, linearIndex, tmp);
+      if (idx + 1 < rank)
+        tmp = builder.create<mlir::arith::MulIOp>(
+            loc, tmp,
+            builder.createConvert(loc, indexType, extents[rank - idx - 2]));
+
+      linearIndex = tmp;
+      ++idx;
+    }
+    return linearIndex;
+  }
+
+  /// Compute one-based array indices from the given zero-based \p linearIndex
+  /// and the array \p extents [e0, e1, ..., en].
+  ///   i0 := linearIndex % e0 + 1
+  ///   linearIndex := linearIndex / e0
+  ///   i1 := linearIndex % e1 + 1
+  ///   linearIndex := linearIndex / e1
+  ///   ...
+  ///   i(n-1) := linearIndex % e(n-1) + 1
+  ///   linearIndex := linearIndex / e(n-1)
+  ///   if (wrapAround) {
+  ///     // If the index is allowed to wrap around, then
+  ///     // we need to modulo it by the last dimension's extent.
+  ///     in := linearIndex % en + 1
+  ///   } else {
+  ///     in := linearIndex + 1
+  ///   }
+  static llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
+  delinearizeIndex(mlir::Location loc, fir::FirOpBuilder &builder,
+                   mlir::ValueRange extents, mlir::Value linearIndex,
+                   bool wrapAround) {
+    llvm::SmallVector<mlir::Value, Fortran::common::maxRank> indices;
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value one = builder.createIntegerConstant(loc, indexType, 1);
+    linearIndex = builder.createConvert(loc, indexType, linearIndex);
+
+    for (std::size_t dim = 0; dim < extents.size(); ++dim) {
+      mlir::Value extent = builder.createConvert(loc, indexType, extents[dim]);
+      // Avoid the modulo for the last index, unless wrap around is allowed.
+      mlir::Value currentIndex = linearIndex;
+      if (dim != extents.size() - 1 || wrapAround)
+        currentIndex =
+            builder.create<mlir::arith::RemUIOp>(loc, linearIndex, extent);
+      // The result of the last division is unused, so it will be DCEd.
+      linearIndex =
+          builder.create<mlir::arith::DivUIOp>(loc, linearIndex, extent);
+      indices.push_back(
+          builder.create<mlir::arith::AddIOp>(loc, currentIndex, one));
+    }
+    return indices;
+  }
+
+  /// Return size of an array given its extents.
+  static mlir::Value computeArraySize(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      mlir::ValueRange extents) {
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value size = builder.createIntegerConstant(loc, indexType, 1);
+    for (auto extent : extents)
+      size = builder.create<mlir::arith::MulIOp>(
+          loc, size, builder.createConvert(loc, indexType, extent));
+    return size;
+  }
+};
+
 class SimplifyHLFIRIntrinsics
     : public hlfir::impl::SimplifyHLFIRIntrinsicsBase<SimplifyHLFIRIntrinsics> {
 public:
@@ -968,7 +1482,7 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
     patterns.insert<SumAsElementalConversion>(context);
-    patterns.insert<CShiftAsElementalConversion>(context);
+    patterns.insert<CShiftConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
 
     // If forceMatmulAsElemental is false, then hlfir.matmul inlining
@@ -987,6 +1501,7 @@ public:
       patterns.insert<MatmulConversion<hlfir::MatmulOp>>(context);
 
     patterns.insert<DotProductConversion>(context);
+    patterns.insert<ReshapeAsElementalConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {

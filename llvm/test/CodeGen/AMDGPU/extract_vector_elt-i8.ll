@@ -548,10 +548,10 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
   %elt1 = extractelement <8 x i8> %load, i32 1
   %elt2 = extractelement <8 x i8> %load, i32 2
   %elt3 = extractelement <8 x i8> %load, i32 3
-  store volatile i8 %elt0, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt1, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt2, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt3, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt0, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt1, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt2, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt3, ptr addrspace(1) poison, align 1
   ret void
 }
 
@@ -602,10 +602,10 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
   %elt1 = extractelement <8 x i8> %load, i32 1
   %elt4 = extractelement <8 x i8> %load, i32 4
   %elt5 = extractelement <8 x i8> %load, i32 5
-  store volatile i8 %elt0, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt1, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt4, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt5, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt0, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt1, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt4, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt5, ptr addrspace(1) poison, align 1
   ret void
 }
 
@@ -640,8 +640,8 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
   %load = load <8 x i8>, ptr addrspace(4) null
   %elt4 = extractelement <8 x i8> %load, i32 4
   %elt5 = extractelement <8 x i8> %load, i32 5
-  store volatile i8 %elt4, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt5, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt4, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt5, ptr addrspace(1) poison, align 1
   ret void
 }
 
@@ -693,10 +693,10 @@ define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
   %elt1 = extractelement <16 x i8> %load, i32 1
   %elt4 = extractelement <16 x i8> %load, i32 4
   %elt5 = extractelement <16 x i8> %load, i32 5
-  store volatile i8 %elt0, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt1, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt4, ptr addrspace(1) undef, align 1
-  store volatile i8 %elt5, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt0, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt1, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt4, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt5, ptr addrspace(1) poison, align 1
   ret void
 }
 

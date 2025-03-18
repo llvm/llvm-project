@@ -227,20 +227,20 @@ F s(0);
 // CHECK: FunctionTemplateDecl
 // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'char' depth 0 index 0
 // CHECK:   `-TemplateArgument {{.*}} expr
-// CHECK: |   |-inherited from NonTypeTemplateParm {{.*}} '' 'char'
+// CHECK: |   |-inherited from NonTypeTemplateParm {{.*}} depth 0 index 0 'char'
 // CHECK: |   `-CharacterLiteral {{.*}} 'char' 120
 // CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 1 U
 // CHECK: |-ParenExpr {{.*}} 'bool'
 // CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false
-// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (U) -> F<>'
+// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (U) -> F<value-parameter-0-0>'
 // CHECK: | `-ParmVarDecl {{.*}} 'U'
 // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<>'
 // CHECK:   |-TemplateArgument integral ''x''
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'
 // CHECK:   `-ParmVarDecl {{.*}} 'int'
-// CHECK: FunctionProtoType {{.*}} 'auto (U) -> F<>' dependent trailing_return cdecl
-// CHECK: |-InjectedClassNameType {{.*}} 'F<>' dependent
+// CHECK: FunctionProtoType {{.*}} 'auto (U) -> F<value-parameter-0-0>' dependent trailing_return cdecl
+// CHECK: |-InjectedClassNameType {{.*}} 'F<value-parameter-0-0>' dependent
 // CHECK: | `-CXXRecord {{.*}} 'F'
 // CHECK: `-TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 1
 
@@ -691,3 +691,35 @@ Test test(42);
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} 'auto:1'
 
 } // namespace GH122134
+
+namespace GH128691 {
+
+template <typename = void>
+class NewDeleteAllocator;
+
+template <>
+struct NewDeleteAllocator<> {
+  template <typename T>
+  NewDeleteAllocator(T); // expected-note {{candidate template ignored}} \
+                         // expected-note {{implicit deduction guide declared as}}
+};
+
+template <typename>
+struct NewDeleteAllocator : NewDeleteAllocator<> { // expected-note {{candidate template ignored}} \
+                                                   // expected-note {{implicit deduction guide declared as}}
+  using NewDeleteAllocator<>::NewDeleteAllocator;
+};
+
+void test() { NewDeleteAllocator abc(42); } // expected-error {{no viable constructor or deduction guide}}
+
+// CHECK-LABEL: Dumping GH128691::<deduction guide for NewDeleteAllocator>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} <deduction guide for NewDeleteAllocator>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} typename depth 0 index 0
+// CHECK-NEXT: | `-TemplateArgument type 'void'
+// CHECK-NEXT: |   |-inherited from TemplateTypeParm {{.+}} depth 0 index 0
+// CHECK-NEXT: |   `-BuiltinType {{.+}} 'void'
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} typename depth 0 index 1 T
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <deduction guide for NewDeleteAllocator> 'auto (T) -> NewDeleteAllocator<type-parameter-0-0>'
+// CHECK-NEXT:  `-ParmVarDecl {{.+}} 'T'
+
+} // namespace GH128691

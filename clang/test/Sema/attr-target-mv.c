@@ -66,7 +66,8 @@ int use3(void) {
   return mv_after_use();
 }
 
-// expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
+// expected-error@+2 {{function declaration cannot become a multiversioned function after first usage}}
+// expected-note@-6 {{previous declaration is here}}
 int __attribute__((target("arch=sandybridge")))  mv_after_use(void) { return 2; }
 
 int __attribute__((target("sse4.2,arch=sandybridge"))) mangle(void) { return 1; }

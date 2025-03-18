@@ -143,7 +143,8 @@ add_llvm_component_library(LLVMSupport
   APFloat.cpp
   APInt.cpp
   APSInt.cpp
-  ARMBuildAttrs.cpp
+  ARMBuildAttributes.cpp
+  AArch64AttributeParser.cpp
   AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
@@ -182,8 +183,9 @@ add_llvm_component_library(LLVMSupport
   DAGDeltaAlgorithm.cpp
   DJB.cpp
   DynamicAPInt.cpp
-  ELFAttributeParser.cpp
   ELFAttributes.cpp
+  ELFAttrParserCompact.cpp
+  ELFAttrParserExtended.cpp
   Error.cpp
   ErrorHandling.cpp
   ExponentialBackoff.cpp

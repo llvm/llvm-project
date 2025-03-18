@@ -198,6 +198,8 @@ public:
 
   explicit GlobalMerge() : FunctionPass(ID) {
     Opt.MaxOffset = GlobalMergeMaxOffset;
+    Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
+    Opt.MergeConstAggressive = GlobalMergeAllConst;
     initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
@@ -271,8 +273,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
 
   // If we want to just blindly group all globals together, do so.
   if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
-    BitVector AllGlobals(Globals.size());
-    AllGlobals.set();
+    BitVector AllGlobals(Globals.size(), true);
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
 
@@ -673,7 +674,7 @@ bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
-  IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
+  IsMachO = M.getTargetTriple().isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
   MapVector<std::pair<unsigned, StringRef>, SmallVector<GlobalVariable *, 0>>
@@ -729,7 +730,8 @@ bool GlobalMergeImpl::run(Module &M) {
 
     Type *Ty = GV.getValueType();
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
-    if (AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize) {
+    bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
+    if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
@@ -738,11 +740,8 @@ bool GlobalMergeImpl::run(Module &M) {
       else
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
-    LLVM_DEBUG(dbgs() << "GV "
-                      << ((DL.getTypeAllocSize(Ty) < Opt.MaxOffset)
-                              ? "to merge: "
-                              : "not to merge: ")
-                      << GV << "\n");
+    LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
+                      << "\n");
   }
 
   for (auto &P : Globals)

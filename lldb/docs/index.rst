@@ -182,7 +182,8 @@ interesting areas to contribute to lldb.
 
    Source Code <https://github.com/llvm/llvm-project>
    Releases <https://github.com/llvm/llvm-project/releases>
-   Discord <https://discord.com/channels/636084430946959380/636732809708306432>
+   Join the Discord <https://discord.gg/xS7Z362>
+   Discord Channel <https://discord.com/channels/636084430946959380/636732809708306432>
    Discussion Forums <https://discourse.llvm.org/c/subprojects/lldb/8>
    Developer Policy <https://llvm.org/docs/DeveloperPolicy.html>
    Bug Reports <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+label%3Alldb+is%3Aopen>

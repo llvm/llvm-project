@@ -986,7 +986,7 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
     if (Move.Main.size() >= SizeLimit)
       return false;
-    // For stores with return values we'd have to collect downward depenencies.
+    // For stores with return values we'd have to collect downward dependencies.
     // There are no such stores that we handle at the moment, so omit that.
     assert(Info.Inst->getType()->isVoidTy() &&
            "Not handling stores with return values");
@@ -1174,8 +1174,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      EarliestUser[S.Seg.Val] = std::min(
-          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
+      auto &EU = EarliestUser[S.Seg.Val];
+      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 

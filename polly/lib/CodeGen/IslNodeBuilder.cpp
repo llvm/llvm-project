@@ -600,8 +600,7 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // derived class determined by TargetMachine, AssumptionCache can be
   // configured using a TargetTransformInfo object also derived from
   // TargetMachine.
-  TargetLibraryInfoImpl BaselineInfoImpl(
-      Triple(SubFn->getParent()->getTargetTriple()));
+  TargetLibraryInfoImpl BaselineInfoImpl(SubFn->getParent()->getTargetTriple());
   TargetLibraryInfo CalleeTLI(BaselineInfoImpl, SubFn);
   AssumptionCache CalleeAC(*SubFn);
   std::unique_ptr<ScalarEvolution> SubSE = std::make_unique<ScalarEvolution>(
@@ -1103,7 +1102,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Domain = nullptr;
 
   ExprBuilder.setTrackOverflow(true);
-  Value *Cond = ExprBuilder.create(DomainCond);
+  Value *Cond = ExprBuilder.createBool(DomainCond);
   Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
                                               "polly.preload.cond.overflown");
   Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");

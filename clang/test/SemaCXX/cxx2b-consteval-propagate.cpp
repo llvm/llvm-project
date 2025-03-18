@@ -534,15 +534,45 @@ namespace GH123405 {
 consteval void fn() {}
 
 template <typename>
-constexpr int tfn(int) {
+constexpr auto tfn(int) {
     auto p = &fn;  // expected-note {{'tfn<int>' is an immediate function because its body evaluates the address of a consteval function 'fn'}}
-    return int(p); // expected-error {{cast from pointer to smaller type 'int' loses information}}
+    return p;
 }
 
-int g() {
+void g() {
    int a; // expected-note {{declared here}}
-   return tfn<int>(a); // expected-error {{call to immediate function 'GH123405::tfn<int>' is not a constant expression}}\
-                       // expected-note {{read of non-const variable 'a' is not allowed in a constant expression}}
+   tfn<int>(a); // expected-error {{call to immediate function 'GH123405::tfn<int>' is not a constant expression}}\
+                // expected-note {{read of non-const variable 'a' is not allowed in a constant expression}}
+}
+} // namespace GH123405
+
+namespace GH118000 {
+consteval int baz() { return 0;}
+struct S {
+    int mSize = baz();
+};
+
+consteval void bar() {
+    S s;
 }
 
+void foo() {
+    S s;
+}
+} // namespace GH118000
+
+namespace GH119046 {
+
+template <typename Cls> constexpr auto tfn(int) {
+  return (unsigned long long)(&Cls::sfn);
+  //expected-note@-1 {{'tfn<GH119046::S>' is an immediate function because its body evaluates the address of a consteval function 'sfn'}}
+};
+struct S { static consteval void sfn() {} };
+
+int f() {
+  int a = 0; // expected-note{{declared here}}
+  return tfn<S>(a);
+  //expected-error@-1 {{call to immediate function 'GH119046::tfn<GH119046::S>' is not a constant expression}}
+  //expected-note@-2 {{read of non-const variable 'a' is not allowed in a constant expression}}
+}
 }

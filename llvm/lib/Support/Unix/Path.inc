@@ -29,7 +29,6 @@
 
 #include <dirent.h>
 #include <pwd.h>
-#include <sys/file.h>
 
 #ifdef __APPLE__
 #include <copyfile.h>

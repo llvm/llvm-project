@@ -117,7 +117,8 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
         TosaValidationOptions validationOptions;
         validationOptions.profile = {"none"};
-        validationOptions.StrictOperationSpecAlignment = true;
+        validationOptions.extension = {"none"};
+        validationOptions.strictOpSpecAlignment = false;
         validationOptions.level = tosa::TosaLevelEnum::EightK;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,

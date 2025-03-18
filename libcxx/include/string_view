@@ -447,7 +447,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
   copy(_CharT* __s, size_type __n, size_type __pos = 0) const {
     if (__pos > size())
-      __throw_out_of_range("string_view::copy");
+      std::__throw_out_of_range("string_view::copy");
     size_type __rlen = std::min(__n, size() - __pos);
     _Traits::copy(__s, data() + __pos, __rlen);
     return __rlen;
