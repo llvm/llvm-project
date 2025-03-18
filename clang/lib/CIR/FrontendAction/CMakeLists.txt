@@ -18,6 +18,7 @@ add_clang_library(clangCIRFrontendAction
   clangFrontend
   clangCIR
   clangCIRLoweringDirectToLLVM
+  clangCIRLoweringThroughMLIR
   clangCodeGen
   MLIRCIR
   MLIRIR

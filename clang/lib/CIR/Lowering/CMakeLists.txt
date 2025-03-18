@@ -18,3 +18,4 @@ add_clang_library(clangCIRLoweringCommon
   )
 
 add_subdirectory(DirectToLLVM)
+add_subdirectory(ThroughMLIR)
