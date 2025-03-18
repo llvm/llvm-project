@@ -204,9 +204,9 @@ void transform::ApplyTransferToScfPatternsOp::populatePatterns(
   populateVectorToSCFConversionPatterns(patterns, vectorTransferToSCFOptions);
 }
 
-void transform::ApplyVectorPropagateExtractPatternsOp::populatePatterns(
+void transform::ApplySinkVectorPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorPropagateExtractsPatterns(patterns);
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
