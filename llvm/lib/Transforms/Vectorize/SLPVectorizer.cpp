@@ -598,6 +598,28 @@ static std::optional<unsigned> getElementIndex(const Value *Inst,
   return Index;
 }
 
+/// \returns true if all of the values in \p VL use the same opcode.
+/// For comparison instructions, also checks if predicates match.
+/// PoisonValues are considered matching.
+/// Interchangeable instructions are not considered.
+static bool allSameOpcode(ArrayRef<Value *> VL) {
+  auto *It = find_if(VL, IsaPred<Instruction>);
+  if (It == VL.end())
+    return true;
+  Instruction *MainOp = cast<Instruction>(*It);
+  unsigned Opcode = MainOp->getOpcode();
+  bool IsCmpOp = isa<CmpInst>(MainOp);
+  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
+                                        : CmpInst::BAD_ICMP_PREDICATE;
+  return std::all_of(It, VL.end(), [&](Value *V) {
+    if (auto *CI = dyn_cast<CmpInst>(V))
+      return BasePred == CI->getPredicate();
+    if (auto *I = dyn_cast<Instruction>(V))
+      return I->getOpcode() == Opcode;
+    return isa<PoisonValue>(V);
+  });
+}
+
 namespace {
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.
@@ -1411,6 +1433,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     MainOp = FindInstructionWithOpcode(BinOpHelper.getMainOpcode());
     AltOp = FindInstructionWithOpcode(BinOpHelper.getAltOpcode());
   }
+  assert((MainOp == AltOp || !allSameOpcode(VL)) &&
+         "Incorrect implementation of allSameOpcode.");
   return InstructionsState(MainOp, AltOp);
 }
 
@@ -10825,7 +10849,9 @@ void BoUpSLP::transformNodes() {
       // same opcode and same parent block or all constants.
       if (VL.size() <= 2 || LoadEntriesToVectorize.contains(Idx) ||
           !(!E.hasState() || E.getOpcode() == Instruction::Load ||
-            E.isAltShuffle() || !allSameBlock(VL)) ||
+            // We use allSameOpcode instead of isAltShuffle because we don't
+            // want to use interchangeable instruction here.
+            !allSameOpcode(VL) || !allSameBlock(VL)) ||
           allConstant(VL) || isSplat(VL))
         continue;
       if (ForceLoadGather && E.hasState() && E.getOpcode() == Instruction::Load)
@@ -10870,7 +10896,7 @@ void BoUpSLP::transformNodes() {
             if (IsSplat)
               continue;
             InstructionsState S = getSameOpcode(Slice, *TLI);
-            if (!S || S.isAltShuffle() || !allSameBlock(Slice) ||
+            if (!S || !allSameOpcode(Slice) || !allSameBlock(Slice) ||
                 (S.getOpcode() == Instruction::Load &&
                  areKnownNonVectorizableLoads(Slice)) ||
                 (S.getOpcode() != Instruction::Load &&

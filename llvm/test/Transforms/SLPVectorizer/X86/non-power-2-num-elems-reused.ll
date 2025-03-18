@@ -5,19 +5,11 @@ define i64 @test() {
 ; CHECK-LABEL: define i64 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[OR54_I_I_6:%.*]] = or i32 0, 0
-; CHECK-NEXT:    [[CONV193_1_I_6:%.*]] = zext i32 [[OR54_I_I_6]] to i64
-; CHECK-NEXT:    [[CONV193_I_7:%.*]] = zext i32 0 to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i64> @llvm.vector.extract.v4i64.v8i64(<8 x i64> zeroinitializer, i64 0)
-; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i64> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v4i64(<8 x i64> zeroinitializer, <4 x i64> [[RDX_OP]], i64 0)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[OP_RDX]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[CONV193_I_7]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i64 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[OP_RDX3]], [[CONV193_1_I_6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i32> poison, i32 [[OR54_I_I_6]], i32 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i32> @llvm.vector.insert.v16i32.v8i32(<16 x i32> [[TMP0]], <8 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP1]], <16 x i32> poison, <16 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 4, i32 5, i32 5, i32 6, i32 7, i32 7, i32 8>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <16 x i32> [[TMP2]] to <16 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> [[TMP3]])
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
 entry:
