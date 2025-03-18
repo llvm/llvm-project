@@ -26,6 +26,7 @@ namespace llvm {
 class GCNSubtarget;
 class LiveIntervals;
 class LiveRegUnits;
+class MachineInstrBuilder;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
@@ -115,6 +116,16 @@ public:
     return 100;
   }
 
+  // When building a block VGPR load, we only really transfer a subset of the
+  // registers in the block, based on a mask. Liveness analysis is not aware of
+  // the mask, so it might consider that any register in the block is available
+  // before the load and may therefore be scavenged. This is not ok for CSRs
+  // that are not clobbered, since the caller will expect them to be preserved.
+  // This method will add artificial implicit uses for those registers on the
+  // load instruction, so liveness analysis knows they're unavailable.
+  void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
+                                      Register BlockReg) const;
+
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
@@ -157,6 +168,11 @@ public:
   /// is not possible to copy between two registers of the specified class.
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
+
+  const TargetRegisterClass *
+  getRegClassForBlockOp(const MachineFunction &MF) const {
+    return &AMDGPU::VReg_1024RegClass;
+  }
 
   void buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index, int Offset,
                                bool IsLoad, bool IsKill = true) const;
