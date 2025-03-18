@@ -2489,7 +2489,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         if (Spilled[Dst])
           continue;
 
-        auto &VSR = VSRContainingGPRs[Dst];
+        const auto &VSR = VSRContainingGPRs[Dst];
         if (VSR.second != 0) {
           assert(Subtarget.hasP9Vector() &&
                  "mtvsrdd is unavailable on pre-P9 targets.");
