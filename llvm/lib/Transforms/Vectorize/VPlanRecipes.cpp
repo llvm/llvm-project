@@ -481,10 +481,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::PHI: {
-    assert(getParent() ==
-               getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
-           "VPInstructions with PHI opcodes must be used for header phis only "
-           "at the moment");
     BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
     Value *Start = State.get(getOperand(0), VPLane(0));
     PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
@@ -580,11 +576,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
 
-    if (!getParent()->isExiting())
+    VPBasicBlock *Header = cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
+    if (!State.CFG.VPBB2IRBB.contains(Header))
       return CondBr;
 
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
     CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
@@ -595,9 +590,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Cond = Builder.CreateICmpEQ(IV, TC);
 
     // Now create the branch.
-    auto *Plan = getParent()->getPlan();
-    VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
-    VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
+    VPBasicBlock *Header = cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
 
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination (the header) now and to the
