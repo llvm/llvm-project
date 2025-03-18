@@ -39,9 +39,9 @@ Implemented Papers
 ------------------
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
-- P2441R2: ``views::join_with``
-- P2711R1: Making multi-param constructors of ``views`` ``explicit``
-- P2770R0: Stashing stashing ``iterators`` for proper flattening
+- P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
+- P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
+- P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
 
 Improvements and New Features
 -----------------------------
