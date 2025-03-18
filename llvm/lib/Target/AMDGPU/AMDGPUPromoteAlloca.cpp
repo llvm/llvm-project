@@ -773,6 +773,15 @@ static void forEachWorkListItem(const InstContainer &WorkList,
   }
 }
 
+/// Find an insert point after an alloca, after all other allocas clustered at
+/// the start of the block.
+static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
+                                                    BasicBlock::iterator I) {
+  for (BasicBlock::iterator E = BB.end(); I != E && isa<AllocaInst>(*I); ++I)
+    ;
+  return I;
+}
+
 // FIXME: Should try to pick the most likely to be profitable allocas first.
 bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "Trying to promote to vector: " << Alloca << '\n');
@@ -989,7 +998,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   // undef.
   SSAUpdater Updater;
   Updater.Initialize(VectorTy, "promotealloca");
-  Updater.AddAvailableValue(Alloca.getParent(), UndefValue::get(VectorTy));
+
+  BasicBlock *EntryBB = Alloca.getParent();
+  BasicBlock::iterator InitInsertPos =
+      skipToNonAllocaInsertPt(*EntryBB, Alloca.getIterator());
+  // Alloca memory is undefined to begin, not poison.
+  Value *AllocaInitValue =
+      new FreezeInst(PoisonValue::get(VectorTy), "", InitInsertPos);
+  AllocaInitValue->takeName(&Alloca);
+
+  Updater.AddAvailableValue(EntryBB, AllocaInitValue);
 
   // First handle the initial worklist.
   SmallVector<LoadInst *, 4> DeferredLoads;

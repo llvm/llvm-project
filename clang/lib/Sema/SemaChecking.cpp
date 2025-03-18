@@ -15323,7 +15323,7 @@ static bool checkBuiltinVectorMathMixedEnums(Sema &S, Expr *LHS, Expr *RHS,
            R = RHS->getEnumCoercedType(S.Context);
   if (L->isUnscopedEnumerationType() && R->isUnscopedEnumerationType() &&
       !S.Context.hasSameUnqualifiedType(L, R)) {
-    return S.Diag(Loc, diag::err_conv_mixed_enum_types_cxx26)
+    return S.Diag(Loc, diag::err_conv_mixed_enum_types)
            << LHS->getSourceRange() << RHS->getSourceRange()
            << /*Arithmetic Between*/ 0 << L << R;
   }
