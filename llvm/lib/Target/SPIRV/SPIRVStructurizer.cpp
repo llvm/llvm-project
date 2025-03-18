@@ -612,7 +612,7 @@ class SPIRVStructurizer : public FunctionPass {
       auto ContinueAddress = BlockAddress::get(Continue->getParent(), Continue);
       SmallVector<Value *, 2> Args = {MergeAddress, ContinueAddress};
 
-      Builder.CreateIntrinsic(Intrinsic::spv_loop_merge, {}, {Args});
+      Builder.CreateIntrinsic(Intrinsic::spv_loop_merge, {Args});
       Modified = true;
     }
 
