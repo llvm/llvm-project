@@ -1962,25 +1962,33 @@ let hasSideEffects = false in {
 
 // copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
 let hasSideEffects = false, isAsCheapAsAMove = true in {
-  multiclass MOV<RegisterClass RC, string OpStr, ValueType VT, Operand IMMType, SDNode ImmNode>  {
-    def r : NVPTXInst<(outs RC:$dst), (ins RC:$src),
-                       "mov." # OpStr # " \t$dst, $src;", []>;
-    def i : NVPTXInst<(outs RC:$dst), (ins IMMType:$src),
-                        "mov." # OpStr # " \t$dst, $src;",
-                        [(set VT:$dst, ImmNode:$src)]>;
-  }
+  // Class for register-to-register moves
+  class MOVr<RegisterClass RC, string OpStr> :
+    NVPTXInst<(outs RC:$dst), (ins RC:$src),
+             "mov." # OpStr # " \t$dst, $src;", []>;
+  
+  // Class for immediate-to-register moves
+  class MOVi<RegisterClass RC, string OpStr, ValueType VT, Operand IMMType, SDNode ImmNode> :
+    NVPTXInst<(outs RC:$dst), (ins IMMType:$src),
+             "mov." # OpStr # " \t$dst, $src;",
+             [(set VT:$dst, ImmNode:$src)]>;
 }
 
-defm IMOV1 : MOV<Int1Regs, "pred", i1, i1imm, imm>;
-defm IMOV16 : MOV<Int16Regs, "b16", i16, i16imm, imm>;
-defm IMOV32 : MOV<Int32Regs, "b32", i32, i32imm, imm>;
-defm IMOV64 : MOV<Int64Regs, "b64", i64, i64imm, imm>;
-def IMOV128r : NVPTXInst<(outs Int128Regs:$dst), (ins Int128Regs:$src),
-                          "mov.b128 \t$dst, $src;", []>;
-defm FMOV16 : MOV<Int16Regs, "b16", f16, f16imm, fpimm>;
-defm BFMOV16 : MOV<Int16Regs, "b16", bf16, bf16imm, fpimm>;
-defm FMOV32 : MOV<Float32Regs, "b32", f32, f32imm, fpimm>;
-defm FMOV64 : MOV<Float64Regs, "b64", f64, f64imm, fpimm>;
+def IMOV1r : MOVr<Int1Regs, "pred">;
+def IMOV1i : MOVi<Int1Regs, "pred", i1, i1imm, imm>;
+def MOV16r : MOVr<Int16Regs, "b16">;
+def IMOV16i : MOVi<Int16Regs, "b16", i16, i16imm, imm>;
+def IMOV32r : MOVr<Int32Regs, "b32">;
+def IMOV32i : MOVi<Int32Regs, "b32", i32, i32imm, imm>;
+def IMOV64r : MOVr<Int64Regs, "b64">;
+def IMOV64i : MOVi<Int64Regs, "b64", i64, i64imm, imm>;
+def IMOV128r : MOVr<Int128Regs, "b128">;
+def FMOV16i : MOVi<Int16Regs, "b16", f16, f16imm, fpimm>;
+def BFMOV16i : MOVi<Int16Regs, "b16", bf16, bf16imm, fpimm>;
+def FMOV32r : MOVr<Float32Regs, "b32">;
+def FMOV32i : MOVi<Float32Regs, "b32", f32, f32imm, fpimm>;
+def FMOV64r : MOVr<Float64Regs, "b64">;
+def FMOV64i : MOVi<Float64Regs, "b64", f64, f64imm, fpimm>;
 
 def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32i texternalsym:$dst)>;
 def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64i texternalsym:$dst)>;

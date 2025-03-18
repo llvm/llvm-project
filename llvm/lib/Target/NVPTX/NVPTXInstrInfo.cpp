@@ -42,7 +42,7 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (DestRC == &NVPTX::Int1RegsRegClass) {
     Op = NVPTX::IMOV1r;
   } else if (DestRC == &NVPTX::Int16RegsRegClass) {
-    Op = NVPTX::IMOV16r;
+    Op = NVPTX::MOV16r;
   } else if (DestRC == &NVPTX::Int32RegsRegClass) {
     Op = (SrcRC == &NVPTX::Int32RegsRegClass ? NVPTX::IMOV32r
                                              : NVPTX::BITCONVERT_32_F2I);
