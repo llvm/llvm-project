@@ -201,17 +201,17 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
 void ModuleDepCollector::addOutputPaths(CowCompilerInvocation &CI,
                                         ModuleDeps &Deps) {
   CI.getMutFrontendOpts().OutputFile =
-      Controller.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
+      Controller.lookupModuleOutput(Deps, ModuleOutputKind::ModuleFile);
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
     CI.getMutDiagnosticOpts().DiagnosticSerializationFile =
         Controller.lookupModuleOutput(
-            Deps.ID, ModuleOutputKind::DiagnosticSerializationFile);
+            Deps, ModuleOutputKind::DiagnosticSerializationFile);
   if (!CI.getDependencyOutputOpts().OutputFile.empty()) {
-    CI.getMutDependencyOutputOpts().OutputFile = Controller.lookupModuleOutput(
-        Deps.ID, ModuleOutputKind::DependencyFile);
+    CI.getMutDependencyOutputOpts().OutputFile =
+        Controller.lookupModuleOutput(Deps, ModuleOutputKind::DependencyFile);
     CI.getMutDependencyOutputOpts().Targets =
         splitString(Controller.lookupModuleOutput(
-                        Deps.ID, ModuleOutputKind::DependencyTargets),
+                        Deps, ModuleOutputKind::DependencyTargets),
                     '\0');
     if (!CI.getDependencyOutputOpts().OutputFile.empty() &&
         CI.getDependencyOutputOpts().Targets.empty()) {
@@ -418,15 +418,14 @@ void ModuleDepCollector::addModuleMapFiles(
 void ModuleDepCollector::addModuleFiles(
     CompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
   for (const ModuleID &MID : ClangModuleDeps) {
-    std::string PCMPath =
-        Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
-
     ModuleDeps *MD = ModuleDepsByID.lookup(MID);
+    std::string PCMPath =
+        Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
+
     assert(MD && "Inconsistent dependency info");
     if (MD->ModuleCacheKey)
       CI.getFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
                                                         *MD->ModuleCacheKey);
-
     if (Service.shouldEagerLoadModules())
       CI.getFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
@@ -438,15 +437,14 @@ void ModuleDepCollector::addModuleFiles(
 void ModuleDepCollector::addModuleFiles(
     CowCompilerInvocation &CI, ArrayRef<ModuleID> ClangModuleDeps) const {
   for (const ModuleID &MID : ClangModuleDeps) {
-    std::string PCMPath =
-        Controller.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
-
     ModuleDeps *MD = ModuleDepsByID.lookup(MID);
+    std::string PCMPath =
+        Controller.lookupModuleOutput(*MD, ModuleOutputKind::ModuleFile);
+
     assert(MD && "Inconsistent dependency info");
     if (MD->ModuleCacheKey)
       CI.getMutFrontendOpts().ModuleCacheKeys.emplace_back(PCMPath,
                                                            *MD->ModuleCacheKey);
-
     if (Service.shouldEagerLoadModules())
       CI.getMutFrontendOpts().ModuleFiles.push_back(std::move(PCMPath));
     else
