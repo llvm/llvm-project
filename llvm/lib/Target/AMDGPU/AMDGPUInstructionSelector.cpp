@@ -4362,9 +4362,10 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
 static bool retOpStat(const MachineOperand *Op, SrcStatus Stat,
                       std::pair<const MachineOperand *, SrcStatus> &Curr) {
   if ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
-      Op->isCImm() || Op->isFPImm())
+      Op->isCImm() || Op->isFPImm()) {
     Curr = {Op, Stat};
-  return true;
+    return true;
+  }
 
   return false;
 }
@@ -4394,11 +4395,11 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
 
   const MachineInstr *MI = nullptr;
 
-  if (!Curr.first->isDef()) {
+  if (!Curr.first->isDef())
     MI = MRI.getVRegDef(Curr.first->getReg());
-  } else {
+  else
     MI = Curr.first->getParent();
-  }
+
   if (!MI)
     return false;
 
@@ -4448,31 +4449,28 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
 
 SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
-            bool onlyLastSameOrNeg = false, int maxDepth = 6) {
-  int depth = 0;
+            bool OnlyLastSameOrNeg = false, int MaxDepth = 6) {
+  int Depth = 0;
   std::pair<const MachineOperand *, SrcStatus> Curr = {Op, IS_SAME};
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist;
 
-  while (depth <= maxDepth && calcNextStatus(Curr, MRI)) {
-    depth++;
-    if ((onlyLastSameOrNeg &&
-         (Curr.second != IS_SAME && Curr.second != IS_NEG))) {
+  while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
+    Depth++;
+    if ((OnlyLastSameOrNeg &&
+         (Curr.second != IS_SAME && Curr.second != IS_NEG)))
       break;
-    } else if (!onlyLastSameOrNeg) {
+
+    if (!OnlyLastSameOrNeg)
       Statlist.push_back(Curr);
-    }
   }
-  if (onlyLastSameOrNeg)
+  if (OnlyLastSameOrNeg)
     Statlist.push_back(Curr);
   return Statlist;
 }
 
 static bool isInlinableConstant(const MachineOperand &Op,
                                 const SIInstrInfo &TII) {
-  if (Op.isFPImm())
-    return TII.isInlineConstant(Op.getFPImm()->getValueAPF());
-
-  return false;
+  return Op.isFPImm() && TII.isInlineConstant(Op.getFPImm()->getValueAPF());
 }
 
 static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
@@ -4492,10 +4490,10 @@ static bool isSameOperand(const MachineOperand *Op1,
   return Op1->isIdenticalTo(*Op2);
 }
 
-static bool validToPack(SrcStatus HiStat, SrcStatus LoStat, unsigned int &Mods,
-                        const MachineOperand *NewOp,
-                        const MachineOperand *RootOp, const SIInstrInfo &TII,
-                        const MachineRegisterInfo &MRI) {
+static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
+                          unsigned int &Mods, const MachineOperand *NewOp,
+                          const MachineOperand *RootOp, const SIInstrInfo &TII,
+                          const MachineRegisterInfo &MRI) {
   if (NewOp->isReg()) {
     if (isSameBitWidth(NewOp, RootOp, MRI)) {
       // IS_LOWER_HALF remain 0
@@ -4557,29 +4555,28 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
     return {Op, Mods};
   }
 
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist_Hi;
-  Statlist_Hi = getSrcStats(&MI->getOperand(2), MRI);
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi;
+  StatlistHi = getSrcStats(&MI->getOperand(2), MRI);
 
-  if (Statlist_Hi.size() == 0) {
+  if (StatlistHi.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
 
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist_Lo;
-  Statlist_Lo = getSrcStats(&MI->getOperand(1), MRI);
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo;
+  StatlistLo = getSrcStats(&MI->getOperand(1), MRI);
 
-  if (Statlist_Lo.size() == 0) {
+  if (StatlistLo.size() == 0) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
 
-  for (int i = Statlist_Hi.size() - 1; i >= 0; i--) {
-    for (int j = Statlist_Lo.size() - 1; j >= 0; j--) {
-      if (isSameOperand(Statlist_Hi[i].first, Statlist_Lo[j].first)) {
-        if (validToPack(Statlist_Hi[i].second, Statlist_Lo[j].second, Mods,
-                        Statlist_Hi[i].first, RootOp, TII, MRI))
-          return {Statlist_Hi[i].first, Mods};
-      }
+  for (int i = StatlistHi.size() - 1; i >= 0; i--) {
+    for (int j = StatlistLo.size() - 1; j >= 0; j--) {
+      if (isSameOperand(StatlistHi[i].first, StatlistLo[j].first) &&
+          isValidToPack(StatlistHi[i].second, StatlistLo[j].second, Mods,
+                        StatlistHi[i].first, RootOp, TII, MRI))
+        return {StatlistHi[i].first, Mods};
     }
   }
   // Packed instructions do not have abs modifiers.
@@ -4596,13 +4593,15 @@ int64_t getAllKindImm(const MachineOperand *Op) {
     return Op->getCImm()->getSExtValue();
   case MachineOperand::MachineOperandType::MO_FPImmediate:
     return Op->getFPImm()->getValueAPF().bitcastToAPInt().getSExtValue();
+  default:
+    llvm_unreachable("not an imm type");
   }
-  llvm_unreachable("not an imm type");
 }
 
-bool checkRB(const MachineOperand *Op, int RBNo,
-             const AMDGPURegisterBankInfo &RBI, const MachineRegisterInfo &MRI,
-             const TargetRegisterInfo &TRI) {
+static bool checkRB(const MachineOperand *Op, unsigned int RBNo,
+                    const AMDGPURegisterBankInfo &RBI,
+                    const MachineRegisterInfo &MRI,
+                    const TargetRegisterInfo &TRI) {
   const RegisterBank *RB = RBI.getRegBank(Op->getReg(), MRI, TRI);
   return RB->getID() == RBNo;
 }
@@ -4619,17 +4618,18 @@ getVReg(const MachineOperand *NewOp, const MachineOperand *RootOp,
 
   MachineInstr *MI = MRI.getVRegDef(RootOp->getReg());
   if (MI->getOpcode() == AMDGPU::COPY &&
-      isSameOperand(NewOp, &MI->getOperand(1)))
+      isSameOperand(NewOp, &MI->getOperand(1))) {
     // RootOp is VGPR, NewOp is not VGPR, but RootOp = COPY NewOp
     return RootOp;
+  }
 
   MachineBasicBlock *BB = MI->getParent();
   const TargetRegisterClass *DstRC =
       TRI.getConstrainedRegClassForOperand(*RootOp, MRI);
-  Register dstReg = MRI.createVirtualRegister(DstRC);
+  Register DstReg = MRI.createVirtualRegister(DstRC);
 
   MachineInstrBuilder MIB =
-      BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), dstReg)
+      BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
           .addReg(NewOp->getReg());
 
   // only accept VGPR
