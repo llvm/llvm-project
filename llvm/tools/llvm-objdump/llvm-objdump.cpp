@@ -1233,7 +1233,7 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
   }
 }
 
-DenseMap<StringRef, SectionRef> getSectionNames(const ObjectFile &Obj) {
+static DenseMap<StringRef, SectionRef> getSectionNames(const ObjectFile &Obj) {
   DenseMap<StringRef, SectionRef> Sections;
   for (SectionRef Section : Obj.sections()) {
     Expected<StringRef> SecNameOrErr = Section.getName();
@@ -1782,15 +1782,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     if (PltSectionRef != SectionNames.end()) {
       bool PltIsThumb = false;
       for (auto [Addr, SymbolName] : AllMappingSymbols[PltSectionRef->second]) {
-        if (Addr == 0) {
-          if (SymbolName == 't') {
-            PltIsThumb = true;
-            break;
-          }
-          if (SymbolName == 'a') {
-            break;
-          }
+        if (Addr != 0)
+          continue;
+
+        if (SymbolName == 't') {
+          PltIsThumb = true;
+          break;
         }
+        if (SymbolName == 'a')
+          break;
       }
 
       if (PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode"))
