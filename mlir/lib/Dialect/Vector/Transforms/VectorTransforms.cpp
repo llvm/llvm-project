@@ -1069,11 +1069,11 @@ public:
     // Elementwise op with single result and `extract` is single user.
     if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise) ||
         eltwise->getNumResults() != 1 || !eltwise->hasOneUse())
-      return failure();
+      return rewriter.notifyMatchFailure(op, "not a suitable op");
 
     // Arguments types must match.
     if (!llvm::all_equal(eltwise->getOperandTypes()))
-      return failure();
+      return rewriter.notifyMatchFailure(op, "arg types are different");
 
     Type dstType = op.getType();
 
