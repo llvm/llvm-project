@@ -68,6 +68,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  std::unordered_set<Value *> Named;
 
   // map of function declarations to <pointer arg index => element type>
   DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
@@ -343,7 +344,8 @@ void SPIRVEmitIntrinsics::replaceAllUsesWithAndErase(IRBuilder<> &B,
   Src->eraseFromParent();
   if (!Name.empty()) {
     Dest->setName(Name);
-    emitAssignName(Dest, B);
+    if (Named.insert(Dest).second)
+      emitAssignName(Dest, B);
   }
 }
 
@@ -2088,7 +2090,8 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     if (NewOp != Op)
       I->setOperand(OpNo, NewOp);
   }
-  emitAssignName(I, B);
+  if (Named.insert(I).second)
+    emitAssignName(I, B);
 }
 
 Type *SPIRVEmitIntrinsics::deduceFunParamElementType(Function *F,

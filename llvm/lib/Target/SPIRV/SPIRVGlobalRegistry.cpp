@@ -1534,7 +1534,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVIntegerType(
   // such an adjustment SPIRVGlobalRegistry::getOpTypeInt() could create, for
   // example, the same "OpTypeInt 8" type for a series of LLVM integer types
   // with number of bits less than 8, causing duplicate type definitions.
-  BitWidth = adjustOpTypeIntWidth(BitWidth);
+  if (BitWidth > 1)
+    BitWidth = adjustOpTypeIntWidth(BitWidth);
   Type *LLVMTy = IntegerType::get(CurMF->getFunction().getContext(), BitWidth);
   return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeInt, LLVMTy);
 }
