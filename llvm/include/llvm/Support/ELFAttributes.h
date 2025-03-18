@@ -32,14 +32,20 @@ struct BuildAttributeItem {
   unsigned Tag;
   unsigned IntValue;
   std::string StringValue;
+  BuildAttributeItem(){};
   BuildAttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
       : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
 };
 struct BuildAttributeSubSection {
-  StringRef Name;
+  std::string Name;
   unsigned IsOptional;
   unsigned ParameterType;
   SmallVector<BuildAttributeItem, 64> Content;
+  BuildAttributeSubSection(){};
+  BuildAttributeSubSection(const std::string &N, unsigned Opt, unsigned Type,
+                           SmallVector<BuildAttributeItem, 64> &&Content)
+      : Name(N), IsOptional(Opt), ParameterType(Type),
+        Content(std::move(Content)) {}
 };
 
 // Tag to string: ELF extended build attribute section

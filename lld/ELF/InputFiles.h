@@ -19,6 +19,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Threading.h"
+#include <memory>
 
 namespace llvm {
 struct DILineInfo;
@@ -239,9 +240,11 @@ protected:
 public:
   // Name of source file obtained from STT_FILE, if present.
   StringRef sourceFile;
+  std::unique_ptr<std::string> sourceFileStorage;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::unique_ptr<std::array<uint8_t, 16>> aarch64PauthAbiCoreInfoStorage;
 };
 
 // .o file.

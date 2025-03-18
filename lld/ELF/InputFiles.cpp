@@ -20,16 +20,21 @@
 #include "lld/Common/DWARF.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
 #include <optional>
 
 using namespace llvm;
@@ -205,6 +210,166 @@ static void updateSupportedARMFeatures(Ctx &ctx,
       attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
   ctx.arg.armHasArmISA |= armISA && *armISA >= ARMBuildAttrs::Allowed;
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
+}
+
+// Sanitize pauth values
+static void sanitizePauthSubSection(
+    Ctx &ctx, std::optional<llvm::BuildAttributeSubSection> &pauthSubSection,
+    InputSection isec) {
+  /*
+    Incomplete data: ignore
+  */
+  if (!pauthSubSection)
+    return;
+  // Currently there are 2 known tags defined for the pauth subsection,
+  // however, user is allowed to add other, unknown tag. If such tags exists,
+  // remove them. (no need to check for duplicates, they should not be possible)
+  pauthSubSection->Content.erase(
+      std::remove_if(pauthSubSection->Content.begin(),
+                     pauthSubSection->Content.end(),
+                     [](const BuildAttributeItem &item) {
+                       return item.Tag != 1 && item.Tag != 2;
+                     }),
+      pauthSubSection->Content.end());
+
+  if (pauthSubSection->Content.size() < 2) {
+    if (0 == pauthSubSection->Content.size())
+      Warn(ctx) << &isec
+                << ": AArch64 Build Attributes: empty 'aeabi_pauthabi' "
+                   "subsection detected; ignoring subsection";
+    if (1 == pauthSubSection->Content.size()) {
+      if (1 == pauthSubSection->Content[0].Tag)
+        Warn(ctx)
+            << &isec
+            << ": AArch64 Build Attributes: 'aeabi_pauthabi' subsection "
+               "contains only an ID (scheme missing); ignoring subsection";
+      if (2 == pauthSubSection->Content[0].Tag)
+        Warn(ctx) << &isec
+                  << ": AArch64 Build Attributes: 'aeabi_pauthabi' subsection "
+                     "contains only a scheme (ID missing); ignoring subsection";
+    }
+    pauthSubSection = std::nullopt;
+    return;
+  }
+  // printvec(*pauthSubSection);
+  assert(2 == pauthSubSection->Content.size() && "vector size should be 2");
+  std::sort(pauthSubSection->Content.begin(), pauthSubSection->Content.end(),
+            [](const auto &a, const auto &b) { return a.Tag < b.Tag; });
+  assert(1 == pauthSubSection->Content[0].Tag && "first tag should be 1");
+  assert(2 == pauthSubSection->Content[1].Tag && "first tag should be 2");
+}
+
+// Sanitize features bits
+static void sanitizeFAndBSubSection(
+    std::optional<llvm::BuildAttributeSubSection> &fAndBSubSection) {
+  /*
+    Same as gnu properties: treat a missing 'aeabi_feature_and_bits' feature as
+    being set to 0
+  */
+  if (!fAndBSubSection) {
+    fAndBSubSection.emplace("aeabi_feature_and_bits", 1, 0,
+                            SmallVector<BuildAttributeItem, 64>());
+  } else {
+    // Currently there are 3 known tags defined for the features and bits
+    // subsection, however, user is allowed to add other, unknown tag. If such
+    // tags exists, remove them. (duplicates are not possible)
+    fAndBSubSection->Content.erase(
+        std::remove_if(fAndBSubSection->Content.begin(),
+                       fAndBSubSection->Content.end(),
+                       [](const BuildAttributeItem &item) {
+                         return item.Tag != 0 && item.Tag != 1 && item.Tag != 2;
+                       }),
+        fAndBSubSection->Content.end());
+  }
+
+  constexpr unsigned tagBTI = 0, tagPAC = 1, tagGCS = 2;
+  // Find missing tags
+  std::set<unsigned> requiredTags = {tagBTI, tagPAC, tagGCS};
+  for (const auto &item : fAndBSubSection->Content)
+    requiredTags.erase(item.Tag);
+
+  // Add missing tags
+  for (const auto &tag : requiredTags)
+    fAndBSubSection->Content.push_back(
+        BuildAttributeItem(BuildAttributeItem::NumericAttribute, tag, 0, ""));
+
+  assert(3 == fAndBSubSection->Content.size() && "vector size should be 3");
+  std::sort(fAndBSubSection->Content.begin(), fAndBSubSection->Content.end(),
+            [](const auto &a, const auto &b) { return a.Tag < b.Tag; });
+  assert(0 == fAndBSubSection->Content[0].Tag && "first tag should be 0");
+  assert(1 == fAndBSubSection->Content[1].Tag && "first tag should be 1");
+  assert(2 == fAndBSubSection->Content[2].Tag && "first tag should be 2");
+}
+
+static std::array<std::optional<llvm::BuildAttributeSubSection>, 2>
+extractBuildAttributesSubsection(
+    Ctx &ctx,
+    const SmallVector<llvm::BuildAttributeSubSection, 8>
+        &buildAttributesSubsections,
+    InputSection isec) {
+
+  std::optional<llvm::BuildAttributeSubSection> newPauthSubSection;
+  std::optional<llvm::BuildAttributeSubSection> newFAndBSubSection;
+
+  for (const auto &newSubSection : buildAttributesSubsections) {
+    if (newPauthSubSection && newFAndBSubSection)
+      break;
+    if ("aeabi_pauthabi" == newSubSection.Name) {
+      newPauthSubSection.emplace(newSubSection);
+      continue;
+    }
+    if ("aeabi_feature_and_bits" == newSubSection.Name) {
+      newFAndBSubSection.emplace(newSubSection);
+    }
+  }
+  sanitizePauthSubSection(ctx, newPauthSubSection, isec);
+  sanitizeFAndBSubSection(newFAndBSubSection);
+
+  return {std::move(newPauthSubSection), std::move(newFAndBSubSection)};
+}
+
+// Merge AArch64 Build Attributes subsection
+static void mergeAArch64BuildAttributes(
+    Ctx &ctx,
+    const std::array<std::optional<llvm::BuildAttributeSubSection>, 2>
+        &buildAttributesSubsections,
+    InputSection isec) {
+
+  auto [newPauthSubSection, newFAndBSubSection] = buildAttributesSubsections;
+
+  if (ctx.mergedPauthSubSection == std::nullopt) {
+    ctx.mergedPauthSubSection = newPauthSubSection;
+  }
+
+  if (ctx.mergedFAndBSubSection == std::nullopt)
+    ctx.mergedFAndBSubSection = newFAndBSubSection;
+
+  if (newPauthSubSection) {
+    // Since sanitizePauthSubSection sorts, we know that both vectors align.
+    // Merge pauth (values has to match)
+    if ((ctx.mergedPauthSubSection->Content[0].IntValue !=
+         newPauthSubSection->Content[0].IntValue) ||
+        ctx.mergedPauthSubSection->Content[1].IntValue !=
+            newPauthSubSection->Content[1].IntValue) {
+      ctx.mergedPauthSubSection->Content[0].IntValue =
+          std::numeric_limits<unsigned>::max();
+      ctx.mergedPauthSubSection->Content[1].IntValue =
+          std::numeric_limits<unsigned>::max();
+      Warn(ctx)
+          << &isec
+          << ": AArch64 Build Attributes: mismatch in 'aeabi_pauthabi' values "
+             "detected; marking 'aeabi_pauthabi' as invalid for this project";
+    }
+  }
+
+  // Since sanitizeFAndBSubSection sorts, we know that both vectors align.
+  // Merge Features and Bits
+  ctx.mergedFAndBSubSection->Content[0].IntValue &=
+      newFAndBSubSection->Content[0].IntValue;
+  ctx.mergedFAndBSubSection->Content[1].IntValue &=
+      newFAndBSubSection->Content[1].IntValue;
+  ctx.mergedFAndBSubSection->Content[2].IntValue &=
+      newFAndBSubSection->Content[2].IntValue;
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
@@ -552,6 +717,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   // done in parallel.
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
+  bool hasGnuProperties = false;
   uint64_t size = objSections.size();
   sections.resize(size);
   for (size_t i = 0; i != size; ++i) {
@@ -574,9 +740,12 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .try_emplace(CachedHashStringRef(signature), this)
                            .second;
       if (keepGroup) {
-        if (!ctx.arg.resolveGroups)
-          sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
+        if (!ctx.arg.resolveGroups) {
+          StringRef name = check(obj.getSectionName(sec, shstrtab));
+          if (name == ".note.gnu.property")
+            hasGnuProperties = true;
+          sections[i] = createInputSection(i, sec, name);
+        }
       } else {
         // Otherwise, discard group members.
         for (uint32_t secIndex : entries.slice(1)) {
@@ -638,27 +807,77 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       break;
-    case EM_AARCH64:
-      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
-      // lld. Remove the section so that it does not accumulate in the output
-      // file. When support is implemented we expect not to output a build
-      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
-      // ouptut will need a single merged attributes section.
-      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
+    case EM_AARCH64: {
+      // The specification states that if a file contains both GNU properties
+      // and AArch64 build attributes, they must be identical. Therefore, if a
+      // file contains GNU properties, the AArch64 build attributes are ignored.
+      // If a file does not contain GNU properties, we leverage the existing GNU
+      // properties mechanism by populating the corresponding data structures,
+      // which will later be handled by Driver.cpp::readSecurityNotes. This
+      // ensures that AArch64 build attributes are represented in the linked
+      // object file as GNU properties, which are already supported by the Linux
+      // kernel and the dynamic dispatcher.
+      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        AArch64AttributeParser attributes;
+        ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+        if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+          InputSection isec(*this, sec, name);
+          Warn(ctx) << &isec << ": " << std::move(e);
+        } else {
+          // for functions that has to warn/err/report
+          InputSection isec(*this, sec, name);
+          const SmallVector<llvm::BuildAttributeSubSection, 8>
+              buildAttributesSubSections =
+                  attributes.getBuildAttributesSection();
+          auto subsections = extractBuildAttributesSubsection(
+              ctx, buildAttributesSubSections, isec);
+          mergeAArch64BuildAttributes(ctx, subsections, isec);
+          if (!hasGnuProperties) {
+            ObjFile<ELFT> &f = *this;
+            auto [pauthSubSection, fAndBSubSection] = subsections;
+            if (pauthSubSection) {
+              assert(
+                  (pauthSubSection->Content.size() == 2) &&
+                  "pauthSubSection must contain exactly two build attributes");
+              // sanitizePauthSubSection already sorts
+              f.aarch64PauthAbiCoreInfoStorage =
+                  std::make_unique<std::array<uint8_t, 16>>();
+              uint64_t values[2] = {
+                  static_cast<uint64_t>(pauthSubSection->Content[0].IntValue),
+                  static_cast<uint64_t>(pauthSubSection->Content[1].IntValue)};
+              std::memcpy(f.aarch64PauthAbiCoreInfoStorage->data(), &values[0],
+                          sizeof(values));
+              f.aarch64PauthAbiCoreInfo = *f.aarch64PauthAbiCoreInfoStorage;
+            }
+            if (fAndBSubSection) {
+              assert((fAndBSubSection->Content.size() == 3) &&
+                     "fAndBSubSection must contain exactly three build "
+                     "attributes");
+              // sanitizeFAndBSubSection already sorts
+              f.andFeatures = 0;
+              f.andFeatures |= (fAndBSubSection->Content[0].IntValue) << 0;
+              f.andFeatures |= (fAndBSubSection->Content[1].IntValue) << 1;
+              f.andFeatures |= (fAndBSubSection->Content[2].IntValue) << 2;
+            }
+          }
+        }
         sections[i] = &InputSection::discarded;
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
-      // medatada, and we don't want them to end up in the output file for
+      // metadata, and we don't want them to end up in the output file for
       // static executables.
       if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
           !canHaveMemtagGlobals(ctx))
         sections[i] = &InputSection::discarded;
-      break;
+      }
     }
+    break;
   }
 
   // Read a symbol table.
   initializeSymbols(obj);
+  }
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.

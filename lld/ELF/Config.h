@@ -24,6 +24,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
@@ -694,6 +695,10 @@ struct Ctx : CommonLinkerContext {
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+
+  // AArch64 Build Attributes data
+  std::optional<llvm::BuildAttributeSubSection> mergedPauthSubSection;
+  std::optional<llvm::BuildAttributeSubSection> mergedFAndBSubSection;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
