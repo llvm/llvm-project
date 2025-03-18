@@ -1983,25 +1983,29 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     if (!ArgTy->getAs<VectorType>() &&
         !ConstantMatrixType::isValidElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* vector, integer or float ty*/ 0 << ArgTy;
+             << ArgOrdinal << /* vector, */ 3 << /* integer */ 1 << /* fp */ 1
+             << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::FloatTy:
     if (!EltTy->isRealFloatingType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* vector or float ty*/ 5 << ArgTy;
+             << ArgOrdinal << /* scalar or vector */ 5 << /* no int */ 0
+             << /* floating-point */ 1 << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::IntegerTy:
     if (!EltTy->isIntegerType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* vector or int ty*/ 10 << ArgTy;
+             << ArgOrdinal << /* scalar or vector */ 5 << /* integer */ 1
+             << /* no fp */ 0 << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::SignedIntOrFloatTy:
     if (EltTy->isUnsignedIntegerType()) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << 1 << /* signed integer or float ty*/ 3 << ArgTy;
+             << 1 << /* scalar or vector */ 5 << /* signed int */ 2
+             << /* or fp */ 1 << ArgTy;
     }
     break;
   }
@@ -2071,7 +2075,8 @@ static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
 
   if (!ArgTy->isUnsignedIntegerType()) {
     S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /*unsigned integer ty*/ 7 << ArgTy;
+        << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
+        << ArgTy;
     return true;
   }
   return false;
@@ -2095,7 +2100,8 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 
   if (!Arg0Ty->isUnsignedIntegerType()) {
     S.Diag(Arg0->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /*unsigned integer ty*/ 7 << Arg0Ty;
+        << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
+        << Arg0Ty;
     return true;
   }
 
@@ -2111,7 +2117,7 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
 
     if (!Arg1Ty->isSpecificBuiltinType(BuiltinType::Int)) {
       S.Diag(Arg1->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 2 << /*'int' ty*/ 8 << Arg1Ty;
+          << 2 << /* scalar */ 1 << /* 'int' ty */ 4 << /* no fp */ 0 << Arg1Ty;
       return true;
     }
   }
@@ -2828,7 +2834,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     if (ElTy.isNull()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* vector ty*/ 4 << Arg->getType();
+          << 1 << /* vector ty */ 2 << /* no int */ 0 << /* no fp */ 0
+          << Arg->getType();
       return ExprError();
     }
 
@@ -2851,7 +2858,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     if (ElTy.isNull() || !ElTy->isFloatingType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1 << /* vector of floating points */ 9 << Arg->getType();
+          << 1 << /* vector of */ 4 << /* no int */ 0 << /* fp */ 1
+          << Arg->getType();
       return ExprError();
     }
 
@@ -2880,7 +2888,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     if (ElTy.isNull() || !ElTy->isIntegerType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 1  << /* vector of integers */ 6 << Arg->getType();
+          << 1 << /* vector of */ 4 << /* int */ 1 << /* no fp */ 0
+          << Arg->getType();
       return ExprError();
     }
 
@@ -15401,8 +15410,9 @@ bool Sema::BuiltinNonDeterministicValue(CallExpr *TheCall) {
   QualType TyArg = Arg.get()->getType();
 
   if (!TyArg->isBuiltinType() && !TyArg->isVectorType())
-    return Diag(TheCall->getArg(0)->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-           << 1 << /*vector, integer or floating point ty*/ 0 << TyArg;
+    return Diag(TheCall->getArg(0)->getBeginLoc(),
+                diag::err_builtin_invalid_arg_type)
+           << 1 << /* vector, */ 3 << /* integer */ 1 << /* fp */ 1 << TyArg;
 
   TheCall->setType(TyArg);
   return false;
@@ -15421,7 +15431,7 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
   auto *MType = Matrix->getType()->getAs<ConstantMatrixType>();
   if (!MType) {
     Diag(Matrix->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /* matrix ty*/ 1 << Matrix->getType();
+        << 1 << 0 << /* matrix ty */ 5 << /* no fp */ 0 << Matrix->getType();
     return ExprError();
   }
 
@@ -15493,15 +15503,16 @@ ExprResult Sema::BuiltinMatrixColumnMajorLoad(CallExpr *TheCall,
   QualType ElementTy;
   if (!PtrTy) {
     Diag(PtrExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << PtrArgIdx + 1 << /*pointer to element ty*/ 2 << PtrExpr->getType();
+        << PtrArgIdx + 1 << 0 << /* pointer to element ty */ 6 << /* no fp */ 0
+        << PtrExpr->getType();
     ArgError = true;
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
 
     if (!ConstantMatrixType::isValidElementType(ElementTy)) {
       Diag(PtrExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << PtrArgIdx + 1 << /* pointer to element ty*/ 2
-          << PtrExpr->getType();
+          << PtrArgIdx + 1 << 0 << /* pointer to element ty */ 6
+          << /* no fp */ 0 << PtrExpr->getType();
       ArgError = true;
     }
   }
@@ -15601,7 +15612,7 @@ ExprResult Sema::BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
   auto *MatrixTy = MatrixExpr->getType()->getAs<ConstantMatrixType>();
   if (!MatrixTy) {
     Diag(MatrixExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << 1 << /*matrix ty */ 1 << MatrixExpr->getType();
+        << 1 << 0 << /* matrix ty */ 5 << 0 << MatrixExpr->getType();
     ArgError = true;
   }
 
@@ -15621,7 +15632,8 @@ ExprResult Sema::BuiltinMatrixColumnMajorStore(CallExpr *TheCall,
   auto *PtrTy = PtrExpr->getType()->getAs<PointerType>();
   if (!PtrTy) {
     Diag(PtrExpr->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-        << PtrArgIdx + 1 << /*pointer to element ty*/ 2 << PtrExpr->getType();
+        << PtrArgIdx + 1 << 0 << /* pointer to element ty */ 6 << 0
+        << PtrExpr->getType();
     ArgError = true;
   } else {
     QualType ElementTy = PtrTy->getPointeeType();
