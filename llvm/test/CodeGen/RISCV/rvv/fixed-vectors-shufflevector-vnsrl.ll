@@ -559,10 +559,10 @@ define void @vnsrl_0_i32_single_src_m8_2(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    lui a0, 349525
 ; ZVE32F-NEXT:    addi a0, a0, 1365
 ; ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVE32F-NEXT:    vmv.v.x v16, a0
+; ZVE32F-NEXT:    vmv.v.x v24, a0
 ; ZVE32F-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; ZVE32F-NEXT:    vcompress.vm v24, v8, v16
-; ZVE32F-NEXT:    vse32.v v24, (a1)
+; ZVE32F-NEXT:    vcompress.vm v16, v8, v24
+; ZVE32F-NEXT:    vse32.v v16, (a1)
 ; ZVE32F-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
