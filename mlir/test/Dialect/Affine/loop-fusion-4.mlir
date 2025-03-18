@@ -361,8 +361,8 @@ func.func @same_memref_load_multiple_stores(%producer : memref<32xf32>, %produce
 
 // -----
 
-#map = affine_map<()[s0] -> (s0 + 5)>
-#map1 = affine_map<()[s0] -> (s0 + 17)>
+#map = affine_map<(d0) -> (d0 + 5)>
+#map1 = affine_map<(d0) -> (d0 + 17)>
 
 // Test with non-int/float memref types.
 
@@ -383,8 +383,8 @@ func.func @memref_index_type() {
   }
   affine.for %arg3 = 0 to 3 {
     %4 = affine.load %alloc_2[%arg3] : memref<3xindex>
-    %5 = affine.apply #map()[%4]
-    %6 = affine.apply #map1()[%3]
+    %5 = affine.apply #map(%4)
+    %6 = affine.apply #map1(%3)
     %7 = memref.load %alloc[%5, %6] : memref<8x18xf32>
     affine.store %7, %alloc_1[%arg3] : memref<3xf32>
   }
