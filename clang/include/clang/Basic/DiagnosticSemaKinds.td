@@ -591,6 +591,8 @@ def err_decomp_decl_std_tuple_size_not_constant : Error<
   "is not a valid integral constant expression">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
+def err_arg_is_not_destructurable : Error<
+  "type %0 cannot be decomposed">;
 
 def err_std_type_trait_not_class_template : Error<
   "unsupported standard library implementation: "

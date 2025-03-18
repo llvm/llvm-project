@@ -357,6 +357,8 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
