@@ -922,8 +922,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
         Record.type = RecordType::SDValueNode;
       } else {
         Record.type = RecordType::VReg;
-        assert(VirtRegs.count(SDV));
-        Record.payload.Reg = VirtRegs[SDV];
+        auto It = VirtRegs.find(SDV);
+        assert(It != VirtRegs.end());
+        Record.payload.Reg = It->second;
       }
     } else if (Loc.getNode()) {
       Record.type = RecordType::Spill;
