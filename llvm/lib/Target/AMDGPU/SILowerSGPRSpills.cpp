@@ -101,8 +101,8 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
-static bool isLiveInIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
-                            const TargetRegisterInfo *TRI) {
+static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
+                          const TargetRegisterInfo *TRI) {
   for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
     if (MBB.isLiveIn(*R)) {
       return true;
@@ -136,7 +136,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       // incoming register value, so don't kill at the spill point. This happens
       // since we pass some special inputs (workgroup IDs) in the callee saved
       // range.
-      bool IsLiveIn = isLiveInIntoMBB(Reg, SaveBlock, TRI);
+      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, TRI);
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
                               RC, TRI, Register());
 
