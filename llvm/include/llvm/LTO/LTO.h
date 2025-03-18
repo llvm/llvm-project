@@ -386,6 +386,8 @@ public:
 private:
   Config Conf;
 
+  std::string TargetTriple;
+
   struct RegularLTOState {
     RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                     const Config &Conf);
@@ -520,10 +522,16 @@ private:
                    const SymbolResolution *&ResI, const SymbolResolution *ResE);
 
   Error runRegularLTO(AddStreamFn AddStream);
-  Error runThinLTO(AddStreamFn AddStream, FileCache Cache,
-                   const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols);
+  Error
+  runThinLTO(AddStreamFn AddStream, FileCache Cache,
+             const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+             function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
 
   Error checkPartiallySplit();
+
+  std::string & getTargetTriple() { return TargetTriple; }
+
+  void setTargetTriple(std::string TT) { TargetTriple = std::move(TT); }
 
   mutable bool CalledGetMaxTasks = false;
 
