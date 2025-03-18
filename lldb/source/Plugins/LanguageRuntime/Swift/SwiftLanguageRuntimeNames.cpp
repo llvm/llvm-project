@@ -82,26 +82,39 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
     return false;
   if (hasChild(node, Node::Kind::AsyncSuspendResumePartialFunction))
     return false;
-  // Peel off a Static node. If it exists, there will be a single instance and a
-  // top level node.
-  if (node->getFirstChild()->getKind() == Node::Kind::Static)
-    node = node->getFirstChild();
 
-  // Get the ExplicitClosure or Function node.
+  // Peel off a ProtocolWitness node. If it exists, there will be a single
+  // instance, before Static nodes.
+  if (NodePointer witness = childAtPath(node, Node::Kind::ProtocolWitness))
+    node = witness;
+
+  // Peel off a Static node. If it exists, there will be a single instance.
+  if (NodePointer static_node = childAtPath(node, Node::Kind::Static))
+    node = static_node;
+
+  // Get the {Implicit, Explicit} Closure or Function node.
   // For nested closures in Swift, the demangle tree is inverted: the
-  // inner-most closure is the top-most ExplicitClosure node.
+  // inner-most closure is the top-most closure node.
   NodePointer func_node = [&] {
     if (NodePointer func = childAtPath(node, Node::Kind::Function))
       return func;
+    if (NodePointer implicit = childAtPath(node, Node::Kind::ImplicitClosure))
+      return implicit;
     return childAtPath(node, Node::Kind::ExplicitClosure);
   }();
 
-  return childAtPath(func_node, {Node::Kind::Type, Node::Kind::FunctionType,
-                                 Node::Kind::AsyncAnnotation}) ||
-         childAtPath(func_node,
-                     {Node::Kind::Type, Node::Kind::DependentGenericType,
-                      Node::Kind::Type, Node::Kind::FunctionType,
-                      Node::Kind::AsyncAnnotation});
+  using Kind = Node::Kind;
+  static const llvm::SmallVector<llvm::SmallVector<Kind>>
+      async_annotation_paths = {
+          {Kind::Type, Kind::FunctionType, Kind::AsyncAnnotation},
+          {Kind::Type, Kind::NoEscapeFunctionType, Kind::AsyncAnnotation},
+          {Kind::Type, Kind::DependentGenericType, Kind::Type,
+           Kind::FunctionType, Kind::AsyncAnnotation},
+      };
+  return llvm::any_of(async_annotation_paths,
+                      [func_node](llvm::ArrayRef<Kind> path) {
+                        return childAtPath(func_node, path);
+                      });
 }
 
 /// Returns true if closure1 and closure2 have the same number, type, and
@@ -122,11 +135,16 @@ AreFuncletsOfSameAsyncClosure(swift::Demangle::NodePointer closure1,
 
   // Because the tree is inverted, a parent closure (in swift code) is a child
   // *node* (in the demangle tree). Check that any such parents are identical.
-  NodePointer closure1_parent =
+  NodePointer explicit_closure1_parent =
       childAtPath(closure1, Node::Kind::ExplicitClosure);
-  NodePointer closure2_parent =
+  NodePointer explicit_closure2_parent =
       childAtPath(closure2, Node::Kind::ExplicitClosure);
-  if (!Node::deepEquals(closure1_parent, closure2_parent))
+  NodePointer implicit_closure1_parent =
+      childAtPath(closure1, Node::Kind::ImplicitClosure);
+  NodePointer implicit_closure2_parent =
+      childAtPath(closure2, Node::Kind::ImplicitClosure);
+  if (!Node::deepEquals(explicit_closure1_parent, explicit_closure2_parent) ||
+      !Node::deepEquals(implicit_closure1_parent, implicit_closure2_parent))
     return false;
 
   // If there are no ExplicitClosure as parents, there may still be a
@@ -136,6 +154,43 @@ AreFuncletsOfSameAsyncClosure(swift::Demangle::NodePointer closure1,
   return Node::deepEquals(closure1_function, closure2_function);
 }
 
+std::optional<uint64_t>
+SwiftLanguageRuntime::GetFuncletNumber(swift::Demangle::NodePointer node) {
+  if (!node)
+    return {};
+  NodePointer node_id =
+      childAtPath(node, {Node::Kind::AsyncSuspendResumePartialFunction,
+                         Node::Kind::Number});
+  if (!node_id)
+    node_id = childAtPath(node, {Node::Kind::AsyncAwaitResumePartialFunction,
+                                 Node::Kind::Number});
+  if (node_id) {
+    if (node_id->hasIndex())
+      return node_id->getIndex();
+
+    // This should never happen, log it if it does:
+    std::string node_dump = getNodeTreeAsString(node);
+    LLDB_LOGF(GetLog(LLDBLog::Demangle),
+              "%s::Found a number node without a number:\n%s", __FUNCTION__,
+              node_dump.c_str());
+    return {};
+  }
+
+  // If this is an async function and there was no number, then this is an entry
+  // funclet. Assign it number 0.
+  if (SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(node))
+    return 0;
+  return {};
+}
+
+std::optional<uint64_t>
+SwiftLanguageRuntime::GetFuncletNumber(llvm::StringRef name) {
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
+  return GetFuncletNumber(node);
+}
+
 SwiftLanguageRuntime::FuncletComparisonResult
 SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(llvm::StringRef name1,
                                                      llvm::StringRef name2) {
@@ -143,35 +198,50 @@ SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(llvm::StringRef name1,
   Context ctx;
   NodePointer node1 = DemangleSymbolAsNode(name1, ctx);
   NodePointer node2 = DemangleSymbolAsNode(name2, ctx);
+  return AreFuncletsOfSameAsyncFunction(node1, node2);
+}
 
+SwiftLanguageRuntime::FuncletComparisonResult
+SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
+    swift::Demangle::NodePointer node1, swift::Demangle::NodePointer node2) {
   if (!IsAnySwiftAsyncFunctionSymbol(node1) ||
       !IsAnySwiftAsyncFunctionSymbol(node2))
     return FuncletComparisonResult::NotBothFunclets;
 
-  // Peel off Static nodes.
-  NodePointer static_wrapper1 = childAtPath(node1, Node::Kind::Static);
-  NodePointer static_wrapper2 = childAtPath(node2, Node::Kind::Static);
-  if (static_wrapper1 || static_wrapper2) {
-    if (!static_wrapper1 | !static_wrapper2)
-      return FuncletComparisonResult::DifferentAsyncFunctions;
-    node1 = static_wrapper1;
-    node2 = static_wrapper2;
+  // Peel off ProtocolWitnes/Static nodes, in this order.
+  for (auto wrapper : {Node::Kind::ProtocolWitness, Node::Kind::Static}) {
+    NodePointer wrapper1 = childAtPath(node1, wrapper);
+    NodePointer wrapper2 = childAtPath(node2, wrapper);
+    if (wrapper1 || wrapper2) {
+      if (!wrapper1 | !wrapper2)
+        return FuncletComparisonResult::DifferentAsyncFunctions;
+      node1 = wrapper1;
+      node2 = wrapper2;
+    }
   }
 
   // If there are closures involved, do the closure-specific comparison.
-  NodePointer closure1 = childAtPath(node1, Node::Kind::ExplicitClosure);
-  NodePointer closure2 = childAtPath(node2, Node::Kind::ExplicitClosure);
-  if (closure1 || closure2) {
-    if (!closure1 || !closure2)
-      return FuncletComparisonResult::DifferentAsyncFunctions;
-    return AreFuncletsOfSameAsyncClosure(closure1, closure2)
-               ? FuncletComparisonResult::SameAsyncFunction
-               : FuncletComparisonResult::DifferentAsyncFunctions;
+  for (auto closure_kind :
+       {Node::Kind::ImplicitClosure, Node::Kind::ExplicitClosure}) {
+    NodePointer closure1 = childAtPath(node1, closure_kind);
+    NodePointer closure2 = childAtPath(node2, closure_kind);
+    if (closure1 || closure2) {
+      if (!closure1 || !closure2)
+        return FuncletComparisonResult::DifferentAsyncFunctions;
+      return AreFuncletsOfSameAsyncClosure(closure1, closure2)
+                 ? FuncletComparisonResult::SameAsyncFunction
+                 : FuncletComparisonResult::DifferentAsyncFunctions;
+    }
   }
 
   // Otherwise, find the corresponding function and compare the two.
   NodePointer function1 = childAtPath(node1, Node::Kind::Function);
   NodePointer function2 = childAtPath(node2, Node::Kind::Function);
+
+  // If we fail to find a function node, conservatively fail.
+  if (!function1 || !function2)
+    return FuncletComparisonResult::NotBothFunclets;
+
   return Node::deepEquals(function1, function2)
              ? FuncletComparisonResult::SameAsyncFunction
              : FuncletComparisonResult::DifferentAsyncFunctions;

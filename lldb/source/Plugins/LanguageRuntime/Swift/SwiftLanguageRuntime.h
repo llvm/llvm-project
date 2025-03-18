@@ -165,6 +165,11 @@ public:
   static FuncletComparisonResult
   AreFuncletsOfSameAsyncFunction(llvm::StringRef name1, llvm::StringRef name2);
 
+  /// See AreFuncletsOfSameAsyncFunction(StringRef, StringRef).
+  static FuncletComparisonResult
+  AreFuncletsOfSameAsyncFunction(swift::Demangle::NodePointer node1,
+                                 swift::Demangle::NodePointer node2);
+
   /// Return true if name is a Swift async function symbol.
   static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
 
@@ -175,6 +180,14 @@ public:
   /// Return true if node is a Swift async function, await resume partial
   /// function, or suspend resume partial function symbol.
   static bool IsAnySwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node);
+
+  /// If node is a Swift async funclet, return its funclet number.
+  static std::optional<uint64_t>
+  GetFuncletNumber(swift::Demangle::NodePointer node);
+
+  /// If name is a Swift async funclet, return its funclet number.
+  static std::optional<uint64_t>
+  GetFuncletNumber(llvm::StringRef name);
 
   /// Return the async context address using the target's specific register.
   static lldb::addr_t GetAsyncContext(RegisterContext *regctx);
