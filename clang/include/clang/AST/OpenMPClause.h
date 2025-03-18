@@ -3658,13 +3658,17 @@ public:
 class OMPReductionClause final
     : public OMPVarListClause<OMPReductionClause>,
       public OMPClauseWithPostUpdate,
-      private llvm::TrailingObjects<OMPReductionClause, Expr *> {
+      private llvm::TrailingObjects<OMPReductionClause, Expr *, bool> {
   friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
 
   /// Reduction modifier.
   OpenMPReductionClauseModifier Modifier = OMPC_REDUCTION_unknown;
+
+  /// Original Sharing  modifier.
+  OpenMPOriginalSharingModifier OriginalSharingModifier =
+      OMPC_ORIGINAL_SHARING_default;
 
   /// Reduction modifier location.
   SourceLocation ModifierLoc;
@@ -3677,9 +3681,6 @@ class OMPReductionClause final
 
   /// Name of custom operator.
   DeclarationNameInfo NameInfo;
-
-  /// Private variable reduction flag
-  llvm::SmallVector<bool, 8> IsPrivateVarReductionFlags;
 
   /// Build clause with number of variables \a N.
   ///
@@ -3694,12 +3695,14 @@ class OMPReductionClause final
   OMPReductionClause(SourceLocation StartLoc, SourceLocation LParenLoc,
                      SourceLocation ModifierLoc, SourceLocation ColonLoc,
                      SourceLocation EndLoc,
-                     OpenMPReductionClauseModifier Modifier, unsigned N,
-                     NestedNameSpecifierLoc QualifierLoc,
+                     OpenMPReductionClauseModifier Modifier,
+                     OpenMPOriginalSharingModifier OriginalSharingModifier,
+                     unsigned N, NestedNameSpecifierLoc QualifierLoc,
                      const DeclarationNameInfo &NameInfo)
       : OMPVarListClause<OMPReductionClause>(llvm::omp::OMPC_reduction,
                                              StartLoc, LParenLoc, EndLoc, N),
         OMPClauseWithPostUpdate(this), Modifier(Modifier),
+        OriginalSharingModifier(OriginalSharingModifier),
         ModifierLoc(ModifierLoc), ColonLoc(ColonLoc),
         QualifierLoc(QualifierLoc), NameInfo(NameInfo) {}
 
@@ -3714,6 +3717,11 @@ class OMPReductionClause final
 
   /// Sets reduction modifier.
   void setModifier(OpenMPReductionClauseModifier M) { Modifier = M; }
+
+  /// Sets Original Sharing  modifier.
+  void setOriginalSharingModifier(OpenMPOriginalSharingModifier M) {
+    OriginalSharingModifier = M;
+  }
 
   /// Sets location of the modifier.
   void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
@@ -3759,6 +3767,31 @@ class OMPReductionClause final
   /// Also, variables in these expressions are used for proper initialization of
   /// reduction copies.
   void setRHSExprs(ArrayRef<Expr *> RHSExprs);
+
+  /// Set the list private reduction flags
+  void setPrivateVariableReductionFlags(ArrayRef<bool> Flags) {
+    assert(Flags.size() == varlist_size() &&
+           "Number of private flags does not match vars");
+    std::copy(Flags.begin(), Flags.end(), getTrailingObjects<bool>());
+  }
+
+  /// Get the list of help private variable reduction flags
+  MutableArrayRef<bool> getPrivateVariableReductionFlags() {
+    return MutableArrayRef<bool>(getTrailingObjects<bool>(), varlist_size());
+  }
+  ArrayRef<bool> getPrivateVariableReductionFlags() const {
+    return ArrayRef<bool>(getTrailingObjects<bool>(), varlist_size());
+  }
+
+  /// Returns the number of Expr* objects in trailing storage
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size() * (Modifier == OMPC_REDUCTION_inscan ? 8 : 5);
+  }
+
+  /// Returns the number of bool flags in trailing storage
+  size_t numTrailingObjects(OverloadToken<bool>) const {
+    return varlist_size();
+  }
 
   /// Get the list of helper destination expressions.
   MutableArrayRef<Expr *> getRHSExprs() {
@@ -3867,7 +3900,8 @@ public:
          ArrayRef<Expr *> LHSExprs, ArrayRef<Expr *> RHSExprs,
          ArrayRef<Expr *> ReductionOps, ArrayRef<Expr *> CopyOps,
          ArrayRef<Expr *> CopyArrayTemps, ArrayRef<Expr *> CopyArrayElems,
-         Stmt *PreInit, Expr *PostUpdate, ArrayRef<bool> IsPrivateVarReduction);
+         Stmt *PreInit, Expr *PostUpdate, ArrayRef<bool> IsPrivateVarReduction,
+         OpenMPOriginalSharingModifier OriginalSharingModifier);
 
   /// Creates an empty clause with the place for \a N variables.
   ///
@@ -3881,6 +3915,11 @@ public:
   /// Returns modifier.
   OpenMPReductionClauseModifier getModifier() const { return Modifier; }
 
+  /// Returns Original Sharing Modifier.
+  OpenMPOriginalSharingModifier getOriginalSharingModifier() const {
+    return OriginalSharingModifier;
+  }
+
   /// Returns modifier location.
   SourceLocation getModifierLoc() const { return ModifierLoc; }
 
@@ -3893,21 +3932,16 @@ public:
   /// Gets the nested name specifier.
   NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
 
-  /// Get all private variable reduction flags
-  ArrayRef<bool> getPrivateVariableReductionFlags() const {
-    return IsPrivateVarReductionFlags;
-  }
-
-  //// Set private variable reduction flags
-  void setPrivateVariableReductionFlags(ArrayRef<bool> Flags) {
-    std::copy(Flags.begin(), Flags.end(), IsPrivateVarReductionFlags.begin());
-  }
-
   using helper_expr_iterator = MutableArrayRef<Expr *>::iterator;
   using helper_expr_const_iterator = ArrayRef<const Expr *>::iterator;
   using helper_expr_range = llvm::iterator_range<helper_expr_iterator>;
   using helper_expr_const_range =
       llvm::iterator_range<helper_expr_const_iterator>;
+  using helper_flag_iterator = MutableArrayRef<bool>::iterator;
+  using helper_flag_const_iterator = ArrayRef<bool>::iterator;
+  using helper_flag_range = llvm::iterator_range<helper_flag_iterator>;
+  using helper_flag_const_range =
+      llvm::iterator_range<helper_flag_const_iterator>;
 
   helper_expr_const_range privates() const {
     return helper_expr_const_range(getPrivates().begin(), getPrivates().end());
@@ -3931,6 +3965,16 @@ public:
 
   helper_expr_range rhs_exprs() {
     return helper_expr_range(getRHSExprs().begin(), getRHSExprs().end());
+  }
+
+  helper_flag_const_range private_var_reduction_flags() const {
+    return helper_flag_const_range(getPrivateVariableReductionFlags().begin(),
+                                   getPrivateVariableReductionFlags().end());
+  }
+
+  helper_flag_range private_var_reduction_flags() {
+    return helper_flag_range(getPrivateVariableReductionFlags().begin(),
+                             getPrivateVariableReductionFlags().end());
   }
 
   helper_expr_const_range reduction_ops() const {

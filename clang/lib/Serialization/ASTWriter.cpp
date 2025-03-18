@@ -8020,8 +8020,9 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
     for (auto *E : C->copy_array_elems())
       Record.AddStmt(E);
   }
-  ArrayRef<bool> PrivateFlags = C->getPrivateVariableReductionFlags();
-  Record.push_back(PrivateFlags.size());
+  auto PrivateFlags = C->private_var_reduction_flags();
+  Record.push_back(std::distance(PrivateFlags.begin(), PrivateFlags.end()));
+  // Record.push_back(PrivateFlags.size());
   for (bool Flag : PrivateFlags)
     Record.push_back(Flag);
 }

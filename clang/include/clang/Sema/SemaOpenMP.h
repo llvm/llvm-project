@@ -1162,6 +1162,12 @@ public:
     SmallVector<SourceLocation, NumberOfOMPAllocateClauseModifiers>
         AllocClauseModifiersLoc;
     Expr *AllocateAlignment = nullptr;
+    struct OpenMPReductionClauseModifiers {
+      int ExtraModifier;
+      int OriginalSharingModifier;
+      OpenMPReductionClauseModifiers(int extra, int original)
+          : ExtraModifier(extra), OriginalSharingModifier(original) {}
+    };
   };
 
   OMPClause *ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
@@ -1210,14 +1216,13 @@ public:
                                      SourceLocation EndLoc);
   /// Called on well-formed 'reduction' clause.
   OMPClause *ActOnOpenMPReductionClause(
-      ArrayRef<Expr *> VarList, OpenMPReductionClauseModifier Modifier,
+      ArrayRef<Expr *> VarList,
+      OpenMPVarListDataTy::OpenMPReductionClauseModifiers Modifiers,
       SourceLocation StartLoc, SourceLocation LParenLoc,
       SourceLocation ModifierLoc, SourceLocation ColonLoc,
       SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId,
-      ArrayRef<Expr *> UnresolvedReductions = {},
-      OpenMPOriginalSharingModifier OriginalShareModifier =
-          OMPC_ORIGINAL_SHARING_default);
+      ArrayRef<Expr *> UnresolvedReductions = {});
   /// Called on well-formed 'task_reduction' clause.
   OMPClause *ActOnOpenMPTaskReductionClause(
       ArrayRef<Expr *> VarList, SourceLocation StartLoc,

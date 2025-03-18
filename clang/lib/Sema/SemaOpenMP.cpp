@@ -17390,10 +17390,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_REDUCTION_unknown &&
            "Unexpected lastprivate modifier.");
     Res = ActOnOpenMPReductionClause(
-        VarList, static_cast<OpenMPReductionClauseModifier>(ExtraModifier),
+        VarList,
+        OpenMPVarListDataTy::OpenMPReductionClauseModifiers(
+            ExtraModifier, OriginalSharingModifier),
         StartLoc, LParenLoc, ExtraModifierLoc, ColonLoc, EndLoc,
-        Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId, {},
-        static_cast<OpenMPOriginalSharingModifier>(OriginalSharingModifier));
+        Data.ReductionOrMapperIdScopeSpec, Data.ReductionOrMapperId);
     break;
   case OMPC_task_reduction:
     Res = ActOnOpenMPTaskReductionClause(
@@ -19474,12 +19475,17 @@ static bool actOnOMPReductionKindClause(
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
-    ArrayRef<Expr *> VarList, OpenMPReductionClauseModifier Modifier,
+    ArrayRef<Expr *> VarList,
+    OpenMPVarListDataTy::OpenMPReductionClauseModifiers Modifiers,
     SourceLocation StartLoc, SourceLocation LParenLoc,
     SourceLocation ModifierLoc, SourceLocation ColonLoc, SourceLocation EndLoc,
     CXXScopeSpec &ReductionIdScopeSpec, const DeclarationNameInfo &ReductionId,
-    ArrayRef<Expr *> UnresolvedReductions,
-    OpenMPOriginalSharingModifier OriginalSharingMod) {
+    ArrayRef<Expr *> UnresolvedReductions) {
+  OpenMPReductionClauseModifier Modifier =
+      static_cast<OpenMPReductionClauseModifier>(Modifiers.ExtraModifier);
+  OpenMPOriginalSharingModifier OriginalSharingModifier =
+      static_cast<OpenMPOriginalSharingModifier>(
+          Modifiers.OriginalSharingModifier);
   if (ModifierLoc.isValid() && Modifier == OMPC_REDUCTION_unknown) {
     Diag(LParenLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_reduction, /*First=*/0,
@@ -19501,7 +19507,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
     Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
     return nullptr;
   }
-  ReductionData RD(VarList.size(), Modifier, OriginalSharingMod);
+  ReductionData RD(VarList.size(), Modifier, OriginalSharingModifier);
   if (actOnOMPReductionKindClause(SemaRef, DSAStack, OMPC_reduction, VarList,
                                   StartLoc, LParenLoc, ColonLoc, EndLoc,
                                   ReductionIdScopeSpec, ReductionId,
@@ -19515,7 +19521,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
       RD.Privates, RD.LHSs, RD.RHSs, RD.ReductionOps, RD.InscanCopyOps,
       RD.InscanCopyArrayTemps, RD.InscanCopyArrayElems,
       buildPreInits(getASTContext(), RD.ExprCaptures),
-      buildPostUpdate(SemaRef, RD.ExprPostUpdates), RD.IsPrivateVarReduction);
+      buildPostUpdate(SemaRef, RD.ExprPostUpdates), RD.IsPrivateVarReduction,
+      OriginalSharingModifier);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPTaskReductionClause(

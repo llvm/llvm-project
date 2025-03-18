@@ -4693,7 +4693,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         return false;
       }
       ParenT.consumeClose();
-      assert(Tok.is(tok::comma) && "Expected comma.");
+      if (!Tok.is(tok::comma)) {
+        Diag(Tok.getLocation(), diag::err_expected) << "',' (comma)";
+        return false;
+      }
       (void)ConsumeToken();
     }
     ColonProtectionRAIIObject ColonRAII(*this);
