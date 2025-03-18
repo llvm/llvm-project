@@ -111,10 +111,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <typename _Tp, typename _Base = __cxx_atomic_base_impl<_Tp> >
-struct __cxx_atomic_impl : public _Base {
+template <typename _Tp>
+struct __check_atomic_mandates {
+  using type = _Tp;
   static_assert(is_trivially_copyable<_Tp>::value, "std::atomic<T> requires that 'T' be a trivially copyable type");
+};
 
+template <typename _Tp, typename _Base = __cxx_atomic_base_impl<typename __check_atomic_mandates<_Tp>::type> >
+struct __cxx_atomic_impl : public _Base {
   _LIBCPP_HIDE_FROM_ABI __cxx_atomic_impl() _NOEXCEPT = default;
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_impl(_Tp __value) _NOEXCEPT : _Base(__value) {}
 };
