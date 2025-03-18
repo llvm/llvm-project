@@ -21,6 +21,14 @@
 ; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
 ; GFX9: .amdhsa_user_sgpr_queue_ptr 0
 
+; CHECK: debugtrap_requires_queue_ptr
+; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
+; CHECK: ubsantrap_requires_queue_ptr
+; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
 ; CHECK: amdgcn_queue_ptr_requires_queue_ptr
 ; CHECK: .amdhsa_user_sgpr_queue_ptr 1
 
@@ -72,6 +80,28 @@ define amdgpu_kernel void @trap_requires_queue_ptr() {
 }
 
 ; CHECK: - .args:
+
+; CHECK-NOT: hidden_shared_base
+; CHECK-NOT: hidden_private_base
+; CHECK-NOT: hidden_queue_ptr
+; CHECK-LABEL:		.name:           debugtrap_requires_queue_ptr
+define amdgpu_kernel void @debugtrap_requires_queue_ptr() {
+  call void @llvm.debugtrap()
+  unreachable
+}
+
+; CHECK: - .args:
+
+; CHECK-NOT: hidden_shared_base
+; CHECK-NOT: hidden_private_base
+; CHECK-NOT: hidden_queue_ptr
+; CHECK-LABEL:		.name:           ubsantrap_requires_queue_ptr
+define amdgpu_kernel void @ubsantrap_requires_queue_ptr() {
+  call void @llvm.ubsantrap(i8 0)
+  unreachable
+}
+
+; CHECK: - .args:
 ; CHECK-NOT: hidden_queue_ptr
 ; CHECK-NOT: hidden_shared_base
 ; CHECK-NOT: hidden_private_base
@@ -96,6 +126,7 @@ declare i1 @llvm.amdgcn.is.shared(ptr)
 declare i1 @llvm.amdgcn.is.private(ptr)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()
+declare void @llvm.ubsantrap(i8 immarg)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
