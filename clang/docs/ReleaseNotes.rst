@@ -299,6 +299,9 @@ C++ Language Changes
 - The builtin type alias ``__builtin_common_type`` has been added to improve the
   performance of ``std::common_type``.
 
+- In C++26 mode, arithmetic conversion errors between mixed enumeration types can
+  be disabled with ``-Wno-enum-enum-conversion`` (#GH92340).
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
