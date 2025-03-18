@@ -53,8 +53,6 @@ extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
-  // case TargetOpcode::G_CONSTANT:
-  // case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_SMIN:
@@ -105,13 +103,6 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register ResVReg = I.getOperand(0).getReg();
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        /*if (MRI.getRegClassOrNull(ResVReg)) {
-          if (isTypeFoldingSupported(Opcode)) {
-            insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
-            processInstr(I, MIB, MRI, GR, GR->getSPIRVTypeForVReg(ResVReg));
-          }
-          continue;
-        }*/
         // Check if we have type defined for operands of the new instruction
         bool IsKnownReg = MRI.getRegClassOrNull(ResVReg);
         SPIRVType *ResVType = GR->getSPIRVTypeForVReg(

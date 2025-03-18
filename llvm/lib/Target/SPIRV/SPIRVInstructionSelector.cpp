@@ -2888,9 +2888,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     assert(MI);
     Register GVarVReg = MI->getOperand(0).getReg();
     bool Res = selectGlobalValue(GVarVReg, *MI, Init);
-    // We violate SSA form by inserting OpVariable having a gMIR instruction
-    // %vreg = G_GLOBAL_VALUE @gvar
-    // We need to fix this erasing the duplicated definition.
+    // We violate SSA form by inserting OpVariable and still having a gMIR
+    // instruction %vreg = G_GLOBAL_VALUE @gvar. We need to fix this by erasing
+    // the duplicated definition.
     if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
       GR.invalidateMachineInstr(MI);
       MI->removeFromParent();

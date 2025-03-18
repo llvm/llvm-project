@@ -219,33 +219,11 @@ def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
 
 // 3.42.7 Constant-Creation Instructions
 
-//def imm_to_i32 : SDNodeXForm<imm, [{
-//return CurDAG->getTargetConstant(
-//  N->getValueAP().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-//}]>;
-
-//def fimm_to_i64 : SDNodeXForm<imm, [{
-//return CurDAG->getTargetConstant(
-//  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-//}]>;
-
-//def gi_bitcast_fimm_to_i64 : GICustomOperandRenderer<"renderFImm64">,
-//  GISDNodeXFormEquiv<fimm_to_i64>;
-
-//def gi_bitcast_imm_to_i32 : GICustomOperandRenderer<"renderImm32">,
-//  GISDNodeXFormEquiv<imm_to_i32>;
-
-//def PseudoConstI: IntImmLeaf<i64, [{ return Imm.getBitWidth() <= 32; }], imm_to_i32>;
-//def PseudoConstF: FPImmLeaf<f64, [{  return true; }], fimm_to_i64>;
-//def ConstPseudoNull: IntImmLeaf<i64, [{ return Imm.isZero(); }]>;
-
 multiclass IntFPImm<bits<16> opCode, string name> {
   def I: Op<opCode, (outs iID:$dst), (ins TYPE:$type, iID:$src, variable_ops),
                   "$dst = "#name#" $type">;
-//, [(set iID:$dst, (assigntype PseudoConstI:$src, TYPE:$type))]
   def F: Op<opCode, (outs fID:$dst), (ins TYPE:$type, fID:$src, variable_ops),
                   "$dst = "#name#" $type">;
-//, [(set fID:$dst, (assigntype PseudoConstF:$src, TYPE:$type))]
 }
 defm OpConstant: IntFPImm<43, "OpConstant">;
 
