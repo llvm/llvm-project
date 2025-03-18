@@ -1905,7 +1905,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     auto IsVisibleToRegularObj = [&](StringRef name) {
       auto It = GlobalResolutions->find(name);
       return (It == GlobalResolutions->end() ||
-              It->second.VisibleOutsideSummary);
+              It->second.VisibleOutsideSummary || It->second.ExportDynamic);
     };
 
     getVisibleToRegularObjVtableGUIDs(ThinLTO.CombinedIndex,
