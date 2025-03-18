@@ -1,7 +1,19 @@
+//===------- AMDGPUMIRUtils.h - Helpers for MIR passes --------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// \brief Helper functions for MIR passes.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMIRUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMIRUTILS_H
-
-#pragma once
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -51,9 +63,9 @@ bool isSub0Sub1SingleDef(unsigned Reg, const llvm::MachineRegisterInfo &MRI);
 
 llvm::LaneBitmask getRegMask(const llvm::MachineOperand &MO,
                              const llvm::MachineRegisterInfo &MRI);
-void andLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet);
-void andNotLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet);
-void mergeLiveRegSet(LiveSet &targetSet, const LiveSet &inputSet);
+void andLiveRegSet(LiveSet &TargetSet, const LiveSet &InputSet);
+void andNotLiveRegSet(LiveSet &TargetSet, const LiveSet &InputSet);
+void mergeLiveRegSet(LiveSet &TargetSet, const LiveSet &InputSet);
 llvm::MachineBasicBlock *split(llvm::MachineInstr *I);
 
 // For inst like S_BUFFER_LOAD_DWORDX16, change to S_BUFFER_LOAD_DWORDX4 if only
@@ -70,9 +82,6 @@ bool reach_block(llvm::MachineBasicBlock *FromBB,
 
 void viewCFGWithPhi(llvm::MachineFunction &MF);
 void write_contribution_list(llvm::MachineFunction &MF, const char *Filename);
-
-llvm::MachineBasicBlock *createNullExportBlock(llvm::MachineFunction &MF,
-                                               const llvm::SIInstrInfo *TII);
 
 bool getNonDebugMBBEnd(llvm::MachineBasicBlock::reverse_iterator &BBEnd,
                        llvm::MachineBasicBlock &MBB);
@@ -128,7 +137,7 @@ llvm::MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
 // local.
 bool isLocalLiveInterval(
     const llvm::LiveInterval &LI, llvm::SlotIndexes *Indexes,
-    llvm::SmallDenseSet<llvm::MachineBasicBlock *, 2> &touchedMBBSet);
+    llvm::SmallDenseSet<llvm::MachineBasicBlock *, 2> &TouchedMBBSet);
 bool isLocalLiveInterval(const llvm::LiveInterval &LI,
                          llvm::SlotIndexes *Indexes);
 
@@ -149,13 +158,12 @@ bool isFastMathInst(llvm::MachineInstr &MI);
 
 namespace pressure {
 void print_reg(llvm::Register Reg, const llvm::MachineRegisterInfo &MRI,
-               const llvm::SIRegisterInfo *SIRI, llvm::raw_ostream &os);
+               const llvm::SIRegisterInfo *SIRI, llvm::raw_ostream &OS);
 void write_pressure(llvm::MachineFunction &MF, llvm::LiveIntervals *LIS,
                     const char *Filename);
 void write_pressure(llvm::MachineFunction &MF, llvm::LiveIntervals *LIS,
-                    llvm::raw_ostream &os);
+                    llvm::raw_ostream &OS);
 } // namespace pressure
-// bool IsLdsSpillSupportedForHwStage(xmd::HwStage Stage);
 
 // Look for the successor `Succ` of the given `MBB`.
 // Returns MBB->succ_end() if `Succ` is not a successor of MBB.

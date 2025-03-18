@@ -1,3 +1,17 @@
+//===------- AMDGPUMIRUtils.cpp - Helpers for MIR passes ------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// \brief Helper functions for MIR passes.
+//
+//===----------------------------------------------------------------------===//
+
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -383,8 +397,9 @@ struct Piece {
   }
 };
 
-static void updateSubReg(MachineOperand &UseMO, const llvm::TargetRegisterClass *NewRC,
-                  unsigned Offset, const SIRegisterInfo *SIRI) {
+static void updateSubReg(MachineOperand &UseMO,
+                         const llvm::TargetRegisterClass *NewRC,
+                         unsigned Offset, const SIRegisterInfo *SIRI) {
   unsigned Size = NewRC->getLaneMask().getNumLanes();
   if (Size == 1) {
     UseMO.setSubReg(0);
@@ -529,12 +544,13 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
     case 1:
       return reduceChannel(Piece.Offset, MI,
                            SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORD_IMM
-                                          : AMDGPU::S_BUFFER_LOAD_DWORD_SGPR),
+                                           : AMDGPU::S_BUFFER_LOAD_DWORD_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 2:
       return reduceChannel(Piece.Offset, MI,
-                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM
-                                          : AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR),
+                           SIII->get(IsImm
+                                         ? AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM
+                                         : AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 3:
       if (FullMask == 0xf)
@@ -542,8 +558,9 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
       LLVM_FALLTHROUGH;
     case 4:
       return reduceChannel(Piece.Offset, MI,
-                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM
-                                          : AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR),
+                           SIII->get(IsImm
+                                         ? AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM
+                                         : AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     case 5:
     case 6:
@@ -553,8 +570,9 @@ bool removeUnusedLanes(llvm::MachineInstr &MI, MachineRegisterInfo &MRI,
       LLVM_FALLTHROUGH;
     case 8:
       return reduceChannel(Piece.Offset, MI,
-                           SIII->get(IsImm ? AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM
-                                          : AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR),
+                           SIII->get(IsImm
+                                         ? AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM
+                                         : AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR),
                            MRI, SIRI, SIII, SlotIndexes);
     }
 
@@ -751,19 +769,19 @@ unsigned get_reg_size(unsigned Reg, const MachineRegisterInfo &MRI,
 void write_live(unsigned Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI,
                 const SIRegisterInfo *SIRI, raw_ostream &OS) {
   if (Mask.none()) {
-    unsigned size = get_reg_size(Reg, MRI, SIRI);
-    Mask = LaneBitmask((1 << size) - 1);
+    unsigned Size = get_reg_size(Reg, MRI, SIRI);
+    Mask = LaneBitmask((1 << Size) - 1);
   }
-  unsigned mask = Mask.getAsInteger();
+  unsigned IntMask = Mask.getAsInteger();
   for (unsigned i = 0; i <= Mask.getHighestLane(); i++) {
-    if (mask & (1 << i)) {
+    if (IntMask & (1 << i)) {
       write_reg(Reg, i, MRI, SIRI, OS);
       OS << ",\n";
     }
   }
 }
 
-void write_dag_input_node(unsigned ID, unsigned reg, unsigned mask,
+void write_dag_input_node(unsigned ID, unsigned Reg, unsigned Mask,
                           const MachineRegisterInfo &MRI,
                           const SIRegisterInfo *SIRI, raw_ostream &OS) {
   OS << "{";
@@ -773,13 +791,13 @@ void write_dag_input_node(unsigned ID, unsigned reg, unsigned mask,
 
   OS << ",";
 
-  auto WriteReg = [&reg, &MRI, &SIRI, &OS]() { print_reg(reg, MRI, SIRI, OS); };
+  auto WriteReg = [&Reg, &MRI, &SIRI, &OS]() { print_reg(Reg, MRI, SIRI, OS); };
 
   json_pair("reg", WriteReg, OS);
 
   OS << ",";
 
-  auto WriteMask = [&mask, &OS]() { OS << mask; };
+  auto WriteMask = [&Mask, &OS]() { OS << Mask; };
 
   json_pair("mask", WriteMask, OS);
 
@@ -1220,8 +1238,8 @@ void write_file(const MDNode *FileNode, raw_ostream &OS) {
   OS << ",\n";
 
   const MDString *Content = cast<MDString>(FileNode->getOperand(1).get());
-  std::string str = get_legal_str(Content);
-  auto WriteContent = [&str, &OS]() { OS << str; };
+  std::string Str = get_legal_str(Content);
+  auto WriteContent = [&Str, &OS]() { OS << Str; };
   json_pair("content", WriteContent, OS);
   OS << "\n},\n";
 }
@@ -1468,8 +1486,7 @@ void write_function(MachineFunction &MF, LiveIntervals *LIS,
   // Check debug info.
   const Function &F = MF.getFunction();
   const Module *M = F.getParent();
-  const NamedMDNode *SourceMD =
-      M->getNamedMetadata("dx.source.contents");
+  const NamedMDNode *SourceMD = M->getNamedMetadata("dx.source.contents");
   if (SourceMD) {
     write_dbg_info(MF, LIS, MRI, SIII, SIRI, SlotIndexes, SourceMD, OS);
   }
@@ -1530,7 +1547,8 @@ public:
 
 void buildMIContribution(MachineInstr &MI,
                          DenseSet<MachineInstr *> &ContributorSet,
-                         DenseSet<MachineInstr *> &ContributedSet, MachineRegisterInfo &MRI) {
+                         DenseSet<MachineInstr *> &ContributedSet,
+                         MachineRegisterInfo &MRI) {
   for (MachineOperand &UseMO : MI.uses()) {
     if (!UseMO.isReg())
       continue;
@@ -1938,8 +1956,7 @@ MachineBasicBlock::iterator llvm::findOrCreateInsertionPointForSccDef(
   //      MI
   //      S_CMP_LG_U32 %SavedSCC, 0       # Restore SCC
   //
-  Register TmpScc =
-      MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  Register TmpScc = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   DebugLoc DL = MI->getDebugLoc();
   BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_CSELECT_B32), TmpScc)
       .addImm(-1)

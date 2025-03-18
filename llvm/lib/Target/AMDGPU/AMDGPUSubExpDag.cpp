@@ -1,9 +1,23 @@
+//===----------- AMDGPUSubExpDag.cpp - AMDGPU Sub Expression DAG ----------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// \brief AMDGPU Sub Expression DAG. Helper for building a dag based on sub
+/// expressions.
+//
+//===----------------------------------------------------------------------===//
+
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
-// #include "dxc/DXIL/DxilMetadataHelper.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -752,8 +766,7 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
                                         const llvm::ExpDag *G) {
     return G->getGraphNodeLabel(SU);
   }
-  static std::string getNodeAttributes(const SUnit *N,
-                                       const llvm::ExpDag *) {
+  static std::string getNodeAttributes(const SUnit *N, const llvm::ExpDag *) {
     std::string Str("shape=Mrecord");
 
     Str += ",style=filled,fillcolor=\"#";

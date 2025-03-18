@@ -436,7 +436,7 @@ public:
   /// \returns an empty set if there is no set of covering sub registers.
   std::vector<unsigned>
   getMinimalSpanningSubRegIdxSetForLaneMask(const TargetRegisterClass *RC,
-                                            LaneBitmask mask) const;
+                                            LaneBitmask Mask) const;
 
   /// The lane masks returned by getSubRegIndexLaneMask() above can only be
   /// used to determine if sub-registers overlap - they can't be used to

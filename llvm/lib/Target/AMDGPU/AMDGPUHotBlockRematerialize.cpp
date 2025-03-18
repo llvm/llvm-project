@@ -3287,7 +3287,8 @@ void sortSubExpCandidates(std::vector<SubExp> &SubExpCandidates) {
   MapVector<SubExp *, SortNode> SortMap;
   for (auto It : InputMap) {
     unsigned Reg = It.first;
-    MapVector<Register, SetVector<SubExp *>>::iterator OutIt = OutputMap.find(Reg);
+    MapVector<Register, SetVector<SubExp *>>::iterator OutIt =
+        OutputMap.find(Reg);
     if (OutIt == OutputMap.end())
       continue;
     auto &InExps = It.second;
@@ -3622,8 +3623,7 @@ collectPassThrus(MachineBasicBlock *MBB,
   return PassThrus;
 }
 // Try to build a free subExp which all input is passThrus.
-SubExp buildFreeSubExp(SubExp &Exp,
-                       GCNRPTracker::LiveRegSet &PassThrus,
+SubExp buildFreeSubExp(SubExp &Exp, GCNRPTracker::LiveRegSet &PassThrus,
                        MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI) {
   SubExp FreeExp;
   // Try to split the subExp to find a help case.
@@ -3777,8 +3777,7 @@ std::vector<SubExp> buildSubExpCandidates(
       }
       if (!canHelpPressureWhenSink(Exp, PassThrus, MRI, SIRI, MLI, DT,
                                    IsCanClone, IsSgprBound)) {
-        if (AllowPartialUseInSubExp &&
-            Exp.isSafeToMove(MRI)) {
+        if (AllowPartialUseInSubExp && Exp.isSafeToMove(MRI)) {
           SubExp FreeSubExp = buildFreeSubExp(Exp, PassThrus, MRI, SIRI);
           if (canHelpPressureWhenSink(FreeSubExp, PassThrus, MRI, SIRI, MLI, DT,
                                       IsCanClone, IsSgprBound)) {
@@ -4249,9 +4248,8 @@ bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &HotBlocks,
       continue;
 
     // Collect pass thru regs.
-    GCNRPTracker::LiveRegSet PassThrus =
-        collectPassThrus(MBB, InputLive, OutputLive,
-                         LiveRegCandidates, MRI, IsCanClone);
+    GCNRPTracker::LiveRegSet PassThrus = collectPassThrus(
+        MBB, InputLive, OutputLive, LiveRegCandidates, MRI, IsCanClone);
 
     // Group pass thru regs by def MBB.
     SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
