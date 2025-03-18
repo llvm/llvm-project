@@ -12,8 +12,10 @@
 #include "DAPForward.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
@@ -187,6 +189,9 @@ private:
   llvm::json::Array m_telemetry_array;
   SBDebugger *debugger;
 };
+
+/// Take ownership of the stored error.
+llvm::Error ToError(const lldb::SBError &error);
 
 } // namespace lldb_dap
 

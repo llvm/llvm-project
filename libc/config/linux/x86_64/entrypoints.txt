@@ -93,6 +93,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
+    libc.src.strings.ffs
+    libc.src.strings.ffsl
+    libc.src.strings.ffsll
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
@@ -934,6 +937,10 @@ if(LLVM_LIBC_FULL_BUILD)
     # string.h entrypoints
     libc.src.string.strcoll_l
     libc.src.string.strxfrm_l
+
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
 
     # assert.h entrypoints
     libc.src.assert.__assert_fail

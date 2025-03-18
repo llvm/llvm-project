@@ -52,6 +52,34 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
+# A flag to pick which `mpc` to use for math tests.
+# Usage: `--@llvm-project//libc:mpc=<disable|external|system>`.
+# Flag documentation: https://bazel.build/extending/config
+string_flag(
+    name = "mpc",
+    build_setting_default = "external",
+    values = [
+        "disable",  # Skip tests that need mpc
+        "external",  # Build mpc from source
+        "system",  # Use system mpc (non hermetic)
+    ],
+)
+
+config_setting(
+    name = "mpc_disable",
+    flag_values = {":mpc": "disable"},
+)
+
+config_setting(
+    name = "mpc_external",
+    flag_values = {":mpc": "external"},
+)
+
+config_setting(
+    name = "mpc_system",
+    flag_values = {":mpc": "system"},
+)
+
 ########################### Header Generation ##################################
 
 py_binary(
@@ -574,6 +602,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/span.h"],
     deps = [
         ":__support_cpp_array",
+        ":__support_cpp_limits",
         ":__support_cpp_type_traits",
     ],
 )
@@ -583,6 +612,7 @@ libc_support_library(
     hdrs = ["src/__support/CPP/string_view.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_limits",
     ],
 )
 
@@ -862,6 +892,26 @@ libc_support_library(
         ":__support_str_to_num_result",
         ":__support_uint128",
         ":errno",
+    ],
+)
+
+libc_support_library(
+    name = "__support_complex_type",
+    hdrs = ["src/__support/complex_type.h"],
+    deps = [
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
+    name = "__support_complex_basic_ops",
+    hdrs = ["src/__support/complex_basic_ops.h"],
+    deps = [
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_fputil_fp_bits",
     ],
 )
 
@@ -1269,6 +1319,7 @@ libc_support_library(
             "src/__support/OSUtil/linux/aarch64/syscall.h",
             "src/__support/OSUtil/linux/x86_64/syscall.h",
         ],
+	"@platforms//os:windows": [],
     }),
     deps = [
         ":__support_common",
@@ -1310,6 +1361,7 @@ libc_support_library(
     textual_hdrs = select({
         "@platforms//os:macos": ["src/__support/OSUtil/darwin/io.h"],
         "@platforms//os:linux": ["src/__support/OSUtil/linux/io.h"],
+	"@platforms//os:windows": ["src/__support/OSUtil/windows/io.h"],
     }),
     deps = [
         ":__support_common",
@@ -1548,9 +1600,9 @@ libc_support_library(
     ],
 )
 
-############################### errno targets ################################
+############################### errno ########################################
 
-libc_function(
+libc_support_library(
     name = "errno",
     srcs = ["src/errno/libc_errno.cpp"],
     hdrs = ["src/errno/libc_errno.h"],
@@ -1890,11 +1942,268 @@ libc_support_library(
     ],
 )
 
+############################### complex targets ################################
+
+libc_function(
+    name = "cimag",
+    srcs = ["src/complex/generic/cimag.cpp"],
+    hdrs = ["src/complex/cimag.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "cimagf",
+    srcs = ["src/complex/generic/cimagf.cpp"],
+    hdrs = ["src/complex/cimagf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "cimagf128",
+    srcs = ["src/complex/generic/cimagf128.cpp"],
+    hdrs = ["src/complex/cimagf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_function(
+    name = "cimagf16",
+    srcs = ["src/complex/generic/cimagf16.cpp"],
+    hdrs = ["src/complex/cimagf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_function(
+    name = "cimagl",
+    srcs = ["src/complex/generic/cimagl.cpp"],
+    hdrs = ["src/complex/cimagl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "conj",
+    srcs = ["src/complex/generic/conj.cpp"],
+    hdrs = ["src/complex/conj.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "conjf",
+    srcs = ["src/complex/generic/conjf.cpp"],
+    hdrs = ["src/complex/conjf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "conjf128",
+    srcs = ["src/complex/generic/conjf128.cpp"],
+    hdrs = ["src/complex/conjf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+    ],
+)
+
+libc_function(
+    name = "conjf16",
+    srcs = ["src/complex/generic/conjf16.cpp"],
+    hdrs = ["src/complex/conjf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+    ],
+)
+
+libc_function(
+    name = "conjl",
+    srcs = ["src/complex/generic/conjl.cpp"],
+    hdrs = ["src/complex/conjl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "cproj",
+    srcs = ["src/complex/generic/cproj.cpp"],
+    hdrs = ["src/complex/cproj.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "cprojf",
+    srcs = ["src/complex/generic/cprojf.cpp"],
+    hdrs = ["src/complex/cprojf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "cprojf128",
+    srcs = ["src/complex/generic/cprojf128.cpp"],
+    hdrs = ["src/complex/cprojf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+    ],
+)
+
+libc_function(
+    name = "cprojf16",
+    srcs = ["src/complex/generic/cprojf16.cpp"],
+    hdrs = ["src/complex/cprojf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+    ],
+)
+
+libc_function(
+    name = "cprojl",
+    srcs = ["src/complex/generic/cprojl.cpp"],
+    hdrs = ["src/complex/cprojl.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_basic_ops",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "creal",
+    srcs = ["src/complex/generic/creal.cpp"],
+    hdrs = ["src/complex/creal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "crealf",
+    srcs = ["src/complex/generic/crealf.cpp"],
+    hdrs = ["src/complex/crealf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+    ],
+)
+
+libc_function(
+    name = "crealf128",
+    srcs = ["src/complex/generic/crealf128.cpp"],
+    hdrs = ["src/complex/crealf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+    ],
+)
+
+libc_function(
+    name = "crealf16",
+    srcs = ["src/complex/generic/crealf16.cpp"],
+    hdrs = ["src/complex/crealf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+        ":__support_macros_properties_complex_types",
+    ],
+)
+
+libc_function(
+    name = "creall",
+    srcs = ["src/complex/generic/creall.cpp"],
+    hdrs = ["src/complex/creall.h"],
+    deps = [
+        ":__support_common",
+        ":__support_complex_type",
+        ":__support_cpp_bit",
+        ":__support_macros_config",
+    ],
+)
+
 ################################ math targets ##################################
 
 libc_math_function(
     name = "acosf",
     additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "acosf16",
+    additional_deps = [
+        ":__support_fputil_cast",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
@@ -1929,6 +2238,20 @@ libc_math_function(
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "asinf16",
+    additional_deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
         ":inv_trigf_utils",
     ],
 )
@@ -2001,6 +2324,26 @@ libc_math_function(name = "canonicalizef128")
 
 libc_math_function(name = "canonicalizef16")
 
+libc_math_function(name = "iscanonical")
+
+libc_math_function(name = "iscanonicalf")
+
+libc_math_function(name = "iscanonicall")
+
+libc_math_function(name = "iscanonicalf128")
+
+libc_math_function(name = "iscanonicalf16")
+
+libc_math_function(name = "issignaling")
+
+libc_math_function(name = "issignalingf")
+
+libc_math_function(name = "issignalingl")
+
+libc_math_function(name = "issignalingf128")
+
+libc_math_function(name = "issignalingf16")
+
 libc_math_function(
     name = "cbrt",
     additional_deps = [
@@ -2056,6 +2399,15 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "cosf16",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":sincosf16_utils",
     ],
 )
 
@@ -3153,6 +3505,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "sinf16",
+    additional_deps = [
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":sincosf16_utils",
+    ],
+)
+
+libc_math_function(
     name = "sincos",
     additional_deps = [
         ":__support_fputil_multiply_add",
@@ -3273,6 +3634,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "tanf16",
+    additional_deps = [
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":sincosf16_utils",
+    ],
+)
+
+libc_math_function(
     name = "tanhf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -3291,6 +3661,17 @@ libc_math_function(
     name = "tanhf16",
     additional_deps = [
         ":expxf16",
+    ],
+)
+
+libc_math_function(
+    name = "tanpif16",
+    additional_deps = [
+        ":sincosf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":__support_fputil_cast",
+        ":__support_fputil_multiply_add",
     ],
 )
 
@@ -3891,7 +4272,6 @@ libc_function(
     hdrs = ["src/string/strcpy.h"],
     deps = [
         ":__support_common",
-        ":memcpy",
         ":string_memory_utils",
         ":string_utils",
     ],
@@ -4546,7 +4926,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_writer",
-    srcs = ["src/stdio/printf_core/writer.cpp"],
     hdrs = ["src/stdio/printf_core/writer.h"],
     deps = [
         ":__support_cpp_string_view",
@@ -4558,7 +4937,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_converter",
-    srcs = ["src/stdio/printf_core/converter.cpp"],
     hdrs = [
         "src/stdio/printf_core/char_converter.h",
         "src/stdio/printf_core/converter.h",
@@ -4596,7 +4974,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_main",
-    srcs = ["src/stdio/printf_core/printf_main.cpp"],
     hdrs = ["src/stdio/printf_core/printf_main.h"],
     deps = [
         ":__support_arg_list",

@@ -18,7 +18,7 @@ subroutine omp_do_firstprivate(a)
   ! CHECK-NEXT: omp.loop_nest (%[[ARG1:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivateEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivateEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK-NEXT: fir.store %[[ARG1]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK-NEXT: hlfir.assign %[[ARG1]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK-NEXT: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK-NEXT: omp.yield
   ! CHECK-NEXT: }
@@ -48,7 +48,7 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[N_PVT_DECL:.*]]:2 = hlfir.declare %[[N_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: fir.store %[[ARG2]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[ARG2]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
   ! CHECK: fir.call @_QPfoo(%[[I_PVT_DECL]]#1, %[[A_PVT_DECL]]#1) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK: omp.yield
     do i= a, n

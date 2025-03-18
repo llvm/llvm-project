@@ -54,18 +54,24 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
       return rewriter.notifyMatchFailure(op, "unsupported type");
 
     // Get and verify zero points.
-    int64_t iZp;
-    int64_t wZp;
-
-    if (op.getInputZeroPoint(iZp).failed() ||
-        op.getWeightZeroPoint(wZp).failed())
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (failed(maybeIZp))
       return rewriter.notifyMatchFailure(
-          op, "bail out if zero points cannot statically be determined");
+          op, "input zero point cannot be statically determined");
 
-    if (op.verifyInputZeroPoint(iZp).failed() ||
-        op.verifyWeightZeroPoint(wZp).failed())
+    FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
+    if (failed(maybeWZp))
       return rewriter.notifyMatchFailure(
-          op, "zero point must be zero for non-int8 integer types");
+          op, "weight zero point cannot be statically determined");
+
+    int64_t iZp = *maybeIZp;
+    int64_t wZp = *maybeWZp;
+    if (op.verifyInputZeroPoint(iZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input zero point must be zero for non-int8 integer types");
+    if (op.verifyWeightZeroPoint(wZp).failed())
+      return rewriter.notifyMatchFailure(
+          op, "weight zero point must be zero for non-int8 integer types");
 
     // Reshape input to [N, H, W, C] -> [N, H, W, C, 1].
     ArrayRef<int64_t> inputShape = inputType.getShape();

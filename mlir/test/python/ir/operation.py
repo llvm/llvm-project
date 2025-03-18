@@ -643,6 +643,8 @@ def testOperationPrint():
     # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+    # CHECK: %nom = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(use_name_loc_as_prefix=True, use_local_scope=True)
 
     # Test printing using state.
     state = AsmState(module.operation)

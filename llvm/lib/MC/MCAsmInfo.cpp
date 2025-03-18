@@ -145,9 +145,9 @@ StringRef MCAsmInfo::getVariantKindName(uint32_t Kind) const {
   return It->second;
 }
 
-uint32_t MCAsmInfo::getVariantKindForName(StringRef Name) const {
+std::optional<uint32_t> MCAsmInfo::getVariantKindForName(StringRef Name) const {
   auto It = NameToVariantKind.find(Name.lower());
   if (It != NameToVariantKind.end())
     return It->second;
-  return MCSymbolRefExpr::VK_Invalid;
+  return {};
 }

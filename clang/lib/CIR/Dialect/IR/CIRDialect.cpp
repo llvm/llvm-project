@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace cir;
@@ -268,6 +269,19 @@ LogicalResult cir::ScopeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return mlir::SuccessorOperands(getDestOperandsMutable());
+}
+
+Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
+  return getDest();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -297,11 +311,16 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 }
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          llvm::StringRef sym_name, mlir::Type sym_type) {
+                          llvm::StringRef sym_name, mlir::Type sym_type,
+                          cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+
+  cir::GlobalLinkageKindAttr linkageAttr =
+      cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
+  odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -437,6 +456,47 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 // TODO(CIR): The properties of functions that require verification haven't
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+
+//===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::UnaryOp::verify() {
+  switch (getKind()) {
+  case cir::UnaryOpKind::Inc:
+  case cir::UnaryOpKind::Dec:
+  case cir::UnaryOpKind::Plus:
+  case cir::UnaryOpKind::Minus:
+  case cir::UnaryOpKind::Not:
+    // Nothing to verify.
+    return success();
+  }
+
+  llvm_unreachable("Unknown UnaryOp kind?");
+}
+
+static bool isBoolNot(cir::UnaryOp op) {
+  return isa<cir::BoolType>(op.getInput().getType()) &&
+         op.getKind() == cir::UnaryOpKind::Not;
+}
+
+// This folder simplifies the sequential boolean not operations.
+// For instance, the next two unary operations will be eliminated:
+//
+// ```mlir
+// %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+// %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
+// ```
+//
+// and the argument of the first one (%0) will be used instead.
+OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
+  if (isBoolNot(*this))
+    if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
+      if (isBoolNot(previous))
+        return previous.getInput();
+
+  return {};
+}
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions

@@ -256,8 +256,7 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
     report_fatal_error("<unknown operand type>");
   }
 
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *ME = MCSymbolRefExpr::create(Symbol, OutContext);
   ME = XtensaMCExpr::create(ME, Kind, OutContext);
 
   if (Offset) {

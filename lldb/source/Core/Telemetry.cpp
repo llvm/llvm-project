@@ -66,12 +66,31 @@ void ClientInfo::serialize(Serializer &serializer) const {
     serializer.write("error_msg", error_msg.value());
 }
 
+void CommandInfo::serialize(Serializer &serializer) const {
+  LLDBBaseTelemetryInfo::serialize(serializer);
+
+  serializer.write("target_uuid", target_uuid.GetAsString());
+  serializer.write("command_id", command_id);
+  serializer.write("command_name", command_name);
+  if (original_command.has_value())
+    serializer.write("original_command", original_command.value());
+  if (args.has_value())
+    serializer.write("args", args.value());
+  if (ret_status.has_value())
+    serializer.write("ret_status", ret_status.value());
+  if (error_data.has_value())
+    serializer.write("error_data", error_data.value());
+}
+
 void DebuggerInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
   serializer.write("lldb_version", lldb_version);
   serializer.write("is_exit_entry", is_exit_entry);
 }
+
+std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
+uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
 
 TelemetryManager::TelemetryManager(std::unique_ptr<LLDBConfig> config)
     : m_config(std::move(config)), m_id(MakeUUID()) {}
@@ -129,6 +148,7 @@ void TelemetryManager::DispatchClientTelemetry(
                    "Failed to dispatch client telemetry");
 }
 
+
 class NoOpTelemetryManager : public TelemetryManager {
 public:
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {
@@ -140,18 +160,18 @@ public:
       : TelemetryManager(std::make_unique<LLDBConfig>(
             /*EnableTelemetry*/ false, /*DetailedCommand*/ false)) {}
 
-  llvm::StringRef GetInstanceName() const override {
+  virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
   }
 
+  DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry, Debugger *debugger) override {
+    // Does nothing.
+  }
+  
   llvm::Error dispatch(llvm::telemetry::TelemetryInfo *entry) override {
     // Does nothing.
     return llvm::Error::success();
-  }
-
-  void DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry,
-                               Debugger *debugger) override {
-    // Does nothing.
   }
 
   static NoOpTelemetryManager *GetInstance() {

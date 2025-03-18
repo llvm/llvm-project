@@ -51,7 +51,7 @@ on:
 jobs:
   check-docs-build:
     name: "Test documentation build"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       # Don't fetch before checking for file changes to force the file changes
@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 1
       - name: Get subprojects that have doc changes
         id: docs-changed-subprojects
-        uses: tj-actions/changed-files@fea790cb660e33aef4bdf07304e28fedd77dfa13 # v39.2.4
+        uses: step-security/changed-files@3dbe17c78367e7d60f00d78ae6781a35be47b4a1 # v45.0.1
         with:
           files_yaml: |
             llvm:

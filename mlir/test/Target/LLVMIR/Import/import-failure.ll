@@ -339,8 +339,25 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; // -----
 
 ; CHECK:      import-failure.ll
+; CHECK-SAME: dereferenceable metadata operand must be a non-negative constant integer
+define void @deref(i64 %0) {
+  %2 = inttoptr i64 %0 to ptr, !dereferenceable !0
+  ret void
+}
+
+!0 = !{i64 -4}
+
+; // -----
+
+; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: unhandled data layout token: ni:42
 target datalayout = "e-ni:42-i64:64"
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: malformed specification, must be of the form "m:<mangling>"
+target datalayout = "e-m-i64:64"
 
 ; // -----
 

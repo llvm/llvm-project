@@ -168,6 +168,10 @@ namespace tosa {
 std::optional<Value> createZeroPointTensor(OpBuilder &builder, Location loc,
                                            Type srcElemType, int64_t zp = 0);
 
+// Create a pad-const const tensor with value of `val` of required data-type
+Value createPadConstTensor(OpBuilder &builder, Location loc, Value src,
+                           int32_t val = 0);
+
 } // namespace tosa
 } // namespace mlir
 

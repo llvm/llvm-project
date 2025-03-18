@@ -2077,8 +2077,9 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                         location_result->GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
-                      byte_size =
-                          var_sp->GetType()->GetByteSize(nullptr).value_or(0);
+                      byte_size = llvm::expectedToOptional(
+                                      var_sp->GetType()->GetByteSize(nullptr))
+                                      .value_or(0);
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
@@ -3622,9 +3623,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       DWARFFormValue::IsDataForm(const_value_form.Form());
   if (use_type_size_for_value && type_sp->GetType()) {
     DWARFExpression *location = location_list.GetMutableExpressionAtAddress();
-    location->UpdateValue(const_value_form.Unsigned(),
-                          type_sp->GetType()->GetByteSize(nullptr).value_or(0),
-                          die.GetCU()->GetAddressByteSize());
+    location->UpdateValue(
+        const_value_form.Unsigned(),
+        llvm::expectedToOptional(type_sp->GetType()->GetByteSize(nullptr))
+            .value_or(0),
+        die.GetCU()->GetAddressByteSize());
   }
 
   return std::make_shared<Variable>(

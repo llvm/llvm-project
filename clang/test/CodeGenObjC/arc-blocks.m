@@ -422,16 +422,16 @@ void test11b(void) {
 @implementation Test12
 @synthesize ablock, nblock;
 // CHECK:    define internal ptr @"\01-[Test12 ablock]"(
-// CHECK:    call ptr @objc_getProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef {{%.*}}, i1 noundef zeroext true)
+// CHECK:    call ptr @objc_getProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef 0, i1 noundef zeroext true)
 
 // CHECK:    define internal void @"\01-[Test12 setAblock:]"(
-// CHECK:    call void @objc_setProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef {{%.*}}, ptr noundef {{%.*}}, i1 noundef zeroext true, i1 noundef zeroext true)
+// CHECK:    call void @objc_setProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef 0, ptr noundef {{%.*}}, i1 noundef zeroext true, i1 noundef zeroext true)
 
 // CHECK:    define internal ptr @"\01-[Test12 nblock]"(
-// CHECK:    %add.ptr = getelementptr inbounds i8, ptr %0, i64 %ivar
+// CHECK:    %add.ptr = getelementptr inbounds i8, ptr %0, i64 8
 
 // CHECK:    define internal void @"\01-[Test12 setNblock:]"(
-// CHECK:    call void @objc_setProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef {{%.*}}, ptr noundef {{%.*}}, i1 noundef zeroext false, i1 noundef zeroext true)
+// CHECK:    call void @objc_setProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef 8, ptr noundef {{%.*}}, i1 noundef zeroext false, i1 noundef zeroext true)
 @end
 
 void test13(id x) {

@@ -984,6 +984,23 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 #undef LCALLNAME5
   }
 
+  if (Subtarget->outlineAtomics() && !Subtarget->hasLSFE()) {
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::bf16, LibCall);
+  }
+
   if (Subtarget->hasLSE128()) {
     // Custom lowering because i128 is not legal. Must be replaced by 2x64
     // values. ATOMIC_LOAD_AND also needs op legalisation to emit LDCLRP.
@@ -1700,6 +1717,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Legal);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
@@ -7906,7 +7924,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  DenseMap<unsigned, SDValue> CopiedRegs;
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
   // At this point, Ins[].VT may already be promoted to i32. To correctly
@@ -10686,6 +10703,25 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     return convertFromScalableVector(DAG, VT, Res);
   }
 
+  // With SVE, but without Neon, extend the scalars to scalable vectors and use
+  // a SVE FCOPYSIGN.
+  if (!VT.isVector() && !Subtarget->isNeonAvailable() &&
+      Subtarget->isSVEorStreamingSVEAvailable()) {
+    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64 && VT != MVT::bf16)
+      return SDValue();
+    EVT SVT = getPackedSVEVectorVT(VT);
+
+    SDValue Ins1 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, DAG.getUNDEF(SVT), In1,
+                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue Ins2 =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, SVT, DAG.getUNDEF(SVT), In2,
+                    DAG.getConstant(0, DL, MVT::i64));
+    SDValue FCS = DAG.getNode(ISD::FCOPYSIGN, DL, SVT, Ins1, Ins2);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, FCS,
+                       DAG.getConstant(0, DL, MVT::i64));
+  }
+
   auto BitCast = [this](EVT VT, SDValue Op, SelectionDAG &DAG) {
     if (VT.isScalableVector())
       return getSVESafeBitCast(VT, Op, DAG);
@@ -10788,7 +10824,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     if (VT == MVT::i32)
       AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, AddV,
                          DAG.getConstant(0, DL, MVT::i64));
-    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
+    else
+      AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                         DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, AddV),
+                         DAG.getConstant(0, DL, MVT::i64));
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
@@ -10797,7 +10836,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
     SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v16i8, CtPop);
-    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
+    AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
+                       DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v2i64, AddV),
+                       DAG.getConstant(0, DL, MVT::i64));
+    AddV = DAG.getZExtOrTrunc(AddV, DL, VT);
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
@@ -16905,14 +16947,18 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     // most one extra extend step is needed and using tbl is not profitable.
     // Similarly, bail out if partial_reduce(acc, zext(i8)) can be lowered to a
     // udot instruction.
-    if (SrcWidth * 4 <= DstWidth && I->hasOneUser()) {
-      auto *SingleUser = cast<Instruction>(*I->user_begin());
-      if (match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
-          (match(SingleUser,
-                 m_Intrinsic<Intrinsic::experimental_vector_partial_reduce_add>(
-                     m_Value(), m_Specific(I))) &&
-           !shouldExpandPartialReductionIntrinsic(
-               cast<IntrinsicInst>(SingleUser))))
+    if (SrcWidth * 4 <= DstWidth) {
+      if (all_of(I->users(), [&](auto *U) {
+            auto *SingleUser = cast<Instruction>(&*U);
+            return (
+                match(SingleUser, m_c_Mul(m_Specific(I), m_SExt(m_Value()))) ||
+                (match(SingleUser,
+                       m_Intrinsic<
+                           Intrinsic::experimental_vector_partial_reduce_add>(
+                           m_Value(), m_Specific(I))) &&
+                 !shouldExpandPartialReductionIntrinsic(
+                     cast<IntrinsicInst>(SingleUser))));
+          }))
         return false;
     }
 
@@ -17459,7 +17505,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
       if (UseScalable)
         Shuffle = Builder.CreateInsertVector(
-            STVTy, UndefValue::get(STVTy), Shuffle,
+            STVTy, PoisonValue::get(STVTy), Shuffle,
             ConstantInt::get(Type::getInt64Ty(STVTy->getContext()), 0));
 
       Ops.push_back(Shuffle);
@@ -23892,6 +23938,20 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   return Chain;
 }
 
+static unsigned getFPSubregForVT(EVT VT) {
+  assert(VT.isSimple() && "Expected simple VT");
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::f16:
+    return AArch64::hsub;
+  case MVT::f32:
+    return AArch64::ssub;
+  case MVT::f64:
+    return AArch64::dsub;
+  default:
+    llvm_unreachable("Unexpected VT!");
+  }
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -23952,15 +24012,58 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
 
-  if (ST->isTruncatingStore()) {
-    EVT StoreVT = ST->getMemoryVT();
-    if (!isHalvingTruncateOfLegalScalableType(ValueVT, StoreVT))
-      return SDValue();
+  if (ST->isTruncatingStore() &&
+      isHalvingTruncateOfLegalScalableType(ValueVT, MemVT)) {
     if (SDValue Rshrnb =
             trySimplifySrlAddToRshrnb(ST->getOperand(1), DAG, Subtarget)) {
       return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
-                               StoreVT, ST->getMemOperand());
+                               MemVT, ST->getMemOperand());
     }
+  }
+
+  // This is an integer vector_extract_elt followed by a (possibly truncating)
+  // store. We may be able to replace this with a store of an FP subregister.
+  if (DCI.isAfterLegalizeDAG() && ST->isUnindexed() &&
+      Value.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+
+    SDValue Vector = Value.getOperand(0);
+    SDValue ExtIdx = Value.getOperand(1);
+    EVT VectorVT = Vector.getValueType();
+    EVT ElemVT = VectorVT.getVectorElementType();
+    if (!ValueVT.isInteger() || ElemVT == MVT::i8 || MemVT == MVT::i8)
+      return SDValue();
+    if (ValueVT != MemVT && !ST->isTruncatingStore())
+      return SDValue();
+
+    // Heuristic: If there are other users of integer scalars extracted from
+    // this vector that won't fold into the store -- abandon folding. Applying
+    // this fold may extend the vector lifetime and disrupt paired stores.
+    for (const auto &Use : Vector->uses()) {
+      if (Use.getResNo() != Vector.getResNo())
+        continue;
+      const SDNode *User = Use.getUser();
+      if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          (!User->hasOneUse() ||
+           (*User->user_begin())->getOpcode() != ISD::STORE))
+        return SDValue();
+    }
+
+    EVT FPElemVT = EVT::getFloatingPointVT(ElemVT.getSizeInBits());
+    EVT FPVectorVT = VectorVT.changeVectorElementType(FPElemVT);
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, FPVectorVT, Vector);
+    SDValue Ext =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, FPElemVT, Cast, ExtIdx);
+
+    EVT FPMemVT = EVT::getFloatingPointVT(MemVT.getSizeInBits());
+    if (ST->isTruncatingStore() && FPMemVT != FPElemVT) {
+      SDValue Trunc = DAG.getTargetExtractSubreg(getFPSubregForVT(FPMemVT), DL,
+                                                 FPMemVT, Ext);
+      return DAG.getStore(ST->getChain(), DL, Trunc, ST->getBasePtr(),
+                          ST->getMemOperand());
+    }
+
+    return DAG.getStore(ST->getChain(), DL, Ext, ST->getBasePtr(),
+                        ST->getMemOperand());
   }
 
   return SDValue();
@@ -27876,6 +27979,12 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
                        AI->getOperation() == AtomicRMWInst::Or ||
                        AI->getOperation() == AtomicRMWInst::And);
   if (CanUseLSE128)
+    return AtomicExpansionKind::None;
+
+  // If LSFE available, use atomic FP instructions in preference to expansion
+  if (Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
+                               AI->getOperation() == AtomicRMWInst::FMax ||
+                               AI->getOperation() == AtomicRMWInst::FMin))
     return AtomicExpansionKind::None;
 
   // Nand is not supported in LSE.

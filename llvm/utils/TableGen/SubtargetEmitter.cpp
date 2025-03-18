@@ -1029,9 +1029,9 @@ void SubtargetEmitter::expandProcResources(
   for (unsigned I = 0, E = PRVec.size(); I != E; ++I) {
     const Record *PRDef = PRVec[I];
     ConstRecVec SubResources;
-    if (PRDef->isSubClassOf("ProcResGroup"))
+    if (PRDef->isSubClassOf("ProcResGroup")) {
       SubResources = PRDef->getValueAsListOfDefs("Resources");
-    else {
+    } else {
       SubResources.push_back(PRDef);
       PRDef = SchedModels.findProcResUnits(PRDef, PM, PRDef->getLoc());
       for (const Record *SubDef = PRDef;
@@ -1053,13 +1053,11 @@ void SubtargetEmitter::expandProcResources(
       if (PR == PRDef || !PR->isSubClassOf("ProcResGroup"))
         continue;
       ConstRecVec SuperResources = PR->getValueAsListOfDefs("Resources");
-      ConstRecIter SubI = SubResources.begin(), SubE = SubResources.end();
-      for (; SubI != SubE; ++SubI) {
-        if (!is_contained(SuperResources, *SubI)) {
-          break;
-        }
-      }
-      if (SubI == SubE) {
+      bool AllContained =
+          all_of(SubResources, [SuperResources](const Record *SubResource) {
+            return is_contained(SuperResources, SubResource);
+          });
+      if (AllContained) {
         PRVec.push_back(PR);
         ReleaseAtCycles.push_back(ReleaseAtCycles[I]);
         AcquireAtCycles.push_back(AcquireAtCycles[I]);

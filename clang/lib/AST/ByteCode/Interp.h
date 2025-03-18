@@ -137,6 +137,9 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr);
 
+bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                 AccessKinds AK);
+
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
@@ -159,6 +162,7 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
+bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -2431,9 +2435,12 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   // Ensure the This pointer has been cast to the correct base.
   if (!This.isDummy()) {
     assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
-    assert(This.getRecord());
+    [[maybe_unused]] const Record *R = This.getRecord();
+    if (!R)
+      R = This.narrow().getRecord();
+    assert(R);
     assert(
-        This.getRecord()->getDecl() ==
+        R->getDecl() ==
         cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
   }
 
@@ -2776,8 +2783,29 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
+  ++S.SpeculationDepth;
+  if (S.SpeculationDepth != 1)
+    return true;
+
+  assert(S.PrevDiags == nullptr);
+  S.PrevDiags = S.getEvalStatus().Diag;
+  S.getEvalStatus().Diag = nullptr;
+  return true;
+}
+inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
+  assert(S.SpeculationDepth != 0);
+  --S.SpeculationDepth;
+  if (S.SpeculationDepth == 0) {
+    S.getEvalStatus().Diag = S.PrevDiags;
+    S.PrevDiags = nullptr;
+  }
+  return true;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
+
 inline bool SideEffect(InterpState &S, CodePtr OpPC) {
   return S.noteSideEffect();
 }
@@ -3079,6 +3107,11 @@ bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
                const Type *TypeInfoType);
 bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType);
 bool DiagTypeid(InterpState &S, CodePtr OpPC);
+
+inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  return CheckActive(S, OpPC, Ptr, AK_Destroy);
+}
 
 //===----------------------------------------------------------------------===//
 // Read opcode arguments

@@ -709,7 +709,7 @@ public:
   bool shouldUseMotorolaIntegers() const { return UseMotorolaIntegers; }
 
   StringRef getVariantKindName(uint32_t Kind) const;
-  uint32_t getVariantKindForName(StringRef Name) const;
+  std::optional<uint32_t> getVariantKindForName(StringRef Name) const;
 };
 
 } // end namespace llvm
