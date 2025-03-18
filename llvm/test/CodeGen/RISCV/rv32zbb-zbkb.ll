@@ -438,3 +438,255 @@ define i1 @andn_snez_i64(i64 %a, i64 %b) nounwind {
   %cmpeq = icmp ne i64 %and, %b
   ret i1 %cmpeq
 }
+
+define i32 @and_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
+; CHECK-LABEL: and_hoisted_not_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a2, .LBB24_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:  .LBB24_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i32 %a, %x
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i32 @and_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
+; CHECK-LABEL: and_hoisted_not_i32_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a2, .LBB25_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:  .LBB25_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i32 %x, %a
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i64 @and_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
+; CHECK-LABEL: and_hoisted_not_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a4, .LBB26_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    and a0, a2, a0
+; CHECK-NEXT:    and a1, a3, a1
+; CHECK-NEXT:  .LBB26_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i64 %a, %x
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i64 @and_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
+; CHECK-LABEL: and_hoisted_not_i64_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a4, .LBB27_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    and a1, a1, a3
+; CHECK-NEXT:  .LBB27_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = and i64 %x, %a
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i32 @or_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
+; CHECK-LABEL: or_hoisted_not_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a2, .LBB28_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:  .LBB28_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i32 %a, %x
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i32 @or_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
+; CHECK-LABEL: or_hoisted_not_i32_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a2, .LBB29_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:  .LBB29_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i32 %x, %a
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i64 @or_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
+; CHECK-LABEL: or_hoisted_not_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a4, .LBB30_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    or a0, a2, a0
+; CHECK-NEXT:    or a1, a3, a1
+; CHECK-NEXT:  .LBB30_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i64 %a, %x
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i64 @or_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
+; CHECK-LABEL: or_hoisted_not_i64_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a4, .LBB31_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    or a1, a1, a3
+; CHECK-NEXT:  .LBB31_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = or i64 %x, %a
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i32 @xor_hoisted_not_i32(i32 %x, i32 %m, i1 zeroext %cond) {
+; CHECK-LABEL: xor_hoisted_not_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a2, .LBB32_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    xor a0, a1, a0
+; CHECK-NEXT:  .LBB32_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i32 %a, %x
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i32 @xor_hoisted_not_i32_swapped(i32 %x, i32 %m, i1 zeroext %cond) {
+; CHECK-LABEL: xor_hoisted_not_i32_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a2, .LBB33_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:  .LBB33_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i32 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i32 %x, %a
+  ret i32 %masked
+
+identity:
+  ret i32 %x
+}
+
+define i64 @xor_hoisted_not_i64(i64 %x, i64 %m, i1 zeroext %cond) {
+; CHECK-LABEL: xor_hoisted_not_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a4, .LBB34_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    xor a0, a2, a0
+; CHECK-NEXT:    xor a1, a3, a1
+; CHECK-NEXT:  .LBB34_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i64 %a, %x
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
+
+define i64 @xor_hoisted_not_i64_swapped(i64 %x, i64 %m, i1 zeroext %cond) {
+; CHECK-LABEL: xor_hoisted_not_i64_swapped:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beqz a4, .LBB35_2
+; CHECK-NEXT:  # %bb.1: # %mask
+; CHECK-NEXT:    not a3, a3
+; CHECK-NEXT:    not a2, a2
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    xor a1, a1, a3
+; CHECK-NEXT:  .LBB35_2: # %identity
+; CHECK-NEXT:    ret
+  %a = xor i64 %m, -1
+  br i1 %cond, label %mask, label %identity
+
+mask:
+  %masked = xor i64 %x, %a
+  ret i64 %masked
+
+identity:
+  ret i64 %x
+}
