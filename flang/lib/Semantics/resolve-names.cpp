@@ -1758,14 +1758,46 @@ void OmpVisitor::ProcessReductionSpecifier(
           &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
     }
   }
-  // Creating a new scope in case the combiner expression (or clauses) use
-  // reerved identifiers, like "omp_in". This is a temporary solution until
-  // we deal with these in a more thorough way.
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::OmpTypeNameList>(spec.t));
-  Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
-  Walk(clauses);
-  PopScope();
+
+  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
+
+  // Create a temporary variable declaration for the four variables
+  // used in the reduction specifier and initializer (omp_out, omp_in,
+  // omp_priv and omp_orig), with the type in the  typeList.
+  //
+  // In theory it would be possible to create only variables that are
+  // actually used, but that requires walking the entire parse-tree of the
+  // expressions, and finding the relevant variables [there may well be other
+  // variables involved too].
+  //
+  // This allows doing semantic analysis where the type is a derived type
+  // e.g omp_out%x = omp_out%x + omp_in%x.
+  //
+  // These need to be temporary (in their own scope). If they are created
+  // as variables in the outer scope, if there's more than one type in the
+  // typelist, duplicate symbols will be reported.
+  const parser::CharBlock ompVarNames[]{
+      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
+
+  for (auto &t : typeList.v) {
+    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    BeginDeclTypeSpec();
+    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
+    Walk(t.u);
+
+    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
+    assert(typeSpec && "We should have a type here");
+
+    for (auto &nm : ompVarNames) {
+      ObjectEntityDetails details{};
+      details.set_type(*typeSpec);
+      MakeSymbol(nm, Attrs{}, std::move(details));
+    }
+    EndDeclTypeSpec();
+    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(clauses);
+    PopScope();
+  }
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {

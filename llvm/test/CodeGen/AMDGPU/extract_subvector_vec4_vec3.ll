@@ -25,11 +25,11 @@ define amdgpu_hs void @main(ptr addrspace(6) inreg %arg) {
   ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[COPY4]], [[COPY5]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96) into `ptr addrspace(8) poison`, align 1, addrspace 8)
   ; GCN-NEXT:   S_ENDPGM 0
 main_body:
-  %tmp25 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) poison, i32 undef, i32 0, i32 0)
+  %tmp25 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) poison, i32 poison, i32 0, i32 0)
   %tmp27 = bitcast <4 x float> %tmp25 to <16 x i8>
   %tmp28 = shufflevector <16 x i8> %tmp27, <16 x i8> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %tmp29 = bitcast <12 x i8> %tmp28 to <3 x i32>
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %tmp29, ptr addrspace(8) poison, i32 undef, i32 0, i32 0) #3
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %tmp29, ptr addrspace(8) poison, i32 poison, i32 0, i32 0) #3
   ret void
 }
 
