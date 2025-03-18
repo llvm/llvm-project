@@ -208,8 +208,10 @@ Status ProcessAIXCore::DoLoadCore() {
         exe_module_spec.GetArchitecture() = arch;
         exe_module_spec.GetFileSpec().SetFile(m_aixcore_header.User.process.pi_comm,
                 FileSpec::Style::native);
-        exe_module_sp = GetTarget().GetOrCreateModule(exe_module_spec, true);
-        GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+        exe_module_sp = 
+            GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
+        if (exe_module_sp)
+            GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
     }
     
     return error;
@@ -232,8 +234,11 @@ void ProcessAIXCore::RefreshStateAfterStop() {}
 // Process Memory
 size_t ProcessAIXCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                   Status &error) {
+  if(addr == LLDB_INVALID_ADDRESS)
+      return 0;
+
   if (lldb::ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+      addr = abi_sp->FixAnyAddress(addr);
 
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.

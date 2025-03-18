@@ -235,17 +235,19 @@ bool DynamicLoaderAIXDYLD::IsCoreFile() const {
 void DynamicLoaderAIXDYLD::FillCoreLoaderData(lldb_private::DataExtractor &data,
         uint64_t loader_offset, uint64_t loader_size ) {
     
+    Log *log = GetLog(LLDBLog::DynamicLoader);
+    LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
     static char *buffer = (char *)malloc(loader_size);
-    struct ld_info ldinfo[64];
-    char *buffer_complete;
+    if (buffer == NULL) {
+        LLDB_LOG(log, "Buffer allocation failed error: {0}", std::strerror(errno));
+        return;
+    }
+    struct ld_info ldinfo[64] = {};
     struct ld_info *ptr;
     int i = 0;
     
-    Log *log = GetLog(LLDBLog::DynamicLoader);
-    LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
     ByteOrder byteorder = data.GetByteOrder();
     data.ExtractBytes(loader_offset, loader_size, eByteOrderBig, buffer);
-    buffer_complete = buffer + loader_size;
     ldinfo[0].ldinfo_next = 1;
     
     while (ldinfo[i++].ldinfo_next != 0) {

@@ -110,7 +110,7 @@ bool AIXCore64Header::ParseCoreHeader(lldb_private::DataExtractor &data,
     ret = ParseThreadContext(data, offset);
     ret = ParseUserData(data, &offset_to_user);
 
-    return true;
+    return ret;
 
 }
         

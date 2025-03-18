@@ -73,8 +73,6 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
 
       assert(data_sp);
 
-      const uint8_t *magic = data_sp->GetBytes() + data_offset;
-
       // Update the data to contain the entire file if it doesn't already
       if (data_sp->GetByteSize() < length) {
           data_sp = MapFileDataWritable(*file, length, file_offset);
@@ -82,7 +80,6 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
               return nullptr;
           data_offset = 0;
           mapped_writable = true;
-          magic = data_sp->GetBytes();
       }
 
       // If we didn't map the data as writable take ownership of the buffer.
@@ -90,7 +87,6 @@ ObjectFile *ObjectFileAIXCore::CreateInstance(const lldb::ModuleSP &module_sp,
           data_sp = std::make_shared<DataBufferHeap>(data_sp->GetBytes(),
                   data_sp->GetByteSize());
           data_offset = 0;
-          magic = data_sp->GetBytes();
       }
 
       std::unique_ptr<ObjectFileAIXCore> objfile_up(new ObjectFileAIXCore(
@@ -124,19 +120,22 @@ size_t ObjectFileAIXCore::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-static uint32_t AIXCoreHeaderCheckFromMagic(uint32_t magic) {
+static bool AIXCoreHeaderCheckFromMagic(uint32_t magic) {
 
     Log *log = GetLog(LLDBLog::Modules);
+    bool ret = false;
     switch (magic) {
         case AIXCORE32: 
             LLDB_LOGF(log, "ObjectFileAIXCore: 32-bit not supported");
             break;
         case AIXCORE64:
             m_is_core = true;
-            return 1; 
+            ret = true; 
+            break;
+        default:
             break;
     }
-    return 0;
+    return ret;
 }
 
 bool ObjectFileAIXCore::MagicBytesMatch(DataBufferSP &data_sp,
@@ -147,7 +146,7 @@ bool ObjectFileAIXCore::MagicBytesMatch(DataBufferSP &data_sp,
   lldb::offset_t offset = 0;
   offset += 4; // Skipping to the coredump version
   uint32_t magic = data.GetU32(&offset);
-  return AIXCoreHeaderCheckFromMagic(magic) != 0;
+  return AIXCoreHeaderCheckFromMagic(magic);
 }
 
 bool ObjectFileAIXCore::ParseHeader() {
