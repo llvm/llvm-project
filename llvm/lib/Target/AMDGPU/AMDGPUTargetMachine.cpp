@@ -517,6 +517,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
+  initializeAMDGPUHotBlockRematerializePass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);

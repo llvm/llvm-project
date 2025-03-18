@@ -1332,6 +1332,9 @@ public:
 
   bool isLowLatencyInstruction(const MachineInstr &MI) const;
   bool isHighLatencyDef(int Opc) const override;
+  bool isHighLatencyInstruction(const MachineInstr& MI) const {
+    return isHighLatencyDef(MI.getOpcode());
+  }
 
   /// Return the descriptor of the target-specific machine instruction
   /// that corresponds to the specified pseudo or native opcode.
