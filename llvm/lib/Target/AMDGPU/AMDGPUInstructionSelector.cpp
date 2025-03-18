@@ -4310,7 +4310,7 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   }};
 }
 
-enum SrcStatus {
+enum class SrcStatus {
   IS_SAME,
   IS_UPPER_HALF,
   IS_LOWER_HALF,
@@ -4372,18 +4372,18 @@ static bool retOpStat(const MachineOperand *Op, SrcStatus Stat,
 
 SrcStatus getNegStatus(SrcStatus S) {
   switch (S) {
-  case IS_SAME:
-    return IS_NEG;
-  case IS_UPPER_HALF:
-    return IS_UPPER_HALF_NEG;
-  case IS_LOWER_HALF:
-    return IS_LOWER_HALF_NEG;
-  case IS_NEG:
-    return IS_SAME;
-  case IS_UPPER_HALF_NEG:
-    return IS_UPPER_HALF;
-  case IS_LOWER_HALF_NEG:
-    return IS_LOWER_HALF;
+  case SrcStatus::IS_SAME:
+    return SrcStatus::IS_NEG;
+  case SrcStatus::IS_UPPER_HALF:
+    return SrcStatus::IS_UPPER_HALF_NEG;
+  case SrcStatus::IS_LOWER_HALF:
+    return SrcStatus::IS_LOWER_HALF_NEG;
+  case SrcStatus::IS_NEG:
+    return SrcStatus::IS_SAME;
+  case SrcStatus::IS_UPPER_HALF_NEG:
+    return SrcStatus::IS_UPPER_HALF;
+  case SrcStatus::IS_LOWER_HALF_NEG:
+    return SrcStatus::IS_LOWER_HALF;
   }
   llvm_unreachable("unexpected SrcStatus");
 }
@@ -4405,7 +4405,7 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
 
   unsigned Opc = MI->getOpcode();
 
-  // Handle general Opc cases
+  // Handle general Opc cases.
   switch (Opc) {
   case AMDGPU::G_BITCAST:
   case AMDGPU::G_CONSTANT:
@@ -4413,35 +4413,38 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
   case AMDGPU::COPY:
     return retOpStat(&MI->getOperand(1), Curr.second, Curr);
   case AMDGPU::G_FNEG:
-    // XXXX + 3 = XXXX_NEG, (XXXX_NEG + 3) mod 3 = XXXX
     return retOpStat(&MI->getOperand(1), getNegStatus(Curr.second), Curr);
+  default:
+    break;
   }
 
-  // Calc next Stat from current Stat
+  // Calc next Stat from current Stat.
   switch (Curr.second) {
-  case IS_SAME:
+  case SrcStatus::IS_SAME:
     if (isTruncHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, Curr);
+      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
     break;
-  case IS_NEG:
+  case SrcStatus::IS_NEG:
     if (isTruncHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, Curr);
+      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG, Curr);
     break;
-  case IS_UPPER_HALF:
+  case SrcStatus::IS_UPPER_HALF:
     if (isShlHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, Curr);
+      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
     break;
-  case IS_LOWER_HALF:
+  case SrcStatus::IS_LOWER_HALF:
     if (isLshrHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), IS_UPPER_HALF, Curr);
+      return retOpStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF, Curr);
     break;
-  case IS_UPPER_HALF_NEG:
+  case SrcStatus::IS_UPPER_HALF_NEG:
     if (isShlHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, Curr);
+      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG, Curr);
     break;
-  case IS_LOWER_HALF_NEG:
+  case SrcStatus::IS_LOWER_HALF_NEG:
     if (isLshrHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), IS_UPPER_HALF_NEG, Curr);
+      return retOpStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF_NEG, Curr);
+    break;
+  default:
     break;
   }
   return false;
@@ -4451,13 +4454,13 @@ SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
             bool OnlyLastSameOrNeg = false, int MaxDepth = 6) {
   int Depth = 0;
-  std::pair<const MachineOperand *, SrcStatus> Curr = {Op, IS_SAME};
+  std::pair<const MachineOperand *, SrcStatus> Curr = {Op, SrcStatus::IS_SAME};
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist;
 
   while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
     Depth++;
-    if ((OnlyLastSameOrNeg &&
-         (Curr.second != IS_SAME && Curr.second != IS_NEG)))
+    if ((OnlyLastSameOrNeg && (Curr.second != SrcStatus::IS_SAME &&
+                               Curr.second != SrcStatus::IS_NEG)))
       break;
 
     if (!OnlyLastSameOrNeg)
@@ -4496,35 +4499,35 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
                           const MachineRegisterInfo &MRI) {
   if (NewOp->isReg()) {
     if (isSameBitWidth(NewOp, RootOp, MRI)) {
-      // IS_LOWER_HALF remain 0
-      if (HiStat == IS_UPPER_HALF_NEG) {
+      // SrcStatus::IS_LOWER_HALF remain 0.
+      if (HiStat == SrcStatus::IS_UPPER_HALF_NEG) {
         Mods ^= SISrcMods::NEG_HI;
         Mods |= SISrcMods::OP_SEL_1;
-      } else if (HiStat == IS_UPPER_HALF) {
+      } else if (HiStat == SrcStatus::IS_UPPER_HALF) {
         Mods |= SISrcMods::OP_SEL_1;
-      } else if (HiStat == IS_LOWER_HALF_NEG) {
+      } else if (HiStat == SrcStatus::IS_LOWER_HALF_NEG) {
         Mods ^= SISrcMods::NEG_HI;
       }
-      if (LoStat == IS_UPPER_HALF_NEG) {
+      if (LoStat == SrcStatus::IS_UPPER_HALF_NEG) {
         Mods ^= SISrcMods::NEG;
         Mods |= SISrcMods::OP_SEL_0;
-      } else if (LoStat == IS_UPPER_HALF) {
+      } else if (LoStat == SrcStatus::IS_UPPER_HALF) {
         Mods |= SISrcMods::OP_SEL_0;
-      } else if (LoStat == IS_UPPER_HALF_NEG) {
+      } else if (LoStat == SrcStatus::IS_UPPER_HALF_NEG) {
         Mods |= SISrcMods::NEG;
       }
       return true;
     }
   } else {
-    if ((HiStat == IS_SAME || HiStat == IS_NEG) &&
-        (LoStat == IS_SAME || LoStat == IS_NEG) &&
+    if ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_NEG) &&
+        (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_NEG) &&
         isInlinableConstant(*NewOp, TII)) {
-      if (HiStat == IS_NEG)
+      if (HiStat == SrcStatus::IS_NEG)
         Mods ^= SISrcMods::NEG_HI;
-      if (LoStat == IS_NEG)
+      if (LoStat == SrcStatus::IS_NEG)
         Mods ^= SISrcMods::NEG;
       // opsel = opsel_hi = 0, since the upper half and lower half both
-      // the same as the target inlinable constant
+      // the same as the target inlinable constant.
       return true;
     }
   }
@@ -4543,7 +4546,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
-  if (Stat.second == IS_NEG)
+  if (Stat.second == SrcStatus::IS_NEG)
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
 
   Op = Stat.first;
@@ -4611,7 +4614,7 @@ getVReg(const MachineOperand *NewOp, const MachineOperand *RootOp,
         const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
         const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
   // RootOp can only be VGPR or SGPR (some hand written cases such as
-  // inst-select-ashr.v2s16.mir::ashr_v2s16_vs)
+  // inst-select-ashr.v2s16.mir::ashr_v2s16_vs).
   if (checkRB(RootOp, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
       checkRB(NewOp, AMDGPU::VGPRRegBankID, RBI, MRI, TRI))
     return NewOp;
@@ -4619,7 +4622,7 @@ getVReg(const MachineOperand *NewOp, const MachineOperand *RootOp,
   MachineInstr *MI = MRI.getVRegDef(RootOp->getReg());
   if (MI->getOpcode() == AMDGPU::COPY &&
       isSameOperand(NewOp, &MI->getOperand(1))) {
-    // RootOp is VGPR, NewOp is not VGPR, but RootOp = COPY NewOp
+    // RootOp is VGPR, NewOp is not VGPR, but RootOp = COPY NewOp.
     return RootOp;
   }
 
