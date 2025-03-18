@@ -484,13 +484,6 @@ private:
   /// spilling.
   bool IncreaseOccupancy;
 
-  /// Determines whether there is excess VGPR pressure in \p RP w.r.t. \p
-  /// MaxVGPRs. If there is, \p ExcessArchVGPRs is set to the number of
-  /// ArchVGPRs one must save to eliminate the excess and \p AGPRLimited is set
-  /// to true if AGPR pressure alone causes an excess.
-  bool hasExcessVGPRs(const GCNRegPressure &RP, unsigned MaxVGPRs,
-                      unsigned &ExcessArchVGPRs, bool &AGPRLimited);
-
   /// Returns whether remat can reduce spilling or increase function occupancy
   /// by 1 through rematerialization. If it can do one, collects instructions in
   /// PreRARematStage::Rematerializations and sets the target occupancy in
