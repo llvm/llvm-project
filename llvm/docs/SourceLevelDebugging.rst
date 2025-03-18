@@ -75,7 +75,7 @@ debug info formats such as STABS.
 
 SamplePGO (also known as `AutoFDO <https://gcc.gnu.org/wiki/AutoFDO>`_)
 is a variant of profile guided optimizations which uses hardware sampling based
-profilers to collect branch frequency data to with low overhead in production
+profilers to collect branch frequency data with low overhead in production
 environments. It relies on debug information to associate profile information
 to LLVM IR which is then used to guide optimization heuristics.
 
