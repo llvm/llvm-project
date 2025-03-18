@@ -1047,6 +1047,16 @@ struct ReorderElementwiseOpsOnBroadcast final
 /// This may result in more efficient code when we extracting a single value
 /// from multi-element vector and also to help canonicalize 1-element vectors to
 /// scalars.
+/// ```
+///  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
+///  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+/// ```
+/// Gets converted to:
+/// ```
+///  %0 = vector.extract %arg0[1] : f32 from vector<4xf32>
+///  %1 = vector.extract %arg1[1] : f32 from vector<4xf32>
+///  %2 = arith.addf %0, %1 : f32
+/// ```
 class ExtractOpFromElementwise final
     : public OpRewritePattern<vector::ExtractOp> {
 public:
@@ -1061,7 +1071,7 @@ public:
         eltwise->getNumResults() != 1 || !eltwise->hasOneUse())
       return failure();
 
-    // Arguments and result types must match.
+    // Arguments types must match.
     if (!llvm::all_equal(eltwise->getOperandTypes()))
       return failure();
 
@@ -1072,7 +1082,7 @@ public:
 
     IRMapping mapping;
     Location loc = eltwise->getLoc();
-    for (auto &&[i, arg] : llvm::enumerate(eltwise->getOperands())) {
+    for (auto arg : eltwise->getOperands()) {
       Value newArg =
           rewriter.create<vector::ExtractOp>(loc, arg, op.getMixedPosition());
       mapping.map(arg, newArg);
