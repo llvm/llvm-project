@@ -74,6 +74,15 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- Similarly to GCC, Clang now supports constant expressions in
+  the strings of a GNU ``asm`` statement.
+
+  .. code-block:: c++
+
+    int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+    }
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -251,6 +260,9 @@ Improvements to Clang's diagnostics
 - The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers 
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
+- The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
+  methods which are marked as virtual inside a ``final`` class, and hence can
+  never be overridden.
 
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 

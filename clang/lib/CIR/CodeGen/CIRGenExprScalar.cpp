@@ -94,6 +94,210 @@ public:
 
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
 
+  // Unary Operators.
+  mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
+    LValue lv = cgf.emitLValue(e->getSubExpr());
+    return emitScalarPrePostIncDec(e, lv, false, false);
+  }
+  mlir::Value VisitUnaryPostInc(const UnaryOperator *e) {
+    LValue lv = cgf.emitLValue(e->getSubExpr());
+    return emitScalarPrePostIncDec(e, lv, true, false);
+  }
+  mlir::Value VisitUnaryPreDec(const UnaryOperator *e) {
+    LValue lv = cgf.emitLValue(e->getSubExpr());
+    return emitScalarPrePostIncDec(e, lv, false, true);
+  }
+  mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
+    LValue lv = cgf.emitLValue(e->getSubExpr());
+    return emitScalarPrePostIncDec(e, lv, true, true);
+  }
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                      bool isInc, bool isPre) {
+    if (cgf.getLangOpts().OpenMP)
+      cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
+
+    QualType type = e->getSubExpr()->getType();
+
+    mlir::Value value;
+    mlir::Value input;
+
+    if (type->getAs<AtomicType>()) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Atomic inc/dec");
+      // TODO(cir): This is not correct, but it will produce reasonable code
+      // until atomic operations are implemented.
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      input = value;
+    } else {
+      value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getScalarVal();
+      input = value;
+    }
+
+    // NOTE: When possible, more frequent cases are handled first.
+
+    // Special case of integer increment that we have to check first: bool++.
+    // Due to promotion rules, we get:
+    //   bool++ -> bool = bool + 1
+    //          -> bool = (int)bool + 1
+    //          -> bool = ((int)bool + 1 != 0)
+    // An interesting aspect of this is that increment is always true.
+    // Decrement does not have this property.
+    if (isInc && type->isBooleanType()) {
+      value = builder.create<cir::ConstantOp>(cgf.getLoc(e->getExprLoc()),
+                                              cgf.convertType(type),
+                                              builder.getCIRBoolAttr(true));
+    } else if (type->isIntegerType()) {
+      QualType promotedType;
+      bool canPerformLossyDemotionCheck = false;
+      if (cgf.getContext().isPromotableIntegerType(type)) {
+        promotedType = cgf.getContext().getPromotedIntegerType(type);
+        assert(promotedType != type && "Shouldn't promote to the same type.");
+        canPerformLossyDemotionCheck = true;
+        canPerformLossyDemotionCheck &=
+            cgf.getContext().getCanonicalType(type) !=
+            cgf.getContext().getCanonicalType(promotedType);
+        canPerformLossyDemotionCheck &=
+            type->isIntegerType() && promotedType->isIntegerType();
+
+        // TODO(cir): Currently, we store bitwidths in CIR types only for
+        // integers. This might also be required for other types.
+
+        assert(
+            (!canPerformLossyDemotionCheck ||
+             type->isSignedIntegerOrEnumerationType() ||
+             promotedType->isSignedIntegerOrEnumerationType() ||
+             mlir::cast<cir::IntType>(cgf.convertType(type)).getWidth() ==
+                 mlir::cast<cir::IntType>(cgf.convertType(type)).getWidth()) &&
+            "The following check expects that if we do promotion to different "
+            "underlying canonical type, at least one of the types (either "
+            "base or promoted) will be signed, or the bitwidths will match.");
+      }
+
+      assert(!cir::MissingFeatures::sanitizers());
+      if (e->canOverflow() && type->isSignedIntegerOrEnumerationType()) {
+        value = emitIncDecConsiderOverflowBehavior(e, value, isInc);
+      } else {
+        cir::UnaryOpKind kind =
+            e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
+        // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
+        value = emitUnaryOp(e, kind, input);
+      }
+    } else if (const PointerType *ptr = type->getAs<PointerType>()) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec pointer");
+      return {};
+    } else if (type->isVectorType()) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector");
+      return {};
+    } else if (type->isRealFloatingType()) {
+      assert(!cir::MissingFeatures::CGFPOptionsRAII());
+
+      if (type->isHalfType() &&
+          !cgf.getContext().getLangOpts().NativeHalfType) {
+        cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec half");
+        return {};
+      }
+
+      if (mlir::isa<cir::SingleType, cir::DoubleType>(value.getType())) {
+        // Create the inc/dec operation.
+        // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
+        cir::UnaryOpKind kind =
+            (isInc ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec);
+        value = emitUnaryOp(e, kind, value);
+      } else {
+        cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
+        return {};
+      }
+    } else if (type->isFixedPointType()) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fixed point");
+      return {};
+    } else {
+      assert(type->castAs<ObjCObjectPointerType>());
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec ObjectiveC pointer");
+      return {};
+    }
+
+    CIRGenFunction::SourceLocRAIIObject sourceloc{
+        cgf, cgf.getLoc(e->getSourceRange())};
+
+    // Store the updated result through the lvalue
+    if (lv.isBitField()) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec bitfield");
+      return {};
+    } else {
+      cgf.emitStoreThroughLValue(RValue::get(value), lv);
+    }
+
+    // If this is a postinc, return the value read from memory, otherwise use
+    // the updated value.
+    return isPre ? value : input;
+  }
+
+  mlir::Value emitIncDecConsiderOverflowBehavior(const UnaryOperator *e,
+                                                 mlir::Value inVal,
+                                                 bool isInc) {
+    assert(!cir::MissingFeatures::opUnarySignedOverflow());
+    cir::UnaryOpKind kind =
+        e->isIncrementOp() ? cir::UnaryOpKind::Inc : cir::UnaryOpKind::Dec;
+    switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      return emitUnaryOp(e, kind, inVal);
+    case LangOptions::SOB_Undefined:
+      assert(!cir::MissingFeatures::sanitizers());
+      return emitUnaryOp(e, kind, inVal);
+      break;
+    case LangOptions::SOB_Trapping:
+      if (!e->canOverflow())
+        return emitUnaryOp(e, kind, inVal);
+      cgf.cgm.errorNYI(e->getSourceRange(), "inc/def overflow SOB_Trapping");
+      return {};
+    }
+    llvm_unreachable("Unexpected signed overflow behavior kind");
+  }
+
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e,
+                             QualType promotionType = QualType()) {
+    if (!promotionType.isNull())
+      cgf.cgm.errorNYI(e->getSourceRange(), "VisitUnaryPlus: promotionType");
+    assert(!cir::MissingFeatures::opUnaryPromotionType());
+    mlir::Value result = emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
+    return result;
+  }
+
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e,
+                              QualType promotionType = QualType()) {
+    if (!promotionType.isNull())
+      cgf.cgm.errorNYI(e->getSourceRange(), "VisitUnaryMinus: promotionType");
+    assert(!cir::MissingFeatures::opUnaryPromotionType());
+    mlir::Value result = emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus);
+    return result;
+  }
+
+  mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
+                                   cir::UnaryOpKind kind) {
+    ignoreResultAssign = false;
+
+    assert(!cir::MissingFeatures::opUnaryPromotionType());
+    mlir::Value operand = Visit(e->getSubExpr());
+
+    assert(!cir::MissingFeatures::opUnarySignedOverflow());
+
+    // NOTE: LLVM codegen will lower this directly to either a FNeg
+    // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
+    return emitUnaryOp(e, kind, operand);
+  }
+
+  mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
+                          mlir::Value input) {
+    return builder.create<cir::UnaryOp>(
+        cgf.getLoc(e->getSourceRange().getBegin()), input.getType(), kind,
+        input);
+  }
+
+  mlir::Value VisitUnaryNot(const UnaryOperator *e) {
+    ignoreResultAssign = false;
+    mlir::Value op = Visit(e->getSubExpr());
+    return emitUnaryOp(e, cir::UnaryOpKind::Not, op);
+  }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -187,4 +391,11 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   return builder.getConstant(
       loc, builder.getAttr<cir::IntAttr>(
                cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
+}
+
+mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *E,
+                                                    LValue LV, bool isInc,
+                                                    bool isPre) {
+  return ScalarExprEmitter(*this, builder)
+      .emitScalarPrePostIncDec(E, LV, isInc, isPre);
 }

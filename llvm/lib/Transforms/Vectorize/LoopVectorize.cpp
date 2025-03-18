@@ -1912,6 +1912,12 @@ public:
 
       SCEVCheckCond = SCEVExp.expandCodeForPredicate(
           &UnionPred, SCEVCheckBlock->getTerminator());
+      if (isa<Constant>(SCEVCheckCond)) {
+        // Clean up directly after expanding the predicate to a constant, to
+        // avoid further expansions re-using anything left over from SCEVExp.
+        SCEVExpanderCleaner SCEVCleaner(SCEVExp);
+        SCEVCleaner.cleanup();
+      }
     }
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
@@ -7466,6 +7472,16 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             SeenInstrs.insert(M);
         }
         continue;
+      }
+      // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
+      // cost model won't cost it whilst the legacy will.
+      if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
+        if (none_of(FOR->users(), [](VPUser *U) {
+              auto *VPI = dyn_cast<VPInstruction>(U);
+              return VPI && VPI->getOpcode() ==
+                                VPInstruction::FirstOrderRecurrenceSplice;
+            }))
+          return true;
       }
       // The VPlan-based cost model is more accurate for partial reduction and
       // comparing against the legacy cost isn't desirable.
