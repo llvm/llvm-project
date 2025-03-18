@@ -22,7 +22,7 @@ define void @Store1(ptr %p, i8 %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP8]] to ptr
@@ -76,7 +76,7 @@ define void @Store2(ptr %p, i16 %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP8]] to ptr
@@ -130,7 +130,7 @@ define void @Store4(ptr %p, i32 %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP8]] to ptr
@@ -184,7 +184,7 @@ define void @Store8(ptr %p, i64 %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP8]] to ptr
@@ -241,7 +241,7 @@ define void @Store16(ptr %p, i128 %x) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 8
 ; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP8]] to ptr
@@ -300,7 +300,7 @@ define i8 @Load1(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
@@ -342,7 +342,7 @@ define i16 @Load2(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
@@ -384,7 +384,7 @@ define i32 @Load4(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
@@ -426,7 +426,7 @@ define i64 @Load8(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
@@ -468,7 +468,7 @@ define i128 @Load16(ptr %p) sanitize_memory {
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
 ; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB6:.*]], label %[[BB7:.*]], !prof [[PROF1]]
