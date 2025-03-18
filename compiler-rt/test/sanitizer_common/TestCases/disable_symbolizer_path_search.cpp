@@ -2,7 +2,7 @@
 
 // RUN: %clangxx %s -o %t
 // RUN: echo $ASAN_SYMBOLIZER_PATH
-// RUN: env -u ASAN_SYMBOLIZER_PATH bash
+// RUN: export ASAN_SYMBOLIZER_PATH= TSAN_SYMBOLIZER_PATH= MSAN_SYMBOLIZER_PATH= UBSAN_SYMBOLIZER_PATH= 
 // RUN: echo $ASAN_SYMBOLIZER_PATH
 // RUN: %run %t 2>&1 | FileCheck %s
 
@@ -26,4 +26,3 @@ static void Symbolize() {
 int main() {
   Symbolize();
 }
-
