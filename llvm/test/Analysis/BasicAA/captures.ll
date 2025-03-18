@@ -45,7 +45,7 @@ declare ptr @capture_ret(ptr, ptr)
 
 ; CHECK-LABEL: capture_ret_only
 ; CHECK: MayAlias:	i8* %a, i8* %ret
-; CHECK: MayAlias:	i8* %b, i8* %ret
+; CHECK: NoAlias:	i8* %b, i8* %ret
 define void @capture_ret_only(ptr noalias %a, ptr noalias %b) {
   %ret = call ptr @capture_ret(ptr captures(ret: address, provenance) %a, ptr captures(none) %b)
   load i8, ptr %ret

@@ -713,7 +713,8 @@ CaptureInfo CallBase::getCaptureInfo(unsigned OpNo) const {
   return OBU.isDeoptOperandBundle() ? CaptureInfo::none() : CaptureInfo::all();
 }
 
-bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
+void CallBase::getArgumentsWithAdditionalReturnCaptureComponents(
+    SmallVectorImpl<Value *> &Args) const {
   for (unsigned I = 0, E = arg_size(); I < E; ++I) {
     if (!getArgOperand(I)->getType()->isPointerTy())
       continue;
@@ -722,9 +723,8 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
     if (auto *Fn = dyn_cast<Function>(getCalledOperand()))
       CI &= Fn->getAttributes().getParamAttrs(I).getCaptureInfo();
     if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents()))
-      return true;
+      Args.push_back(getArgOperand(I));
   }
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
