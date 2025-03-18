@@ -410,4 +410,6 @@ bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
       B.buildSExtInReg(Dst, Src, RootWidth);
     };
   }
+
+  return true;
 }
