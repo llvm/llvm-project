@@ -9,11 +9,13 @@
 #ifndef LLDB_CORE_MANGLED_H
 #define LLDB_CORE_MANGLED_H
 
+#include "lldb/Core/Demangle.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
-#include "lldb/Utility/ConstString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Utility.h"
 
 #include <cstddef>
 #include <memory>
@@ -275,6 +277,8 @@ public:
   ///   table offsets in the cache data.
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
+  const std::optional<FunctionNameInfo> &GetDemangledInfo() const;
+
 private:
   /// If \c force is \c false, this function will re-use the previously
   /// demangled name (if any). If \c force is \c true (or the mangled name
@@ -288,6 +292,11 @@ private:
   ///< Mutable so we can get it on demand with
   ///< a const version of this object.
   mutable ConstString m_demangled;
+
+  /// If available, holds details information about where
+  /// in \c m_demangled parts of the name begin end (e.g.,
+  /// basename, arguments, etc.).
+  mutable std::optional<FunctionNameInfo> m_demangled_info = std::nullopt;
 };
 
 Stream &operator<<(Stream &s, const Mangled &obj);
