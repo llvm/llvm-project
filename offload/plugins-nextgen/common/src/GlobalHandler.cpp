@@ -273,7 +273,7 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
-  if (__llvm_write_custom_profile == nullptr)
+  if (!__llvm_write_custom_profile)
     return Plugin::error("Could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
