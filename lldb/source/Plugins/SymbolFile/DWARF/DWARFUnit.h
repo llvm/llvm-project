@@ -11,6 +11,7 @@
 
 #include "DWARFDIE.h"
 #include "DWARFDebugInfoEntry.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
@@ -38,34 +39,7 @@ enum DWARFProducer {
   eProducerOther
 };
 
-class DWARFUnitInterface {
-public:
-  DWARFUnitInterface() = default;
-  virtual ~DWARFUnitInterface() = default;
-
-  virtual SymbolFileDWARF &GetSymbolFileDWARF() const = 0;
-  virtual dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const = 0;
-  virtual uint16_t GetVersion() const = 0;
-  virtual std::unique_ptr<llvm::DWARFLocationTable>
-  GetLocationTable(const DataExtractor &data) const = 0;
-  virtual dw_addr_t GetBaseAddress() const = 0;
-  virtual uint8_t GetAddressByteSize() const = 0;
-  virtual llvm::Error GetBitSizeAndSign(uint64_t die_offset, uint64_t &bit_size,
-                                        bool &sign) = 0;
-
-  static uint8_t GetAddressByteSize(const DWARFUnitInterface *cu) {
-    if (cu)
-      return cu->GetAddressByteSize();
-    return GetDefaultAddressSize();
-  }
-
-  static uint8_t GetDefaultAddressSize() { return 4; }
-
-  DWARFUnitInterface(const DWARFUnitInterface &) = delete;
-  DWARFUnitInterface &operator=(const DWARFUnitInterface &) = delete;
-};
-
-class DWARFUnit : public UserID, public DWARFUnitInterface {
+class DWARFUnit : public UserID, public DWARFExpression::Delegate {
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 
@@ -174,15 +148,30 @@ public:
 
   DWARFDIE GetDIE(dw_offset_t die_offset);
 
-  llvm::Error GetBitSizeAndSign(uint64_t die_offset, uint64_t &bit_size,
-                                bool &sign) override;
-
   /// Returns the AT_Name of the DIE at `die_offset`, if it exists, without
   /// parsing the entire compile unit. An empty is string is returned upon
   /// error or if the attribute is not present.
   llvm::StringRef PeekDIEName(dw_offset_t die_offset);
 
+  llvm::Error GetDIEBitSizeAndSign(uint64_t die_offset, uint64_t &bit_size,
+                                   bool &sign) override;
+
+  lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                          const lldb::offset_t data_offset,
+                                          const uint8_t op) const override;
+
+  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                              lldb::offset_t &offset,
+                              std::vector<Value> &stack) const override;
+
+  bool ParseDWARFLocationList(const DataExtractor &data,
+                              DWARFExpressionList *loc_list) const;
+
   DWARFUnit &GetNonSkeletonUnit();
+
+  static uint8_t GetAddressByteSize(const DWARFUnit *cu);
+
+  static uint8_t GetDefaultAddressSize();
 
   lldb_private::CompileUnit *GetLLDBCompUnit() const { return m_lldb_cu; }
 
@@ -202,7 +191,7 @@ public:
 
   bool Supports_unnamed_objc_bitfields();
 
-  SymbolFileDWARF &GetSymbolFileDWARF() const override { return m_dwarf; }
+  SymbolFileDWARF &GetSymbolFileDWARF() const { return m_dwarf; }
 
   DWARFProducer GetProducer();
 
@@ -265,7 +254,7 @@ public:
   /// Return the location table for parsing the given location list data. The
   /// format is chosen according to the unit type. Never returns null.
   std::unique_ptr<llvm::DWARFLocationTable>
-  GetLocationTable(const DataExtractor &data) const override;
+  GetLocationTable(const DataExtractor &data) const;
 
   DWARFDataExtractor GetLocationData() const;
 

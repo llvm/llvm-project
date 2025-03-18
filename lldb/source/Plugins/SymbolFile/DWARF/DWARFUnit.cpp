@@ -672,8 +672,32 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   return DWARFDIE(); // Not found
 }
 
-llvm::Error DWARFUnit::GetBitSizeAndSign(uint64_t die_offset,
-                                         uint64_t &bit_size, bool &sign) {
+llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
+  DWARFDebugInfoEntry die;
+  if (!die.Extract(GetData(), *this, &die_offset))
+    return llvm::StringRef();
+
+  // Does die contain a DW_AT_Name?
+  if (const char *name =
+          die.GetAttributeValueAsString(this, DW_AT_name, nullptr))
+    return name;
+
+  // Does its DW_AT_specification or DW_AT_abstract_origin contain an AT_Name?
+  for (auto attr : {DW_AT_specification, DW_AT_abstract_origin}) {
+    DWARFFormValue form_value;
+    if (!die.GetAttributeValue(this, attr, form_value))
+      continue;
+    auto [unit, offset] = form_value.ReferencedUnitAndOffset();
+    if (unit)
+      if (auto name = unit->PeekDIEName(offset); !name.empty())
+        return name;
+  }
+
+  return llvm::StringRef();
+}
+
+llvm::Error DWARFUnit::GetDIEBitSizeAndSign(uint64_t die_offset,
+                                            uint64_t &bit_size, bool &sign) {
   // Retrieve the type DIE that the value is being converted to. This
   // offset is compile unit relative so we need to fix it up.
   const uint64_t abs_die_offset = die_offset + GetOffset();
@@ -703,28 +727,54 @@ llvm::Error DWARFUnit::GetBitSizeAndSign(uint64_t die_offset,
   return llvm::Error::success();
 }
 
-llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
-  DWARFDebugInfoEntry die;
-  if (!die.Extract(GetData(), *this, &die_offset))
-    return llvm::StringRef();
+lldb::offset_t
+DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
+                                    const lldb::offset_t data_offset,
+                                    const uint8_t op) const {
+  return GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(data, data_offset, op);
+}
 
-  // Does die contain a DW_AT_Name?
-  if (const char *name =
-          die.GetAttributeValueAsString(this, DW_AT_name, nullptr))
-    return name;
+bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                                       lldb::offset_t &offset,
+                                       std::vector<Value> &stack) const {
+  return GetSymbolFileDWARF().ParseVendorDWARFOpcode(op, opcodes, offset,
+                                                     stack);
+}
 
-  // Does its DW_AT_specification or DW_AT_abstract_origin contain an AT_Name?
-  for (auto attr : {DW_AT_specification, DW_AT_abstract_origin}) {
-    DWARFFormValue form_value;
-    if (!die.GetAttributeValue(this, attr, form_value))
-      continue;
-    auto [unit, offset] = form_value.ReferencedUnitAndOffset();
-    if (unit)
-      if (auto name = unit->PeekDIEName(offset); !name.empty())
-        return name;
+bool DWARFUnit::ParseDWARFLocationList(
+    const DataExtractor &data, DWARFExpressionList *location_list) const {
+  location_list->Clear();
+  std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
+      GetLocationTable(data);
+  Log *log = GetLog(DWARFLog::DebugInfo);
+  auto lookup_addr =
+      [&](uint32_t index) -> std::optional<llvm::object::SectionedAddress> {
+    addr_t address = ReadAddressFromDebugAddrSection(index);
+    if (address == LLDB_INVALID_ADDRESS)
+      return std::nullopt;
+    return llvm::object::SectionedAddress{address};
+  };
+  auto process_list = [&](llvm::Expected<llvm::DWARFLocationExpression> loc) {
+    if (!loc) {
+      LLDB_LOG_ERROR(log, loc.takeError(), "{0}");
+      return true;
+    }
+    auto buffer_sp =
+        std::make_shared<DataBufferHeap>(loc->Expr.data(), loc->Expr.size());
+    DWARFExpression expr = DWARFExpression(DataExtractor(
+        buffer_sp, data.GetByteOrder(), data.GetAddressByteSize()));
+    location_list->AddExpression(loc->Range->LowPC, loc->Range->HighPC, expr);
+    return true;
+  };
+  llvm::Error error = loctable_up->visitAbsoluteLocationList(
+      0, llvm::object::SectionedAddress{GetBaseAddress()}, lookup_addr,
+      process_list);
+  location_list->Sort();
+  if (error) {
+    LLDB_LOG_ERROR(log, std::move(error), "{0}");
+    return false;
   }
-
-  return llvm::StringRef();
+  return true;
 }
 
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
@@ -733,6 +783,14 @@ DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
     return *m_dwo;
   return *this;
 }
+
+uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
+  if (cu)
+    return cu->GetAddressByteSize();
+  return DWARFUnit::GetDefaultAddressSize();
+}
+
+uint8_t DWARFUnit::GetDefaultAddressSize() { return 4; }
 
 DWARFCompileUnit *DWARFUnit::GetSkeletonUnit() {
   if (m_skeleton_unit.load() == nullptr && IsDWOUnit()) {

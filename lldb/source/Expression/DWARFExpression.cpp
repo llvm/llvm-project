@@ -15,7 +15,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -37,7 +36,6 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
@@ -130,10 +128,10 @@ static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
 
 /// Return the length in bytes of the set of operands for \p op. No guarantees
 /// are made on the state of \p data after this call.
-static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
-                                        const lldb::offset_t data_offset,
-                                        const LocationAtom op,
-                                        const DWARFUnitInterface *dwarf_cu) {
+static lldb::offset_t
+GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
+                  const LocationAtom op,
+                  const DWARFExpression::Delegate *dwarf_cu) {
   lldb::offset_t offset = data_offset;
   switch (op) {
   // Only used in LLVM metadata.
@@ -362,7 +360,7 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
                                // + LEB128
   {
     data.Skip_LEB128(&offset);
-    return DWARFUnitInterface::GetAddressByteSize(dwarf_cu) + offset -
+    return (dwarf_cu ? dwarf_cu->GetAddressByteSize() : 4) + offset -
            data_offset;
   }
 
@@ -388,14 +386,13 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
   }
 
   if (dwarf_cu)
-    return dwarf_cu->GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(
-        data, data_offset, op);
+    return dwarf_cu->GetVendorDWARFOpcodeSize(data, data_offset, op);
 
   return LLDB_INVALID_OFFSET;
 }
 
 llvm::Expected<lldb::addr_t> DWARFExpression::GetLocation_DW_OP_addr(
-    const DWARFUnitInterface *dwarf_cu) const {
+    const DWARFExpression::Delegate *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
@@ -423,8 +420,8 @@ llvm::Expected<lldb::addr_t> DWARFExpression::GetLocation_DW_OP_addr(
   return LLDB_INVALID_ADDRESS;
 }
 
-bool DWARFExpression::Update_DW_OP_addr(const DWARFUnitInterface *dwarf_cu,
-                                        lldb::addr_t file_addr) {
+bool DWARFExpression::Update_DW_OP_addr(
+    const DWARFExpression::Delegate *dwarf_cu, lldb::addr_t file_addr) {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
@@ -482,7 +479,7 @@ bool DWARFExpression::Update_DW_OP_addr(const DWARFUnitInterface *dwarf_cu,
 }
 
 bool DWARFExpression::ContainsThreadLocalStorage(
-    const DWARFUnitInterface *dwarf_cu) const {
+    const DWARFExpression::Delegate *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const LocationAtom op = static_cast<LocationAtom>(m_data.GetU8(&offset));
@@ -498,7 +495,7 @@ bool DWARFExpression::ContainsThreadLocalStorage(
   return false;
 }
 bool DWARFExpression::LinkThreadLocalStorage(
-    const DWARFUnitInterface *dwarf_cu,
+    const DWARFExpression::Delegate *dwarf_cu,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
         &link_address_callback) {
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
@@ -784,10 +781,9 @@ enum LocationDescriptionKind {
   /* Composite*/
 };
 /// Adjust value's ValueType according to the kind of location description.
-void UpdateValueTypeFromLocationDescription(Log *log,
-                                            const DWARFUnitInterface *dwarf_cu,
-                                            LocationDescriptionKind kind,
-                                            Value *value = nullptr) {
+void UpdateValueTypeFromLocationDescription(
+    Log *log, const DWARFExpression::Delegate *dwarf_cu,
+    LocationDescriptionKind kind, Value *value = nullptr) {
   // Note that this function is conflating DWARF expressions with
   // DWARF location descriptions. Perhaps it would be better to define
   // a wrapper for DWARFExpression::Eval() that deals with DWARF
@@ -877,8 +873,9 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    const DWARFUnitInterface *dwarf_cu, const lldb::RegisterKind reg_kind,
-    const Value *initial_value_ptr, const Value *object_address_ptr) {
+    const DWARFExpression::Delegate *dwarf_cu,
+    const lldb::RegisterKind reg_kind, const Value *initial_value_ptr,
+    const Value *object_address_ptr) {
 
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
@@ -2167,8 +2164,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           return llvm::createStringError("unspecified architecture");
       } else {
         if (llvm::Error err =
-                const_cast<DWARFUnitInterface *>(dwarf_cu)->GetBitSizeAndSign(
-                    die_offset, bit_size, sign))
+                const_cast<DWARFExpression::Delegate *>(dwarf_cu)
+                    ->GetDIEBitSizeAndSign(die_offset, bit_size, sign))
           return err;
       }
       Scalar &top = stack.back().ResolveValue(exe_ctx);
@@ -2293,8 +2290,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->GetSymbolFileDWARF().ParseVendorDWARFOpcode(
-                op, opcodes, offset, stack)) {
+        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, stack)) {
           break;
         }
       }
@@ -2327,43 +2323,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     }
   }
   return stack.back();
-}
-
-bool DWARFExpression::ParseDWARFLocationList(
-    const DWARFUnitInterface *dwarf_cu, const DataExtractor &data,
-    DWARFExpressionList *location_list) {
-  location_list->Clear();
-  std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
-      dwarf_cu->GetLocationTable(data);
-  Log *log = GetLog(LLDBLog::Expressions);
-  auto lookup_addr =
-      [&](uint32_t index) -> std::optional<llvm::object::SectionedAddress> {
-    addr_t address = dwarf_cu->ReadAddressFromDebugAddrSection(index);
-    if (address == LLDB_INVALID_ADDRESS)
-      return std::nullopt;
-    return llvm::object::SectionedAddress{address};
-  };
-  auto process_list = [&](llvm::Expected<llvm::DWARFLocationExpression> loc) {
-    if (!loc) {
-      LLDB_LOG_ERROR(log, loc.takeError(), "{0}");
-      return true;
-    }
-    auto buffer_sp =
-        std::make_shared<DataBufferHeap>(loc->Expr.data(), loc->Expr.size());
-    DWARFExpression expr = DWARFExpression(DataExtractor(
-        buffer_sp, data.GetByteOrder(), data.GetAddressByteSize()));
-    location_list->AddExpression(loc->Range->LowPC, loc->Range->HighPC, expr);
-    return true;
-  };
-  llvm::Error error = loctable_up->visitAbsoluteLocationList(
-      0, llvm::object::SectionedAddress{dwarf_cu->GetBaseAddress()},
-      lookup_addr, process_list);
-  location_list->Sort();
-  if (error) {
-    LLDB_LOG_ERROR(log, std::move(error), "{0}");
-    return false;
-  }
-  return true;
 }
 
 bool DWARFExpression::MatchesOperand(
