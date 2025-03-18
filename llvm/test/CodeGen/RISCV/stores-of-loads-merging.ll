@@ -186,47 +186,40 @@ define void @v2i8_v4i8(ptr %p, ptr %q) {
 define void @v16i8_v32i8(ptr %p, ptr %q) {
 ; CHECK-LABEL: v16i8_v32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 2 * vlenb
-; CHECK-NEXT:    addi a2, a0, 16
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0e, 0x72, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 64 + 2 * vlenb
+; CHECK-NEXT:    li s1, 32
+; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle8.v v8, (a2)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, s0, 2
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl1r.v v8, (a1) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    addi a0, sp, 32
+; CHECK-NEXT:    vl2r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vsetvli zero, s1, e8, m2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (s0)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a1) # Unknown-size Folded Reload
-; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 32
-; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_def_cfa sp, 64
+; CHECK-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
-; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    addi sp, sp, 64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %p0 = getelementptr i8, ptr %p, i64 0
@@ -235,8 +228,8 @@ define void @v16i8_v32i8(ptr %p, ptr %q) {
   %x1 = load <16 x i8>, ptr %p1
   call void @g()
   %q0 = getelementptr i8, ptr %q, i64 0
-  %q1 = getelementptr i8, ptr %q, i64 2
-  store <16 x i8> %x0, ptr %q0, align 16
+  %q1 = getelementptr i8, ptr %q, i64 16
+  store <16 x i8> %x0, ptr %q0, align 2
   store <16 x i8> %x1, ptr %q1
   ret void
 }
