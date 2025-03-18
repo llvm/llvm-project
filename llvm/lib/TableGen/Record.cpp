@@ -84,7 +84,7 @@ struct RecordKeeperImpl {
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
-  FoldingSet<RecordsOpInit> TheRecordsOpInitPool;
+  FoldingSet<InstancesOpInit> TheInstancesOpInitPool;
   DenseMap<std::pair<const RecTy *, const Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<const TypedInit *, unsigned>, VarBitInit *>
       TheVarBitInitPool;
@@ -2223,32 +2223,33 @@ std::string ExistsOpInit::getAsString() const {
       .str();
 }
 
-static void ProfileRecordsOpInit(FoldingSetNodeID &ID, const RecTy *Type,
-                                 const Init *Regex) {
+static void ProfileInstancesOpInit(FoldingSetNodeID &ID, const RecTy *Type,
+                                   const Init *Regex) {
   ID.AddPointer(Type);
   ID.AddPointer(Regex);
 }
 
-const RecordsOpInit *RecordsOpInit::get(const RecTy *Type, const Init *Regex) {
+const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
+                                            const Init *Regex) {
   FoldingSetNodeID ID;
-  ProfileRecordsOpInit(ID, Type, Regex);
+  ProfileInstancesOpInit(ID, Type, Regex);
 
   detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
   void *IP = nullptr;
-  if (const RecordsOpInit *I =
-          RK.TheRecordsOpInitPool.FindNodeOrInsertPos(ID, IP))
+  if (const InstancesOpInit *I =
+          RK.TheInstancesOpInitPool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  RecordsOpInit *I = new (RK.Allocator) RecordsOpInit(Type, Regex);
-  RK.TheRecordsOpInitPool.InsertNode(I, IP);
+  InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
+  RK.TheInstancesOpInitPool.InsertNode(I, IP);
   return I;
 }
 
-void RecordsOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileRecordsOpInit(ID, Type, Regex);
+void InstancesOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileInstancesOpInit(ID, Type, Regex);
 }
 
-const Init *RecordsOpInit::Fold() const {
+const Init *InstancesOpInit::Fold() const {
   const auto *RegexInit = dyn_cast<StringInit>(Regex);
   if (!RegexInit)
     return this;
@@ -2267,19 +2268,20 @@ const Init *RecordsOpInit::Fold() const {
   return ListInit::get(Selected, Type);
 }
 
-const Init *RecordsOpInit::resolveReferences(Resolver &R) const {
+const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
   const Init *NewRegex = Regex->resolveReferences(R);
   if (Regex != NewRegex)
     return get(Type, NewRegex)->Fold();
   return this;
 }
 
-const Init *RecordsOpInit::getBit(unsigned Bit) const {
+const Init *InstancesOpInit::getBit(unsigned Bit) const {
   return VarBitInit::get(this, Bit);
 }
 
-std::string RecordsOpInit::getAsString() const {
-  return "!records<" + Type->getAsString() + ">(" + Regex->getAsString() + ")";
+std::string InstancesOpInit::getAsString() const {
+  return "!instances<" + Type->getAsString() + ">(" + Regex->getAsString() +
+         ")";
 }
 
 const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {

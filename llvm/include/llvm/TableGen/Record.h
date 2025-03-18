@@ -316,7 +316,7 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
-    IK_RecordsOpInit,
+    IK_InstancesOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -1193,27 +1193,27 @@ public:
   std::string getAsString() const override;
 };
 
-/// !records<type>([regex]) - Produces a list of records whose type is `type`.
+/// !instances<type>([regex]) - Produces a list of records whose type is `type`.
 /// If `regex` is provided, only records whose name matches the regular
 /// expression `regex` will be included.
-class RecordsOpInit final : public TypedInit, public FoldingSetNode {
+class InstancesOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *Type;
   const Init *Regex;
 
-  RecordsOpInit(const RecTy *Type, const Init *Regex)
-      : TypedInit(IK_RecordsOpInit, ListRecTy::get(Type)), Type(Type),
+  InstancesOpInit(const RecTy *Type, const Init *Regex)
+      : TypedInit(IK_InstancesOpInit, ListRecTy::get(Type)), Type(Type),
         Regex(Regex) {}
 
 public:
-  RecordsOpInit(const RecordsOpInit &) = delete;
-  RecordsOpInit &operator=(const RecordsOpInit &) = delete;
+  InstancesOpInit(const InstancesOpInit &) = delete;
+  InstancesOpInit &operator=(const InstancesOpInit &) = delete;
 
   static bool classof(const Init *I) {
-    return I->getKind() == IK_RecordsOpInit;
+    return I->getKind() == IK_InstancesOpInit;
   }
 
-  static const RecordsOpInit *get(const RecTy *Type, const Init *Regex);
+  static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
 
   void Profile(FoldingSetNodeID &ID) const;
 

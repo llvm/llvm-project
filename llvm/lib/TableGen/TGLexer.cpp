@@ -629,10 +629,10 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("listsplat", tgtok::XListSplat)
           .Case("listremove", tgtok::XListRemove)
           .Case("range", tgtok::XRange)
-          .Case("records", tgtok::XRecords)
           .Case("strconcat", tgtok::XStrConcat)
           .Case("initialized", tgtok::XInitialized)
           .Case("interleave", tgtok::XInterleave)
+          .Case("instances", tgtok::XInstances)
           .Case("substr", tgtok::XSubstr)
           .Case("find", tgtok::XFind)
           .Cases("setdagop", "setop", tgtok::XSetDagOp) // !setop is deprecated.

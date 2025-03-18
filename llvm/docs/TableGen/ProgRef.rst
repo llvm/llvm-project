@@ -223,10 +223,10 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div         !empty       !eq          !exists      !filter
                : !find        !foldl       !foreach     !ge          !getdagarg
                : !getdagname  !getdagop    !gt          !head        !if
-               : !initialized !interleave  !isa         !le          !listconcat
-               : !listflatten !listremove  !listsplat   !logtwo      !lt
-               : !match       !mul         !ne          !not         !or
-               : !range       !records     !repr        !setdagarg   !setdagname
+               : !initialized !instances   !interleave  !isa         !le
+               : !listconcat  !listflatten !listremove  !listsplat   !logtwo
+               : !lt          !match       !mul         !ne          !not
+               : !or          !range       !repr        !setdagarg   !setdagname
                : !setdagop    !shl         !size        !sra         !srl
                : !strconcat   !sub         !subst       !substr      !tail
                : !tolower     !toupper     !xor
@@ -1836,6 +1836,12 @@ and non-0 as true.
   This operator produces 1 if *a* is not the uninitialized value (``?``) and 0
   otherwise.
 
+``!instances<``\ *type*\ ``>([``\ *regex*\ ``])``
+    This operator produces a list of records whose type is *type*. If *regex*
+    is provided, only records whose name matches the regular expression *regex*
+    will be included. The format of *regex* is ERE (Extended POSIX Regular
+    Expressions).
+
 ``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
     This operator concatenates the items in the *list*, interleaving the
     *delim* string between each pair, and produces the resulting string.
@@ -1919,12 +1925,6 @@ and non-0 as true.
 
 ``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
-
-``!records<``\ *type*\ ``>([``\ *regex*\ ``])``
-    This operator produces a list of records whose type is *type*. If *regex*
-    is provided, only records whose name matches the regular expression *regex*
-    will be included. The format of *regex* is ERE (Extended POSIX Regular
-    Expressions).
 
 ``!repr(``\ *value*\ ``)``
     Represents *value* as a string. String format for the value is not
