@@ -74,6 +74,9 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- Added a :ref:`__builtin_structured_binding_size <builtin_structured_binding_size-doc>` (T)
+  builtin that returns the number of structured bindings that would be produced by destructuring ``T``.
+
 - Similarly to GCC, Clang now supports constant expressions in
   the strings of a GNU ``asm`` statement.
 
