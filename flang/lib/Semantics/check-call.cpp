@@ -790,6 +790,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "ALLOCATABLE %s must have INTENT(IN) to be associated with a coindexed actual argument"_err_en_US,
             dummyName);
       }
+      if (!actualIsCoindexed && actualLastSymbol && dummy.type.corank() == 0 &&
+          actualLastSymbol->Corank() > 0) {
+        messages.Say(
+            "ALLOCATABLE %s is not a coarray but actual argument has corank %d"_err_en_US,
+            dummyName, actualLastSymbol->Corank());
+      }
     } else if (evaluate::IsBareNullPointer(&actual)) {
       if (dummyIsOptional) {
       } else if (dummy.intent == common::Intent::Default &&
@@ -821,12 +827,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
           dummyName);
-    }
-    if (!actualIsCoindexed && actualLastSymbol &&
-        actualLastSymbol->Corank() != dummy.type.corank()) {
-      messages.Say(
-          "ALLOCATABLE %s has corank %d but actual argument has corank %d"_err_en_US,
-          dummyName, dummy.type.corank(), actualLastSymbol->Corank());
     }
   }
 
@@ -926,6 +926,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "Actual argument associated with coarray %s must be a coarray"_err_en_US,
           dummyName);
+    } else if (actualType.corank() != dummy.type.corank() &&
+        dummyIsAllocatableOrPointer) {
+      messages.Say(
+          "ALLOCATABLE or POINTER %s has corank %d but actual argument has corank %d"_err_en_US,
+          dummyName, dummy.type.corank(), actualType.corank());
     }
     if (dummyIsVolatile) {
       if (!actualIsVolatile) {
@@ -1840,6 +1845,13 @@ static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
   if (arguments.size() >= 2) {
     evaluate::CheckForCoindexedObject(
         messages, arguments[1], "move_alloc", "to");
+    int fromCR{GetCorank(arguments[0])};
+    int toCR{GetCorank(arguments[1])};
+    if (fromCR != toCR) {
+      messages.Say(*arguments[0]->sourceLocation(),
+          "FROM= argument to MOVE_ALLOC has corank %d, but TO= argument has corank %d"_err_en_US,
+          fromCR, toCR);
+    }
   }
   if (arguments.size() >= 3) {
     evaluate::CheckForCoindexedObject(

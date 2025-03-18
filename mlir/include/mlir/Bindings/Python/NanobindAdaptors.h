@@ -46,14 +46,16 @@ namespace detail {
 static nanobind::object mlirApiObjectToCapsule(nanobind::handle apiObject) {
   if (PyCapsule_CheckExact(apiObject.ptr()))
     return nanobind::borrow<nanobind::object>(apiObject);
-  if (!nanobind::hasattr(apiObject, MLIR_PYTHON_CAPI_PTR_ATTR)) {
+  nanobind::object api =
+      nanobind::getattr(apiObject, MLIR_PYTHON_CAPI_PTR_ATTR, nanobind::none());
+  if (api.is_none()) {
     std::string repr = nanobind::cast<std::string>(nanobind::repr(apiObject));
     throw nanobind::type_error(
         (llvm::Twine("Expected an MLIR object (got ") + repr + ").")
             .str()
             .c_str());
   }
-  return apiObject.attr(MLIR_PYTHON_CAPI_PTR_ATTR);
+  return api;
 }
 
 // Note: Currently all of the following support cast from nanobind::object to
@@ -318,6 +320,16 @@ struct type_caster<MlirType> {
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
         .release();
+  }
+};
+
+/// Casts MlirStringRef -> object.
+template <>
+struct type_caster<MlirStringRef> {
+  NB_TYPE_CASTER(MlirStringRef, const_name("MlirStringRef"))
+  static handle from_cpp(MlirStringRef s, rv_policy,
+                         cleanup_list *cleanup) noexcept {
+    return nanobind::str(s.data, s.length).release();
   }
 };
 

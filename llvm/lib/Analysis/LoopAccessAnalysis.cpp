@@ -527,8 +527,9 @@ void RuntimePointerChecking::groupChecks(
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (const auto &MI : DepCands.members(LeaderI)) {
-      auto PointerI = PositionMap.find(MI.getPointer());
+    for (auto MI = DepCands.member_begin(LeaderI), ME = DepCands.member_end();
+         MI != ME; ++MI) {
+      auto PointerI = PositionMap.find(MI->getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
       for (unsigned Pointer : PointerI->second) {
@@ -2286,8 +2287,9 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &AccessSets,
           (AIIsWrite ? AI : std::next(AI));
       while (OI != AE) {
         // Check every accessing instruction pair in program order.
-        for (std::vector<unsigned>::iterator I1 = Accesses[*AI].begin(),
-             I1E = Accesses[*AI].end(); I1 != I1E; ++I1)
+        auto &Acc = Accesses[*AI];
+        for (std::vector<unsigned>::iterator I1 = Acc.begin(), I1E = Acc.end();
+             I1 != I1E; ++I1)
           // Scan all accesses of another equivalence class, but only the next
           // accesses of the same equivalent class.
           for (std::vector<unsigned>::iterator
