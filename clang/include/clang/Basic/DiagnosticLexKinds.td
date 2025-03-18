@@ -55,10 +55,6 @@ def ext_line_comment : Extension<
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
 
-def warn_cxx98_compat_no_newline_eof : Warning<
-  "C++98 requires newline at end of file">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
-
 def ext_dollar_in_identifier : Extension<"'$' in identifier">,
   InGroup<DiagGroup<"dollar-in-identifier-extension">>;
 def ext_charize_microsoft : Extension<
