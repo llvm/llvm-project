@@ -1103,11 +1103,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
     if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
-        BM->getZExtValue() != 0xF || isa<UndefValue>(Old))
+        BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 
     // If bound_ctrl = 1, row mask = bank mask = 0xf we can omit old value.
-    return IC.replaceOperand(II, 0, UndefValue::get(Old->getType()));
+    return IC.replaceOperand(II, 0, PoisonValue::get(Old->getType()));
   }
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlane16_var:
