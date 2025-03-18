@@ -10,10 +10,12 @@ from lldbsuite.test import lldbutil
 
 class TestReverseContinueBreakpoints(ReverseTestBase):
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue(self):
         self.reverse_continue_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_async(self):
         self.reverse_continue_internal(async_mode=True)
 
@@ -42,10 +44,12 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertEqual(process.GetExitStatus(), 0)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_breakpoint(self):
         self.reverse_continue_breakpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_breakpoint_async(self):
         self.reverse_continue_breakpoint_internal(async_mode=True)
 
@@ -63,10 +67,12 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertEqual(threads_now, initial_threads)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_breakpoint(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_breakpoint_async(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=True)
 
@@ -91,10 +97,12 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         )
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_continue_preserves_direction(self):
         self.continue_preserves_direction_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_continue_preserves_direction_asyhc(self):
         self.continue_preserves_direction_internal(async_mode=True)
 

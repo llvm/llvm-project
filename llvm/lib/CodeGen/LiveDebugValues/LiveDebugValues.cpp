@@ -125,8 +125,10 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
     // Avoid DomTree calculation as non-used.
     TheImpl = &*HeterogeneousImpl;
 
-  return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
-                               InputDbgValueLimit);
+  return TheImpl->ExtendRanges(
+      MF, DomTree,
+      TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues(),
+      InputBBLimit, InputDbgValueLimit);
 }
 
 bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {
