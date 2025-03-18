@@ -195,16 +195,25 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   const auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
-  auto getters = std::string{};
+  auto op_getters = std::string{};
+  auto res_getters = std::string{};
 
   for (size_t i = 0; i < opStrings.opOperandNames.size(); ++i) {
     const auto &op = snakeToPascal(opStrings.opOperandNames[i]);
-    getters += llvm::formatv(
+    op_getters += llvm::formatv(
         "::mlir::Value get{0}() { return getODSOperands({1}).front(); }\n  ",
         op, i);
   }
+  for (size_t i = 0; i < opStrings.opResultNames.size(); ++i) {
+    const auto &op = snakeToPascal(opStrings.opResultNames[i]);
+    res_getters += llvm::formatv(
+        R"(::mlir::TypedValue<::mlir::Type> get{0}() { return ::llvm::cast<::mlir::TypedValue<::mlir::Type>>(getODSResults({1}).front()); }
+  )",
+        op, i);
+  }
 
-  dict["OP_GETTER_DECLS"] = getters;
+  dict["OP_OPERAND_GETTER_DECLS"] = op_getters;
+  dict["OP_RESULT_GETTER_DECLS"] = res_getters;
   std::string buildDecls;
   llvm::raw_string_ostream stream{buildDecls};
 

@@ -14,7 +14,7 @@ irdl.dialect @test_irdl_to_cpp {
     }
 
 
-    // CHECK: irdl.type @ beef {
+    // CHECK: irdl.type @beef {
     // CHECK: %[[v0:[^ ]*]] = irdl.any
     // CHECK: irdl.operands(lhs: %[[v0]], rhs: %[[v0]])
     // CHECK: irdl.results(res: %[[v0]])
@@ -25,7 +25,7 @@ irdl.dialect @test_irdl_to_cpp {
         irdl.results(res: %0)
     }
 
-    // CHECK: irdl.type @ beef {
+    // CHECK: irdl.type @hash {
     // CHECK: %[[v0:[^ ]*]] = irdl.any
     // CHECK: irdl.operands(lhs: %[[v0]], rhs: %[[v0]])
     // CHECK: irdl.results(res: %[[v0]])

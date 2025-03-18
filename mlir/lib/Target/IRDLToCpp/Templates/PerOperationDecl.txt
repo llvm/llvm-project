@@ -55,7 +55,7 @@ public:
     return odsOperands;
   }
 
-  __OP_GETTER_DECLS__
+  __OP_OPERAND_GETTER_DECLS__
 
 private:
   RangeT odsOperands;
@@ -125,7 +125,8 @@ public:
              std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
   }
 
-  __OP_GETTER_DECLS__
+  __OP_OPERAND_GETTER_DECLS__
+  __OP_RESULT_GETTER_DECLS__
   
   __OP_BUILD_DECLS__
   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {});
