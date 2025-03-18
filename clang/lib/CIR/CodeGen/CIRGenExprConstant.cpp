@@ -331,8 +331,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
 
     mlir::Attribute filler;
     if (value.hasArrayFiller()) {
-      filler =
-          tryEmitPrivate(value.getArrayFiller(), arrayElementTy);
+      filler = tryEmitPrivate(value.getArrayFiller(), arrayElementTy);
       if (!filler)
         return {};
     }
@@ -363,8 +362,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       elements.push_back(elementTyped);
     }
 
-    mlir::TypedAttr typedFiller =
-        llvm::cast_or_null<mlir::TypedAttr>(filler);
+    mlir::TypedAttr typedFiller = llvm::cast_or_null<mlir::TypedAttr>(filler);
     if (filler && !typedFiller)
       cgm.errorNYI("array filler should always be typed");
 

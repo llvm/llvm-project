@@ -270,7 +270,8 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   unsigned zeros = 0;
   if (parser.parseOptionalComma().succeeded()) {
     if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
-      unsigned typeSize = mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
+      unsigned typeSize =
+          mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
       mlir::Attribute elts = resultVal.value();
       if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
         zeros = typeSize - str.size();
@@ -286,7 +287,8 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
     return {};
 
   return parser.getChecked<ConstArrayAttr>(
-      parser.getCurrentLocation(), parser.getContext(), resultTy.value(), resultVal.value(), zeros);
+      parser.getCurrentLocation(), parser.getContext(), resultTy.value(),
+      resultVal.value(), zeros);
 }
 
 void ConstArrayAttr::print(AsmPrinter &printer) const {
