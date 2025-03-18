@@ -2886,8 +2886,7 @@ bool RISCVAsmParser::parseInstruction(ParseInstructionInfo &Info,
   // the start of MatchInstructionImpl(), but that's too late for custom
   // operand parsing.
   const FeatureBitset &AvailableFeatures = getAvailableFeatures();
-  unsigned AssemblerDialect = getParser().getAssemblerDialect();
-  applyMnemonicAliases(Name, AvailableFeatures, AssemblerDialect);
+  applyMnemonicAliases(Name, AvailableFeatures, 0);
 
   // First operand is token for instruction
   Operands.push_back(RISCVOperand::createToken(Name, NameLoc));
