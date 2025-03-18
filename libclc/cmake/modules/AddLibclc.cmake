@@ -340,27 +340,32 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
-  # Add opt target. It is empty if ARG_OPT_FLAGS is empty.
   set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
-  add_custom_target( ${builtins_opt_lib_tgt} ALL )
-  set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
-    FOLDER "libclc/Device IR/Opt"
-  )
-  add_dependencies( ${builtins_opt_lib_tgt} ${builtins_link_lib_tgt} )
 
   if( ${ARG_OPT_FLAGS} STREQUAL "" )
-    # no-op
+    # Add empty opt target.
+    add_custom_target( ${builtins_opt_lib_tgt} ALL )
+    set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
+      FOLDER "libclc/Device IR/Opt"
+    )
+    add_dependencies( ${builtins_opt_lib_tgt} ${builtins_link_lib_tgt} )
+
     set( builtins_opt_lib ${builtins_link_lib} )
   else()
+    # Add opt target
     add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_opt_lib_tgt}.bc
         ${builtins_link_lib}
       DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
     )
+    add_custom_target( ${builtins_opt_lib_tgt}
+      ALL DEPENDS ${builtins_opt_lib_tgt}.bc
+    )
     set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
       TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${builtins_opt_lib_tgt}.bc
-      DEPENDS ${builtins_opt_lib_tgt}.bc
+      FOLDER "libclc/Device IR/Opt"
     )
+
     set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
   endif()
 
