@@ -411,6 +411,14 @@ TEST(SmallPtrSetTest, RemoveIf) {
   EXPECT_FALSE(Removed);
 }
 
+TEST(SmallPtrSetTest, InsertRange) {
+  int Vals[3] = {0, 1, 2};
+  SmallPtrSet<int *, 4> Set;
+  int *Args[] = {&Vals[2], &Vals[0], &Vals[1]};
+  Set.insert_range(Args);
+  EXPECT_THAT(Set, UnorderedElementsAre(&Vals[0], &Vals[1], &Vals[2]));
+}
+
 TEST(SmallPtrSetTest, Reserve) {
   // Check that we don't do anything silly when using reserve().
   SmallPtrSet<int *, 4> Set;
