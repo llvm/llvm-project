@@ -1560,7 +1560,8 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
-  telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(&m_debugger);
+  telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(
+      &m_debugger);
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
