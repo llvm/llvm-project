@@ -26,8 +26,7 @@ define void @f(ptr noundef captures(none) %a, float noundef %x) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT_6:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_6]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_7]]

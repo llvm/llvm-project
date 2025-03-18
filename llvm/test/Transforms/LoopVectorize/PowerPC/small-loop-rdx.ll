@@ -85,14 +85,13 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> zeroinitializer, double [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX24:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT27:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT27:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI25:%.*]] = phi <2 x double> [ [[TMP22]], %[[VEC_EPILOG_PH]] ], [ [[TMP26:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX24]], 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds double, ptr [[ARR]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds double, ptr [[TMP24]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x double>, ptr [[TMP25]], align 8
 ; CHECK-NEXT:    [[TMP26]] = fadd fast <2 x double> [[WIDE_LOAD26]], [[VEC_PHI25]]
-; CHECK-NEXT:    [[INDEX_NEXT27]] = add nuw i64 [[INDEX24]], 2
+; CHECK-NEXT:    [[INDEX_NEXT27]] = add nuw i64 [[TMP23]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT27]], [[N_VEC23]]
 ; CHECK-NEXT:    br i1 [[TMP27]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:

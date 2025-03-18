@@ -235,9 +235,8 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i64 [[INDEX]]
+; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
@@ -246,7 +245,7 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x float> [[WIDE_VEC2]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
 ; VF2-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[STRIDED_VEC]], [[STRIDED_VEC3]]
 ; VF2-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[STRIDED_VEC1]], [[STRIDED_VEC4]]
-; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RES]], i64 [[INDEX]]
 ; VF2-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; VF2-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 4
