@@ -111,9 +111,9 @@ void PPCLinuxToolChain::addFortranRuntimeLibs(
           Path = getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static,
                                         true))))
     CmdArgs.push_back(Path);
-  else if (getVFS().exists(Twine(Path = getCompilerRTArgString(
-                                     Args, "runtime", ToolChain::FT_Shared,
-                                     getDriver().IsFlangMode()))))
+  else if (getVFS().exists(
+               Twine(Path = getCompilerRTArgString(
+                         Args, "runtime", ToolChain::FT_Shared, true))))
     CmdArgs.push_back(Path);
   else
     CmdArgs.push_back("-lflang_rt.runtime");
