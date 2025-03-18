@@ -13,6 +13,8 @@
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 
+#include <regex>
+
 #define DEBUG_TYPE "ptx-builder"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
@@ -129,9 +131,9 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   }
 
   // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
-  // Replace all % with $
-  std::replace(ptxInstruction.begin(), ptxInstruction.end(), '%', '$');
-
+  // Replace all % with $, but only if they are followed by a digit.
+  ptxInstruction = std::regex_replace(ptxInstruction, std::regex("(%)(\\d+)"),
+                                      "$\\2", std::regex_constants::format_sed);
   return rewriter.create<LLVM::InlineAsmOp>(
       interfaceOp->getLoc(),
       /*result types=*/resultTypes,
