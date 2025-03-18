@@ -306,19 +306,6 @@ public:
 
   static bool isLdStSafeToPair(const MachineInstr &LdSt,
                                const TargetRegisterInfo *TRI);
-
-protected:
-  const RISCVSubtarget &STI;
-
-private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
-  bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
-                                         bool Invert = false) const;
-  bool areRVVInstsReassociable(const MachineInstr &MI1,
-                               const MachineInstr &MI2) const;
-  bool hasReassociableVectorSibling(const MachineInstr &Inst,
-                                    bool &Commuted) const;
   /// Return true if the branch represented by the conditional branch with
   /// components TBB, FBB, and CurCond was folded into an unconditional branch.
   ///
@@ -339,6 +326,19 @@ private:
   bool trySimplifyCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                          MachineBasicBlock *FBB,
                          SmallVectorImpl<MachineOperand> &Cond) const;
+
+protected:
+  const RISCVSubtarget &STI;
+
+private:
+  unsigned getInstBundleLength(const MachineInstr &MI) const;
+
+  bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
+                                         bool Invert = false) const;
+  bool areRVVInstsReassociable(const MachineInstr &MI1,
+                               const MachineInstr &MI2) const;
+  bool hasReassociableVectorSibling(const MachineInstr &Inst,
+                                    bool &Commuted) const;
 };
 
 namespace RISCV {

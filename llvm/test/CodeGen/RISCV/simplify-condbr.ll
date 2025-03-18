@@ -128,7 +128,7 @@ define ptr @Perl_pp_refassign(ptr %PL_stack_sp, i1 %tobool.not, i1 %tobool3.not,
 ; CHECK-NEXT:    andi a2, a2, 1
 ; CHECK-NEXT:    beqz a2, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    beqz zero, .LBB1_6
+; CHECK-NEXT:    j .LBB1_6
 ; CHECK-NEXT:  .LBB1_5: # %sw.bb85
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
