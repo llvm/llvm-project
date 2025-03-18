@@ -349,26 +349,54 @@ mlir::Value hlfir::genVariableBoxChar(mlir::Location loc,
                                           lengths[0]);
 }
 
+static hlfir::Entity changeBoxAttributes(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         hlfir::Entity var,
+                                         fir::BaseBoxType forceBoxType) {
+  assert(llvm::isa<fir::BaseBoxType>(var.getType()) && "expect box type");
+  // Propagate lower bounds.
+  mlir::Value shift;
+  llvm::SmallVector<mlir::Value> lbounds =
+      getNonDefaultLowerBounds(loc, builder, var);
+  if (!lbounds.empty())
+    shift = builder.genShift(loc, lbounds);
+  auto rebox = builder.create<fir::ReboxOp>(loc, forceBoxType, var, shift,
+                                            /*slice=*/nullptr);
+  return hlfir::Entity{rebox};
+}
+
 hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
                                     fir::FirOpBuilder &builder,
-                                    hlfir::Entity var) {
+                                    hlfir::Entity var,
+                                    fir::BaseBoxType forceBoxType) {
   assert(var.isVariable() && "must be a variable");
   var = hlfir::derefPointersAndAllocatables(loc, builder, var);
-  if (mlir::isa<fir::BaseBoxType>(var.getType()))
-    return var;
+  if (mlir::isa<fir::BaseBoxType>(var.getType())) {
+    if (!forceBoxType || forceBoxType == var.getType())
+      return var;
+    return changeBoxAttributes(loc, builder, var, forceBoxType);
+  }
   // Note: if the var is not a fir.box/fir.class at that point, it has default
   // lower bounds and is not polymorphic.
   mlir::Value shape =
       var.isArray() ? hlfir::genShape(loc, builder, var) : mlir::Value{};
   llvm::SmallVector<mlir::Value> typeParams;
-  auto maybeCharType =
-      mlir::dyn_cast<fir::CharacterType>(var.getFortranElementType());
+  mlir::Type elementType =
+      forceBoxType ? fir::getFortranElementType(forceBoxType.getEleTy())
+                   : var.getFortranElementType();
+  auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(elementType);
   if (!maybeCharType || maybeCharType.hasDynamicLen())
     hlfir::genLengthParameters(loc, builder, var, typeParams);
   mlir::Value addr = var.getBase();
   if (mlir::isa<fir::BoxCharType>(var.getType()))
     addr = genVariableRawAddress(loc, builder, var);
   mlir::Type boxType = fir::BoxType::get(var.getElementOrSequenceType());
+  if (forceBoxType) {
+    boxType = forceBoxType;
+    mlir::Type baseType =
+        fir::ReferenceType::get(fir::unwrapRefType(forceBoxType.getEleTy()));
+    addr = builder.createConvert(loc, baseType, addr);
+  }
   auto embox =
       builder.create<fir::EmboxOp>(loc, boxType, addr, shape,
                                    /*slice=*/mlir::Value{}, typeParams);

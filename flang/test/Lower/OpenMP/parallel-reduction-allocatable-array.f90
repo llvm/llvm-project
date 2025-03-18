@@ -101,7 +101,7 @@ end program
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_18:.*]]) : i32 = (%[[VAL_14]]) to (%[[VAL_15]]) inclusive step (%[[VAL_16]]) {
 ! CHECK:                 %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_17]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-! CHECK:                 fir.store %[[VAL_18]] to %[[VAL_13]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_18]] to %[[VAL_13]]#1 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_20:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_21:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:                 %[[VAL_22:.*]] = arith.constant 1 : index

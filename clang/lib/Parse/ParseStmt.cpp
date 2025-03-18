@@ -1552,6 +1552,11 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                                           : diag::ext_consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
+    } else if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteKeywordAfterIf(
+          NotLocation.isValid());
+      return StmtError();
     }
   }
   if (!IsConsteval && (NotLocation.isValid() || Tok.isNot(tok::l_paren))) {

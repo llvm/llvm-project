@@ -66,6 +66,8 @@ def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
                              [SDNPHasChain]>;
@@ -516,12 +518,13 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrFormats.td"
+include "RISCVInstrFormatsC.td"
+include "RISCVInstrFormatsV.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
               (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
@@ -529,6 +532,9 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
@@ -2131,16 +2137,16 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
-// Compressed
-include "RISCVInstrInfoC.td"
-include "RISCVInstrInfoZc.td"
-include "RISCVInstrInfoZcmop.td"
-
 // Integer
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZicfiss.td"
+
+// Compressed
+include "RISCVInstrInfoC.td"
+include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

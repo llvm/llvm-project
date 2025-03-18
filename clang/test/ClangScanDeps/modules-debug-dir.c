@@ -4,7 +4,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format \
-// RUN:   experimental-full > %t/result.json
+// RUN:   experimental-full -optimize-args=all > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s
 
 //--- cdb.json.in

@@ -15,6 +15,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/SMLoc.h"
@@ -1730,38 +1731,12 @@ public:
 // Dialect OpAsm interface.
 //===--------------------------------------------------------------------===//
 
-/// A functor used to set the name of the result. See 'getAsmResultNames' below
-/// for more details.
-using OpAsmSetNameFn = function_ref<void(StringRef)>;
-
-/// A functor used to set the name of the start of a result group of an
-/// operation. See 'getAsmResultNames' below for more details.
-using OpAsmSetValueNameFn = function_ref<void(Value, StringRef)>;
-
-/// A functor used to set the name of blocks in regions directly nested under
-/// an operation.
-using OpAsmSetBlockNameFn = function_ref<void(Block *, StringRef)>;
-
 class OpAsmDialectInterface
     : public DialectInterface::Base<OpAsmDialectInterface> {
 public:
   OpAsmDialectInterface(Dialect *dialect) : Base(dialect) {}
 
-  //===------------------------------------------------------------------===//
-  // Aliases
-  //===------------------------------------------------------------------===//
-
-  /// Holds the result of `getAlias` hook call.
-  enum class AliasResult {
-    /// The object (type or attribute) is not supported by the hook
-    /// and an alias was not provided.
-    NoAlias,
-    /// An alias was provided, but it might be overriden by other hook.
-    OverridableAlias,
-    /// An alias was provided and it should be used
-    /// (no other hooks will be checked).
-    FinalAlias
-  };
+  using AliasResult = OpAsmAliasResult;
 
   /// Hooks for getting an alias identifier alias for a given symbol, that is
   /// not necessarily a part of this dialect. The identifier is used in place of
@@ -1827,9 +1802,7 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 //===--------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
-#include "mlir/IR/OpAsmAttrInterface.h.inc"
 #include "mlir/IR/OpAsmOpInterface.h.inc"
-#include "mlir/IR/OpAsmTypeInterface.h.inc"
 
 namespace llvm {
 template <>

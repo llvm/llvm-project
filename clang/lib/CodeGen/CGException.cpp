@@ -2145,7 +2145,7 @@ llvm::Value *CodeGenFunction::EmitSEHExceptionInfo() {
   // Sema should diagnose calling this builtin outside of a filter context, but
   // don't crash if we screw up.
   if (!SEHInfo)
-    return llvm::UndefValue::get(Int8PtrTy);
+    return llvm::PoisonValue::get(Int8PtrTy);
   assert(SEHInfo->getType() == Int8PtrTy);
   return SEHInfo;
 }

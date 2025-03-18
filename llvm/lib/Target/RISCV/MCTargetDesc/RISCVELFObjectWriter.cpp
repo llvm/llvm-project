@@ -55,6 +55,17 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = Fixup.getTargetKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
+
+  switch (Target.getRefKind()) {
+  case RISCVMCExpr::VK_RISCV_TPREL_HI:
+  case RISCVMCExpr::VK_RISCV_TLS_GOT_HI:
+  case RISCVMCExpr::VK_RISCV_TLS_GD_HI:
+  case RISCVMCExpr::VK_RISCV_TLSDESC_HI:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  }
+
   if (IsPCRel) {
     switch (Kind) {
     default:

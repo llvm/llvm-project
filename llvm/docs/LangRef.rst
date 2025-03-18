@@ -1616,12 +1616,12 @@ Currently, only the following parameter attributes are defined:
 
 ``alignstack(<n>)``
     This indicates the alignment that should be considered by the backend when
-    assigning this parameter to a stack slot during calling convention
-    lowering. The enforcement of the specified alignment is target-dependent,
-    as target-specific calling convention rules may override this value. This
-    attribute serves the purpose of carrying language specific alignment
-    information that is not mapped to base types in the backend (for example,
-    over-alignment specification through language attributes).
+    assigning this parameter or return value to a stack slot during calling
+    convention lowering. The enforcement of the specified alignment is
+    target-dependent, as target-specific calling convention rules may override
+    this value. This attribute serves the purpose of carrying language specific
+    alignment information that is not mapped to base types in the backend (for
+    example, over-alignment specification through language attributes).
 
 ``allocalign``
     The function parameter marked with this attribute is the alignment in bytes of the
@@ -5824,6 +5824,8 @@ Hexagon:
 
 LoongArch:
 
+- ``u``: Print an LASX register.
+- ``w``: Print an LSX register.
 - ``z``: Print $zero register if operand is zero, otherwise print it normally.
 
 MSP430:
@@ -6317,21 +6319,24 @@ The following ``tag:`` values are valid:
   DW_TAG_union_type       = 23
 
 For ``DW_TAG_array_type``, the ``elements:`` should be :ref:`subrange
-descriptors <DISubrange>`, each representing the range of subscripts at that
-level of indexing. The ``DIFlagVector`` flag to ``flags:`` indicates that an
-array type is a native packed vector. The optional ``dataLocation`` is a
-DIExpression that describes how to get from an object's address to the actual
-raw data, if they aren't equivalent. This is only supported for array types,
-particularly to describe Fortran arrays, which have an array descriptor in
-addition to the array data. Alternatively it can also be DIVariable which
-has the address of the actual raw data. The Fortran language supports pointer
-arrays which can be attached to actual arrays, this attachment between pointer
-and pointee is called association.  The optional ``associated`` is a
-DIExpression that describes whether the pointer array is currently associated.
-The optional ``allocated`` is a DIExpression that describes whether the
-allocatable array is currently allocated.  The optional ``rank`` is a
-DIExpression that describes the rank (number of dimensions) of fortran assumed
-rank array (rank is known at runtime).
+descriptors <DISubrange>` or :ref:`subrange descriptors
+<DISubrangeType>`, each representing the range of subscripts at that
+level of indexing. The ``DIFlagVector`` flag to ``flags:`` indicates
+that an array type is a native packed vector. The optional
+``dataLocation`` is a DIExpression that describes how to get from an
+object's address to the actual raw data, if they aren't
+equivalent. This is only supported for array types, particularly to
+describe Fortran arrays, which have an array descriptor in addition to
+the array data. Alternatively it can also be DIVariable which has the
+address of the actual raw data. The Fortran language supports pointer
+arrays which can be attached to actual arrays, this attachment between
+pointer and pointee is called association.  The optional
+``associated`` is a DIExpression that describes whether the pointer
+array is currently associated.  The optional ``allocated`` is a
+DIExpression that describes whether the allocatable array is currently
+allocated.  The optional ``rank`` is a DIExpression that describes the
+rank (number of dimensions) of fortran assumed rank array (rank is
+known at runtime).
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration
@@ -6375,6 +6380,50 @@ DISubrange
     ; Use of global variable as count value
     !12 = !DIGlobalVariable(name: "count", scope: !8, file: !6, line: 22, type: !9)
     !13 = !DISubrange(count: !12, lowerBound: 0)
+
+.. _DISubrangeType:
+
+DISubrangeType
+""""""""""""""
+
+``DISubrangeType`` is similar to ``DISubrange``, but it is also a
+``DIType``.  It may be used as the type of an object, but could also
+be used as an array index.
+
+Like ``DISubrange``, it can hold a lower bound and count, or a lower
+bound and upper bound.  A ``DISubrangeType`` refers to the underlying
+type of which it is a subrange; this type can be an integer type or an
+enumeration type.
+
+A ``DISubrangeType`` may also have a stride -- unlike ``DISubrange``,
+this stride is a bit stride.  The stride is only useful when a
+``DISubrangeType`` is used as an array index type.
+
+Finally, ``DISubrangeType`` may have a bias.  In Ada, a program can
+request that a subrange value be stored in the minimum number of bits
+required.  In this situation, the stored value is biased by the lower
+bound -- e.g., a range ``-7 .. 0`` may take 3 bits in memory, and the
+value -5 would be stored as 2 (a bias of -7).
+
+.. code-block:: text
+
+    ; Scopes used in rest of example
+    !0 = !DIFile(filename: "vla.c", directory: "/path/to/file")
+    !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !0)
+    !2 = distinct !DISubprogram(name: "foo", scope: !1, file: !0, line: 5)
+
+    ; Base type used in example.
+    !3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+
+    ; A simple subrange with a name.
+    !4 = !DISubrange(name: "subrange", file: !0, line: 17, size: 32,
+                     align: 32, baseType: !3, lowerBound: 18, count: 12)
+    ; A subrange with a bias.
+    !5 = !DISubrange(name: "biased", lowerBound: -7, upperBound: 0,
+                     bias: -7, size: 3)
+    ; A subrange with a bit stride.
+    !6 = !DISubrange(name: "biased", lowerBound: 0, upperBound: 7,
+                     stride: 3)
 
 .. _DIEnumerator:
 
@@ -12996,9 +13045,9 @@ This instruction requires several arguments:
    -  Caller and callee both have the calling convention ``fastcc`` or ``tailcc``.
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
-   -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is 
+   -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is
       ``true``, or the calling convention is ``tailcc``.
-   -  `Platform-specific constraints are met. 
+   -  `Platform-specific constraints are met.
       <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
@@ -29512,9 +29561,10 @@ The ``llvm.type.checked.load.relative`` intrinsic loads a relative pointer to a
 function from a virtual table pointer using metadata. Otherwise, its semantic is
 identical to the ``llvm.type.checked.load`` intrinsic.
 
-A relative pointer is a pointer to an offset to the pointed to value. The
-address of the underlying pointer of the relative pointer is obtained by adding
-the offset to the address of the offset value.
+A relative pointer is a pointer to an offset. This is the offset between the destination
+pointer and the original pointer. The address of the destination pointer is obtained
+by loading this offset and adding it to the original pointer. This calculation is the
+same as that of the ``llvm.load.relative`` intrinsic.
 
 '``llvm.arithmetic.fence``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

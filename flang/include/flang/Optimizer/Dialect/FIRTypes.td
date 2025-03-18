@@ -658,5 +658,12 @@ def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
     IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
+// Returns true iff the type is an array box or a reference to such type.
+def IsArrayBoxPred : CPred<"::fir::getBoxRank($_self) != 0">;
+
+// Any boxed array type (not a reference to a boxed array type).
+def AnyBoxedArray
+    : TypeConstraint<And<[BoxOrClassType.predicate, IsArrayBoxPred]>,
+                     "any boxed array">;
 
 #endif // FIR_DIALECT_FIR_TYPES

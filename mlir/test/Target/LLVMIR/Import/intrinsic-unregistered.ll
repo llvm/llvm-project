@@ -9,7 +9,7 @@ define dso_local void @t0(ptr %a) {
 
 ; CHECK-LABEL: llvm.func @llvm.aarch64.ldxr.p0(!llvm.ptr)
 ; CHECK-LABEL: llvm.func @t0
-; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr) -> i64
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr {llvm.elementtype = i8}) -> i64
 ; CHECK:   llvm.return
 ; CHECK: }
 
@@ -65,4 +65,15 @@ define void @lround_test(float %0, double %1) {
   ; CHECK: llvm.intr.lround(%{{.*}}) : (f32) -> i32
   %3 = call i32 @llvm.lround.i32.f32(float %0)
   ret void
+}
+
+; // -----
+
+declare i32 @llvm.riscv.sha256sig0(i32)
+
+; CHECK-LABEL: test_intrin_arg_attr
+define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
+    ; CHECK: llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+    %val = call i32 @llvm.riscv.sha256sig0(i32 signext %a)
+    ret i32 %val
 }
