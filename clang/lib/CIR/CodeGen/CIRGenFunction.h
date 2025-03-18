@@ -73,6 +73,9 @@ public:
     return &fn.getRegion().front();
   }
 
+  /// Sanitizers enabled for this function.
+  clang::SanitizerSet sanOpts;
+
   mlir::Type convertTypeForMem(QualType T);
 
   mlir::Type convertType(clang::QualType T);
