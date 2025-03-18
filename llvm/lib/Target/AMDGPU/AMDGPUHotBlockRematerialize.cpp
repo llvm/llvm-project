@@ -2023,7 +2023,7 @@ void printVreg(Register Reg, const MachineRegisterInfo &MRI) {
     if (Name != "") {
       dbgs() << '%' << Name;
     } else {
-      dbgs() << '%' << Register::virtReg2Index(Reg);
+      dbgs() << '%' << Reg.virtRegIndex();
     }
   }
 }
@@ -3851,7 +3851,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
       }
 
       for (auto OutIt : Exp.OutputLive) {
-        unsigned Reg = OutIt.first;
+        Register Reg = OutIt.first;
         LaneBitmask OutMask = OutIt.second;
         LaneBitmask MBBBeginMask;
         if (CrossLive.find(Reg) != CrossLive.end())
@@ -3863,10 +3863,9 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
                                              : (OutMask & MBBBeginMask);
         if (MBBBeginMask.any()) {
           unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
-          LLVM_DEBUG(std::string movStr =
+          LLVM_DEBUG(std::string MovStr =
                          Exp.IsHoist ? "output hoist:" : "output sink:";
-                     dbgs()
-                     << movStr << Register::virtReg2Index(Reg) << " " << Size);
+                     dbgs() << MovStr << Reg.virtRegIndex() << " " << Size);
           // Exp out live at block input.
           // It will descrease live for MBB when sink and increase when hoist.
           if (SIRI->isVGPR(MRI, Reg)) {
@@ -3886,7 +3885,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
       }
 
       for (auto InIt : Exp.InputLive) {
-        unsigned Reg = InIt.first;
+        Register Reg = InIt.first;
         LaneBitmask InMask = InIt.second;
         LaneBitmask MBBBeginMask;
         if (CrossLive.find(Reg) != CrossLive.end())
@@ -3903,9 +3902,9 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
           // It will increase live for MBB.
           unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
 
-          LLVM_DEBUG(
-              std::string movStr = Exp.IsHoist ? "input hoist:" : "input sink:";
-              dbgs() << movStr << Register::virtReg2Index(Reg) << " " << Size);
+          LLVM_DEBUG(std::string MovStr =
+                         Exp.IsHoist ? "input hoist:" : "input sink:";
+                     dbgs() << MovStr << Reg.virtRegIndex() << " " << Size);
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
             if (Exp.IsHoist)
@@ -3928,7 +3927,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
       // MBB. So cannot count that output live reg as profit.
       // Hoist into loop is not supported now.
       for (auto OutIt : Exp.OutputLive) {
-        unsigned Reg = OutIt.first;
+        Register Reg = OutIt.first;
         bool IsDomUser = false;
         for (MachineInstr &MI : MRI.use_nodbg_instructions(Reg)) {
           MachineBasicBlock *UserMBB = MI.getParent();
@@ -3947,8 +3946,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
         LaneBitmask ProfitMask = OutMask & MBBBeginMask;
         if (MBBBeginMask.any()) {
           unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
-          LLVM_DEBUG(dbgs()
-                     << "move:" << Register::virtReg2Index(Reg) << " " << Size);
+          LLVM_DEBUG(dbgs() << "move:" << Reg.virtRegIndex() << " " << Size);
           // Exp out live at block input.
           // It will descrease live for MBB.
           if (SIRI->isVGPR(MRI, Reg)) {
@@ -3962,7 +3960,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
       }
 
       for (auto InIt : Exp.InputLive) {
-        unsigned Reg = InIt.first;
+        Register Reg = InIt.first;
         LaneBitmask InMask = InIt.second;
         LaneBitmask MBBBeginMask;
         if (InputLive.find(Reg) != InputLive.end())
@@ -3976,8 +3974,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
           // It will increase live for MBB.
           unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
 
-          LLVM_DEBUG(dbgs()
-                     << "add:" << Register::virtReg2Index(Reg) << " " << Size);
+          LLVM_DEBUG(dbgs() << "add:" << Reg.virtRegIndex() << " " << Size);
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
             VgprDiff += Size;

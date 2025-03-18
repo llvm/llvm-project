@@ -819,7 +819,7 @@ void print_reg(Register Reg, const MachineRegisterInfo &MRI,
     if (Name != "") {
       OS << '%' << Name;
     } else {
-      OS << '%' << Register::virtReg2Index(Reg);
+      OS << '%' << Reg.virtRegIndex();
     }
   } else if (Reg < SIRI->getNumRegs()) {
     OS << '$';

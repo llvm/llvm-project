@@ -52,7 +52,7 @@ using LiveSet = llvm::DenseMap<unsigned, llvm::LaneBitmask>;
 unsigned getRegSize(unsigned Reg, llvm::LaneBitmask &Mask,
                     const llvm::MachineRegisterInfo &MRI,
                     const llvm::SIRegisterInfo *SIRI);
-void collectLiveSetPressure(const LiveSet &liveSet,
+void collectLiveSetPressure(const LiveSet &LiveSet,
                             const llvm::MachineRegisterInfo &MRI,
                             const llvm::SIRegisterInfo *SIRI,
                             unsigned &VPressure, unsigned &SPressure);
