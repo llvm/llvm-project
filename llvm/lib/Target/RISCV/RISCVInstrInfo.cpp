@@ -45,8 +45,10 @@ using namespace llvm;
 #include "RISCVGenInstrInfo.inc"
 
 #define DEBUG_TYPE "riscv-instr-info"
-STATISTIC(TotalLMULSpilled, "Total LMUL spilled from vector registers");
-STATISTIC(TotalLMULReloaded, "Total LMUL reloaded into vector registers");
+STATISTIC(NumVRegSpilled,
+          "Number of registers within vector register groups spilled");
+STATISTIC(NumVRegReloaded,
+          "Number of registers within vector register groups reloaded");
 
 static cl::opt<bool> PreferWholeRegisterMove(
     "riscv-prefer-whole-register-move", cl::init(false), cl::Hidden,
@@ -662,7 +664,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addFrameIndex(FI)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
-    TotalLMULSpilled += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
+    NumVRegSpilled += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
   } else {
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
@@ -753,7 +755,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(
         .addFrameIndex(FI)
         .addMemOperand(MMO)
         .setMIFlag(Flags);
-    TotalLMULReloaded += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
+    NumVRegReloaded += TRI->getRegSizeInBits(*RC) / RISCV::RVVBitsPerBlock;
   } else {
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
