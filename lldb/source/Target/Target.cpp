@@ -1565,7 +1565,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   ClearModules(false);
 
   if (executable_sp) {
-    lldb::pid_t pid;
+    lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
     if (ProcessSP proc = GetProcessSP())
       pid = proc->GetID();
 
