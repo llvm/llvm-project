@@ -60,32 +60,23 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
-static std::string snakeToCamel(llvm::StringRef in) {
-  std::string output{};
+static std::string snakeToCamel(llvm::StringRef in, bool capitalize = false) {
+  std::string output;
   output.reserve(in.size());
-  for (size_t i = 0; i < in.size(); ++i) {
-    if (in[i] == '_' && i + 1 < in.size()) {
-      output += toupper(in[i + 1]);
-      ++i;
+
+  for (char c : in) {
+    if (c == '_') {
+      capitalize = true;
     } else {
-      output += in[i];
+      output += capitalize ? toupper(c) : c;
+      capitalize = false;
     }
   }
   return output;
 }
 
 static std::string snakeToPascal(llvm::StringRef in) {
-  std::string output{static_cast<std::string::value_type>(toupper(in.front()))};
-  output.reserve(in.size());
-  for (size_t i = 1; i < in.size(); ++i) {
-    if (in[i] == '_' && i + 1 < in.size()) {
-      output += toupper(in[i + 1]);
-      ++i;
-    } else {
-      output += in[i];
-    }
-  }
-  return output;
+    return snakeToCamel(in, /*capitalize=*/true);
 }
 
 static std::string typeToCppName(irdl::TypeOp type) {
