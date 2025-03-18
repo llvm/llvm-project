@@ -648,12 +648,12 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcibm,  RISCV::FeatureVendorXqcicli,
-    RISCV::FeatureVendorXqcicm,  RISCV::FeatureVendorXqcics,
-    RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqciint,
-    RISCV::FeatureVendorXqcili,  RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcibi,  RISCV::FeatureVendorXqcibm,
+    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
+    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
+    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcili,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisls,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
