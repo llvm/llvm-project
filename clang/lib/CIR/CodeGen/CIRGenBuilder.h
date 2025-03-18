@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "CIRGenTypeCache.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -42,6 +43,14 @@ public:
 
     assert(!cir::MissingFeatures::unsizedTypes());
     return false;
+  }
+
+  bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
+
+  // Creates constant nullptr for pointer type ty.
+  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
+    return create<cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
   }
 };
 
