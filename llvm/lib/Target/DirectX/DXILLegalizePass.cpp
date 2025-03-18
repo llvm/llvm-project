@@ -19,10 +19,10 @@
 #define DEBUG_TYPE "dxil-legalize"
 
 using namespace llvm;
-namespace {
 
-void fixI8TruncUseChain(Instruction &I, SmallVector<Instruction *> &ToRemove,
-                        DenseMap<Value *, Value *> &ReplacedValues) {
+static void fixI8TruncUseChain(Instruction &I,
+                               SmallVectorImpl<Instruction *> &ToRemove,
+                               DenseMap<Value *, Value *> &ReplacedValues) {
 
   auto *Cmp = dyn_cast<CmpInst>(&I);
 
@@ -89,9 +89,10 @@ void fixI8TruncUseChain(Instruction &I, SmallVector<Instruction *> &ToRemove,
   }
 }
 
-void downcastI64toI32InsertExtractElements(Instruction &I,
-                                           SmallVector<Instruction *> &ToRemove,
-                                           DenseMap<Value *, Value *> &) {
+static void
+downcastI64toI32InsertExtractElements(Instruction &I,
+                                      SmallVectorImpl<Instruction *> &ToRemove,
+                                      DenseMap<Value *, Value *> &) {
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
     Value *Idx = Extract->getIndexOperand();
@@ -127,6 +128,7 @@ void downcastI64toI32InsertExtractElements(Instruction &I,
   }
 }
 
+namespace {
 class DXILLegalizationPipeline {
 
 public:
@@ -147,8 +149,9 @@ public:
   }
 
 private:
-  SmallVector<std::function<void(Instruction &, SmallVector<Instruction *> &,
-                                 DenseMap<Value *, Value *> &)>>
+  SmallVector<
+      std::function<void(Instruction &, SmallVectorImpl<Instruction *> &,
+                         DenseMap<Value *, Value *> &)>>
       LegalizationPipeline;
 
   void initializeLegalizationPipeline() {
