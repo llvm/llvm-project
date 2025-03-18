@@ -165,6 +165,54 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   return LValue();
 }
 
+LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
+  UnaryOperatorKind op = e->getOpcode();
+
+  // __extension__ doesn't affect lvalue-ness.
+  if (op == UO_Extension)
+    return emitLValue(e->getSubExpr());
+
+  switch (op) {
+  case UO_Deref: {
+    cgm.errorNYI(e->getSourceRange(), "UnaryOp dereference");
+    return LValue();
+  }
+  case UO_Real:
+  case UO_Imag: {
+    cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
+    return LValue();
+  }
+  case UO_PreInc:
+  case UO_PreDec: {
+    bool isInc = e->isIncrementOp();
+    LValue lv = emitLValue(e->getSubExpr());
+
+    assert(e->isPrefix() && "Prefix operator in unexpected state!");
+
+    if (e->getType()->isAnyComplexType()) {
+      cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
+      return LValue();
+    } else {
+      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
+    }
+
+    return lv;
+  }
+  case UO_Extension:
+    llvm_unreachable("UnaryOperator extension should be handled above!");
+  case UO_Plus:
+  case UO_Minus:
+  case UO_Not:
+  case UO_LNot:
+  case UO_AddrOf:
+  case UO_PostInc:
+  case UO_PostDec:
+  case UO_Coawait:
+    llvm_unreachable("UnaryOperator of non-lvalue kind!");
+  }
+  llvm_unreachable("Unknown unary operator kind!");
+}
+
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
 RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
