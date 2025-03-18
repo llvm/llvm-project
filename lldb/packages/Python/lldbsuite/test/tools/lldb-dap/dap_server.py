@@ -88,13 +88,13 @@ def packet_type_is(packet, packet_type):
 
 
 def dump_dap_log(log_file):
-    print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
+    print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
-        print("no log file available")
+        print("no log file available", file=sys.stderr)
     else:
         with open(log_file, "r") as file:
-            print(file.read())
-    print("========= END =========")
+            print(file.read(), file=sys.stderr)
+    print("========= END =========", file=sys.stderr)
 
 
 def read_packet_thread(vs_comm, log_file):
@@ -107,6 +107,10 @@ def read_packet_thread(vs_comm, log_file):
             # termination of lldb-dap and stop waiting for new packets.
             done = not vs_comm.handle_recv_packet(packet)
     finally:
+        # Wait for the process to fully exit before dumping the log file to
+        # ensure we have the entire log contents.
+        if vs_comm.process is not None:
+            vs_comm.process.wait()
         dump_dap_log(log_file)
 
 
