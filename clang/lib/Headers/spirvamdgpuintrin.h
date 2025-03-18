@@ -1,4 +1,4 @@
-//===-- amdgpuintrin.h - AMDGPU intrinsic functions -----------------------===//
+//===-- spirvamdgpuintrin.h - spirv amdgpu intrinsic functions -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,29 +6,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __AMDGPUINTRIN_H
-#define __AMDGPUINTRIN_H
+#ifndef __SPIRVAMDGPUINTRIN_H
+#define __SPIRVAMDGPUINTRIN_H
 
-#ifndef __AMDGPU__
-#error "This file is intended for AMDGPU targets or offloading to AMDGPU"
+#if !defined( __SPIRV64__) || !defined(__AMDGPU__)
+#error "This file is intended for the spirv64-amd-amdhsa target"
 #endif
 
 #ifndef __GPUINTRIN_H
-#error "Never use <amdgpuintrin.h> directly; include <gpuintrin.h> instead"
+#error "Never use <spirvamdgcnintrin.h> directly; include <gpuintrin.h> instead"
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 
-// Type aliases to the address spaces used by the AMDGPU backend.
-#define __gpu_private __attribute__((address_space(5)))
-#define __gpu_constant __attribute__((address_space(4)))
+// Type aliases to the address spaces used by the SPIRV64 AMDGPU backend.
+#define __gpu_private __attribute__((address_space(0)))
+#define __gpu_constant __attribute__((address_space(1)))
 #define __gpu_local __attribute__((address_space(3)))
 #define __gpu_global __attribute__((address_space(1)))
-#define __gpu_generic __attribute__((address_space(0)))
+#define __gpu_generic __attribute__((address_space(4)))
 
-// Attribute to declare a function as a kernel.
-#define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
+// Attribute to declare a function as a kernel is not available on spirv
+#define __gpu_kernel
 
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
@@ -188,4 +188,4 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");
 
-#endif // __AMDGPUINTRIN_H
+#endif // __SPIRVAMDGPUINTRIN_H

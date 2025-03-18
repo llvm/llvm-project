@@ -9,6 +9,11 @@
 // RUN:   -target-feature +ptx62 \
 // RUN:   -triple nvptx64-nvidia-cuda -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=NVPTX
+//
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include  \
+// RUN:   -internal-isystem %S/../../lib/Headers/ \
+// RUN:   -triple spirv64-amd-amdhsa -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=SPIRVAMD
 
 #include <gpuintrin.h>
 
@@ -978,8 +983,511 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:    call void @llvm.nvvm.exit()
 // NVPTX-NEXT:    ret void
 //
+//
+// SPIRVAMD-LABEL: define spir_func void @foo(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks_x()
+// SPIRVAMD-NEXT:    [[CALL1:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks_y()
+// SPIRVAMD-NEXT:    [[CALL2:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks_z()
+// SPIRVAMD-NEXT:    [[CALL3:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks(i32 noundef 0)
+// SPIRVAMD-NEXT:    [[CALL4:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id_x()
+// SPIRVAMD-NEXT:    [[CALL5:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id_y()
+// SPIRVAMD-NEXT:    [[CALL6:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id_z()
+// SPIRVAMD-NEXT:    [[CALL7:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id(i32 noundef 0)
+// SPIRVAMD-NEXT:    [[CALL8:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads_x()
+// SPIRVAMD-NEXT:    [[CALL9:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads_y()
+// SPIRVAMD-NEXT:    [[CALL10:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads_z()
+// SPIRVAMD-NEXT:    [[CALL11:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads(i32 noundef 0)
+// SPIRVAMD-NEXT:    [[CALL12:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id_x()
+// SPIRVAMD-NEXT:    [[CALL13:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id_y()
+// SPIRVAMD-NEXT:    [[CALL14:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id_z()
+// SPIRVAMD-NEXT:    [[CALL15:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id(i32 noundef 0)
+// SPIRVAMD-NEXT:    [[CALL16:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_lanes()
+// SPIRVAMD-NEXT:    [[CALL17:%.*]] = call spir_func addrspace(4) i32 @__gpu_lane_id()
+// SPIRVAMD-NEXT:    [[CALL18:%.*]] = call spir_func addrspace(4) i64 @__gpu_lane_mask()
+// SPIRVAMD-NEXT:    [[CALL19:%.*]] = call spir_func addrspace(4) i32 @__gpu_read_first_lane_u32(i64 noundef -1, i32 noundef -1)
+// SPIRVAMD-NEXT:    [[CALL20:%.*]] = call spir_func addrspace(4) i64 @__gpu_read_first_lane_u64(i64 noundef -1, i64 noundef -1)
+// SPIRVAMD-NEXT:    [[CALL21:%.*]] = call spir_func addrspace(4) i64 @__gpu_ballot(i64 noundef -1, i1 noundef zeroext true)
+// SPIRVAMD-NEXT:    call spir_func addrspace(4) void @__gpu_sync_threads()
+// SPIRVAMD-NEXT:    call spir_func addrspace(4) void @__gpu_sync_lane(i64 noundef -1)
+// SPIRVAMD-NEXT:    [[CALL22:%.*]] = call spir_func addrspace(4) i32 @__gpu_shuffle_idx_u32(i64 noundef -1, i32 noundef -1, i32 noundef -1, i32 noundef 0)
+// SPIRVAMD-NEXT:    [[CALL23:%.*]] = call spir_func addrspace(4) i64 @__gpu_first_lane_id(i64 noundef -1)
+// SPIRVAMD-NEXT:    [[CALL24:%.*]] = call spir_func zeroext addrspace(4) i1 @__gpu_is_first_in_lane(i64 noundef -1)
+// SPIRVAMD-NEXT:    call spir_func addrspace(4) void @__gpu_exit() #[[ATTR7:[0-9]+]]
+// SPIRVAMD-NEXT:    unreachable
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_blocks_x(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 12
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG3:![0-9]+]], !invariant.load [[META4:![0-9]+]]
+// SPIRVAMD-NEXT:    [[TMP3:%.*]] = call align 8 dereferenceable(256) addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// SPIRVAMD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP3]], i32 12
+// SPIRVAMD-NEXT:    [[TMP5:%.*]] = load i16, ptr addrspace(4) [[TMP4]], align 2, !range [[RNG5:![0-9]+]], !invariant.load [[META4]], !noundef [[META4]]
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i16 [[TMP5]] to i32
+// SPIRVAMD-NEXT:    [[DIV:%.*]] = udiv i32 [[TMP2]], [[CONV]]
+// SPIRVAMD-NEXT:    ret i32 [[DIV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_blocks_y(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 16
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG3]], !invariant.load [[META4]]
+// SPIRVAMD-NEXT:    [[TMP3:%.*]] = call align 8 dereferenceable(256) addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// SPIRVAMD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP3]], i32 14
+// SPIRVAMD-NEXT:    [[TMP5:%.*]] = load i16, ptr addrspace(4) [[TMP4]], align 2, !range [[RNG5]], !invariant.load [[META4]], !noundef [[META4]]
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i16 [[TMP5]] to i32
+// SPIRVAMD-NEXT:    [[DIV:%.*]] = udiv i32 [[TMP2]], [[CONV]]
+// SPIRVAMD-NEXT:    ret i32 [[DIV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_blocks_z(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call align 4 dereferenceable(64) addrspace(4) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 20
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !range [[RNG3]], !invariant.load [[META4]]
+// SPIRVAMD-NEXT:    [[TMP3:%.*]] = call align 8 dereferenceable(256) addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// SPIRVAMD-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP3]], i32 16
+// SPIRVAMD-NEXT:    [[TMP5:%.*]] = load i16, ptr addrspace(4) [[TMP4]], align 2, !range [[RNG5]], !invariant.load [[META4]], !noundef [[META4]]
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i16 [[TMP5]] to i32
+// SPIRVAMD-NEXT:    [[DIV:%.*]] = udiv i32 [[TMP2]], [[CONV]]
+// SPIRVAMD-NEXT:    ret i32 [[DIV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_blocks(
+// SPIRVAMD-SAME: i32 noundef [[__DIM:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__DIM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__DIM_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i32 [[__DIM]], ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRVAMD-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRVAMD-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRVAMD-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRVAMD-NEXT:    ]
+// SPIRVAMD:       [[SW_BB]]:
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks_x()
+// SPIRVAMD-NEXT:    store i32 [[CALL]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN:.*]]
+// SPIRVAMD:       [[SW_BB1]]:
+// SPIRVAMD-NEXT:    [[CALL2:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks_y()
+// SPIRVAMD-NEXT:    store i32 [[CALL2]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_BB3]]:
+// SPIRVAMD-NEXT:    [[CALL4:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_blocks_z()
+// SPIRVAMD-NEXT:    store i32 [[CALL4]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_DEFAULT]]:
+// SPIRVAMD-NEXT:    unreachable
+// SPIRVAMD:       [[RETURN]]:
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_block_id_x(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call addrspace(4) i32 @llvm.amdgcn.workgroup.id.x()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_block_id_y(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call addrspace(4) i32 @llvm.amdgcn.workgroup.id.y()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_block_id_z(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call addrspace(4) i32 @llvm.amdgcn.workgroup.id.z()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_block_id(
+// SPIRVAMD-SAME: i32 noundef [[__DIM:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__DIM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__DIM_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i32 [[__DIM]], ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRVAMD-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRVAMD-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRVAMD-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRVAMD-NEXT:    ]
+// SPIRVAMD:       [[SW_BB]]:
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id_x()
+// SPIRVAMD-NEXT:    store i32 [[CALL]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN:.*]]
+// SPIRVAMD:       [[SW_BB1]]:
+// SPIRVAMD-NEXT:    [[CALL2:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id_y()
+// SPIRVAMD-NEXT:    store i32 [[CALL2]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_BB3]]:
+// SPIRVAMD-NEXT:    [[CALL4:%.*]] = call spir_func addrspace(4) i32 @__gpu_block_id_z()
+// SPIRVAMD-NEXT:    store i32 [[CALL4]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_DEFAULT]]:
+// SPIRVAMD-NEXT:    unreachable
+// SPIRVAMD:       [[RETURN]]:
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_threads_x(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call align 8 dereferenceable(256) addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 12
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 2, !range [[RNG5]], !invariant.load [[META4]], !noundef [[META4]]
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i16 [[TMP2]] to i32
+// SPIRVAMD-NEXT:    ret i32 [[CONV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_threads_y(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call align 8 dereferenceable(256) addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 14
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 2, !range [[RNG5]], !invariant.load [[META4]], !noundef [[META4]]
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i16 [[TMP2]] to i32
+// SPIRVAMD-NEXT:    ret i32 [[CONV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_threads_z(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call align 8 dereferenceable(256) addrspace(4) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[TMP0]], i32 16
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i16, ptr addrspace(4) [[TMP1]], align 2, !range [[RNG5]], !invariant.load [[META4]], !noundef [[META4]]
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i16 [[TMP2]] to i32
+// SPIRVAMD-NEXT:    ret i32 [[CONV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_threads(
+// SPIRVAMD-SAME: i32 noundef [[__DIM:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__DIM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__DIM_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i32 [[__DIM]], ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRVAMD-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRVAMD-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRVAMD-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRVAMD-NEXT:    ]
+// SPIRVAMD:       [[SW_BB]]:
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads_x()
+// SPIRVAMD-NEXT:    store i32 [[CALL]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN:.*]]
+// SPIRVAMD:       [[SW_BB1]]:
+// SPIRVAMD-NEXT:    [[CALL2:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads_y()
+// SPIRVAMD-NEXT:    store i32 [[CALL2]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_BB3]]:
+// SPIRVAMD-NEXT:    [[CALL4:%.*]] = call spir_func addrspace(4) i32 @__gpu_num_threads_z()
+// SPIRVAMD-NEXT:    store i32 [[CALL4]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_DEFAULT]]:
+// SPIRVAMD-NEXT:    unreachable
+// SPIRVAMD:       [[RETURN]]:
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_thread_id_x(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) addrspace(4) i32 @llvm.amdgcn.workitem.id.x()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_thread_id_y(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) addrspace(4) i32 @llvm.amdgcn.workitem.id.y()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_thread_id_z(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call noundef range(i32 0, 1024) addrspace(4) i32 @llvm.amdgcn.workitem.id.z()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_thread_id(
+// SPIRVAMD-SAME: i32 noundef [[__DIM:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__DIM_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__DIM_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i32 [[__DIM]], ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__DIM_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRVAMD-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRVAMD-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRVAMD-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRVAMD-NEXT:    ]
+// SPIRVAMD:       [[SW_BB]]:
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id_x()
+// SPIRVAMD-NEXT:    store i32 [[CALL]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN:.*]]
+// SPIRVAMD:       [[SW_BB1]]:
+// SPIRVAMD-NEXT:    [[CALL2:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id_y()
+// SPIRVAMD-NEXT:    store i32 [[CALL2]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_BB3]]:
+// SPIRVAMD-NEXT:    [[CALL4:%.*]] = call spir_func addrspace(4) i32 @__gpu_thread_id_z()
+// SPIRVAMD-NEXT:    store i32 [[CALL4]], ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    br label %[[RETURN]]
+// SPIRVAMD:       [[SW_DEFAULT]]:
+// SPIRVAMD-NEXT:    unreachable
+// SPIRVAMD:       [[RETURN]]:
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[RETVAL_ASCAST]], align 4
+// SPIRVAMD-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_num_lanes(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call addrspace(4) i32 @llvm.amdgcn.wavefrontsize()
+// SPIRVAMD-NEXT:    ret i32 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_lane_id(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call addrspace(4) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = call addrspace(4) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[TMP0]])
+// SPIRVAMD-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i64 @__gpu_lane_mask(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = call addrspace(4) i64 @llvm.amdgcn.ballot.i64(i1 true)
+// SPIRVAMD-NEXT:    ret i64 [[TMP0]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_read_first_lane_u32(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]], i32 noundef [[__X:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__X_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__X_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    store i32 [[__X]], ptr addrspace(4) [[__X_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__X_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = call addrspace(4) i32 @llvm.amdgcn.readfirstlane.i32(i32 [[TMP0]])
+// SPIRVAMD-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i64 @__gpu_read_first_lane_u64(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]], i64 noundef [[__X:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__X_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__HI:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__LO:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__X_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__HI_ASCAST:%.*]] = addrspacecast ptr [[__HI]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LO_ASCAST:%.*]] = addrspacecast ptr [[__LO]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    store i64 [[__X]], ptr addrspace(4) [[__X_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[__X_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[SHR:%.*]] = lshr i64 [[TMP0]], 32
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = trunc i64 [[SHR]] to i32
+// SPIRVAMD-NEXT:    store i32 [[CONV]], ptr addrspace(4) [[__HI_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(4) [[__X_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[AND:%.*]] = and i64 [[TMP1]], 4294967295
+// SPIRVAMD-NEXT:    [[CONV1:%.*]] = trunc i64 [[AND]] to i32
+// SPIRVAMD-NEXT:    store i32 [[CONV1]], ptr addrspace(4) [[__LO_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[__HI_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP2]], i32 noundef [[TMP3]])
+// SPIRVAMD-NEXT:    [[CONV2:%.*]] = zext i32 [[CALL]] to i64
+// SPIRVAMD-NEXT:    [[SHL:%.*]] = shl i64 [[CONV2]], 32
+// SPIRVAMD-NEXT:    [[TMP4:%.*]] = load i64, ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[__LO_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[CALL3:%.*]] = call spir_func addrspace(4) i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP4]], i32 noundef [[TMP5]])
+// SPIRVAMD-NEXT:    [[CONV4:%.*]] = zext i32 [[CALL3]] to i64
+// SPIRVAMD-NEXT:    [[AND5:%.*]] = and i64 [[CONV4]], 4294967295
+// SPIRVAMD-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[AND5]]
+// SPIRVAMD-NEXT:    ret i64 [[OR]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i64 @__gpu_ballot(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]], i1 noundef zeroext [[__X:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__X_ADDR:%.*]] = alloca i8, align 1
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__X_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[STOREDV:%.*]] = zext i1 [[__X]] to i8
+// SPIRVAMD-NEXT:    store i8 [[STOREDV]], ptr addrspace(4) [[__X_ADDR_ASCAST]], align 1
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(4) [[__X_ADDR_ASCAST]], align 1
+// SPIRVAMD-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP1]] to i1
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = call addrspace(4) i64 @llvm.amdgcn.ballot.i64(i1 [[LOADEDV]])
+// SPIRVAMD-NEXT:    [[AND:%.*]] = and i64 [[TMP0]], [[TMP2]]
+// SPIRVAMD-NEXT:    ret i64 [[AND]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func void @__gpu_sync_threads(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    call addrspace(4) void @llvm.amdgcn.s.barrier()
+// SPIRVAMD-NEXT:    fence syncscope("workgroup") seq_cst
+// SPIRVAMD-NEXT:    ret void
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func void @__gpu_sync_lane(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    call addrspace(4) void @llvm.amdgcn.wave.barrier()
+// SPIRVAMD-NEXT:    ret void
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i32 @__gpu_shuffle_idx_u32(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]], i32 noundef [[__IDX:%.*]], i32 noundef [[__X:%.*]], i32 noundef [[__WIDTH:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__IDX_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__X_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__WIDTH_ADDR:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[__LANE:%.*]] = alloca i32, align 4
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__IDX_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__IDX_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__X_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__X_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__WIDTH_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__WIDTH_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_ASCAST:%.*]] = addrspacecast ptr [[__LANE]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    store i32 [[__IDX]], ptr addrspace(4) [[__IDX_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    store i32 [[__X]], ptr addrspace(4) [[__X_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    store i32 [[__WIDTH]], ptr addrspace(4) [[__WIDTH_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[__IDX_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_lane_id()
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[__WIDTH_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[SUB:%.*]] = sub i32 [[TMP1]], 1
+// SPIRVAMD-NEXT:    [[NOT:%.*]] = xor i32 [[SUB]], -1
+// SPIRVAMD-NEXT:    [[AND:%.*]] = and i32 [[CALL]], [[NOT]]
+// SPIRVAMD-NEXT:    [[ADD:%.*]] = add i32 [[TMP0]], [[AND]]
+// SPIRVAMD-NEXT:    store i32 [[ADD]], ptr addrspace(4) [[__LANE_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[__LANE_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[SHL:%.*]] = shl i32 [[TMP2]], 2
+// SPIRVAMD-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[__X_ADDR_ASCAST]], align 4
+// SPIRVAMD-NEXT:    [[TMP4:%.*]] = call addrspace(4) i32 @llvm.amdgcn.ds.bpermute(i32 [[SHL]], i32 [[TMP3]])
+// SPIRVAMD-NEXT:    ret i32 [[TMP4]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func i64 @__gpu_first_lane_id(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[TMP1:%.*]] = call addrspace(4) i64 @llvm.cttz.i64(i64 [[TMP0]], i1 true)
+// SPIRVAMD-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 1
+// SPIRVAMD-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[TMP0]], 0
+// SPIRVAMD-NEXT:    [[FFS:%.*]] = select i1 [[ISZERO]], i64 0, i64 [[TMP2]]
+// SPIRVAMD-NEXT:    [[CAST:%.*]] = trunc i64 [[FFS]] to i32
+// SPIRVAMD-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CAST]], 1
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = sext i32 [[SUB]] to i64
+// SPIRVAMD-NEXT:    ret i64 [[CONV]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func zeroext i1 @__gpu_is_first_in_lane(
+// SPIRVAMD-SAME: i64 noundef [[__LANE_MASK:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRVAMD-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr [[__LANE_MASK_ADDR]] to ptr addrspace(4)
+// SPIRVAMD-NEXT:    store i64 [[__LANE_MASK]], ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[CALL:%.*]] = call spir_func addrspace(4) i32 @__gpu_lane_id()
+// SPIRVAMD-NEXT:    [[CONV:%.*]] = zext i32 [[CALL]] to i64
+// SPIRVAMD-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(4) [[__LANE_MASK_ADDR_ASCAST]], align 8
+// SPIRVAMD-NEXT:    [[CALL1:%.*]] = call spir_func addrspace(4) i64 @__gpu_first_lane_id(i64 noundef [[TMP0]])
+// SPIRVAMD-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CONV]], [[CALL1]]
+// SPIRVAMD-NEXT:    ret i1 [[CMP]]
+//
+//
+// SPIRVAMD-LABEL: define internal spir_func void @__gpu_exit(
+// SPIRVAMD-SAME: ) addrspace(4) #[[ATTR1:[0-9]+]] {
+// SPIRVAMD-NEXT:  [[ENTRY:.*:]]
+// SPIRVAMD-NEXT:    call addrspace(4) void @llvm.amdgcn.endpgm()
+// SPIRVAMD-NEXT:    ret void
+//
 //.
 // AMDGPU: [[RNG3]] = !{i32 1, i32 0}
 // AMDGPU: [[META4]] = !{}
 // AMDGPU: [[RNG5]] = !{i16 1, i16 1025}
+//.
+// SPIRVAMD: [[RNG3]] = !{i32 1, i32 0}
+// SPIRVAMD: [[META4]] = !{}
+// SPIRVAMD: [[RNG5]] = !{i16 1, i16 1025}
 //.
