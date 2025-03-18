@@ -1652,6 +1652,7 @@ Designated initializers (N494)                                                 C
 Array & element qualification (N2607)                                          C23           C89
 Attributes (N2335)                                                             C23           C89
 ``#embed`` (N3017)                                                             C23           C89, C++
+Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
