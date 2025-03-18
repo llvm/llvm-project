@@ -28,10 +28,18 @@ TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(neg_zero));
   EXPECT_MATH_ERRNO(EDOM);
 
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::acoshf16(neg_zero),
+                              FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::acoshf16(inf));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(neg_inf));
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::acoshf16(neg_inf),
+                              FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::acoshf16(
