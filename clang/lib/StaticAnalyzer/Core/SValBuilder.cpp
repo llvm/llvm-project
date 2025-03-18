@@ -370,9 +370,8 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     const auto *TE = cast<TypeTraitExpr>(E);
     if (TE->isStoredAsBoolean())
       return makeTruthVal(TE->getBoolValue(), TE->getType());
-    if (TE->getType()->isIntegralOrEnumerationType())
-      return makeIntVal(TE->getAPValue().getInt());
-    return std::nullopt;
+    assert(TE->getAPValue().isInt() && "APValue type not supported");
+    return makeIntVal(TE->getAPValue().getInt());
   }
 
   case Stmt::IntegerLiteralClass:
