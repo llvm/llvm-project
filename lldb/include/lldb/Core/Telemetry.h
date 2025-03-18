@@ -98,7 +98,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
   /// session. Necessary because we'd send off an entry right before a command's
   /// execution and another right after. This is to avoid losing telemetry if
   /// the command does not execute successfully.
-  uint64_t command_id;
+  uint64_t command_id = 0;
   /// The command name(eg., "breakpoint set")
   std::string command_name;
   /// These two fields are not collected by default due to PII risks.
@@ -125,7 +125,7 @@ struct CommandInfo : public LLDBBaseTelemetryInfo {
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 
-  static uint64_t GetNextId();
+  static uint64_t GetNextID();
 
 private:
   // We assign each command (in the same session) a unique id so that their
@@ -161,14 +161,14 @@ struct ExecModuleInfo : public LLDBBaseTelemetryInfo {
   /// The same as the executable-module's UUID.
   UUID exec_uuid;
   /// PID of the process owned by this target.
-  lldb::pid_t pid;
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
   /// The triple of this executable module.
   std::string triple;
 
   /// If true, this entry was emitted at the beginning of an event (eg., before
   /// the executable is set). Otherwise, it was emitted at the end of an
   /// event (eg., after the module and any dependency were loaded.)
-  bool is_start_entry;
+  bool is_start_entry = false;
 
   ExecModuleInfo() = default;
 
@@ -192,8 +192,8 @@ struct ExitDescription {
 
 struct ProcessExitInfo : public LLDBBaseTelemetryInfo {
   UUID exec_uuid;
-  lldb::pid_t pid;
-  bool is_start_entry;
+  lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+  bool is_start_entry = false;
   std::optional<ExitDescription> exit_desc;
 
   llvm::telemetry::KindType getKind() const override {
