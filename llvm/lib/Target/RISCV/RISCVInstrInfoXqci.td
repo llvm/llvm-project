@@ -54,7 +54,28 @@ def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
 
+def uimm16nonzero : RISCVOp<XLenVT>,
+                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<16>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<16, "NonZero">;
+  let DecoderMethod = "decodeUImmNonZeroOperand<16>";
+  let OperandType = "OPERAND_UIMM16_NONZERO";
+}
+
+def simm5nonzero : RISCVOp<XLenVT>,
+                   ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<5>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<5, "NonZero">;
+  let DecoderMethod = "decodeSImmNonZeroOperand<5>";
+  let OperandType = "OPERAND_SIMM5_NONZERO";
+}
+
 def simm11 : RISCVSImmLeafOp<11>;
+
+def simm16nonzero : RISCVOp<XLenVT>,
+                    ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<16>(Imm);}]> {
+  let ParserMatchClass = SImmAsmOperand<16, "NonZero">;
+  let DecoderMethod = "decodeSImmNonZeroOperand<16>";
+  let OperandType = "OPERAND_SIMM16_NONZERO";
+}
 
 def simm20 : RISCVSImmLeafOp<20>;
 
@@ -261,6 +282,40 @@ class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
   let Inst{6-2} = funct5{4-0};
 }
 
+class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
+    : RVInstB<funct3, OPC_CUSTOM_3, (outs),
+              (ins GPRNoX0:$rs1, InTyImm5:$rs2, simm13_lsb0:$imm12),
+              opcodestr, "$rs1, $rs2, $imm12"> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
+    : RVInst48<(outs), (ins GPRNoX0:$rs1, InTyImm16:$imm16, simm13_lsb0:$imm12),
+               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
+  bits<5> rs1;
+  bits<16> imm16;
+  bits<12> imm12;
+
+  let Inst{47-32} = imm16;
+  let Inst{31} = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = funct5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-8} = imm12{3-0};
+  let Inst{7} = imm12{10};
+  let Inst{6-0} = 0b0011111;
+  let isBranch = 1;
+  let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 let hasSideEffects = 1 in
 class QCIRVInst16CI_NONE<bits<5> funct5, string OpcodeStr>
     : RVInst16CI<0b000, 0b10, (outs), (ins), OpcodeStr, ""> {
@@ -279,6 +334,19 @@ class QCIInt_IMM<bits<1> funct1, string opcodestr>
   let rs1 = imm10{4-0};
   let Inst{31-25} = {0b110011, funct1};
   let Inst{24-20} = imm10{9-5};
+}
+
+class QCISim_NONE<bits<4> imm11_8, string opcodestr>
+    : RVInstI<0b010, OPC_OP_IMM, (outs), (ins), opcodestr, ""> {
+  let rs1 = 0;
+  let rd = 0;
+  let imm12 = {imm11_8, 0b00000000};
+}
+
+class QCISim_RS1<bits<4> imm11_8, string opcodestr>
+    : RVInstI<0b010, OPC_OP_IMM, (outs), (ins GPR:$rs1), opcodestr, "$rs1"> {
+  let rd = 0;
+  let imm12 = {imm11_8, 0b00000000};
 }
 
 class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
@@ -398,6 +466,22 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_NORMEU : QCIRVInstR<0b1001, "qc.normeu">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcia, IsRV32]
+
+let Predicates = [HasVendorXqcibi, IsRV32] in {
+  def QC_BEQI  : QCIBranchInst_rii<0b000, simm5nonzero, "qc.beqi">;
+  def QC_BNEI  : QCIBranchInst_rii<0b001, simm5nonzero, "qc.bnei">;
+  def QC_BLTI  : QCIBranchInst_rii<0b100, simm5nonzero, "qc.blti">;
+  def QC_BGEI  : QCIBranchInst_rii<0b101, simm5nonzero, "qc.bgei">;
+  def QC_BLTUI : QCIBranchInst_rii<0b110, uimm5nonzero, "qc.bltui">;
+  def QC_BGEUI : QCIBranchInst_rii<0b111, uimm5nonzero, "qc.bgeui">;
+
+  def QC_E_BEQI  : QCIBranchInst48_rii<0b11000, simm16nonzero, "qc.e.beqi">;
+  def QC_E_BNEI  : QCIBranchInst48_rii<0b11001, simm16nonzero, "qc.e.bnei">;
+  def QC_E_BLTI  : QCIBranchInst48_rii<0b11100, simm16nonzero, "qc.e.blti">;
+  def QC_E_BGEI  : QCIBranchInst48_rii<0b11101, simm16nonzero, "qc.e.bgei">;
+  def QC_E_BLTUI : QCIBranchInst48_rii<0b11110, uimm16nonzero, "qc.e.bltui">;
+  def QC_E_BGEUI : QCIBranchInst48_rii<0b11111, uimm16nonzero, "qc.e.bgeui">;
+} // Predicates = [HasVendorXqcibi, IsRV32]
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
@@ -619,6 +703,41 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_E_ANDI  : QCIRVInstEI<0b011, 0b11, "qc.e.andi">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcilia, IsRV32]
+
+let Predicates = [HasVendorXqcisim, IsRV32] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
+  def QC_PSYSCALLI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm10:$imm10),
+                             "qc.psyscalli", "$imm10"> {
+    bits<10> imm10;
+
+    let rs1 = 0;
+    let rd = 0;
+    let imm12 = {0b00, imm10};
+  }
+
+  def QC_PPUTCI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm8:$imm8),
+                          "qc.pputci", "$imm8"> {
+    bits<8> imm8;
+
+    let rs1 = 0;
+    let rd = 0;
+    let imm12 = {0b0100, imm8};
+  }
+
+  def QC_PCOREDUMP : QCISim_NONE<0b0110, "qc.pcoredump">;
+  def QC_PPREGS : QCISim_NONE<0b0111, "qc.ppregs">;
+  def QC_PPREG : QCISim_RS1<0b1000, "qc.ppreg">;
+  def QC_PPUTC : QCISim_RS1<0b1001, "qc.pputc">;
+  def QC_PPUTS : QCISim_RS1<0b1010, "qc.pputs">;
+  def QC_PEXIT : QCISim_RS1<0b1011, "qc.pexit">;
+  def QC_PSYSCALL : QCISim_RS1<0b1100, "qc.psyscall">;
+
+  def QC_C_PTRACE : RVInst16CI<0b000, 0b10, (outs), (ins), "qc.c.ptrace", ""> {
+    let rd = 0;
+    let imm = 0;
+  }
+} // mayLoad = 0, mayStore = 0, hasSideEffects = 1
+} // Predicates = [HasVendorXqcisim, IsRV32]
 
 } // DecoderNamespace = "Xqci"
 

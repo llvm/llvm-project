@@ -1364,7 +1364,8 @@ static bool checkDestructor(InterpState &S, CodePtr OpPC, const Function *Func,
 
 static void compileFunction(InterpState &S, const Function *Func) {
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Func->getDecl(), const_cast<Function *>(Func));
+      .compileFunc(Func->getDecl()->getMostRecentDecl(),
+                   const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
