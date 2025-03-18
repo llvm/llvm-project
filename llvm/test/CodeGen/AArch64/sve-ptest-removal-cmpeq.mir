@@ -689,8 +689,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
     ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 31, implicit $vg
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr_3b = COPY [[PTRUE_B]]
-    ; CHECK-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[COPY2]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
-    ; CHECK-NEXT: PTEST_PP [[PTRUE_B]], killed [[CMPEQ_PPzZZ_B]], implicit-def $nzcv
+    ; CHECK-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[COPY2]], [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY3]], $wzr, 0, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
