@@ -470,7 +470,7 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
   ProcInfo Proc;
   if (getParser().parseIdentifier(Proc.Name))
     return Error(Loc, "expected identifier for procedure");
-  if (getLexer().is(AsmToken::Identifier)) {
+  while (getLexer().is(AsmToken::Identifier)) {
     StringRef nextVal = getTok().getString();
     SMLoc nextLoc = getTok().getLoc();
     if (nextVal.equals_insensitive("far")) {
@@ -483,6 +483,13 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       Proc.Distance = PROC_DISTANCE_NEAR;
       nextVal = getTok().getString();
       nextLoc = getTok().getLoc();
+    } else if (nextVal.equals_insensitive("frame")) {
+      Lex();
+      Proc.IsFramed = true;
+      nextVal = getTok().getString();
+      nextLoc = getTok().getLoc();
+    } else {
+      break;
     }
   }
   MCSymbolCOFF *Sym =
@@ -498,12 +505,6 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
                                      ? MCContext::IsNear
                                      : MCContext::IsFar);
 
-  if (getLexer().is(AsmToken::Identifier) &&
-      getTok().getString().equals_insensitive("frame")) {
-    Lex();
-    Proc.IsFramed = true;
-    getStreamer().emitWinCFIStartProc(Sym, Loc);
-  }
   if (Proc.IsFramed) {
     getStreamer().emitWinCFIStartProc(Sym, Loc);
   }
