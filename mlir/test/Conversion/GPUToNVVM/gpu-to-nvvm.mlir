@@ -1064,6 +1064,7 @@ gpu.module @test_module_54 {
   // CHECK: llvm.func @__nv_isinfd(f64) -> i32
   // CHECK: llvm.func @__nv_isnanf(f32) -> i32
   // CHECK: llvm.func @__nv_isnand(f64) -> i32
+  // CHECK: llvm.func @__nv_finitef(f32) -> i32
   // CHECK: llvm.func @__nv_isfinited(f64) -> i32
   // CHECK-LABEL: @fpclassify
   func.func @fpclassify(%f32: f32, %f64: f64) -> (i1, i1, i1, i1, i1, i1) {
