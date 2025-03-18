@@ -4749,6 +4749,167 @@ void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// DoConcurrentOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::DoConcurrentOp::verify() {
+  mlir::Block *body = getBody();
+
+  if (body->empty())
+    return emitOpError("body cannot be empty");
+
+  if (!body->mightHaveTerminator() ||
+      !mlir::isa<fir::DoConcurrentLoopOp>(body->getTerminator()))
+    return emitOpError("must be terminated by 'fir.do_concurrent.loop'");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// DoConcurrentLoopOp
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
+                                                 mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  // Parse an opening `(` followed by induction variables followed by `)`
+  llvm::SmallVector<mlir::OpAsmParser::Argument, 4> ivs;
+  if (parser.parseArgumentList(ivs, mlir::OpAsmParser::Delimiter::Paren))
+    return mlir::failure();
+
+  // Parse loop bounds.
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> lower;
+  if (parser.parseEqual() ||
+      parser.parseOperandList(lower, ivs.size(),
+                              mlir::OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(lower, builder.getIndexType(), result.operands))
+    return mlir::failure();
+
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> upper;
+  if (parser.parseKeyword("to") ||
+      parser.parseOperandList(upper, ivs.size(),
+                              mlir::OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(upper, builder.getIndexType(), result.operands))
+    return mlir::failure();
+
+  // Parse step values.
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> steps;
+  if (parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, ivs.size(),
+                              mlir::OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(steps, builder.getIndexType(), result.operands))
+    return mlir::failure();
+
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> reduceOperands;
+  llvm::SmallVector<mlir::Type> reduceArgTypes;
+  if (succeeded(parser.parseOptionalKeyword("reduce"))) {
+    // Parse reduction attributes and variables.
+    llvm::SmallVector<fir::ReduceAttr> attributes;
+    if (failed(parser.parseCommaSeparatedList(
+            mlir::AsmParser::Delimiter::Paren, [&]() {
+              if (parser.parseAttribute(attributes.emplace_back()) ||
+                  parser.parseArrow() ||
+                  parser.parseOperand(reduceOperands.emplace_back()) ||
+                  parser.parseColonType(reduceArgTypes.emplace_back()))
+                return mlir::failure();
+              return mlir::success();
+            })))
+      return mlir::failure();
+    // Resolve input operands.
+    for (auto operand_type : llvm::zip(reduceOperands, reduceArgTypes))
+      if (parser.resolveOperand(std::get<0>(operand_type),
+                                std::get<1>(operand_type), result.operands))
+        return mlir::failure();
+    llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
+                                                 attributes.end());
+    result.addAttribute(getReduceAttrsAttrName(result.name),
+                        builder.getArrayAttr(arrayAttr));
+  }
+
+  // Now parse the body.
+  mlir::Region *body = result.addRegion();
+  for (auto &iv : ivs)
+    iv.type = builder.getIndexType();
+  if (parser.parseRegion(*body, ivs))
+    return mlir::failure();
+
+  // Set `operandSegmentSizes` attribute.
+  result.addAttribute(DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {static_cast<int32_t>(lower.size()),
+                           static_cast<int32_t>(upper.size()),
+                           static_cast<int32_t>(steps.size()),
+                           static_cast<int32_t>(reduceOperands.size())}));
+
+  // Parse attributes.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return mlir::failure();
+
+  return mlir::success();
+}
+
+void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
+  p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
+    << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
+
+  if (!getReduceOperands().empty()) {
+    p << " reduce(";
+    auto attrs = getReduceAttrsAttr();
+    auto operands = getReduceOperands();
+    llvm::interleaveComma(llvm::zip(attrs, operands), p, [&](auto it) {
+      p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
+        << std::get<1>(it).getType();
+    });
+    p << ')';
+  }
+
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+                       DoConcurrentLoopOp::getReduceAttrsAttrName()});
+}
+
+llvm::SmallVector<mlir::Region *> fir::DoConcurrentLoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
+  mlir::Operation::operand_range lbValues = getLowerBound();
+  mlir::Operation::operand_range ubValues = getUpperBound();
+  mlir::Operation::operand_range stepValues = getStep();
+
+  if (lbValues.empty())
+    return emitOpError(
+        "needs at least one tuple element for lowerBound, upperBound and step");
+
+  if (lbValues.size() != ubValues.size() ||
+      ubValues.size() != stepValues.size())
+    return emitOpError("different number of tuple elements for lowerBound, "
+                       "upperBound or step");
+
+  // Check that the body defines the same number of block arguments as the
+  // number of tuple elements in step.
+  mlir::Block *body = getBody();
+  if (body->getNumArguments() != stepValues.size())
+    return emitOpError() << "expects the same number of induction variables: "
+                         << body->getNumArguments()
+                         << " as bound and step values: " << stepValues.size();
+  for (auto arg : body->getArguments())
+    if (!arg.getType().isIndex())
+      return emitOpError(
+          "expects arguments for the induction variable to be of index type");
+
+  auto reduceAttrs = getReduceAttrsAttr();
+  if (getNumReduceOperands() != (reduceAttrs ? reduceAttrs.size() : 0))
+    return emitOpError(
+        "mismatch in number of reduction variables and reduction attributes");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
 
