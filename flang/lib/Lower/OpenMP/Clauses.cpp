@@ -164,8 +164,8 @@ std::optional<Object> getBaseObject(const Object &object,
       // as the symbol in the input object,
       // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
       // Here we have the Symbol(A), which is what we started with.
+      (void)symRef;
       assert(&**symRef == object.sym());
-      [[maybe_unused]] auto *unused = symRef;
       return std::nullopt;
     }
   } else {
