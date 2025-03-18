@@ -15,16 +15,16 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm_ocaml.h"
+#include "caml/callback.h"
+#include "caml/fail.h"
+#include "caml/memory.h"
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/memory.h"
-#include "caml/fail.h"
-#include "caml/callback.h"
-#include "llvm_ocaml.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if OCAML_VERSION < 41200
 value caml_alloc_some(value v) {
@@ -1547,7 +1547,8 @@ value llvm_set_global_constant(value Flag, value GlobalVar) {
 }
 
 /* llvalue -> llmdkind -> llmetadata -> unit */
-value llvm_global_set_metadata(value Value, value MetadataKind, value Metadata) {
+value llvm_global_set_metadata(value Value, value MetadataKind,
+                               value Metadata) {
   LLVMGlobalSetMetadata(Value_val(Value), (unsigned int)Int_val(MetadataKind),
                         Metadata_val(Metadata));
   return Val_unit;
