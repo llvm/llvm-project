@@ -10,10 +10,12 @@ from lldbsuite.test import lldbutil
 
 class TestReverseContinueWatchpoints(ReverseTestBase):
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_watchpoint(self):
         self.reverse_continue_watchpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_watchpoint_async(self):
         self.reverse_continue_watchpoint_internal(async_mode=True)
 
@@ -58,10 +60,12 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
         )
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_watchpoint(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_watchpoint_async(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=True)
 
