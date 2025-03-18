@@ -9579,14 +9579,12 @@ OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
   auto FileIDInfo = CallBack();
   uint64_t FileID{0};
   auto EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
-  if (EC) {
-    // The inode ID could not be determined, so create a hash value
-    // the current file name and use that as an ID.
+  // If the inode ID could not be determined, create a hash value
+  // the current file name and use that as an ID.
+  if (EC)
     FileID = hash_value(FileIDInfo);
-  }
-  else {
+  else
     FileID = ID.getFile();
-  }
 
   return TargetRegionEntryInfo(ParentName, ID.getDevice(), FileID,
                                std::get<1>(FileIDInfo));
