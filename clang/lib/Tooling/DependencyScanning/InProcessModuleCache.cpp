@@ -54,7 +54,7 @@ class InProcessModuleCache : public ModuleCache {
 
   // TODO: If we changed the InMemoryModuleCache API and relied on strict
   // context hash, we could probably create more efficient thread-safe
-  // implementation of the InMemoryModuleCache such that it does need to be
+  // implementation of the InMemoryModuleCache such that it doesn't need to be
   // recreated for each translation unit.
   InMemoryModuleCache InMemory;
 
