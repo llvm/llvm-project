@@ -181,7 +181,7 @@ qc.e.bgeui x0, 711, 128
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.bgeui x12, 711
 
-# CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [1, 32767]
+# CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [1, 65535]
 qc.e.bgeui x12, 0, 128
 
 # CHECK-PLUS: :[[@LINE+1]]:22: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
@@ -198,7 +198,7 @@ qc.e.bltui x0, 7, 666
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.bltui x2, 7
 
-# CHECK-PLUS: :[[@LINE+1]]:16: error: immediate must be an integer in the range [1, 32767]
+# CHECK-PLUS: :[[@LINE+1]]:16: error: immediate must be an integer in the range [1, 65535]
 qc.e.bltui x2, -7, 666
 
 # CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be a multiple of 2 bytes in the range [-4096, 4094]
