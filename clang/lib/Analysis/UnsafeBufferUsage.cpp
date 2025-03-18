@@ -521,8 +521,7 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
   Expr::EvalResult ER1, ER2;
 
   // If both are constants:
-  if (E1->EvaluateAsInt(ER1, Ctx) &&
-      E2->EvaluateAsInt(ER2, Ctx))
+  if (E1->EvaluateAsInt(ER1, Ctx) && E2->EvaluateAsInt(ER2, Ctx))
     return ER1.Val.getInt() == ER2.Val.getInt();
 
   // Otherwise, they should have identical stmt kind:
@@ -557,7 +556,7 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //        Sometimes, there is only one parameter index representing the total
 //        size.
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
-                                        const ASTContext &Ctx) {
+                                        ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
   const Expr *Arg0 = Node.getArg(0)->IgnoreParenImpCasts();
@@ -698,10 +697,9 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     const Expr *RHS = BE->getRHS();
 
     if ((!LHS->isValueDependent() &&
-         LHS->EvaluateAsInt(EVResult,
-                            Finder->getASTContext())) || // case: `n & e`
+         LHS->EvaluateAsInt(EVResult, Ctx)) || // case: `n & e`
         (!RHS->isValueDependent() &&
-         RHS->EvaluateAsInt(EVResult, Finder->getASTContext()))) { // `e & n`
+         RHS->EvaluateAsInt(EVResult, Ctx))) { // `e & n`
       llvm::APSInt result = EVResult.Val.getInt();
       if (result.isNonNegative() && result.getLimitedValue() < limit)
         return true;
@@ -1510,8 +1508,7 @@ public:
     return G->getKind() == Kind::SpanTwoParamConstructor;
   }
 
-  static bool matches(const Stmt *S, const ASTContext &Ctx,
-                      MatchResult &Result) {
+  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
     const auto *CE = dyn_cast<CXXConstructExpr>(S);
     if (!CE)
       return false;
@@ -1526,7 +1523,7 @@ public:
     return true;
   }
 
-  static bool matches(const Stmt *S, const ASTContext &Ctx,
+  static bool matches(const Stmt *S, ASTContext &Ctx,
                       const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     if (ignoreUnsafeBufferInContainer(*S, Handler))
@@ -1800,8 +1797,7 @@ public:
     return G->getKind() == Kind::UnsafeBufferUsageCtorAttr;
   }
 
-  static bool matches(const Stmt *S, const ASTContext &Ctx,
-                      MatchResult &Result) {
+  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
     const auto *CE = dyn_cast<CXXConstructExpr>(S);
     if (!CE || !CE->getConstructor()->hasAttr<UnsafeBufferUsageAttr>())
       return false;
