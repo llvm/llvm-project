@@ -197,6 +197,21 @@ struct Entry {
     return true;
   }
 
+  struct HighlightSettings {
+    std::string prefix;
+    std::string suffix;
+
+    enum class Kind : uint8_t {
+      ///< Don't highlight.
+      None,
+
+      ///< Highlight function basename
+      ///< (i.e., name without Scope and
+      ///< without template arguments).
+      Basename,
+    } kind = Kind::None;
+  };
+
   std::string string;
   std::string printf_format;
   std::vector<Entry> children;
@@ -204,6 +219,7 @@ struct Entry {
   lldb::Format fmt = lldb::eFormatDefault;
   lldb::addr_t number = 0;
   bool deref = false;
+  HighlightSettings highlight;
 };
 
 bool Format(const Entry &entry, Stream &s, const SymbolContext *sc,

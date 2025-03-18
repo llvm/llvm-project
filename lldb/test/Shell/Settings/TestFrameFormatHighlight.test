@@ -1,0 +1,55 @@
+# UNSUPPORTED: system-windows
+# Test highlighting of function basenames.
+
+# RUN: split-file %s %t
+# RUN: %build %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 | FileCheck %s --check-prefix=CHECK-COLOR
+
+#--- main.cpp
+namespace ns {
+template<typename T>
+struct Bar {
+  template<typename K>
+  T bar(K k) const & { return 1.0f; }
+};
+
+template<typename T>
+struct Foo {
+  template<typename K>
+  void foo() const volatile && {
+    Bar<float> b;
+    b.bar(b);
+  }
+};
+
+template<typename T>
+T func() {
+  ns::Foo<int>{}.foo<int>();
+  return T{};
+}
+} // namespace ns
+
+int main() {
+  ns::func<ns::Foo<int>>();
+  return 0;
+}
+
+#--- commands.input
+settings set use-color true
+settings set -f frame-format "frame ${function.name-with-args:%highlight_basename(ansi.fg.cyan)}\n"
+break set -n bar
+
+run
+bt
+# CHECK-COLOR: frame float ns::Bar<float>::[36mbar[0m<ns::Bar<float>>(this={{.*}}, k=Bar<float> @ {{.*}}) const &
+# CHECK-COLOR: frame void ns::Foo<int>::[36mfoo[0m<int>(this={{.*}}) const volatile &&
+# CHECK-COLOR: frame ns::Foo<int> ns::[36mfunc[0m<ns::Foo<int>>()
+# CHECK-COLOR: frame main
+
+settings set -f frame-format "frame ${function.name-with-args:%highlight_basename(ansi.bg.green)}\n"
+bt
+
+# CHECK-COLOR: frame float ns::Bar<float>::[42mbar[0m<ns::Bar<float>>(this={{.*}}, k=Bar<float> @ {{.*}}) const &
+# CHECK-COLOR: frame void ns::Foo<int>::[42mfoo[0m<int>(this={{.*}}) const volatile &&
+# CHECK-COLOR: frame ns::Foo<int> ns::[42mfunc[0m<ns::Foo<int>>()
+# CHECK-COLOR: frame main
