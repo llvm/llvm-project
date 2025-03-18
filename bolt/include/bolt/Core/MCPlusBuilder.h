@@ -577,6 +577,16 @@ public:
     return getNoRegister();
   }
 
+  /// Returns the register used as call destination, or no-register, if not
+  /// an indirect call. Sets IsAuthenticatedInternally if the instruction
+  /// accepts a signed pointer as its operand and authenticates it internally.
+  virtual MCPhysReg
+  getRegUsedAsCallDest(const MCInst &Inst,
+                       bool &IsAuthenticatedInternally) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {

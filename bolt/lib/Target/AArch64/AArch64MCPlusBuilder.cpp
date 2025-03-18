@@ -277,6 +277,48 @@ public:
     }
   }
 
+  MCPhysReg
+  getRegUsedAsCallDest(const MCInst &Inst,
+                       bool &IsAuthenticatedInternally) const override {
+    assert(isCall(Inst) || isBranch(Inst));
+    IsAuthenticatedInternally = false;
+
+    switch (Inst.getOpcode()) {
+    case AArch64::B:
+    case AArch64::BL:
+      assert(Inst.getOperand(0).isExpr());
+      return getNoRegister();
+    case AArch64::Bcc:
+    case AArch64::CBNZW:
+    case AArch64::CBNZX:
+    case AArch64::CBZW:
+    case AArch64::CBZX:
+      assert(Inst.getOperand(1).isExpr());
+      return getNoRegister();
+    case AArch64::TBNZW:
+    case AArch64::TBNZX:
+    case AArch64::TBZW:
+    case AArch64::TBZX:
+      assert(Inst.getOperand(2).isExpr());
+      return getNoRegister();
+    case AArch64::BR:
+    case AArch64::BLR:
+      return Inst.getOperand(0).getReg();
+    case AArch64::BRAA:
+    case AArch64::BRAB:
+    case AArch64::BRAAZ:
+    case AArch64::BRABZ:
+    case AArch64::BLRAA:
+    case AArch64::BLRAB:
+    case AArch64::BLRAAZ:
+    case AArch64::BLRABZ:
+      IsAuthenticatedInternally = true;
+      return Inst.getOperand(0).getReg();
+    default:
+      llvm_unreachable("Unhandled call instruction");
+    }
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }
