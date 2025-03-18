@@ -36,14 +36,14 @@
 namespace test {
 using namespace mlir;
 struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
-  using OpConversionPattern<test_irdl_to_cpp::BeefOp>::OpConversionPattern;
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(mlir::test_irdl_to_cpp::BeefOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.setInsertionPointAfter(op);
     auto bar = rewriter.replaceOpWithNewOp<test_irdl_to_cpp::BarOp>(
         op, op->getResultTypes().front());
+    rewriter.setInsertionPointAfter(bar);
 
     rewriter.create<test_irdl_to_cpp::HashOp>(
         bar.getLoc(), rewriter.getIntegerType(32), adaptor.getLhs(),
@@ -58,7 +58,13 @@ struct ConvertTestDialectToSomethingPass
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<TestOpConversion>(ctx);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    ConversionTarget target(getContext());
+    target.addIllegalOp<test_irdl_to_cpp::BeefOp>();
+    target.addLegalOp<test_irdl_to_cpp::BarOp>();
+    target.addLegalOp<test_irdl_to_cpp::HashOp>();
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
+      signalPassFailure();
   }
 
   StringRef getArgument() const final { return "test-irdl-conversion-check"; }
