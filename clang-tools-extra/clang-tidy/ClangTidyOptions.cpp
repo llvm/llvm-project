@@ -290,15 +290,14 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(UseColor, Other.UseColor);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
-
+  // FIXME: how to handle duplicate names check?
+  mergeVectors(CustomChecks, Other.CustomChecks);
   for (const auto &KeyValue : Other.CheckOptions) {
     CheckOptions.insert_or_assign(
         KeyValue.getKey(),
         ClangTidyValue(KeyValue.getValue().Value,
                        KeyValue.getValue().Priority + Order));
   }
-  mergeVectors(CustomChecks, Other.CustomChecks);
-
   return *this;
 }
 

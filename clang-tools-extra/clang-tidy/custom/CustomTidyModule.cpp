@@ -16,8 +16,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {}
 };
 
-// FIXME: could be clearer to add parameter of addCheckFactories to pass
-// Options?
+// We need to register the checks more flexibly than builtin modules. The checks
+// will changed dynamically when switching to different source file.
 extern void registerCustomChecks(ClangTidyOptions const &Options,
                                  ClangTidyCheckFactories &Factories) {
   static llvm::SmallSet<llvm::SmallString<32>, 8> CustomCheckNames{};
