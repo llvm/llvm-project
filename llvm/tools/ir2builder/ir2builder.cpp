@@ -139,9 +139,7 @@ private:
 
   std::vector<std::string> PhiIncomings;
 
-  inline bool hasName(const Value *Op) {
-    return !isa<Constant, InlineAsm>(Op);
-  }
+  inline bool hasName(const Value *Op) { return !isa<Constant, InlineAsm>(Op); }
 
   void outputAttr(Attribute Att, raw_ostream &OS);
 
@@ -184,7 +182,7 @@ public:
   ///       in a TODO comment.
   void convert(const Instruction *I, raw_ostream &OS);
 };
-}
+} // namespace
 
 std::string IR2Builder::getNextVar() { return "v0" + std::to_string(VarI++); }
 
@@ -199,7 +197,7 @@ static std::string escape(std::string S) {
 
 static std::string sanitize(std::string &S) {
   std::stringstream SS;
-  for (auto C: S) {
+  for (auto C : S) {
     if (!std::isalnum(C))
       SS << "_" << static_cast<unsigned>(C) << "_";
     else
@@ -545,13 +543,11 @@ std::string IR2Builder::asStr(const Type *T) {
     std::string Elements = LLVMPrefix + "ArrayRef<Type *>(";
     if (ST->getNumElements() > 1)
       Elements += "{";
-    bool First = true;
-    for (auto E : ST->elements()) {
-      if (!First)
-        Elements += ", ";
-      Elements += asStr(E);
-      First = false;
-    }
+    SmallVector<std::string> Tmp;
+    Elements +=
+        formatv("{0}", (llvm::transform(ST->elements(), back_inserter(Tmp),
+                                        [&](Type *V) { return asStr(V); }),
+                        make_range(Tmp.begin(), Tmp.end())));
     if (ST->getNumElements() > 1)
       Elements += "}";
     Elements += ")";
@@ -570,14 +566,10 @@ std::string IR2Builder::asStr(const Type *T) {
   } else if (auto FT = dyn_cast<FunctionType>(T)) {
     TCall = formatv("{0}FunctionType::get({1}, {{", LLVMPrefix,
                     asStr(FT->getReturnType()));
-
-    bool IsFirst = true;
-    for (auto A : FT->params()) {
-      if (!IsFirst)
-        TCall += ", ";
-      TCall += asStr(A);
-      IsFirst = false;
-    }
+    SmallVector<std::string> Tmp;
+    TCall += formatv("{0}", (llvm::transform(FT->params(), back_inserter(Tmp),
+                                             [&](Type *V) { return asStr(V); }),
+                             make_range(Tmp.begin(), Tmp.end())));
     TCall += "}, " + toStr(FT->isVarArg()) + ")";
     return TCall;
   } else if (T->isPointerTy())
@@ -620,15 +612,11 @@ std::string IR2Builder::asStr(const Constant *C) {
                    asStr(C->getType()), Val);
   }
   if (auto *AT = dyn_cast<ConstantAggregate>(C)) {
-    std::string Values;
-    bool First = true;
-    for (unsigned I = 0; I < AT->getNumOperands(); ++I) {
-      if (!First)
-        Values += ", ";
-      Values += asStr(AT->getOperand(I));
-      First = false;
-    }
-
+    SmallVector<std::string> Tmp;
+    std::string Values =
+        formatv("{0}", (llvm::transform(AT->operands(), back_inserter(Tmp),
+                                        [&](Value *V) { return asStr(V); }),
+                        make_range(Tmp.begin(), Tmp.end())));
     std::string ClassName;
     if (isa<ConstantArray>(C)) {
       ClassName = "ConstantArray";
@@ -661,31 +649,25 @@ std::string IR2Builder::asStr(const Constant *C) {
     else
       return "/* TODO: Unknown data sequential constant */";
     if (CDS->isString()) {
-      Values = "";
-      bool First = true;
-      for (auto a : CDS->getAsString().str()) {
-        if (First) {
-          Values += std::to_string(static_cast<uint8_t>(a));
-          First = false;
-        } else {
-          Values += ", " + std::to_string(static_cast<uint8_t>(a));
-        }
-      }
+      SmallVector<std::string> Tmp;
+      Values = formatv(
+          "{0}",
+          (llvm::transform(
+               CDS->getAsString().str(), back_inserter(Tmp),
+               [&](char V) { return std::to_string(static_cast<uint8_t>(V)); }),
+           make_range(Tmp.begin(), Tmp.end())));
       assert(!ClassName.empty() && "Class name not set");
       return formatv("{0}{1}::get({2}, {0}ArrayRef<uint8_t>({3}{4}{5}))",
                      LLVMPrefix, ClassName, Ctx, "{", Values, "}");
     }
     if (CDS->isCString()) {
-      Values = "";
-      bool First = true;
-      for (auto A : CDS->getAsCString().str()) {
-        if (First) {
-          Values += std::to_string(static_cast<uint8_t>(A));
-          First = false;
-        } else {
-          Values += ", " + std::to_string(static_cast<uint8_t>(A));
-        }
-      }
+      SmallVector<std::string> Tmp;
+      Values = formatv(
+          "{0}",
+          (llvm::transform(
+               CDS->getAsCString().str(), back_inserter(Tmp),
+               [&](char V) { return std::to_string(static_cast<uint8_t>(V)); }),
+           make_range(Tmp.begin(), Tmp.end())));
       assert(!ClassName.empty() && "Class name not set");
       return formatv("{0}{1}::get({2}, {0}ArrayRef<uint8_t>({3}{4}{5}))",
                      LLVMPrefix, ClassName, Ctx, "{", Values, "}");
@@ -738,26 +720,23 @@ std::string IR2Builder::asStr(const Constant *C) {
                    asStr(C->getType()));
   if (auto *CTN = dyn_cast<ConstantTargetNone>(C)) {
     auto CTNType = CTN->getType();
+    SmallVector<std::string> Tmp;
+    auto TypeStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(CTNType->type_params(), back_inserter(Tmp),
+                                 [&](Type *V) { return asStr(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
 
-    std::string TypeStr = "{";
-    bool First = true;
-    for (unsigned I = 0; I < CTNType->getNumTypeParameters(); ++I) {
-      if (!First)
-        TypeStr += ", ";
-      TypeStr += asStr(CTNType->getTypeParameter(I));
-      First = false;
-    }
-    TypeStr += "}";
-
-    std::string IntsStr = "{";
-    First = true;
-    for (unsigned I = 0; I < CTNType->getNumIntParameters(); ++I) {
-      if (!First)
-        IntsStr += ", ";
-      IntsStr += std::to_string(CTNType->getIntParameter(I));
-      First = false;
-    }
-    IntsStr += "}";
+    SmallVector<std::string> Tmp2;
+    auto IntsStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(CTNType->int_params(), back_inserter(Tmp2),
+                                 [&](unsigned V) { return std::to_string(V); }),
+                 make_range(Tmp2.begin(), Tmp2.end()))) +
+        "}";
 
     return formatv("{0}ConstantTargetNone::get({0}TargetExtType::get({1}, "
                    "\"{2}\", {3}, {4}))",
@@ -921,15 +900,15 @@ void IR2Builder::outputAttr(Attribute Att, raw_ostream &OS) {
        << "Attribute::AttrKind)" << std::to_string(Att.getKindAsEnum()) << ", "
        << asStr(CR) << ")";
   } else if (Att.isConstantRangeListAttribute()) {
-    std::string Args = "{";
-    bool First = true;
-    for (auto CR : Att.getValueAsConstantRangeList()) {
-      if (!First)
-        Args += ", ";
-      Args += asStr(CR);
-      First = false;
-    }
-    Args += "}";
+    SmallVector<std::string> Tmp;
+    auto Args =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(Att.getValueAsConstantRangeList(),
+                                 back_inserter(Tmp),
+                                 [&](ConstantRange V) { return asStr(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     OS << LLVMPrefix << "Attribute::get(" << Ctx << ", (" << LLVMPrefix
        << "Attribute::AttrKind)" << std::to_string(Att.getKindAsEnum()) << ", "
        << LLVMPrefix << Args << ")";
@@ -1177,15 +1156,13 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
   } break;
   case Instruction::Invoke: {
     auto *InvI = dyn_cast<InvokeInst>(I);
-    std::string Args = "{";
-    bool First = true;
-    for (unsigned I = 0; I < InvI->arg_size(); ++I) {
-      if (!First)
-        Args += ", ";
-      Args += asStr(InvI->getArgOperand(I));
-      First = false;
-    }
-    Args += "}";
+    SmallVector<std::string> Tmp;
+    auto Args =
+        "{" +
+        formatv("{0}", (llvm::transform(InvI->args(), back_inserter(Tmp),
+                                        [&](Value *V) { return asStr(V); }),
+                        make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     std::string FunDecl = getNextVar();
     OS << formatv("auto {0} = {1}->getOrInsertFunction(\"{2}\", {3});\n",
                   FunDecl, ModName, I->getOperand(2)->getName(),
@@ -1223,25 +1200,22 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
   } break;
   case Instruction::CallBr: {
     auto *CallBRI = cast<CallBrInst>(I);
-    std::string Inddest = "{";
-    bool First = true;
-    for (unsigned I = 0; I < CallBRI->getNumIndirectDests(); ++I) {
-      if (!First)
-        Inddest += ", ";
-      Inddest += asStr(CallBRI->getIndirectDest(I));
-      First = false;
-    }
-    Inddest += "}";
+    SmallVector<std::string> Tmp;
+    auto Inddest =
+        "{" +
+        formatv("{0}", (llvm::transform(CallBRI->getIndirectDests(),
+                                        back_inserter(Tmp),
+                                        [&](Value *V) { return asStr(V); }),
+                        make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
 
-    std::string Args = "{";
-    First = true;
-    for (unsigned I = 0; I < CallBRI->arg_size(); ++I) {
-      if (!First)
-        Args += ", ";
-      Args += asStr(CallBRI->getArgOperand(I));
-      First = false;
-    }
-    Args += "}";
+    SmallVector<std::string> Tmp2;
+    auto Args =
+        "{" +
+        formatv("{0}", (llvm::transform(CallBRI->args(), back_inserter(Tmp2),
+                                        [&](Value *V) { return asStr(V); }),
+                        make_range(Tmp2.begin(), Tmp2.end()))) +
+        "}";
     Call = formatv("CreateCallBr({0}, {1}, {2}, {3}, {4})",
                    asStr(CallBRI->getFunctionType()),
                    asStr(I->getOperand(I->getNumOperands() - 1)),
@@ -1333,13 +1307,12 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     std::string StrList = formatv("{0}ArrayRef<{0}Value*>(", LLVMPrefix);
     if (I->getNumOperands() > 2)
       StrList += "{";
-    bool First = true;
-    for (unsigned J = 1; J < I->getNumOperands(); ++J) {
-      if (!First)
-        StrList += ", ";
-      StrList += asStr(I->getOperand(J));
-      First = false;
-    }
+    SmallVector<std::string> Tmp;
+    iterator_range<const Use *> GepRange(I->op_begin() + 1, I->op_end());
+    StrList +=
+        formatv("{0}", (llvm::transform(GepRange, back_inserter(Tmp),
+                                        [&](Value *V) { return asStr(V); }),
+                        make_range(Tmp.begin(), Tmp.end())));
     if (I->getNumOperands() > 2)
       StrList += "}";
     StrList += ")";
@@ -1409,28 +1382,26 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
   } break;
   case Instruction::CleanupPad: {
     auto *CupI = dyn_cast<CleanupPadInst>(I);
-    std::string ArgsStr = "{";
-    bool First = true;
-    for (unsigned I = 0; I < CupI->arg_size(); ++I) {
-      if (!First)
-        ArgsStr += ", ";
-      ArgsStr += asStr(CupI->getArgOperand(I));
-      First = false;
-    }
-    ArgsStr += "}";
+    SmallVector<std::string> Tmp;
+    auto ArgsStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(CupI->arg_operands(), back_inserter(Tmp),
+                                 [&](Value *V) { return asStr(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     Call = formatv("CreateCleanupPad({0}, {1})", Op1, ArgsStr);
   } break;
   case Instruction::CatchPad: {
     auto *CapI = dyn_cast<CatchPadInst>(I);
-    std::string ArgsStr = "{";
-    bool First = true;
-    for (unsigned I = 0; I < CapI->arg_size(); ++I) {
-      if (!First)
-        ArgsStr += ", ";
-      ArgsStr += asStr(CapI->getArgOperand(I));
-      First = false;
-    }
-    ArgsStr += "}";
+    SmallVector<std::string> Tmp;
+    auto ArgsStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(CapI->arg_operands(), back_inserter(Tmp),
+                                 [&](Value *V) { return asStr(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     Call = formatv("CreateCatchPad({0}, {1})", Op1, ArgsStr);
   } break;
   case Instruction::ICmp: {
@@ -1468,13 +1439,10 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
     if (FcI->arg_size() > 0) {
       ArgDecl = getNextVar();
       OS << "Value *" << ArgDecl << "[] = {";
-      bool IsFirst = true;
-      for (unsigned I = 0; I < FcI->arg_size(); ++I) {
-        if (!IsFirst)
-          OS << ", ";
-        OS << asStr(FcI->getArgOperand(I));
-        IsFirst = false;
-      }
+      SmallVector<std::string> Tmp;
+      OS << formatv("{0}", (llvm::transform(FcI->args(), back_inserter(Tmp),
+                                            [&](Value *V) { return asStr(V); }),
+                            make_range(Tmp.begin(), Tmp.end())));
       OS << "};\n";
     }
 
@@ -1568,41 +1536,38 @@ void IR2Builder::convert(const Instruction *I, raw_ostream &OS) {
   } break;
   case Instruction::ShuffleVector: {
     auto *SvI = cast<ShuffleVectorInst>(I);
-    std::string MaskStr = "{";
-    bool First = true;
-    for (int I : SvI->getShuffleMask()) {
-      if (!First)
-        MaskStr += ", ";
-      MaskStr += std::to_string(I);
-      First = false;
-    }
-    MaskStr += "}";
+    SmallVector<std::string> Tmp;
+    auto MaskStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(SvI->getShuffleMask(), back_inserter(Tmp),
+                                 [&](int V) { return std::to_string(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     Call = formatv("CreateShuffleVector({0}, {1}, {2})", Op1, Op2, MaskStr);
   } break;
   case Instruction::ExtractValue: {
     auto *EvI = cast<ExtractValueInst>(I);
-    std::string ArgStr = "{";
-    bool IsFirst = true;
-    for (auto ind : EvI->getIndices()) {
-      if (!IsFirst)
-        ArgStr += ", ";
-      ArgStr += std::to_string(ind);
-      IsFirst = false;
-    }
-    ArgStr += "}";
+    SmallVector<std::string> Tmp;
+    auto ArgStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(EvI->getIndices(), back_inserter(Tmp),
+                                 [&](int V) { return std::to_string(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     Call = formatv("CreateExtractValue({0}, {1})", Op1, ArgStr);
   } break;
   case Instruction::InsertValue: {
     auto *IvI = cast<InsertValueInst>(I);
-    std::string ArgStr = "{";
-    bool IsFirst = true;
-    for (auto Ind : IvI->getIndices()) {
-      if (!IsFirst)
-        ArgStr += ", ";
-      ArgStr += std::to_string(Ind);
-      IsFirst = false;
-    }
-    ArgStr += "}";
+    SmallVector<std::string> Tmp;
+    auto ArgStr =
+        "{" +
+        formatv("{0}",
+                (llvm::transform(IvI->getIndices(), back_inserter(Tmp),
+                                 [&](int V) { return std::to_string(V); }),
+                 make_range(Tmp.begin(), Tmp.end()))) +
+        "}";
     Call = formatv("CreateInsertValue({0}, {1}, {2})", Op1, Op2, ArgStr);
   } break;
   case Instruction::LandingPad: {
