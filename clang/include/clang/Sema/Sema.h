@@ -2733,9 +2733,18 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
+  enum class EltwiseBuiltinArgTyRestriction {
+    None,
+    FloatTy,
+    IntegerTy,
+    SignedIntOrFloatTy,
+  };
+
   /// \param FPOnly restricts the arguments to floating-point types.
-  std::optional<QualType> BuiltinVectorMath(CallExpr *TheCall,
-                                            bool FPOnly = false);
+  std::optional<QualType>
+  BuiltinVectorMath(CallExpr *TheCall,
+                    EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                        EltwiseBuiltinArgTyRestriction::None);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
@@ -2839,9 +2848,13 @@ public:
                                bool *ICContext = nullptr,
                                bool IsListInit = false);
 
-  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                     bool CheckForFloatArgs = true);
-  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
+  bool
+  BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                                    EltwiseBuiltinArgTyRestriction::FloatTy);
+  bool PrepareBuiltinElementwiseMathOneArgCall(
+      CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                             EltwiseBuiltinArgTyRestriction::None);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2950,7 +2963,9 @@ private:
                                  AtomicExpr::AtomicOp Op);
 
   /// \param FPOnly restricts the arguments to floating-point types.
-  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
+  bool BuiltinElementwiseMath(CallExpr *TheCall,
+                              EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                                  EltwiseBuiltinArgTyRestriction::None);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
