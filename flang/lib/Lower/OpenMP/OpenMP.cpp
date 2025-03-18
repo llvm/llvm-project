@@ -2266,16 +2266,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
       name << sym.name().ToString();
 
-      mlir::FlatSymbolRefAttr mapperId;
-      if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
-        auto &typeSpec = sym.GetType()->derivedTypeSpec();
-        std::string mapperIdName = typeSpec.name().ToString() + ".default";
-        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
-        if (converter.getModuleOp().lookupSymbol(mapperIdName))
-          mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                                  mapperIdName);
-      }
-
       fir::factory::AddrAndBoundsInfo info =
           Fortran::lower::getDataOperandBaseAddr(
               converter, firOpBuilder, sym, converter.getCurrentLocation());
@@ -2334,7 +2324,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           static_cast<
               std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
               mapFlag),
-          captureKind, baseOp.getType(), /*partialMap=*/false, mapperId);
+          captureKind, baseOp.getType());
 
       clauseOps.mapVars.push_back(mapOp);
       mapSyms.push_back(&sym);
@@ -2577,8 +2567,9 @@ static void genStandaloneDistribute(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatization, symTable);
-  dsp.processStep1(&distributeClauseOps);
+                           enableDelayedPrivatizationStaging, symTable);
+  dsp.processStep1();
+  dsp.processStep2(&distributeClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
