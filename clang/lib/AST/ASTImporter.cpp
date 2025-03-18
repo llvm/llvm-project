@@ -8955,9 +8955,9 @@ ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   if (Error Err = ImportContainerChecked(E->getArgs(), ToArgs))
     return std::move(Err);
 
-  // According to Sema::BuildTypeTrait(), if E is value-dependent,
-  // Value is always false.
-  if (E->isValueDependent() || E->isStoredAsBoolean()) {
+  if (E->isStoredAsBoolean()) {
+    // According to Sema::BuildTypeTrait(), if E is value-dependent,
+    // Value is always false.
     bool ToValue = (E->isValueDependent() ? false : E->getBoolValue());
     return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
                                  E->getTrait(), ToArgs, ToEndLoc, ToValue);

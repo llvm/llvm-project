@@ -2138,9 +2138,10 @@ void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
   E->TypeTraitExprBits.IsBooleanTypeTrait = Record.readInt();
   E->TypeTraitExprBits.NumArgs = Record.readInt();
   E->TypeTraitExprBits.Kind = Record.readInt();
-  E->TypeTraitExprBits.Value = Record.readInt();
 
-  if (!E->TypeTraitExprBits.IsBooleanTypeTrait)
+  if (E->TypeTraitExprBits.IsBooleanTypeTrait)
+    E->TypeTraitExprBits.Value = Record.readInt();
+  else
     *E->getTrailingObjects<APValue>() = Record.readAPValue();
 
   SourceRange Range = readSourceRange();

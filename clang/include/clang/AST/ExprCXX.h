@@ -51,6 +51,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <variant>
 
 namespace clang {
 
@@ -2772,22 +2773,18 @@ class TypeTraitExpr final
   ///  The location of the closing parenthesis.
   SourceLocation RParenLoc;
 
-  // Note: The TypeSourceInfos for the arguments are allocated after the
-  // TypeTraitExpr.
-
-  TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
-                ArrayRef<TypeSourceInfo *> Args,
-                SourceLocation RParenLoc,
-                bool Value);
-
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                 ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
-                APValue Value);
+                std::variant<bool, APValue> Value);
 
   TypeTraitExpr(EmptyShell Empty) : Expr(TypeTraitExprClass, Empty) {}
 
   size_t numTrailingObjects(OverloadToken<TypeSourceInfo *>) const {
     return getNumArgs();
+  }
+
+  size_t numTrailingObjects(OverloadToken<APValue>) const {
+    return TypeTraitExprBits.IsBooleanTypeTrait ? 0 : 1;
   }
 
 public:
@@ -2858,10 +2855,6 @@ public:
 
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-
-  unsigned numTrailingObjects(OverloadToken<APValue>) const {
-    return TypeTraitExprBits.IsBooleanTypeTrait ? 0 : 1;
   }
 };
 

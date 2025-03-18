@@ -2143,9 +2143,10 @@ void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   Record.push_back(E->TypeTraitExprBits.IsBooleanTypeTrait);
   Record.push_back(E->TypeTraitExprBits.NumArgs);
   Record.push_back(E->TypeTraitExprBits.Kind); // FIXME: Stable encoding
-  Record.push_back(E->TypeTraitExprBits.Value);
 
-  if (!E->TypeTraitExprBits.IsBooleanTypeTrait)
+  if (E->TypeTraitExprBits.IsBooleanTypeTrait)
+    Record.push_back(E->TypeTraitExprBits.Value);
+  else
     Record.AddAPValue(E->getAPValue());
 
   Record.AddSourceRange(E->getSourceRange());

@@ -1854,47 +1854,34 @@ bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
 
 TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                              ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc, bool Value)
+                             SourceLocation RParenLoc,
+                             std::variant<bool, APValue> Value)
     : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   assert(Kind <= TT_Last && "invalid enum value!");
+
   TypeTraitExprBits.Kind = Kind;
   assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
          "TypeTraitExprBits.Kind overflow!");
-  TypeTraitExprBits.IsBooleanTypeTrait = true;
-  TypeTraitExprBits.Value = Value;
+
+  TypeTraitExprBits.IsBooleanTypeTrait = Value.index() == 0;
+  if (TypeTraitExprBits.IsBooleanTypeTrait)
+    TypeTraitExprBits.Value = std::get<bool>(Value);
+  else
+    *getTrailingObjects<APValue>() = std::get<APValue>(std::move(Value));
+
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
          "TypeTraitExprBits.NumArgs overflow!");
-
   auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
   for (unsigned I = 0, N = Args.size(); I != N; ++I)
     ToArgs[I] = Args[I];
 
   setDependence(computeDependence(this));
-}
 
-TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
-                             ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc, APValue Value)
-    : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
-      RParenLoc(RParenLoc) {
-  assert(Kind <= TT_Last && "invalid enum value!");
-  TypeTraitExprBits.Kind = Kind;
-  assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
-         "TypeTraitExprBits.Kind overflow!");
-  TypeTraitExprBits.IsBooleanTypeTrait = false;
-  TypeTraitExprBits.NumArgs = Args.size();
-  assert(Args.size() == TypeTraitExprBits.NumArgs &&
-         "TypeTraitExprBits.NumArgs overflow!");
-
-  *getTrailingObjects<APValue>() = Value;
-
-  auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
-  for (unsigned I = 0, N = Args.size(); I != N; ++I)
-    ToArgs[I] = Args[I];
-
-  setDependence(computeDependence(this));
+  assert((TypeTraitExprBits.IsBooleanTypeTrait || isValueDependent() ||
+          getAPValue().isInt() || getAPValue().isAbsent()) &&
+         "Only int values are supported by clang");
 }
 
 TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
