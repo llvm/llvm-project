@@ -75,19 +75,19 @@ extern "C" {
 ///
 struct SharedMemorySmartStackTy {
   /// Initialize the stack. Must be called by all threads.
-  static void init(bool IsSPMD);
+  void init(bool IsSPMD);
 
   /// Allocate \p Bytes on the stack for the encountering thread. Each thread
   /// can call this function.
-  static void *push(uint64_t Bytes);
+  void *push(uint64_t Bytes);
 
   /// Deallocate the last allocation made by the encountering thread and pointed
   /// to by \p Ptr from the stack. Each thread can call this function.
-  static void pop(void *Ptr, uint64_t Bytes);
+  void pop(void *Ptr, uint64_t Bytes);
 
 private:
   /// Compute the size of the storage space reserved for a thread.
-  static uint32_t computeThreadStorageTotal() {
+  uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
     return utils::alignDown((state::SharedScratchpadSize / NumLanesInBlock),
                             allocator::ALIGNMENT);
@@ -95,28 +95,23 @@ private:
 
   /// Return the top address of the warp data stack, that is the first address
   /// this warp will allocate memory at next.
-  static void *getThreadDataTop(uint32_t TId) {
-    return (void *)&Data[computeThreadStorageTotal() * TId + Usage[TId]];
+  void *getThreadDataTop(uint32_t TId) {
+    return &Data[computeThreadStorageTotal() * TId + Usage[TId]];
   }
 
   /// The actual storage, shared among all warps.
-
-  [[gnu::aligned(allocator::ALIGNMENT)]] [[clang::loader_uninitialized]]
-  static Local<unsigned char> Data[state::SharedScratchpadSize];
-  [[gnu::aligned(allocator::ALIGNMENT)]] [[clang::loader_uninitialized]]
-  static Local<unsigned char> Usage[mapping::MaxThreadsPerTeam];
+  [[gnu::aligned(
+      allocator::ALIGNMENT)]] unsigned char Data[state::SharedScratchpadSize];
+  [[gnu::aligned(
+      allocator::ALIGNMENT)]] unsigned char Usage[mapping::MaxThreadsPerTeam];
 };
-
-Local<unsigned char>
-    SharedMemorySmartStackTy::Data[state::SharedScratchpadSize];
-Local<unsigned char>
-    SharedMemorySmartStackTy::Usage[mapping::MaxThreadsPerTeam];
 
 static_assert(state::SharedScratchpadSize / mapping::MaxThreadsPerTeam <= 256,
               "Shared scratchpad of this size not supported yet.");
 
-/// The single shared memory scratchpad.
-using SharedMemorySmartStack = SharedMemorySmartStackTy;
+/// The allocation of a single shared memory scratchpad.
+[[clang::loader_uninitialized]] static Local<SharedMemorySmartStackTy>
+    SharedMemorySmartStack;
 
 void SharedMemorySmartStackTy::init(bool IsSPMD) {
   Usage[mapping::getThreadIdInBlock()] = 0;
@@ -168,11 +163,11 @@ void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
 void *memory::getDynamicBuffer() { return DynamicSharedBuffer; }
 
 void *memory::allocShared(uint64_t Bytes, const char *Reason) {
-  return SharedMemorySmartStack::push(Bytes);
+  return SharedMemorySmartStack.push(Bytes);
 }
 
 void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
-  SharedMemorySmartStack::pop(Ptr, Bytes);
+  SharedMemorySmartStack.pop(Ptr, Bytes);
 }
 
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
@@ -252,7 +247,7 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 
 void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
                  KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
-  SharedMemorySmartStack::init(IsSPMD);
+  SharedMemorySmartStack.init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
     ThreadStates = nullptr;
