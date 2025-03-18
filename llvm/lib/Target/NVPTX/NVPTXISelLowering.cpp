@@ -2785,10 +2785,18 @@ static SDValue expandFSH64(SDValue A, SDValue B, SDValue ShiftAmount, SDLoc DL,
   SDValue BHi = UnpackB.getValue(1);
 
   // The bitfeild consists of { AHi : ALo : BHi : BLo }
-  // FSHL, Amt <  32 - The window will contain { AHi : ALo : BHi }
-  // FSHL, Amt >= 32 - The window will contain { ALo : BHi : BLo }
-  // FSHR, Amt <  32 - The window will contain { ALo : BHi : BLo }
-  // FSHR, Amt >= 32 - The window will contain { AHi : ALo : BHi }
+  //
+  // * FSHL, Amt <  32 - The window will contain { AHi : ALo : BHi }
+  // * FSHL, Amt >= 32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt <  32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt >= 32 - The window will contain { AHi : ALo : BHi }
+  //
+  // Note that Amt = 0 and Amt = 32 are special cases where 32-bit funnel shifts
+  // are not needed at all. Amt = 0 is a no-op producing either A or B depending
+  // on the direction. Amt = 32 can be implemented by a packing and unpacking
+  // move to select and arrange the 32bit values. For simplicity, these cases
+  // are not handled here explicitly and instead we rely on DAGCombiner to
+  // remove the no-op funnel shifts we insert.
   auto [High, Mid, Low] = ((Opcode == ISD::FSHL) == (Amt < 32))
                               ? std::make_tuple(AHi, ALo, BHi)
                               : std::make_tuple(ALo, BHi, BLo);
