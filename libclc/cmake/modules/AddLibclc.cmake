@@ -66,9 +66,9 @@ function(compile_to_bc)
     DEPFILE ${ARG_OUTPUT}.d
   )
   # FIXME: The target is added to ensure the parallel build of source files.
-  # However, this may result in an large number of targets.
-  # Since CMake 3.27, DEPENDS_EXPLICIT_ONLY can be used with add_custom_command
-  # to enable parallel build.
+  # However, this may result in a large number of targets.
+  # Starting with CMake 3.27, DEPENDS_EXPLICIT_ONLY can be used with
+  # add_custom_command to enable parallel build.
   # Refer to https://gitlab.kitware.com/cmake/cmake/-/issues/17097 for details.
   add_custom_target( ${ARG_TARGET} DEPENDS ${ARG_OUTPUT}${TMP_SUFFIX} )
 
