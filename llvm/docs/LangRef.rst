@@ -1616,12 +1616,12 @@ Currently, only the following parameter attributes are defined:
 
 ``alignstack(<n>)``
     This indicates the alignment that should be considered by the backend when
-    assigning this parameter to a stack slot during calling convention
-    lowering. The enforcement of the specified alignment is target-dependent,
-    as target-specific calling convention rules may override this value. This
-    attribute serves the purpose of carrying language specific alignment
-    information that is not mapped to base types in the backend (for example,
-    over-alignment specification through language attributes).
+    assigning this parameter or return value to a stack slot during calling
+    convention lowering. The enforcement of the specified alignment is
+    target-dependent, as target-specific calling convention rules may override
+    this value. This attribute serves the purpose of carrying language specific
+    alignment information that is not mapped to base types in the backend (for
+    example, over-alignment specification through language attributes).
 
 ``allocalign``
     The function parameter marked with this attribute is the alignment in bytes of the
