@@ -1,5 +1,5 @@
 # Test runner infrastructure for Clang. This configures the Clang test trees
-# for use by Lit, and delegates to LLVM's lit test handlers.
+# for use by Lit, and delegates to LLVM's lit test handlers.int
 
 llvm_canonicalize_cmake_booleans(
   CLANG_BUILD_EXAMPLES
@@ -89,6 +89,7 @@ list(APPEND CLANG_TEST_DEPS
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
+    cir-translate
     )
 endif()
 
