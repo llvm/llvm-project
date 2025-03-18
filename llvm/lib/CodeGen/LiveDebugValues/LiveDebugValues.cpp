@@ -128,8 +128,7 @@ void LiveDebugValuesPass::printPipeline(
 }
 
 bool LiveDebugValuesLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  assert(TPC && "TargetPassConfig must be available");
+  auto *TPC = &getAnalysis<TargetPassConfig>();
   return LiveDebugValues().run(
       MF, TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues());
 }
