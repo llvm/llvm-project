@@ -216,9 +216,8 @@ void mlir::affine::getTripCountMapAndOperands(
 
 /// Take the min if all trip counts are constant.
 static std::optional<uint64_t>
-getConstantTripCountFromAffineMap(AffineMap map,
-                                  SmallVectorImpl<Value> &operands,
-                                  presburger::BoundType type) {
+getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
+                       presburger::BoundType type) {
   std::optional<uint64_t> tripCount;
   for (auto resultExpr : map.getResults()) {
     AffineMap subMap =
@@ -260,8 +259,7 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
 
   if (!map)
     return std::nullopt;
-  return getConstantTripCountFromAffineMap(map, operands,
-                                           presburger::BoundType::LB);
+  return getKnownTripCountBound(map, operands, presburger::BoundType::LB);
 }
 
 /// Returns the maximum trip count when the operand of forOp has a range. If the
@@ -275,8 +273,7 @@ mlir::affine::getUpperBoundOnTripCount(AffineForOp forOp) {
 
   if (!map)
     return std::nullopt;
-  return getConstantTripCountFromAffineMap(map, operands,
-                                           presburger::BoundType::UB);
+  return getKnownTripCountBound(map, operands, presburger::BoundType::UB);
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine

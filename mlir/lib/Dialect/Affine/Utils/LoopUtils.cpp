@@ -116,9 +116,10 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> minTripCount = getConstantTripCount(forOp);
   std::optional<uint64_t> maxTripCount = getUpperBoundOnTripCount(forOp);
-  if (!tripCount || *tripCount != 1 || !maxTripCount || *maxTripCount != 1)
+  if (!minTripCount || *minTripCount != 1 || !maxTripCount ||
+      *maxTripCount != 1)
     return failure();
 
   // TODO: extend this for arbitrary affine bounds.
