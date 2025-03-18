@@ -131,6 +131,7 @@ struct DataObject {
   DataSymbol *DataSym;
   std::vector<std::string> MangledNames;
   std::map<std::string, std::string> NameExpressionMap;
+  llvm::SmallVector<const char *, 128> SpirvFlags;
 
 private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;

@@ -69,18 +69,24 @@ class AMDGPUCompiler {
 
   amd_comgr_status_t createTmpDirs();
   amd_comgr_status_t removeTmpDirs();
-  amd_comgr_status_t processFile(const char *InputFilePath,
+  amd_comgr_status_t processFile(DataObject *Input, const char *InputFilePath,
                                  const char *OutputFilePath);
   /// Process each file in @c InSet individually, placing output in @c OutSet.
   amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
                                   const char *OutputSuffix);
+  amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
+                                  const char *OutputSuffix, DataSet *InSet);
   amd_comgr_status_t addIncludeFlags();
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr,
                                               bool CompilingSrc);
   amd_comgr_status_t addCompilationFlags();
   amd_comgr_status_t addDeviceLibraries();
+  amd_comgr_status_t extractSpirvFlags(DataSet *BcSet);
 
   amd_comgr_status_t executeInProcessDriver(llvm::ArrayRef<const char *> Args);
+
+  amd_comgr_status_t translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
+                                                 DataSet *BcOutSet);
 
 public:
   AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet,
@@ -98,6 +104,7 @@ public:
   amd_comgr_status_t linkToRelocatable();
   amd_comgr_status_t linkToExecutable();
   amd_comgr_status_t compileToExecutable();
+  amd_comgr_status_t compileSpirvToRelocatable();
   amd_comgr_status_t translateSpirvToBitcode();
 
   amd_comgr_language_t getLanguage() const { return ActionInfo->Language; }
