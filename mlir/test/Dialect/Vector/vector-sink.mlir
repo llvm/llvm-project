@@ -438,6 +438,17 @@ func.func @extract_elementwise_scalar(%arg0: vector<4xf32>, %arg1: vector<4xf32>
   return %1 : f32
 }
 
+// CHECK-LABEL: @extract_elementwise_arg_res_different_types
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xindex>)
+func.func @extract_elementwise_arg_res_different_types(%arg0: vector<4xindex>) -> i64 {
+// CHECK:   %[[EXT:.*]] = vector.extract %[[ARG0]][1] : index from vector<4xindex>
+// CHECK:   %[[RES:.*]] = arith.index_cast %[[EXT]] : index to i64
+// CHECK:   return %[[RES]] : i64
+  %0 = arith.index_cast %arg0: vector<4xindex> to vector<4xi64>
+  %1 = vector.extract %0[1] : i64 from vector<4xi64>
+  return %1 : i64
+}
+
 // CHECK-LABEL: @extract_elementwise_vec
 //  CHECK-SAME:   (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<2x4xf32>)
 func.func @extract_elementwise_vec(%arg0: vector<2x4xf32>, %arg1: vector<2x4xf32>) -> vector<4xf32> {
@@ -460,4 +471,28 @@ func.func @extract_elementwise_no_single_use(%arg0: vector<4xf32>, %arg1: vector
   %0 = arith.addf %arg0, %arg1 : vector<4xf32>
   %1 = vector.extract %0[1] : f32 from vector<4xf32>
   return %1, %0 : f32, vector<4xf32>
+}
+
+// CHECK-LABEL: @extract_elementwise_not_one_res
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xi32>, %[[ARG1:.*]]: vector<4xi32>)
+func.func @extract_elementwise_not_one_res(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
+// Do not propagate extract, as elementwise has more than 1 result.
+// CHECK:   %[[LOW:.*]], %[[HIGH:.*]] = arith.mulsi_extended %[[ARG0]], %[[ARG1]] : vector<4xi32>
+// CHECK:   %[[EXT:.*]] = vector.extract %[[LOW]][1] : i32 from vector<4xi32>
+// CHECK:   return %[[EXT]] : i32
+  %low, %hi = arith.mulsi_extended %arg0, %arg1 : vector<4xi32>
+  %1 = vector.extract %low[1] : i32 from vector<4xi32>
+  return %1 : i32
+}
+
+// CHECK-LABEL: @extract_not_elementwise
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xi64>)
+func.func @extract_not_elementwise(%arg0: vector<4xi64>) -> i64 {
+// `test.increment` is not an elemewise op.
+// CHECK:   %[[INC:.*]] = test.increment %[[ARG0]] : vector<4xi64>
+// CHECK:   %[[RES:.*]] = vector.extract %[[INC]][1] : i64 from vector<4xi64>
+// CHECK:   return %[[RES]] : i64
+  %0 = test.increment %arg0: vector<4xi64>
+  %1 = vector.extract %0[1] : i64 from vector<4xi64>
+  return %1 : i64
 }
