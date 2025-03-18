@@ -3405,6 +3405,30 @@ bool Lexer::isCodeCompletionPoint(const char *CurPtr) const {
   return false;
 }
 
+void Lexer::DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
+                                                   bool Named,
+                                                   const LangOptions &Opts,
+                                                   DiagnosticsEngine &Diags) {
+  unsigned DiagId;
+  if (Opts.CPlusPlus23)
+    DiagId = diag::warn_cxx23_delimited_escape_sequence;
+  else if (Opts.C2y && !Named)
+    DiagId = diag::warn_c2y_delimited_escape_sequence;
+  else
+    DiagId = diag::ext_delimited_escape_sequence;
+
+  // The trailing arguments are only used by the extension warning; either this
+  // is a C2y extension or a C++23 extension, unless it's a named escape
+  // sequence in C, then it's a Clang extension.
+  unsigned Ext;
+  if (!Opts.CPlusPlus)
+    Ext = Named ? 2 /* Clang extension */ : 1 /* C2y extension */;
+  else
+    Ext = 0; // C++23 extension
+
+  Diags.Report(Loc, DiagId) << Named << Ext;
+}
+
 std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
                                                  const char *SlashLoc,
                                                  Token *Result) {
@@ -3496,12 +3520,10 @@ std::optional<uint32_t> Lexer::tryReadNumericUCN(const char *&StartPtr,
     return std::nullopt;
   }
 
-  if (Delimited && PP) {
-    Diag(SlashLoc, PP->getLangOpts().CPlusPlus23
-                       ? diag::warn_cxx23_delimited_escape_sequence
-                       : diag::ext_delimited_escape_sequence)
-        << /*delimited*/ 0 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
-  }
+  if (Delimited && PP)
+    DiagnoseDelimitedOrNamedEscapeSequence(getSourceLocation(SlashLoc), false,
+                                           PP->getLangOpts(),
+                                           PP->getDiagnostics());
 
   if (Result) {
     Result->setFlag(Token::HasUCN);
@@ -3585,10 +3607,9 @@ std::optional<uint32_t> Lexer::tryReadNamedUCN(const char *&StartPtr,
   }
 
   if (Diagnose && Match)
-    Diag(SlashLoc, PP->getLangOpts().CPlusPlus23
-                       ? diag::warn_cxx23_delimited_escape_sequence
-                       : diag::ext_delimited_escape_sequence)
-        << /*named*/ 1 << (PP->getLangOpts().CPlusPlus ? 1 : 0);
+    DiagnoseDelimitedOrNamedEscapeSequence(getSourceLocation(SlashLoc), true,
+                                           PP->getLangOpts(),
+                                           PP->getDiagnostics());
 
   // If no diagnostic has been emitted yet, likely because we are doing a
   // tentative lexing, we do not want to recover here to make sure the token

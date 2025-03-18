@@ -4717,21 +4717,21 @@ def HLSLNumThreads: InheritableAttr {
 }
 
 def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_groupthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupThreadIDDocs];
 }
 
 def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupID">];
+  let Spellings = [HLSLAnnotation<"sv_groupid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIDDocs];
 }
 
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
+  let Spellings = [HLSLAnnotation<"sv_groupindex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIndexDocs];
@@ -4783,7 +4783,7 @@ def HLSLPackOffset: HLSLAnnotationAttr {
 }
 
 def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_DispatchThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_dispatchthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_DispatchThreadIDDocs];
@@ -4810,33 +4810,6 @@ def HLSLShader : InheritableAttr {
     return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
-}
-
-def HLSLResource : InheritableAttr {
-  let Spellings = [];
-  let Subjects = SubjectList<[Struct]>;
-  let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<
-        "ResourceKind", "llvm::hlsl::ResourceKind",
-        /*is_string=*/0,
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
-  ];
-  let Documentation = [InternalOnly];
 }
 
 def HLSLROV : TypeAttr {
@@ -5026,4 +4999,7 @@ def OpenACCRoutineAnnot : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [InternalOnly];
+  let AdditionalMembers = [{
+    SourceLocation BindClause;
+  }];
 }

@@ -41,7 +41,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor: $input,
+    Tosa_TensorAtLeast1D: $input,
     I32Attr: $axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
@@ -300,12 +300,10 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
 // Operator: matmul
 //===----------------------------------------------------------------------===//
 def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
-  let summary = "Matrix multiplication with bias";
+  let summary = "Matrix multiplication";
 
   let description = [{
-    Performs a two dimensional matrix multiplication. This allows both inputs to
-    be activations, rather than reserving weights as an attribute in the
-    FULLY_CONNECTED operator.
+    Performs two dimensional matrix multiplications.
   }];
 
   let arguments = (ins
@@ -396,7 +394,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$input,
+    Tosa_Tensor3D:$input_real,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -411,7 +409,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   ];
 
   let assemblyFormat = [{
-    $input attr-dict `:` `(` type($input) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
+    $input_real attr-dict `:` `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
   }];
 
   let hasVerifier = 1;
@@ -1356,7 +1354,9 @@ def Tosa_LogicalNotOp : Tosa_ElementwiseUnaryOp<"logical_not"> {
 //===----------------------------------------------------------------------===//
 // Operator: negate
 //===----------------------------------------------------------------------===//
-def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
+def Tosa_NegateOp : Tosa_InferShapedTypeOp<"negate", [
+    TosaElementwiseOperator,
+    Pure]> {
   let summary = "Elementwise negate op";
 
   let description = [{
@@ -1365,8 +1365,8 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
 
   let arguments = (ins
       Tosa_Tensor:$input1,
-      OptionalAttr<I32Attr>:$input1_zp,
-      OptionalAttr<I32Attr>:$output_zp
+      Tosa_ScalarIntOrFloatTensor:$input1_zp,
+      Tosa_ScalarIntOrFloatTensor:$output_zp
   );
 
   let results = (outs
@@ -1378,9 +1378,20 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
     Extension<[Tosa_EXT_BF16]>,
   ];
 
-  let builders = [Tosa_UnaryOpQuantInfoBuilder];
+  let builders = [Tosa_NegateOpQuantInfoBuilder];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInput1ZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInput1ZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1618,12 +1629,12 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1657,12 +1668,12 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1696,13 +1707,13 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1737,13 +1748,13 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis,
     DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1778,12 +1789,12 @@ def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1817,12 +1828,12 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input,
+    Tosa_TensorAtLeast1D:$input,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1861,12 +1872,12 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
   }];
 
   let arguments = (ins
-    Variadic<Tosa_Tensor>:$input1,
+    Variadic<Tosa_TensorAtLeast1D>:$input1,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1912,13 +1923,13 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
   }];
 
   let arguments = (ins
-    Tosa_RankedTensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     Tosa_Shape:$padding,
     Tosa_ScalarTensor:$pad_const
   );
 
   let results = (outs
-    Tosa_RankedTensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -1985,12 +1996,12 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     I32Attr:$axis
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2017,13 +2028,13 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     Tosa_Shape:$start,
     Tosa_Shape:$size
   );
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2047,11 +2058,11 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     Tosa_Shape:$multiples);
 
   let results = (outs
-    Tosa_Tensor:$output
+    Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2082,12 +2093,12 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
   }];
 
   let arguments = (ins
-    Tosa_Tensor:$input1,
+    Tosa_TensorAtLeast1D:$input1,
     DenseI32ArrayAttr:$perms
   );
 
   let results = (
-    outs Tosa_Tensor:$output
+    outs Tosa_TensorAtLeast1D:$output
   );
 
   list<Availability> availability = [
@@ -2344,10 +2355,10 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Tosa_Tensor:$input,
     Tosa_1DInt16Or32Tensor:$multiplier,
     Tosa_1DInt8Tensor:$shift,
-    I32Attr:$input_zp,
-    I32Attr:$output_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$output_zp,
     BoolAttr:$scale32,
-    BoolAttr:$double_round,
+    Tosa_RoundingTypeAttr:$rounding_mode,
     BoolAttr:$per_channel,
     BoolAttr: $input_unsigned,
     BoolAttr: $output_unsigned
@@ -2361,6 +2372,13 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Profile<[Tosa_PRO_INT]>,
     Extension<[Tosa_EXT_INT16]>,
   ];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInputZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
 
   let hasVerifier = 1;
 

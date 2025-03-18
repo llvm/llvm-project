@@ -385,7 +385,7 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
-// Evaluate "builtin" functions.
+// Evaluate "builtin" functions and assumptions.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = CoreBuiltin in {
@@ -397,6 +397,10 @@ def NoReturnFunctionChecker : Checker<"NoReturnFunctions">,
 
 def BuiltinFunctionChecker : Checker<"BuiltinFunctions">,
   HelpText<"Evaluate compiler builtin functions (e.g., alloca())">,
+  Documentation<NotDocumented>;
+
+def AssumeModeling : Checker<"AssumeModeling">,
+  HelpText<"Model compiler builtin assume functions and the assume attribute">,
   Documentation<NotDocumented>;
 
 } // end "core.builtin"
@@ -1757,6 +1761,10 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 
 let ParentPackage = WebKitAlpha in {
 
+def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
+  HelpText<"Check for forward declared local or member variables and function arguments">,
+  Documentation<HasDocumentation>;
+
 def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
   Documentation<HasDocumentation>;
@@ -1765,12 +1773,24 @@ def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
   Documentation<HasDocumentation>;
 
+def NoUnretainedMemberChecker : Checker<"NoUnretainedMemberChecker">,
+  HelpText<"Check for no unretained member variables.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedLambdaCapturesChecker : Checker<"UnretainedLambdaCapturesChecker">,
+  HelpText<"Check unretained lambda captures.">,
+  Documentation<HasDocumentation>;
+
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
   HelpText<"Check uncounted call arguments.">,
   Documentation<HasDocumentation>;
 
 def UncheckedCallArgsChecker : Checker<"UncheckedCallArgsChecker">,
   HelpText<"Check unchecked call arguments.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
+  HelpText<"Check unretained call arguments.">,
   Documentation<HasDocumentation>;
 
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
@@ -1783,6 +1803,10 @@ def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
 
 def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
+  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

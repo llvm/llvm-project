@@ -866,15 +866,29 @@ void WinEHPrepareImpl::demotePHIsOnFunclets(Function &F,
   for (BasicBlock &BB : make_early_inc_range(F)) {
     if (!BB.isEHPad())
       continue;
-    if (DemoteCatchSwitchPHIOnly &&
-        !isa<CatchSwitchInst>(BB.getFirstNonPHIIt()))
-      continue;
 
     for (Instruction &I : make_early_inc_range(BB)) {
       auto *PN = dyn_cast<PHINode>(&I);
       // Stop at the first non-PHI.
       if (!PN)
         break;
+
+      // If DemoteCatchSwitchPHIOnly is true, we only demote a PHI when
+      // 1. The PHI is within a catchswitch BB
+      // 2. The PHI has a catchswitch BB has one of its incoming blocks
+      if (DemoteCatchSwitchPHIOnly) {
+        bool IsCatchSwitchBB = isa<CatchSwitchInst>(BB.getFirstNonPHIIt());
+        bool HasIncomingCatchSwitchBB = false;
+        for (unsigned I = 0, E = PN->getNumIncomingValues(); I < E; ++I) {
+          if (isa<CatchSwitchInst>(
+                  PN->getIncomingBlock(I)->getFirstNonPHIIt())) {
+            HasIncomingCatchSwitchBB = true;
+            break;
+          }
+        }
+        if (!IsCatchSwitchBB && !HasIncomingCatchSwitchBB)
+          break;
+      }
 
       AllocaInst *SpillSlot = insertPHILoads(PN, F);
       if (SpillSlot)

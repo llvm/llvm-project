@@ -63,6 +63,7 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
    full_cross_build
    overlay_mode
    gpu/index.rst
+   uefi/index.rst
    configure
 
 .. toctree::

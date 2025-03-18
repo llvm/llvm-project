@@ -70,7 +70,7 @@ class FileManager;
 class FrontendAction;
 class HeaderSearch;
 class InputKind;
-class InMemoryModuleCache;
+class ModuleCache;
 class PCHContainerOperations;
 class PCHContainerReader;
 class Preprocessor;
@@ -110,7 +110,7 @@ private:
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;

@@ -10,8 +10,8 @@
 ; RUN: llc -mtriple=x86_64-apple-xros8.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-driverkit < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=x86_64-apple-driverkit24.0 < %s | FileCheck -check-prefix=APPLE %s
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefix=GISEL-X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefix=GISEL-X64
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X86
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X64
 
 ; RUN: not llc -mtriple=x86_64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
@@ -30,15 +30,18 @@ define float @test_exp10_f32(float %x) nounwind {
 ; GISEL-X86-LABEL: test_exp10_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll exp10f
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: test_exp10_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp exp10f@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq exp10f
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %ret = call float @llvm.exp10.f32(float %x)
   ret float %ret
 }
@@ -55,15 +58,23 @@ define double @test_exp10_f64(double %x) nounwind {
 ; GISEL-X86-LABEL: test_exp10_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll exp10
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: test_exp10_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp exp10@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq exp10
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %ret = call double @llvm.exp10.f64(double %x)
   ret double %ret
 }
@@ -101,7 +112,7 @@ define x86_fp80 @test_exp10_f80(x86_fp80 %x) nounwind {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq exp10l@PLT
+; GISEL-X64-NEXT:    callq exp10l
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %ret = call x86_fp80 @llvm.exp10.f80(x86_fp80 %x)
