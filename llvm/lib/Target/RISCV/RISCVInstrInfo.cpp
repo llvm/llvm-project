@@ -1014,6 +1014,38 @@ RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
   }
 }
 
+// Return true if MO definitely contains the value one.
+static bool isOne(MachineOperand &MO) {
+  if (MO.isImm() && MO.getImm() == 1)
+    return true;
+
+  if (!MO.isReg() || !MO.getReg().isVirtual())
+    return false;
+
+  MachineRegisterInfo &MRI =
+      MO.getParent()->getParent()->getParent()->getRegInfo();
+  MachineInstr *DefMI = MRI.getUniqueVRegDef(MO.getReg());
+  if (!DefMI)
+    return false;
+
+  // For now, just check the canonical one value.
+  if (DefMI->getOpcode() == RISCV::ADDI &&
+      DefMI->getOperand(1).getReg() == RISCV::X0 &&
+      DefMI->getOperand(2).getImm() == 1)
+    return true;
+
+  return false;
+}
+
+// Return true if MO definitely contains the value zero.
+static bool isZero(MachineOperand &MO) {
+  if (MO.isImm() && MO.getImm() == 0)
+    return true;
+  if (MO.isReg() && MO.getReg() == RISCV::X0)
+    return true;
+  return false;
+}
+
 bool RISCVInstrInfo::trySimplifyCondBr(
     MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
     SmallVectorImpl<MachineOperand> &Cond) const {
@@ -1024,38 +1056,6 @@ bool RISCVInstrInfo::trySimplifyCondBr(
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   auto LHS = Cond[1];
   auto RHS = Cond[2];
-
-  // Return true if MO definitely contains the value one.
-  auto isOne = [](MachineOperand &MO) -> bool {
-    if (MO.isImm() && MO.getImm() == 1)
-      return true;
-
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      return false;
-
-    MachineRegisterInfo &MRI =
-        MO.getParent()->getParent()->getParent()->getRegInfo();
-    MachineInstr *DefMI = MRI.getUniqueVRegDef(MO.getReg());
-    if (!DefMI)
-      return false;
-
-    // For now, just check the canonical one value.
-    if (DefMI->getOpcode() == RISCV::ADDI &&
-        DefMI->getOperand(1).getReg() == RISCV::X0 &&
-        DefMI->getOperand(2).getImm() == 1)
-      return true;
-
-    return false;
-  };
-
-  // Return true if MO definitely contains the value zero.
-  auto isZero = [](MachineOperand &MO) -> bool {
-    if (MO.isImm() && MO.getImm() == 0)
-      return true;
-    if (MO.isReg() && MO.getReg() == RISCV::X0)
-      return true;
-    return false;
-  };
 
   MachineBasicBlock *Folded = nullptr;
   switch (CC) {
