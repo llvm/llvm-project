@@ -392,17 +392,6 @@ static MCRelocationInfo *createARMMCRelocationInfo(const Triple &TT,
   return llvm::createMCRelocationInfo(TT, Ctx);
 }
 
-template <typename T, size_t N>
-static bool instructionsMatch(const T (&Insns)[N], const uint8_t *Buf,
-                              llvm::endianness E) {
-  for (size_t I = 0; I < N; ++I) {
-    T Val = support::endian::read<T>(Buf + I * sizeof(T), E);
-    if (Val != Insns[I])
-      return false;
-  }
-  return true;
-}
-
 namespace {
 
 class ARMMCInstrAnalysis : public MCInstrAnalysis {
@@ -634,6 +623,17 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   case ARMII::AddrModeT1_s:
     return evaluateMemOpAddrForAddrModeT1_s(Inst, Desc, OpIndex, Addr);
   }
+}
+
+template <typename T, size_t N>
+static bool instructionsMatch(const T (&Insns)[N], const uint8_t *Buf,
+                              llvm::endianness E) {
+  for (size_t I = 0; I < N; ++I) {
+    T Val = support::endian::read<T>(Buf + I * sizeof(T), E);
+    if (Val != Insns[I])
+      return false;
+  }
+  return true;
 }
 
 std::vector<std::pair<uint64_t, uint64_t>>
