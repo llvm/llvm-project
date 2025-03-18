@@ -115,7 +115,7 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
     auto target = std::make_shared<ConversionTarget>(*context);
     auto typeConverter = std::make_shared<TypeConverter>();
 
-    // Add fallback identity converison
+    // Add fallback identity converison.
     typeConverter->addConversion([](Type type) -> std::optional<Type> {
       if (emitc::isSupportedEmitCType(type))
         return type;

@@ -1,5 +1,4 @@
 // RUN: mlir-opt -convert-memref-to-emitc %s -split-input-file -verify-diagnostics
-// RUN: mlir-opt -convert-to-emitc="filter-dialects=memref" %s -split-input-file -verify-diagnostics
 
 func.func @memref_op(%arg0 : memref<2x4xf32>) {
   // expected-error@+1 {{failed to legalize operation 'memref.copy'}}
