@@ -279,13 +279,13 @@ represented using target extension types:
 
   .. table:: Inline SPIR-V Types
 
-  ========================== =================== ==============================
-     LLVM type name          LLVM type arguments LLVM integer arguments
-  ========================== =================== ==============================
-  ``spirv.Type``             SPIR-V operands     opcode, size, alignment
-  ``spirv.IntegralConstant`` integral type       value
-  ``spirv.Literal``          (none)              value
-  ========================== =================== ==============================
+    ========================== =================== =========================
+    LLVM type name             LLVM type arguments LLVM integer arguments
+    ========================== =================== =========================
+    ``spirv.Type``             SPIR-V operands     opcode, size, alignment
+    ``spirv.IntegralConstant`` integral type       value
+    ``spirv.Literal``          (none)              value
+    ========================== =================== =========================
 
 The operand arguments to ``spirv.Type`` may be either a ``spirv.IntegralConstant`` type,
 representing an ``OpConstant`` id operand, a ``spirv.Literal`` type, representing an immediate
