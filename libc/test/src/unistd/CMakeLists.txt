@@ -353,10 +353,11 @@ add_libc_unittest(
     unlink_test.cpp
   DEPENDS
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
 
 add_libc_unittest(
