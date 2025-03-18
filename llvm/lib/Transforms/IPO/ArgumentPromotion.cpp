@@ -266,7 +266,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
           ArgAttrVec.push_back(AttributeSet());
         }
       } else {
-        assert(ArgIt != ArgsToPromote.end() && I->use_empty());
+        assert(I->use_empty());
         DeadArgs.emplace_back(AI->get());
       }
     }
