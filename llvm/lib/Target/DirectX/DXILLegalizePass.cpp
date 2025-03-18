@@ -5,12 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-//===---------------------------------------------------------------------===//
-///
-/// \file This file contains a pass to remove i8 truncations and i64 extract
-/// and insert elements.
-///
-//===----------------------------------------------------------------------===//
+
 #include "DXILLegalizePass.h"
 #include "DirectX.h"
 #include "llvm/IR/Function.h"
@@ -20,31 +15,27 @@
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
-#include <map>
-#include <stack>
-#include <vector>
 
 #define DEBUG_TYPE "dxil-legalize"
 
 using namespace llvm;
 namespace {
 
-static void fixI8TruncUseChain(Instruction &I,
-                               std::stack<Instruction *> &ToRemove,
-                               std::map<Value *, Value *> &ReplacedValues) {
+void fixI8TruncUseChain(Instruction &I, SmallVector<Instruction *> &ToRemove,
+                        DenseMap<Value *, Value *> &ReplacedValues) {
 
   auto *Cmp = dyn_cast<CmpInst>(&I);
 
   if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
     if (Trunc->getDestTy()->isIntegerTy(8)) {
       ReplacedValues[Trunc] = Trunc->getOperand(0);
-      ToRemove.push(Trunc);
+      ToRemove.push_back(Trunc);
     }
   } else if (I.getType()->isIntegerTy(8) ||
              (Cmp && Cmp->getOperand(0)->getType()->isIntegerTy(8))) {
     IRBuilder<> Builder(&I);
 
-    std::vector<Value *> NewOperands;
+    SmallVector<Value *> NewOperands;
     Type *InstrType = IntegerType::get(I.getContext(), 32);
     for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
       Value *Op = I.getOperand(OpIdx);
@@ -88,20 +79,19 @@ static void fixI8TruncUseChain(Instruction &I,
 
     if (NewInst) {
       ReplacedValues[&I] = NewInst;
-      ToRemove.push(&I);
+      ToRemove.push_back(&I);
     }
   } else if (auto *Cast = dyn_cast<CastInst>(&I)) {
     if (Cast->getSrcTy()->isIntegerTy(8)) {
-      ToRemove.push(Cast);
+      ToRemove.push_back(Cast);
       Cast->replaceAllUsesWith(ReplacedValues[Cast->getOperand(0)]);
     }
   }
 }
 
-static void
-downcastI64toI32InsertExtractElements(Instruction &I,
-                                      std::stack<Instruction *> &ToRemove,
-                                      std::map<Value *, Value *> &) {
+void downcastI64toI32InsertExtractElements(Instruction &I,
+                                           SmallVector<Instruction *> &ToRemove,
+                                           DenseMap<Value *, Value *> &) {
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
     Value *Idx = Extract->getIndexOperand();
@@ -115,7 +105,7 @@ downcastI64toI32InsertExtractElements(Instruction &I,
           Extract->getVectorOperand(), Idx32, Extract->getName());
 
       Extract->replaceAllUsesWith(NewExtract);
-      ToRemove.push(Extract);
+      ToRemove.push_back(Extract);
     }
   }
 
@@ -132,7 +122,7 @@ downcastI64toI32InsertExtractElements(Instruction &I,
           Insert->getName());
 
       Insert->replaceAllUsesWith(Insert32Index);
-      ToRemove.push(Insert);
+      ToRemove.push_back(Insert);
     }
   }
 }
@@ -143,27 +133,22 @@ public:
   DXILLegalizationPipeline() { initializeLegalizationPipeline(); }
 
   bool runLegalizationPipeline(Function &F) {
-    std::stack<Instruction *> ToRemove;
-    std::map<Value *, Value *> ReplacedValues;
+    SmallVector<Instruction *> ToRemove;
+    DenseMap<Value *, Value *> ReplacedValues;
     for (auto &I : instructions(F)) {
-      for (auto &LegalizationFn : LegalizationPipeline) {
+      for (auto &LegalizationFn : LegalizationPipeline)
         LegalizationFn(I, ToRemove, ReplacedValues);
-      }
-    }
-    bool MadeChanges = !ToRemove.empty();
-
-    while (!ToRemove.empty()) {
-      Instruction *I = ToRemove.top();
-      I->eraseFromParent();
-      ToRemove.pop();
     }
 
-    return MadeChanges;
+    for (auto *Inst : reverse(ToRemove))
+      Inst->eraseFromParent();
+
+    return !ToRemove.empty();
   }
 
 private:
-  std::vector<std::function<void(Instruction &, std::stack<Instruction *> &,
-                                 std::map<Value *, Value *> &)>>
+  SmallVector<std::function<void(Instruction &, SmallVector<Instruction *> &,
+                                 DenseMap<Value *, Value *> &)>>
       LegalizationPipeline;
 
   void initializeLegalizationPipeline() {
