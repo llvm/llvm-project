@@ -18,7 +18,7 @@
 
 ; FIXME the offset here should not be folded: if %p points to the beginning of
 ; scratch or LDS and %i is -1, a folded offset crashes the program.
-define i32 @flat_offset_maybe_oob(ptr addrspace(0) %p, i32 %i) {
+define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX90A-LABEL: flat_offset_maybe_oob:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -81,8 +81,8 @@ define i32 @flat_offset_maybe_oob(ptr addrspace(0) %p, i32 %i) {
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %idx = add nsw i32 %i, 3
-  %arrayidx = getelementptr inbounds i32, ptr addrspace(0) %p, i32 %idx
-  %l = load i32, ptr addrspace(0) %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %p, i32 %idx
+  %l = load i32, ptr %arrayidx
   ret i32 %l
 }
 
