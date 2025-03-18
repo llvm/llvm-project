@@ -67,6 +67,7 @@ if (SPHINX_FOUND)
       threads
       uchar
       unistd
+      sys/utsname
       wchar
       wctype
     )
