@@ -1,5 +1,10 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
 
+; This test checks to ensure the behavior of the DXIL shader flag analysis
+; for the flag ResMayNotAlias is correct when the DXIL Version is 1.7. The
+; ResMayNotAlias flag (0x20000000) should be set on all functions if there are
+; one or more UAVs present globally in the module.
+
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; CHECK:      Combined Shader Flags for Module

@@ -1,5 +1,9 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
 
+; This test checks to ensure that setting the LLVM module flag "dx.resmayalias"
+; to 1 prevents the DXIL shader flag analysis from setting the flag
+; ResMayNotAlias.
+
 target triple = "dxil-pc-shadermodel6.8-library"
 
 ; CHECK:      Combined Shader Flags for Module
