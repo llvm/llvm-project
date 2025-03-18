@@ -2127,6 +2127,34 @@ public:
     return Type;
   }
 
+  uint32_t analyzePLTHeader(std::vector<MCInst *> &Insns) const override {
+    uint32_t HeaderSize = 0;
+    if (Insns.size() == 0) // empty header
+      return HeaderSize;
+    if (isTerminateBranch(*Insns[0])) {
+      // starting with an endbr, possible headers: mold
+      if (Insns.size() >= 4 && isPush(*Insns[1]) && isPush(*Insns[2]) &&
+          isIndirectBranch(*Insns[3])) {
+        // The mold linker (https://github.com/rui314/mold/blob/v2.34.1/src/arch-x86-64.cc#L50)
+        // generates a unique format for the PLT. The size of the header is 32 bytes and the 
+        // format is as follows:
+        ///   endbr64
+        ///   push %r11
+        ///   push GOTPLT+8(%rip)
+        ///   jmp *GOTPLT+16(%rip)
+        ///   padding （14 bytes）
+        HeaderSize = 32; // mold with CET support
+      } else {
+        // In case other linkers have new proposals.
+      }
+    } else {
+      // TODO: headers with endbr in the midddle, including the lld version plt,
+      // or headers without CET support, including R_386_PLT32, R_X86_64_PLT32,
+      // retpolineplt of lld (for Spectre v2 mitigation), and etc.
+    }
+    return HeaderSize;
+  }
+
   /// Analyze a callsite to see if it could be a virtual method call.  This only
   /// checks to see if the overall pattern is satisfied, it does not guarantee
   /// that the callsite is a true virtual method call.
