@@ -12,7 +12,7 @@
 #include "stat.h"
 #include "terminator.h"
 #include "type-info.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/assign.h"
 #include "flang/Runtime/descriptor.h"
 

@@ -394,7 +394,6 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: fshl_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    lsr w8, w1, #1
-; CHECK-SD-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-SD-NEXT:    mvn w9, w2
 ; CHECK-SD-NEXT:    lsl w10, w0, w2
 ; CHECK-SD-NEXT:    lsr w8, w8, w9
@@ -420,7 +419,6 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SD-LABEL: fshr_i32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    lsl w8, w0, #1
-; CHECK-SD-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-SD-NEXT:    mvn w9, w2
 ; CHECK-SD-NEXT:    lsr w10, w1, w2
 ; CHECK-SD-NEXT:    lsl w8, w8, w9

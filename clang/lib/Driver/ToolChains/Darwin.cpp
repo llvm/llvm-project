@@ -2777,30 +2777,6 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   // and try to push it down into tool specific logic.
 
   for (Arg *A : Args) {
-    if (A->getOption().matches(options::OPT_Xarch__)) {
-      // Skip this argument unless the architecture matches either the toolchain
-      // triple arch, or the arch being bound.
-      StringRef XarchArch = A->getValue(0);
-      if (!(XarchArch == getArchName() ||
-            (!BoundArch.empty() && XarchArch == BoundArch)))
-        continue;
-
-      Arg *OriginalArg = A;
-      TranslateXarchArgs(Args, A, DAL);
-
-      // Linker input arguments require custom handling. The problem is that we
-      // have already constructed the phase actions, so we can not treat them as
-      // "input arguments".
-      if (A->getOption().hasFlag(options::LinkerInput)) {
-        // Convert the argument into individual Zlinker_input_args.
-        for (const char *Value : A->getValues()) {
-          DAL->AddSeparateArg(
-              OriginalArg, Opts.getOption(options::OPT_Zlinker_input), Value);
-        }
-        continue;
-      }
-    }
-
     // Sob. These is strictly gcc compatible for the time being. Apple
     // gcc translates options twice, which means that self-expanding
     // options add duplicates.

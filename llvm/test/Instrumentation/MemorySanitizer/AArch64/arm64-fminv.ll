@@ -2,12 +2,6 @@
 ; RUN: opt < %s -passes=msan -S | FileCheck %s
 ;
 ; Forked from llvm/test/CodeGen/AArch64/arm64-fminv.ll
-;
-; Currently handled (suboptimally) by handleUnknownInstruction:
-; - llvm.aarch64.neon.fmaxv
-; - llvm.aarch64.neon.fminv
-; - llvm.aarch64.neon.fmaxnmv
-; - llvm.aarch64.neon.fminnmv
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
@@ -17,15 +11,9 @@ define float @test_fminv_v2f32(<2 x float> %in) #0 {
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v2f32(<2 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MIN]]
 ;
   %min = call float @llvm.aarch64.neon.fminv.f32.v2f32(<2 x float> %in)
@@ -37,15 +25,9 @@ define float @test_fminv_v4f32(<4 x float> %in) #0 {
 ; CHECK-SAME: <4 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v4f32(<4 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MIN]]
 ;
   %min = call float @llvm.aarch64.neon.fminv.f32.v4f32(<4 x float> %in)
@@ -57,15 +39,9 @@ define double @test_fminv_v2f64(<2 x double> %in) #0 {
 ; CHECK-SAME: <2 x double> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP1]])
 ; CHECK-NEXT:    [[MIN:%.*]] = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> [[IN]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[MIN]]
 ;
   %min = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> %in)
@@ -81,15 +57,9 @@ define float @test_fmaxv_v2f32(<2 x float> %in) #0 {
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v2f32(<2 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MAX]]
 ;
   %max = call float @llvm.aarch64.neon.fmaxv.f32.v2f32(<2 x float> %in)
@@ -101,15 +71,9 @@ define float @test_fmaxv_v4f32(<4 x float> %in) #0 {
 ; CHECK-SAME: <4 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MAX]]
 ;
   %max = call float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float> %in)
@@ -121,15 +85,9 @@ define double @test_fmaxv_v2f64(<2 x double> %shareholder_value) #0 {
 ; CHECK-SAME: <2 x double> [[SHAREHOLDER_VALUE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP1]])
 ; CHECK-NEXT:    [[MAX:%.*]] = call double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double> [[SHAREHOLDER_VALUE]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[MAX]]
 ;
   %max_sv = call double @llvm.aarch64.neon.fmaxv.f64.v2f64(<2 x double> %shareholder_value)
@@ -145,15 +103,9 @@ define float @test_fminnmv_v2f32(<2 x float> %in) #0 {
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MINNM:%.*]] = call float @llvm.aarch64.neon.fminnmv.f32.v2f32(<2 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MINNM]]
 ;
   %minnm = call float @llvm.aarch64.neon.fminnmv.f32.v2f32(<2 x float> %in)
@@ -165,15 +117,9 @@ define float @test_fminnmv_v4f32(<4 x float> %in) #0 {
 ; CHECK-SAME: <4 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MINNM:%.*]] = call float @llvm.aarch64.neon.fminnmv.f32.v4f32(<4 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MINNM]]
 ;
   %minnm = call float @llvm.aarch64.neon.fminnmv.f32.v4f32(<4 x float> %in)
@@ -185,15 +131,9 @@ define double @test_fminnmv_v2f64(<2 x double> %in) #0 {
 ; CHECK-SAME: <2 x double> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP1]])
 ; CHECK-NEXT:    [[MINNM:%.*]] = call double @llvm.aarch64.neon.fminnmv.f64.v2f64(<2 x double> [[IN]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[MINNM]]
 ;
   %minnm = call double @llvm.aarch64.neon.fminnmv.f64.v2f64(<2 x double> %in)
@@ -209,15 +149,9 @@ define float @test_fmaxnmv_v2f32(<2 x float> %in) #0 {
 ; CHECK-SAME: <2 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to i64
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MAXNM:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MAXNM]]
 ;
   %maxnm = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> %in)
@@ -229,15 +163,9 @@ define float @test_fmaxnmv_v4f32(<4 x float> %in) #0 {
 ; CHECK-SAME: <4 x float> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[MAXNM:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v4f32(<4 x float> [[IN]])
-; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret float [[MAXNM]]
 ;
   %maxnm = call float @llvm.aarch64.neon.fmaxnmv.f32.v4f32(<4 x float> %in)
@@ -249,15 +177,9 @@ define double @test_fmaxnmv_v2f64(<2 x double> %in) #0 {
 ; CHECK-SAME: <2 x double> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP1]])
 ; CHECK-NEXT:    [[MAXNM:%.*]] = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> [[IN]])
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret double [[MAXNM]]
 ;
   %maxnm = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> %in)
@@ -269,6 +191,3 @@ declare float @llvm.aarch64.neon.fmaxnmv.f32.v4f32(<4 x float>)
 declare double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double>)
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.

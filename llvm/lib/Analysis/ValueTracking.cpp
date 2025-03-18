@@ -683,28 +683,30 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
 
   Value *Y;
   const APInt *Mask, *C;
+  if (!match(RHS, m_APInt(C)))
+    return;
+
   uint64_t ShAmt;
   switch (Pred) {
   case ICmpInst::ICMP_EQ:
     // assume(V = C)
-    if (match(LHS, m_V) && match(RHS, m_APInt(C))) {
+    if (match(LHS, m_V)) {
       Known = Known.unionWith(KnownBits::makeConstant(*C));
       // assume(V & Mask = C)
-    } else if (match(LHS, m_c_And(m_V, m_Value(Y))) &&
-               match(RHS, m_APInt(C))) {
+    } else if (match(LHS, m_c_And(m_V, m_Value(Y)))) {
       // For one bits in Mask, we can propagate bits from C to V.
       Known.One |= *C;
       if (match(Y, m_APInt(Mask)))
         Known.Zero |= ~*C & *Mask;
       // assume(V | Mask = C)
-    } else if (match(LHS, m_c_Or(m_V, m_Value(Y))) && match(RHS, m_APInt(C))) {
+    } else if (match(LHS, m_c_Or(m_V, m_Value(Y)))) {
       // For zero bits in Mask, we can propagate bits from C to V.
       Known.Zero |= ~*C;
       if (match(Y, m_APInt(Mask)))
         Known.One |= *C & ~*Mask;
       // assume(V << ShAmt = C)
     } else if (match(LHS, m_Shl(m_V, m_ConstantInt(ShAmt))) &&
-               match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
+               ShAmt < BitWidth) {
       // For those bits in C that are known, we can propagate them to known
       // bits in V shifted to the right by ShAmt.
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
@@ -713,7 +715,7 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
       Known = Known.unionWith(RHSKnown);
       // assume(V >> ShAmt = C)
     } else if (match(LHS, m_Shr(m_V, m_ConstantInt(ShAmt))) &&
-               match(RHS, m_APInt(C)) && ShAmt < BitWidth) {
+               ShAmt < BitWidth) {
       KnownBits RHSKnown = KnownBits::makeConstant(*C);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
@@ -724,38 +726,36 @@ static void computeKnownBitsFromCmp(const Value *V, CmpInst::Predicate Pred,
   case ICmpInst::ICMP_NE: {
     // assume (V & B != 0) where B is a power of 2
     const APInt *BPow2;
-    if (match(LHS, m_And(m_V, m_Power2(BPow2))) && match(RHS, m_Zero()))
+    if (C->isZero() && match(LHS, m_And(m_V, m_Power2(BPow2))))
       Known.One |= *BPow2;
     break;
   }
-  default:
-    if (match(RHS, m_APInt(C))) {
-      const APInt *Offset = nullptr;
-      if (match(LHS, m_CombineOr(m_V, m_AddLike(m_V, m_APInt(Offset))))) {
-        ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
-        if (Offset)
-          LHSRange = LHSRange.sub(*Offset);
-        Known = Known.unionWith(LHSRange.toKnownBits());
-      }
-      if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
-        // X & Y u> C     -> X u> C && Y u> C
-        // X nuw- Y u> C  -> X u> C
-        if (match(LHS, m_c_And(m_V, m_Value())) ||
-            match(LHS, m_NUWSub(m_V, m_Value())))
-          Known.One.setHighBits(
-              (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
-      }
-      if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
-        // X | Y u< C    -> X u< C && Y u< C
-        // X nuw+ Y u< C -> X u< C && Y u< C
-        if (match(LHS, m_c_Or(m_V, m_Value())) ||
-            match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
-          Known.Zero.setHighBits(
-              (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
-        }
+  default: {
+    const APInt *Offset = nullptr;
+    if (match(LHS, m_CombineOr(m_V, m_AddLike(m_V, m_APInt(Offset))))) {
+      ConstantRange LHSRange = ConstantRange::makeAllowedICmpRegion(Pred, *C);
+      if (Offset)
+        LHSRange = LHSRange.sub(*Offset);
+      Known = Known.unionWith(LHSRange.toKnownBits());
+    }
+    if (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_UGE) {
+      // X & Y u> C     -> X u> C && Y u> C
+      // X nuw- Y u> C  -> X u> C
+      if (match(LHS, m_c_And(m_V, m_Value())) ||
+          match(LHS, m_NUWSub(m_V, m_Value())))
+        Known.One.setHighBits(
+            (*C + (Pred == ICmpInst::ICMP_UGT)).countLeadingOnes());
+    }
+    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) {
+      // X | Y u< C    -> X u< C && Y u< C
+      // X nuw+ Y u< C -> X u< C && Y u< C
+      if (match(LHS, m_c_Or(m_V, m_Value())) ||
+          match(LHS, m_c_NUWAdd(m_V, m_Value()))) {
+        Known.Zero.setHighBits(
+            (*C - (Pred == ICmpInst::ICMP_ULT)).countLeadingZeros());
       }
     }
-    break;
+  } break;
   }
 }
 

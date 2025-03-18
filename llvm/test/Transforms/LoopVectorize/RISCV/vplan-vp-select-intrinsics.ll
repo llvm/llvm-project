@@ -6,8 +6,8 @@
  ; RUN: -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -disable-output < %s 2>&1 | FileCheck --check-prefix=IF-EVL %s
 
  define void @vp_select(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
- ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF={1}'
- ; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+ ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
+ ; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
  ; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}'
  ; IF-EVL: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
  ;

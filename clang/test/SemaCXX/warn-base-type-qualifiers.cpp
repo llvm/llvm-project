@@ -8,7 +8,7 @@ template <typename T> using add_const_t = typename add_const<T>::type;
 class A { };
 
 typedef const A A_Const;
-class B : public A_Const { }; // expected-warning {{'const' qualifier on base class type 'A_Const' (aka 'const A') have no effect}} \
+class B : public A_Const { }; // expected-warning {{'const' qualifier on base class type 'A_Const' (aka 'const A') has no effect}} \
                               // expected-note {{base class 'A_Const' (aka 'const A') specified here}}
 
 typedef const volatile A A_Const_Volatile;
@@ -19,7 +19,7 @@ struct D {
   D(int);
 };
 
-template <typename T> struct E : T { // expected-warning {{'const' qualifier on base class type 'const D' have no effect}} \
+template <typename T> struct E : T { // expected-warning {{'const' qualifier on base class type 'const D' has no effect}} \
                                      // expected-note {{base class 'const D' specified here}}
   using T::T;
   E(int &) : E(0) {}
@@ -27,7 +27,7 @@ template <typename T> struct E : T { // expected-warning {{'const' qualifier on 
 E<const D> e(1); // expected-note {{in instantiation of template class 'E<const D>' requested here}}
 
 template <typename T>
-struct G : add_const<T>::type { // expected-warning {{'const' qualifier on base class type 'add_const<D>::type' (aka 'const D') have no effect}} \
+struct G : add_const<T>::type { // expected-warning {{'const' qualifier on base class type 'add_const<D>::type' (aka 'const D') has no effect}} \
                                 // expected-note {{base class 'add_const<D>::type' (aka 'const D') specified here}}
   using T::T;
   G(int &) : G(0) {}

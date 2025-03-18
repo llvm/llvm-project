@@ -226,7 +226,7 @@ void mlir::configureOpenMPToLLVMConversionLegality(
   target.addDynamicallyLegalOp<
       omp::AtomicReadOp, omp::AtomicWriteOp, omp::CancellationPointOp,
       omp::CancelOp, omp::CriticalDeclareOp, omp::FlushOp, omp::MapBoundsOp,
-      omp::MapInfoOp, omp::OrderedOp, omp::TargetEnterDataOp,
+      omp::MapInfoOp, omp::OrderedOp, omp::ScanOp, omp::TargetEnterDataOp,
       omp::TargetExitDataOp, omp::TargetUpdateOp, omp::ThreadprivateOp,
       omp::YieldOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getOperandTypes()) &&
@@ -274,6 +274,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       RegionLessOpConversion<omp::CancelOp>,
       RegionLessOpConversion<omp::CriticalDeclareOp>,
       RegionLessOpConversion<omp::OrderedOp>,
+      RegionLessOpConversion<omp::ScanOp>,
       RegionLessOpConversion<omp::TargetEnterDataOp>,
       RegionLessOpConversion<omp::TargetExitDataOp>,
       RegionLessOpConversion<omp::TargetUpdateOp>,

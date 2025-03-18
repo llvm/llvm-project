@@ -64,5 +64,19 @@ const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
 
 } // end namespace rt
+namespace rt_alt {
+const char *UnwindInfoManagerInstanceName =
+    "orc_rt_alt_UnwindInfoManager_Instance";
+const char *UnwindInfoManagerFindSectionsHelperName =
+    "orc_rt_alt_UnwindInfoManager_findSectionsHelper";
+const char *UnwindInfoManagerEnableWrapperName =
+    "orc_rt_alt_UnwindInfoManager_enable";
+const char *UnwindInfoManagerDisableWrapperName =
+    "orc_rt_alt_UnwindInfoManager_disable";
+const char *UnwindInfoManagerRegisterActionName =
+    "orc_rt_alt_UnwindInfoManager_register";
+const char *UnwindInfoManagerDeregisterActionName =
+    "orc_rt_alt_UnwindInfoManager_deregister";
+} // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

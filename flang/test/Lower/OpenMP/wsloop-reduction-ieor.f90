@@ -17,10 +17,9 @@
 
 
 !CHECK: omp.parallel
-!CHECK: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-!CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFreduction_ieorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop reduction(@[[IEOR_DECLARE_I]] %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>)
+!CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[I_REF:.*]] : !fir.ref<i32>) reduction(@[[IEOR_DECLARE_I]] %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>)
 !CHECK-NEXT: omp.loop_nest
+!CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFreduction_ieorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRV_DECL:.+]]:2 = hlfir.declare %[[PRV]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: fir.store %{{.*}} to %[[I_DECL]]#1 : !fir.ref<i32>
 !CHECK: %[[I_32:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>

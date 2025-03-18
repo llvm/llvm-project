@@ -11,10 +11,10 @@
 #include "../stat.h"
 #include "../terminator.h"
 #include "../type-info.h"
-#include "flang/Common/Fortran.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocator-registry.h"
+#include "flang/Support/Fortran.h"
 
 #include "cuda_runtime.h"
 

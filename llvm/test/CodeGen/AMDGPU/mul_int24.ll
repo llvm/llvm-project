@@ -740,7 +740,7 @@ define amdgpu_kernel void @simplify_i24_crash(ptr addrspace(1) %out, i32 %arg0, 
 ; EG:       ; %bb.0: ; %bb
 ; EG-NEXT:    ALU_PUSH_BEFORE 1, @6, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    JUMP @5 POP:1
-; EG-NEXT:    ALU 14, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 12, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 0
 ; EG-NEXT:    POP @5 POP:1
 ; EG-NEXT:    CF_END
@@ -748,27 +748,25 @@ define amdgpu_kernel void @simplify_i24_crash(ptr addrspace(1) %out, i32 %arg0, 
 ; EG-NEXT:     SETNE_INT * T0.W, KC0[2].Z, 0.0,
 ; EG-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
 ; EG-NEXT:    ALU clause starting at 8:
-; EG-NEXT:     MOV T0.X, KC0[3].Y,
-; EG-NEXT:     MOV * T1.X, KC0[2].W,
-; EG-NEXT:     LSHL T0.W, PS, literal.x,
-; EG-NEXT:     LSHL * T1.W, PV.X, literal.x,
+; EG-NEXT:     MOV T0.W, KC0[3].Y,
+; EG-NEXT:     MOV * T1.W, KC0[2].W,
+; EG-NEXT:     LSHL T1.W, PS, literal.x,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; EG-NEXT:     ASHR T1.W, PS, literal.x,
-; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
+; EG-NEXT:     ASHR T0.W, PS, literal.x,
+; EG-NEXT:     ASHR * T1.W, PV.W, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     MOV T2.W, KC0[2].Y,
 ; EG-NEXT:     MULLO_INT * T0.X, PS, PV.W,
 ; EG-NEXT:     LSHR T1.X, PV.W, literal.x,
-; EG-NEXT:     MOV T0.Y, PS,
-; EG-NEXT:     MOV T0.W, KC0[3].X,
-; EG-NEXT:     MOV * T0.W, KC0[3].Z,
+; EG-NEXT:     MOV * T0.Y, PS,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; CM-LABEL: simplify_i24_crash:
 ; CM:       ; %bb.0: ; %bb
 ; CM-NEXT:    ALU_PUSH_BEFORE 1, @6, KC0[CB0:0-32], KC1[]
 ; CM-NEXT:    JUMP @5 POP:1
-; CM-NEXT:    ALU 17, @8, KC0[CB0:0-32], KC1[]
+; CM-NEXT:    ALU 15, @8, KC0[CB0:0-32], KC1[]
 ; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
 ; CM-NEXT:    POP @5 POP:1
 ; CM-NEXT:    CF_END
@@ -776,23 +774,21 @@ define amdgpu_kernel void @simplify_i24_crash(ptr addrspace(1) %out, i32 %arg0, 
 ; CM-NEXT:     SETNE_INT * T0.W, KC0[2].Z, 0.0,
 ; CM-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
 ; CM-NEXT:    ALU clause starting at 8:
-; CM-NEXT:     MOV * T0.X, KC0[3].Y,
-; CM-NEXT:     MOV * T1.X, KC0[2].W,
-; CM-NEXT:     LSHL T0.Z, PV.X, literal.x,
-; CM-NEXT:     LSHL * T0.W, T0.X, literal.x,
+; CM-NEXT:     MOV T0.Z, KC0[3].Y,
+; CM-NEXT:     MOV * T0.W, KC0[2].W,
+; CM-NEXT:     LSHL T1.Z, PV.W, literal.x,
+; CM-NEXT:     LSHL * T0.W, PV.Z, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; CM-NEXT:     MOV T0.Y, KC0[2].Y,
-; CM-NEXT:     ASHR T1.Z, PV.W, literal.x,
+; CM-NEXT:     ASHR T0.Z, PV.W, literal.x,
 ; CM-NEXT:     ASHR * T0.W, PV.Z, literal.x,
 ; CM-NEXT:    8(1.121039e-44), 0(0.000000e+00)
-; CM-NEXT:     MULLO_INT T0.X, T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT T0.Y (MASKED), T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT T0.Z (MASKED), T0.W, T1.Z,
-; CM-NEXT:     MULLO_INT * T0.W (MASKED), T0.W, T1.Z,
+; CM-NEXT:     MULLO_INT T0.X, T0.W, T0.Z,
+; CM-NEXT:     MULLO_INT T0.Y (MASKED), T0.W, T0.Z,
+; CM-NEXT:     MULLO_INT T0.Z (MASKED), T0.W, T0.Z,
+; CM-NEXT:     MULLO_INT * T0.W (MASKED), T0.W, T0.Z,
 ; CM-NEXT:     LSHR T1.X, T0.Y, literal.x,
-; CM-NEXT:     MOV T0.Y, PV.X,
-; CM-NEXT:     MOV T0.Z, KC0[3].X,
-; CM-NEXT:     MOV * T0.W, KC0[3].Z,
+; CM-NEXT:     MOV * T0.Y, PV.X,
 ; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 bb:
   %cmp = icmp eq i32 %arg0, 0

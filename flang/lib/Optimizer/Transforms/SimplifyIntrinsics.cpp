@@ -22,7 +22,6 @@
 /// and small in size.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -35,6 +34,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"

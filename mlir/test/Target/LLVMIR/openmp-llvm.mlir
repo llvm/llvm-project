@@ -2825,18 +2825,23 @@ llvm.func @task(%arg0 : !llvm.ptr) {
 // CHECK:         %[[VAL_13:.*]] = getelementptr { ptr }, ptr %[[VAL_11]], i32 0, i32 0
 // CHECK:         %[[VAL_14:.*]] = load ptr, ptr %[[VAL_13]], align 8
 // CHECK:         %[[VAL_15:.*]] = alloca i32, align 4
+// CHECK:         br label %omp.region.after_alloca
+
+// CHECK:       omp.region.after_alloca:
+// CHECK:         br label %task.body
+
+// CHECK:       task.body:                                        ; preds = %omp.region.after_alloca
 // CHECK:         br label %omp.private.init
-// CHECK:       omp.private.init:                                 ; preds = %task.alloca
+
+// CHECK:       omp.private.init:                                 ; preds = %task.body
 // CHECK:         br label %omp.private.copy
+
 // CHECK:       omp.private.copy:                                 ; preds = %omp.private.init
 // CHECK:         %[[VAL_19:.*]] = load i32, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 %[[VAL_19]], ptr %[[VAL_15]], align 4
-// CHECK:         br label %[[VAL_20:.*]]
-// CHECK:       [[VAL_20]]:
-// CHECK:         br label %task.body
-// CHECK:       task.body:                                        ; preds = %[[VAL_20]]
 // CHECK:         br label %omp.task.region
-// CHECK:       omp.task.region:                                  ; preds = %task.body
+
+// CHECK:       omp.task.region:                                  ; preds = %omp.private.copy
 // CHECK:         call void @foo(ptr %[[VAL_15]])
 // CHECK:         br label %omp.region.cont
 // CHECK:       omp.region.cont:                                  ; preds = %omp.task.region

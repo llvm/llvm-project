@@ -4692,13 +4692,24 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   EVT InputEVT = EVT::getEVT(InputTypeA);
   EVT AccumEVT = EVT::getEVT(AccumType);
 
-  if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
-    return Invalid;
+  unsigned VFMinValue = VF.getKnownMinValue();
+
+  if (VF.isScalable()) {
+    if (!ST->isSVEorStreamingSVEAvailable())
+      return Invalid;
+
+    // Don't accept a partial reduction if the scaled accumulator is vscale x 1,
+    // since we can't lower that type.
+    unsigned Scale =
+        AccumEVT.getScalarSizeInBits() / InputEVT.getScalarSizeInBits();
+    if (VFMinValue == Scale)
+      return Invalid;
+  }
   if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
     return Invalid;
 
   if (InputEVT == MVT::i8) {
-    switch (VF.getKnownMinValue()) {
+    switch (VFMinValue) {
     default:
       return Invalid;
     case 8:
@@ -4717,7 +4728,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   } else if (InputEVT == MVT::i16) {
     // FIXME: Allow i32 accumulator but increase cost, as we would extend
     //        it to i64.
-    if (VF.getKnownMinValue() != 8 || AccumEVT != MVT::i64)
+    if (VFMinValue != 8 || AccumEVT != MVT::i64)
       return Invalid;
   } else
     return Invalid;

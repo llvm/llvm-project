@@ -4362,6 +4362,7 @@ def SPIRV_OC_OpCompositeExtract             : I32EnumAttrCase<"OpCompositeExtrac
 def SPIRV_OC_OpCompositeInsert              : I32EnumAttrCase<"OpCompositeInsert", 82>;
 def SPIRV_OC_OpTranspose                    : I32EnumAttrCase<"OpTranspose", 84>;
 def SPIRV_OC_OpImageDrefGather              : I32EnumAttrCase<"OpImageDrefGather", 97>;
+def SPIRV_OC_OpImageWrite                   : I32EnumAttrCase<"OpImageWrite", 99>;
 def SPIRV_OC_OpImage                        : I32EnumAttrCase<"OpImage", 100>;
 def SPIRV_OC_OpImageQuerySize               : I32EnumAttrCase<"OpImageQuerySize", 104>;
 def SPIRV_OC_OpConvertFToU                  : I32EnumAttrCase<"OpConvertFToU", 109>;
@@ -4558,10 +4559,10 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpVectorInsertDynamic, SPIRV_OC_OpVectorShuffle,
       SPIRV_OC_OpCompositeConstruct, SPIRV_OC_OpCompositeExtract,
       SPIRV_OC_OpCompositeInsert, SPIRV_OC_OpTranspose, SPIRV_OC_OpImageDrefGather,
-      SPIRV_OC_OpImage, SPIRV_OC_OpImageQuerySize, SPIRV_OC_OpConvertFToU,
-      SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF, SPIRV_OC_OpConvertUToF,
-      SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert, SPIRV_OC_OpFConvert,
-      SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpConvertUToPtr,
+      SPIRV_OC_OpImageWrite, SPIRV_OC_OpImage, SPIRV_OC_OpImageQuerySize,
+      SPIRV_OC_OpConvertFToU, SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF,
+      SPIRV_OC_OpConvertUToF, SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert,
+      SPIRV_OC_OpFConvert, SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpConvertUToPtr,
       SPIRV_OC_OpPtrCastToGeneric, SPIRV_OC_OpGenericCastToPtr,
       SPIRV_OC_OpGenericCastToPtrExplicit, SPIRV_OC_OpBitcast, SPIRV_OC_OpSNegate,
       SPIRV_OC_OpFNegate, SPIRV_OC_OpIAdd, SPIRV_OC_OpFAdd, SPIRV_OC_OpISub,

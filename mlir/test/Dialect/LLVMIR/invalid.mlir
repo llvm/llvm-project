@@ -1703,3 +1703,53 @@ llvm.func @wrong_number_of_bundle_tags() {
   } : (i32, i32) -> ()
   llvm.return
 }
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{expects type to be a valid element type for an LLVM global alias}}
+llvm.mlir.alias external @y : !llvm.label {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{linkage not supported in aliases, available options}}
+llvm.mlir.alias appending @y2 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1 {{initializer region must always return a pointer}}
+llvm.mlir.alias external @y3 : i32 {
+  %c = llvm.mlir.constant(42 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y4 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  // expected-error@+1 {{ops with side effects are not allowed in alias initializers}}
+  %2 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y5 : i32 {
+  // expected-error@+1 {{pointer address space must match address space}}
+  %0 = llvm.mlir.addressof @x : !llvm.ptr<4>
+  llvm.return %0 : !llvm.ptr<4>
+}
+
