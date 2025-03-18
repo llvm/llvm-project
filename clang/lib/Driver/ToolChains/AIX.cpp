@@ -625,8 +625,8 @@ void AIX::addFortranRuntimeLibs(const ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const {
   // Link flang_rt.runtime.a. On AIX, the static and shared library are all
   // named .a
-  CmdArgs.push_back(getCompilerRTArgString(
-      Args, "runtime", ToolChain::FT_Static, true));
+  CmdArgs.push_back(
+      getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
 }
 
 ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {
