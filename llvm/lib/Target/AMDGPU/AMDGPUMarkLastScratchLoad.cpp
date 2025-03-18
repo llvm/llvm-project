@@ -69,11 +69,11 @@ bool AMDGPUMarkLastScratchLoadLegacy::runOnMachineFunction(
   if (skipFunction(MF.getFunction()))
     return false;
 
-  auto *LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto *SI = &getAnalysis<SlotIndexesWrapperPass>().getSI();
+  auto &LS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &SI = getAnalysis<SlotIndexesWrapperPass>().getSI();
 
-  return AMDGPUMarkLastScratchLoad(LS, LIS, SI).run(MF);
+  return AMDGPUMarkLastScratchLoad(&LS, &LIS, &SI).run(MF);
 }
 
 PreservedAnalyses
