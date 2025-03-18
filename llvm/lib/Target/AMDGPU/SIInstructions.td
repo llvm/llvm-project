@@ -1841,7 +1841,6 @@ def : BitConvert <v12i32, v12f32, VReg_384>;
 def : BitConvert <v12f32, v12i32, VReg_384>;
 
 // 512-bit bitcast
-// 512-bit bitcast
 def : BitConvert <v32f16, v32i16, VReg_512>;
 def : BitConvert <v32i16, v32f16, VReg_512>;
 def : BitConvert <v32f16, v16i32, VReg_512>;
