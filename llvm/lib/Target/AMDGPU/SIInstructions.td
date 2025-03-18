@@ -1841,58 +1841,29 @@ def : BitConvert <v12i32, v12f32, VReg_384>;
 def : BitConvert <v12f32, v12i32, VReg_384>;
 
 // 512-bit bitcast
-def : BitConvert <v32f16, v32i16, VReg_512>;
-def : BitConvert <v32i16, v32f16, VReg_512>;
-def : BitConvert <v32f16, v16i32, VReg_512>;
-def : BitConvert <v32f16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32f16, VReg_512>;
-def : BitConvert <v16i32, v32f16, VReg_512>;
-def : BitConvert <v32i16, v16i32, VReg_512>;
-def : BitConvert <v32i16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32i16, VReg_512>;
-def : BitConvert <v16i32, v32i16, VReg_512>;
-def : BitConvert <v16i32, v16f32, VReg_512>;
-def : BitConvert <v16f32, v16i32, VReg_512>;
-def : BitConvert <v8i64,  v8f64,  VReg_512>;
-def : BitConvert <v8f64,  v8i64,  VReg_512>;
-def : BitConvert <v8i64,  v16i32, VReg_512>;
-def : BitConvert <v8f64,  v16i32, VReg_512>;
-def : BitConvert <v16i32, v8i64,  VReg_512>;
-def : BitConvert <v16i32, v8f64,  VReg_512>;
-def : BitConvert <v8i64,  v16f32, VReg_512>;
-def : BitConvert <v8f64,  v16f32, VReg_512>;
-def : BitConvert <v16f32, v8i64,  VReg_512>;
-def : BitConvert <v16f32, v8f64,  VReg_512>;
+foreach vt = VReg_512.RegTypes in {
+  foreach st = VReg_512.RegTypes in {
+    if !not(!eq (vt, st)) then {
+        def : BitConvert <vt, st, VReg_512>;
+    }
+  }
+}
 
-
-
-def : BitConvert <v32bf16, v32i16, VReg_512>;
-def : BitConvert <v32i16, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v32i16, SReg_512>;
 def : BitConvert <v32i16, v32bf16, SReg_512>;
 
-def : BitConvert <v32bf16, v32f16, VReg_512>;
-def : BitConvert <v32f16, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v32f16, SReg_512>;
 def : BitConvert <v32f16, v32bf16, SReg_512>;
 
-def : BitConvert <v32bf16, v16i32, VReg_512>;
-def : BitConvert <v16i32, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v16i32, SReg_512>;
 def : BitConvert <v16i32, v32bf16, SReg_512>;
 
-def : BitConvert <v32bf16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v16f32, SReg_512>;
 def : BitConvert <v16f32, v32bf16, SReg_512>;
 
-def : BitConvert <v32bf16, v8f64, VReg_512>;
-def : BitConvert <v8f64, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v8f64, SReg_512>;
 def : BitConvert <v8f64, v32bf16, SReg_512>;
 
-def : BitConvert <v32bf16, v8i64, VReg_512>;
-def : BitConvert <v8i64, v32bf16, VReg_512>;
 def : BitConvert <v32bf16, v8i64, SReg_512>;
 def : BitConvert <v8i64, v32bf16, SReg_512>;
 

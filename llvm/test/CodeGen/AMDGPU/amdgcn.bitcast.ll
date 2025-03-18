@@ -1946,6 +1946,133 @@ end:
   ret void
 }
 
+; CHECK-LABEL: {{^}}v_bitcast_v8i64_to_v32f16:
+define <32 x half> @v_bitcast_v8i64_to_v32f16(<8 x i64> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = add <8 x i64> %a, splat (i64 3)
+  %a2 = bitcast <8 x i64> %a1 to <32 x half>
+  br label %end
+cmp.false:
+  %a3 = bitcast <8 x i64> %a to <32 x half>
+  br label %end
+end:
+  %phi = phi <32 x half> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <32 x half> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8i64_to_v32i16:
+define <32 x i16> @v_bitcast_v8i64_to_v32i16(<8 x i64> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = add <8 x i64> %a, splat (i64 3)
+  %a2 = bitcast <8 x i64> %a1 to <32 x i16>
+  br label %end
+cmp.false:
+  %a3 = bitcast <8 x i64> %a to <32 x i16>
+  br label %end
+end:
+  %phi = phi <32 x i16> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <32 x i16> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8f64_to_v32i16:
+define <32 x i16> @v_bitcast_v8f64_to_v32i16(<8 x double> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = fadd <8 x double> %a, splat (double 1.000000e+00)
+  %a2 = bitcast <8 x double> %a1 to <32 x i16>
+  br label %end
+cmp.false:
+  %a3 = bitcast <8 x double> %a to <32 x i16>
+  br label %end
+end:
+  %phi = phi <32 x i16> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <32 x i16> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v8f64_to_v32f16:
+define <32 x half> @v_bitcast_v8f64_to_v32f16(<8 x double> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = fadd <8 x double> %a, splat (double 1.000000e+00)
+  %a2 = bitcast <8 x double> %a1 to <32 x half>
+  br label %end
+cmp.false:
+  %a3 = bitcast <8 x double> %a to <32 x half>
+  br label %end
+end:
+  %phi = phi <32 x half> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <32 x half> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32f16_to_v8i64:
+define <8 x i64> @v_bitcast_v32f16_to_v8i64(<32 x half> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = fadd <32 x half> %a, splat (half 0xH0200)
+  %a2 = bitcast <32 x half> %a1 to <8 x i64>
+  br label %end
+cmp.false:
+  %a3 = bitcast <32 x half> %a to <8 x i64>
+  br label %end
+end:
+  %phi = phi <8 x i64> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <8 x i64> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32f16_to_v8f64:
+define <8 x double> @v_bitcast_v32f16_to_v8f64(<32 x half> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = fadd <32 x half> %a, splat (half 0xH0200)
+  %a2 = bitcast <32 x half> %a1 to <8 x double>
+  br label %end
+cmp.false:
+  %a3 = bitcast <32 x half> %a to <8 x double>
+  br label %end
+end:
+  %phi = phi <8 x double> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <8 x double> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32i16_to_v8i64:
+define <8 x i64> @v_bitcast_v32i16_to_v8i64(<32 x i16> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = add <32 x i16> %a, splat (i16 3)
+  %a2 = bitcast <32 x i16> %a1 to <8 x i64>
+  br label %end
+cmp.false:
+  %a3 = bitcast <32 x i16> %a to <8 x i64>
+  br label %end
+end:
+  %phi = phi <8 x i64> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <8 x i64> %phi
+}
+
+; CHECK-LABEL: {{^}}v_bitcast_v32i16_to_v8f64:
+define <8 x double> @v_bitcast_v32i16_to_v8f64(<32 x i16> %a, i32 %b) {
+  %cmp = icmp eq i32 %b, 0
+  br i1 %cmp, label %cmp.true, label %cmp.false
+cmp.true:
+  %a1 = add <32 x i16> %a, splat (i16 3)
+  %a2 = bitcast <32 x i16> %a1 to <8 x double>
+  br label %end
+cmp.false:
+  %a3 = bitcast <32 x i16> %a to <8 x double>
+  br label %end
+end:
+  %phi = phi <8 x double> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
+  ret <8 x double> %phi
+}
 
 
 
