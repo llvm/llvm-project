@@ -458,6 +458,47 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::UnaryOp::verify() {
+  switch (getKind()) {
+  case cir::UnaryOpKind::Inc:
+  case cir::UnaryOpKind::Dec:
+  case cir::UnaryOpKind::Plus:
+  case cir::UnaryOpKind::Minus:
+  case cir::UnaryOpKind::Not:
+    // Nothing to verify.
+    return success();
+  }
+
+  llvm_unreachable("Unknown UnaryOp kind?");
+}
+
+static bool isBoolNot(cir::UnaryOp op) {
+  return isa<cir::BoolType>(op.getInput().getType()) &&
+         op.getKind() == cir::UnaryOpKind::Not;
+}
+
+// This folder simplifies the sequential boolean not operations.
+// For instance, the next two unary operations will be eliminated:
+//
+// ```mlir
+// %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+// %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
+// ```
+//
+// and the argument of the first one (%0) will be used instead.
+OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
+  if (isBoolNot(*this))
+    if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
+      if (isBoolNot(previous))
+        return previous.getInput();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

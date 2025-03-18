@@ -646,8 +646,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
-// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
-// CHECK: !2 = !{i32 1}
+// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
+// CHECK: ![[ID]] = !{i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -655,8 +655,8 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) 
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
-// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
-// CHECK: !2 = !{i32 1, i32 3}
+// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
+// CHECK: ![[ID]] = !{i32 1, i32 3}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }

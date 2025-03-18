@@ -1125,10 +1125,10 @@ def VS4R_V : VWholeStore<3, "vs4r.v", VRM4>,
 def VS8R_V : VWholeStore<7, "vs8r.v", VRM8>,
              Sched<[WriteVST8R, ReadVST8R, ReadVSTX]>;
 
-def : InstAlias<"vl1r.v $vd, (${rs1})", (VL1RE8_V VR:$vd, GPR:$rs1)>;
-def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;
-def : InstAlias<"vl4r.v $vd, (${rs1})", (VL4RE8_V VRM4:$vd, GPR:$rs1)>;
-def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VRM8:$vd, GPR:$rs1)>;
+def : InstAlias<"vl1r.v $vd, $rs1", (VL1RE8_V VR:$vd,   GPRMemZeroOffset:$rs1)>;
+def : InstAlias<"vl2r.v $vd, $rs1", (VL2RE8_V VRM2:$vd, GPRMemZeroOffset:$rs1)>;
+def : InstAlias<"vl4r.v $vd, $rs1", (VL4RE8_V VRM4:$vd, GPRMemZeroOffset:$rs1)>;
+def : InstAlias<"vl8r.v $vd, $rs1", (VL8RE8_V VRM8:$vd, GPRMemZeroOffset:$rs1)>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructions] in {
