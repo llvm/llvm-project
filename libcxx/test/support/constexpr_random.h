@@ -379,7 +379,7 @@ public:
 #endif
 };
 
-class simple_random_generator {
+class simple_random_generator { // A linear congruential generator, using the constants used by MS UCRT.
 private:
   std::uint32_t status_;
 
