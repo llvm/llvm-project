@@ -352,6 +352,29 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
 
 using namespace __msan;
 
+#define PRINT_FAULTING_INSTRUCTION(instname)                          \
+  Printf("Instruction that failed the shadow check: %s\n", instname); \
+  Printf("\n");
+
+#define MSAN_MAYBE_WARNING_INSTNAME(type, size, instname)                    \
+  void __msan_maybe_warning_instname_##size(type s, u32 o, char *instname) { \
+    GET_CALLER_PC_BP;                                                        \
+    if (UNLIKELY(s)) {                                                       \
+      if (instname)                                                          \
+        PRINT_FAULTING_INSTRUCTION(instname);                                \
+      PrintWarningWithOrigin(pc, bp, o);                                     \
+      if (__msan::flags()->halt_on_error) {                                  \
+        Printf("Exiting\n");                                                 \
+        Die();                                                               \
+      }                                                                      \
+    }                                                                        \
+  }
+
+MSAN_MAYBE_WARNING_INSTNAME(u8, 1, instname)
+MSAN_MAYBE_WARNING_INSTNAME(u16, 2, instname)
+MSAN_MAYBE_WARNING_INSTNAME(u32, 4, instname)
+MSAN_MAYBE_WARNING_INSTNAME(u64, 8, instname)
+
 #define MSAN_MAYBE_WARNING(type, size)              \
   void __msan_maybe_warning_##size(type s, u32 o) { \
     GET_CALLER_PC_BP;                               \
@@ -418,6 +441,57 @@ void __msan_warning_with_origin(u32 origin) {
 }
 
 void __msan_warning_with_origin_noreturn(u32 origin) {
+  GET_CALLER_PC_BP;
+  PrintWarningWithOrigin(pc, bp, origin);
+  if (__msan::flags()->print_stats)
+    ReportStats();
+  Printf("Exiting\n");
+  Die();
+}
+
+// We duplicate the non _instname function's body because we don't want to
+// pollute the stack traces with an additional function call.
+//
+// We can't use a simple macro wrapper, because the instrumentation pass
+// expects function symbols.
+// We don't add instname as a parameter everywhere (with a check whether the
+// value is null) to avoid polluting the fastpath.
+void __msan_warning_instname(char *instname) {
+  PRINT_FAULTING_INSTRUCTION(instname);
+  GET_CALLER_PC_BP;
+  PrintWarningWithOrigin(pc, bp, 0);
+  if (__msan::flags()->halt_on_error) {
+    if (__msan::flags()->print_stats)
+      ReportStats();
+    Printf("Exiting\n");
+    Die();
+  }
+}
+
+void __msan_warning_noreturn_instname(char *instname) {
+  PRINT_FAULTING_INSTRUCTION(instname);
+  GET_CALLER_PC_BP;
+  PrintWarningWithOrigin(pc, bp, 0);
+  if (__msan::flags()->print_stats)
+    ReportStats();
+  Printf("Exiting\n");
+  Die();
+}
+
+void __msan_warning_with_origin_instname(u32 origin, char *instname) {
+  PRINT_FAULTING_INSTRUCTION(instname);
+  GET_CALLER_PC_BP;
+  PrintWarningWithOrigin(pc, bp, origin);
+  if (__msan::flags()->halt_on_error) {
+    if (__msan::flags()->print_stats)
+      ReportStats();
+    Printf("Exiting\n");
+    Die();
+  }
+}
+
+void __msan_warning_with_origin_noreturn_instname(u32 origin, char *instname) {
+  PRINT_FAULTING_INSTRUCTION(instname);
   GET_CALLER_PC_BP;
   PrintWarningWithOrigin(pc, bp, origin);
   if (__msan::flags()->print_stats)
