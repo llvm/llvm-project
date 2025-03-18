@@ -78,8 +78,13 @@ loop:
   store i64 0, ptr %arrayidx13, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 3
-  br i1 %exitcond.not, label %exit, label %loop
+  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret void
 }
+
+!0 = distinct !{!0, !1, !2, !3}
+!1 = !{!"llvm.loop.vectorize.width", i32 2}
+!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable", i1 true}
