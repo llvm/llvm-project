@@ -394,6 +394,13 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
+class WriteMemoryRequestHandler : public LegacyRequestHandler {
+public:
+  using LegacyRequestHandler::LegacyRequestHandler;
+  static llvm::StringLiteral getCommand() { return "writeMemory"; }
+  void operator()(const llvm::json::Object &request) const override;
+};
+
 } // namespace lldb_dap
 
 #endif

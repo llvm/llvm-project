@@ -725,6 +725,18 @@ class DebugCommunication(object):
             "arguments": args_dict,
         }
         return self.send_recv(command_dict)
+    def request_writeMemory(self, memoryReference, offset, data):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "offset": offset,
+            "data": data,
+        }
+        command_dict = {
+            "command": "writeMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
 
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)

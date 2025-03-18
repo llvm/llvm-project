@@ -77,6 +77,7 @@ add_lldb_tool(lldb-dap
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
+  Handler/WriteMemoryRequestHandler.cpp
 
   LINK_LIBS
     liblldb
