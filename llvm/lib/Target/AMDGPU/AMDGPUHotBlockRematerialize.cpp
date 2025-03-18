@@ -365,15 +365,13 @@ unsigned collectFnPressure(MachineFunction &MF, LiveIntervals *LIS,
 
   LLVM_DEBUG(
       const SIRegisterInfo *SIRI = ST->getRegisterInfo();
-      dbgs() << "output live"; for (auto &It
-                                    : Status.MBBOutputLiveMap) {
+      dbgs() << "output live"; for (auto &It : Status.MBBOutputLiveMap) {
         unsigned Idx = It.first->getNumber();
         auto LiveReg = It.second;
         dbgs() << "MBB" << Idx << ":";
         llvm::dumpLiveSet(LiveReg, SIRI);
       } dbgs() << "input live";
-      for (auto &It
-           : Status.MBBInputLiveMap) {
+      for (auto &It : Status.MBBInputLiveMap) {
         unsigned Idx = It.first->getNumber();
         auto LiveReg = It.second;
         dbgs() << "MBB" << Idx << ":";
@@ -1811,10 +1809,9 @@ std::vector<SubExp> buildSubExpFromCandidates(
     Defs.emplace_back(&MI);
   }
 
-  LLVM_DEBUG(dbgs() << "\nFinished Candidate Defs:\n"; for (MachineInstr *MI
-                                                            : Defs) {
-    MI->dump();
-  } dbgs() << "\nFinished Candidate Defs End\n";);
+  LLVM_DEBUG(dbgs() << "\nFinished Candidate Defs:\n";
+             for (MachineInstr *MI : Defs) { MI->dump(); } dbgs()
+             << "\nFinished Candidate Defs End\n";);
 
   // Build SubExp with CandidateDefs as Nodes, CandidateInput as input
   // Candidates as output.
@@ -1999,13 +1996,11 @@ std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
     Defs.emplace_back(&MI);
   }
 
-  LLVM_DEBUG(dbgs() << "\nFinished Candidate Defs:\n"; for (MachineInstr *MI
-                                                            : Defs) {
-    MI->dump();
-  } dbgs() << "\nFinished Candidate Defs End\n";);
+  LLVM_DEBUG(dbgs() << "\nFinished Candidate Defs:\n";
+             for (MachineInstr *MI : Defs) { MI->dump(); } dbgs()
+             << "\nFinished Candidate Defs End\n";);
 
-  LLVM_DEBUG(dbgs() << "\nLocalCandidates:\n"; for (auto It
-                                                    : LocalCandidates) {
+  LLVM_DEBUG(dbgs() << "\nLocalCandidates:\n"; for (auto It : LocalCandidates) {
     pressure::print_reg(It.first, MRI, SIRI, llvm::dbgs());
   } dbgs() << "\nLocalCandidates End\n";);
   // Make sure all input reg are uniqueDef.
@@ -3552,13 +3547,13 @@ groupPassThruByDefBlock(Remat *Remat, const GCNRPTracker::LiveRegSet &PassThrus,
   llvm::SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
       Result = Candidates.takeVector();
 
-  LLVM_DEBUG(llvm::dbgs() << "Before sort candidates\n"; for (auto It
-                                                              : Result) {
-    MachineBasicBlock *MBB = It.first;
-    auto &defInMBB = It.second;
-    MBB->dump();
-    llvm::dumpLiveSet(defInMBB, SIRI);
-  } llvm::dbgs() << "end of candidates\n";);
+  LLVM_DEBUG(
+      llvm::dbgs() << "Before sort candidates\n"; for (auto It : Result) {
+        MachineBasicBlock *MBB = It.first;
+        auto &defInMBB = It.second;
+        MBB->dump();
+        llvm::dumpLiveSet(defInMBB, SIRI);
+      } llvm::dbgs() << "end of candidates\n";);
 
   std::sort(Result.begin(), Result.end(),
             [](std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &It0,
@@ -3566,8 +3561,7 @@ groupPassThruByDefBlock(Remat *Remat, const GCNRPTracker::LiveRegSet &PassThrus,
               return It0.first->getNumber() < It1.first->getNumber();
             });
 
-  LLVM_DEBUG(llvm::dbgs() << "After sort candidates\n"; for (auto It
-                                                             : Result) {
+  LLVM_DEBUG(llvm::dbgs() << "After sort candidates\n"; for (auto It : Result) {
     MachineBasicBlock *MBB = It.first;
     auto &defInMBB = It.second;
     MBB->dump();

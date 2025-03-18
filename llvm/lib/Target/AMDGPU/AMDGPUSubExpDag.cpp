@@ -1023,8 +1023,7 @@ void HRB::buildLinear(std::vector<llvm::SUnit> &SUnits) {
   }
 
   LLVM_DEBUG(
-      dbgs() << "Chained Nodes:"; for (SUnit *SU
-                                       : ChainedNodes) {
+      dbgs() << "Chained Nodes:"; for (SUnit *SU : ChainedNodes) {
         dbgs() << " " << SU->NodeNum << "\n";
       } for (unsigned i = 0; i < Lineages.size(); i++) {
         dbgs() << "Lineage" << i << ":";
@@ -1225,8 +1224,7 @@ void HRB::buildReachRelation(ArrayRef<SUnit *> BotRoots) {
   }
   ReachMap.erase(&FakeEntry);
 
-  LLVM_DEBUG(for (Lineage &L
-                  : Lineages) {
+  LLVM_DEBUG(for (Lineage &L : Lineages) {
     for (SUnit *SU : L.Nodes) {
       DenseSet<SUnit *> &CurReach = ReachMap[SU];
       dbgs() << SU->NodeNum << " reach: ";
@@ -1687,8 +1685,7 @@ std::vector<const SUnit *> hrbSched(std::vector<SUnit> &SUnits,
                 return ConfA > ConfB;
               });
 
-    LLVM_DEBUG(dbgs() << "ReadyList:\n"; for (SUnit *SU
-                                              : ReadyList) {
+    LLVM_DEBUG(dbgs() << "ReadyList:\n"; for (SUnit *SU : ReadyList) {
       dbgs() << " " << SU->NodeNum;
     } dbgs() << "\n";);
     SUnit *Candidate = nullptr;
