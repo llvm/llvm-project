@@ -6,8 +6,32 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define <4 x i32> @sdiv_v4i32_packed(<4 x i32> %op1) vscale_range(1,0) #0 {
-; CHECK-LABEL: sdiv_v4i32_packed:
+define <4 x i32> @sdiv_v4i32_negative_pow2_divisor_packed(<4 x i32> %op1) vscale_range(1,0) #0 {
+; CHECK-LABEL: sdiv_v4i32_negative_pow2_divisor_packed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
+; CHECK-NEXT:    usra v0.4s, v1.4s, #29
+; CHECK-NEXT:    sshr v0.4s, v0.4s, #3
+; CHECK-NEXT:    neg v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %res = sdiv <4 x i32> %op1, splat (i32 -8)
+  ret <4 x i32> %res
+}
+
+define <2 x i32> @sdiv_v2i32_negative_pow2_divisor_unpacked(<2 x i32> %op1) vscale_range(1,0) #0 {
+; CHECK-LABEL: sdiv_v2i32_negative_pow2_divisor_unpacked:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v1.2s, v0.2s, #0
+; CHECK-NEXT:    usra v0.2s, v1.2s, #29
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #3
+; CHECK-NEXT:    neg v0.2s, v0.2s
+; CHECK-NEXT:    ret
+  %res = sdiv <2 x i32> %op1, splat (i32 -8)
+  ret <2 x i32> %res
+}
+
+define <4 x i32> @sdiv_v4i32_positive_pow2_divisor_packed(<4 x i32> %op1) vscale_range(1,0) #0 {
+; CHECK-LABEL: sdiv_v4i32_positive_pow2_divisor_packed:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
 ; CHECK-NEXT:    usra v0.4s, v1.4s, #29
@@ -17,8 +41,8 @@ define <4 x i32> @sdiv_v4i32_packed(<4 x i32> %op1) vscale_range(1,0) #0 {
   ret <4 x i32> %res
 }
 
-define <2 x i32> @sdiv_v2i32_unpacked(<2 x i32> %op1) vscale_range(1,0) #0 {
-; CHECK-LABEL: sdiv_v2i32_unpacked:
+define <2 x i32> @sdiv_v2i32_positive_pow2_divisor_unpacked(<2 x i32> %op1) vscale_range(1,0) #0 {
+; CHECK-LABEL: sdiv_v2i32_positive_pow2_divisor_unpacked:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v1.2s, v0.2s, #0
 ; CHECK-NEXT:    usra v0.2s, v1.2s, #29
