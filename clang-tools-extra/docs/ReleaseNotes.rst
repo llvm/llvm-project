@@ -96,6 +96,9 @@ Improvements to clang-tidy
   `SystemHeaders` option is enabled.
   Note: this may lead to false negatives; downstream users may need to adjust
   their checks to preserve existing behavior.
+- :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
+  configuration option.
+  :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
 
 New checks
 ^^^^^^^^^^

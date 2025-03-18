@@ -23,7 +23,7 @@ void f();
 // LIST-CHECK:   custom-avoid-long-type
 // LIST-CHECK:   custom-function-decl
 
-// DUMP-CONFIG: CustomeChecks:
+// DUMP-CONFIG: CustomChecks:
 // DUMP-CONFIG: - Name: avoid-long-type
 // DUMP-CONFIG:   Query: |
 // DUMP-CONFIG:     match varDecl(

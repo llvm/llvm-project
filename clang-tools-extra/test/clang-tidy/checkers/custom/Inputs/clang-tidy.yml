@@ -1,4 +1,4 @@
-CustomeChecks:
+CustomChecks:
   - Name: test-diag-level
     Query: |
       match varDecl(

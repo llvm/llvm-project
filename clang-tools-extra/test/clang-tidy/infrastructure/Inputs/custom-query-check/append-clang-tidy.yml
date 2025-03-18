@@ -1,5 +1,5 @@
 InheritParentConfig: true
-CustomeChecks:
+CustomChecks:
   - Name: function-decl
     Query: match functionDecl().bind("func")
     Diagnostic:

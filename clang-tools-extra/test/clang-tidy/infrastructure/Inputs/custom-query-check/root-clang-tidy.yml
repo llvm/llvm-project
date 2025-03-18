@@ -1,4 +1,4 @@
-CustomeChecks:
+CustomChecks:
   - Name: avoid-long-type
     Query: |
       match varDecl(
