@@ -50,20 +50,18 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-NEXT:    mov x8, xzr
 ; CHECK-NODOT-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q0, [x1, x8]
-; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
+; CHECK-NODOT-NEXT:    ldr q0, [x0, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x1, x8]
 ; CHECK-NODOT-NEXT:    add x8, x8, #16
 ; CHECK-NODOT-NEXT:    cmp x8, #16
-; CHECK-NODOT-NEXT:    ushll2 v3.8h, v0.16b, #0
-; CHECK-NODOT-NEXT:    ushll2 v4.8h, v2.16b, #0
-; CHECK-NODOT-NEXT:    ushll v5.8h, v0.8b, #0
-; CHECK-NODOT-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    umull v3.8h, v0.8b, v2.8b
+; CHECK-NODOT-NEXT:    umull2 v2.8h, v0.16b, v2.16b
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    umull v6.4s, v4.4h, v3.4h
-; CHECK-NODOT-NEXT:    umlal v1.4s, v2.4h, v5.4h
-; CHECK-NODOT-NEXT:    umlal2 v6.4s, v2.8h, v5.8h
-; CHECK-NODOT-NEXT:    umlal2 v1.4s, v4.8h, v3.8h
-; CHECK-NODOT-NEXT:    add v1.4s, v6.4s, v1.4s
+; CHECK-NODOT-NEXT:    ushll v1.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    uaddw v4.4s, v0.4s, v3.4h
+; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v3.8h
+; CHECK-NODOT-NEXT:    uaddw2 v2.4s, v4.4s, v2.8h
+; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
 ; CHECK-NODOT-NEXT:    b.ne .LBB1_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    ret
