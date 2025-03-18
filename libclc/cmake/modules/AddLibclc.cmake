@@ -345,9 +345,6 @@ function(add_libclc_builtin_set)
   if( ${ARG_OPT_FLAGS} STREQUAL "" )
     # Add empty opt target.
     add_custom_target( ${builtins_opt_lib_tgt} ALL )
-    set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
-      FOLDER "libclc/Device IR/Opt"
-    )
     add_dependencies( ${builtins_opt_lib_tgt} ${builtins_link_lib_tgt} )
 
     set( builtins_opt_lib ${builtins_link_lib} )
@@ -363,11 +360,13 @@ function(add_libclc_builtin_set)
     )
     set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
       TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${builtins_opt_lib_tgt}.bc
-      FOLDER "libclc/Device IR/Opt"
     )
 
     set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
   endif()
+  set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
+    FOLDER "libclc/Device IR/Opt"
+  )
 
   # Add prepare target
   set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
