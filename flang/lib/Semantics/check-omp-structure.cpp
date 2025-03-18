@@ -1516,7 +1516,9 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       "A variable in a %s directive cannot appear in an "
                       "EQUIVALENCE statement"_err_en_US,
                       ContextDirectiveAsFortran());
-                } else if (name->symbol->test(Symbol::Flag::InNamelist)) {
+                } else if (name->symbol->test(Symbol::Flag::InNamelist) &&
+                    GetContext().directive ==
+                        llvm::omp::Directive::OMPD_threadprivate) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot appear in a NAMELIST"_err_en_US,
                       ContextDirectiveAsFortran());
@@ -1575,7 +1577,9 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                           ContextDirectiveAsFortran(), obj->name(),
                           name.symbol->name());
                     }
-                    if (obj->test(Symbol::Flag::InNamelist)) {
+                    if (obj->test(Symbol::Flag::InNamelist) &&
+                        GetContext().directive ==
+                            llvm::omp::OMPD_threadprivate) {
                       context_.Say(name.source,
                           "A variable in a %s directive cannot appear in a NAMELIST"_err_en_US,
                           ContextDirectiveAsFortran());
