@@ -996,16 +996,12 @@ TEST(TBAAMetadataTest, BaseClass) {
           MConstInt(4))));
   ASSERT_TRUE(I);
 
-  I = matchNext(I,
-      MInstruction(Instruction::Store,
-        MConstInt(77, 32),
-        MMTuple(
-          ClassBase,
-          MMTuple(
-            MMString("int"),
-            OmnipotentCharCXX,
-            MConstInt(0)),
-          MConstInt(0))));
+  I = matchNext(
+      I, MInstruction(
+             Instruction::Store, MConstInt(77, 32),
+             MMTuple(ClassDerived,
+                     MMTuple(MMString("int"), OmnipotentCharCXX, MConstInt(0)),
+                     MConstInt(0))));
   ASSERT_TRUE(I);
 }
 
@@ -1072,16 +1068,12 @@ TEST(TBAAMetadataTest, PolymorphicClass) {
           MConstInt(Compiler.PtrSize + 4))));
   ASSERT_TRUE(I);
 
-  I = matchNext(I,
-      MInstruction(Instruction::Store,
-        MConstInt(77, 32),
-        MMTuple(
-          ClassBase,
-          MMTuple(
-            MMString("int"),
-            OmnipotentCharCXX,
-            MConstInt(0)),
-          MConstInt(Compiler.PtrSize))));
+  I = matchNext(
+      I, MInstruction(
+             Instruction::Store, MConstInt(77, 32),
+             MMTuple(ClassDerived,
+                     MMTuple(MMString("int"), OmnipotentCharCXX, MConstInt(0)),
+                     MConstInt(Compiler.PtrSize))));
   ASSERT_TRUE(I);
 }
 

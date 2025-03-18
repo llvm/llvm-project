@@ -140,8 +140,6 @@ static bool isValidBaseType(QualType QTy) {
     // Incomplete types are not valid base access types.
     if (!RD)
       return false;
-    if (RD->hasFlexibleArrayMember())
-      return false;
     // RD can be struct, union, class, interface or enum.
     // For now, we only handle struct and class.
     if (RD->isStruct() || RD->isClass())

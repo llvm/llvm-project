@@ -172,7 +172,7 @@ uint32_t g9(StructS *S, StructS2 *S2, uint64_t count) {
 // CHECK: store i32 4, ptr %{{.*}}, align 4, !tbaa [[TAG_i32]]
 // PATH-LABEL: define{{.*}} i32 @_Z2g9
 // PATH: store i32 1, ptr %{{.*}}, align 4, !tbaa [[TAG_S_f32]]
-// PATH: store i32 4, ptr %{{.*}}, align 4, !tbaa [[TAG_S_f32:!.*]]
+// PATH: store i32 4, ptr %{{.*}}, align 4, !tbaa [[TAG_S2_S_f32:!.*]]
   S->f32 = 1;
   S2->f32 = 4;
   return S->f32;
@@ -264,8 +264,9 @@ uint32_t g14(StructM2 *M, StructS *S) {
 // OLD-PATH: [[TAG_S_f32]] = !{[[TYPE_S:!.*]], [[TYPE_INT]], i64 4}
 // OLD-PATH: [[TYPE_S]] = !{!"_ZTS7StructS", [[TYPE_SHORT]], i64 0, [[TYPE_INT]], i64 4}
 // OLD-PATH: [[TAG_S_f16]] = !{[[TYPE_S]], [[TYPE_SHORT]], i64 0}
-// OLD-PATH: [[TAG_S2_f32_2]] = !{[[TYPE_S2:!.*]], [[TYPE_INT]], i64 12}
+// OLD-PATH: [[TAG_S2_S_f32]] = !{[[TYPE_S2:!.*]], [[TYPE_INT]], i64 4}
 // OLD-PATH: [[TYPE_S2]] = !{!"_ZTS8StructS2", [[TYPE_S]], i64 0, [[TYPE_SHORT]], i64 8, [[TYPE_INT]], i64 12}
+// OLD-PATH: [[TAG_S2_f32_2]] = !{[[TYPE_S2]], [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TAG_C_b_a_f32]] = !{[[TYPE_C:!.*]], [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TYPE_C]] = !{!"_ZTS7StructC", [[TYPE_SHORT]], i64 0, [[TYPE_B]], i64 4, [[TYPE_INT]], i64 28}
 // OLD-PATH: [[TAG_D_b_a_f32]] = !{[[TYPE_D:!.*]], [[TYPE_INT]], i64 12}
@@ -292,8 +293,9 @@ uint32_t g14(StructM2 *M, StructS *S) {
 // NEW-PATH: [[TAG_S_f32]] = !{[[TYPE_S:!.*]], [[TYPE_INT]], i64 4, i64 4}
 // NEW-PATH: [[TYPE_S]] = !{[[TYPE_CHAR]], i64 8, !"_ZTS7StructS", [[TYPE_SHORT]], i64 0, i64 2, [[TYPE_INT]], i64 4, i64 4}
 // NEW-PATH: [[TAG_S_f16]] = !{[[TYPE_S]], [[TYPE_SHORT]], i64 0, i64 2}
-// NEW-PATH: [[TAG_S2_f32_2]] = !{[[TYPE_S2:!.*]], [[TYPE_INT]], i64 12, i64 4}
+// NEW-PATH: [[TAG_S2_S_f32]] = !{[[TYPE_S2:!.*]], [[TYPE_INT]], i64 4, i64 4}
 // NEW-PATH: [[TYPE_S2]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS8StructS2", [[TYPE_S]], i64 0, i64 8, [[TYPE_SHORT]], i64 8, i64 2, [[TYPE_INT]], i64 12, i64 4}
+// NEW-PATH: [[TAG_S2_f32_2]] = !{[[TYPE_S2]], [[TYPE_INT]], i64 12, i64 4}
 // NEW-PATH: [[TAG_C_b_a_f32]] = !{[[TYPE_C:!.*]], [[TYPE_INT]], i64 12, i64 4}
 // NEW-PATH: [[TYPE_C]] = !{[[TYPE_CHAR]], i64 32, !"_ZTS7StructC", [[TYPE_SHORT]], i64 0, i64 2, [[TYPE_B]], i64 4, i64 24, [[TYPE_INT]], i64 28, i64 4}
 // NEW-PATH: [[TAG_D_b_a_f32]] = !{[[TYPE_D:!.*]], [[TYPE_INT]], i64 12, i64 4}
