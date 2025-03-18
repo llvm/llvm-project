@@ -1945,27 +1945,27 @@ def Wrapper    : SDNode<"NVPTXISD::Wrapper", SDTWrapper>;
 
 // Load a memory address into a u32 or u64 register.
 def MOV_ADDR : NVPTXInst<(outs Int32Regs:$dst), (ins ADDR_base:$a),
-                         "mov.u32 \t$dst, $a;",
+                         "mov.b32 \t$dst, $a;",
                          [(set i32:$dst, (Wrapper tglobaladdr:$a))]>;
 def MOV_ADDR64 : NVPTXInst<(outs Int64Regs:$dst), (ins ADDR_base:$a),
-                           "mov.u64 \t$dst, $a;",
+                           "mov.b64 \t$dst, $a;",
                            [(set i64:$dst, (Wrapper tglobaladdr:$a))]>;
 
 // Get pointer to local stack.
 let hasSideEffects = false in {
   def MOV_DEPOT_ADDR :    NVPTXInst<(outs Int32Regs:$d), (ins i32imm:$num),
-                                     "mov.u32 \t$d, __local_depot$num;", []>;
+                                     "mov.b32 \t$d, __local_depot$num;", []>;
   def MOV_DEPOT_ADDR_64 : NVPTXInst<(outs Int64Regs:$d), (ins i32imm:$num),
-                                    "mov.u64 \t$d, __local_depot$num;", []>;
+                                    "mov.b64 \t$d, __local_depot$num;", []>;
 }
 
 
 // copyPhysreg is hard-coded in NVPTXInstrInfo.cpp
 let hasSideEffects = false, isAsCheapAsAMove = true in {
   multiclass MOV<RegisterClass RC, string OpStr, ValueType VT, Operand IMMType, SDNode ImmNode>  {
-    def rr : NVPTXInst<(outs RC:$dst), (ins RC:$src),
+    def r : NVPTXInst<(outs RC:$dst), (ins RC:$src),
                        "mov." # OpStr # " \t$dst, $src;", []>;
-    def ri : NVPTXInst<(outs RC:$dst), (ins IMMType:$src),
+    def i : NVPTXInst<(outs RC:$dst), (ins IMMType:$src),
                         "mov." # OpStr # " \t$dst, $src;",
                         [(set VT:$dst, ImmNode:$src)]>;
   }
@@ -1975,15 +1975,15 @@ defm IMOV1 : MOV<Int1Regs, "pred", i1, i1imm, imm>;
 defm IMOV16 : MOV<Int16Regs, "b16", i16, i16imm, imm>;
 defm IMOV32 : MOV<Int32Regs, "b32", i32, i32imm, imm>;
 defm IMOV64 : MOV<Int64Regs, "b64", i64, i64imm, imm>;
-def IMOV128rr : NVPTXInst<(outs Int128Regs:$dst), (ins Int128Regs:$src),
+def IMOV128r : NVPTXInst<(outs Int128Regs:$dst), (ins Int128Regs:$src),
                           "mov.b128 \t$dst, $src;", []>;
 defm FMOV16 : MOV<Int16Regs, "b16", f16, f16imm, fpimm>;
 defm BFMOV16 : MOV<Int16Regs, "b16", bf16, bf16imm, fpimm>;
 defm FMOV32 : MOV<Float32Regs, "b32", f32, f32imm, fpimm>;
 defm FMOV64 : MOV<Float64Regs, "b64", f64, f64imm, fpimm>;
 
-def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32ri texternalsym:$dst)>;
-def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64ri texternalsym:$dst)>;
+def : Pat<(i32 (Wrapper texternalsym:$dst)), (IMOV32i texternalsym:$dst)>;
+def : Pat<(i64 (Wrapper texternalsym:$dst)), (IMOV64i texternalsym:$dst)>;
 
 //---- Copy Frame Index ----
 def LEA_ADDRi :   NVPTXInst<(outs Int32Regs:$dst), (ins ADDR:$addr),
@@ -2694,8 +2694,8 @@ def ProxyRegI1    : ProxyRegInst<"pred", i1, Int1Regs>;
 def ProxyRegI16   : ProxyRegInst<"b16",  i16, Int16Regs>;
 def ProxyRegI32   : ProxyRegInst<"b32",  i32, Int32Regs>;
 def ProxyRegI64   : ProxyRegInst<"b64",  i64, Int64Regs>;
-def ProxyRegF32   : ProxyRegInst<"f32",  f32, Float32Regs>;
-def ProxyRegF64   : ProxyRegInst<"f64",  f64, Float64Regs>;
+def ProxyRegF32   : ProxyRegInst<"b32",  f32, Float32Regs>;
+def ProxyRegF64   : ProxyRegInst<"b64",  f64, Float64Regs>;
 
 foreach vt = [f16, bf16] in {
   def: Pat<(vt (ProxyReg  vt:$src)), (ProxyRegI16 $src)>;

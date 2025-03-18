@@ -110,7 +110,7 @@ define  float @check_f32() {
   ; PTX-DAG: ld.param.f32 [[LD:%f[0-9]+]], [retval0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.f32 [[PROXY:%f[0-9]+]], [[LD]];
+  ; PTX-WITHOUT-DAG: mov.b32 [[PROXY:%f[0-9]+]], [[LD]];
   ; PTX-WITHOUT-DAG: st.param.f32 [func_retval0], [[PROXY]];
   ; PTX-WITH-DAG:    st.param.f32 [func_retval0], [[LD]];
 
@@ -125,7 +125,7 @@ define  double @check_f64() {
   ; PTX-DAG: ld.param.f64 [[LD:%fd[0-9]+]], [retval0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.f64 [[PROXY:%fd[0-9]+]], [[LD]];
+  ; PTX-WITHOUT-DAG: mov.b64 [[PROXY:%fd[0-9]+]], [[LD]];
   ; PTX-WITHOUT-DAG: st.param.f64 [func_retval0], [[PROXY]];
   ; PTX-WITH-DAG:    st.param.f64 [func_retval0], [[LD]];
 
@@ -173,8 +173,8 @@ define  <2 x double> @check_vec_f64() {
   ; PTX-DAG: ld.param.v2.f64 {[[LD0:%fd[0-9]+]], [[LD1:%fd[0-9]+]]}, [retval0];
   ; PTX-DAG: } // callseq {{[0-9]+}}
 
-  ; PTX-WITHOUT-DAG: mov.f64 [[PROXY0:%fd[0-9]+]], [[LD0]];
-  ; PTX-WITHOUT-DAG: mov.f64 [[PROXY1:%fd[0-9]+]], [[LD1]];
+  ; PTX-WITHOUT-DAG: mov.b64 [[PROXY0:%fd[0-9]+]], [[LD0]];
+  ; PTX-WITHOUT-DAG: mov.b64 [[PROXY1:%fd[0-9]+]], [[LD1]];
   ; PTX-WITHOUT-DAG: st.param.v2.f64 [func_retval0], {[[PROXY0]], [[PROXY1]]};
   ; PTX-WITH-DAG:    st.param.v2.f64 [func_retval0], {[[LD0]], [[LD1]]};
 

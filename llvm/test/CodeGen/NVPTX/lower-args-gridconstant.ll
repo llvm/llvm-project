@@ -33,7 +33,7 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; PTX-NEXT:    ld.param.u8 %rs1, [non_kernel_function_param_1];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
 ; PTX-NEXT:    setp.eq.b16 %p1, %rs2, 1;
-; PTX-NEXT:    mov.u64 %rd3, gi;
+; PTX-NEXT:    mov.b64 %rd3, gi;
 ; PTX-NEXT:    cvta.global.u64 %rd4, %rd3;
 ; PTX-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p1;
 ; PTX-NEXT:    ld.param.s32 %rd6, [non_kernel_function_param_2];
@@ -81,7 +81,6 @@ define ptx_kernel void @grid_const_int(ptr byval(i32) align 4 %input1, i32 %inpu
 ; OPT-NEXT:    [[ADD:%.*]] = add i32 [[TMP]], [[INPUT2]]
 ; OPT-NEXT:    store i32 [[ADD]], ptr [[OUT3]], align 4
 ; OPT-NEXT:    ret void
-;
   %tmp = load i32, ptr %input1, align 4
   %add = add i32 %tmp, %input2
   store i32 %add, ptr %out
@@ -116,7 +115,6 @@ define ptx_kernel void @grid_const_struct(ptr byval(%struct.s) align 4 %input, p
 ; OPT-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[TMP2]]
 ; OPT-NEXT:    store i32 [[ADD]], ptr [[OUT5]], align 4
 ; OPT-NEXT:    ret void
-;
   %gep1 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 0
   %gep2 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 1
   %int1 = load i32, ptr %gep1
@@ -136,7 +134,7 @@ define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; PTX-NEXT:    mov.b64 %rd2, grid_const_escape_param_0;
 ; PTX-NEXT:    mov.b64 %rd3, %rd2;
 ; PTX-NEXT:    cvta.param.u64 %rd4, %rd3;
-; PTX-NEXT:    mov.u64 %rd1, escape;
+; PTX-NEXT:    mov.b64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd4;
@@ -157,7 +155,6 @@ define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; OPT-NEXT:    [[INPUT_PARAM_GEN:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT_PARAM]])
 ; OPT-NEXT:    [[CALL:%.*]] = call i32 @escape(ptr [[INPUT_PARAM_GEN]])
 ; OPT-NEXT:    ret void
-;
   %call = call i32 @escape(ptr %input)
   ret void
 }
@@ -172,7 +169,7 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-NEXT:    .reg .b64 %rd<10>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
-; PTX-NEXT:    mov.u64 %SPL, __local_depot4;
+; PTX-NEXT:    mov.b64 %SPL, __local_depot4;
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    mov.b64 %rd2, multiple_grid_const_escape_param_0;
 ; PTX-NEXT:    mov.b64 %rd3, multiple_grid_const_escape_param_2;
@@ -184,7 +181,7 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-NEXT:    add.u64 %rd8, %SP, 0;
 ; PTX-NEXT:    add.u64 %rd9, %SPL, 0;
 ; PTX-NEXT:    st.local.u32 [%rd9], %r1;
-; PTX-NEXT:    mov.u64 %rd1, escape3;
+; PTX-NEXT:    mov.b64 %rd1, escape3;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd7;
@@ -215,7 +212,6 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; OPT-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; OPT-NEXT:    [[CALL:%.*]] = call i32 @escape3(ptr [[INPUT_PARAM_GEN]], ptr [[A_ADDR]], ptr [[B_PARAM_GEN]])
 ; OPT-NEXT:    ret void
-;
   %a.addr = alloca i32, align 4
   store i32 %a, ptr %a.addr, align 4
   %call = call i32 @escape3(ptr %input, ptr %a.addr, ptr %b)
@@ -243,7 +239,6 @@ define ptx_kernel void @grid_const_memory_escape(ptr byval(%struct.s) align 4 %i
 ; OPT-NEXT:    [[INPUT1:%.*]] = call ptr @llvm.nvvm.ptr.param.to.gen.p0.p101(ptr addrspace(101) [[INPUT_PARAM]])
 ; OPT-NEXT:    store ptr [[INPUT1]], ptr [[ADDR5]], align 8
 ; OPT-NEXT:    ret void
-;
   store ptr %input, ptr %addr, align 8
   ret void
 }
@@ -277,7 +272,6 @@ define ptx_kernel void @grid_const_inlineasm_escape(ptr byval(%struct.s) align 4
 ; OPT-NEXT:    [[TMP2:%.*]] = call i64 asm "add.s64 $0, $1, $2
 ; OPT-NEXT:    store i64 [[TMP2]], ptr [[RESULT5]], align 8
 ; OPT-NEXT:    ret void
-;
   %tmpptr1 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 0
   %tmpptr2 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 1
   %1 = call i64 asm "add.s64 $0, $1, $2;", "=l,l,l"(ptr %tmpptr1, ptr %tmpptr2) #1
@@ -300,7 +294,7 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %ou
 ; PTX-NEXT:    ld.u32 %r1, [%rd6];
 ; PTX-NEXT:    add.s32 %r2, %r1, %r1;
 ; PTX-NEXT:    st.global.u32 [%rd4], %r2;
-; PTX-NEXT:    mov.u64 %rd1, escape;
+; PTX-NEXT:    mov.b64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 2, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd6;
@@ -326,7 +320,6 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %ou
 ; OPT-NEXT:    store i32 [[TWICE]], ptr [[OUTPUT5]], align 4
 ; OPT-NEXT:    [[CALL:%.*]] = call i32 @escape(ptr [[INPUT1_GEN]])
 ; OPT-NEXT:    ret void
-;
   %val = load i32, ptr %input
   %twice = add i32 %val, %val
   store i32 %twice, ptr %output
@@ -350,7 +343,7 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input,
 ; PTX-NEXT:    ld.u32 %r2, [%rd6+4];
 ; PTX-NEXT:    st.global.u64 [%rd4], %rd6;
 ; PTX-NEXT:    add.s32 %r3, %r1, %r2;
-; PTX-NEXT:    mov.u64 %rd1, escape;
+; PTX-NEXT:    mov.b64 %rd1, escape;
 ; PTX-NEXT:    { // callseq 3, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd6;
@@ -380,7 +373,6 @@ define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input,
 ; OPT-NEXT:    [[ADD:%.*]] = add i32 [[VAL1]], [[VAL2]]
 ; OPT-NEXT:    [[CALL2:%.*]] = call i32 @escape(ptr [[PTR1]])
 ; OPT-NEXT:    ret i32 [[ADD]]
-;
   %ptr1 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 0
   %val1 = load i32, ptr %ptr1
   %ptr2 = getelementptr inbounds %struct.s, ptr %input, i32 0, i32 1
@@ -433,7 +425,6 @@ define ptx_kernel void @grid_const_phi(ptr byval(%struct.s) align 4 %input1, ptr
 ; OPT-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT2]], align 4
 ; OPT-NEXT:    ret void
-;
 
   %val = load i32, ptr %inout
   %less = icmp slt i32 %val, 0
@@ -499,7 +490,6 @@ define ptx_kernel void @grid_const_phi_ngc(ptr byval(%struct.s) align 4 %input1,
 ; OPT-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT2]], align 4
 ; OPT-NEXT:    ret void
-;
   %val = load i32, ptr %inout
   %less = icmp slt i32 %val, 0
   br i1 %less, label %first, label %second
@@ -553,7 +543,6 @@ define ptx_kernel void @grid_const_select(ptr byval(i32) align 4 %input1, ptr by
 ; OPT-NEXT:    [[VALLOADED:%.*]] = load i32, ptr [[PTRNEW]], align 4
 ; OPT-NEXT:    store i32 [[VALLOADED]], ptr [[INOUT2]], align 4
 ; OPT-NEXT:    ret void
-;
   %val = load i32, ptr %inout
   %less = icmp slt i32 %val, 0
   %ptrnew = select i1 %less, ptr %input1, ptr %input2
@@ -585,7 +574,6 @@ define ptx_kernel i32 @grid_const_ptrtoint(ptr byval(i32) %input) {
 ; OPT-NEXT:    [[PTRVAL:%.*]] = ptrtoint ptr [[INPUT1]] to i32
 ; OPT-NEXT:    [[KEEPALIVE:%.*]] = add i32 [[INPUT3]], [[PTRVAL]]
 ; OPT-NEXT:    ret i32 [[KEEPALIVE]]
-;
   %val = load i32, ptr %input
   %ptrval = ptrtoint ptr %input to i32
   %keepalive = add i32 %val, %ptrval
