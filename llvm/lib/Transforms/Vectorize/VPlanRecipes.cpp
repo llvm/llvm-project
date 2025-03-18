@@ -2701,17 +2701,6 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-/// Use all-true mask for reverse rather than actual mask, as it avoids a
-/// dependence w/o affecting the result.
-static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
-                                     Value *EVL, const Twine &Name) {
-  VectorType *ValTy = cast<VectorType>(Operand->getType());
-  Value *AllTrueMask =
-      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
-  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
-                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
-}
-
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);
 
@@ -2726,19 +2715,26 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Value *EVL = State.get(getEVL(), VPLane(0));
   Value *Addr = State.get(getAddr(), !CreateGather);
   Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask()) {
+  if (VPValue *VPMask = getMask())
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
-  } else {
+  else
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  }
 
   if (CreateGather) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
   } else {
+    if (isReverse()) {
+      auto *EltTy = DataTy->getElementType();
+      // if (EltTy->getScalarSizeInBits() !=
+      // EVL->getType()->getScalarSizeInBits())
+      //   EVL = ConstantInt::getSigned(EVL->getType(),
+      //   static_cast<int64_t>(EltTy->getScalarSizeInBits()) / 8);
+      auto *GEP = dyn_cast<GetElementPtrInst>(Addr->stripPointerCasts());
+      Value *Offset = Builder.CreateSub(State.Builder.getInt32(1), EVL);
+      Addr = Builder.CreateGEP(EltTy, Addr, Offset, "", GEP->isInBounds());
+    }
     VectorBuilder VBuilder(Builder);
     VBuilder.setEVL(EVL).setMask(Mask);
     NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
@@ -2747,10 +2743,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
-  Instruction *Res = NewLI;
-  if (isReverse())
-    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
-  State.set(this, Res);
+  State.set(this, NewLI);
 }
 
 InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
@@ -2768,14 +2761,13 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
-  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
-  if (!Reverse)
-    return Cost;
+  // if (!Reverse)
+    return Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                         AS, Ctx.CostKind);
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  // return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty,
+  //                                       getAddr()->getUnderlyingValue(), false,
+  //                                       Alignment, Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2836,7 +2828,8 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   auto *SI = cast<StoreInst>(&Ingredient);
-
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
@@ -2847,22 +2840,32 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue);
   Value *EVL = State.get(getEVL(), VPLane(0));
-  if (isReverse())
-    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
   Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask()) {
+  if (VPValue *VPMask = getMask())
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
-  } else {
+  else
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  }
+
   Value *Addr = State.get(getAddr(), !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
                                     Intrinsic::vp_scatter,
                                     {StoredVal, Addr, Mask, EVL});
   } else {
+    if (isReverse()) {
+      auto *EltTy = DataTy->getElementType();
+      // FIXME: we may need not deal with the size, the InstCombine will deal
+      // with the Offset Type if (EltTy->getScalarSizeInBits() !=
+      // EVL->getType()->getScalarSizeInBits())
+      //   EVL = ConstantInt::getSigned(EVL->getType(),
+      //   static_cast<int64_t>(EltTy->getScalarSizeInBits()) / 8);
+      auto *GEP = dyn_cast<GetElementPtrInst>(Addr->stripPointerCasts());
+      // Value *Offset =
+      // Builder.CreateSub(State.Builder.getIntN(EVL->getType()->getScalarSizeInBits(),
+      // 1), EVL);
+      Value *Offset = Builder.CreateSub(State.Builder.getInt32(1), EVL);
+      Addr = Builder.CreateGEP(EltTy, Addr, Offset, "", GEP->isInBounds());
+    }
     VectorBuilder VBuilder(Builder);
     VBuilder.setEVL(EVL).setMask(Mask);
     NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
@@ -2889,14 +2892,13 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
-  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
-  if (!Reverse)
-    return Cost;
+  // if (!Reverse)
+    return Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                         AS, Ctx.CostKind);
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  // return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty,
+  //                                       getAddr()->getUnderlyingValue(), false,
+  //                                       Alignment, Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
