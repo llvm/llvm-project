@@ -481,6 +481,78 @@ body: |
 ...
 
 ---
+name: test_sext_inreg_s8_1
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX9-LABEL: name: test_sext_inreg_s8_1
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXT_INREG]](s32)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s8)
+    ;
+    ; GFX8-LABEL: name: test_sext_inreg_s8_1
+    ; GFX8: liveins: $vgpr0
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s8)
+    ;
+    ; GFX6-LABEL: name: test_sext_inreg_s8_1
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
+    ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s8)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s8) = G_SEXT_INREG %1, 1
+    S_ENDPGM 0, implicit %2
+
+...
+
+---
+name: test_sext_inreg_s16_7
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX9-LABEL: name: test_sext_inreg_s16_7
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXT_INREG]](s32)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s8)
+    ;
+    ; GFX8-LABEL: name: test_sext_inreg_s16_7
+    ; GFX8: liveins: $vgpr0
+    ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
+    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s8)
+    ;
+    ; GFX6-LABEL: name: test_sext_inreg_s16_7
+    ; GFX6: liveins: $vgpr0
+    ; GFX6-NEXT: {{  $}}
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
+    ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s8)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s8) = G_SEXT_INREG %1, 7
+    S_ENDPGM 0, implicit %2
+
+...
+
+---
 name: test_sext_inreg_s96_8
 body: |
   bb.0:
