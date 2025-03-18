@@ -2401,8 +2401,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   return BF;
 }
 
-BinaryFunction *BinaryContext::createInstructionPatch(
-    uint64_t Address, InstructionListType &Instructions, const Twine &Name) {
+BinaryFunction *
+BinaryContext::createInstructionPatch(uint64_t Address,
+                                      const InstructionListType &Instructions,
+                                      const Twine &Name) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot get section for patching");
   assert(Section->hasSectionRef() && Section->isText() &&
@@ -2423,6 +2425,11 @@ BinaryFunction *BinaryContext::createInstructionPatch(
   PBF->setFileOffset(FileOffset);
   PBF->setOriginSection(&Section.get());
   PBF->addBasicBlock()->addInstructions(Instructions);
+  PBF->setIsPatch(true);
+
+  // Don't create symbol table entry if the name wasn't specified.
+  if (Name.str().empty())
+    PBF->setAnonymous(true);
 
   return PBF;
 }
