@@ -9,16 +9,23 @@ define float @test(ptr %in) {
 ;
 ; CHECK-LABEL: test(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .f32 %f<8>;
-; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_param_0];
-; CHECK-NEXT:    ld.f32 %f1, [%rd1];
-; CHECK-NEXT:    ld.f32 %f2, [%rd1+8];
+; CHECK-NEXT:    ld.u64 %rd2, [%rd1];
+; CHECK-NEXT:    ld.u64 %rd3, [%rd1+8];
+; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
+; CHECK-NEXT:    cvt.u32.u64 %r2, %rd3;
+; CHECK-NEXT:    mov.b32 %f1, %r1;
+; CHECK-NEXT:    mov.b32 %f2, %r2;
 ; CHECK-NEXT:    add.rn.f32 %f3, %f1, %f2;
-; CHECK-NEXT:    ld.f32 %f4, [%rd1+4];
-; CHECK-NEXT:    ld.f32 %f5, [%rd1+12];
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r3}, %rd2; }
+; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r4}, %rd3; }
+; CHECK-NEXT:    mov.b32 %f4, %r3;
+; CHECK-NEXT:    mov.b32 %f5, %r4;
 ; CHECK-NEXT:    add.rn.f32 %f6, %f4, %f5;
 ; CHECK-NEXT:    add.rn.f32 %f7, %f3, %f6;
 ; CHECK-NEXT:    st.param.f32 [func_retval0], %f7;
