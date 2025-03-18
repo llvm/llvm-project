@@ -13040,6 +13040,16 @@ def err_acc_magic_static_in_routine
 def err_acc_duplicate_bind
     : Error<"multiple 'routine' directives with 'bind' clauses are not "
             "permitted to refer to the same function">;
+def err_acc_duplicate_unnamed_bind
+    : Error<"OpenACC 'bind' clause on a declaration must bind to the same name "
+            "as previous bind clauses">;
+def warn_acc_confusing_routine_name
+    : Warning<"OpenACC 'routine' directive with a name refers to a function "
+              "with the same name as the function on the following line; this "
+              "may be unintended">,
+      InGroup<DiagGroup<"openacc-confusing-routine-name">>;
+def err_acc_decl_for_routine
+    : Error<"expected function or lambda declaration for 'routine' construct">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
