@@ -823,12 +823,12 @@ public:
   bool isSImm5NonZero() const {
     if (!isImm())
       return false;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && Imm != 0 &&
            isInt<5>(fixImmediateForRV32(Imm, isRV64Imm())) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_None;
   }
 
   bool isSImm6() const {
@@ -1021,22 +1021,22 @@ public:
   bool isSImm16NonZero() const {
     if (!isImm())
       return false;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && Imm != 0 &&
            isInt<16>(fixImmediateForRV32(Imm, isRV64Imm())) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_None;
   }
 
   bool isUImm16NonZero() const {
     if (!isImm())
       return false;
     int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isUInt<16>(Imm) && (Imm != 0) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_None;
   }
 
   bool isUImm20LUI() const {
