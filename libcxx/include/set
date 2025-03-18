@@ -537,6 +537,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
@@ -665,6 +666,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI set(const set& __s) : __tree_(__s.__tree_) { insert(__s.begin(), __s.end()); }
 
   _LIBCPP_HIDE_FROM_ABI set& operator=(const set& __s) {
+    static_assert(is_copy_assignable<value_type>::value, "T must be Cpp17CopyAssignable");
     __tree_ = __s.__tree_;
     return *this;
   }
@@ -704,6 +706,9 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI set& operator=(set&& __s) noexcept(is_nothrow_move_assignable<__base>::value) {
+    static_assert(
+        __alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<value_type>::value,
+        "T must be Cpp17MoveAssignable");
     __tree_ = std::move(__s.__tree_);
     return *this;
   }
@@ -1130,6 +1135,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI multiset& operator=(const multiset& __s) {
+    static_assert(is_copy_assignable<value_type>::value, "T must be Cpp17CopyAssignable");
     __tree_ = __s.__tree_;
     return *this;
   }
@@ -1169,6 +1175,9 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI multiset& operator=(multiset&& __s) _NOEXCEPT_(is_nothrow_move_assignable<__base>::value) {
+    static_assert(
+        __alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<value_type>::value,
+        "T must be Cpp17MoveAssignable");
     __tree_ = std::move(__s.__tree_);
     return *this;
   }

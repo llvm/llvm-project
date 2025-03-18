@@ -227,6 +227,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/disjunction.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
@@ -1328,6 +1329,7 @@ deque<_Tp, _Allocator>::deque(const deque& __c, const __type_identity_t<allocato
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(const deque& __c) {
+  static_assert(is_copy_assignable<value_type>::value, "T must be Cpp17CopyAssignable");
   if (this != std::addressof(__c)) {
     __copy_assign_alloc(__c);
     assign(__c.begin(), __c.end());
@@ -1383,6 +1385,8 @@ inline deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(deque&& __c) no
     (__alloc_traits::propagate_on_container_move_assignment::value &&
      is_nothrow_move_assignable<allocator_type>::value) ||
     allocator_traits<allocator_type>::is_always_equal::value) {
+  static_assert(__alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<value_type>::value,
+                "T must be Cpp17MoveAssignable");
   __move_assign(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }

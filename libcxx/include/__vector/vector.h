@@ -50,6 +50,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
@@ -295,6 +296,9 @@ public:
   vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector& operator=(vector&& __x)
       _NOEXCEPT_(__noexcept_move_assign_container<_Allocator, __alloc_traits>::value) {
+    static_assert(
+        __alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<value_type>::value,
+        "T must be Cpp17MoveAssignable");
     __move_assign(__x, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
     return *this;
   }
@@ -1036,6 +1040,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Allocator>&
 vector<_Tp, _Allocator>::operator=(const vector& __x) {
+  static_assert(is_copy_assignable<value_type>::value, "T must be Cpp17CopyAssignable");
   if (this != std::addressof(__x)) {
     __copy_assign_alloc(__x);
     assign(__x.__begin_, __x.__end_);

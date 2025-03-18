@@ -232,6 +232,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/container_traits.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_allocator.h>
+#  include <__type_traits/is_assignable.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_pointer.h>
@@ -1065,6 +1066,9 @@ inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(list&& __c) noexcept(
     (__node_alloc_traits::propagate_on_container_move_assignment::value &&
      is_nothrow_move_assignable<__node_allocator>::value) ||
     allocator_traits<allocator_type>::is_always_equal::value) {
+  static_assert(
+      __node_alloc_traits::propagate_on_container_move_assignment::value || is_move_assignable<value_type>::value,
+      "T must be Cpp17MoveAssignable");
   __move_assign(__c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -1090,6 +1094,7 @@ void list<_Tp, _Alloc>::__move_assign(list& __c,
 
 template <class _Tp, class _Alloc>
 inline list<_Tp, _Alloc>& list<_Tp, _Alloc>::operator=(const list& __c) {
+  static_assert(is_copy_assignable<value_type>::value, "T must be Cpp17CopyAssignable");
   if (this != std::addressof(__c)) {
     __base::__copy_assign_alloc(__c);
     assign(__c.begin(), __c.end());
