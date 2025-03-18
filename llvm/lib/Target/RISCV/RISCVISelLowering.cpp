@@ -14319,7 +14319,7 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
                                      SelectionDAG &DAG) {
   using namespace llvm::SDPatternMatch;
 
-  // Loooking for a reg-reg add and not an addi.
+  // Looking for a reg-reg add and not an addi.
   if (isa<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
 
@@ -14342,13 +14342,14 @@ static SDValue combineShlAddIAddImpl(SDNode *N, SDValue AddI, SDValue Other,
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  int64_t ShlConst = VShift.getSExtValue();
+  // The shift must be positive but the add can be signed.
+  uint64_t ShlConst = VShift.getZExtValue();
   int64_t AddConst = AddVal.getSExtValue();
 
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
                               DAG.getConstant(ShlConst, DL, VT), Other);
   return DAG.getNode(ISD::ADD, DL, VT, SHADD,
-                     DAG.getConstant(AddConst, DL, VT));
+                     DAG.getSignedConstant(AddConst, DL, VT));
 }
 
 // Optimize (add (add (shl x, c0),  c1), y) ->

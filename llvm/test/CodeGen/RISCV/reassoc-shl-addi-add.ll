@@ -130,4 +130,60 @@ entry:
   ret void
 }
 
+define void @t8(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
+; CHECK-LABEL: t8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sh3add a2, a0, a2
+; CHECK-NEXT:    sh3add a1, a0, a1
+; CHECK-NEXT:    lui a4, 1
+; CHECK-NEXT:    addi a4, a4, 1307
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    sh3add a3, a0, a3
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    tail callee
+entry:
+  %shl = shl i32 %a, 3
+  %add = add nsw i32 %shl, 5403
+  %add1 = add nsw i32 %add, %b
+  %add3 = add nsw i32 %add, %c
+  %add5 = add nsw i32 %shl, %d
+  %call = tail call i32 @callee(i32 noundef %add1, i32 noundef %add1, i32 noundef %add3, i32 noundef %add5)
+  ret void
+}
+
+define void @t9(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
+; CHECK-LABEL: t9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    sh2add a2, a0, a2
+; CHECK-NEXT:    sh2add a1, a0, a1
+; CHECK-NEXT:    addi a1, a1, -42
+; CHECK-NEXT:    addi a2, a2, -42
+; CHECK-NEXT:    sh2add a3, a0, a3
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    tail callee
+entry:
+  %shl = shl i32 %a, 2
+  %add = add nsw i32 %shl, -42
+  %add1 = add nsw i32 %add, %b
+  %add3 = add nsw i32 %add, %c
+  %add5 = add nsw i32 %shl, %d
+  %call = tail call i32 @callee(i32 noundef %add1, i32 noundef %add1, i32 noundef %add3, i32 noundef %add5)
+  ret void
+}
+
+define void @t10(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
+; CHECK-LABEL: t10:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    tail callee
+entry:
+  %shl = shl i32 %a, -2
+  %add = add nsw i32 %shl, 42
+  %add1 = add nsw i32 %add, %b
+  %add3 = add nsw i32 %add, %c
+  %add5 = add nsw i32 %shl, %d
+  %call = tail call i32 @callee(i32 noundef %add1, i32 noundef %add1, i32 noundef %add3, i32 noundef %add5)
+  ret void
+}
+
 attributes #0 = { nounwind optsize }
