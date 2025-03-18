@@ -199,7 +199,7 @@ class OutputLookup {
 public:
   OutputLookup(void *MLOContext, CXModuleLookupOutputCallback *MLO)
       : MLOContext(MLOContext), MLO(MLO) {}
-  std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK);
+  std::string lookupModuleOutput(const ModuleDeps &MD, ModuleOutputKind MOK);
 
 private:
   llvm::DenseMap<ModuleID, std::string> PCMPaths;
@@ -317,8 +317,8 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
   CXModuleLookupOutputCallback *MLO = Settings.MLO;
 
   OutputLookup OL(MLOContext, MLO);
-  auto LookupOutputs = [&](const ModuleID &ID, ModuleOutputKind MOK) {
-    return OL.lookupModuleOutput(ID, MOK);
+  auto LookupOutputs = [&](const ModuleDeps &MD, ModuleOutputKind MOK) {
+    return OL.lookupModuleOutput(MD, MOK);
   };
 
   if (!Out)
@@ -540,27 +540,28 @@ CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph Graph) {
   return unwrap(Graph)->getDiagnosticSet();
 }
 
-static std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK,
-                                      void *MLOContext,
+static std::string lookupModuleOutput(const ModuleDeps &MD,
+                                      ModuleOutputKind MOK, void *MLOContext,
                                       CXModuleLookupOutputCallback *MLO) {
   SmallVector<char, 256> Buffer(256);
-  size_t Len = MLO(MLOContext, ID.ModuleName.c_str(), ID.ContextHash.c_str(),
-                   wrap(MOK), Buffer.data(), Buffer.size());
+  size_t Len =
+      MLO(MLOContext, MD.ID.ModuleName.c_str(), MD.ID.ContextHash.c_str(),
+          wrap(MOK), Buffer.data(), Buffer.size());
   if (Len > Buffer.size()) {
     Buffer.resize(Len);
-    Len = MLO(MLOContext, ID.ModuleName.c_str(), ID.ContextHash.c_str(),
+    Len = MLO(MLOContext, MD.ID.ModuleName.c_str(), MD.ID.ContextHash.c_str(),
               wrap(MOK), Buffer.data(), Buffer.size());
   }
   return std::string(Buffer.begin(), Len);
 }
 
-std::string OutputLookup::lookupModuleOutput(const ModuleID &ID,
+std::string OutputLookup::lookupModuleOutput(const ModuleDeps &MD,
                                              ModuleOutputKind MOK) {
   if (MOK != ModuleOutputKind::ModuleFile)
-    return ::lookupModuleOutput(ID, MOK, MLOContext, MLO);
+    return ::lookupModuleOutput(MD, MOK, MLOContext, MLO);
   // PCM paths are looked up repeatedly, so cache them.
-  auto PCMPath = PCMPaths.insert({ID, ""});
+  auto PCMPath = PCMPaths.insert({MD.ID, ""});
   if (PCMPath.second)
-    PCMPath.first->second = ::lookupModuleOutput(ID, MOK, MLOContext, MLO);
+    PCMPath.first->second = ::lookupModuleOutput(MD, MOK, MLOContext, MLO);
   return PCMPath.first->second;
 }
