@@ -1332,7 +1332,7 @@ public:
 
   bool isLowLatencyInstruction(const MachineInstr &MI) const;
   bool isHighLatencyDef(int Opc) const override;
-  bool isHighLatencyInstruction(const MachineInstr& MI) const {
+  bool isHighLatencyInstruction(const MachineInstr &MI) const {
     return isHighLatencyDef(MI.getOpcode());
   }
 

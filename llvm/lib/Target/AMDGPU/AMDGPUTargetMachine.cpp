@@ -397,8 +397,8 @@ static cl::opt<bool>
 // Enable Hot block rematerialize
 static cl::opt<bool>
     EnableHotBlockRemat("amdgpu-enable-hot-block-remat",
-                         cl::desc("Enable HotBlock Rematerialize optimization"),
-                         cl::init(false), cl::Hidden);
+                        cl::desc("Enable HotBlock Rematerialize optimization"),
+                        cl::init(false), cl::Hidden);
 
 // Enable GFX11+ VOPD
 static cl::opt<bool>
