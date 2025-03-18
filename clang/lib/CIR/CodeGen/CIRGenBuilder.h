@@ -44,6 +44,7 @@ public:
     return false;
   }
 
+  // Return true if this is the null value
   bool isNullValue(mlir::Attribute attr) const {
     if (mlir::isa<cir::ZeroAttr>(attr))
       return true;

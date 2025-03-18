@@ -169,11 +169,11 @@ static mlir::Attribute
 emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
                   mlir::Type commonElementType, unsigned arrayBound,
                   SmallVectorImpl<mlir::TypedAttr> &elements,
-                  mlir::TypedAttr filter) {
-  const auto &builder = cgm.getBuilder();
+                  mlir::TypedAttr filler) {
+  const CIRGenBuilderTy &builder = cgm.getBuilder();
 
   unsigned nonzeroLength = arrayBound;
-  if (elements.size() < nonzeroLength && builder.isNullValue(filter))
+  if (elements.size() < nonzeroLength && builder.isNullValue(filler))
     nonzeroLength = elements.size();
 
   if (nonzeroLength == elements.size()) {
@@ -186,13 +186,15 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
     return cir::ZeroAttr::get(builder.getContext(), desiredType);
 
   const unsigned trailingZeroes = arrayBound - nonzeroLength;
-  if (trailingZeroes >= 8) {
-    if (elements.size() < nonzeroLength)
-      cgm.errorNYI("missing initializer for non-zero element");
-  } else if (elements.size() != arrayBound) {
-    elements.resize(arrayBound, filter);
 
-    if (filter.getType() != commonElementType)
+  // Add a zeroinitializer array filler if we have lots of trailing zeroes.
+  if (trailingZeroes >= 8) {
+    assert(elements.size() >= nonzeroLength &&
+           "missing initializer for non-zero element");
+  } else if (elements.size() != arrayBound) {
+    elements.resize(arrayBound, filler);
+
+    if (filler.getType() != commonElementType)
       cgm.errorNYI(
           "array filter type should always be the same as element type");
   }
@@ -327,16 +329,16 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     const unsigned numElements = value.getArraySize();
     const unsigned numInitElts = value.getArrayInitializedElts();
 
-    mlir::Attribute filter;
+    mlir::Attribute filler;
     if (value.hasArrayFiller()) {
-      filter =
-          tryEmitPrivate(value.getArrayFiller(), arrayTy->getElementType());
-      if (!filter)
+      filler =
+          tryEmitPrivate(value.getArrayFiller(), arrayElementTy);
+      if (!filler)
         return {};
     }
 
     SmallVector<mlir::TypedAttr, 16> elements;
-    if (filter && builder.isNullValue(filter))
+    if (filler && builder.isNullValue(filler))
       elements.reserve(numInitElts + 1);
     else
       elements.reserve(numInitElts);
@@ -361,14 +363,14 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       elements.push_back(elementTyped);
     }
 
-    mlir::TypedAttr typedFilter =
-        llvm::dyn_cast_or_null<mlir::TypedAttr>(filter);
-    if (filter && !typedFilter)
-      cgm.errorNYI("array filter should always be typed");
+    mlir::TypedAttr typedFiller =
+        llvm::cast_or_null<mlir::TypedAttr>(filler);
+    if (filler && !typedFiller)
+      cgm.errorNYI("array filler should always be typed");
 
     mlir::Type desiredType = cgm.convertType(destType);
     return emitArrayConstant(cgm, desiredType, commonElementType, numElements,
-                             elements, typedFilter);
+                             elements, typedFiller);
   }
   case APValue::Vector: {
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate vector");

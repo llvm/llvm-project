@@ -201,9 +201,9 @@ ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
   if (!(mlir::isa<ArrayAttr>(elts) || mlir::isa<StringAttr>(elts)))
     return emitError() << "constant array expects ArrayAttr or StringAttr";
 
-  if (StringAttr strAttr = mlir::dyn_cast<StringAttr>(elts)) {
-    ArrayType arrayTy = mlir::cast<ArrayType>(type);
-    IntType intTy = mlir::dyn_cast<IntType>(arrayTy.getEltType());
+  if (auto strAttr = mlir::dyn_cast<StringAttr>(elts)) {
+    const auto arrayTy = mlir::cast<ArrayType>(type);
+    const auto intTy = mlir::dyn_cast<IntType>(arrayTy.getEltType());
 
     // TODO: add CIR type for char.
     if (!intTy || intTy.getWidth() != 8) {
@@ -215,8 +215,8 @@ ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
   }
 
   assert(mlir::isa<ArrayAttr>(elts));
-  ArrayAttr arrayAttr = mlir::cast<mlir::ArrayAttr>(elts);
-  ArrayType arrayTy = mlir::cast<ArrayType>(type);
+  const auto arrayAttr = mlir::cast<mlir::ArrayAttr>(elts);
+  const auto arrayTy = mlir::cast<ArrayType>(type);
 
   // Make sure both number of elements and subelement types match type.
   if (arrayTy.getSize() != arrayAttr.size() + trailingZerosNum)
@@ -225,10 +225,9 @@ ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
 }
 
 Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
-  ::mlir::FailureOr<Type> resultTy;
-  ::mlir::FailureOr<Attribute> resultVal;
-  ::llvm::SMLoc loc = parser.getCurrentLocation();
-  (void)loc;
+  mlir::FailureOr<Type> resultTy;
+  mlir::FailureOr<Attribute> resultVal;
+
   // Parse literal '<'
   if (parser.parseLess())
     return {};
@@ -244,7 +243,7 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
   }
 
   // ArrayAttrrs have per-element type, not the type of the array...
-  if (mlir::dyn_cast<ArrayAttr>(*resultVal)) {
+  if (mlir::isa<ArrayAttr>(*resultVal)) {
     // Array has implicit type: infer from const array type.
     if (parser.parseOptionalColon().failed()) {
       resultTy = type;
@@ -259,7 +258,6 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
       }
     }
   } else {
-    assert(mlir::isa<TypedAttr>(*resultVal) && "IDK");
     auto ta = mlir::cast<TypedAttr>(*resultVal);
     resultTy = ta.getType();
     if (mlir::isa<mlir::NoneType>(*resultTy)) {
@@ -269,11 +267,11 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
     }
   }
 
-  auto zeros = 0;
+  unsigned zeros = 0;
   if (parser.parseOptionalComma().succeeded()) {
     if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
-      auto typeSize = mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
-      auto elts = resultVal.value();
+      unsigned typeSize = mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
+      mlir::Attribute elts = resultVal.value();
       if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
         zeros = typeSize - str.size();
       else
@@ -288,7 +286,7 @@ Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
     return {};
 
   return parser.getChecked<ConstArrayAttr>(
-      loc, parser.getContext(), resultTy.value(), resultVal.value(), zeros);
+      parser.getCurrentLocation(), parser.getContext(), resultTy.value(), resultVal.value(), zeros);
 }
 
 void ConstArrayAttr::print(AsmPrinter &printer) const {

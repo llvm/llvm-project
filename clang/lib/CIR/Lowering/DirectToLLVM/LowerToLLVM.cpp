@@ -189,7 +189,7 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
                                 mlir::ConversionPatternRewriter &rewriter,
                                 const mlir::TypeConverter *converter) {
   CIRAttrToValue valueConverter(parentOp, rewriter, converter);
-  auto value = valueConverter.visit(attr);
+  mlir::Value value = valueConverter.visit(attr);
   if (!value)
     llvm_unreachable("unhandled attribute type");
   return value;
@@ -242,8 +242,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts())) {
     for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
       mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
-      mlir::Value init =
-          emitCirAttrToMemory(parentOp, elt, rewriter, converter, dataLayout);
+      mlir::Value init = visit(elt);
       result =
           rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
     }
