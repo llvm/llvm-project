@@ -86,8 +86,8 @@ const llvm::StringRef MainMod =
   declare i32 @bar()
 )";
 
-cl::list<std::string> InputArgv(cl::Positional,
-                                cl::desc("<program arguments>..."));
+static cl::list<std::string> InputArgv(cl::Positional,
+                                       cl::desc("<program arguments>..."));
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.

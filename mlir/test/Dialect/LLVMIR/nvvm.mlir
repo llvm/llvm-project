@@ -411,6 +411,25 @@ llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {
   llvm.return %r1 : i32
 }
 
+llvm.func @redux_sync_f32(%value: f32, %offset: i32) -> f32 {
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r1 = nvvm.redux.sync fmin %value, %offset: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r2 = nvvm.redux.sync fmin %value, %offset {abs = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r3 = nvvm.redux.sync fmin %value, %offset {NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmin %{{.*}}
+  %r4 = nvvm.redux.sync fmin %value, %offset {abs = true, NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r5 = nvvm.redux.sync fmax %value, %offset: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r6 = nvvm.redux.sync fmax %value, %offset {abs = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r7 = nvvm.redux.sync fmax %value, %offset {NaN = true}: f32 -> f32
+  // CHECK: nvvm.redux.sync fmax %{{.*}}
+  %r8 = nvvm.redux.sync fmax %value, %offset {abs = true, NaN = true}: f32 -> f32
+  llvm.return %r1 : f32
+}
 
 // -----
 
@@ -529,6 +548,19 @@ func.func @mapa(%a: !llvm.ptr, %a_shared: !llvm.ptr<3>, %b : i32) {
   // CHECK:   nvvm.mapa %{{.*}}
   %1 = nvvm.mapa %a_shared, %b: !llvm.ptr<3> -> !llvm.ptr<3>
   return
+}
+
+// CHECK-LABEL: @match_sync
+func.func @match_sync(%val32: i32, %val64: i64, %thread_mask: i32) {
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i32 -> i32
+  %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i32 -> !llvm.struct<(i32, i1)>
+  %1 = nvvm.match.sync all %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.match.sync any %{{.*}}, %{{.*}} : i64 -> i32
+  %2 = nvvm.match.sync any %thread_mask, %val64 : i64 -> i32
+  // CHECK: nvvm.match.sync all %{{.*}}, %{{.*}} : i64 -> !llvm.struct<(i32, i1)>
+  %3 = nvvm.match.sync all %thread_mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
+  return 
 }
 
 // -----

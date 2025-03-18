@@ -100,6 +100,26 @@ LIBC_INLINE NumberPair<T> exact_mult(const NumberPair<T> &as, T a, T b) {
   return r;
 }
 
+// The templated exact multiplication needs template version of
+// LIBC_TARGET_CPU_HAS_FMA_* macro to correctly select the implementation.
+// These can be moved to "src/__support/macros/properties/cpu_features.h" if
+// other part of libc needed.
+template <typename T> struct TargetHasFmaInstruction {
+  static constexpr bool VALUE = false;
+};
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+template <> struct TargetHasFmaInstruction<float> {
+  static constexpr bool VALUE = true;
+};
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+template <> struct TargetHasFmaInstruction<double> {
+  static constexpr bool VALUE = true;
+};
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+
 // Note: When FMA instruction is not available, the `exact_mult` function is
 // only correct for round-to-nearest mode.  See:
 //   Zimmermann, P., "Note on the Veltkamp/Dekker Algorithms with Directed
@@ -111,15 +131,15 @@ template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
 LIBC_INLINE NumberPair<T> exact_mult(T a, T b) {
   NumberPair<T> r{0.0, 0.0};
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
-  r.hi = a * b;
-  r.lo = fputil::multiply_add(a, b, -r.hi);
-#else
-  // Dekker's Product.
-  NumberPair<T> as = split(a);
+  if constexpr (TargetHasFmaInstruction<T>::VALUE) {
+    r.hi = a * b;
+    r.lo = fputil::multiply_add(a, b, -r.hi);
+  } else {
+    // Dekker's Product.
+    NumberPair<T> as = split(a);
 
-  r = exact_mult<T, SPLIT_B>(as, a, b);
-#endif // LIBC_TARGET_CPU_HAS_FMA
+    r = exact_mult<T, SPLIT_B>(as, a, b);
+  }
 
   return r;
 }

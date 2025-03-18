@@ -2,7 +2,7 @@
 ! Test selector and team-value in CHANGE TEAM statement
 
 ! OK
-subroutine s1
+subroutine s1(y)
   use iso_fortran_env, only: team_type
   type(team_type) :: t
   real :: y[10,*]
@@ -11,7 +11,7 @@ subroutine s1
   form team(1, t)
 end
 
-subroutine s2
+subroutine s2(y,y2,x)
   use iso_fortran_env
   type(team_type) :: t
   real :: y[10,*], y2[*], x[*]
@@ -27,7 +27,7 @@ subroutine s2
   end team
 end
 
-subroutine s3
+subroutine s3(y)
   type :: team_type
   end type
   type :: foo

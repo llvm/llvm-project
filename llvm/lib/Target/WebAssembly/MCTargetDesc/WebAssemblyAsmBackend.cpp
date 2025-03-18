@@ -36,9 +36,6 @@ public:
       : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
-  unsigned getNumFixupKinds() const override {
-    return WebAssembly::NumTargetFixupKinds;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -70,7 +67,8 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) <
+             WebAssembly::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }

@@ -598,6 +598,8 @@ def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimmBits<5>", [], [], 
 def SplatPat_uimm6 : ComplexPattern<vAny, 1, "selectVSplatUimmBits<6>", [], [], 3>;
 def SplatPat_simm5_plus1
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1", [], [], 3>;
+def SplatPat_simm5_plus1_nodec
+    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NoDec", [], [], 3>;
 def SplatPat_simm5_plus1_nonzero
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero", [], [], 3>;
 
@@ -1020,7 +1022,7 @@ multiclass VPatIntegerSetCCVL_VV<VTypeInfo vti, string instruction_name,
                          VR:$passthru,
                          vti.RegClass:$rs1,
                          vti.RegClass:$rs2,
-                         (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW)>;
+                         (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TA_MU)>;
 }
 
 // Inherits from VPatIntegerSetCCVL_VV and adds a pattern with operands swapped.
@@ -1034,7 +1036,8 @@ multiclass VPatIntegerSetCCVL_VV_Swappable<VTypeInfo vti, string instruction_nam
                                       VLOpFrag)),
             (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
                          VR:$passthru, vti.RegClass:$rs1,
-                         vti.RegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW)>;
+                         vti.RegClass:$rs2, (vti.Mask VMV0:$vm), GPR:$vl,
+                         vti.Log2SEW, TA_MU)>;
 }
 
 multiclass VPatIntegerSetCCVL_VX_Swappable<VTypeInfo vti, string instruction_name,
@@ -1046,14 +1049,16 @@ multiclass VPatIntegerSetCCVL_VX_Swappable<VTypeInfo vti, string instruction_nam
                                       (vti.Mask VMV0:$vm),
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                GPR:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW)>;
+                                GPR:$rs2, (vti.Mask VMV0:$vm), GPR:$vl,
+                                vti.Log2SEW, TA_MU)>;
   def : Pat<(vti.Mask (riscv_setcc_vl (SplatPat (XLenVT GPR:$rs2)),
                                       (vti.Vector vti.RegClass:$rs1), invcc,
                                       VR:$passthru,
                                       (vti.Mask VMV0:$vm),
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
-                                GPR:$rs2, (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW)>;
+                                GPR:$rs2, (vti.Mask VMV0:$vm), GPR:$vl,
+                                vti.Log2SEW, TA_MU)>;
 }
 
 multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_name,
@@ -1067,7 +1072,7 @@ multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_nam
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
                                 XLenVT:$rs2, (vti.Mask VMV0:$vm), GPR:$vl,
-                                vti.Log2SEW)>;
+                                vti.Log2SEW, TA_MU)>;
 
   // FIXME: Can do some canonicalization to remove these patterns.
   def : Pat<(vti.Mask (riscv_setcc_vl (splatpat_kind simm5:$rs2),
@@ -1077,7 +1082,7 @@ multiclass VPatIntegerSetCCVL_VI_Swappable<VTypeInfo vti, string instruction_nam
                                       VLOpFrag)),
             (instruction_masked VR:$passthru, vti.RegClass:$rs1,
                                 simm5:$rs2, (vti.Mask VMV0:$vm), GPR:$vl,
-                                vti.Log2SEW)>;
+                                vti.Log2SEW, TA_MU)>;
 }
 
 multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
@@ -1094,7 +1099,7 @@ multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                 (!cast<Instruction>(inst_name#"_VV_"#fvti.LMul.MX#"_MASK")
                     VR:$passthru, fvti.RegClass:$rs1,
                     fvti.RegClass:$rs2, (fvti.Mask VMV0:$vm),
-                    GPR:$vl, fvti.Log2SEW)>;
+                    GPR:$vl, fvti.Log2SEW, TA_MU)>;
       def : Pat<(fvti.Mask (vop (fvti.Vector fvti.RegClass:$rs1),
                                 (SplatFPOp fvti.ScalarRegClass:$rs2),
                                 cc,
@@ -1104,7 +1109,7 @@ multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                 (!cast<Instruction>(inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
                     VR:$passthru, fvti.RegClass:$rs1,
                     fvti.ScalarRegClass:$rs2, (fvti.Mask VMV0:$vm),
-                    GPR:$vl, fvti.Log2SEW)>;
+                    GPR:$vl, fvti.Log2SEW, TA_MU)>;
       def : Pat<(fvti.Mask (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
                                 (fvti.Vector fvti.RegClass:$rs1),
                                 cc,
@@ -1114,7 +1119,7 @@ multiclass VPatFPSetCCVL_VV_VF_FV<SDPatternOperator vop, CondCode cc,
                 (!cast<Instruction>(swapped_op_inst_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
                     VR:$passthru, fvti.RegClass:$rs1,
                     fvti.ScalarRegClass:$rs2, (fvti.Mask VMV0:$vm),
-                    GPR:$vl, fvti.Log2SEW)>;
+                    GPR:$vl, fvti.Log2SEW, TA_MU)>;
     }
   }
 }
@@ -1989,10 +1994,10 @@ multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
 // 11.1. Vector Single-Width Integer Add and Subtract
 defm : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
 defm : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
-// Handle VRSUB specially since it's the only integer binary op with reversed
-// pattern operands
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
+    // Handle VRSUB specially since it's the only integer binary op with
+    // reversed pattern operands
     def : Pat<(riscv_sub_vl (vti.Vector (SplatPat (XLenVT GPR:$rs2))),
                             (vti.Vector vti.RegClass:$rs1),
                             vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
@@ -2005,6 +2010,15 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1, simm5:$rs2,
                    (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    // Match VSUB with a small immediate to vadd.vi by negating the immediate.
+    def : Pat<(riscv_sub_vl (vti.Vector vti.RegClass:$rs1),
+                            (vti.Vector (SplatPat_simm5_plus1_nodec simm5_plus1:$rs2)),
+                            vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX#"_MASK")
+                     vti.RegClass:$passthru, vti.RegClass:$rs1,
+                     (NegImm simm5_plus1:$rs2), (vti.Mask VMV0:$vm),
+                     GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
@@ -2701,20 +2715,12 @@ foreach mti = AllMasks in {
                    VR:$rs, VR:$rs, GPR:$vl, mti.Log2SEW)>;
 
     // 15.2 Vector count population in mask vcpop.m
-    def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
-                                      VLOpFrag)),
-              (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX)
-                   VR:$rs2, GPR:$vl, mti.Log2SEW)>;
     def : Pat<(XLenVT (riscv_vcpop_vl (mti.Mask VR:$rs2), (mti.Mask VMV0:$vm),
                                       VLOpFrag)),
               (!cast<Instruction>("PseudoVCPOP_M_" # mti.BX # "_MASK")
                    VR:$rs2, (mti.Mask VMV0:$vm), GPR:$vl, mti.Log2SEW)>;
 
     // 15.3 vfirst find-first-set mask bit
-    def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask true_mask),
-                                      VLOpFrag)),
-              (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX)
-                   VR:$rs2, GPR:$vl, mti.Log2SEW)>;
     def : Pat<(XLenVT (riscv_vfirst_vl (mti.Mask VR:$rs2), (mti.Mask VMV0:$vm),
                                       VLOpFrag)),
               (!cast<Instruction>("PseudoVFIRST_M_" # mti.BX # "_MASK")

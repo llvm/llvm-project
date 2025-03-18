@@ -306,12 +306,15 @@ EXTENSION(statement_attributes_with_gnu_syntax, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs_full, LangOpts.GNUAsm)
+EXTENSION(gnu_asm_constexpr_strings, LangOpts.GNUAsm && LangOpts.CPlusPlus11)
 EXTENSION(matrix_types, LangOpts.MatrixTypes)
 EXTENSION(matrix_types_scalar_division, true)
 EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
 EXTENSION(datasizeof, LangOpts.CPlusPlus)
 
 FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
+
+FEATURE(clang_atomic_attributes, true)
 
 // CUDA/HIP Features
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)

@@ -304,15 +304,15 @@ define i64 @loadITLUninit2() {
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    add r3, r3, r4
-; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
-; SMALL32-NEXT:    lwz r5, 0(r3)
-; SMALL32-NEXT:    lwz r3, 4(r3)
-; SMALL32-NEXT:    lwz r6, 0(r4)
-; SMALL32-NEXT:    lwz r4, 4(r4)
-; SMALL32-NEXT:    addc r4, r4, r3
-; SMALL32-NEXT:    adde r3, r6, r5
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
 ; SMALL32-NEXT:    mtlr r0
@@ -327,14 +327,14 @@ define i64 @loadITLUninit2() {
 ; LARGE32-NEXT:    lwz r4, L..C0@l(r3)
 ; LARGE32-NEXT:    bla .__get_tpointer[PR]
 ; LARGE32-NEXT:    add r3, r3, r4
-; LARGE32-NEXT:    lwz r5, 0(r3)
-; LARGE32-NEXT:    lwz r3, 4(r3)
-; LARGE32-NEXT:    addis r4, L..C4@u(r2)
-; LARGE32-NEXT:    lwz r4, L..C4@l(r4)
-; LARGE32-NEXT:    lwz r6, 0(r4)
-; LARGE32-NEXT:    lwz r4, 4(r4)
-; LARGE32-NEXT:    addc r4, r4, r3
-; LARGE32-NEXT:    adde r3, r6, r5
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
 ; LARGE32-NEXT:    addi r1, r1, 32
 ; LARGE32-NEXT:    lwz r0, 8(r1)
 ; LARGE32-NEXT:    mtlr r0
@@ -424,15 +424,15 @@ define i64 @loadITLInit2() {
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    add r3, r3, r4
-; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
-; SMALL32-NEXT:    lwz r5, 0(r3)
-; SMALL32-NEXT:    lwz r3, 4(r3)
-; SMALL32-NEXT:    lwz r6, 0(r4)
-; SMALL32-NEXT:    lwz r4, 4(r4)
-; SMALL32-NEXT:    addc r4, r4, r3
-; SMALL32-NEXT:    adde r3, r6, r5
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
 ; SMALL32-NEXT:    mtlr r0
@@ -447,14 +447,14 @@ define i64 @loadITLInit2() {
 ; LARGE32-NEXT:    lwz r4, L..C1@l(r3)
 ; LARGE32-NEXT:    bla .__get_tpointer[PR]
 ; LARGE32-NEXT:    add r3, r3, r4
-; LARGE32-NEXT:    lwz r5, 0(r3)
-; LARGE32-NEXT:    lwz r3, 4(r3)
-; LARGE32-NEXT:    addis r4, L..C4@u(r2)
-; LARGE32-NEXT:    lwz r4, L..C4@l(r4)
-; LARGE32-NEXT:    lwz r6, 0(r4)
-; LARGE32-NEXT:    lwz r4, 4(r4)
-; LARGE32-NEXT:    addc r4, r4, r3
-; LARGE32-NEXT:    adde r3, r6, r5
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
 ; LARGE32-NEXT:    addi r1, r1, 32
 ; LARGE32-NEXT:    lwz r0, 8(r1)
 ; LARGE32-NEXT:    mtlr r0
@@ -544,15 +544,15 @@ define i64 @loadTLUninit2() {
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    add r3, r3, r4
-; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
-; SMALL32-NEXT:    lwz r5, 0(r3)
-; SMALL32-NEXT:    lwz r3, 4(r3)
-; SMALL32-NEXT:    lwz r6, 0(r4)
-; SMALL32-NEXT:    lwz r4, 4(r4)
-; SMALL32-NEXT:    addc r4, r4, r3
-; SMALL32-NEXT:    adde r3, r6, r5
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
 ; SMALL32-NEXT:    mtlr r0
@@ -567,14 +567,14 @@ define i64 @loadTLUninit2() {
 ; LARGE32-NEXT:    lwz r4, L..C2@l(r3)
 ; LARGE32-NEXT:    bla .__get_tpointer[PR]
 ; LARGE32-NEXT:    add r3, r3, r4
-; LARGE32-NEXT:    lwz r5, 0(r3)
-; LARGE32-NEXT:    lwz r3, 4(r3)
-; LARGE32-NEXT:    addis r4, L..C4@u(r2)
-; LARGE32-NEXT:    lwz r4, L..C4@l(r4)
-; LARGE32-NEXT:    lwz r6, 0(r4)
-; LARGE32-NEXT:    lwz r4, 4(r4)
-; LARGE32-NEXT:    addc r4, r4, r3
-; LARGE32-NEXT:    adde r3, r6, r5
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
 ; LARGE32-NEXT:    addi r1, r1, 32
 ; LARGE32-NEXT:    lwz r0, 8(r1)
 ; LARGE32-NEXT:    mtlr r0
@@ -664,15 +664,15 @@ define i64 @loadTLInit2() {
 ; SMALL32-NEXT:    stwu r1, -32(r1)
 ; SMALL32-NEXT:    lwz r4, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
 ; SMALL32-NEXT:    bla .__get_tpointer[PR]
+; SMALL32-NEXT:    lwz r5, L..C4(r2) # @VarInit
 ; SMALL32-NEXT:    stw r0, 40(r1)
 ; SMALL32-NEXT:    add r3, r3, r4
-; SMALL32-NEXT:    lwz r4, L..C4(r2) # @VarInit
-; SMALL32-NEXT:    lwz r5, 0(r3)
-; SMALL32-NEXT:    lwz r3, 4(r3)
-; SMALL32-NEXT:    lwz r6, 0(r4)
-; SMALL32-NEXT:    lwz r4, 4(r4)
-; SMALL32-NEXT:    addc r4, r4, r3
-; SMALL32-NEXT:    adde r3, r6, r5
+; SMALL32-NEXT:    lwz r6, 4(r5)
+; SMALL32-NEXT:    lwz r5, 0(r5)
+; SMALL32-NEXT:    lwz r4, 4(r3)
+; SMALL32-NEXT:    lwz r3, 0(r3)
+; SMALL32-NEXT:    addc r4, r6, r4
+; SMALL32-NEXT:    adde r3, r5, r3
 ; SMALL32-NEXT:    addi r1, r1, 32
 ; SMALL32-NEXT:    lwz r0, 8(r1)
 ; SMALL32-NEXT:    mtlr r0
@@ -687,14 +687,14 @@ define i64 @loadTLInit2() {
 ; LARGE32-NEXT:    lwz r4, L..C3@l(r3)
 ; LARGE32-NEXT:    bla .__get_tpointer[PR]
 ; LARGE32-NEXT:    add r3, r3, r4
-; LARGE32-NEXT:    lwz r5, 0(r3)
-; LARGE32-NEXT:    lwz r3, 4(r3)
-; LARGE32-NEXT:    addis r4, L..C4@u(r2)
-; LARGE32-NEXT:    lwz r4, L..C4@l(r4)
-; LARGE32-NEXT:    lwz r6, 0(r4)
-; LARGE32-NEXT:    lwz r4, 4(r4)
-; LARGE32-NEXT:    addc r4, r4, r3
-; LARGE32-NEXT:    adde r3, r6, r5
+; LARGE32-NEXT:    lwz r4, 4(r3)
+; LARGE32-NEXT:    lwz r3, 0(r3)
+; LARGE32-NEXT:    addis r5, L..C4@u(r2)
+; LARGE32-NEXT:    lwz r5, L..C4@l(r5)
+; LARGE32-NEXT:    lwz r6, 4(r5)
+; LARGE32-NEXT:    lwz r5, 0(r5)
+; LARGE32-NEXT:    addc r4, r6, r4
+; LARGE32-NEXT:    adde r3, r5, r3
 ; LARGE32-NEXT:    addi r1, r1, 32
 ; LARGE32-NEXT:    lwz r0, 8(r1)
 ; LARGE32-NEXT:    mtlr r0

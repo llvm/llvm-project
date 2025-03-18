@@ -1779,31 +1779,31 @@ TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
   return TemplateArgument(llvm::ArrayRef(Arguments, NumArguments));
 }
 
-FunctionParmPackExpr::FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
+FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
                                            SourceLocation NameLoc,
                                            unsigned NumParams,
-                                           VarDecl *const *Params)
+                                           ValueDecl *const *Params)
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
     std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<VarDecl *>());
+                            getTrailingObjects<ValueDecl *>());
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::Create(const ASTContext &Context, QualType T,
-                             VarDecl *ParamPack, SourceLocation NameLoc,
-                             ArrayRef<VarDecl *> Params) {
-  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(Params.size())))
+                             ValueDecl *ParamPack, SourceLocation NameLoc,
+                             ArrayRef<ValueDecl *> Params) {
+  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(Params.size())))
       FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::CreateEmpty(const ASTContext &Context,
                                   unsigned NumParams) {
-  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(NumParams)))
+  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(NumParams)))
       FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
 }
 
@@ -1964,53 +1964,4 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
-}
-
-ResolvedUnexpandedPackExpr::ResolvedUnexpandedPackExpr(SourceLocation BL,
-                                                       QualType QT,
-                                                       unsigned NumExprs)
-    : Expr(ResolvedUnexpandedPackExprClass, QT, VK_PRValue, OK_Ordinary),
-      BeginLoc(BL), NumExprs(NumExprs) {
-  // C++ [temp.dep.expr]p3
-  // An id-expression is type-dependent if it is
-  //    - associated by name lookup with a pack
-  setDependence(ExprDependence::TypeValueInstantiation |
-                ExprDependence::UnexpandedPack);
-}
-
-ResolvedUnexpandedPackExpr *
-ResolvedUnexpandedPackExpr::CreateDeserialized(ASTContext &Ctx,
-                                               unsigned NumExprs) {
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
-                           alignof(ResolvedUnexpandedPackExpr));
-  return new (Mem)
-      ResolvedUnexpandedPackExpr(SourceLocation(), QualType(), NumExprs);
-}
-
-ResolvedUnexpandedPackExpr *
-ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
-                                   QualType T, unsigned NumExprs) {
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
-                           alignof(ResolvedUnexpandedPackExpr));
-  ResolvedUnexpandedPackExpr *New =
-      new (Mem) ResolvedUnexpandedPackExpr(BL, T, NumExprs);
-
-  auto Exprs = New->getExprs();
-  std::uninitialized_fill(Exprs.begin(), Exprs.end(), nullptr);
-
-  return New;
-}
-
-ResolvedUnexpandedPackExpr *
-ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
-                                   QualType T, ArrayRef<Expr *> Exprs) {
-  auto *New = Create(Ctx, BL, T, Exprs.size());
-  std::uninitialized_copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
-  return New;
-}
-
-ResolvedUnexpandedPackExpr *ResolvedUnexpandedPackExpr::getFromDecl(Decl *D) {
-  if (auto *BD = dyn_cast<BindingDecl>(D))
-    return dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding());
-  return nullptr;
 }

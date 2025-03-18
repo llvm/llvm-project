@@ -143,10 +143,14 @@ llvm::Expected<uint32_t> ValueObjectMemory::CalculateNumChildren(uint32_t max) {
   return *child_count <= max ? *child_count : max;
 }
 
-std::optional<uint64_t> ValueObjectMemory::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectMemory::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  if (m_type_sp)
-    return m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  if (m_type_sp) {
+    if (auto size =
+            m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+      return *size;
+    return llvm::createStringError("could not get byte size of memory object");
+  }
   return m_compiler_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
 }
 

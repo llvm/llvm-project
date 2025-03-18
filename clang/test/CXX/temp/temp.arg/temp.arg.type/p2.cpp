@@ -15,14 +15,13 @@ B<function> b; // expected-note{{instantiation of}}
 
 template <typename T> int f0(void *, const T&); // expected-note{{candidate template ignored: substitution failure}}
 enum {e};
-#if __cplusplus <= 199711L
-// expected-note@-2 {{unnamed type used in template argument was declared here}}
-#endif
+// expected-note@-1 {{unnamed type used in template argument was declared here}}
 
 void test_f0(int n) { // #here
   int i = f0(0, e);
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{template argument uses unnamed type}}
+  // expected-note@-3 {{while substituting deduced template arguments}}
 #endif
 
   int vla[n]; // expected-warning {{variable length arrays in C++ are a Clang extension}}
@@ -59,21 +58,25 @@ namespace N0 {
     f0(
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses unnamed type}}
+    // expected-note@-3 {{while substituting deduced template arguments}}
 #endif
 
        &f1<__typeof__(e1)>);
 #if __cplusplus <= 199711L
  // expected-warning@-2 {{template argument uses unnamed type}}
+ // expected-note@-3 {{while substituting explicitly-specified template arguments}}
 #endif
 
     int (*fp1)(int, __typeof__(e2)) = f1;
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses unnamed type}}
+    // expected-note@-3 {{while substituting deduced template arguments}}
 #endif
 
     f1(e2);
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses unnamed type}}
+    // expected-note@-3 {{while substituting deduced template arguments}}
 #endif
 
     f1(e2);

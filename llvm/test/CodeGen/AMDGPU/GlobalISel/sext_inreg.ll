@@ -1444,7 +1444,6 @@ define i65 @v_sext_inreg_i65_22(i65 %value) {
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v3, 10, v1
 ; GFX6-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX6-NEXT:    v_bfe_i32 v2, v2, 0, 1
-; GFX6-NEXT:    v_lshr_b64 v[0:1], v[0:1], 0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX6-NEXT:    v_bfe_u32 v1, v1, 0, 10
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v4, 10, v2
@@ -1459,7 +1458,6 @@ define i65 @v_sext_inreg_i65_22(i65 %value) {
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 10, v1
 ; GFX8-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX8-NEXT:    v_bfe_i32 v2, v2, 0, 1
-; GFX8-NEXT:    v_lshrrev_b64 v[0:1], 0, v[0:1]
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX8-NEXT:    v_bfe_u32 v1, v1, 0, 10
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v4, 10, v2
@@ -1473,7 +1471,6 @@ define i65 @v_sext_inreg_i65_22(i65 %value) {
 ; GFX9-NEXT:    v_lshlrev_b64 v[2:3], 22, v[2:3]
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 10, v1
 ; GFX9-NEXT:    v_or_b32_e32 v2, v2, v3
-; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 0, v[0:1]
 ; GFX9-NEXT:    v_bfe_i32 v2, v2, 0, 1
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-NEXT:    v_bfe_u32 v1, v1, 0, 10
@@ -1486,9 +1483,8 @@ define i65 @v_sext_inreg_i65_22(i65 %value) {
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    v_lshlrev_b64 v[2:3], 22, v[2:3]
 ; GFX10PLUS-NEXT:    v_lshrrev_b32_e32 v3, 10, v1
-; GFX10PLUS-NEXT:    v_lshrrev_b64 v[0:1], 0, v[0:1]
-; GFX10PLUS-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX10PLUS-NEXT:    v_bfe_u32 v1, v1, 0, 10
+; GFX10PLUS-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX10PLUS-NEXT:    v_bfe_i32 v2, v2, 0, 1
 ; GFX10PLUS-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX10PLUS-NEXT:    v_lshl_or_b32 v1, v2, 10, v1

@@ -15,8 +15,6 @@
 #include <__bit/countr.h>
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_same.h>
 #include <__utility/integer_sequence.h>
 #include <cstdint>
 
@@ -78,7 +76,7 @@ using __get_as_integer_type_t _LIBCPP_NODEBUG = typename __get_as_integer_type_i
 #  if defined(__AVX__) || defined(__MVS__)
 template <class _Tp>
 inline constexpr size_t __native_vector_size = 32 / sizeof(_Tp);
-#  elif defined(__SSE__) || defined(__ARM_NEON__)
+#  elif defined(__SSE__) || defined(__ARM_NEON)
 template <class _Tp>
 inline constexpr size_t __native_vector_size = 16 / sizeof(_Tp);
 #  elif defined(__MMX__)

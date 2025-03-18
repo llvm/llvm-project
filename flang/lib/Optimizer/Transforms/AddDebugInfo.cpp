@@ -118,7 +118,10 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
     op = conOp.getValue().getDefiningOp();
 
   if (auto cordOp = mlir::dyn_cast_if_present<fir::CoordinateOp>(op)) {
-    optint = fir::getIntIfConstant(cordOp.getOperand(1));
+    auto coors = cordOp.getCoor();
+    if (coors.size() != 1)
+      return false;
+    optint = fir::getIntIfConstant(coors[0]);
     if (!optint)
       return false;
     op = cordOp.getRef().getDefiningOp();
