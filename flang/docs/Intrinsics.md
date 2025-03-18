@@ -1026,10 +1026,10 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 #### Example
 ```Fortran
 PROGRAM example_hostnm
-  CHARACTER(len=255) :: cwd
+  CHARACTER(len=255) :: hnam
   INTEGER :: status
-  CALL hostnm(cwd, status)
-  PRINT *, cwd
+  CALL hostnm(hnam, status)
+  PRINT *, hnam
   PRINT *, status
 END PROGRAM
 ```
