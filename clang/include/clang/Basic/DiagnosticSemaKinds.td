@@ -7639,9 +7639,13 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
-def err_conv_mixed_enum_types_cxx26 : Error<
+
+def err_conv_mixed_enum_types: Error <
   "invalid %sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">;
+def warn_conv_mixed_enum_types_cxx26 : Warning <
+  err_conv_mixed_enum_types.Summary>,
+  InGroup<EnumEnumConversion>, DefaultError;
 
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
