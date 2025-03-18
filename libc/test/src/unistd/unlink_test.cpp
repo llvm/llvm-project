@@ -16,19 +16,20 @@
 #include <sys/stat.h>
 
 using LlvmLibcUnlinkTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-namespace ESM = LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST_F(LlvmLibcUnlinkTest, CreateAndUnlink) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "unlink.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
 
-  ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), ESM::Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), ESM::Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }
 
 TEST_F(LlvmLibcUnlinkTest, UnlinkNonExistentFile) {
-  ASSERT_THAT(LIBC_NAMESPACE::unlink("non-existent-file"), ESM::Fails(ENOENT));
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  ASSERT_THAT(LIBC_NAMESPACE::unlink("non-existent-file"), Fails(ENOENT));
 }
