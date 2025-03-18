@@ -895,14 +895,16 @@ SDValue XtensaTargetLowering::LowerSTACKSAVE(SDValue Op,
 
 SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                 SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  SDValue NewSP = Op.getOperand(1);
+
   if (Subtarget.isWindowedABI()) {
-    SDValue NewSP =
-        DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::i32, Op.getOperand(1));
-    return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP, NewSP);
-  } else {
-    return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
-                            Op.getOperand(1));
+    return DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, Chain,
+                       DAG.getRegister(Xtensa::SP, NewSP.getValueType()),
+                       NewSP);
   }
+
+  return DAG.getCopyToReg(Chain, SDLoc(Op), Xtensa::SP, NewSP);
 }
 
 SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
@@ -944,9 +946,11 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
   SDValue NewSP = DAG.getNode(ISD::SUB, DL, VT, SP, SizeRoundUp); // Value
   if (Subtarget.isWindowedABI()) {
-    NewSP = DAG.getNode(XtensaISD::MOVSP, DL, MVT::i32, NewSP);
+    Chain = DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, SP.getValue(1),
+                        DAG.getRegister(SPReg, NewSP.getValueType()), NewSP);
+  } else {
+    Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain
   }
-  Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain
 
   SDValue NewVal = DAG.getCopyFromReg(Chain, DL, SPReg, MVT::i32);
   Chain = NewVal.getValue(1);
@@ -1383,6 +1387,16 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     if (MI.memoperands_empty() || (*MI.memoperands_begin())->isVolatile()) {
       BuildMI(*MBB, MI, DL, TII.get(Xtensa::MEMW));
     }
+    return MBB;
+  }
+  case Xtensa::MOVSP_P: {
+    MachineOperand SP = MI.getOperand(0);
+    MachineOperand NewSP = MI.getOperand(1);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::MOVSP), SP.getReg())
+        .addReg(NewSP.getReg());
+    MI.eraseFromParent();
+
     return MBB;
   }
   default:

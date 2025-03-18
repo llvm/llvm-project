@@ -719,10 +719,15 @@ def : Pat<(Xtensa_callw8 AR:$dst),
           (CALLX8 AR:$dst)>;
 
 def MOVSP : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
-                    "movsp\t$t, $s",
-                    [(set AR:$t, (Xtensa_movsp AR:$s))]>,
-                    Requires<[HasWindowed]> {
+                    "movsp\t$t, $s", []>, Requires<[HasWindowed]> {
   let r = 0x01;
+}
+
+// Use this pseudo operation instead of getCopyToReg function to
+// update SP register.
+let usesCustomInserter = 1, Predicates = [HasWindowed] in {
+  def MOVSP_P : Pseudo<(outs), (ins AR:$t, AR:$s),
+                      "!movsp_p\t$t, $s", [(Xtensa_movsp AR:$t, AR:$s)]>;
 }
 
 let isReturn = 1, isTerminator = 1,
