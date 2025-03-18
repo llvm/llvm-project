@@ -13,9 +13,9 @@ module attributes {transform.with_named_sequence} {
 }
 
 
-// CHECK-LABEL: @extract_elementwise
+// CHECK-LABEL: @extract_elementwise_scalar
 //  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
-func.func @extract_elementwise(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f32 {
+func.func @extract_elementwise_scalar(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f32 {
 // CHECK:   %[[EXT0:.*]] = vector.extract %[[ARG0]][1] : f32 from vector<4xf32>
 // CHECK:   %[[EXT1:.*]] = vector.extract %[[ARG1]][1] : f32 from vector<4xf32>
 // CHECK:   %[[RES:.*]] = arith.addf %[[EXT0]], %[[EXT1]] : f32
