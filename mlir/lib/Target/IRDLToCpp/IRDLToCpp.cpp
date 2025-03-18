@@ -76,7 +76,7 @@ static std::string snakeToCamel(llvm::StringRef in, bool capitalize = false) {
 }
 
 static std::string snakeToPascal(llvm::StringRef in) {
-    return snakeToCamel(in, /*capitalize=*/true);
+  return snakeToCamel(in, /*capitalize=*/true);
 }
 
 static std::string typeToCppName(irdl::TypeOp type) {
@@ -490,61 +490,81 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   return success();
 }
 
-LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
-                                              raw_ostream &output) {
+LogicalResult
+irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
+                                raw_ostream &output) {
   static const auto typeDefTempl = detail::Template(
 #include "Templates/TypeDef.txt"
   );
 
-  StringRef dialectName = dialect.getSymName();
+  llvm::LogicalResult result = success();
 
-  // TODO: deal with no more constraints than the verifier allows.
-  if (dialectName.size() < 1)
-    return dialect->emitError("dialect name must be more than one character");
-  if (!llvm::isAlpha(dialectName[0]))
-    return dialect->emitError("dialect name must start with a letter");
-  if (!llvm::all_of(dialectName,
-                    [](char c) { return llvm::isAlnum(c) || c == '_'; }))
-    return dialect->emitError(
-        "dialect name must only contain letters, numbers or underscores");
+  for (auto dialect : dialects) {
+    StringRef dialectName = dialect.getSymName();
 
-  if (failed(verifySupported(dialect)))
-    return failure();
+    // TODO: deal with no more constraints than the verifier allows.
+    if (dialectName.size() < 1) {
+      result =
+          dialect->emitError("dialect name must be more than one character");
+      continue;
+    }
+    if (!llvm::isAlpha(dialectName[0])) {
+      result = dialect->emitError("dialect name must start with a letter");
+      continue;
+    }
+    if (!llvm::all_of(dialectName,
+                      [](char c) { return llvm::isAlnum(c) || c == '_'; })) {
+      result = dialect->emitError(
+          "dialect name must only contain letters, numbers or underscores");
+      continue;
+    }
 
-  llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
-                                                                dialectName};
-  std::string namespaceOpen;
-  std::string namespaceClose;
-  std::string namespacePath;
-  llvm::raw_string_ostream namespaceOpenStream(namespaceOpen);
-  llvm::raw_string_ostream namespaceCloseStream(namespaceClose);
-  llvm::raw_string_ostream namespacePathStream(namespacePath);
-  for (auto &pathElement : namespaceAbsolutePath) {
-    namespaceOpenStream << "namespace " << pathElement << " {\n";
-    namespaceCloseStream << "} // namespace " << pathElement << "\n";
-    namespacePathStream << "::" << pathElement;
+    if (failed(verifySupported(dialect)))
+      result = failure();
+
+    llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
+                                                                  dialectName};
+    std::string namespaceOpen;
+    std::string namespaceClose;
+    std::string namespacePath;
+    llvm::raw_string_ostream namespaceOpenStream(namespaceOpen);
+    llvm::raw_string_ostream namespaceCloseStream(namespaceClose);
+    llvm::raw_string_ostream namespacePathStream(namespacePath);
+    for (auto &pathElement : namespaceAbsolutePath) {
+      namespaceOpenStream << "namespace " << pathElement << " {\n";
+      namespaceCloseStream << "} // namespace " << pathElement << "\n";
+      namespacePathStream << "::" << pathElement;
+    }
+
+    std::string cppShortName = snakeToPascal(dialectName);
+    std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
+    std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
+
+    DialectStrings dialectStrings;
+    dialectStrings.dialectName = dialectName;
+    dialectStrings.dialectBaseTypeName = dialectBaseTypeName;
+    dialectStrings.dialectCppName = cppName;
+    dialectStrings.dialectCppShortName = cppShortName;
+    dialectStrings.namespaceOpen = namespaceOpen;
+    dialectStrings.namespaceClose = namespaceClose;
+    dialectStrings.namespacePath = namespacePath;
+
+    output << headerTemplateText;
+
+    if (failed(generateInclude(dialect, output, dialectStrings))) {
+      dialect->emitError("Error in Dialect " + dialectName +
+                         " while generating headers");
+      result = failure();
+      continue;
+    }
+
+    if (failed(generateLib(dialect, output, dialectStrings))) {
+      dialect->emitError("Error in Dialect " + dialectName +
+                         " while generating library");
+      result = failure();
+      continue;
+    }
   }
 
-  std::string cppShortName = snakeToPascal(dialectName);
-  std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
-  std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
-
-  DialectStrings dialectStrings;
-  dialectStrings.dialectName = dialectName;
-  dialectStrings.dialectBaseTypeName = dialectBaseTypeName;
-  dialectStrings.dialectCppName = cppName;
-  dialectStrings.dialectCppShortName = cppShortName;
-  dialectStrings.namespaceOpen = namespaceOpen;
-  dialectStrings.namespaceClose = namespaceClose;
-  dialectStrings.namespacePath = namespacePath;
-
-  output << headerTemplateText;
-
-  if (failed(generateInclude(dialect, output, dialectStrings)))
-    return failure();
-
-  if (failed(generateLib(dialect, output, dialectStrings)))
-    return failure();
-
-  return success();
+  return result;
 }

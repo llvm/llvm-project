@@ -108,10 +108,21 @@ public:
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {
     return {index, __OP_OPERAND_COUNT__};
   }
+
   ::mlir::Operation::operand_range getODSOperands(unsigned index) {
     auto valueRange = getODSOperandIndexAndLength(index);
     return {std::next(getOperation()->operand_begin(), valueRange.first),
              std::next(getOperation()->operand_begin(), valueRange.first + valueRange.second)};
+  }
+
+  std::pair<unsigned, unsigned> getODSResultIndexAndLength(unsigned index) {
+    return {index, __OP_RESULT_COUNT__};
+  }
+
+  ::mlir::Operation::result_range getODSResults(unsigned index) {
+    auto valueRange = getODSResultIndexAndLength(index);
+    return {std::next(getOperation()->result_begin(), valueRange.first),
+             std::next(getOperation()->result_begin(), valueRange.first + valueRange.second)};
   }
 
   __OP_GETTER_DECLS__

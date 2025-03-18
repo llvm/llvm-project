@@ -29,7 +29,7 @@ namespace irdl {
 ///
 ///  // This define generates code for the dialect's class definitions
 ///  #define GEN_DIALECT_DEF
-LogicalResult translateIRDLDialectToCpp(irdl::DialectOp dialect,
+LogicalResult translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialect,
                                         raw_ostream &output);
 
 } // namespace irdl

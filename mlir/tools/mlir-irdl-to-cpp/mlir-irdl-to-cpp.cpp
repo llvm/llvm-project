@@ -82,36 +82,20 @@ static LogicalResult translateIRDLToCpp(int argc, char **argv) {
     return failure();
 
   auto moduleOp = llvm::cast<ModuleOp>(*op);
+  llvm::SmallVector<irdl::DialectOp> dialects{
+      moduleOp.getOps<irdl::DialectOp>()};
 
   if (!verifyDiagnostics) {
     SourceMgrDiagnosticHandler sourceMgrHandler(*sourceMgr, &ctx);
+    if (failed(irdl::translateIRDLDialectToCpp(dialects, output->os())))
+      return failure();
 
-    for (Operation &op : moduleOp.getOps()) {
-      auto dialectOp = llvm::dyn_cast<irdl::DialectOp>(op);
-      if (!dialectOp)
-        continue;
-
-      // TODO: accept multiple operations in translation to not generate headers
-      // multiple times.
-      if (failed(irdl::translateIRDLDialectToCpp(dialectOp, output->os()))) {
-        return failure();
-      }
-    }
     output->keep();
     return success();
   }
 
   SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &ctx);
-
-  for (Operation &op : moduleOp.getOps()) {
-    auto dialectOp = llvm::dyn_cast<irdl::DialectOp>(op);
-    if (!dialectOp)
-      continue;
-
-    // TODO: accept multiple operations in translation to not generate headers
-    // multiple times.
-    ((void)irdl::translateIRDLDialectToCpp(dialectOp, output->os()));
-  }
+  ((void)irdl::translateIRDLDialectToCpp(dialects, output->os()));
   return sourceMgrHandler.verify();
 }
 
