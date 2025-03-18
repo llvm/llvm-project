@@ -74,7 +74,7 @@ class InstructionInfoView : public InstructionView {
     bool mayLoad = false;
     bool mayStore = false;
     bool hasUnmodeledSideEffects = false;
-    std::string OpcodeName = "";
+    StringRef OpcodeName = "";
     std::string Resources = "";
   };
   using IIVDVec = SmallVector<InstructionInfoViewData, 16>;
