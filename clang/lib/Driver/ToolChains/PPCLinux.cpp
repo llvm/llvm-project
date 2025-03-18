@@ -109,7 +109,7 @@ void PPCLinuxToolChain::addFortranRuntimeLibs(
   const char *Path;
   if (getVFS().exists(Twine(
           Path = getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static,
-                                        getDriver().IsFlangMode()))))
+                                        true))))
     CmdArgs.push_back(Path);
   else if (getVFS().exists(Twine(Path = getCompilerRTArgString(
                                      Args, "runtime", ToolChain::FT_Shared,
