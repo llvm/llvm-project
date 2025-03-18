@@ -1238,12 +1238,6 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
-def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
-  "DynamicVGPR",
-  "true",
-  "Enable dynamic VGPR mode"
->;
-
 def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
   "DynamicVGPRBlockSize32",
   "true",
@@ -1269,6 +1263,12 @@ def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
   "UseBlockVGPROpsForCSR",
   "true",
   "Use block load/store for VGPR callee saved registers"
+>;
+
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
 >;
 
 // Dummy feature used to disable assembler instructions.
