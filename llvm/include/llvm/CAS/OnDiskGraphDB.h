@@ -338,6 +338,7 @@ public:
   static Expected<std::unique_ptr<OnDiskGraphDB>>
   open(StringRef Path, StringRef HashName, unsigned HashByteSize,
        std::unique_ptr<OnDiskGraphDB> UpstreamDB = nullptr,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr,
        FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   ~OnDiskGraphDB();
@@ -411,8 +412,8 @@ private:
 
   OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
                 OnDiskDataAllocator DataPool,
-                std::unique_ptr<OnDiskGraphDB> UpstreamDB,
-                FaultInPolicy Policy);
+                std::unique_ptr<OnDiskGraphDB> UpstreamDB, FaultInPolicy Policy,
+                std::shared_ptr<OnDiskCASLogger> Logger);
 
   /// Mapping from hash to object reference.
   ///
@@ -431,6 +432,8 @@ private:
   /// Optional on-disk store to be used for faulting-in nodes.
   std::unique_ptr<OnDiskGraphDB> UpstreamDB;
   FaultInPolicy FIPolicy;
+
+  std::shared_ptr<OnDiskCASLogger> Logger;
 };
 
 } // namespace llvm::cas::ondisk

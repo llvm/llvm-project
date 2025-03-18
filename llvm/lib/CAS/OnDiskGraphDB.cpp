@@ -51,6 +51,7 @@
 #include "OnDiskCommon.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
@@ -511,15 +512,17 @@ StandaloneDataMap<N>::lookup(ArrayRef<uint8_t> Hash) const {
 /// files and has a signal handler registerd that removes them all.
 class OnDiskGraphDB::TempFile {
   bool Done = false;
-  TempFile(StringRef Name, int FD) : TmpName(std::string(Name)), FD(FD) {}
+  TempFile(StringRef Name, int FD, OnDiskCASLogger *Logger)
+      : TmpName(std::string(Name)), FD(FD), Logger(Logger) {}
 
 public:
   /// This creates a temporary file with createUniqueFile.
-  static Expected<TempFile> create(const Twine &Model);
+  static Expected<TempFile> create(const Twine &Model, OnDiskCASLogger *Logger);
   TempFile(TempFile &&Other) { *this = std::move(Other); }
   TempFile &operator=(TempFile &&Other) {
     TmpName = std::move(Other.TmpName);
     FD = Other.FD;
+    Logger = Other.Logger;
     Other.Done = true;
     Other.FD = -1;
     return *this;
@@ -530,6 +533,8 @@ public:
 
   // The open file descriptor.
   int FD = -1;
+
+  OnDiskCASLogger *Logger = nullptr;
 
   // Keep this with the given name.
   Error keep(const Twine &Name);
@@ -575,9 +580,13 @@ Error OnDiskGraphDB::TempFile::discard() {
 
   // Always try to close and remove.
   std::error_code RemoveEC;
-  if (!TmpName.empty())
-    if (std::error_code EC = sys::fs::remove(TmpName))
+  if (!TmpName.empty()) {
+    std::error_code EC = sys::fs::remove(TmpName);
+    if (Logger)
+      Logger->log_TempFile_remove(TmpName, EC);
+    if (EC)
       return errorCodeToError(EC);
+  }
   TmpName = "";
 
   return Error::success();
@@ -588,6 +597,9 @@ Error OnDiskGraphDB::TempFile::keep(const Twine &Name) {
   Done = true;
   // Always try to close and rename.
   std::error_code RenameEC = sys::fs::rename(TmpName, Name);
+
+  if (Logger)
+    Logger->log_TempFile_keep(TmpName, Name.str(), RenameEC);
 
   if (!RenameEC)
     TmpName = "";
@@ -601,13 +613,16 @@ Error OnDiskGraphDB::TempFile::keep(const Twine &Name) {
 }
 
 Expected<OnDiskGraphDB::TempFile>
-OnDiskGraphDB::TempFile::create(const Twine &Model) {
+OnDiskGraphDB::TempFile::create(const Twine &Model, OnDiskCASLogger *Logger) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC = sys::fs::createUniqueFile(Model, FD, ResultPath))
     return errorCodeToError(EC);
 
-  TempFile Ret(ResultPath, FD);
+  if (Logger)
+    Logger->log_TempFile_create(ResultPath);
+
+  TempFile Ret(ResultPath, FD, Logger);
   return std::move(Ret);
 }
 
@@ -1291,7 +1306,8 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
 Expected<OnDiskGraphDB::MappedTempFile>
 OnDiskGraphDB::createTempFile(StringRef FinalPath, uint64_t Size) {
   assert(Size && "Unexpected request for an empty temp file");
-  Expected<TempFile> File = TempFile::create(FinalPath + ".%%%%%%");
+  Expected<TempFile> File =
+      TempFile::create(FinalPath + ".%%%%%%", Logger.get());
   if (!File)
     return File.takeError();
 
@@ -1516,7 +1532,8 @@ static bool useSmallMappedFiles(const Twine &P) {
 
 Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
     StringRef AbsPath, StringRef HashName, unsigned HashByteSize,
-    std::unique_ptr<OnDiskGraphDB> UpstreamDB, FaultInPolicy Policy) {
+    std::unique_ptr<OnDiskGraphDB> UpstreamDB,
+    std::shared_ptr<OnDiskCASLogger> Logger, FaultInPolicy Policy) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
 
@@ -1540,10 +1557,11 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
 
   std::optional<OnDiskHashMappedTrie> Index;
   if (Error E =
-          OnDiskHashMappedTrie::create(
-              AbsPath + Slash + FilePrefix + IndexFile,
-              IndexTableName + "[" + HashName + "]", HashByteSize * CHAR_BIT,
-              /*DataSize=*/sizeof(TrieRecord), MaxIndexSize, /*MinFileSize=*/MB)
+          OnDiskHashMappedTrie::create(AbsPath + Slash + FilePrefix + IndexFile,
+                                       IndexTableName + "[" + HashName + "]",
+                                       HashByteSize * CHAR_BIT,
+                                       /*DataSize=*/sizeof(TrieRecord),
+                                       MaxIndexSize, /*MinFileSize=*/MB, Logger)
               .moveInto(Index))
     return std::move(E);
 
@@ -1554,7 +1572,7 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
   if (Error E = OnDiskDataAllocator::create(
                     AbsPath + Slash + FilePrefix + DataPoolFile,
                     DataPoolTableName + "[" + HashName + "]" + PolicyName,
-                    MaxDataPoolSize, /*MinFileSize=*/MB, UserHeaderSize,
+                    MaxDataPoolSize, /*MinFileSize=*/MB, UserHeaderSize, Logger,
                     [](void *UserHeaderPtr) {
                       new (UserHeaderPtr) std::atomic<uint64_t>(0);
                     })
@@ -1567,16 +1585,17 @@ Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
 
   return std::unique_ptr<OnDiskGraphDB>(
       new OnDiskGraphDB(AbsPath, std::move(*Index), std::move(*DataPool),
-                        std::move(UpstreamDB), Policy));
+                        std::move(UpstreamDB), Policy, std::move(Logger)));
 }
 
 OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
                              OnDiskDataAllocator DataPool,
                              std::unique_ptr<OnDiskGraphDB> UpstreamDB,
-                             FaultInPolicy Policy)
+                             FaultInPolicy Policy,
+                             std::shared_ptr<OnDiskCASLogger> Logger)
     : Index(std::move(Index)), DataPool(std::move(DataPool)),
       RootPath(RootPath.str()), UpstreamDB(std::move(UpstreamDB)),
-      FIPolicy(Policy) {
+      FIPolicy(Policy), Logger(std::move(Logger)) {
   /// Lifetime for "big" objects not in DataPool.
   ///
   /// NOTE: Could use ThreadSafeHashMappedTrie here. For now, doing something

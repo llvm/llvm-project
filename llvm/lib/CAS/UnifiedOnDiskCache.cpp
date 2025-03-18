@@ -52,6 +52,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
@@ -197,6 +198,11 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
 
   assert(!DBDirs.empty());
 
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger;
+  if (Error E =
+          ondisk::OnDiskCASLogger::openIfEnabled(RootPath).moveInto(Logger))
+    return std::move(E);
+
   /// If there is only one directory open databases on it. If there are 2 or
   /// more directories, get the most recent directories and chain them, with the
   /// most recent being the primary one. The remaining directories are unused
@@ -207,13 +213,14 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
     StringRef UpstreamDir = *(DBDirs.end() - 2);
     PathBuf = RootPath;
     sys::path::append(PathBuf, UpstreamDir);
-    if (Error E = OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
-                                      /*UpstreamDB=*/nullptr, FaultInPolicy)
-                      .moveInto(UpstreamGraphDB))
+    if (Error E =
+            OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
+                                /*UpstreamDB=*/nullptr, Logger, FaultInPolicy)
+                .moveInto(UpstreamGraphDB))
       return std::move(E);
     if (Error E = OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
                                          /*ValueName=*/"objectid",
-                                         /*ValueSize=*/sizeof(uint64_t))
+                                         /*ValueSize=*/sizeof(uint64_t), Logger)
                       .moveInto(UpstreamKVDB))
       return std::move(E);
   }
@@ -223,16 +230,17 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   PathBuf = RootPath;
   sys::path::append(PathBuf, PrimaryDir);
   std::unique_ptr<OnDiskGraphDB> PrimaryGraphDB;
-  if (Error E = OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
-                                    std::move(UpstreamGraphDB), FaultInPolicy)
-                    .moveInto(PrimaryGraphDB))
+  if (Error E =
+          OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
+                              std::move(UpstreamGraphDB), Logger, FaultInPolicy)
+              .moveInto(PrimaryGraphDB))
     return std::move(E);
   std::unique_ptr<OnDiskKeyValueDB> PrimaryKVDB;
   // \p UnifiedOnDiskCache does manual chaining for key-value requests,
   // including an extra translation step of the value during fault-in.
   if (Error E = OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
                                        /*ValueName=*/"objectid",
-                                       /*ValueSize=*/sizeof(uint64_t))
+                                       /*ValueSize=*/sizeof(uint64_t), Logger)
                     .moveInto(PrimaryKVDB))
     return std::move(E);
 
@@ -246,6 +254,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   UniDB->PrimaryGraphDB = std::move(PrimaryGraphDB);
   UniDB->UpstreamKVDB = std::move(UpstreamKVDB);
   UniDB->PrimaryKVDB = std::move(PrimaryKVDB);
+  UniDB->Logger = std::move(Logger);
 
   return std::move(UniDB);
 }
@@ -347,7 +356,8 @@ UnifiedOnDiskCache::UnifiedOnDiskCache() = default;
 
 UnifiedOnDiskCache::~UnifiedOnDiskCache() { consumeError(close()); }
 
-Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
+Error UnifiedOnDiskCache::collectGarbage(StringRef Path,
+                                         ondisk::OnDiskCASLogger *Logger) {
   SmallVector<std::string, 4> DBDirs;
   if (Error E = getAllDBDirs(Path, DBDirs))
     return E;
@@ -360,6 +370,8 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
   SmallString<256> PathBuf(Path);
   for (StringRef UnusedSubDir : ArrayRef(DBDirs).drop_back(2)) {
     sys::path::append(PathBuf, UnusedSubDir);
+    if (Logger)
+      Logger->log_UnifiedOnDiskCache_collectGarbage(PathBuf);
     if (std::error_code EC = sys::fs::remove_directories(PathBuf))
       return createFileError(PathBuf, EC);
     sys::path::remove_filename(PathBuf);
@@ -367,4 +379,6 @@ Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
   return Error::success();
 }
 
-Error UnifiedOnDiskCache::collectGarbage() { return collectGarbage(RootPath); }
+Error UnifiedOnDiskCache::collectGarbage() {
+  return collectGarbage(RootPath, Logger.get());
+}

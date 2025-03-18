@@ -1,0 +1,27 @@
+RUN: rm -rf %t
+RUN: split-file %s %t
+RUN: env LLVM_CAS_LOG=2 llvm-cas --cas %t/cas --ingest %t/input
+RUN: FileCheck %s --input-file %t/cas/v1.log
+
+// CHECK: resize mapped file '{{.*}}v8.index'
+// CHECK: mmap '{{.*}}v8.index' [[INDEX:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}v8.data'
+// CHECK: mmap '{{.*}}v8.data' [[DATA:0x[0-9a-f]+]]
+// CHECK: resize mapped file '{{.*}}v3.actions'
+// CHECK: mmap '{{.*}}v3.actions' [[ACTIONS:0x[0-9a-f]+]]
+
+// store input/a contents into the datapool
+// CHECK: create record region=[[INDEX]] offset=[[INPUT_A_OFF:0x[0-9a-f]+]] hash=9b096cd140f119
+// CHECK: cmpxcgh subtrie region=[[INDEX]] offset={{.*}} slot={{.*}} expected=0x0 new=[[INPUT_A_OFF]] prev=0x0
+// CHECK: alloc [[DATA]]
+
+// CHECK: resize mapped file '{{.*}}v3.actions'
+// CHECK: close mmap '{{.*}}v3.actions'
+// CHECK: resize mapped file '{{.*}}v8.data'
+// CHECK: close mmap '{{.*}}v8.data'
+// CHECK: resize mapped file '{{.*}}v8.index'
+// CHECK: close mmap '{{.*}}v8.index'
+
+//--- input/a
+Input 1
+

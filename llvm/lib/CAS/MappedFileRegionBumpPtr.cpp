@@ -54,6 +54,7 @@
 #include "llvm/CAS/MappedFileRegionBumpPtr.h"
 #include "OnDiskCommon.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CAS/OnDiskCASLogger.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -89,9 +90,11 @@ struct FileLockRAII {
 
 Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     const Twine &Path, uint64_t Capacity, int64_t BumpPtrOffset,
+    std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
     function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor) {
   MappedFileRegionBumpPtr Result;
   Result.Path = Path.str();
+  Result.Logger = std::move(Logger);
   // Open the main file.
   int FD;
   if (std::error_code EC = sys::fs::openFileForReadWrite(
@@ -147,6 +150,10 @@ Expected<MappedFileRegionBumpPtr> MappedFileRegionBumpPtr::create(
     // to make this a sparse region, if supported.
     if (std::error_code EC = sys::fs::resize_file(FD, Capacity))
       return createFileError(Result.Path, EC);
+
+    if (Result.Logger)
+      Result.Logger->log_MappedFileRegionBumpPtr_resizeFile(
+          Result.Path, Status.getSize(), Capacity);
   } else {
     // Someone else initialized it.
     Capacity = Status.getSize();
@@ -186,9 +193,14 @@ void MappedFileRegionBumpPtr::destroyImpl() {
   if (BumpPtr) {
     assert(SharedLockFD && "Must have shared lock file open");
     if (tryLockFileThreadSafe(*SharedLockFD) == std::error_code()) {
-      assert(size() <= capacity());
+      size_t Size = size();
+      size_t Capacity = capacity();
+      assert(Size < Capacity);
       (void)sys::fs::resize_file(*FD, size());
       (void)unlockFileThreadSafe(*SharedLockFD);
+
+      if (Logger)
+        Logger->log_MappedFileRegionBumpPtr_resizeFile(Path, Capacity, Size);
     }
   }
 
@@ -203,6 +215,9 @@ void MappedFileRegionBumpPtr::destroyImpl() {
   // Close the file and shared lock.
   Close(FD);
   Close(SharedLockFD);
+
+  if (Logger)
+    Logger->log_MappedFileRegionBumpPtr_close(Path);
 }
 
 void MappedFileRegionBumpPtr::initializeBumpPtr(int64_t BumpPtrOffset) {
@@ -218,6 +233,10 @@ void MappedFileRegionBumpPtr::initializeBumpPtr(int64_t BumpPtrOffset) {
   if (!BumpPtr->compare_exchange_strong(ExistingValue, BumpPtrEndOffset))
     assert(ExistingValue >= BumpPtrEndOffset &&
            "Expected 0, or past the end of the BumpPtr itself");
+
+  if (Logger)
+    Logger->log_MappedFileRegionBumpPtr_create(Path, *FD, data(), capacity(),
+                                               size());
 }
 
 static Error createAllocatorOutOfSpaceError() {
@@ -239,7 +258,15 @@ Expected<int64_t> MappedFileRegionBumpPtr::allocateOffset(uint64_t AllocSize) {
     if (OldEnd <= (int64_t)capacity())
       (void)BumpPtr->exchange(OldEnd);
 
+    if (Logger)
+      Logger->log_MappedFileRegionBumpPtr_oom(Path, capacity(), OldEnd,
+                                              AllocSize);
+
     return createAllocatorOutOfSpaceError();
   }
+
+  if (Logger)
+    Logger->log_MappedFileRegionBumpPtr_allocate(data(), OldEnd, AllocSize);
+
   return OldEnd;
 }

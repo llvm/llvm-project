@@ -57,7 +57,8 @@ public:
   /// \param ValueSize Size for the value bytes.
   static Expected<std::unique_ptr<OnDiskKeyValueDB>>
   open(StringRef Path, StringRef HashName, unsigned KeySize,
-       StringRef ValueName, size_t ValueSize);
+       StringRef ValueName, size_t ValueSize,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr);
 
 private:
   OnDiskKeyValueDB(size_t ValueSize, OnDiskHashMappedTrie Cache)

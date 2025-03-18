@@ -117,7 +117,8 @@ public:
   ///
   /// It is recommended that garbage-collection is triggered concurrently in the
   /// background, so that it has minimal effect on the workload of the process.
-  static Error collectGarbage(StringRef Path);
+  static Error collectGarbage(StringRef Path,
+                              ondisk::OnDiskCASLogger *Logger = nullptr);
 
   Error collectGarbage();
 
@@ -145,6 +146,8 @@ private:
 
   std::unique_ptr<OnDiskKeyValueDB> UpstreamKVDB;
   std::unique_ptr<OnDiskKeyValueDB> PrimaryKVDB;
+
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr;
 };
 
 } // namespace llvm::cas::ondisk

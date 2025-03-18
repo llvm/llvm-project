@@ -16,6 +16,10 @@
 
 namespace llvm::cas {
 
+namespace ondisk {
+class OnDiskCASLogger;
+}
+
 /// Allocator for an owned mapped file region that supports thread-safe and
 /// process-safe bump pointer allocation.
 ///
@@ -48,6 +52,7 @@ public:
   /// access to the file. Must call \c initializeBumpPtr.
   static Expected<MappedFileRegionBumpPtr>
   create(const Twine &Path, uint64_t Capacity, int64_t BumpPtrOffset,
+         std::shared_ptr<ondisk::OnDiskCASLogger> Logger,
          function_ref<Error(MappedFileRegionBumpPtr &)> NewFileConstructor);
 
   /// Finish initializing the bump pointer. Must be called by
@@ -99,6 +104,7 @@ private:
     std::swap(Path, RHS.Path);
     std::swap(FD, RHS.FD);
     std::swap(SharedLockFD, RHS.SharedLockFD);
+    std::swap(Logger, RHS.Logger);
   }
 
 private:
@@ -107,6 +113,7 @@ private:
   std::string Path;
   std::optional<int> FD;
   std::optional<int> SharedLockFD;
+  std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr;
 };
 
 } // namespace llvm::cas

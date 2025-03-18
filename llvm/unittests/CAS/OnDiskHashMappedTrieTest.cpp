@@ -161,7 +161,7 @@ TEST(OnDiskHashMappedTrieTest, OutOfSpace) {
   ASSERT_THAT_ERROR(OnDiskHashMappedTrie::create(
                         Temp.path("NoSpace2").str(), "index",
                         /*NumHashBits=*/8, /*DataSize=*/8, /*MaxFileSize=*/100,
-                        /*NewInitialFileSize=*/std::nullopt,
+                        /*NewInitialFileSize=*/std::nullopt, /*Logger=*/nullptr,
                         /*NewTableNumRootBits=*/1, /*NewTableNumSubtrieBits=*/1)
                         .moveInto(Trie),
                     Succeeded());
