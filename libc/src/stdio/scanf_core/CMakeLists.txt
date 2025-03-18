@@ -16,8 +16,6 @@ if(LIBC_TARGET_OS_IS_GPU)
     libc.src.stdio.ungetc
     libc.src.stdio.ferror
   )
-elseif(LIBC_TARGET_OS_IS_BAREMETAL)
-  # There's no FILE* for baremetal.
 elseif(LLVM_LIBC_FULL_BUILD)
   list(APPEND file_deps
     libc.src.__support.File.file
@@ -66,7 +64,6 @@ add_header_library(
     .converter
     .core_structs
     libc.src.__support.arg_list
-    ${file_deps}
   ${use_system_file}
 )
 
@@ -107,7 +104,6 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
-    ${file_deps}
   ${use_system_file}
 )
 
