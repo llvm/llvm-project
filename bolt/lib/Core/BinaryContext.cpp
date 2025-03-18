@@ -2284,21 +2284,21 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
 }
 
 void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                  uint32_t Type, bool Optional, uint64_t Addend,
+                                  uint32_t Type, uint64_t Addend,
                                   uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
-  Section->addRelocation(Address - Section->getAddress(), Symbol, Type,
-                         Optional, Addend, Value);
+  Section->addRelocation(Address - Section->getAddress(), Symbol, Type, Addend,
+                         Value);
 }
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
-                                         uint32_t Type, bool Optional,
-                                         uint64_t Addend, uint64_t Value) {
+                                         uint32_t Type, uint64_t Addend,
+                                         uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Optional, Addend, Value);
+                                Addend, Value);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

@@ -359,18 +359,17 @@ public:
 
   /// Add a new relocation at the given /p Offset.
   void addRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
-                     bool Optional, uint64_t Addend, uint64_t Value = 0) {
+                     uint64_t Addend, uint64_t Value = 0) {
     assert(Offset < getSize() && "offset not within section bounds");
     Relocations.emplace(
-        Relocation{Offset, Symbol, Type, Optional, Addend, Value});
+        Relocation{Offset, Symbol, Type, /* Optional */ false, Addend, Value});
   }
 
   /// Add a dynamic relocation at the given /p Offset.
   void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
-                            bool Optional, uint64_t Addend,
-                            uint64_t Value = 0) {
+                            uint64_t Addend, uint64_t Value = 0) {
     addDynamicRelocation(
-        Relocation{Offset, Symbol, Type, Optional, Addend, Value});
+        Relocation{Offset, Symbol, Type, /*Optional*/ false, Addend, Value});
   }
 
   void addDynamicRelocation(const Relocation &Reloc) {

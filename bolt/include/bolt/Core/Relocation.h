@@ -48,7 +48,7 @@ struct Relocation {
   uint32_t Type;
 
   /// Relocations added by optimizations can be optional.
-  bool Optional;
+  bool Optional = false;
 
   /// The offset from the \p Symbol base used to compute the final
   /// value of this relocation.
@@ -60,6 +60,10 @@ struct Relocation {
 
   /// Return size in bytes of the given relocation \p Type.
   static size_t getSizeForType(uint32_t Type);
+
+  /// Some relocations added by optimizations are optional, meaning they can be
+  /// omitted under certain circumstances.
+  void setOptional() { Optional = true; }
 
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }

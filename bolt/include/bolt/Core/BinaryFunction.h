@@ -1261,7 +1261,7 @@ public:
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
-                     bool Optional, uint64_t Addend, uint64_t Value);
+                     uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
