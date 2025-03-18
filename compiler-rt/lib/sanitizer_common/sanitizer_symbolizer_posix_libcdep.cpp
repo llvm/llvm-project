@@ -38,9 +38,35 @@
 // because we do not require a C++ ABI library to be linked to a program
 // using sanitizers; if it's not present, we'll just use the mangled name.
 namespace __cxxabiv1 {
+// `weak` attribute without definition on AIX will cause linking time undefined
+// symbol error, we use dlopen/dlsym here to find related symbol.
+#  if SANITIZER_AIX
+typedef char *__cxa_demangle_t(const char *mangled, char *buffer,
+                               size_t *length, int *status);
+
+char *__cxa_demangle(const char *mangled, char *buffer, size_t *length,
+                     int *status) {
+  // Use NULL as the module name, so if the libc++abi module is linked into the
+  // main executable, we are able to find the __cxa_demangle symbol and this
+  // impelemtation will not force libc++abi to be loaded to the executable.
+  void *Handler = dlopen(0, RTLD_NOW);
+  if (!Handler) {
+    return nullptr;
+  }
+
+  auto FooPtr =
+      reinterpret_cast<__cxa_demangle_t *>(dlsym(Handler, "__cxa_demangle"));
+  if (!FooPtr) {
+    return nullptr;
+  }
+
+  return FooPtr(mangled, buffer, length, status);
+}
+#  else
   extern "C" SANITIZER_WEAK_ATTRIBUTE
   char *__cxa_demangle(const char *mangled, char *buffer,
                                   size_t *length, int *status);
+#  endif
 }
 
 namespace __sanitizer {
@@ -445,17 +471,17 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
   // Otherwise symbolizer program is unknown, let's search $PATH
   CHECK(path == nullptr);
 #if SANITIZER_APPLE
-  if (const char *found_path = FindPathToBinary("atos")) {
+  if (const char *found_path = FindPathToBinaryOrLibrary("atos")) {
     VReport(2, "Using atos found at: %s\n", found_path);
     return new(*allocator) AtosSymbolizer(found_path, allocator);
   }
 #endif  // SANITIZER_APPLE
-  if (const char *found_path = FindPathToBinary("llvm-symbolizer")) {
+  if (const char *found_path = FindPathToBinaryOrLibrary("llvm-symbolizer")) {
     VReport(2, "Using llvm-symbolizer found at: %s\n", found_path);
     return new(*allocator) LLVMSymbolizer(found_path, allocator);
   }
   if (common_flags()->allow_addr2line) {
-    if (const char *found_path = FindPathToBinary("addr2line")) {
+    if (const char *found_path = FindPathToBinaryOrLibrary("addr2line")) {
       VReport(2, "Using addr2line found at: %s\n", found_path);
       return new(*allocator) Addr2LinePool(found_path, allocator);
     }
