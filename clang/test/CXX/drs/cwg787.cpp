@@ -10,4 +10,4 @@
 // This file intentionally does not end with a newline. CWG787 made this
 // well-defined behavior.
 
-// cwg787: 3.0
+// cwg787: 21
