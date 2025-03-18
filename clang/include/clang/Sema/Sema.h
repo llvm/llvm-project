@@ -2499,9 +2499,9 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
-  /// Check the arguments to '__builtin_va_start' or '__builtin_ms_va_start'
-  /// for validity.  Emit an error and return true on failure; return false
-  /// on success.
+  /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
+  /// or '__builtin_c23_va_start' for validity. Emit an error and return true
+  /// on failure; return false on success.
   bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
 
@@ -5591,9 +5591,15 @@ public:
   void ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
 
-  bool EvaluateStaticAssertMessageAsString(Expr *Message, std::string &Result,
-                                           ASTContext &Ctx,
-                                           bool ErrorOnInvalidMessage);
+  enum class StringEvaluationContext { StaticAssert = 0, Asm = 1 };
+
+  bool EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+  bool EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc);
@@ -10761,11 +10767,6 @@ public:
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
 
-  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
-  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
-  /// value has been discarded.
-  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
-
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
   void DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID);
@@ -11046,6 +11047,7 @@ private:
   ///@{
 
 public:
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -15334,6 +15336,13 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
+  DB << llvm::to_underlying(Ctx);
+  return DB;
+}
+
 } // end namespace clang
 
 #endif

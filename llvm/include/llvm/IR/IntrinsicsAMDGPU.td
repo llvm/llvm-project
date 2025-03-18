@@ -2940,19 +2940,20 @@ def int_amdgcn_ds_sub_gs_reg_rtn :
             [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree],
             "", [SDNPMemOperand]>;
 
-class IntDSBVHStackRtn :
+class IntDSBVHStackRtn<LLVMType vdst, LLVMType data1> :
   Intrinsic<
-    [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
+    [vdst, llvm_i32_ty], // %vdst, %addr
     [
       llvm_i32_ty,   // %addr
       llvm_i32_ty,   // %data0
-      llvm_v4i32_ty, // %data1
+      data1,         // %data1
       llvm_i32_ty,   // %offset
     ],
     [ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
-def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn;
+def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn<vdst  = llvm_i32_ty,
+                                                   data1 = llvm_v4i32_ty>;
 
 def int_amdgcn_s_wait_event_export_ready :
   ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
@@ -3029,31 +3030,14 @@ def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_anyint_ty
 // GFX12 Intrinsics
 //===----------------------------------------------------------------------===//
 
-def int_amdgcn_ds_bvh_stack_push4_pop1_rtn : IntDSBVHStackRtn;
+def int_amdgcn_ds_bvh_stack_push4_pop1_rtn : IntDSBVHStackRtn<vdst  = llvm_i32_ty,
+                                                              data1 = llvm_v4i32_ty>;
 
-def int_amdgcn_ds_bvh_stack_push8_pop1_rtn :
-  Intrinsic<
-    [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
-    [
-      llvm_i32_ty,   // %addr
-      llvm_i32_ty,   // %data0
-      llvm_v8i32_ty, // %data1
-      llvm_i32_ty,   // %offset
-    ],
-    [ImmArg<ArgIndex<3>>, IntrWillReturn]
-  >;
+def int_amdgcn_ds_bvh_stack_push8_pop1_rtn : IntDSBVHStackRtn<vdst  = llvm_i32_ty,
+                                                              data1 = llvm_v8i32_ty>;
 
-def int_amdgcn_ds_bvh_stack_push8_pop2_rtn :
-  Intrinsic<
-    [llvm_i64_ty, llvm_i32_ty], // %vdst, %addr
-    [
-      llvm_i32_ty,   // %addr
-      llvm_i32_ty,   // %data0
-      llvm_v8i32_ty, // %data1
-      llvm_i32_ty,   // %offset
-    ],
-    [ImmArg<ArgIndex<3>>, IntrWillReturn]
-  >;
+def int_amdgcn_ds_bvh_stack_push8_pop2_rtn : IntDSBVHStackRtn<vdst  = llvm_i64_ty,
+                                                              data1 = llvm_v8i32_ty>;
 
 // <vdata>, <ray_origin>, <ray_dir>
 //   llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,

@@ -1291,4 +1291,29 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
+
+def ModuleFlagAttr
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+  let summary = "LLVM module flag metadata";
+  let description = [{
+    Represents a single entry of llvm.module.flags metadata
+    (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
+    flag described by `ModFlagBehaviorAttr`, the second is a string ID
+    and third is the value of the flag (currently only integer constants
+    are supported).
+
+    Example:
+    ```mlir
+      #llvm.mlir.module_flag<error, "wchar_size", 4>
+    ```
+  }];
+  let parameters = (ins "ModFlagBehavior":$behavior,
+                        "StringAttr":$key,
+                        "uint32_t":$value);
+  let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
+}
+
 #endif // LLVMIR_ATTRDEFS

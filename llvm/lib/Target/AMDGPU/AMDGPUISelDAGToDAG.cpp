@@ -447,8 +447,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     return;
   }
 
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
-               Triple::amdgcn;
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
   if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
       CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
     uint64_t C = 0;
@@ -4770,7 +4769,7 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
-  assert(CurDAG->getTarget().getTargetTriple().getArch() == Triple::amdgcn);
+  assert(CurDAG->getTarget().getTargetTriple().isAMDGCN());
 
   const SIRegisterInfo *SIRI =
     static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
