@@ -1864,7 +1864,7 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
   assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
          "TypeTraitExprBits.Kind overflow!");
 
-  TypeTraitExprBits.IsBooleanTypeTrait = Value.index() == 0;
+  TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
   if (TypeTraitExprBits.IsBooleanTypeTrait)
     TypeTraitExprBits.Value = std::get<bool>(Value);
   else
