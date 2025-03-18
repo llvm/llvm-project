@@ -90,20 +90,19 @@ struct MissingFeatures {
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
 
-  static bool unsizedTypes() { return false; }
-  static bool scalableVectors() { return false; }
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
+  static bool CGFPOptionsRAII() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
-  static bool methodType() { return false; }
   static bool matrixType() { return false; }
+  static bool methodType() { return false; }
+  static bool scalableVectors() { return false; }
+  static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
-  static bool sanitizers() { return false; }
-  static bool CGFPOptionsRAII() { return false; }
 };
 
 } // namespace cir
