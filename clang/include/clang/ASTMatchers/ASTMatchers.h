@@ -1084,12 +1084,19 @@ AST_POLYMORPHIC_MATCHER_P2(
 /// \code
 ///   template<typename T> struct C {};
 ///   C<int> c;
+///   template<typename T> void f() {}
+///   void func() { f<int>(); };
 /// \endcode
+///
 /// classTemplateSpecializationDecl(templateArgumentCountIs(1))
 ///   matches C<int>.
+///
+/// functionDecl(templateArgumentCountIs(1))
+///   matches f<int>();
 AST_POLYMORPHIC_MATCHER_P(
     templateArgumentCountIs,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    VarTemplateSpecializationDecl, FunctionDecl,
                                     TemplateSpecializationType),
     unsigned, N) {
   return internal::getTemplateSpecializationArgs(Node).size() == N;

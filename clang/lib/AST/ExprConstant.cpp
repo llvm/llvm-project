@@ -7474,7 +7474,7 @@ class APValueToBufferConverter {
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
 
-    if (VTy->isExtVectorBoolType()) {
+    if (VTy->isPackedVectorBoolType(Info.Ctx)) {
       // Special handling for OpenCL bool vectors:
       // Since these vectors are stored as packed bits, but we can't write
       // individual bits to the BitCastBuffer, we'll buffer all of the elements
@@ -7737,11 +7737,11 @@ class BufferToAPValueConverter {
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
     unsigned EltSize =
-        VTy->isExtVectorBoolType() ? 1 : Info.Ctx.getTypeSize(EltTy);
+        VTy->isPackedVectorBoolType(Info.Ctx) ? 1 : Info.Ctx.getTypeSize(EltTy);
 
     SmallVector<APValue, 4> Elts;
     Elts.reserve(NElts);
-    if (VTy->isExtVectorBoolType()) {
+    if (VTy->isPackedVectorBoolType(Info.Ctx)) {
       // Special handling for OpenCL bool vectors:
       // Since these vectors are stored as packed bits, but we can't read
       // individual bits from the BitCastBuffer, we'll buffer all of the
@@ -7870,7 +7870,8 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
   if (const auto *VTy = Ty->getAs<VectorType>()) {
     QualType EltTy = VTy->getElementType();
     unsigned NElts = VTy->getNumElements();
-    unsigned EltSize = VTy->isExtVectorBoolType() ? 1 : Ctx.getTypeSize(EltTy);
+    unsigned EltSize =
+        VTy->isPackedVectorBoolType(Ctx) ? 1 : Ctx.getTypeSize(EltTy);
 
     if ((NElts * EltSize) % Ctx.getCharWidth() != 0) {
       // The vector's size in bits is not a multiple of the target's byte size,
@@ -17927,10 +17928,12 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
   return {};
 }
 
-bool Expr::EvaluateCharRangeAsString(std::string &Result,
-                                     const Expr *SizeExpression,
-                                     const Expr *PtrExpression, ASTContext &Ctx,
-                                     EvalResult &Status) const {
+template <typename T>
+static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
+                                          const Expr *SizeExpression,
+                                          const Expr *PtrExpression,
+                                          ASTContext &Ctx,
+                                          Expr::EvalResult &Status) {
   LValue String;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
   Info.InConstantContext = true;
@@ -17942,6 +17945,13 @@ bool Expr::EvaluateCharRangeAsString(std::string &Result,
 
   uint64_t Size = SizeValue.getZExtValue();
 
+  // FIXME: better protect against invalid or excessive sizes
+  if constexpr (std::is_same_v<APValue, T>)
+    Result = APValue(APValue::UninitArray{}, Size, Size);
+  else {
+    if (Size < Result.max_size())
+      Result.reserve(Size);
+  }
   if (!::EvaluatePointer(PtrExpression, String, Info))
     return false;
 
@@ -17952,18 +17962,38 @@ bool Expr::EvaluateCharRangeAsString(std::string &Result,
                                         Char))
       return false;
 
-    APSInt C = Char.getInt();
-    Result.push_back(static_cast<char>(C.getExtValue()));
+    if constexpr (std::is_same_v<APValue, T>) {
+      Result.getArrayInitializedElt(I) = std::move(Char);
+    } else {
+      APSInt C = Char.getInt();
+
+      assert(C.getBitWidth() <= 8 &&
+             "string element not representable in char");
+
+      Result.push_back(static_cast<char>(C.getExtValue()));
+    }
+
     if (!HandleLValueArrayAdjustment(Info, PtrExpression, String, CharTy, 1))
       return false;
   }
-  if (!Scope.destroy())
-    return false;
 
-  if (!CheckMemoryLeaks(Info))
-    return false;
+  return Scope.destroy() && CheckMemoryLeaks(Info);
+}
 
-  return true;
+bool Expr::EvaluateCharRangeAsString(std::string &Result,
+                                     const Expr *SizeExpression,
+                                     const Expr *PtrExpression, ASTContext &Ctx,
+                                     EvalResult &Status) const {
+  return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
+                                       PtrExpression, Ctx, Status);
+}
+
+bool Expr::EvaluateCharRangeAsString(APValue &Result,
+                                     const Expr *SizeExpression,
+                                     const Expr *PtrExpression, ASTContext &Ctx,
+                                     EvalResult &Status) const {
+  return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
+                                       PtrExpression, Ctx, Status);
 }
 
 bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
