@@ -263,4 +263,39 @@ std::int32_t RTNAME(GetCwd)(
   return status;
 }
 
+std::int32_t RTNAME(Hostnm)(
+    const Descriptor &hnam, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  RUNTIME_CHECK(terminator, IsValidCharDescriptor(&hnam));
+
+  char buf[256];
+  std::int32_t status{0};
+
+#ifdef _WIN32
+
+  DWORD dwSize{sizeof(buf)};
+
+  // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
+  // in order to avoid adding dependency on Winsock.
+  if (!GetComputerNameEx(ComputerNameDnsHostname, buf, &dwSize)) {
+    status = GetLastError();
+  }
+
+#else
+
+  if (gethostname(buf, sizeof(buf)) < 0) {
+    status = errno;
+  }
+
+#endif
+
+  if (status == 0) {
+    std::int64_t strLen{StringLength(buf)};
+    std::int32_t status{CopyCharsToDescriptor(hnam, buf, strLen)};
+  }
+
+  return status;
+}
+
 } // namespace Fortran::runtime
