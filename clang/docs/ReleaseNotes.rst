@@ -314,6 +314,9 @@ C++2c Feature Support
 
 - Implemented `P3176R1 The Oxford variadic comma <https://wg21.link/P3176R1>`_
 
+- The error produced when doing arithmetic operations on enums of different types
+  can be disabled with ``-Wno-enum-enum-conversion``. (#GH92340)
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.
