@@ -488,9 +488,8 @@ def RetCC_X86_64 : CallingConv<[
     CCIfSubtarget<"isTargetWin64()", CCIfRegCallv4<CCDelegateTo<RetCC_X86_Win64_RegCallv4>>>>,
 
   CCIfCC<"CallingConv::X86_RegCall",
-          CCIfSubtarget<"isTargetWin64()",                        
+          CCIfSubtarget<"isTargetWin64()",
                         CCDelegateTo<RetCC_X86_Win64_RegCall>>>,
-
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_SysV64_RegCall>>,
           
   // Mingw64 and native Win64 use Win64 CC
