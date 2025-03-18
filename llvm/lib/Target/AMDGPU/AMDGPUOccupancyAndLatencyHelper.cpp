@@ -20,6 +20,8 @@
 
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
+#include <cmath>
+
 namespace llvm {
 
 // Other info which can help compare schedule result.
