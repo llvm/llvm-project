@@ -1085,6 +1085,59 @@ public:
   void extractLastLaneOfOperand(VPBuilder &Builder);
 };
 
+/// Helper type to provide functions to access incoming values and blocks for
+/// phi-like recipes. RecipeTy must be a sub-class of VPRecipeBase.
+template <typename RecipeTy> class VPPhiAccessors {
+  /// Return a VPRecipeBase* to the current object.
+  const VPRecipeBase *getAsRecipe() const {
+    return static_cast<const RecipeTy *>(this);
+  }
+
+public:
+  /// Returns the incoming VPValue with index \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return getAsRecipe()->getOperand(Idx);
+  }
+
+  /// Returns an interator range over the incoming values
+  VPUser::const_operand_range incoming_values() const {
+    return getAsRecipe()->operands();
+  }
+
+  /// Returns the incoming block with index \p Idx.
+  const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  using const_incoming_block_iterator =
+      mapped_iterator<detail::index_iterator,
+                      std::function<const VPBasicBlock *(size_t)>>;
+  using const_incoming_blocks_range =
+      iterator_range<const_incoming_block_iterator>;
+
+  const_incoming_block_iterator incoming_block_begin() const {
+    return const_incoming_block_iterator(
+        detail::index_iterator(0),
+        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  }
+  const_incoming_block_iterator incoming_block_end() const {
+    return const_incoming_block_iterator(
+        detail::index_iterator(getAsRecipe()->getNumOperands()),
+        [this](size_t Idx) { return getIncomingBlock(Idx); });
+  }
+
+  /// Returns an iterator range over the incoming blocks.
+  const_incoming_blocks_range incoming_blocks() const {
+    return make_range(incoming_block_begin(), incoming_block_end());
+  }
+
+  /// Returns an iterator range over pairs of incoming values and correspondingx
+  /// incoming blocks.
+  detail::zippy<llvm::detail::zip_shortest, VPUser::const_operand_range,
+                const_incoming_blocks_range>
+  incoming_values_and_blocks() const {
+    return zip(incoming_values(), incoming_blocks());
+  }
+};
+
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
 /// opcode and operands of the recipe. This recipe covers most of the
 /// traditional vectorization cases where each recipe transforms into a
@@ -1883,8 +1936,8 @@ public:
 /// recipe is placed in an entry block to a (non-replicate) region, it must have
 /// exactly 2 incoming values, the first from the predecessor of the region and
 /// the second from the exiting block of the region.
-class VPWidenPHIRecipe : public VPSingleDefRecipe {
-  /// Name to use for the generated IR instruction for the widened phi.
+class VPWidenPHIRecipe : public VPSingleDefRecipe,
+                         public VPPhiAccessors<VPWidenPHIRecipe> {
   std::string Name;
 
 public:
@@ -1914,12 +1967,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  /// Returns the \p I th incoming VPBasicBlock.
-  VPBasicBlock *getIncomingBlock(unsigned I);
-
-  /// Returns the \p I th incoming VPValue.
-  VPValue *getIncomingValue(unsigned I) { return getOperand(I); }
 };
 
 /// A recipe for handling first-order recurrence phis. The start value is the
