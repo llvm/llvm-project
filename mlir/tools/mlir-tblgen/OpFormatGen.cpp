@@ -303,22 +303,33 @@ struct OperationFormat {
     std::optional<int> getBuilderIdx() const { return builderIdx; }
     void setBuilderIdx(int idx) { builderIdx = idx; }
 
+    int getNumArgs() const { return resolver.size(); }
+
     /// Get the variable this type is resolved to, or nullptr.
-    const NamedTypeConstraint *getVariable() const {
-      return llvm::dyn_cast_if_present<const NamedTypeConstraint *>(resolver);
+    const NamedTypeConstraint *getVariable(int i) const {
+      return resolver.empty()
+                 ? nullptr
+                 : llvm::dyn_cast_if_present<const NamedTypeConstraint *>(
+                       resolver[i]);
     }
     /// Get the attribute this type is resolved to, or nullptr.
-    const NamedAttribute *getAttribute() const {
-      return llvm::dyn_cast_if_present<const NamedAttribute *>(resolver);
+    const NamedAttribute *getAttribute(int i) const {
+      return resolver.empty()
+                 ? nullptr
+                 : llvm::dyn_cast_if_present<const NamedAttribute *>(
+                       resolver[i]);
     }
     /// Get the transformer for the type of the variable, or std::nullopt.
     std::optional<StringRef> getVarTransformer() const {
       return variableTransformer;
     }
-    void setResolver(ConstArgument arg, std::optional<StringRef> transformer) {
+    void setResolver(const SmallVector<ConstArgument, 1> &arg,
+                     std::optional<StringRef> transformer) {
       resolver = arg;
       variableTransformer = transformer;
-      assert(getVariable() || getAttribute());
+      assert(llvm::all_of(llvm::seq<int>(arg.size()), [&](int i) {
+        return getVariable(i) || getAttribute(i);
+      }));
     }
 
   private:
@@ -327,7 +338,7 @@ struct OperationFormat {
     std::optional<int> builderIdx;
     /// If the type is resolved based upon another operand or result, this is
     /// the variable or the attribute that this type is resolved to.
-    ConstArgument resolver;
+    SmallVector<ConstArgument, 1> resolver;
     /// If the type is resolved based upon another operand or result, this is
     /// a transformer to apply to the variable when resolving.
     std::optional<StringRef> variableTransformer;
@@ -1685,23 +1696,25 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
     std::optional<StringRef> transformer = resolver.getVarTransformer();
     if (!transformer)
       continue;
-    // Ensure that we don't verify the same variables twice.
-    const NamedTypeConstraint *variable = resolver.getVariable();
-    if (!variable || !verifiedVariables.insert(variable).second)
-      continue;
+    for (int i = 0, e = resolver.getNumArgs(); i < e; ++i) {
+      // Ensure that we don't verify the same variables twice.
+      const NamedTypeConstraint *variable = resolver.getVariable(i);
+      if (!variable || !verifiedVariables.insert(variable).second)
+        continue;
 
-    auto constraint = variable->constraint;
-    body << "  for (::mlir::Type type : " << variable->name << "Types) {\n"
-         << "    (void)type;\n"
-         << "    if (!("
-         << tgfmt(constraint.getConditionTemplate(),
-                  &verifierFCtx.withSelf("type"))
-         << ")) {\n"
-         << formatv("      return parser.emitError(parser.getNameLoc()) << "
-                    "\"'{0}' must be {1}, but got \" << type;\n",
-                    variable->name, constraint.getSummary())
-         << "    }\n"
-         << "  }\n";
+      auto constraint = variable->constraint;
+      body << "  for (::mlir::Type type : " << variable->name << "Types) {\n"
+           << "    (void)type;\n"
+           << "    if (!("
+           << tgfmt(constraint.getConditionTemplate(),
+                    &verifierFCtx.withSelf("type"))
+           << ")) {\n"
+           << formatv("      return parser.emitError(parser.getNameLoc()) << "
+                      "\"'{0}' must be {1}, but got \" << type;\n",
+                      variable->name, constraint.getSummary())
+           << "    }\n"
+           << "  }\n";
+    }
   }
 
   // Initialize the set of buildable types.
@@ -1717,26 +1730,30 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
   auto emitTypeResolver = [&](TypeResolution &resolver, StringRef curVar) {
     if (std::optional<int> val = resolver.getBuilderIdx()) {
       body << "odsBuildableType" << *val;
-    } else if (const NamedTypeConstraint *var = resolver.getVariable()) {
-      if (std::optional<StringRef> tform = resolver.getVarTransformer()) {
-        FmtContext fmtContext;
-        fmtContext.addSubst("_ctxt", "parser.getContext()");
-        if (var->isVariadic())
-          fmtContext.withSelf(var->name + "Types");
-        else
-          fmtContext.withSelf(var->name + "Types[0]");
-        body << tgfmt(*tform, &fmtContext);
-      } else {
-        body << var->name << "Types";
-        if (!var->isVariadic())
-          body << "[0]";
+    } else if (std::optional<StringRef> tform = resolver.getVarTransformer()) {
+      FmtContext fmtContext;
+      fmtContext.addSubst("_ctxt", "parser.getContext()");
+      for (int i = 0, e = resolver.getNumArgs(); i < e; ++i) {
+        std::string substName = "arg" + std::to_string(i);
+        if (const NamedTypeConstraint *var = resolver.getVariable(i)) {
+          if (var->isVariadic())
+            fmtContext.addSubst(substName, var->name + "Types");
+          else
+            fmtContext.addSubst(substName, var->name + "Types[0]");
+        } else if (const NamedAttribute *attr = resolver.getAttribute(i)) {
+          fmtContext.addSubst(substName, attr->name + "Attr.getType()");
+        } else {
+          assert(false && "resolver arguements should be a type constraint or "
+                          "an attribute");
+        }
       }
-    } else if (const NamedAttribute *attr = resolver.getAttribute()) {
-      if (std::optional<StringRef> tform = resolver.getVarTransformer())
-        body << tgfmt(*tform,
-                      &FmtContext().withSelf(attr->name + "Attr.getType()"));
-      else
-        body << attr->name << "Attr.getType()";
+      body << tgfmt(*tform, &fmtContext);
+    } else if (const NamedTypeConstraint *var = resolver.getVariable(0)) {
+      body << var->name << "Types";
+      if (!var->isVariadic())
+        body << "[0]";
+    } else if (const NamedAttribute *attr = resolver.getAttribute(0)) {
+      body << attr->name << "Attr.getType()";
     } else {
       body << curVar << "Types";
     }
@@ -2717,7 +2734,7 @@ private:
   /// type as well as an optional transformer to apply to that type in order to
   /// properly resolve the type of a variable.
   struct TypeResolutionInstance {
-    ConstArgument resolver;
+    SmallVector<ConstArgument, 1> resolver;
     std::optional<StringRef> transformer;
   };
 
@@ -2827,7 +2844,7 @@ LogicalResult OpFormatParser::verify(SMLoc loc,
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/false);
     } else if (def.getName() == "SameOperandsAndResultType") {
       handleSameTypesConstraint(variableTyResolver, /*includeResults=*/true);
-    } else if (def.isSubClassOf("TypesMatchWith")) {
+    } else if (def.isSubClassOf("InferTypesFrom")) {
       handleTypesMatchConstraint(variableTyResolver, def);
     } else if (!op.allResultTypesKnown()) {
       // This doesn't check the name directly to handle
@@ -3228,9 +3245,9 @@ void OpFormatParser::handleAllTypesMatchConstraint(
 
     // Mark this value as the type resolver for the other variables.
     for (unsigned j = 0; j != i; ++j)
-      variableTyResolver[values[j]] = {arg, std::nullopt};
+      variableTyResolver[values[j]] = {{arg}, std::nullopt};
     for (unsigned j = i + 1; j != e; ++j)
-      variableTyResolver[values[j]] = {arg, std::nullopt};
+      variableTyResolver[values[j]] = {{arg}, std::nullopt};
   }
 }
 
@@ -3251,21 +3268,26 @@ void OpFormatParser::handleSameTypesConstraint(
   // Set the resolvers for each operand and result.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i)
     if (!seenOperandTypes.test(i))
-      variableTyResolver[op.getOperand(i).name] = {resolver, std::nullopt};
+      variableTyResolver[op.getOperand(i).name] = {{resolver}, std::nullopt};
   if (includeResults) {
     for (unsigned i = 0, e = op.getNumResults(); i != e; ++i)
       if (!seenResultTypes.test(i))
-        variableTyResolver[op.getResultName(i)] = {resolver, std::nullopt};
+        variableTyResolver[op.getResultName(i)] = {{resolver}, std::nullopt};
   }
 }
 
 void OpFormatParser::handleTypesMatchConstraint(
     StringMap<TypeResolutionInstance> &variableTyResolver, const Record &def) {
-  StringRef lhsName = def.getValueAsString("lhs");
-  StringRef rhsName = def.getValueAsString("rhs");
+  std::vector<StringRef> args = def.getValueAsListOfStrings("args");
+  StringRef target = def.getValueAsString("target");
   StringRef transformer = def.getValueAsString("transformer");
-  if (ConstArgument arg = findSeenArg(lhsName))
-    variableTyResolver[rhsName] = {arg, transformer};
+
+  SmallVector<ConstArgument, 1> resolutionArgs;
+  llvm::for_each(args, [&](StringRef arg) {
+    if (ConstArgument seenArg = findSeenArg(arg))
+      resolutionArgs.push_back(seenArg);
+  });
+  variableTyResolver[target] = {resolutionArgs, transformer};
 }
 
 ConstArgument OpFormatParser::findSeenArg(StringRef name) {
