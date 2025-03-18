@@ -1331,7 +1331,7 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   if (Version.Major >= 10) {
     KernelCode.compute_pgm_resource_registers |=
         S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-        S_00B848_MEM_ORDERED(1);
+        S_00B848_MEM_ORDERED(1) | S_00B848_FWD_PROGRESS(1);
   }
 }
 
