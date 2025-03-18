@@ -2947,11 +2947,6 @@ def : Pat<(int_nvvm_read_ptx_sreg_envreg29), (MOV_SPECIAL ENVREG29)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg30), (MOV_SPECIAL ENVREG30)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg31), (MOV_SPECIAL ENVREG31)>;
 
-
-def : Pat<(int_nvvm_swap_lo_hi_b64 i64:$src),
-          (V2I32toI64 (I64toI32H $src),
-                      (I64toI32L $src))> ;
-
 //-----------------------------------
 // Texture Intrinsics
 //-----------------------------------

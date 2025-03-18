@@ -1292,7 +1292,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (Name.consume_front("abs."))
         // nvvm.abs.{i,ii}
         Expand = Name == "i" || Name == "ll";
-      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f")
+      else if (Name == "clz.ll" || Name == "popc.ll" || Name == "h2f" ||
+               Name == "swap.lo.hi.b64")
         Expand = true;
       else if (Name.consume_front("max.") || Name.consume_front("min."))
         // nvvm.{min,max}.{i,ii,ui,ull}
@@ -2370,6 +2371,11 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *ZExtShiftAmt = Builder.CreateZExt(CI->getOperand(1), Int64Ty);
     Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshr,
                                   {Arg, Arg, ZExtShiftAmt});
+  } else if (Name == "swap.lo.hi.b64") {
+    Type *Int64Ty = Builder.getInt64Ty();
+    Value *Arg = CI->getOperand(0);
+    Rep = Builder.CreateIntrinsic(Int64Ty, Intrinsic::fshl,
+                                  {Arg, Arg, Builder.getInt64(32)});
   } else if ((Name.consume_front("ptr.gen.to.") &&
               (Name.starts_with("local") || Name.starts_with("shared") ||
                Name.starts_with("global") || Name.starts_with("constant"))) ||
