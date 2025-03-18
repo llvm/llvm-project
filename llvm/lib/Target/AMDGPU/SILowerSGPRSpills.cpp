@@ -101,16 +101,6 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
-static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
-                          const TargetRegisterInfo *TRI) {
-  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
-    if (MBB.isLiveIn(*R)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /// Insert spill code for the callee-saved registers used in the function.
 static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI,
@@ -119,32 +109,14 @@ static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
   const TargetFrameLowering *TFI = ST.getFrameLowering();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   MachineBasicBlock::iterator I = SaveBlock.begin();
-  if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
-    for (const CalleeSavedInfo &CS : CSI) {
-      // Insert the spill to the stack frame.
-      MCRegister Reg = CS.getReg();
+  MachineInstrSpan MIS(I, &SaveBlock);
+  bool Success = TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI);
+  assert(Success && "spillCalleeSavedRegisters should always succeed");
+  (void)Success;
 
-      MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-
-      // If this value was already livein, we probably have a direct use of the
-      // incoming register value, so don't kill at the spill point. This happens
-      // since we pass some special inputs (workgroup IDs) in the callee saved
-      // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, TRI);
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, TRI, Register());
-
-      if (Indexes) {
-        assert(std::distance(MIS.begin(), I) == 1);
-        MachineInstr &Inst = *std::prev(I);
-        Indexes->insertMachineInstrInMaps(Inst);
-      }
-
-      if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
-    }
+  if (Indexes) {
+    for (MachineInstr &Inst : make_range(MIS.begin(), I))
+      Indexes->insertMachineInstrInMaps(Inst);
   }
 }
 
