@@ -613,12 +613,10 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-NEXT:    lxv v0, 16(r3)
 ; CHECK-NEXT:    lxv v6, 48(r3)
 ; CHECK-NEXT:    vmr v4, v3
+; CHECK-NEXT:    vmr v3, v2
 ; CHECK-NEXT:    vmr v5, v2
-; CHECK-NEXT:    xxlor v2, v4, v4
-; CHECK-NEXT:    vmr v2, v5
-; CHECK-NEXT:    xxlor v3, v5, v5
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp38, vsp32, 0
-; CHECK-NEXT:    xvf64gerpp wacc0, vsp34, v5
+; CHECK-NEXT:    xvf64gerpp wacc0, vsp34, v2
 ; CHECK-NEXT:    xvf64gerpp wacc0, vsp36, v4
 ; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
@@ -634,12 +632,10 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-BE-NEXT:    lxv v0, 32(r3)
 ; CHECK-BE-NEXT:    lxv v6, 0(r3)
 ; CHECK-BE-NEXT:    vmr v4, v3
+; CHECK-BE-NEXT:    vmr v3, v2
 ; CHECK-BE-NEXT:    vmr v5, v2
-; CHECK-BE-NEXT:    xxlor v2, v4, v4
-; CHECK-BE-NEXT:    vmr v2, v5
-; CHECK-BE-NEXT:    xxlor v3, v5, v5
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp38, vsp32, 0
-; CHECK-BE-NEXT:    xvf64gerpp wacc0, vsp34, v5
+; CHECK-BE-NEXT:    xvf64gerpp wacc0, vsp34, v2
 ; CHECK-BE-NEXT:    xvf64gerpp wacc0, vsp36, v4
 ; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
@@ -652,11 +648,9 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    vmr v4, v3
 ; CHECK-O0-NEXT:    vmr v5, v2
-; CHECK-O0-NEXT:    # implicit-def: $vsrp16
-; CHECK-O0-NEXT:    vmr v1, v5
-; CHECK-O0-NEXT:    xxlor v2, v0, v0
-; CHECK-O0-NEXT:    xxlor v3, v1, v1
+; CHECK-O0-NEXT:    vmr v3, v5
 ; CHECK-O0-NEXT:    vmr v2, v4
+; CHECK-O0-NEXT:    vmr v1, v5
 ; CHECK-O0-NEXT:    vmr v0, v5
 ; CHECK-O0-NEXT:    lxv vs0, 0(r3)
 ; CHECK-O0-NEXT:    # implicit-def: $vsrp20
@@ -688,11 +682,9 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-O0-BE:       # %bb.0: # %entry
 ; CHECK-O0-BE-NEXT:    vmr v4, v3
 ; CHECK-O0-BE-NEXT:    vmr v5, v2
-; CHECK-O0-BE-NEXT:    # implicit-def: $vsrp16
-; CHECK-O0-BE-NEXT:    vmr v1, v5
-; CHECK-O0-BE-NEXT:    xxlor v2, v0, v0
-; CHECK-O0-BE-NEXT:    xxlor v3, v1, v1
+; CHECK-O0-BE-NEXT:    vmr v3, v5
 ; CHECK-O0-BE-NEXT:    vmr v2, v4
+; CHECK-O0-BE-NEXT:    vmr v1, v5
 ; CHECK-O0-BE-NEXT:    vmr v0, v5
 ; CHECK-O0-BE-NEXT:    lxv vs0, 48(r3)
 ; CHECK-O0-BE-NEXT:    # implicit-def: $vsrp20
@@ -727,12 +719,10 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-AIX64-NEXT:    lxv 0, 32(3)
 ; CHECK-AIX64-NEXT:    lxv 6, 0(3)
 ; CHECK-AIX64-NEXT:    vmr 4, 3
+; CHECK-AIX64-NEXT:    vmr 3, 2
 ; CHECK-AIX64-NEXT:    vmr 5, 2
-; CHECK-AIX64-NEXT:    xxlor 2, 4, 4
-; CHECK-AIX64-NEXT:    vmr 2, 5
-; CHECK-AIX64-NEXT:    xxlor 3, 5, 5
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 38, 32, 0
-; CHECK-AIX64-NEXT:    xvf64gerpp 0, 34, 5
+; CHECK-AIX64-NEXT:    xvf64gerpp 0, 34, 2
 ; CHECK-AIX64-NEXT:    xvf64gerpp 0, 36, 4
 ; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
@@ -748,12 +738,10 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-AIX32-NEXT:    lxv 0, 32(3)
 ; CHECK-AIX32-NEXT:    lxv 6, 0(3)
 ; CHECK-AIX32-NEXT:    vmr 4, 3
+; CHECK-AIX32-NEXT:    vmr 3, 2
 ; CHECK-AIX32-NEXT:    vmr 5, 2
-; CHECK-AIX32-NEXT:    xxlor 2, 4, 4
-; CHECK-AIX32-NEXT:    vmr 2, 5
-; CHECK-AIX32-NEXT:    xxlor 3, 5, 5
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 38, 32, 0
-; CHECK-AIX32-NEXT:    xvf64gerpp 0, 34, 5
+; CHECK-AIX32-NEXT:    xvf64gerpp 0, 34, 2
 ; CHECK-AIX32-NEXT:    xvf64gerpp 0, 36, 4
 ; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
