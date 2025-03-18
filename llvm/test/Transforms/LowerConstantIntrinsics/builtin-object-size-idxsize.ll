@@ -89,19 +89,12 @@ entry:
 
 ; Indices are truncated to the pointer size in a gep. So "i32 -65526" should
 ; be truncated to "i16 10".
-; FIXME: The TST result here is incorrect!
 define i32 @possible_out_of_bounds_gep_i32_trunc(i1 %c0, i1 %c1) {
-; CHECK-REF-LABEL: define i32 @possible_out_of_bounds_gep_i32_trunc(
-; CHECK-REF-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
-; CHECK-REF-NEXT:  [[ENTRY:.*:]]
-; CHECK-REF-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 3, i32 0
-; CHECK-REF-NEXT:    ret i32 [[RES]]
-;
-; CHECK-TST-LABEL: define i32 @possible_out_of_bounds_gep_i32_trunc(
-; CHECK-TST-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
-; CHECK-TST-NEXT:  [[ENTRY:.*:]]
-; CHECK-TST-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 0, i32 3
-; CHECK-TST-NEXT:    ret i32 [[RES]]
+; CHECK-LABEL: define i32 @possible_out_of_bounds_gep_i32_trunc(
+; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 3, i32 0
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %obj = alloca [5 x i8]
@@ -207,7 +200,8 @@ define i32 @out_of_bounds_gep_i32_trunc_select(i1 %c0, i1 %c1) {
 ; CHECK-TST-LABEL: define i32 @out_of_bounds_gep_i32_trunc_select(
 ; CHECK-TST-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
 ; CHECK-TST-NEXT:  [[ENTRY:.*:]]
-; CHECK-TST-NEXT:    ret i32 0
+; CHECK-TST-NEXT:    [[RES:%.*]] = select i1 [[C1]], i32 -1, i32 0
+; CHECK-TST-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %obj = alloca [5 x i8]
