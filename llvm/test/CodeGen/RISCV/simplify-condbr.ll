@@ -5,7 +5,12 @@
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write)
+declare void @llvm.assume(i1 noundef) #0
+
 declare fastcc i1 @S_reginclass()
+
+declare fastcc ptr @Perl_av_store(i64)
 
 define fastcc i32 @S_regrepeat(ptr %startposp, i32 %max, i8 %0, i1 %cmp343) nounwind {
 ; CHECK-LABEL: S_regrepeat:
@@ -104,4 +109,71 @@ if.end1497:                                       ; preds = %if.else1492, %sw.ep
   ret i32 %c.0
 }
 
+define ptr @Perl_pp_refassign(ptr %PL_stack_sp, i1 %tobool.not, i1 %tobool3.not, i1 %cond1) nounwind {
+; CHECK-LABEL: Perl_pp_refassign:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    beqz a1, .LBB1_3
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    bnez a2, .LBB1_4
+; CHECK-NEXT:  .LBB1_2: # %cond.true4
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    bnez a0, .LBB1_5
+; CHECK-NEXT:    j .LBB1_6
+; CHECK-NEXT:  .LBB1_3: # %cond.true
+; CHECK-NEXT:    ld a1, 0(a0)
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB1_2
+; CHECK-NEXT:  .LBB1_4:
+; CHECK-NEXT:    beqz zero, .LBB1_6
+; CHECK-NEXT:  .LBB1_5: # %sw.bb85
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    ld a0, 0(a1)
+; CHECK-NEXT:    call Perl_av_store
+; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:  .LBB1_6: # %common.ret
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  br i1 %tobool.not, label %cond.end, label %cond.true
+
+cond.true:                                        ; preds = %entry
+  %0 = load ptr, ptr %PL_stack_sp, align 8
+  br label %cond.end
+
+cond.end:                                         ; preds = %cond.true, %entry
+  %cond = phi ptr [ %0, %cond.true ], [ null, %entry ]
+  br i1 %tobool3.not, label %cond.end7, label %cond.true4
+
+cond.true4:                                       ; preds = %cond.end
+  %1 = load ptr, ptr %PL_stack_sp, align 8
+  %2 = icmp ne ptr %1, null
+  br label %cond.end7
+
+cond.end7:                                        ; preds = %cond.true4, %cond.end
+  %cond84 = phi i1 [ %2, %cond.true4 ], [ false, %cond.end ]
+  br i1 %cond1, label %if.end48, label %sw.bb
+
+sw.bb:                                            ; preds = %cond.end7
+  call void @llvm.assume(i1 %tobool.not)
+  br label %if.end48
+
+if.end48:                                         ; preds = %sw.bb, %cond.end7
+  br i1 %cond84, label %sw.bb85, label %common.ret
+
+common.ret:                                       ; preds = %sw.bb85, %if.end48
+  ret ptr null
+
+sw.bb85:                                          ; preds = %if.end48
+  %3 = load i64, ptr %cond, align 8
+  %call125 = call fastcc ptr @Perl_av_store(i64 %3)
+  br label %common.ret
+}
+
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
