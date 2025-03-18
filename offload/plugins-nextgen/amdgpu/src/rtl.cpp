@@ -1904,6 +1904,10 @@ private:
   /// Use synchronous copy back.
   bool UseSyncCopyBack;
 
+  /// When copying data from one host buffer to another, only do it
+  /// asynchronously if `MinHostToHostAsyncCopySize <= size`.
+  UInt32Envar OMPX_MinHostToHostAsyncCopySize;
+
   /// Arguments for the callback function.
   PostKernelRunProcessingArgsTy PostKernelRunProcessingArgs;
 
@@ -2304,6 +2308,14 @@ public:
                                              Agent, Src, Agent, CopySize, 0,
                                              nullptr, OutputSignals[0]->get()))
         return Err;
+    }
+
+    if (CopySize < OMPX_MinHostToHostAsyncCopySize) {
+      if (auto Err =
+              OutputSignals[0]->wait(StreamBusyWaitMicroseconds, &Device))
+        return Err;
+      std::memcpy(Dst, Inter, CopySize);
+      return Error::success();
     }
 
     // Consume another stream slot and compute dependencies.
@@ -2904,14 +2916,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, {}), AMDGenericDeviceTy(),
         OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
-        OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 6),
+        OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
         OMPX_GenericSpmdTeamsPerCU(
-            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 0),
+            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 6),
         OMPX_BigJumpLoopTeamsPerCU(
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_TEAMS_PER_CU", 0),
         OMPX_BigJumpLoopMaxTotalTeams(
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_MAX_TOTAL_TEAMS", 1024 * 1024),
-        OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 4000),
+        OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 9000),
         OMPX_SmallBlockSize("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32),
         OMPX_NumBlocksForLowTripcount("LIBOMPTARGET_BLOCKS_FOR_LOW_TRIP_COUNT",
                                       0),
@@ -2942,7 +2954,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                     1 * 1024 * 1024), // 1MB
         OMPX_DGPUMaps("OMPX_DGPU_MAPS", false),
         OMPX_SharedDescriptorMaxSize("LIBOMPTARGET_SHARED_DESCRIPTOR_MAX_SIZE",
-                                     48),
+                                     96),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
@@ -4376,8 +4388,8 @@ private:
       // If this value needs to go above UINT_MAX, consider
       // adding sizeof(size_t) check to avoid unpleasant truncation
       // surprises where size_t is still 32bit.
-      constexpr size_t Almost2Gig = 2000000000u;
-      return Almost2Gig;
+      constexpr size_t Almost3Gig = 3000000000u;
+      return Almost3Gig;
     }
     return 0;
   }
@@ -4713,7 +4725,9 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       Slots(32), NextSlot(0), SyncCycle(0),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
       UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()),
-      UseSyncCopyBack(Device.syncCopyBack()) {}
+      UseSyncCopyBack(Device.syncCopyBack()),
+      OMPX_MinHostToHostAsyncCopySize(
+          "LIBOMPTARGET_AMDGPU_MIN_HOST_TO_HOST_ASYNC_COPY_SIZE", 2048) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.
