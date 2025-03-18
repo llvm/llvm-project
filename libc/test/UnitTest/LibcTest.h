@@ -350,9 +350,9 @@ CString libc_make_test_file_path_func(const char *file_name);
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
-  };                                                                           \
-  TypeList::Tests<SuiteName##_##TestName>::type                                \
+    static TypeList::Tests<SuiteName##_##TestName>::type                       \
       SuiteName##_##TestName##_Instance;                                       \
+  };                                                                           \
   template <typename T> void SuiteName##_##TestName<T>::Run()
 
 #define TYPED_TEST_F(SuiteClass, TestName, TypeList)                           \
@@ -370,9 +370,9 @@ CString libc_make_test_file_path_func(const char *file_name);
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
-  };                                                                           \
-  TypeList::Tests<SuiteClass##_##TestName>::type                               \
+    static TypeList::Tests<SuiteClass##_##TestName>::type                      \
       SuiteClass##_##TestName##_Instance;                                      \
+  };                                                                           \
   template <typename T> void SuiteClass##_##TestName<T>::Run()
 
 #define TEST(SuiteName, TestName)                                              \
@@ -383,8 +383,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     SuiteName##_##TestName() { addTest(this); }                                \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
+    static SuiteName##_##TestName SuiteName##_##TestName##_Instance;           \
   };                                                                           \
-  SuiteName##_##TestName SuiteName##_##TestName##_Instance;                    \
   void SuiteName##_##TestName::Run()
 
 #define TEST_F(SuiteClass, TestName)                                           \
@@ -396,8 +396,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     SuiteClass##_##TestName() { addTest(this); }                               \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
+    static SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;         \
   };                                                                           \
-  SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
 // Helper to trick the compiler into ignoring lack of braces on the else
