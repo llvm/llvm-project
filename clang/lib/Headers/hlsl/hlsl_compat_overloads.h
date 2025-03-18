@@ -72,13 +72,6 @@ max(U p0, vector<T, N> p1) {
   return max((vector<T, N>)p0, p1);
 }
 
-template <typename U, typename V>
-constexpr __detail::enable_if_t<
-    __detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value, U>
-max(U p0, V p1) {
-  return max(p0, (U)p1);
-}
-
 //===----------------------------------------------------------------------===//
 // min builtin overloads
 //===----------------------------------------------------------------------===//
@@ -95,13 +88,6 @@ constexpr __detail::enable_if_t<
     __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
 min(U p0, vector<T, N> p1) {
   return min((vector<T, N>)p0, p1);
-}
-
-template <typename U, typename V>
-constexpr __detail::enable_if_t<
-    __detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value, U>
-min(U p0, V p1) {
-  return min(p0, (U)p1);
 }
 
 } // namespace hlsl
