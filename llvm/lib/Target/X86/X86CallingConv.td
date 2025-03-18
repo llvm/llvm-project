@@ -236,59 +236,56 @@ def RetCC_#NAME : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 // Return-value conventions common to all X86 CC's.
-def RetCC_X86Common
-    : CallingConv<[
-          // Scalar values are returned in AX first, then DX.  For i8, the ABI
-          // requires the values to be in AL and AH, however this code uses AL
-          // and DL instead. This is because using AH for the second register
-          // conflicts with the way LLVM does multiple return values -- a return
-          // of {i16,i8} would end up in AX and AH, which overlap. Front-ends
-          // wishing to conform to the ABI for functions that return two i8
-          // values are currently expected to pack the values into an i16 (which
-          // uses AX, and thus AL:AH).
-          //
-          // For code that doesn't care about the ABI, we allow returning more
-          // than two integer values in registers.
-          CCIfType<[v1i1], CCPromoteToType<i8>>,
-          CCIfType<[i1], CCPromoteToType<i8>>,
-          CCIfType<[i8], CCAssignToReg<[AL, DL, CL]>>,
-          CCIfType<[i16], CCAssignToReg<[AX, DX, CX]>>,
-          CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX]>>,
-          CCIfType<[i64], CCAssignToReg<[RAX, RDX, RCX]>>,
+def RetCC_X86Common : CallingConv<[
+  // Scalar values are returned in AX first, then DX.  For i8, the ABI
+  // requires the values to be in AL and AH, however this code uses AL and DL
+  // instead. This is because using AH for the second register conflicts with
+  // the way LLVM does multiple return values -- a return of {i16,i8} would end
+  // up in AX and AH, which overlap. Front-ends wishing to conform to the ABI
+  // for functions that return two i8 values are currently expected to pack the
+  // values into an i16 (which uses AX, and thus AL:AH).
+  //
+  // For code that doesn't care about the ABI, we allow returning more than two
+  // integer values in registers.
+  CCIfType<[v1i1],  CCPromoteToType<i8>>,
+  CCIfType<[i1],  CCPromoteToType<i8>>,
+  CCIfType<[i8] , CCAssignToReg<[AL, DL, CL]>>,
+  CCIfType<[i16], CCAssignToReg<[AX, DX, CX]>>,
+  CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX]>>,
+  CCIfType<[i64], CCAssignToReg<[RAX, RDX, RCX]>>,
 
-          // Boolean vectors of AVX-512 are returned in SIMD registers.
-          // The call from AVX to AVX-512 function should work,
-          // since the boolean types in AVX/AVX2 are promoted by default.
-          CCIfType<[v2i1], CCPromoteToType<v2i64>>,
-          CCIfType<[v4i1], CCPromoteToType<v4i32>>,
-          CCIfType<[v8i1], CCPromoteToType<v8i16>>,
-          CCIfType<[v16i1], CCPromoteToType<v16i8>>,
-          CCIfType<[v32i1], CCPromoteToType<v32i8>>,
-          CCIfType<[v64i1], CCPromoteToType<v64i8>>,
+  // Boolean vectors of AVX-512 are returned in SIMD registers.
+  // The call from AVX to AVX-512 function should work,
+  // since the boolean types in AVX/AVX2 are promoted by default.
+  CCIfType<[v2i1],  CCPromoteToType<v2i64>>,
+  CCIfType<[v4i1],  CCPromoteToType<v4i32>>,
+  CCIfType<[v8i1],  CCPromoteToType<v8i16>>,
+  CCIfType<[v16i1], CCPromoteToType<v16i8>>,
+  CCIfType<[v32i1], CCPromoteToType<v32i8>>,
+  CCIfType<[v64i1], CCPromoteToType<v64i8>>,
 
-          // Vector types are returned in XMM0 and XMM1, when they fit.  XMM2
-          // and XMM3 can only be used by ABI non-compliant code. If the target
-          // doesn't have XMM registers, it won't have vector types.
-          CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v8bf16, v4f32, v2f64],
-                   CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
+  // Vector types are returned in XMM0 and XMM1, when they fit.  XMM2 and XMM3
+  // can only be used by ABI non-compliant code. If the target doesn't have XMM
+  // registers, it won't have vector types.
+  CCIfType<[v16i8, v8i16, v4i32, v2i64, v8f16, v8bf16, v4f32, v2f64],
+            CCAssignToReg<[XMM0,XMM1,XMM2,XMM3]>>,
 
-          // 256-bit vectors are returned in YMM0 and XMM1, when they fit. YMM2
-          // and YMM3 can only be used by ABI non-compliant code. This vector
-          // type is only supported while using the AVX target feature.
-          CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v16bf16, v8f32, v4f64],
-                   CCAssignToReg<[YMM0, YMM1, YMM2, YMM3]>>,
+  // 256-bit vectors are returned in YMM0 and XMM1, when they fit. YMM2 and YMM3
+  // can only be used by ABI non-compliant code. This vector type is only
+  // supported while using the AVX target feature.
+  CCIfType<[v32i8, v16i16, v8i32, v4i64, v16f16, v16bf16, v8f32, v4f64],
+            CCAssignToReg<[YMM0,YMM1,YMM2,YMM3]>>,
 
-          // 512-bit vectors are returned in ZMM0 and ZMM1, when they fit. ZMM2
-          // and ZMM3 can only be used by ABI non-compliant code. This vector
-          // type is only supported while using the AVX-512 target feature.
-          CCIfType<[v64i8, v32i16, v16i32, v8i64, v32f16, v32bf16, v16f32,
-                    v8f64],
-                   CCAssignToReg<[ZMM0, ZMM1, ZMM2, ZMM3]>>,
+  // 512-bit vectors are returned in ZMM0 and ZMM1, when they fit. ZMM2 and ZMM3
+  // can only be used by ABI non-compliant code. This vector type is only
+  // supported while using the AVX-512 target feature.
+  CCIfType<[v64i8, v32i16, v16i32, v8i64, v32f16, v32bf16, v16f32, v8f64],
+            CCAssignToReg<[ZMM0,ZMM1,ZMM2,ZMM3]>>,
 
-          // Long double types are always returned in FP0 (even with SSE),
-          // except on Win64.
-          CCIfNotSubtarget<"isTargetWindowsOrUEFI64()",
-                           CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>]>;
+  // Long double types are always returned in FP0 (even with SSE),
+  // except on Win64.
+  CCIfNotSubtarget<"isTargetWindowsOrUEFI64()", CCIfType<[f80], CCAssignToReg<[FP0, FP1]>>>
+]>;
 
 // X86-32 C return-value convention.
 def RetCC_X86_32_C : CallingConv<[
@@ -469,46 +466,42 @@ def RetCC_X86_32 : CallingConv<[
 ]>;
 
 // This is the root return-value convention for the X86-64 backend.
-def RetCC_X86_64
-    : CallingConv<[
-          // HiPE uses RetCC_X86_64_HiPE
-          CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_64_HiPE>>,
+def RetCC_X86_64 : CallingConv<[
+  // HiPE uses RetCC_X86_64_HiPE
+  CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_64_HiPE>>,
 
-          // Handle AnyReg calls.
-          CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_X86_64_AnyReg>>,
+  // Handle AnyReg calls.
+  CCIfCC<"CallingConv::AnyReg", CCDelegateTo<RetCC_X86_64_AnyReg>>,
 
-          // Handle Swift calls.
-          CCIfCC<"CallingConv::Swift", CCDelegateTo<RetCC_X86_64_Swift>>,
-          CCIfCC<"CallingConv::SwiftTail", CCDelegateTo<RetCC_X86_64_Swift>>,
+  // Handle Swift calls.
+  CCIfCC<"CallingConv::Swift", CCDelegateTo<RetCC_X86_64_Swift>>,
+  CCIfCC<"CallingConv::SwiftTail", CCDelegateTo<RetCC_X86_64_Swift>>,
 
-          // Handle explicit CC selection
-          CCIfCC<"CallingConv::Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
-          CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<RetCC_X86_64_C>>,
+  // Handle explicit CC selection
+  CCIfCC<"CallingConv::Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
+  CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<RetCC_X86_64_C>>,
 
-          // Handle Vectorcall CC
-          CCIfCC<"CallingConv::X86_VectorCall",
-                 CCDelegateTo<RetCC_X86_64_Vectorcall>>,
+  // Handle Vectorcall CC
+  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_64_Vectorcall>>,
 
-          CCIfCC<"CallingConv::X86_RegCall",
-                 CCIfSubtarget<
-                     "isTargetWin64()",
-                     CCIfRegCallv4<CCDelegateTo<RetCC_X86_Win64_RegCallv4>>>>,
+  CCIfCC<"CallingConv::X86_RegCall",
+    CCIfSubtarget<"isTargetWin64()", CCIfRegCallv4<CCDelegateTo<RetCC_X86_Win64_RegCallv4>>>>,
 
-          CCIfCC<"CallingConv::X86_RegCall",
-                 CCIfSubtarget<"isTargetWin64()",
-                               CCDelegateTo<RetCC_X86_Win64_RegCall>>>,
+  CCIfCC<"CallingConv::X86_RegCall",
+          CCIfSubtarget<"isTargetWin64()",                        
+                        CCDelegateTo<RetCC_X86_Win64_RegCall>>>,
 
-          CCIfCC<"CallingConv::X86_RegCall",
-                 CCDelegateTo<RetCC_X86_SysV64_RegCall>>,
+  CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<RetCC_X86_SysV64_RegCall>>,
+          
+  // Mingw64 and native Win64 use Win64 CC
+  CCIfSubtarget<"isTargetWin64()", CCDelegateTo<RetCC_X86_Win64_C>>,
 
-          // Mingw64 and native Win64 use Win64 CC
-          CCIfSubtarget<"isTargetWin64()", CCDelegateTo<RetCC_X86_Win64_C>>,
+  // UEFI64 uses Win64 CC
+  CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<RetCC_X86_Win64_C>>,
 
-          // UEFI64 uses Win64 CC
-          CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<RetCC_X86_Win64_C>>,
-
-          // Otherwise, drop to normal X86-64 CC
-          CCDelegateTo<RetCC_X86_64_C>]>;
+  // Otherwise, drop to normal X86-64 CC
+  CCDelegateTo<RetCC_X86_64_C>
+]>;
 
 // This is the return-value convention used for the entire X86 backend.
 let Entry = 1 in
@@ -1078,35 +1071,29 @@ def CC_X86_32 : CallingConv<[
 ]>;
 
 // This is the root argument convention for the X86-64 backend.
-def CC_X86_64
-    : CallingConv<
-          [CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_64_GHC>>,
-           CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_64_HiPE>>,
-           CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_X86_64_AnyReg>>,
-           CCIfCC<"CallingConv::Win64", CCDelegateTo<CC_X86_Win64_C>>,
-           CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<CC_X86_64_C>>,
-           CCIfCC<"CallingConv::X86_VectorCall",
-                  CCDelegateTo<CC_X86_Win64_VectorCall>>,
-           CCIfCC<"CallingConv::X86_RegCall",
-                  CCIfSubtarget<
-                      "isTargetWin64()",
-                      CCIfRegCallv4<CCDelegateTo<CC_X86_Win64_RegCallv4>>>>,
-           CCIfCC<"CallingConv::X86_RegCall",
-                  CCIfSubtarget<"isTargetWin64()",
-                                CCDelegateTo<CC_X86_Win64_RegCall>>>,
-           CCIfCC<"CallingConv::X86_RegCall",
-                  CCDelegateTo<CC_X86_SysV64_RegCall>>,
-           CCIfCC<"CallingConv::PreserveNone",
-                  CCDelegateTo<CC_X86_64_Preserve_None>>,
-           CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
+def CC_X86_64 : CallingConv<[
+  CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_64_GHC>>,
+  CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_64_HiPE>>,
+  CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_X86_64_AnyReg>>,
+  CCIfCC<"CallingConv::Win64", CCDelegateTo<CC_X86_Win64_C>>,
+  CCIfCC<"CallingConv::X86_64_SysV", CCDelegateTo<CC_X86_64_C>>,
+  CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_Win64_VectorCall>>,
+  CCIfCC<"CallingConv::X86_RegCall",
+    CCIfSubtarget<"isTargetWin64()", CCIfRegCallv4<CCDelegateTo<CC_X86_Win64_RegCallv4>>>>,
+  CCIfCC<"CallingConv::X86_RegCall",
+    CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
+  CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
+  CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
+  CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
 
-           // Mingw64 and native Win64 use Win64 CC
-           CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
-           // UEFI uses Win64 CC
-           CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<CC_X86_Win64_C>>,
+  // Mingw64 and native Win64 use Win64 CC
+  CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
+  // UEFI uses Win64 CC
+  CCIfSubtarget<"isTargetUEFI64()", CCDelegateTo<CC_X86_Win64_C>>,
 
-           // Otherwise, drop to normal X86-64 CC
-           CCDelegateTo<CC_X86_64_C>]>;
+  // Otherwise, drop to normal X86-64 CC
+  CCDelegateTo<CC_X86_64_C>
+]>;
 
 // This is the argument convention used for the entire X86 backend.
 let Entry = 1 in
