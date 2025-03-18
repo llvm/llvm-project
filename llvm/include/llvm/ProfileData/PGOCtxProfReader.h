@@ -92,7 +92,7 @@ private:
 
   GlobalValue::GUID GUID = 0;
   SmallVector<uint64_t, 16> Counters;
-  const std::optional<uint64_t> RootEntryCount;
+  const std::optional<uint64_t> RootEntryCount{};
   CallsiteMapTy Callsites;
 
   PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters,

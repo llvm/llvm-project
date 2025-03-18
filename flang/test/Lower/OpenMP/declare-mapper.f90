@@ -4,6 +4,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-1.f90 -o - | FileCheck %t/omp-declare-mapper-1.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-2.f90 -o - | FileCheck %t/omp-declare-mapper-2.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-3.f90 -o - | FileCheck %t/omp-declare-mapper-3.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -141,3 +142,32 @@ subroutine declare_mapper_3
    !$omp declare mapper (my_mapper : my_type :: var) map (var, var%values (1:var%num_vals))
    !$omp declare mapper (my_mapper2 : my_type2 :: v) map (mapper(my_mapper) : v%my_type_var) map (tofrom : v%arr)
 end subroutine declare_mapper_3
+
+!--- omp-declare-mapper-4.f90
+subroutine declare_mapper_4
+   type my_type
+      integer              :: num
+   end type
+
+   !CHECK: omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_4my_type.default]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_4Tmy_type\{num:i32\}>]]
+   !$omp declare mapper (my_type :: var) map (var%num)
+
+   type(my_type) :: a
+   integer :: b
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) mapper(@[[MY_TYPE_MAPPER]]) map_clauses(tofrom) capture(ByRef) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "b"}
+   !$omp target map(a, b)
+   a%num = 10
+   b = 20
+   !$omp end target
+
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32) mapper(@[[MY_TYPE_MAPPER]]) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a%{{.*}}"}
+   !$omp target map(a%num)
+   a%num = 30
+   !$omp end target
+
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) mapper(@[[MY_TYPE_MAPPER]]) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+   !$omp target
+   a%num = 40
+   !$omp end target
+end subroutine declare_mapper_4

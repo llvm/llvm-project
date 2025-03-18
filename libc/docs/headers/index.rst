@@ -14,6 +14,7 @@ Implementation Status
    errno
    fenv
    float
+   glob
    inttypes
    locale
    math/index.rst
@@ -39,6 +40,7 @@ Implementation Status
    time
    uchar
    unistd
+   sys/utsname
    wchar
    wctype
 ..
