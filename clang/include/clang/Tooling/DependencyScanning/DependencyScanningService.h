@@ -100,7 +100,7 @@ public:
     return SharedCache;
   }
 
-  ModuleCacheMutexes &getModuleCacheMutexes() { return ModuleCacheMutexes; }
+  ModuleCacheMutexes &getModuleCacheMutexes() { return ModCacheMutexes; }
 
 private:
   const ScanningMode Mode;
@@ -114,7 +114,7 @@ private:
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
   /// The global module cache mutexes.
-  ModuleCacheMutexes ModuleCacheMutexes;
+  ModuleCacheMutexes ModCacheMutexes;
 };
 
 } // end namespace dependencies
