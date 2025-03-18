@@ -241,7 +241,7 @@ static cl::opt<enum InstructionTablesType> InstructionTablesOption(
     cl::cat(ToolOptions), cl::init(InstructionTablesType::NONE),
     cl::ValueOptional);
 
-static bool printInstructionTables(enum InstructionTablesType ITType) {
+static bool shouldPrintInstructionTables(enum InstructionTablesType ITType) {
   if (InstructionTablesOption == ITType)
     return true;
 
@@ -249,7 +249,7 @@ static bool printInstructionTables(enum InstructionTablesType ITType) {
 }
 
 static bool printInstructionTables() {
-  return !printInstructionTables(InstructionTablesType::NONE);
+  return !shouldPrintInstructionTables(InstructionTablesType::NONE);
 }
 
 static cl::opt<bool> PrintInstructionInfoView(
@@ -702,8 +702,9 @@ int main(int argc, char **argv) {
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers, printInstructionTables(InstructionTablesType::FULL),
-            *IM, InstToInstruments));
+            ShowBarriers,
+            shouldPrintInstructionTables(InstructionTablesType::FULL), *IM,
+            InstToInstruments));
       }
 
       Printer.addView(

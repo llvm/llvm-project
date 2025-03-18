@@ -32,7 +32,7 @@ void InstructionInfoView::getComment(const MCInst &MCI,
 
   CommentString = "";
   if (Pos = S.find("\n"); Pos != std::string::npos) {
-    InstrStr = S.substr(0, Pos);
+    InstrStr = S.take_front(Pos);
     // C style comment
     if (((PosCmt = InstrStr.find("/*")) != std::string::npos) &&
         ((Pos = InstrStr.find("*/")) != std::string::npos)) {
@@ -41,7 +41,7 @@ void InstructionInfoView::getComment(const MCInst &MCI,
     }
     // C++ style comment
     if ((PosCmt = InstrStr.find("//")) != std::string::npos) {
-      CommentString = InstrStr.substr(PosCmt, Pos);
+      CommentString = InstrStr.substr(PosCmt);
       return;
     }
   }
