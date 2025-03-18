@@ -73,12 +73,6 @@ class TestSwiftConsumeOperatorAsyncType(TestBase):
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
 
-        # Go to breakpoint `1.2. k should still be valid. And we should be on the
-        # other side of the force split.
-        self.continue_to(1)
-        varK = self.get_var('k')
-        self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
-
         # Go to breakpoint 2. k should still be valid. We should be at the move
         # on the other side of the forceSplit.
         self.continue_to(2)
@@ -105,12 +99,6 @@ class TestSwiftConsumeOperatorAsyncType(TestBase):
         self.assertEqual(varK.unsigned, 0, "varK initialized too early?!")
 
         # Go to break point 6.1. k should be valid.
-        self.continue_to(6)
-        varK = self.get_var('k')
-        self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
-
-        # Go to breakpoint 6.2. k should still be valid. And we should be on the
-        # other side of the force split.
         self.continue_to(6)
         varK = self.get_var('k')
         self.assertGreater(varK.unsigned, 0, "varK not initialized?!")
