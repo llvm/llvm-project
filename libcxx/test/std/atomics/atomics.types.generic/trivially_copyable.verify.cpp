@@ -11,12 +11,6 @@
 // template <class T>
 // struct atomic;
 
-// This test checks that we static_assert inside std::atomic<T> when T
-// is not trivially copyable, however Clang will sometimes emit additional
-// errors while trying to instantiate the rest of std::atomic<T>.
-// We silence those to make the test more robust.
-// ADDITIONAL_COMPILE_FLAGS: -Xclang -verify-ignore-unexpected=error
-
 #include <atomic>
 
 struct NotTriviallyCopyable {
