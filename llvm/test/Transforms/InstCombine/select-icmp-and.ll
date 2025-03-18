@@ -912,3 +912,35 @@ define i16 @select_trunc_nuw_bittest_or(i8 %x) {
   %res = or i16 4, %select
   ret i16 %res
 }
+
+define i16 @select_icmp_bittest_range(i16 range (i16 0, 512) %a) {
+; CHECK-LABEL: @select_icmp_bittest_range(
+; CHECK-NEXT:    [[RES:%.*]] = and i16 [[A:%.*]], 256
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %cmp = icmp ult i16 %a, 256
+  %res = select i1 %cmp, i16 0, i16 256
+  ret i16 %res
+}
+
+define i16 @select_icmp_bittest_range_negative_test(i16 range (i16 0, 513) %a) {
+; CHECK-LABEL: @select_icmp_bittest_range_negative_test(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i16 [[A:%.*]], 256
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i16 0, i16 256
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %cmp = icmp ult i16 %a, 256
+  %res = select i1 %cmp, i16 0, i16 256
+  ret i16 %res
+}
+
+define i16 @select_icmp_bittest_range_negative_test2(i16 range (i16 0, 512) %a) {
+; CHECK-LABEL: @select_icmp_bittest_range_negative_test2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i16 [[A:%.*]], 255
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i16 0, i16 255
+; CHECK-NEXT:    ret i16 [[RES]]
+;
+  %cmp = icmp ult i16 %a, 255
+  %res = select i1 %cmp, i16 0, i16 255
+  ret i16 %res
+}

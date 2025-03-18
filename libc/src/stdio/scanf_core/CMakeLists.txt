@@ -56,10 +56,8 @@ add_header_library(
     libc.src.__support.CPP.string_view
 )
 
-add_object_library(
+add_header_library(
   scanf_main
-  SRCS
-    scanf_main.cpp
   HDRS
     scanf_main.h
   DEPENDS
@@ -78,18 +76,19 @@ add_header_library(
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
-    ${file_deps}
-  ${use_system_file}
 )
 
-add_object_library(
+add_header_library(
+  string_reader
+  HDRS
+    string_reader.h
+  DEPENDS
+    .reader
+    libc.src.__support.macros.attributes
+)
+
+add_header_library(
   converter
-  SRCS
-    converter.cpp
-    string_converter.cpp
-    int_converter.cpp
-    float_converter.cpp
-    ptr_converter.cpp
   HDRS
     converter.h
     converter_utils.h

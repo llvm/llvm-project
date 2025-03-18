@@ -671,7 +671,7 @@ define amdgpu_kernel void @test_fold_canonicalize_select_value_f32(ptr addrspace
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load0 = load volatile float, ptr addrspace(1) %gep, align 4
   %load1 = load volatile float, ptr addrspace(1) %gep, align 4
-  %load2 = load volatile i32, ptr addrspace(1) undef, align 4
+  %load2 = load volatile i32, ptr addrspace(1) poison, align 4
   %v0 = fadd float %load0, 15.0
   %v1 = fadd float %load1, 32.0
   %cond = icmp eq i32 %load2, 0

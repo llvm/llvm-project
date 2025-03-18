@@ -120,10 +120,12 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                           PointerTy,          /*FirstNode*/
                                           PointerTy,          /*FirstMemBlock*/
                                           PointerTy,          /*CurrentMem*/
+                                          I64Ty,              /*TotalEntries*/
                                           SanitizerMutexType, /*Taken*/
                                       });
   FunctionDataTy =
       StructType::get(M.getContext(), {
+                                          PointerTy,          /*Next*/
                                           PointerTy,          /*FlatCtx*/
                                           SanitizerMutexType, /*Mutex*/
                                       });
