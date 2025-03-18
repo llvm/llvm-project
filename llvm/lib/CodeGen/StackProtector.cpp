@@ -542,7 +542,7 @@ static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
   if (SupportsSelectionDAGSP)
     *SupportsSelectionDAGSP = true;
   TLI->insertSSPDeclarations(*M);
-  return B.CreateIntrinsic(Intrinsic::stackguard, {}, {});
+  return B.CreateIntrinsic(Intrinsic::stackguard, {});
 }
 
 /// Insert code into the entry block that stores the stack guard
@@ -563,7 +563,7 @@ static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
 
   Value *GuardSlot = getStackGuard(TLI, M, B, &SupportsSelectionDAGSP);
-  B.CreateIntrinsic(Intrinsic::stackprotector, {}, {GuardSlot, AI});
+  B.CreateIntrinsic(Intrinsic::stackprotector, {GuardSlot, AI});
   return SupportsSelectionDAGSP;
 }
 
