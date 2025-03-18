@@ -139,7 +139,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     IDF.setLiveInBlocks(LiveInBlocks);
     IDF.calculate(IDFBlocks);
 
-    // Reserve map large enough to reduce growth.
+    // Important: reserve sufficient buckets to prevent map growth. [1]
     BBInfos.init(LiveInBlocks.size() + DefBlocks.size());
 
     for (auto [BB, V] : R.Defines)
@@ -166,17 +166,16 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       if (BBInfo.LiveInValue)
         return BBInfo.LiveInValue;
 
-      Value *V = DT->isReachableFromEntry(BB) && PredCache.get(BB).size()
+      Value *V = DT->isReachableFromEntry(BB) && !PredCache.get(BB).empty()
                      ? computeValue(DT->getNode(BB)->getIDom()->getBlock(),
-                                    /* IsLiveOut = */ true)
+                                    /*IsLiveOut=*/true)
                      : UndefValue::get(R.Ty);
 
-      // The call to computeValue for the dominator block can insert another
-      // entry into the map, potentially causing the map to grow and
-      // invalidating the BBInfo reference. Therefore, we need to perform
-      // another map lookup. Simply reserving map size may not be sufficient
-      // as the map could grow further.
-      BBInfos[BB].LiveInValue = V;
+      // The call to computeValue can insert new entries into the map:
+      // assume BBInfos shouldn't grow due to [1] above and BBInfo reference is
+      // valid.
+      assert(&BBInfo == &BBInfos[BB] && "Map shouldn't grow!");
+      BBInfo.LiveInValue = V;
       return V;
     };
 
@@ -184,7 +183,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     for (auto *BB : IDFBlocks) {
       auto *PHI = cast<PHINode>(&BB->front());
       for (BasicBlock *Pred : PredCache.get(BB))
-        PHI->addIncoming(computeValue(Pred, /* IsLiveOut = */ true), Pred);
+        PHI->addIncoming(computeValue(Pred, /*IsLiveOut=*/true), Pred);
     }
 
     // Rewrite actual uses with the inserted definitions.
@@ -195,7 +194,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
       auto *User = cast<Instruction>(U->getUser());
       BasicBlock *BB = getUserBB(U);
-      Value *V = computeValue(BB, /* IsLiveOut = */ BB != User->getParent());
+      Value *V = computeValue(BB, /*IsLiveOut=*/ BB != User->getParent());
       Value *OldVal = U->get();
       assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.
