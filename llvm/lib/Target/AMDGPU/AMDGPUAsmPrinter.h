@@ -50,8 +50,6 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
-  uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
-
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
   void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
                         const SIProgramInfo &KernelInfo,

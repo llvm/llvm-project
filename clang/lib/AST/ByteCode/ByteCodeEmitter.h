@@ -31,8 +31,7 @@ protected:
 
 public:
   /// Compiles the function into the module.
-  Function *compileFunc(const FunctionDecl *FuncDecl);
-  Function *compileObjCBlock(const BlockExpr *BE);
+  void compileFunc(const FunctionDecl *FuncDecl, Function *Func = nullptr);
 
 protected:
   ByteCodeEmitter(Context &Ctx, Program &P) : Ctx(Ctx), P(P) {}
@@ -48,12 +47,16 @@ protected:
   virtual bool visitFunc(const FunctionDecl *E) = 0;
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
   virtual bool visitDeclAndReturn(const VarDecl *E, bool ConstantContext) = 0;
+  virtual bool visit(const Expr *E) = 0;
+  virtual bool emitBool(bool V, const Expr *E) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
   bool jumpFalse(const LabelTy &Label);
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
+  /// Speculative execution.
+  bool speculate(const CallExpr *E, const LabelTy &EndLabel);
 
   /// We're always emitting bytecode.
   bool isActive() const { return true; }

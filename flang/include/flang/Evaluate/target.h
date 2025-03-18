@@ -143,9 +143,10 @@ private:
   std::string compilerOptionsString_;
   std::string compilerVersionString_;
   IeeeFeatures ieeeFeatures_{IeeeFeature::Denormal, IeeeFeature::Divide,
-      IeeeFeature::Flags, IeeeFeature::Inf, IeeeFeature::Io, IeeeFeature::NaN,
-      IeeeFeature::Rounding, IeeeFeature::Sqrt, IeeeFeature::Standard,
-      IeeeFeature::Subnormal, IeeeFeature::UnderflowControl};
+      IeeeFeature::Flags, IeeeFeature::Halting, IeeeFeature::Inf,
+      IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
+      IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
+      IeeeFeature::UnderflowControl};
 };
 
 } // namespace Fortran::evaluate

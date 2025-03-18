@@ -621,7 +621,8 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   value.SetCompilerType(compiler_type);
 
   const uint32_t type_flags = compiler_type.GetTypeInfo();
-  const size_t byte_size = compiler_type.GetByteSize(&thread).value_or(0);
+  const size_t byte_size =
+      llvm::expectedToOptional(compiler_type.GetByteSize(&thread)).value_or(0);
   const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
   const llvm::Triple::ArchType machine = arch.GetMachine();
 
@@ -718,10 +719,7 @@ ValueObjectSP ABISysV_riscv::GetReturnValueObjectImpl(
   return GetReturnValueObjectSimple(thread, return_compiler_type);
 }
 
-bool ABISysV_riscv::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
   uint32_t pc_reg_num = riscv_dwarf::dwarf_gpr_pc;
   uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
   uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
@@ -732,19 +730,16 @@ bool ABISysV_riscv::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // Previous frame's pc is in ra
-
   row->SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("riscv function-entry unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
 
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("riscv function-entry unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_riscv::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindGeneric);
-
+UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
 
@@ -763,11 +758,12 @@ bool ABISysV_riscv::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("riscv default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("riscv default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  return plan_sp;
 }
 
 bool ABISysV_riscv::RegisterIsVolatile(const RegisterInfo *reg_info) {
@@ -850,8 +846,62 @@ void ABISysV_riscv::AugmentRegisterInfo(
       it.value().alt_name.SetCString("x3");
     else if (it.value().name == "fp")
       it.value().alt_name.SetCString("s0");
+    else if (it.value().name == "tp")
+      it.value().alt_name.SetCString("x4");
     else if (it.value().name == "s0")
       it.value().alt_name.SetCString("x8");
+    else if (it.value().name == "s1")
+      it.value().alt_name.SetCString("x9");
+    else if (it.value().name == "t0")
+      it.value().alt_name.SetCString("x5");
+    else if (it.value().name == "t1")
+      it.value().alt_name.SetCString("x6");
+    else if (it.value().name == "t2")
+      it.value().alt_name.SetCString("x7");
+    else if (it.value().name == "a0")
+      it.value().alt_name.SetCString("x10");
+    else if (it.value().name == "a1")
+      it.value().alt_name.SetCString("x11");
+    else if (it.value().name == "a2")
+      it.value().alt_name.SetCString("x12");
+    else if (it.value().name == "a3")
+      it.value().alt_name.SetCString("x13");
+    else if (it.value().name == "a4")
+      it.value().alt_name.SetCString("x14");
+    else if (it.value().name == "a5")
+      it.value().alt_name.SetCString("x15");
+    else if (it.value().name == "a6")
+      it.value().alt_name.SetCString("x16");
+    else if (it.value().name == "a7")
+      it.value().alt_name.SetCString("x17");
+    else if (it.value().name == "s2")
+      it.value().alt_name.SetCString("x18");
+    else if (it.value().name == "s3")
+      it.value().alt_name.SetCString("x19");
+    else if (it.value().name == "s4")
+      it.value().alt_name.SetCString("x20");
+    else if (it.value().name == "s5")
+      it.value().alt_name.SetCString("x21");
+    else if (it.value().name == "s6")
+      it.value().alt_name.SetCString("x22");
+    else if (it.value().name == "s7")
+      it.value().alt_name.SetCString("x23");
+    else if (it.value().name == "s8")
+      it.value().alt_name.SetCString("x24");
+    else if (it.value().name == "s9")
+      it.value().alt_name.SetCString("x25");
+    else if (it.value().name == "s10")
+      it.value().alt_name.SetCString("x26");
+    else if (it.value().name == "s11")
+      it.value().alt_name.SetCString("x27");
+    else if (it.value().name == "t3")
+      it.value().alt_name.SetCString("x28");
+    else if (it.value().name == "t4")
+      it.value().alt_name.SetCString("x29");
+    else if (it.value().name == "t5")
+      it.value().alt_name.SetCString("x30");
+    else if (it.value().name == "t6")
+      it.value().alt_name.SetCString("x31");
 
     // Set generic regnum so lldb knows what the PC, etc is
     it.value().regnum_generic = GetGenericNum(it.value().name.GetStringRef());

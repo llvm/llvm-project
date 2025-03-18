@@ -494,9 +494,6 @@ public:
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
 
-  /// Checks if the object is a union.
-  bool isUnion() const;
-
   /// Checks if the storage is extern.
   bool isExtern() const {
     if (isBlockPointer())

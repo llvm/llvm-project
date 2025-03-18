@@ -225,11 +225,9 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
   int VLMul = 1;
   int NF = 1;
 
-  let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
-
   let TSFlags{0} = IsVRegClass;
-  let TSFlags{3-1} = !logtwo(VLMul);
-  let TSFlags{6-4} = !sub(NF, 1);
+  let TSFlags{2-1} = !logtwo(VLMul);
+  let TSFlags{5-3} = !sub(NF, 1);
 }
 
 class GPRRegisterClass<dag regList>
@@ -247,12 +245,26 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 0, 4))>;
 
 def GPRX0 : GPRRegisterClass<(add X0)>;
-def GPRX1 : GPRRegisterClass<(add X1)>;
-def GPRX5 : GPRRegisterClass<(add X5)>;
 
-def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
+def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DiagnosticType = "InvalidRegClassGPRX1";
+  let DiagnosticString = "register must be ra (x1)";
+}
 
-def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
+def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DiagnosticType = "InvalidRegClassGPRX5";
+  let DiagnosticString = "register must be t0 (x5)";
+}
+
+def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
+  let DiagnosticType = "InvalidRegClassGPRX0";
+  let DiagnosticString = "register must be a GPR excluding zero (x0)";
+}
+
+def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX0X2";
+  let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
+}
 
 def GPRX7 : GPRRegisterClass<(add X7)>;
 
@@ -276,13 +288,19 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 28, 31))>;
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
-def SP : GPRRegisterClass<(add X2)>;
+def SP : GPRRegisterClass<(add X2)> {
+  let DiagnosticType = "InvalidRegClassSP";
+  let DiagnosticString = "register must be sp (x2)";
+}
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))>;
 
-def GPRX1X5 :  GPRRegisterClass<(add X1, X5)>;
+def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
+  let DiagnosticType = "InvalidRegClassGPRX1X5";
+  let DiagnosticString = "register must be ra or t0 (x1 or x5)";
+}
 
 //===----------------------------------------------------------------------===//
 // Even-Odd GPR Pairs
@@ -323,7 +341,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = XLenPairRI,
+let RegInfos = XLenPairRI, CopyCost = 2,
     DecoderMethod = "DecodeGPRPairRegisterClass" in {
 def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
@@ -337,7 +355,7 @@ def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
 def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
 } // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
-let RegInfos = XLenPairRI in
+let RegInfos = XLenPairRI, CopyCost = 2 in
 def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
@@ -692,12 +710,18 @@ foreach m = [1, 2, 4] in {
   }
 }
 
-class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
+class VReg<list<ValueType> regTypes, dag regList, int Vlmul, int nf = 1>
     : RISCVRegisterClass<regTypes,
                          64, // The maximum supported ELEN is 64.
                          regList> {
   let IsVRegClass = 1;
   let VLMul = Vlmul;
+  let NF = nf;
+
+  let Size = !mul(VLMul, NF, 64);
+  let CopyCost = !mul(VLMul, NF);
+  // Prefer to allocate high LMUL registers first.
+  let AllocationPriority = !if(!gt(Vlmul, 1), Vlmul, 0);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
@@ -778,17 +802,15 @@ class VTupRegList<int LMUL, int NF> {
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    let NF = nf in {
-      def "VRN" # nf # "M" # m # "NoV0"
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-               m>;
-      def "VRN" # nf # "M" # m
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-               m>;
-    }
+    def "VRN" # nf # "M" # m # "NoV0"
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+             m, nf>;
+    def "VRN" # nf # "M" # m
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                  !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+             m, nf>;
   }
 }
 

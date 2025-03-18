@@ -30,7 +30,7 @@ class MPI_Type<string name, string typeMnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def MPI_Retval : MPI_Type<"Retval", "retval"> {
-  let summary = "MPI function call return value";
+  let summary = "MPI function call return value (!mpi.retval)";
   let description = [{
     This type represents a return value from an MPI function call.
     This value can be MPI_SUCCESS, MPI_ERR_IN_STATUS, or any error code.

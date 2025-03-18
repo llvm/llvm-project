@@ -23,6 +23,30 @@ llvm.func @basic_memset(%memset_value: i8) -> i32 {
 
 // -----
 
+// CHECK-LABEL: llvm.func @memset_float
+// CHECK-SAME: (%[[MEMSET_VALUE:.*]]: i8)
+llvm.func @memset_float(%memset_value: i8) -> f32 {
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %alloca = llvm.alloca %one x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %memset_len = llvm.mlir.constant(4 : i32) : i32
+  "llvm.intr.memset"(%alloca, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
+  // CHECK-NOT: "llvm.intr.memset"
+  // CHECK: %[[VALUE_8:.*]] = llvm.zext %[[MEMSET_VALUE]] : i8 to i32
+  // CHECK: %[[C8:.*]] = llvm.mlir.constant(8 : i32) : i32
+  // CHECK: %[[SHIFTED_8:.*]] = llvm.shl %[[VALUE_8]], %[[C8]]
+  // CHECK: %[[VALUE_16:.*]] = llvm.or %[[VALUE_8]], %[[SHIFTED_8]]
+  // CHECK: %[[C16:.*]] = llvm.mlir.constant(16 : i32) : i32
+  // CHECK: %[[SHIFTED_16:.*]] = llvm.shl %[[VALUE_16]], %[[C16]]
+  // CHECK: %[[VALUE_32:.*]] = llvm.or %[[VALUE_16]], %[[SHIFTED_16]]
+  // CHECK: %[[VALUE_FLOAT:.+]] = llvm.bitcast %[[VALUE_32]] : i32 to f32
+  // CHECK-NOT: "llvm.intr.memset"
+  %load = llvm.load %alloca {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.return %[[VALUE_FLOAT]] : f32
+  llvm.return %load : f32
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @basic_memset_inline
 // CHECK-SAME: (%[[MEMSET_VALUE:.*]]: i8)
 llvm.func @basic_memset_inline(%memset_value: i8) -> i32 {
@@ -53,16 +77,24 @@ llvm.func @basic_memset_constant() -> i32 {
   %memset_len = llvm.mlir.constant(4 : i32) : i32
   "llvm.intr.memset"(%1, %memset_value, %memset_len) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
-  // CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i8) : i8
-  // CHECK: %[[VALUE_42:.*]] = llvm.zext %[[C42]] : i8 to i32
-  // CHECK: %[[C8:.*]] = llvm.mlir.constant(8 : i32) : i32
-  // CHECK: %[[SHIFTED_42:.*]] = llvm.shl %[[VALUE_42]], %[[C8]]  : i32
-  // CHECK: %[[OR0:.*]] = llvm.or %[[VALUE_42]], %[[SHIFTED_42]]  : i32
-  // CHECK: %[[C16:.*]] = llvm.mlir.constant(16 : i32) : i32
-  // CHECK: %[[SHIFTED:.*]] = llvm.shl %[[OR0]], %[[C16]]  : i32
-  // CHECK: %[[RES:..*]] = llvm.or %[[OR0]], %[[SHIFTED]]  : i32
-  // CHECK: llvm.return %[[RES]] : i32
+  // CHECK: %[[CONSTANT_VAL:..*]] = llvm.mlir.constant(707406378 : i32) : i32
+  // CHECK: llvm.return %[[CONSTANT_VAL]] : i32
   llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @memset_one_byte_constant
+llvm.func @memset_one_byte_constant() -> i8 {
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %alloca = llvm.alloca %one x i8 : (i32) -> !llvm.ptr
+  // CHECK: %{{.+}} = llvm.mlir.constant(42 : i8) : i8
+  %value = llvm.mlir.constant(42 : i8) : i8
+  "llvm.intr.memset"(%alloca, %value, %one) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
+  %load = llvm.load %alloca : !llvm.ptr -> i8
+  // CHECK: %[[CONSTANT_VAL:..*]] = llvm.mlir.constant(42 : i8) : i8
+  // CHECK: llvm.return %[[CONSTANT_VAL]] : i8
+  llvm.return %load : i8
 }
 
 // -----
@@ -74,15 +106,8 @@ llvm.func @basic_memset_inline_constant() -> i32 {
   %memset_value = llvm.mlir.constant(42 : i8) : i8
   "llvm.intr.memset.inline"(%1, %memset_value) <{isVolatile = false, len = 4}> : (!llvm.ptr, i8) -> ()
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
-  // CHECK: %[[C42:.*]] = llvm.mlir.constant(42 : i8) : i8
-  // CHECK: %[[VALUE_42:.*]] = llvm.zext %[[C42]] : i8 to i32
-  // CHECK: %[[C8:.*]] = llvm.mlir.constant(8 : i32) : i32
-  // CHECK: %[[SHIFTED_42:.*]] = llvm.shl %[[VALUE_42]], %[[C8]]  : i32
-  // CHECK: %[[OR0:.*]] = llvm.or %[[VALUE_42]], %[[SHIFTED_42]]  : i32
-  // CHECK: %[[C16:.*]] = llvm.mlir.constant(16 : i32) : i32
-  // CHECK: %[[SHIFTED:.*]] = llvm.shl %[[OR0]], %[[C16]]  : i32
-  // CHECK: %[[RES:..*]] = llvm.or %[[OR0]], %[[SHIFTED]]  : i32
-  // CHECK: llvm.return %[[RES]] : i32
+  // CHECK: %[[CONSTANT_VAL:..*]] = llvm.mlir.constant(707406378 : i32) : i32
+  // CHECK: llvm.return %[[CONSTANT_VAL]] : i32
   llvm.return %2 : i32
 }
 

@@ -1084,12 +1084,19 @@ AST_POLYMORPHIC_MATCHER_P2(
 /// \code
 ///   template<typename T> struct C {};
 ///   C<int> c;
+///   template<typename T> void f() {}
+///   void func() { f<int>(); };
 /// \endcode
+///
 /// classTemplateSpecializationDecl(templateArgumentCountIs(1))
 ///   matches C<int>.
+///
+/// functionDecl(templateArgumentCountIs(1))
+///   matches f<int>();
 AST_POLYMORPHIC_MATCHER_P(
     templateArgumentCountIs,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    VarTemplateSpecializationDecl, FunctionDecl,
                                     TemplateSpecializationType),
     unsigned, N) {
   return internal::getTemplateSpecializationArgs(Node).size() == N;
@@ -2489,7 +2496,28 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral>
     imaginaryLiteral;
 
-/// Matches fixed point literals
+/// Matches fixed-point literals eg.
+/// 0.5r, 0.5hr, 0.5lr, 0.5uhr, 0.5ur, 0.5ulr
+/// 1.0k, 1.0hk, 1.0lk, 1.0uhk, 1.0uk, 1.0ulk
+/// Exponents 1.0e10k
+/// Hexadecimal numbers 0x0.2p2r
+///
+/// Does not match implicit conversions such as first two lines:
+/// \code
+///    short _Accum sa = 2;
+///    _Accum a = 12.5;
+///    _Accum b = 1.25hk;
+///    _Fract c = 0.25hr;
+///    _Fract v = 0.35uhr;
+///    _Accum g = 1.45uhk;
+///    _Accum decexp1 = 1.575e1k;
+/// \endcode
+/// \compile_args{-ffixed-point;-std=c99}
+///
+/// The matcher \matcher{fixedPointLiteral()} matches
+/// \match{1.25hk}, \match{0.25hr}, \match{0.35uhr},
+/// \match{1.45uhk}, \match{1.575e1k}, but does not
+/// match \nomatch{12.5} and \nomatch{2} from the code block.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, FixedPointLiteral>
     fixedPointLiteral;
 
@@ -7473,7 +7501,8 @@ extern const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
 ///   matches "int const *b"
 ///
 /// Usable as: Matcher<BlockPointerType>, Matcher<MemberPointerType>,
-///   Matcher<PointerType>, Matcher<ReferenceType>
+///   Matcher<PointerType>, Matcher<ReferenceType>,
+///   Matcher<ObjCObjectPointerType>
 AST_TYPELOC_TRAVERSE_MATCHER_DECL(
     pointee, getPointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,

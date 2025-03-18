@@ -200,6 +200,7 @@ public:
     case DIEnumeratorKind:
     case DIBasicTypeKind:
     case DIStringTypeKind:
+    case DISubrangeTypeKind:
     case DIDerivedTypeKind:
     case DICompositeTypeKind:
     case DISubroutineTypeKind:
@@ -342,9 +343,6 @@ public:
 };
 
 /// Array subrange.
-///
-/// TODO: Merge into node for DW_TAG_array_type, which should have a custom
-/// type.
 class DISubrange : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -550,6 +548,7 @@ public:
       return false;
     case DIBasicTypeKind:
     case DIStringTypeKind:
+    case DISubrangeTypeKind:
     case DIDerivedTypeKind:
     case DICompositeTypeKind:
     case DISubroutineTypeKind:
@@ -808,6 +807,7 @@ public:
       return false;
     case DIBasicTypeKind:
     case DIStringTypeKind:
+    case DISubrangeTypeKind:
     case DIDerivedTypeKind:
     case DICompositeTypeKind:
     case DISubroutineTypeKind:
@@ -1166,6 +1166,97 @@ inline bool operator!=(DIDerivedType::PtrAuthData Lhs,
                        DIDerivedType::PtrAuthData Rhs) {
   return !(Lhs == Rhs);
 }
+
+/// Subrange type.  This is somewhat similar to DISubrange, but it
+/// is also a DIType.
+class DISubrangeType : public DIType {
+public:
+  typedef PointerUnion<ConstantInt *, DIVariable *, DIExpression *> BoundType;
+
+private:
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DISubrangeType(LLVMContext &C, StorageType Storage, unsigned Line,
+                 uint64_t SizeInBits, uint32_t AlignInBits, DIFlags Flags,
+                 ArrayRef<Metadata *> Ops);
+
+  ~DISubrangeType() = default;
+
+  static DISubrangeType *
+  getImpl(LLVMContext &Context, StringRef Name, DIFile *File, unsigned Line,
+          DIScope *Scope, uint64_t SizeInBits, uint32_t AlignInBits,
+          DIFlags Flags, DIType *BaseType, Metadata *LowerBound,
+          Metadata *UpperBound, Metadata *Stride, Metadata *Bias,
+          StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, getCanonicalMDString(Context, Name), File, Line,
+                   Scope, SizeInBits, AlignInBits, Flags, BaseType, LowerBound,
+                   UpperBound, Stride, Bias, Storage, ShouldCreate);
+  }
+
+  static DISubrangeType *getImpl(LLVMContext &Context, MDString *Name,
+                                 Metadata *File, unsigned Line, Metadata *Scope,
+                                 uint64_t SizeInBits, uint32_t AlignInBits,
+                                 DIFlags Flags, Metadata *BaseType,
+                                 Metadata *LowerBound, Metadata *UpperBound,
+                                 Metadata *Stride, Metadata *Bias,
+                                 StorageType Storage, bool ShouldCreate = true);
+
+  TempDISubrangeType cloneImpl() const {
+    return getTemporary(getContext(), getName(), getFile(), getLine(),
+                        getScope(), getSizeInBits(), getAlignInBits(),
+                        getFlags(), getBaseType(), getRawLowerBound(),
+                        getRawUpperBound(), getRawStride(), getRawBias());
+  }
+
+  BoundType convertRawToBound(Metadata *IN) const;
+
+public:
+  DEFINE_MDNODE_GET(DISubrangeType,
+                    (MDString * Name, Metadata *File, unsigned Line,
+                     Metadata *Scope, uint64_t SizeInBits, uint32_t AlignInBits,
+                     DIFlags Flags, Metadata *BaseType, Metadata *LowerBound,
+                     Metadata *UpperBound, Metadata *Stride, Metadata *Bias),
+                    (Name, File, Line, Scope, SizeInBits, AlignInBits, Flags,
+                     BaseType, LowerBound, UpperBound, Stride, Bias))
+  DEFINE_MDNODE_GET(DISubrangeType,
+                    (StringRef Name, DIFile *File, unsigned Line,
+                     DIScope *Scope, uint64_t SizeInBits, uint32_t AlignInBits,
+                     DIFlags Flags, DIType *BaseType, Metadata *LowerBound,
+                     Metadata *UpperBound, Metadata *Stride, Metadata *Bias),
+                    (Name, File, Line, Scope, SizeInBits, AlignInBits, Flags,
+                     BaseType, LowerBound, UpperBound, Stride, Bias))
+
+  TempDISubrangeType clone() const { return cloneImpl(); }
+
+  /// Get the base type this is derived from.
+  DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
+  Metadata *getRawBaseType() const { return getOperand(3); }
+
+  Metadata *getRawLowerBound() const { return getOperand(4).get(); }
+
+  Metadata *getRawUpperBound() const { return getOperand(5).get(); }
+
+  Metadata *getRawStride() const { return getOperand(6).get(); }
+
+  Metadata *getRawBias() const { return getOperand(7).get(); }
+
+  BoundType getLowerBound() const {
+    return convertRawToBound(getRawLowerBound());
+  }
+
+  BoundType getUpperBound() const {
+    return convertRawToBound(getRawUpperBound());
+  }
+
+  BoundType getStride() const { return convertRawToBound(getRawStride()); }
+
+  BoundType getBias() const { return convertRawToBound(getRawBias()); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DISubrangeTypeKind;
+  }
+};
 
 /// Composite types.
 ///

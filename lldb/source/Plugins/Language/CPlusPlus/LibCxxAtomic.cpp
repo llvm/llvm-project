@@ -96,8 +96,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -117,11 +115,6 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::Update() {
     m_real_child = GetLibCxxAtomicValue(m_backend).get();
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::

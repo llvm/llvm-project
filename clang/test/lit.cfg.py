@@ -29,6 +29,7 @@ config.suffixes = [
     ".c",
     ".cpp",
     ".i",
+    ".cir",
     ".cppm",
     ".m",
     ".mm",
@@ -85,6 +86,7 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
+    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -181,6 +183,14 @@ if config.clang_staticanalyzer:
         (
             "%check_analyzer_fixit",
             '"%s" %s' % (config.python_executable, check_analyzer_fixit_path),
+        )
+    )
+
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
+    config.substitutions.append(
+        (
+            "%csv2json",
+            '"%s" %s' % (config.python_executable, csv2json_path),
         )
     )
 
