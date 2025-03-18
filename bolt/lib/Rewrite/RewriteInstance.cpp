@@ -2449,20 +2449,17 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
           if (const uint64_t ReferenceOffset =
                   ReferencedAddress - Func->getAddress()) {
             Func->addEntryPointAtOffset(ReferenceOffset);
-          } else if (ReferencedAddress < Func->getAddress()) {
-            BC->errs() << "BOLT-ERROR: Unable to compute symbol offset.\n";
-            exit(1);
           }
         } else {
-          BC->errs() << "BOLT-ERROR: referenced address: " << ReferencedAddress
-                     << " is in constant island of function : " << *Func
-                     << "\n";
+          BC->errs() << "BOLT-ERROR: referenced address at 0x"
+                     << ReferencedAddress
+                     << " is in constant island of function " << *Func << "\n";
           exit(1);
         }
       }
     } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
       BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
-                    "relocation type.\n";
+                    "relocation type\n";
       exit(1);
     }
 
