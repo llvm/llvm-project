@@ -29,14 +29,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOut::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepOutPastHiddenFunctions;
 
 // ThreadPlanStepOut: Step out of the current frame
 ThreadPlanStepOut::ThreadPlanStepOut(
     Thread &thread, SymbolContext *context, bool first_insn, bool stop_others,
     Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
-    bool continue_to_next_branch, bool gather_return_value)
+    bool continue_to_next_branch, bool gather_return_value, const Flags *flags)
     : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
                  report_run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
@@ -45,7 +46,10 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       m_immediate_step_from_function(nullptr),
       m_calculate_return_value(gather_return_value) {
   Log *log = GetLog(LLDBLog::Step);
-  SetFlagsToDefault();
+  if (flags)
+    m_flags = *flags;
+  else
+    SetFlagsToDefault();
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 
   m_step_from_insn = thread.GetRegisterContext()->GetPC(0);
@@ -58,7 +62,9 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     return; // we can't do anything here.  ValidatePlan() will return false.
 
   // While stepping out, behave as-if artificial frames are not present.
-  while (return_frame_sp->IsArtificial() || return_frame_sp->IsHidden()) {
+  while (return_frame_sp->IsArtificial() ||
+         (m_flags.Test(eStepOutPastHiddenFunctions) &&
+          return_frame_sp->IsHidden())) {
     m_stepped_past_frames.push_back(return_frame_sp);
 
     ++return_frame_index;

@@ -942,7 +942,8 @@ public:
   virtual lldb::ThreadPlanSP QueueThreadPlanForStepOutNoShouldStop(
       bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
       bool stop_other_threads, Vote report_stop_vote, Vote report_run_vote,
-      uint32_t frame_idx, Status &status, bool continue_to_next_branch = false);
+      uint32_t frame_idx, Status &status, bool continue_to_next_branch = false,
+      const Flags *flags = nullptr);
 
   /// Gets the plan used to step through the code that steps from a function
   /// call site at the current PC into the actual function call.
