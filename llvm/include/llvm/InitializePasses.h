@@ -113,7 +113,7 @@ void initializeExpandPostRALegacyPass(PassRegistry &);
 void initializeExpandReductionsPass(PassRegistry &);
 void initializeExpandVariadicsPass(PassRegistry &);
 void initializeExternalAAWrapperPassPass(PassRegistry &);
-void initializeFEntryInserterPass(PassRegistry &);
+void initializeFEntryInserterLegacyPass(PassRegistry &);
 void initializeFinalizeISelPass(PassRegistry &);
 void initializeFinalizeMachineBundlesPass(PassRegistry &);
 void initializeFixIrreduciblePass(PassRegistry &);

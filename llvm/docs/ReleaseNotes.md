@@ -86,6 +86,10 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Enabled the
+  [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
+  for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -165,7 +169,8 @@ Changes to the LLVM tools
 
 * llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
 * llvm-strip now supports continuing to process files on encountering an error.
-* In llvm-objcopy's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
+* In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
+  ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 
 Changes to LLDB
 ---------------------------------

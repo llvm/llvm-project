@@ -471,6 +471,9 @@ public:
         for (auto &&ModID : ModuleIDs) {
           auto &MD = Modules[ModID];
           JOS.object([&] {
+            if (MD.IsInStableDirectories)
+              JOS.attribute("is-in-stable-directories",
+                            MD.IsInStableDirectories);
             JOS.attributeArray("clang-module-deps",
                                toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",
@@ -706,9 +709,10 @@ static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
   return std::string(ExplicitPCMPath);
 }
 
-static std::string lookupModuleOutput(const ModuleID &MID, ModuleOutputKind MOK,
+static std::string lookupModuleOutput(const ModuleDeps &MD,
+                                      ModuleOutputKind MOK,
                                       StringRef OutputDir) {
-  std::string PCMPath = constructPCMPath(MID, OutputDir);
+  std::string PCMPath = constructPCMPath(MD.ID, OutputDir);
   switch (MOK) {
   case ModuleOutputKind::ModuleFile:
     return PCMPath;
@@ -971,8 +975,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
       std::string OutputDir(ModuleFilesDir);
       if (OutputDir.empty())
         OutputDir = getModuleCachePath(Input->CommandLine);
-      auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
-        return ::lookupModuleOutput(MID, MOK, OutputDir);
+      auto LookupOutput = [&](const ModuleDeps &MD, ModuleOutputKind MOK) {
+        return ::lookupModuleOutput(MD, MOK, OutputDir);
       };
 
       // Run the tool on it.
