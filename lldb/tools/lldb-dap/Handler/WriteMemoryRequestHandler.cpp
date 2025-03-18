@@ -122,7 +122,7 @@ void WriteMemoryRequestHandler::operator()(
   int64_t countWrite = 0;
 
   output = llvm::encodeBase64(data64);
-
+  
   // write the memory
   if (!output.empty()) {
     lldb::SBProcess process = dap.target.GetProcess();
