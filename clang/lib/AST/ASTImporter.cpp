@@ -8955,13 +8955,16 @@ ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   if (Error Err = ImportContainerChecked(E->getArgs(), ToArgs))
     return std::move(Err);
 
-  // According to Sema::BuildTypeTrait(), if E is value-dependent,
-  // Value is always false.
-  bool ToValue = (E->isValueDependent() ? false : E->getValue());
-
-  return TypeTraitExpr::Create(
-      Importer.getToContext(), ToType, ToBeginLoc, E->getTrait(), ToArgs,
-      ToEndLoc, ToValue);
+  if (E->isStoredAsBoolean()) {
+    // According to Sema::BuildTypeTrait(), if E is value-dependent,
+    // Value is always false.
+    bool ToValue = (E->isValueDependent() ? false : E->getBoolValue());
+    return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
+                                 E->getTrait(), ToArgs, ToEndLoc, ToValue);
+  }
+  return TypeTraitExpr::Create(Importer.getToContext(), ToType, ToBeginLoc,
+                               E->getTrait(), ToArgs, ToEndLoc,
+                               E->getAPValue());
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXTypeidExpr(CXXTypeidExpr *E) {
