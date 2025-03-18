@@ -19183,6 +19183,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Scalar = N->getOperand(1);
     SDValue VL = N->getOperand(2);
 
+    // The vmv.s.x instruction copies the scalar integer register to element 0
+    // of the destination vector register. If SEW < XLEN, the least-significant
+    // bits are copied and the upper XLEN-SEW bits are ignored.
+    unsigned ScalarSize = Scalar.getValueSizeInBits();
+    unsigned EltWidth = VT.getScalarSizeInBits();
+    if (ScalarSize > EltWidth && SimplifyDemandedLowBitsHelper(1, EltWidth))
+      return SDValue(N, 0);
+
     if (Scalar.getOpcode() == RISCVISD::VMV_X_S && Passthru.isUndef() &&
         Scalar.getOperand(0).getValueType() == N->getValueType(0))
       return Scalar.getOperand(0);
