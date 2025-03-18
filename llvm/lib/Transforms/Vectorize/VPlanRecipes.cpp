@@ -668,10 +668,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if ((State.VF.isVector() ||
-         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-         RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
-        !PhiR->isInLoop()) {
+    if (((State.VF.isVector() ||
+          RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
+         !PhiR->isInLoop()) ||
+        RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
       // TODO: Support in-order reductions based on the recurrence descriptor.
       // All ops in the reduction inherit fast-math-flags from the recurrence
       // descriptor.
@@ -2302,7 +2302,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
   RecurKind Kind = getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "In-loop AnyOf reductions aren't currently supported");
+         "In-loop AnyOf reduction should use Or reduction recipe");
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(getFastMathFlags());

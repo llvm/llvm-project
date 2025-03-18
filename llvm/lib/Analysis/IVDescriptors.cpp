@@ -1210,6 +1210,8 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
       return SelectPatternResult::isMinOrMax(
           matchSelectPattern(Cur, LHS, RHS).Flavor);
     }
+    if (isAnyOfRecurrenceKind(getRecurrenceKind()))
+      return isa<SelectInst>(Cur);
     // Recognize a call to the llvm.fmuladd intrinsic.
     if (isFMulAddIntrinsic(Cur))
       return true;
