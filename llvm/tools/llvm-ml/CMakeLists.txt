@@ -23,5 +23,4 @@ add_llvm_tool(llvm-ml
   GENERATE_DRIVER
   )
 
-llvm_add_tool_symlink(LLD llvm-ml64 llvm-ml ALWAYS_GENERATE)
-llvm_install_symlink(LLD llvm-ml64 llvm-ml ALWAYS_GENERATE)
+add_llvm_tool_symlink(llvm-ml64 llvm-ml)
