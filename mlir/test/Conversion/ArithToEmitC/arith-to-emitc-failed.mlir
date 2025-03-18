@@ -1,5 +1,4 @@
 // RUN: mlir-opt -convert-arith-to-emitc %s -split-input-file -verify-diagnostics
-// RUN: mlir-opt -convert-to-emitc="filter-dialects=arith" -split-input-file -verify-diagnostics
 
 func.func @bool(%arg0: i1, %arg1: i1) {
   // expected-error@+1 {{failed to legalize operation 'arith.addi'}}
