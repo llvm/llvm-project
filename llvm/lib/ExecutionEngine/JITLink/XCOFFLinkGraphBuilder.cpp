@@ -249,7 +249,6 @@ Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
 
     bool External = *Flags & object::SymbolRef::SF_Undefined;
     bool Weak = *Flags & object::SymbolRef::SF_Weak;
-    bool Hidden = *Flags & object::SymbolRef::SF_Hidden;
     bool Global = *Flags & object::SymbolRef::SF_Global;
 
     auto SymbolIndex = Obj.getSymbolIndex(Symbol.getEntryAddress());
@@ -311,7 +310,8 @@ Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
     }
 
     Scope S{Scope::Local};
-    if (Hidden)
+    if (Symbol.getSymbolType() & XCOFF::SYM_V_HIDDEN ||
+        Symbol.getSymbolType() & XCOFF::SYM_V_INTERNAL)
       S = Scope::Hidden;
     else if (Global)
       S = Scope::Default;
