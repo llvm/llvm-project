@@ -90,6 +90,41 @@ define void @f1(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
   store i64 %x0, ptr %q
   %q.1 = getelementptr i64, ptr %q, i64 1
   store i64 %x1, ptr %q.1
+  ret void
+}
 
+define void @i8_i16(ptr %p, ptr %q) {
+; CHECK-LABEL: i8_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    .cfi_offset s1, -24
+; CHECK-NEXT:    lh s1, 0(a0)
+; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    call g
+; CHECK-NEXT:    sh s1, 0(s0)
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %p0 = getelementptr i8, ptr %p, i64 0
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %x0 = load i8, ptr %p0, align 2
+  %x1 = load i8, ptr %p1
+  call void @g()
+  %q0 = getelementptr i8, ptr %q, i64 0
+  %q1 = getelementptr i8, ptr %q, i64 1
+  store i8 %x0, ptr %q0, align 2
+  store i8 %x1, ptr %q1
   ret void
 }
