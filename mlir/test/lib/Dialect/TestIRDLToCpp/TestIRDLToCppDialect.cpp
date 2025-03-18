@@ -54,9 +54,6 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
 
 struct ConvertTestDialectToSomethingPass
     : PassWrapper<ConvertTestDialectToSomethingPass, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      ConvertTestDialectToSomethingPass)
-
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
