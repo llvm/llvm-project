@@ -233,7 +233,7 @@ namespace my_literals {
 
 using my_literals::operator"" _r;
 
-int foo() {
+void foo() {
   auto x2 = 123_r;
 }
 
