@@ -10,6 +10,7 @@
 #include "DAPLog.h"
 #include "Protocol/ProtocolBase.h"
 #include "lldb/Utility/IOObject.h"
+#include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
@@ -27,23 +28,39 @@ using namespace lldb_dap::protocol;
 
 /// ReadFull attempts to read the specified number of bytes. If EOF is
 /// encountered, an empty string is returned.
-static Expected<std::string> ReadFull(IOObject &descriptor, size_t length) {
+static Expected<std::string>
+ReadFull(IOObject &descriptor, size_t length,
+         const std::chrono::microseconds &timeout) {
+  if (!descriptor.IsValid())
+    return createStringError("transport output is closed");
+
+#ifndef _WIN32
+  // FIXME: SelectHelper does not work with NativeFile on Win32.
+  SelectHelper sh;
+  sh.SetTimeout(timeout);
+  sh.FDSetRead(descriptor.GetWaitableHandle());
+  Status status = sh.Select();
+  if (status.Fail())
+    return status.takeError();
+#endif
+
   std::string data;
   data.resize(length);
-  auto status = descriptor.Read(data.data(), length);
+  status = descriptor.Read(data.data(), length);
   if (status.Fail())
     return status.takeError();
   // Return the actual number of bytes read.
   return data.substr(0, length);
 }
 
-static Expected<std::string> ReadUntil(IOObject &descriptor,
-                                       StringRef delimiter) {
+static Expected<std::string>
+ReadUntil(IOObject &descriptor, StringRef delimiter,
+          const std::chrono::microseconds &timeout) {
   std::string buffer;
   buffer.reserve(delimiter.size() + 1);
   while (!llvm::StringRef(buffer).ends_with(delimiter)) {
     Expected<std::string> next =
-        ReadFull(descriptor, buffer.empty() ? delimiter.size() : 1);
+        ReadFull(descriptor, buffer.empty() ? delimiter.size() : 1, timeout);
     if (auto Err = next.takeError())
       return std::move(Err);
     // Return "" if EOF is encountered.
@@ -68,13 +85,14 @@ Transport::Transport(StringRef client_name, Log *log, IOObjectSP input,
     : m_client_name(client_name), m_log(log), m_input(std::move(input)),
       m_output(std::move(output)) {}
 
-Expected<std::optional<Message>> Transport::Read() {
+Expected<std::optional<Message>>
+Transport::Read(const std::chrono::microseconds &timeout) {
   if (!m_input || !m_input->IsValid())
     return createStringError("transport output is closed");
 
   IOObject *input = m_input.get();
   Expected<std::string> message_header =
-      ReadFull(*input, kHeaderContentLength.size());
+      ReadFull(*input, kHeaderContentLength.size(), timeout);
   if (!message_header)
     return message_header.takeError();
   // '' returned on EOF.
@@ -85,7 +103,8 @@ Expected<std::optional<Message>> Transport::Read() {
                                      kHeaderContentLength, *message_header)
                                  .str());
 
-  Expected<std::string> raw_length = ReadUntil(*input, kHeaderSeparator);
+  Expected<std::string> raw_length =
+      ReadUntil(*input, kHeaderSeparator, timeout);
   if (!raw_length)
     return raw_length.takeError();
   if (raw_length->empty())
@@ -96,7 +115,7 @@ Expected<std::optional<Message>> Transport::Read() {
     return createStringError(
         formatv("invalid content length {0}", *raw_length).str());
 
-  Expected<std::string> raw_json = ReadFull(*input, length);
+  Expected<std::string> raw_json = ReadFull(*input, length, timeout);
   if (!raw_json)
     return raw_json.takeError();
   // If we got less than the expected number of bytes then we hit EOF.

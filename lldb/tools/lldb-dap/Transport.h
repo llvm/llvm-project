@@ -43,7 +43,8 @@ public:
   /// Reads the next Debug Adater Protocol message from the input stream.
   ///
   /// \returns Returns the next protocol message or nullopt if EOF is reached.
-  llvm::Expected<std::optional<protocol::Message>> Read();
+  llvm::Expected<std::optional<protocol::Message>>
+  Read(const std::chrono::microseconds &timeout);
 
   /// Returns the name of this transport client, for example `stdin/stdout` or
   /// `client_1`.

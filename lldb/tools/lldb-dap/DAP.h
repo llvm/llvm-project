@@ -397,6 +397,9 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
+
+private:
+  std::atomic<int64_t> active_seq;
 };
 
 } // namespace lldb_dap
