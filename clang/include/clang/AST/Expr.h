@@ -1757,6 +1757,12 @@ enum class StringLiteralKind {
   UTF16,
   UTF32,
   Unevaluated,
+  // Binary kind of string literal is used for the data coming via #embed
+  // directive. File's binary contents is transformed to a special kind of
+  // string literal that in some cases may be used directly as an initializer
+  // and some features of classic string literals are not applicable to this
+  // kind of a string literal, for example finding a particular byte's source
+  // location for better diagnosing.
   Binary
 };
 
@@ -1889,6 +1895,8 @@ public:
   int64_t getCodeUnitS(size_t I, uint64_t BitWidth) const {
     int64_t V = getCodeUnit(I);
     if (isOrdinary() || isWide()) {
+      // Ordinary and wide string literals have types that can be signed.
+      // It is important for checking C23 constexpr initializers.
       unsigned Width = getCharByteWidth() * BitWidth;
       llvm::APInt AInt(Width, (uint64_t)V);
       V = AInt.getSExtValue();
