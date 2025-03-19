@@ -190,11 +190,11 @@ def relpath():
 
 
 def generate_unused_res_test(featname, ordering, op, alignval):
-  if featname != 'lsfe' or op == 'fsub' or alignval == 1:
-    return False
-  if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
-    return False
-  return True;
+    if featname != "lsfe" or op == "fsub" or alignval == 1:
+        return False
+    if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
+        return False
+    return True
 
 
 def align(val, aligned: bool) -> int:
@@ -203,8 +203,8 @@ def align(val, aligned: bool) -> int:
 
 def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
     instr = "atomicrmw"
-    generate_unused = False;
-    tests = [];
+    generate_unused = False
+    tests = []
     for op in atomicrmw_ops:
         for aligned in Aligned:
             for ty, val in datatype:
@@ -222,26 +222,28 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                         )
                     )
                     if generate_unused_res_test(featname, ordering, op, alignval):
-                        generate_unused = True;
+                        generate_unused = True
                         name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}_unused"
                         tests.append(
-                           textwrap.dedent(
-                               f"""
+                            textwrap.dedent(
+                                f"""
                            define dso_local void @{name}(ptr %ptr, {ty} %value) {{
                                %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                                ret void
                            }}
                         """
-                           )
+                            )
                         )
 
     if generate_unused:
-      f.write("\n; NOTE: '_unused' tests are added to ensure we do not lower to "
-              "ST[F]ADD when the destination register is WZR/XZR.\n"
-              "; See discussion on https://github.com/llvm/llvm-project/pull/131174\n")
+        f.write(
+            "\n; NOTE: '_unused' tests are added to ensure we do not lower to "
+            "ST[F]ADD when the destination register is WZR/XZR.\n"
+            "; See discussion on https://github.com/llvm/llvm-project/pull/131174\n"
+        )
 
     for test in tests:
-      f.write(test)
+        f.write(test)
 
 
 def all_load(f):
