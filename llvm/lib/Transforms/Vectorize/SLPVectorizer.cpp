@@ -4802,7 +4802,9 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
     if (!Entries.front().front()->ReuseShuffleIndices.empty() &&
         TE.getVectorFactor() == 2 && Mask.size() == 2 &&
         any_of(enumerate(Entries.front().front()->ReuseShuffleIndices),
-               [](const auto &P) { return P.value() % 2 != P.index() % 2; }))
+               [](const auto &P) {
+                 return P.value() % 2 != static_cast<int>(P.index()) % 2;
+               }))
       return std::nullopt;
 
     // Perfect match in the graph, will reuse the previously vectorized
