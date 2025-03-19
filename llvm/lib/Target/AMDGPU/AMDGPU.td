@@ -1097,7 +1097,7 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
 def FeatureBVHDualAndBVH8Insts : SubtargetFeature<"bvh-dual-bvh-8-insts",
   "HasBVHDualAndBVH8Insts",
   "true",
-  "Has image_bvh_dual_intersect_ray and image_bvh_8_intersect_ray instructions"
+  "Has image_bvh_dual_intersect_ray and image_bvh8_intersect_ray instructions"
 >;
 
 //===------------------------------------------------------------===//
