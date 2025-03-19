@@ -393,26 +393,18 @@ bit in the mask vector identifies one column of a patch constant input and a
 column of an output. A value of 1 means the output is impacted by the primitive
 input.
 
-SFI0 Part
----------
-.. _SFI0:
-
-The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
-This denotes which optional features the shader requires. The flag values are
-defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
-
 Root Signature (RTS0) Part
 --------------------------
 .. _RTS0:
 
-The Root Signature data defines the shader's resource interface with Direct3D 12, 
-specifying what resources the shader needs to access and how they're organized 
-and bound to the pipeline. 
+The Root Signature data defines the shader's resource interface with Direct3D 
+12, specifying what resources the shader needs to access and how they're 
+organized and bound to the pipeline. 
 
 The RTS0 part comprises three data structures: ``RootSignatureHeader``, 
 ``RootParameters`` and ``StaticSamplers``. The details of each will be described 
-in the following sections. All ``RootParameters`` will be serialized following the 
-order they were defined in the metadata representation.
+in the following sections. All ``RootParameters`` will be serialized following 
+the order they were defined in the metadata representation.
 
 Root Signature Header
 ~~~~~~~~~~~~~~~~~~~~~
@@ -450,14 +442,16 @@ the data is visible, and an offset calculated from the start of RTS0 section.
      uint32_t ParameterOffset;
    };
 
-The following sections will describe each of the root parameters types and their encodings.
+The following sections will describe each of the root parameters types and their 
+encodings.
 
 Root Constants
 ''''''''''''''
 
 Root constants are values passed directly to shaders without needing a constant
 buffer. It is a 12 bytes long structure, two 32 bit values encoding the register 
-and space the constant is assigned to, and one 32 bit value encoding the constant value.
+and space the constant is assigned to, and one 32 bit value encoding the 
+constant value.
 
 .. code-block:: c
 
@@ -470,9 +464,13 @@ and space the constant is assigned to, and one 32 bit value encoding the constan
 Root Descriptor
 '''''''''''''''
 
-Root descriptors provide direct GPU memory addresses to resources. Version 1.1 of 
-root descriptor is a 12 byte long, the first two 32 bit values encode the register 
-and space being assigned to the descriptor, and the last 32 bit value is an access flag flag. 
+Root descriptors provide direct GPU memory addresses to resources.
+
+In version 1.0, the root descriptor is 8 bytes. It encodes the register and
+space as 2 32-bit values.
+
+In version 1.1, the root descriptor is 12 bytes. It matches the 1.0 descriptor
+but adds a 32-bit access flag.
 
 Version 1.0 doesn't contain the flags available in version 1.1.
 
@@ -491,18 +489,21 @@ Version 1.0 doesn't contain the flags available in version 1.1.
 
 Root Descriptor Table
 '''''''''''''''''''''
-Descriptor tables let shaders access multiple resources through a single pointer to a descriptor heap. 
+Descriptor tables let shaders access multiple resources through a single pointer 
+to a descriptor heap. 
 
-The tables are made of a collection of descriptor ranges. Version 1.1 ranges are 24 bytes long, containing 
-five 32 bit values: The type of register, the number of registers in the range, the starting register number, 
-the register space, an offset in number of descriptors from the start of the table and finally an access flag. 
+The tables are made of a collection of descriptor ranges. In Version 1.0, the 
+descriptor range is 20 bytes, containing five 32 bit values. It encodes a range 
+of registers, including the register type, range length, register numbers and 
+space within range and the offset locating each range inside the table.
 
-Version 1.0 ranges are the 20 bytes long, following the same structure without the flags. 
+In version 1.1, the descriptor range is 24 bytes. It matches the 1.0 descriptor
+but adds a 32-bit access flag.
 
 .. code-block:: c
 
    struct DescriptorRange_V1_0 {
-      uint_32t RangeType;
+      uint32_t RangeType;
       uint32_t NumDescriptors;
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
@@ -515,20 +516,18 @@ Version 1.0 ranges are the 20 bytes long, following the same structure without t
       uint32_t BaseShaderRegister;
       uint32_t RegisterSpace;
       uint32_t OffsetInDescriptorsFromTableStart;      
-      // Bitfield of flags from the Flags enum
       uint32_t Flags;
    };
 
 Static Samplers
 ~~~~~~~~~~~~~~~
 
-Static samplers are predefined filtering settings built into the root signature, avoiding descriptor heap lookups. 
+Static samplers are predefined filtering settings built into the root signature, 
+avoiding descriptor heap lookups. 
 
-This section also has a variable size. The size is 68 bytes long, containing the following fields: 32 bits for a 
-filter mode, three 32 bit fields for texture address mode, 64 bits for the bias value of minmap level calculation, 
-32 bits for maximum anisotropy level, 32 bits for the comparison function type, 32 bits for the static border colour, 
-two 64 bit fields for the min and max level of detail, two 32 bit fields for the register number and space and finally 
-32 bits for the shader visibility flag.
+This section also has a variable size, since it can contain multiple static 
+samplers definitions. However, the definition is a fixed sized struct, 
+containing 13 32-byte fields of various enum, float, and integer values. 
 
 .. code-block:: c
 
@@ -548,3 +547,11 @@ two 64 bit fields for the min and max level of detail, two 32 bit fields for the
       ShaderVisibility ShaderVisibility;
    };
 
+
+SFI0 Part
+---------
+.. _SFI0:
+
+The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
+This denotes which optional features the shader requires. The flag values are
+defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
