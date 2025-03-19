@@ -448,6 +448,7 @@ of static samplers, and a flags field for global behaviours:
 
 Root Parameters
 ~~~~~~~~~~~~~~~
+
 Root parameters define how resources are bound to the shader pipeline, each 
 type having different size and fields. 
 
@@ -475,10 +476,10 @@ encodings.
 Root Constants
 ''''''''''''''
 
-Root constants are values passed directly to shaders without needing a constant
-buffer. It is a 12 bytes long structure, two 32 bit values encoding the register 
-and space the constant is assigned to, and one 32 bit value encoding the 
-constant value.
+The root constants are inline 32-bit values that show up in the shader 
+as a constant buffer. It is a 12 bytes long structure, two 32 bit values 
+encoding the register and space the constant is assigned to, and one 32 
+bit value encoding the constant value.
 
 .. code-block:: c
 
@@ -516,6 +517,7 @@ Version 1.0 doesn't contain the flags available in version 1.1.
 
 Root Descriptor Table
 '''''''''''''''''''''
+
 Descriptor tables let shaders access multiple resources through a single pointer 
 to a descriptor heap. 
 
@@ -573,7 +575,6 @@ containing 13 32-byte fields of various enum, float, and integer values.
       uint32_t RegisterSpace;
       ShaderVisibility ShaderVisibility;
    };
-
 
 SFI0 Part
 ---------
