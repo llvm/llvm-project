@@ -22,5 +22,6 @@ add_llvm_component_library(LLVMObjCARCOpts
   Analysis
   Core
   Support
+  TargetParser
   TransformUtils
   )
