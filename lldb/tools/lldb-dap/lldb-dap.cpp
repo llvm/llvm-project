@@ -48,6 +48,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -486,8 +487,15 @@ int main(int argc, char *argv[]) {
 
   std::unique_ptr<Log> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
-  if (log_file_path)
-    log = std::make_unique<Log>(log_file_path);
+  if (log_file_path) {
+    std::error_code EC;
+    log = std::make_unique<Log>(log_file_path, EC);
+    if (EC) {
+      llvm::logAllUnhandledErrors(llvm::errorCodeToError(EC), llvm::errs(),
+                                  "Failed to create log file: ");
+      return EXIT_FAILURE;
+    }
+  }
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();

@@ -8,18 +8,23 @@
 
 #include "DAPLog.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+#include <chrono>
 #include <fstream>
 #include <mutex>
+#include <system_error>
 
 using namespace llvm;
 
 namespace lldb_dap {
 
-Log::Log(StringRef filename) : m_stream(std::ofstream(filename.str())) {}
+Log::Log(StringRef filename, std::error_code &EC) : m_stream(filename, EC) {}
 
 void Log::WriteMessage(StringRef message) {
   std::scoped_lock<std::mutex> lock(m_mutex);
-  m_stream << message.str();
+  std::chrono::duration<double> now{
+      std::chrono::system_clock::now().time_since_epoch()};
+  m_stream << formatv("{0:f9} ", now.count()).str() << message << "\n";
   m_stream.flush();
 }
 
