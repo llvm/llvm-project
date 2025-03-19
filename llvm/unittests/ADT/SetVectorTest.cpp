@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -85,4 +86,11 @@ TEST(SetVector, ConstPtrKeyTest) {
   S.set_subtract(T);
   EXPECT_FALSE(S.contains(&j));
   EXPECT_FALSE(S.contains((const int *)&j));
+}
+
+TEST(SetVector, InsertRange) {
+  SetVector<unsigned> Set;
+  constexpr unsigned Args[] = {3, 1, 2};
+  Set.insert_range(Args);
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
 }

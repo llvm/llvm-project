@@ -657,11 +657,12 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
   }
 };
 
-struct MemRefCastOpLowering
-    : public ConvertOpToLLVMPattern<memref::CastOp>::SplitMatchAndRewrite {
-  using SplitMatchAndRewrite::SplitMatchAndRewrite;
+struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
-  LogicalResult match(memref::CastOp memRefCastOp) const override {
+  LogicalResult
+  matchAndRewrite(memref::CastOp memRefCastOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
     Type srcType = memRefCastOp.getOperand().getType();
     Type dstType = memRefCastOp.getType();
 
@@ -671,30 +672,22 @@ struct MemRefCastOpLowering
     // perform a sanity check that the underlying structs are the same. Once op
     // semantics are relaxed we can revisit.
     if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType))
-      return success(typeConverter->convertType(srcType) ==
-                     typeConverter->convertType(dstType));
-
-    // At least one of the operands is unranked type
-    assert(isa<UnrankedMemRefType>(srcType) ||
-           isa<UnrankedMemRefType>(dstType));
+      if (typeConverter->convertType(srcType) !=
+          typeConverter->convertType(dstType))
+        return failure();
 
     // Unranked to unranked cast is disallowed
-    return !(isa<UnrankedMemRefType>(srcType) &&
-             isa<UnrankedMemRefType>(dstType))
-               ? success()
-               : failure();
-  }
+    if (isa<UnrankedMemRefType>(srcType) && isa<UnrankedMemRefType>(dstType))
+      return failure();
 
-  void rewrite(memref::CastOp memRefCastOp, OpAdaptor adaptor,
-               ConversionPatternRewriter &rewriter) const override {
-    auto srcType = memRefCastOp.getOperand().getType();
-    auto dstType = memRefCastOp.getType();
     auto targetStructType = typeConverter->convertType(memRefCastOp.getType());
     auto loc = memRefCastOp.getLoc();
 
     // For ranked/ranked case, just keep the original descriptor.
-    if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType))
-      return rewriter.replaceOp(memRefCastOp, {adaptor.getSource()});
+    if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType)) {
+      rewriter.replaceOp(memRefCastOp, {adaptor.getSource()});
+      return success();
+    }
 
     if (isa<MemRefType>(srcType) && isa<UnrankedMemRefType>(dstType)) {
       // Casting ranked to unranked memref type
@@ -733,6 +726,8 @@ struct MemRefCastOpLowering
     } else {
       llvm_unreachable("Unsupported unranked memref to unranked memref cast");
     }
+
+    return success();
   }
 };
 

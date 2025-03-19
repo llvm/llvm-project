@@ -738,9 +738,11 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     auto idxTy = builder.getIndexType();
     for (mlir::Value sh : elidedShape)
       indices.push_back(builder.createConvert(loc, idxTy, sh));
-    mlir::Value alloc = builder.create<cuf::AllocOp>(
-        loc, ty, nm, symNm, dataAttr, lenParams, indices);
-    return alloc;
+    if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+      return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
+                                                 indices);
+    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
+                                        indices);
   }
 
   // Let the builder do all the heavy lifting.
@@ -852,9 +854,8 @@ void Fortran::lower::defaultInitializeAtRuntime(
       }
       auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                                   global.getSymbol());
-      fir::LoadOp load = builder.create<fir::LoadOp>(loc, addrOf.getResult());
-      // FIXME: Use memcpy instead of store.
-      builder.create<fir::StoreOp>(loc, load, fir::getBase(exv));
+      builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
+                                  /*noOverlap=*/true);
     } else {
       mlir::Value box = builder.createBox(loc, exv);
       fir::runtime::genDerivedTypeInitialize(builder, loc, box);
@@ -1008,6 +1009,17 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static bool needsRepack(Fortran::lower::AbstractConverter &converter,
+                        const Fortran::semantics::Symbol &sym) {
+  if (!converter.getLoweringOptions().getRepackArrays() ||
+      !converter.isRegisteredDummySymbol(sym) ||
+      !Fortran::semantics::IsAssumedShape(sym) ||
+      Fortran::evaluate::IsSimplyContiguous(sym, converter.getFoldingContext()))
+    return false;
+
+  return true;
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -1033,12 +1045,16 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                symMap);
   if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
     auto *builder = &converter.getFirOpBuilder();
+    cuf::DataAttributeAttr dataAttr =
+        Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
+                                                        var.getSymbol());
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     auto *sym = &var.getSymbol();
     const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
+    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram &&
+        dataAttr.getValue() != cuf::DataAttribute::Shared) {
       converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
@@ -1072,6 +1088,17 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                  loc, sym);
       });
     }
+  } else if (var.hasSymbol() && needsRepack(converter, var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    auto *sym = &var.getSymbol();
+    std::optional<fir::FortranVariableOpInterface> varDef =
+        symMap.lookupVariableDefinition(*sym);
+    assert(varDef && "cannot find defining operation for an array that needs "
+                     "to be repacked");
+    converter.getFctCtx().attachCleanup([builder, loc, varDef, sym]() {
+      Fortran::lower::genUnpackArray(*builder, loc, *varDef, *sym);
+    });
   }
 }
 
@@ -1578,17 +1605,6 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
   return false;
 }
 
-/// Compute extent from lower and upper bound.
-static mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Value lb, mlir::Value ub) {
-  mlir::IndexType idxTy = builder.getIndexType();
-  // Let the folder deal with the common `ub - <const> + 1` case.
-  auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ub, lb);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
-  return fir::factory::genMaxWithZero(builder, loc, rawExtent);
-}
-
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -1652,8 +1668,8 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       if (lowerBounds.empty())
         result.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       else
-        result.emplace_back(
-            computeExtent(builder, loc, lowerBounds[spec.index()], ub));
+        result.emplace_back(fir::factory::computeExtent(
+            builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isStar()) {
       result.emplace_back(getAssumedSizeExtent(loc, builder));
     }
@@ -1902,7 +1918,7 @@ void Fortran::lower::genDeclareSymbol(
     bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       (!Fortran::semantics::IsProcedure(sym) ||
-       Fortran::semantics::IsPointer(sym)) &&
+       Fortran::semantics::IsPointer(sym.GetUltimate())) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
@@ -1920,10 +1936,13 @@ void Fortran::lower::genDeclareSymbol(
                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     mlir::Value dummyScope;
-    if (converter.isRegisteredDummySymbol(sym))
+    fir::ExtendedValue base = exv;
+    if (converter.isRegisteredDummySymbol(sym)) {
+      base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
+    }
     hlfir::EntityWithAttributes declare = hlfir::genDeclare(
-        loc, builder, exv, name, attributes, dummyScope, dataAttr);
+        loc, builder, base, name, attributes, dummyScope, dataAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -2273,7 +2292,8 @@ void Fortran::lower::mapSymbolAttributes(
         if (auto high = spec->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           ub = builder.createConvert(loc, idxTy, genValue(expr));
-          extents.emplace_back(computeExtent(builder, loc, lb, ub));
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
         } else {
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isStar() && "expected assumed size");
@@ -2566,4 +2586,76 @@ mlir::Type Fortran::lower::getCrayPointeeBoxType(mlir::Type fortranType) {
     baseType = fir::SequenceType::get(shape, seqType.getEleTy());
   }
   return fir::BoxType::get(fir::PointerType::get(baseType));
+}
+
+fir::ExtendedValue
+Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
+                             const Fortran::semantics::Symbol &sym,
+                             fir::ExtendedValue exv) {
+  if (!needsRepack(converter, sym))
+    return exv;
+
+  auto &opts = converter.getLoweringOptions();
+  llvm::SmallVector<mlir::Value> lenParams;
+  exv.match(
+      [&](const fir::CharArrayBoxValue &box) {
+        lenParams.emplace_back(box.getLen());
+      },
+      [&](const fir::BoxValue &box) {
+        lenParams.append(box.getExplicitParameters().begin(),
+                         box.getExplicitParameters().end());
+      },
+      [](const auto &) {
+        llvm_unreachable("unexpected lowering for assumed-shape dummy");
+      });
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = genLocation(converter, sym);
+  bool stackAlloc = opts.getStackArrays();
+  // 1D arrays must always use 'whole' mode.
+  bool isInnermostMode = !opts.getRepackArraysWhole() && sym.Rank() > 1;
+  // Avoid copy-in for 'intent(out)' variables.
+  bool noCopy = Fortran::semantics::IsIntentOut(sym);
+  auto boxType = mlir::cast<fir::BaseBoxType>(fir::getBase(exv).getType());
+  mlir::Type elementType = boxType.unwrapInnerType();
+  llvm::SmallVector<mlir::Value> elidedLenParams =
+      fir::factory::elideLengthsAlreadyInType(elementType, lenParams);
+  auto packOp = builder.create<fir::PackArrayOp>(
+      loc, fir::getBase(exv), stackAlloc, isInnermostMode, noCopy,
+      /*max_size=*/mlir::IntegerAttr{},
+      /*max_element_size=*/mlir::IntegerAttr{},
+      /*min_stride=*/mlir::IntegerAttr{}, fir::PackArrayHeuristics::None,
+      elidedLenParams);
+
+  mlir::Value newBase = packOp.getResult();
+  return exv.match(
+      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+        return box.clone(newBase);
+      },
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
+        return box.clone(newBase);
+      },
+      [](const auto &) -> fir::ExtendedValue {
+        llvm_unreachable("unexpected lowering for assumed-shape dummy");
+      });
+}
+
+void Fortran::lower::genUnpackArray(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    fir::FortranVariableOpInterface def,
+                                    const Fortran::semantics::Symbol &sym) {
+  // Subtle: rely on the fact that the memref of the defining
+  // hlfir.declare is a result of fir.pack_array.
+  // Alternatively, we can track the pack operation for a symbol
+  // via SymMap.
+  auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(def.getOperation());
+  assert(declareOp &&
+         "cannot find hlfir.declare for an array that needs to be repacked");
+  auto packOp = declareOp.getMemref().getDefiningOp<fir::PackArrayOp>();
+  assert(packOp && "cannot find fir.pack_array");
+  mlir::Value temp = packOp.getResult();
+  mlir::Value original = packOp.getArray();
+  bool stackAlloc = packOp.getStack();
+  // Avoid copy-out for 'intent(in)' variables.
+  bool noCopy = Fortran::semantics::IsIntentIn(sym);
+  builder.create<fir::UnpackArrayOp>(loc, temp, original, stackAlloc, noCopy);
 }

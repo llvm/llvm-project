@@ -772,13 +772,16 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
 
   SDLoc DL(N);
 
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   TargetLowering::MakeLibCallOptions CallOptions;
   SDValue Ops[2] = {GetSoftenedFloat(N->getOperand(0)), StackSlot};
   EVT OpsVT[2] = {VT0, StackSlot.getValueType()};
+  Type *CallOpsTypeOverrides[2] = {nullptr, PointerTy};
 
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but we only really need to handle the 0th one for softening anyway.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
@@ -811,6 +814,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
   SmallVector<EVT, 3> OpsVT = {VT};
 
   std::array<SDValue, 2> StackSlots;
+  SmallVector<Type *, 3> CallOpsTypeOverrides = {nullptr};
+  auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   for (unsigned ResNum = 0; ResNum < N->getNumValues(); ++ResNum) {
     if (ResNum == CallRetResNo)
       continue;
@@ -818,12 +823,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
     Ops.push_back(StackSlot);
     OpsVT.push_back(StackSlot.getValueType());
     StackSlots[ResNum] = StackSlot;
+    CallOpsTypeOverrides.push_back(PointerTy);
   }
 
   TargetLowering::MakeLibCallOptions CallOptions;
   // TODO: setTypeListBeforeSoften can't properly express multiple return types,
   // but since both returns have the same type it should be okay.
-  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true);
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT, true)
+      .setOpsTypeOverrides(CallOpsTypeOverrides);
 
   auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, DL,
                                             /*Chain=*/SDValue());
