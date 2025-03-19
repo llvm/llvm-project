@@ -10,6 +10,7 @@
 #define CTX_PROFILE_CTXINSTRPROFILING_H_
 
 #include "CtxInstrContextNode.h"
+#include "sanitizer_common/sanitizer_dense_map.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include <sanitizer/common_interface_defs.h>
 
@@ -82,6 +83,20 @@ struct ContextRoot {
 
   // Count the number of entries - regardless if we could take the `Taken` mutex
   ::__sanitizer::atomic_uint64_t TotalEntries = {};
+
+  // Profiles for functions we encounter when collecting a contexutal profile,
+  // that are not associated with a callsite. This is expected to happen for
+  // signal handlers, but it also - problematically - currently happens for
+  // call sites generated after profile instrumentation, primarily
+  // mem{memset|copy|move|set}.
+  // `Unhandled` serves 2 purposes:
+  //   1. identifying such cases (like the memops)
+  //   2. collecting a profile for them, which can be at least used as a flat
+  //   profile
+  ::__sanitizer::DenseMap<GUID, ContextNode *> Unhandled;
+  // Keep the unhandled contexts in a list, as we allocate them, as it makes it
+  // simpler to send to the writer when the profile is fetched.
+  ContextNode *FirstUnhandledCalleeNode = nullptr;
 
   // Taken is used to ensure only one thread traverses the contextual graph -
   // either to read it or to write it. On server side, the same entrypoint will
