@@ -57,7 +57,7 @@ __kernel void use_of_local_var()
 // CHECK-LABEL: define dso_local amdgpu_kernel void @use_of_local_var(
 // CHECK-SAME: ) #[[ATTR3:[0-9]+]] !kernel_arg_addr_space [[META8:![0-9]+]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META8]] !kernel_arg_base_type [[META8]] !kernel_arg_type_qual [[META8]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    call void @__clang_ocl_kern_imp_use_of_local_var() #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    call void @__clang_ocl_kern_imp_use_of_local_var() #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 //
