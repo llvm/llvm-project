@@ -7977,10 +7977,7 @@ bool BoUpSLP::canRepresentAsCopyable(const InstructionsState &S,
       MainAltOps.push_back(I);
     }
   }
-  if (AltOps.size() > 0 && MainAltOps.size() > 0)
-    return true;
-
-  return false;
+  return !AltOps.empty() && !MainAltOps.empty();
 }
 
 bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
