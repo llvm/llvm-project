@@ -2417,9 +2417,14 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
 
+  if (RedTy->isFloatingPointTy())
+    return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
+                                            getFastMathFlags(), Ctx.CostKind);
+
+  // Cannot get correct cost when quering TTI with FMFs not contains `reassoc`
+  // for non-FP reductions.
   return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
-                                          RdxDesc.getFastMathFlags(),
-                                          Ctx.CostKind);
+                                          std::nullopt, Ctx.CostKind);
 }
 
 InstructionCost
