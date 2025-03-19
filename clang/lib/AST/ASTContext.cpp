@@ -3322,7 +3322,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case Type::MemberPointer: {
     OS << "M";
     const auto *MPT = T->castAs<MemberPointerType>();
-    encodeTypeForFunctionPointerAuth(Ctx, OS, QualType(MPT->getClass(), 0));
+    encodeTypeForFunctionPointerAuth(
+        Ctx, OS, QualType(MPT->getQualifier()->getAsType(), 0));
     encodeTypeForFunctionPointerAuth(Ctx, OS, MPT->getPointeeType());
     return;
   }
@@ -3511,7 +3512,8 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
         if (PointeeType->castAs<FunctionProtoType>()->getExceptionSpecType() !=
             EST_None) {
           QualType FT = getFunctionTypeWithExceptionSpec(PointeeType, EST_None);
-          T = getMemberPointerType(FT, MPT->getClass());
+          T = getMemberPointerType(FT, MPT->getQualifier(),
+                                   MPT->getMostRecentCXXRecordDecl());
         }
       }
     std::unique_ptr<MangleContext> MC(createMangleContext());
@@ -4025,32 +4027,50 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
   return QualType(New, 0);
 }
 
-/// getMemberPointerType - Return the uniqued reference to the type for a
-/// member pointer to the specified type, in the specified class.
-QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
+QualType ASTContext::getMemberPointerType(QualType T,
+                                          NestedNameSpecifier *Qualifier,
+                                          const CXXRecordDecl *Cls) const {
+  if (!Qualifier) {
+    assert(Cls && "At least one of Qualifier or Cls must be provided");
+    Qualifier = NestedNameSpecifier::Create(*this, /*Prefix=*/nullptr,
+                                            /*Template=*/false,
+                                            getTypeDeclType(Cls).getTypePtr());
+  } else if (!Cls) {
+    Cls = Qualifier->getAsRecordDecl();
+  }
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
-  MemberPointerType::Profile(ID, T, Cls);
+  MemberPointerType::Profile(ID, T, Qualifier, Cls);
 
   void *InsertPos = nullptr;
   if (MemberPointerType *PT =
       MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(PT, 0);
 
+  NestedNameSpecifier *CanonicalQualifier = [&] {
+    if (!Cls)
+      return getCanonicalNestedNameSpecifier(Qualifier);
+    NestedNameSpecifier *R = NestedNameSpecifier::Create(
+        *this, /*Prefix=*/nullptr, /*Template=*/false,
+        Cls->getCanonicalDecl()->getTypeForDecl());
+    assert(R == getCanonicalNestedNameSpecifier(R));
+    return R;
+  }();
   // If the pointee or class type isn't canonical, this won't be a canonical
   // type either, so fill in the canonical type field.
   QualType Canonical;
-  if (!T.isCanonical() || !Cls->isCanonicalUnqualified()) {
-    Canonical = getMemberPointerType(getCanonicalType(T),getCanonicalType(Cls));
-
+  if (!T.isCanonical() || Qualifier != CanonicalQualifier) {
+    Canonical =
+        getMemberPointerType(getCanonicalType(T), CanonicalQualifier, Cls);
+    assert(!cast<MemberPointerType>(Canonical)->isSugared());
     // Get the new insert position for the node we care about.
-    MemberPointerType *NewIP =
-      MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    [[maybe_unused]] MemberPointerType *NewIP =
+        MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!NewIP && "Shouldn't be in the map!");
   }
   auto *New = new (*this, alignof(MemberPointerType))
-      MemberPointerType(T, Cls, Canonical);
+      MemberPointerType(T, Qualifier, Canonical);
   Types.push_back(New);
   MemberPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -6812,11 +6832,16 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
     return true;
   }
 
-  const auto *T1MPType = T1->getAs<MemberPointerType>();
-  const auto *T2MPType = T2->getAs<MemberPointerType>();
-  if (T1MPType && T2MPType &&
-      hasSameUnqualifiedType(QualType(T1MPType->getClass(), 0),
-                             QualType(T2MPType->getClass(), 0))) {
+  if (const auto *T1MPType = T1->getAs<MemberPointerType>(),
+      *T2MPType = T2->getAs<MemberPointerType>();
+      T1MPType && T2MPType) {
+    if (auto *RD1 = T1MPType->getMostRecentCXXRecordDecl(),
+        *RD2 = T2MPType->getMostRecentCXXRecordDecl();
+        RD1 != RD2 && RD1->getCanonicalDecl() != RD2->getCanonicalDecl())
+      return false;
+    if (getCanonicalNestedNameSpecifier(T1MPType->getQualifier()) !=
+        getCanonicalNestedNameSpecifier(T2MPType->getQualifier()))
+      return false;
     T1 = T1MPType->getPointeeType();
     T2 = T2MPType->getPointeeType();
     return true;
@@ -13857,11 +13882,12 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::MemberPointer: {
     const auto *PX = cast<MemberPointerType>(X),
                *PY = cast<MemberPointerType>(Y);
+    assert(declaresSameEntity(PX->getMostRecentCXXRecordDecl(),
+                              PY->getMostRecentCXXRecordDecl()));
     return Ctx.getMemberPointerType(
         getCommonPointeeType(Ctx, PX, PY),
-        Ctx.getCommonSugaredType(QualType(PX->getClass(), 0),
-                                 QualType(PY->getClass(), 0))
-            .getTypePtr());
+        getCommonQualifier(Ctx, PX, PY, /*IsSame=*/true),
+        PX->getMostRecentCXXRecordDecl());
   }
   case Type::LValueReference: {
     const auto *PX = cast<LValueReferenceType>(X),

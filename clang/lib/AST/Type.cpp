@@ -1068,7 +1068,8 @@ public:
     if (pointeeType.getAsOpaquePtr() == T->getPointeeType().getAsOpaquePtr())
       return QualType(T, 0);
 
-    return Ctx.getMemberPointerType(pointeeType, T->getClass());
+    return Ctx.getMemberPointerType(pointeeType, T->getQualifier(),
+                                    T->getMostRecentCXXRecordDecl());
   }
 
   QualType VisitConstantArrayType(const ConstantArrayType *T) {
@@ -4621,8 +4622,15 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    return merge(Cache::get(MPT->getClass()),
-                 Cache::get(MPT->getPointeeType()));
+    CachedProperties Cls = [&] {
+      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
+        return Cache::get(QualType(RD->getTypeForDecl(), 0));
+      if (const Type *T = MPT->getQualifier()->getAsType())
+        return Cache::get(T);
+      // Treat as a dependent type.
+      return CachedProperties(Linkage::External, false);
+    }();
+    return merge(Cls, Cache::get(MPT->getPointeeType()));
   }
   case Type::ConstantArray:
   case Type::IncompleteArray:
@@ -5177,8 +5185,26 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   return DK_none;
 }
 
+bool MemberPointerType::isSugared() const {
+  CXXRecordDecl *D1 = getMostRecentCXXRecordDecl(),
+                *D2 = getQualifier()->getAsRecordDecl();
+  assert(!D1 == !D2);
+  return D1 != D2 && D1->getCanonicalDecl() != D2->getCanonicalDecl();
+}
+
+void MemberPointerType::Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
+                                const NestedNameSpecifier *Qualifier,
+                                const CXXRecordDecl *Cls) {
+  ID.AddPointer(Pointee.getAsOpaquePtr());
+  ID.AddPointer(Qualifier);
+  if (Cls)
+    ID.AddPointer(Cls->getCanonicalDecl());
+}
+
 CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
-  auto *RD = getClass()->getAsCXXRecordDecl();
+  auto *RD = dyn_cast<MemberPointerType>(getCanonicalTypeInternal())
+                 ->getQualifier()
+                 ->getAsRecordDecl();
   if (!RD)
     return nullptr;
   return RD->getMostRecentNonInjectedDecl();

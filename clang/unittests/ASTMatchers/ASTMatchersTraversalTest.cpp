@@ -5760,10 +5760,10 @@ TEST(ElaboratedTypeNarrowing, namesType) {
 
 TEST(NNS, BindsNestedNameSpecifiers) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
-    nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
-    std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>(
-      "nns", "ns::struct E::")));
+      "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
+      nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
+      std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("nns",
+                                                               "ns::E::")));
 }
 
 TEST(NNS, BindsNestedNameSpecifierLocs) {

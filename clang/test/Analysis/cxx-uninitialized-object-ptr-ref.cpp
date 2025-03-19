@@ -430,8 +430,8 @@ void fIntDynTypedVoidPointerTest1() {
 
 struct RecordDynTypedVoidPointerTest {
   struct RecordType {
-    int x; // expected-note{{uninitialized field 'static_cast<struct RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
-    int y; // expected-note{{uninitialized field 'static_cast<struct RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    int x; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y; // expected-note{{uninitialized field 'static_cast<RecordDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
   };
 
   void *vptr;
@@ -447,9 +447,9 @@ void fRecordDynTypedVoidPointerTest() {
 
 struct NestedNonVoidDynTypedVoidPointerTest {
   struct RecordType {
-    int x;      // expected-note{{uninitialized field 'static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
-    int y;      // expected-note{{uninitialized field 'static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
-    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<struct NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
+    int x;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->x'}}
+    int y;      // expected-note{{uninitialized field 'static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->y'}}
+    void *vptr; // expected-note{{uninitialized pointee 'static_cast<char *>(static_cast<NestedNonVoidDynTypedVoidPointerTest::RecordType *>(this->vptr)->vptr)'}}
   };
 
   void *vptr;

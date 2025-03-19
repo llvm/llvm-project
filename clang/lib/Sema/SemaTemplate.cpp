@@ -5923,8 +5923,12 @@ bool UnnamedLocalNoLinkageFinder::VisitRValueReferenceType(
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitMemberPointerType(
-                                                  const MemberPointerType* T) {
-  return Visit(T->getPointeeType()) || Visit(QualType(T->getClass(), 0));
+    const MemberPointerType *T) {
+  if (Visit(T->getPointeeType()))
+    return true;
+  if (auto *RD = T->getMostRecentCXXRecordDecl())
+    return VisitTagDecl(RD);
+  return VisitNestedNameSpecifier(T->getQualifier());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitConstantArrayType(

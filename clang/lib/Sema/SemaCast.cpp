@@ -1788,8 +1788,8 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
           = Self.ResolveAddressOfOverloadedFunction(SrcExpr.get(), DestType, false,
                                                     FoundOverload)) {
       CXXMethodDecl *M = cast<CXXMethodDecl>(Fn);
-      SrcType = Self.Context.getMemberPointerType(Fn->getType(),
-                      Self.Context.getTypeDeclType(M->getParent()).getTypePtr());
+      SrcType = Self.Context.getMemberPointerType(
+          Fn->getType(), /*Qualifier=*/nullptr, M->getParent());
       WasOverloadedFunction = true;
     }
   }
