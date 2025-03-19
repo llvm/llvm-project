@@ -65,6 +65,9 @@ Changes to the LLVM IR
 * Updated semantics of `llvm.type.checked.load.relative` to match that of
   `llvm.load.relative`.
 
+* Standarized `minnum/minimum/minimumnum` and `minnum/minimum/minimumnum`.
+  See `Min/Max Comparation <https://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`.
+
 Changes to LLVM infrastructure
 ------------------------------
 

@@ -146,6 +146,8 @@ C23 Feature Support
   better diagnostic behavior for the ``va_start()`` macro in C23 and later.
   This also updates the definition of ``va_start()`` in ``<stdarg.h>`` to use
   the new builtin. Fixes #GH124031.
+- Standardized fmax/fmaximum/fmaximum_num and fmin/fminimum/fminimum_num builtin support.
+  See `LLVM LangRef <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
