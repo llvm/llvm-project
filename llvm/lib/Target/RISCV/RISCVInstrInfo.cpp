@@ -1288,9 +1288,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   int64_t C0, C1;
   if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
     switch (CC) {
-    default:
-      // TODO: Implement for more CCs
-      break;
+    case RISCVCC::COND_INVALID:
+      llvm_unreachable("Unexpected CC");
     case RISCVCC::COND_EQ: {
       Folded = (C0 == C1) ? TBB : FBB;
       break;
