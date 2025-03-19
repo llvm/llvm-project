@@ -363,7 +363,7 @@ private:
           // https://github.com/llvm/llvm-project/issues/47978
           // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
           // Note __old = __self.load(memory_order_relaxed) will not work
-          std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), &__old, memory_order_relaxed);
+          std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), std::addressof(__old), memory_order_relaxed);
         }
 #  endif
         __new = __operation(__old, __operand);

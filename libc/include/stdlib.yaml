@@ -24,6 +24,12 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: int
+  - name: a64l
+    standards:
+      - posix
+    return_type: long
+    arguments:
+      - type: const char *
   - name: abort
     standards:
       - stdc

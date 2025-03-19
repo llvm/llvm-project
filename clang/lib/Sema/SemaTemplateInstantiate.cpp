@@ -4499,6 +4499,17 @@ Sema::SubstExpr(Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs) {
 }
 
 ExprResult
+Sema::SubstCXXIdExpr(Expr *E,
+                     const MultiLevelTemplateArgumentList &TemplateArgs) {
+  if (!E)
+    return E;
+
+  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
+                                    DeclarationName());
+  return Instantiator.TransformAddressOfOperand(E);
+}
+
+ExprResult
 Sema::SubstConstraintExpr(Expr *E,
                           const MultiLevelTemplateArgumentList &TemplateArgs) {
   // FIXME: should call SubstExpr directly if this function is equivalent or

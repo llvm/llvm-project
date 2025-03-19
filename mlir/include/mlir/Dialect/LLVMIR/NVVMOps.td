@@ -19,6 +19,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
@@ -257,11 +258,13 @@ def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
 def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
 def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
 def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
+def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
+def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
 
 /// Enum attribute of the different kinds.
 def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
   [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-    ReduxKindUmax, ReduxKindUmin, ReduxKindXor]> {
+   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
@@ -273,9 +276,24 @@ def NVVM_ReduxOp :
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_Type:$val,
                  ReduxKindAttr:$kind,
-                 I32:$mask_and_clamp)> {
+                 I32:$mask_and_clamp,
+                 DefaultValuedAttr<BoolAttr, "false">:$abs,
+                 DefaultValuedAttr<BoolAttr, "false">:$nan)> {
+  let summary = "Redux Sync Op";
+  let description = [{
+    `redux.sync` performs a reduction operation `kind` of the 32 bit source 
+    register across all non-exited threads in the membermask.
+
+    The `abs` and `nan` attributes can be used in the case of f32 input type, 
+    where the `abs` attribute causes the absolute value of the input to be used 
+    in the reduction operation, and the `nan` attribute causes the reduction 
+    operation to return NaN if any of the inputs to participating threads are 
+    NaN.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
+  }];
   string llvmBuilder = [{
-      auto intId = getReduxIntrinsicId($_resultType, $kind);
+      auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
   }];
   let assemblyFormat = [{
@@ -2566,6 +2584,52 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM match.sync Op
+//===----------------------------------------------------------------------===//
+
+def MatchSyncKindAny : I32EnumAttrCase<"any", 0>;
+def MatchSyncKindAll : I32EnumAttrCase<"all", 1>;
+
+def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
+  [MatchSyncKindAny, MatchSyncKindAll]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
+
+def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
+  Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
+  Arguments<(ins I32:$thread_mask,
+                 AnyTypeOf<[I32, I64]>:$val,
+                 MatchSyncKindAttr:$kind)> {
+  let summary = "Broadcast and compare a value across threads in warp";
+  let description = [{
+    The `match.sync` op performs broadcast and compare of operand `val` across 
+    all non-exited threads in `thread_mask` and returns a mask depending on the 
+    kind and an optional predicate.
+
+    The matching operation kinds are:
+    - `any`: Returns a mask corresponding to the non-exited threads in the 
+    `thread_mask` that have the same value of operand `val`.
+    - `all`: Returns a mask and a predicate. If all non-exited threads in the 
+    `thread_mask` have the same value of operand `val`, the predicate is set to 
+    true and the mask corresponds to the non-exited threads in the 
+    `thread_mask`. Otherwise, the predicate is set to false and the mask is 0.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-match-sync)
+  }];
+  string llvmBuilder = [{
+    auto intId = getMatchSyncIntrinsicId(
+        op.getVal().getType(), $kind);
+    $res = createIntrinsicCall(builder,
+        intId, {$thread_mask, $val});
+  }];
+  let assemblyFormat = "$kind $thread_mask `,` $val attr-dict `:` type($val) `->` type($res)";
+  let hasVerifier = 1;
+}
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
@@ -2648,8 +2712,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc"> {
     the amount specified by `nCols` and writes the destination
     address to the `addr` argument. The `nCols` operand specifies the
     number of columns to be allocated and it must be a power-of-two.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
@@ -2679,8 +2742,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc"> {
     specified by `tmemAddr`, which must be from a previous tensor
     memory allocation. The `nCols` operand specifies the number
     of columns to be de-allocated, and it must be a power-of-two.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins LLVM_PointerTensor:$taddr, I32:$nCols,
@@ -2708,8 +2770,7 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
     of the executing thread is relinquishing the right to allocate
     Tensor Memory. So, it is illegal for a CTA to perform `tcgen05.alloc`
     after any of its constituent threads execute `tcgen05.relinquish_alloc_permit`.
-    [For more information, refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
@@ -2733,8 +2794,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence"> {
     The `tcgen05.fence<after>` orders all subsequent async tcgen05 operations
     with respect to the prior tcgen05 and execution ordering operations.
 
-    [For more information refer to the PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence)
   }];
 
   let arguments = (ins Tcgen05FenceKindAttr:$kind);
@@ -2756,8 +2816,7 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait"> {
     have completed. Similarly, the `tcgen05.wait<store>` causes the executing
     thread to block until all prior `tcgen05.st` operations issued by the
     executing thread have completed.
-    [For more information refer PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait)
   }];
 
   let arguments = (ins Tcgen05WaitKindAttr:$kind);
@@ -2782,8 +2841,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit"> {
     when present, specifies the destination CTAs in the cluster such
     that each bit position in the 16-bit `multicastMask` operand
     corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
-    [For more information refer PTX ISA]
-    (https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
   }];
 
   let arguments = (ins
@@ -2916,6 +2974,208 @@ def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp"> {
     auto id = NVVM::Tcgen05CpOp::getIntrinsicID(*op);
     createIntrinsicCall(builder, id, {$taddr, $smem_desc});
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05 LdSt Shape Attr
+//===----------------------------------------------------------------------===//
+
+def Tcgen05LdStShape16x64b: I32EnumAttrCase<"SHAPE_16X64B", 0, "shape_16x64b">;
+def Tcgen05LdStShape16x128b: I32EnumAttrCase<"SHAPE_16X128B", 1, "shape_16x128b">;
+def Tcgen05LdStShape16x256b: I32EnumAttrCase<"SHAPE_16X256B", 2, "shape_16x256b">;
+def Tcgen05LdStShape32x32b: I32EnumAttrCase<"SHAPE_32X32B", 3, "shape_32x32b">;
+def Tcgen05LdStShape16x32bx2: I32EnumAttrCase<"SHAPE_16X32BX2", 4, "shape_16x32bx2">;
+
+def Tcgen05LdStShape: I32EnumAttr<
+  "Tcgen05LdStShape",
+  "",
+  [Tcgen05LdStShape16x64b, Tcgen05LdStShape16x128b, Tcgen05LdStShape16x256b,
+   Tcgen05LdStShape32x32b, Tcgen05LdStShape16x32bx2]
+> {
+  let cppNamespace = "::mlir::NVVM";
+  let genSpecializedAttr = 0;
+}
+
+def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst_shape"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld"> {
+  let summary = "tensor memory load instructions";
+  let arguments = (ins
+    // Attributes
+    UnitAttr:$pack,
+    Tcgen05LdStShapeAttr:$shape,
+    // Arguments
+    LLVM_PointerTensor:$tmemAddr,
+    Optional<I64>:$offset
+  );
+
+  let results = (outs AnyTypeOf<[I32, VectorOfLengthAndType<
+                                  [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$res);
+
+  let assemblyFormat = [{
+    $tmemAddr (`,` $offset^)? (`pack` $pack^)? attr-dict `:` type($res)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.ld` asynchronously loads data from the Tensor Memory at
+    the location specified by the 32-bit address operand `tmemAddr` into the
+    destination register `res`, collectively across all threads of the warps.
+
+    The `shape` and the `num` attribute together determines the total
+    dimension of the data which is loaded from the Tensor Memory. The `shape`
+    attribute indicates the base dimension of data to be accessed as described
+    in the Data Movement Shape. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data
+    that is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `tmemAddr`
+    and the base address of the second access is specified by
+    `tmemAddr + offset`, where `offset` is an immediate argument.
+
+    The unit attribute `pack` can be used to pack two 16-bit
+    elements from adjacent columns into a single 32-bit element during the load.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes
+    |=====================================================================|
+    | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
+    |=====================================================================|
+    | x1             |          1                 |    2       |    4     |
+    | x2             |          2                 |    4       |    8     |
+    | x4             |          4                 |    8       |    16    |
+    | x8             |          8                 |    16      |    32    |
+    | x16            |          16                |    32      |    64    |
+    | x32            |          32                |    64      |    128   |
+    | x64            |          64                |    128     |    NA    |
+    | x128           |          128               |    NA      |    NA    |
+    |=====================================================================|
+
+    Example:
+    ```mlir
+      nvvm.tcgen05.ld %tmemAddr, %offset pack {
+        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
+      } : <2xi32>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
+    auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
+
+    unsigned num = $_resultType->isVectorTy()
+                       ? llvm::cast<llvm::VectorType>($_resultType)
+                             ->getElementCount()
+                             .getFixedValue()
+                       : 1;
+
+    auto ID = getTcgen05LdIntrinsicID($shape, num);
+    if (ID == llvm::Intrinsic::not_intrinsic)
+      llvm::report_fatal_error("unknow intrinsic signature for tcgen05.ld");
+
+    if ($offset)
+      $res = createIntrinsicCall(builder, ID, {$tmemAddr, $offset, Pack});
+    else
+      $res = createIntrinsicCall(builder, ID, {$tmemAddr, Pack});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.st Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st"> {
+  let summary = "tensor memory store instructions";
+  let arguments = (ins
+    // Attributes
+    UnitAttr:$unpack,
+    Tcgen05LdStShapeAttr:$shape,
+    // Arguments
+    LLVM_PointerTensor:$tmemAddr,
+    AnyTypeOf<[I32, VectorOfLengthAndType<
+                      [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$val,
+    Optional<I64>:$offset
+  );
+
+  let assemblyFormat = [{
+    $tmemAddr `,` $val (`,` $offset^)? (`unpack` $unpack^)? attr-dict `:` type($val)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.st` asynchronously stores data from the source register `r`
+    into the Tensor Memory at the location specified by the 32-bit address operand
+    `tmemAddr`, collectively across all threads of the warps.
+
+    The `shape` and the `num` attribute together determines the total dimension of
+    the data which is stored to the Tensor Memory. The `shape` indicates the base
+    dimension of data to be accessed. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data that
+    is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `tmemAddr`
+    and the base address of the second access is specified by
+    `tmemAddr + offset`, where `offset` is an immediate argument.
+
+    The unit attribute `unpack` can be used to unpack a 32-bit element
+    in the register into two 16-bit elements and store them in adjacent columns.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes
+    |=====================================================================|
+    | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
+    |=====================================================================|
+    | x1             |          1                 |    2       |    4     |
+    | x2             |          2                 |    4       |    8     |
+    | x4             |          4                 |    8       |    16    |
+    | x8             |          8                 |    16      |    32    |
+    | x16            |          16                |    32      |    64    |
+    | x32            |          32                |    64      |    128   |
+    | x64            |          64                |    128     |    NA    |
+    | x128           |          128               |    NA      |    NA    |
+    |=====================================================================|
+
+    Example:
+    ```mlir
+      nvvm.tcgen05.st %tmemAddr, %val, %offset unpack {
+        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
+      } : <2xi32>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
+  }];
+
+  string llvmBuilder = [{
+    llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
+    auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
+
+    auto valTy = $val->getType();
+    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
+                                             ->getElementCount()
+                                             .getFixedValue()
+                                       : 1;
+
+    auto ID = getTcgen05StIntrinsicID($shape, num);
+    if (ID == llvm::Intrinsic::not_intrinsic)
+      llvm::report_fatal_error("unknow intrinsic signature for tcgen05.st");
+
+    if ($offset)
+      createIntrinsicCall(builder, ID, {$tmemAddr, $offset, $val, Unpack});
+    else
+      createIntrinsicCall(builder, ID, {$tmemAddr, $val, Unpack});
+  }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

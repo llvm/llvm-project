@@ -54,5 +54,5 @@ We can then compile and run hello world via:
 
 This was what we call a "full build" of llvm-libc. From here, you can visit
 :ref:`full_host_build` for more info, :ref:`full_cross_build` for cross
-compiling, :ref:`overlay_mode` for mixing llvm-libc with another libc, or
-:ref:`libc_gpu` for targeting GPUs.
+compiling, :ref:`overlay_mode` for mixing llvm-libc with another libc,
+:ref:`libc_gpu` for targeting GPUs, or :ref:`libc_uefi` for targeting UEFI.

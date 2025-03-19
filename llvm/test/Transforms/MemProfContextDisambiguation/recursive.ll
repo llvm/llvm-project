@@ -64,10 +64,18 @@
 ;; Check the default behavior (clone recursive callsites).
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
+; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
 ; RUN:  --check-prefix=ALL --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS \
 ; RUN:  --check-prefix=CLONE-RECUR-CALLSITES
+
+;; Check that the backedge was correctly detected and emitted to the dot file
+;; as a dotted edge.
+; RUN: cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
+; DOT-DAG: Node[[B:0x[a-f0-9]+]] {{.*}}_Z1Bi -\> _Z1Ci
+; DOT-DAG: Node[[C:0x[a-f0-9]+]] {{.*}}_Z1Ci -\> _Z1Bi
+; DOT-DAG: Node[[C]] -> Node[[B]]{{.*}}style="dotted"
 
 ;; Skipping recursive contexts should prevent spurious call to cloned version of
 ;; B from the context starting at memprof_recursive.cc:19:13, which is actually

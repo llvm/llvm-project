@@ -1270,6 +1270,39 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, "Conflict"},
 
       {R"cpp(
+        struct conflict {};
+        enum v^ar {};
+      )cpp",
+       "conflict", !HeaderFile, "conflict"},
+
+      {R"cpp(
+        struct conflict {};
+        int [[v^ar]];
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        enum conflict {};
+        int [[v^ar]];
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        void func(int conflict) {
+          struct [[t^ag]] {};
+        }
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
+        void func(void) {
+          struct conflict {};
+          int [[v^ar]];
+        }
+      )cpp",
+       nullptr, !HeaderFile, "conflict"},
+
+      {R"cpp(
         void func(int);
         void [[o^therFunc]](double);
       )cpp",
