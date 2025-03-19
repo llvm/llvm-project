@@ -1,10 +1,30 @@
-//===-- LowerRepackArrays.cpp
-//------------------------------------------------===//
+//===-- LowerRepackArrays.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+/// \file
+/// This pass expands fir.pack_array and fir.unpack_array operations
+/// into sequences of other FIR operations and Fortran runtime calls.
+/// This pass is using structured control flow FIR operations such
+/// as fir.if, so its placement in the pipeline should guarantee
+/// further lowering of these operations.
+///
+/// A fir.pack_array operation is converted into a sequence of checks
+/// identifying whether an array needs to be copied into a contiguous
+/// temporary. When the checks pass, a new memory allocation is done
+/// for the temporary array (in either stack or heap memory).
+/// If `fir.pack_array` does not have no_copy attribute, then
+/// the original array is shallow-copied into the temporary.
+///
+/// A fir.unpack_array operations is converted into a check
+/// of whether the original and the temporary arrays are different
+/// memory. When the check passes, the temporary array might be
+/// shallow-copied into the original array, and then the temporary
+/// array is deallocated (if it was allocated in stack memory,
+/// then there is no explicit deallocation).
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
