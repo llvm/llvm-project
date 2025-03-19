@@ -290,7 +290,7 @@ protected:
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
-  bool visitAPValueInitializer(const APValue &Val, const Expr *E);
+  bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
