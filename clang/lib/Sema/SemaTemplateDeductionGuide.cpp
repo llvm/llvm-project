@@ -1077,7 +1077,11 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // !!NOTE: DeduceResults respects the sequence of template parameters of
   // the deduction guide f.
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
-    if (const auto &D = DeduceResults[Index]; !D.isNull()) // Deduced
+    const auto &D = DeduceResults[Index];
+    bool NonDeduced =
+        D.isNull() || (D.getKind() == TemplateArgument::Pack &&
+                       D.pack_size() == 1 && D.pack_begin()->isNull());
+    if (!NonDeduced)
       DeducedArgs.push_back(D);
     else
       NonDeducedTemplateParamsInFIndex.push_back(Index);
@@ -1141,7 +1145,10 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    if (D.isNull()) {
+    bool NonDeduced =
+        D.isNull() || (D.getKind() == TemplateArgument::Pack &&
+                       D.pack_size() == 1 && D.pack_begin()->isNull());
+    if (NonDeduced) {
       // 2): Non-deduced template parameters would be substituted later.
       continue;
     }

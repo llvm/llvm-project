@@ -3660,6 +3660,8 @@ public:
     return SemaRef.BuildCXXNoexceptExpr(Range.getBegin(), Arg, Range.getEnd());
   }
 
+  bool HeuristicallyComputeSizeOfPackExpr() const { return true; }
+
   /// Build a new expression to compute the length of a parameter pack.
   ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc, NamedDecl *Pack,
                                    SourceLocation PackLoc,
@@ -16095,6 +16097,10 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   // Try to compute the result without performing a partial substitution.
   std::optional<unsigned> Result = 0;
   for (const TemplateArgument &Arg : PackArgs) {
+    if (!getDerived().HeuristicallyComputeSizeOfPackExpr()) {
+      Result = std::nullopt;
+      break;
+    }
     if (!Arg.isPackExpansion()) {
       Result = *Result + 1;
       continue;
