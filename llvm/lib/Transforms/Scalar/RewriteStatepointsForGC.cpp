@@ -2903,7 +2903,7 @@ static void stripNonValidAttributesFromPrototype(Function &F) {
   // assumes that the attributes defined in Intrinsic.td are conservatively
   // correct for both physical and abstract model.
   if (Intrinsic::ID id = F.getIntrinsicID()) {
-    F.setAttributes(Intrinsic::getAttributes(Ctx, id));
+    F.setAttributes(Intrinsic::getAttributes(Ctx, id, F.getFunctionType()));
     return;
   }
 
