@@ -3,10 +3,10 @@
 
 
 StructuredBuffer<float> Buf : register(t10);
+RWStructuredBuffer<float> Buf2 : register(u5, space1);
 
 #ifndef SPIRV
-// NOTE: SPIRV codegen for resource types with counter variable is not yet implemented
-RWStructuredBuffer<float> Buf2 : register(u5, space1);
+// NOTE: SPIRV codegen for these resource types is not implemented yet.
 AppendStructuredBuffer<float> Buf3 : register(u3);
 ConsumeStructuredBuffer<float> Buf4 : register(u4);
 RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
@@ -19,10 +19,11 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK-DXIL: %"class.hlsl::RasterizerOrderedStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 1) }
 
 // CHECK-SPIRV: %"class.hlsl::StructuredBuffer" = type { target("spirv.VulkanBuffer", [0 x float], 12, 0) }
+// CHECK-SPIRV: %"class.hlsl::RWStructuredBuffer" = type { target("spirv.VulkanBuffer", [0 x float], 12, 1) }
 
 
 // CHECK: @_ZL3Buf = internal global %"class.hlsl::StructuredBuffer" poison
-// CHECK-DXIL: @_ZL4Buf2 = internal global %"class.hlsl::RWStructuredBuffer" poison, align 4
+// CHECK: @_ZL4Buf2 = internal global %"class.hlsl::RWStructuredBuffer" poison
 // CHECK-DXIL: @_ZL4Buf3 = internal global %"class.hlsl::AppendStructuredBuffer" poison, align 4
 // CHECK-DXIL: @_ZL4Buf4 = internal global %"class.hlsl::ConsumeStructuredBuffer" poison, align 4
 // CHECK-DXIL: @_ZL4Buf5 = internal global %"class.hlsl::RasterizerOrderedStructuredBuffer" poison, align 4
@@ -33,9 +34,11 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_0t(i32 0, i32 10, i32 1, i32 0, i1 false)
 // CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 0) [[H]], ptr @_ZL3Buf, align 8
 
-// CHECK-DXIL: define internal void @_init_resource__ZL4Buf2()
+// CHECK: define internal void @_init_resource__ZL4Buf2()
 // CHECK-DXIL: [[H:%.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 1, i32 5, i32 1, i32 0, i1 false)
 // CHECK-DXIL: store target("dx.RawBuffer", float, 1, 0) [[H]], ptr @_ZL4Buf2, align 4
+// CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_1t(i32 1, i32 5, i32 1, i32 0, i1 false)
+// CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 1) [[H]], ptr @_ZL4Buf2, align 8
 
 // CHECK-DXIL: define internal void @_init_resource__ZL4Buf3()
 // CHECK-DXIL: [[H:%.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 3, i32 1, i32 0, i1 false)
@@ -61,7 +64,7 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 
 // CHECK: define {{.*}} void @_GLOBAL__sub_I_StructuredBuffers_constructors.hlsl()
 // CHECK: call {{.*}} @_init_resource__ZL3Buf()
-// CHECK-DXIL: call void @_init_resource__ZL4Buf2()
+// CHECK: call {{.*}} @_init_resource__ZL4Buf2()
 // CHECK-DXIL: call void @_init_resource__ZL4Buf3()
 // CHECK-DXIL: call void @_init_resource__ZL4Buf4()
 // CHECK-DXIL: call void @_init_resource__ZL4Buf5()

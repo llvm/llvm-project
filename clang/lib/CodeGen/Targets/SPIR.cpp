@@ -401,8 +401,6 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       uint32_t StorageClass = /* StorageBuffer storage class */ 12;
       bool IsWritable =
           ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
-      assert(!IsWritable && "Writable buffers require a corresponding counter "
-                            "variable. Not implemented yet.");
       return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
                                       {RuntimeArrayType},
                                       {StorageClass, IsWritable});
