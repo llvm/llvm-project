@@ -164,10 +164,9 @@ define void @v2i16(ptr %p1) {
 ; CHECK-NEXT:    movi v1.2s, #32
 ; CHECK-NEXT:    clz v0.2s, v0.2s
 ; CHECK-NEXT:    sub v0.2s, v1.2s, v0.2s
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strh w9, [x0]
-; CHECK-NEXT:    strh w8, [x0, #2]
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
 ; CHECK-NEXT:    ret
 entry:
   %d = load <2 x i16>, ptr %p1
