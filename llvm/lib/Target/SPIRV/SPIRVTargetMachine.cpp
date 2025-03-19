@@ -175,8 +175,12 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
-  TargetPassConfig::addIRPasses();
 
+  if (TM.getSubtargetImpl()->canUseExtension(
+          SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
+    addPass(createSPIRVCodeGenPreparePass(TM));
+  }
+  TargetPassConfig::addIRPasses();
   if (TM.getSubtargetImpl()->isVulkanEnv()) {
     // 1.  Simplify loop for subsequent transformations. After this steps, loops
     // have the following properties:

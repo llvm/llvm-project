@@ -143,4 +143,16 @@ let TargetPrefix = "spv" in {
 
   // FPMaxErrorDecorationINTEL
   def int_spv_assign_fpmaxerror_decoration: Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
+
+  // Masked Gather Scatter Intrinsics
+  def int_spv_masked_gather
+    :DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+            [IntrReadMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+  def int_spv_masked_scatter
+    :DefaultAttrsIntrinsic<[],
+                [llvm_anyvector_ty, LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                [IntrWriteMem, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 }
