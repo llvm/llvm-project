@@ -9577,8 +9577,8 @@ OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                                           StringRef ParentName) {
   sys::fs::UniqueID ID;
   auto FileIDInfo = CallBack();
-  uint64_t FileID{0};
-  auto EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
+  uint64_t FileID = 0;
+  std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
   // If the inode ID could not be determined, create a hash value
   // the current file name and use that as an ID.
   if (EC)
