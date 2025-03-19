@@ -873,6 +873,8 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       Pressure[CurRegion] = RPTracker.moveMaxPressure();
       if (CurRegion-- == RegionIdx)
         break;
+      auto &Rgn = Regions[CurRegion];
+      NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
     RPTracker.advanceToNext();
     RPTracker.advanceBeforeNext();

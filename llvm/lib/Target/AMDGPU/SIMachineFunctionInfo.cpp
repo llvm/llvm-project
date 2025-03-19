@@ -727,7 +727,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), NeedIdx0Restore(MFI.getNeedIdx0Restore()),
-      HasInitWholeWave(MFI.hasInitWholeWave()) {
+      HasInitWholeWave(MFI.hasInitWholeWave()),
+      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
