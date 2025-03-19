@@ -50,7 +50,7 @@ constexpr bool test() {
 
   // LWG4027 ensures that the behavior is unchanged in C++23.
   {
-    [[maybe_unused]] auto r = std::views::single(0) | views::transform([](int) { return 0; });
+    [[maybe_unused]] auto r = std::views::single(0) | std::views::transform([](int) { return 0; });
     using CIt1              = decltype(std::ranges::cbegin(r));
     using CIt2              = decltype(std::cbegin(r));
     static_assert(std::is_same_v<CIt1, CIt2>);

@@ -128,13 +128,13 @@ constexpr bool testReturnTypes() {
   ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(a)), int* const*);
   ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(b)), const int(*)[2]);
   ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(c)), const short*);
-  ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(d)), const char*);
+  ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(d)), const short*);
   ASSERT_SAME_TYPE(decltype(std::ranges::cbegin(e)), std::basic_const_iterator<char*>);
 
   ASSERT_SAME_TYPE(decltype(std::ranges::crbegin(a)), std::reverse_iterator<int* const*>);
   ASSERT_SAME_TYPE(decltype(std::ranges::crbegin(b)), std::reverse_iterator<const int(*)[2]>);
   ASSERT_SAME_TYPE(decltype(std::ranges::crbegin(c)), const long*);
-  ASSERT_SAME_TYPE(decltype(std::ranges::crbegin(d)), const int*);
+  ASSERT_SAME_TYPE(decltype(std::ranges::crbegin(d)), const long*);
   ASSERT_SAME_TYPE(decltype(std::ranges::crbegin(e)), std::basic_const_iterator<int*>);
 
   return true;

@@ -117,7 +117,7 @@ constexpr bool testReturnTypes() {
       int* begin() const;
       int* end() const;
     };
-    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), const char*);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), const short*);
     static_assert(!std::is_invocable_v<RangeCDataT, D&&>);
     ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const D&>())), const short*);
     static_assert(!std::is_invocable_v<RangeCDataT, const D&&>);
@@ -156,7 +156,7 @@ constexpr bool testReturnTypes() {
     ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<NC&>())), char*);
     ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const NC&>())), char*);
 #else
-    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<NC&>())), const int*);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<NC&>())), const char*);
     ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const NC&>())), const char*);
 #endif
   }
