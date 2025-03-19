@@ -4966,7 +4966,9 @@ bool CompilerInvocation::CreateFromArgsImpl(
                         Res.getFileSystemOpts().WorkingDir);
   if (Res.getFrontendOpts().GenReducedBMI ||
       Res.getFrontendOpts().ProgramAction ==
-          frontend::GenerateReducedModuleInterface) {
+          frontend::GenerateReducedModuleInterface ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateModuleInterface) {
     Res.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
     Res.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
   }
