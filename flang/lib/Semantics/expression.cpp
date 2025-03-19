@@ -2263,14 +2263,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         } else if (IsNullAllocatable(&*value) && IsAllocatable(*symbol)) {
           result.Add(*symbol, Expr<SomeType>{NullPointer{}});
           continue;
-        } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
-            pointer && pureContext) { // C1594(4)
-          if (const Symbol *
-              visible{semantics::FindExternallyVisibleObject(
-                  *value, *pureContext)}) {
-            Say(expr.source,
-                "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
-                visible->name(), symbol->name(), pointer->name());
+        } else if (auto *derived{evaluate::GetDerivedTypeSpec(
+                       evaluate::DynamicType::From(*symbol))}) {
+          if (auto iter{FindPointerPotentialComponent(*derived)};
+              iter && pureContext) { // F'2023 C15104(4)
+            if (const Symbol *
+                visible{semantics::FindExternallyVisibleObject(
+                    *value, *pureContext)}) {
+              Say(expr.source,
+                  "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  visible->name(), symbol->name(),
+                  iter.BuildResultDesignatorName());
+            } else if (ExtractCoarrayRef(*value)) {
+              Say(expr.source,
+                  "A coindexed object may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  symbol->name(), iter.BuildResultDesignatorName());
+            }
           }
         }
         // Make implicit conversion explicit to allow folding of the structure

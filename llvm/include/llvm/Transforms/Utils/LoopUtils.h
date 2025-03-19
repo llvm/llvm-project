@@ -411,8 +411,8 @@ Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                              RecurKind RdxKind);
 /// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
-Value *createSimpleReduction(VectorBuilder &VB, Value *Src,
-                             const RecurrenceDescriptor &Desc);
+Value *createSimpleReduction(VectorBuilder &VB, Value *Src, RecurKind RdxKind,
+                             FastMathFlags FMFs);
 
 /// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
@@ -428,14 +428,12 @@ Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
                                  const RecurrenceDescriptor &Desc);
 
 /// Create an ordered reduction intrinsic using the given recurrence
-/// descriptor \p Desc.
-Value *createOrderedReduction(IRBuilderBase &B,
-                              const RecurrenceDescriptor &Desc, Value *Src,
+/// kind \p RdxKind.
+Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind, Value *Src,
                               Value *Start);
 /// Overloaded function to generate vector-predication intrinsics for ordered
 /// reduction.
-Value *createOrderedReduction(VectorBuilder &VB,
-                              const RecurrenceDescriptor &Desc, Value *Src,
+Value *createOrderedReduction(VectorBuilder &VB, RecurKind RdxKind, Value *Src,
                               Value *Start);
 
 /// Get the intersection (logical and) of all of the potential IR flags

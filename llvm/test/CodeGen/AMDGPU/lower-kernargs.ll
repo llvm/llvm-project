@@ -1837,13 +1837,13 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
-; HSA: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+; HSA: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; HSA: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
 ; HSA: attributes #[[ATTR2:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
 ; HSA: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
 ; HSA: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; MESA: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+; MESA: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; MESA: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
 ; MESA: attributes #[[ATTR2:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
 ; MESA: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="tahiti" }

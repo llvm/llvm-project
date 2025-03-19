@@ -3105,6 +3105,14 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
+#if CLANG_ENABLE_CIR
+  if (Args.hasArg(OPT_clangir_disable_passes))
+    Opts.ClangIRDisablePasses = true;
+
+  if (Args.hasArg(OPT_clangir_disable_verifier))
+    Opts.ClangIRDisableCIRVerifier = true;
+#endif // CLANG_ENABLE_CIR
+
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))

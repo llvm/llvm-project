@@ -51348,6 +51348,8 @@ static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
@@ -51479,6 +51481,22 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
         N0->hasOneUse() && N0.getOperand(1)->hasOneUse()) {
       SDValue MaskMul = DAG.getNode(ISD::AND, dl, VT, N0.getOperand(1), N1);
       return DAG.getNode(Opc0, dl, VT, N0.getOperand(0), MaskMul);
+    }
+  }
+
+  // On AVX512 targets, attempt to reverse foldVSelectToSignBitSplatMask.
+  // to make use of predicated selects.
+  // AND(X,SEXT(SETCC())) -> SELECT(SETCC(),X,0)
+  if (DCI.isAfterLegalizeDAG() && VT.isVector()) {
+    SDValue X, Y;
+    EVT CondVT = VT.changeVectorElementType(MVT::i1);
+    if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
+        sd_match(N, m_And(m_Value(X),
+                          m_OneUse(m_SExt(m_AllOf(
+                              m_Value(Y), m_SpecificVT(CondVT),
+                              m_SetCC(m_Value(), m_Value(), m_Value()))))))) {
+      return DAG.getSelect(dl, VT, Y, X,
+                           getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
   }
 
