@@ -2142,6 +2142,16 @@ bool SIFrameLowering::requiresStackPointerReference(
   return frameTriviallyRequiresSP(MFI);
 }
 
+static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
+                          const TargetRegisterInfo *TRI) {
+  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
+    if (MBB.isLiveIn(*R)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SIFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
@@ -2161,12 +2171,11 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
     } else {
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
           Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-      const MachineRegisterInfo &MRI = MF.getRegInfo();
       // If this value was already livein, we probably have a direct use of the
       // incoming register value, so don't kill at the spill point. This happens
       // since we pass some special inputs (workgroup IDs) in the callee saved
       // range.
-      const bool IsLiveIn = MRI.isLiveIn(Reg);
+      const bool IsLiveIn = isLiveIntoMBB(Reg, MBB, TRI);
       TII->storeRegToStackSlotCFI(MBB, MBBI, Reg, !IsLiveIn, CS.getFrameIdx(),
                                   RC, TRI);
     }
