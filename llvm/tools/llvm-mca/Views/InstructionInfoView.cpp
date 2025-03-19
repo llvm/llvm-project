@@ -95,38 +95,31 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   unsigned LastPadding = 35;
   if (PrintFullInfo) {
     Fields.push_back("Bypass Latency");
-    Paddings.push_back(LastPadding + 7);
-    LastPadding += 7;
-    Fields.push_back("Resources");
-    Paddings.push_back(LastPadding + 7);
-    LastPadding += 7;
+    Paddings.push_back(LastPadding += 7);
+    Fields.push_back("Resources (<Name> | <Name>[<ReleaseAtCycle>] | "
+                     "<Name>[<AcquireAtCycle>,<ReleaseAtCycle])");
+    Paddings.push_back(LastPadding += 7);
     Fields.push_back("LLVM Opcode Name");
-    Paddings.push_back(LastPadding + 57);
-    LastPadding += 57;
+    Paddings.push_back(LastPadding += 43);
   }
   if (PrintBarriers) {
     Fields.push_back("LoadBarrier");
-    Paddings.push_back(LastPadding + 7);
+    Paddings.push_back(LastPadding += 7);
     Fields.push_back("StoreBarrier");
-    Paddings.push_back(LastPadding + 14);
-    LastPadding += 14;
+    Paddings.push_back(LastPadding += 7);
   }
   if (PrintEncodings) {
-    Paddings.push_back(LastPadding + 7);
-    Paddings.push_back(LastPadding + 14);
-    Paddings.push_back(LastPadding + 44);
-    LastPadding += 44;
+    Paddings.push_back(LastPadding += 7);
+    Paddings.push_back(LastPadding += 7);
+    Paddings.push_back(LastPadding += 30);
     Fields.push_back("Encoding Size");
     EndFields.push_back("Encodings:");
     EndFields.push_back("Instructions:");
   } else {
-    if (PrintFullInfo) {
-      Paddings.push_back(LastPadding + 27);
-      LastPadding += 27;
-    } else {
-      Paddings.push_back(LastPadding + 7);
-      LastPadding += 7;
-    }
+    if (PrintFullInfo)
+      Paddings.push_back(LastPadding += 27);
+    else
+      Paddings.push_back(LastPadding += 7);
     EndFields.push_back("Instructions:");
   }
 
@@ -167,34 +160,31 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     unsigned LastPaddingIdx = 5;
 
     if (PrintFullInfo) {
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 1] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << IIVDEntry.Bypass;
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 2] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << IIVDEntry.Resources;
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 3] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << IIVDEntry.OpcodeName;
-      LastPaddingIdx += 3;
     }
 
     if (PrintBarriers) {
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 1] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << (LoweredInsts[Index]->isALoadBarrier() ? "*" : " ");
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 2] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << (LoweredInsts[Index]->isAStoreBarrier() ? "*" : " ");
-      LastPaddingIdx += 2;
     }
 
     if (PrintEncodings) {
       StringRef Encoding(CE.getEncoding(Index));
       unsigned EncodingSize = Encoding.size();
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 1] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << EncodingSize;
-      FOS.PadToColumn(Paddings[LastPaddingIdx + 2]);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1]);
       for (unsigned i = 0, e = Encoding.size(); i != e; ++i)
         FOS << format("%02x ", (uint8_t)Encoding[i]);
-      LastPaddingIdx += 2;
     }
-    FOS.PadToColumn(Paddings[LastPaddingIdx + 1]);
+    FOS.PadToColumn(Paddings[LastPaddingIdx += 1]);
     FOS << printInstructionString(Inst);
     if (PrintFullInfo) {
       std::string CommentString;
@@ -204,7 +194,6 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     FOS << '\n';
   }
 
-  FOS.flush();
   OS << Buffer;
 }
 
@@ -250,7 +239,7 @@ void InstructionInfoView::collectData(
       raw_string_ostream TempStream(IIVDEntry.Resources);
       const MCWriteProcResEntry *Index = STI.getWriteProcResBegin(&SCDesc);
       const MCWriteProcResEntry *Last = STI.getWriteProcResEnd(&SCDesc);
-      auto Sep = "";
+      StringRef Sep = "";
       for (; Index != Last; ++Index) {
         if (!Index->ReleaseAtCycle)
           continue;
@@ -260,10 +249,15 @@ void InstructionInfoView::collectData(
           // Output ReleaseAtCycle between [] if not 1 (default)
           // This is to be able to evaluate throughput.
           // See getReciprocalThroughput in MCSchedule.cpp
-          TempStream << Sep
-                     << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
+          if (Index->AcquireAtCycle > 0)
+            TempStream << Sep
+                       << format("%s[%d,%d]", MCProc->Name,
+                                 Index->AcquireAtCycle, Index->ReleaseAtCycle);
+          else
+            TempStream << Sep
+                       << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
         } else {
-          TempStream << Sep << format("%s", MCProc->Name);
+          TempStream << Sep << MCProc->Name;
         }
         Sep = ",";
       }

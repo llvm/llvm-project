@@ -248,7 +248,7 @@ static bool shouldPrintInstructionTables(enum InstructionTablesType ITType) {
   return false;
 }
 
-static bool printInstructionTables() {
+static bool shouldPrintInstructionTables() {
   return !shouldPrintInstructionTables(InstructionTablesType::NONE);
 }
 
@@ -684,9 +684,9 @@ int main(int argc, char **argv) {
     NonEmptyRegions++;
 
     mca::CircularSourceMgr S(LoweredSequence,
-                             printInstructionTables() ? 1 : Iterations);
+                             shouldPrintInstructionTables() ? 1 : Iterations);
 
-    if (printInstructionTables()) {
+    if (shouldPrintInstructionTables()) {
       //  Create a pipeline, stages, and a printer.
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
@@ -707,8 +707,9 @@ int main(int argc, char **argv) {
             InstToInstruments));
       }
 
-      Printer.addView(
-          std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
+      if (PrintResourcePressureView)
+        Printer.addView(
+            std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
       if (!runPipeline(*P))
         return 1;

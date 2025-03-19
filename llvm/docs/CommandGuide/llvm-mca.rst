@@ -216,6 +216,13 @@ option specifies "``-``", then the output will also be sent to standard output.
   - `<Resources units>`: Used resources associated with LLVM Opcode.
   - `<instruction comment>`: reports comment if any from source assembly.
 
+  `<Resources units>` syntax can be:
+  - <Resource Name>: ReleaseAtCycle is 1.
+  - <Resource Name>[<ReleaseAtCycle>]: ReleaseAtCycle greater than 1
+  and AcquireAtCycle is 0.
+  - <Resource Name>[<AcquireAtCycle>,<ReleaseAtCycle>]: ReleaseAtCycle
+  greater than 1 and AcquireAtCycle greater than 0.
+
 .. option:: -bottleneck-analysis
 
   Print information about bottlenecks that affect the throughput. This analysis
