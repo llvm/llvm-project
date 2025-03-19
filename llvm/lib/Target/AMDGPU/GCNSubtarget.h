@@ -229,7 +229,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
-  bool HasBVHDualInst = false;
+  bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
@@ -1366,7 +1366,7 @@ public:
 
   bool hasPrngInst() const { return HasPrngInst; }
 
-  bool hasBVHDualInst() const { return HasBVHDualInst; }
+  bool hasBVHDualAndBVH8Insts() const { return HasBVHDualAndBVH8Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

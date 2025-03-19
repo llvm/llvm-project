@@ -103,6 +103,18 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
+
+  // Future CIR operations
+  static bool labelOp() { return false; }
+  static bool brCondOp() { return false; }
+  static bool switchOp() { return false; }
+  static bool tryOp() { return false; }
+  static bool unaryOp() { return false; }
+  static bool selectOp() { return false; }
+  static bool complexCreateOp() { return false; }
+  static bool complexRealOp() { return false; }
+  static bool complexImagOp() { return false; }
+  static bool callOp() { return false; }
 };
 
 } // namespace cir
