@@ -8,14 +8,14 @@
 ;; Test printer and parser with --call-graph-section only.
 
 ;; Test printer.
-;; Verify that fwdArgRegs is not set, typeId is set.
-;; Verify the exact typeId value to ensure it is not garbage but the value
-;; computed as the type id from the type operand bundle.
+;; Verify that fwdArgRegs is not set, calleeTypeId is set.
+;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
+;; computed as the type id from the callee_type operand bundle.
 ; RUN: llc --call-graph-section %s -stop-before=finalize-isel -o %t1.mir
 ; RUN: cat %t1.mir | FileCheck %s --check-prefix=PRINTER_CGS
 ; PRINTER_CGS: name: main
 ; PRINTER_CGS: callSites:
-; PRINTER_CGS-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+; PRINTER_CGS-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
 ; PRINTER_CGS-NEXT: 7854600665770582568 }
 
 
@@ -25,21 +25,21 @@
 ; RUN: | FileCheck %s --check-prefix=PARSER_CGS
 ; PARSER_CGS: name: main
 ; PARSER_CGS: callSites:
-; PARSER_CGS-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+; PARSER_CGS-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
 ; PARSER_CGS-NEXT: 7854600665770582568 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test printer and parser with -emit-call-site-info only.
 
 ;; Test printer.
-;; Verify that fwdArgRegs is set, typeId is not set.
+;; Verify that fwdArgRegs is set, calleeTypeId is not set.
 ; RUN: llc -emit-call-site-info %s -stop-before=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CSI
 ; PRINTER_CSI: name: main
 ; PRINTER_CSI: callSites:
 ; PRINTER_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
 ; PRINTER_CSI-NEXT: { arg: 0, reg: '$edi' }
-; PRINTER_CSI-NOT: typeId:
+; PRINTER_CSI-NOT: calleeTypeId:
 
 
 ;; Test parser.
@@ -50,21 +50,21 @@
 ; PARSER_CSI: callSites:
 ; PARSER_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
 ; PARSER_CSI-NEXT: { arg: 0, reg: '$edi' }
-; PARSER_CSI-NOT: typeId:
+; PARSER_CSI-NOT: calleeTypeId:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test printer and parser with both -emit-call-site-info and --call-graph-section.
 
 ;; Test printer.
-;; Verify both fwdArgRegs and typeId are set.
-;; Verify the exact typeId value to ensure it is not garbage but the value
-;; computed as the type id from the type operand bundle.
+;; Verify both fwdArgRegs and calleeTypeId are set.
+;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
+;; computed as the type id from the callee_type operand bundle.
 ; RUN: llc --call-graph-section -emit-call-site-info %s -stop-before=finalize-isel -o %t2.mir
 ; RUN: cat %t2.mir | FileCheck %s --check-prefix=PRINTER_CGS_CSI
 ; PRINTER_CGS_CSI: name: main
 ; PRINTER_CGS_CSI: callSites:
 ; PRINTER_CGS_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PRINTER_CGS_CSI-NEXT: { arg: 0, reg: '$edi' }, typeId:
+; PRINTER_CGS_CSI-NEXT: { arg: 0, reg: '$edi' }, calleeTypeId:
 ; PRINTER_CGS_CSI-NEXT:   7854600665770582568 }
 
 
@@ -75,7 +75,7 @@
 ; PARSER_CGS_CSI: name: main
 ; PARSER_CGS_CSI: callSites:
 ; PARSER_CGS_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PARSER_CGS_CSI-NEXT: { arg: 0, reg: '$edi' }, typeId:
+; PARSER_CGS_CSI-NEXT: { arg: 0, reg: '$edi' }, calleeTypeId:
 ; PARSER_CGS_CSI-NEXT:   7854600665770582568 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
