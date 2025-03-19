@@ -8835,7 +8835,7 @@ public:
 
     case CK_LValueBitCast:
       this->CCEDiag(E, diag::note_constexpr_invalid_cast)
-          << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+          << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
           << Info.Ctx.getLangOpts().CPlusPlus;
       if (!Visit(E->getSubExpr()))
         return false;
@@ -9677,7 +9677,7 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
                 << SubExpr->getType();
         } else
           CCEDiag(E, diag::note_constexpr_invalid_cast)
-              << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+              << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
               << Info.Ctx.getLangOpts().CPlusPlus;
         Result.Designator.setInvalid();
       }
@@ -9717,7 +9717,7 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
   case CK_IntegralToPointer: {
     CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << Info.Ctx.getLangOpts().CPlusPlus;
 
     APValue Value;
@@ -11183,7 +11183,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       // Give up if the input isn't an int, float, or vector.  For example, we
       // reject "(v4i16)(intptr_t)&a".
       Info.FFDiag(E, diag::note_constexpr_invalid_cast)
-          << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+          << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
           << Info.Ctx.getLangOpts().CPlusPlus;
       return false;
     }
@@ -15203,7 +15203,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
   case CK_PointerToIntegral: {
     CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
     LValue LV;

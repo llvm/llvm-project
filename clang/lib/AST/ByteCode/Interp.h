@@ -2372,7 +2372,7 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
   } else {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
   }
 
@@ -2738,7 +2738,7 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
   if (Desc)
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisCastOrReinterpret
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus;
 
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
