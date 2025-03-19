@@ -27,6 +27,8 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         )
         frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
+        if self.TraceOn():
+            self.expect("frame variable")
 
         varB = frame.FindVariable("varB")
         field = varB.GetChildMemberWithName("a").GetChildMemberWithName("field")
