@@ -164,6 +164,7 @@ std::optional<Object> getBaseObject(const Object &object,
       // as the symbol in the input object,
       // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
       // Here we have the Symbol(A), which is what we started with.
+      (void)symRef;
       assert(&**symRef == object.sym());
       return std::nullopt;
     }
@@ -222,6 +223,7 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
 MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
+MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);

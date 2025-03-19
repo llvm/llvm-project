@@ -2268,7 +2268,7 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
 
   foreach vt = [f16, bf16] in {
     def : GCNPat <
-      (VGPRImm<(f16 fpimm)>:$imm),
+      (VGPRImm<(vt fpimm)>:$imm),
       (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
     >;
   }
@@ -4362,7 +4362,23 @@ def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
 
 def G_AMDGPU_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+}
+
+def G_AMDGPU_BVH8_INTERSECT_RAY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$ray_origin, type1:$ray_dir);
+  let InOperandList = (ins unknown:$opcode, variable_ops);
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;

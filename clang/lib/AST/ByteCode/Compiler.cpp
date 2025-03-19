@@ -2844,9 +2844,13 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   if (DiscardResult)
     return true;
-  if (E->getType()->isBooleanType())
-    return this->emitConstBool(E->getValue(), E);
-  return this->emitConst(E->getValue(), E);
+  if (E->isStoredAsBoolean()) {
+    if (E->getType()->isBooleanType())
+      return this->emitConstBool(E->getBoolValue(), E);
+    return this->emitConst(E->getBoolValue(), E);
+  }
+  PrimType T = classifyPrim(E->getType());
+  return this->visitAPValue(E->getAPValue(), T, E);
 }
 
 template <class Emitter>
@@ -3576,7 +3580,7 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
     return true;
 
   const Function *Func = nullptr;
-  if (auto F = Compiler<ByteCodeEmitter>(Ctx, P).compileObjCBlock(E))
+  if (auto F = Ctx.getOrCreateObjCBlock(E))
     Func = F;
 
   if (!Func)
@@ -3650,7 +3654,7 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
   assert(V.isStruct());
   assert(V.getStructNumBases() == 0);
-  if (!this->visitAPValueInitializer(V, E))
+  if (!this->visitAPValueInitializer(V, E, E->getType()))
     return false;
 
   return this->emitFinishInit(E);
@@ -4637,48 +4641,27 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
-                                                const Expr *E) {
-
+                                                const Expr *E, QualType T) {
   if (Val.isStruct()) {
-    const Record *R = this->getRecord(E->getType());
+    const Record *R = this->getRecord(T);
     assert(R);
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
+      QualType FieldType = RF->Decl->getType();
 
-      if (F.isInt() || F.isFloat() || F.isLValue() || F.isMemberPointer()) {
-        PrimType T = classifyPrim(RF->Decl->getType());
-        if (!this->visitAPValue(F, T, E))
+      if (std::optional<PrimType> PT = classify(FieldType)) {
+        if (!this->visitAPValue(F, *PT, E))
           return false;
-        if (!this->emitInitField(T, RF->Offset, E))
-          return false;
-      } else if (F.isArray()) {
-        assert(RF->Desc->isPrimitiveArray());
-        const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
-        PrimType ElemT = classifyPrim(ArrType->getElementType());
-        assert(ArrType);
-
-        if (!this->emitGetPtrField(RF->Offset, E))
-          return false;
-
-        for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
-          if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
-            return false;
-          if (!this->emitInitElem(ElemT, A, E))
-            return false;
-        }
-
-        if (!this->emitPopPtr(E))
-          return false;
-      } else if (F.isStruct() || F.isUnion()) {
-        if (!this->emitGetPtrField(RF->Offset, E))
-          return false;
-        if (!this->visitAPValueInitializer(F, E))
-          return false;
-        if (!this->emitPopPtr(E))
+        if (!this->emitInitField(*PT, RF->Offset, E))
           return false;
       } else {
-        assert(false && "I don't think this should be possible");
+        if (!this->emitGetPtrField(RF->Offset, E))
+          return false;
+        if (!this->visitAPValueInitializer(F, E, FieldType))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
       }
     }
     return true;
@@ -4692,6 +4675,28 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     if (!this->visitAPValue(F, T, E))
       return false;
     return this->emitInitField(T, RF->Offset, E);
+  } else if (Val.isArray()) {
+    const auto *ArrType = T->getAsArrayTypeUnsafe();
+    QualType ElemType = ArrType->getElementType();
+    for (unsigned A = 0, AN = Val.getArraySize(); A != AN; ++A) {
+      const APValue &Elem = Val.getArrayInitializedElt(A);
+      if (std::optional<PrimType> ElemT = classify(ElemType)) {
+        if (!this->visitAPValue(Elem, *ElemT, E))
+          return false;
+        if (!this->emitInitElem(*ElemT, A, E))
+          return false;
+      } else {
+        if (!this->emitConstUint32(A, E))
+          return false;
+        if (!this->emitArrayElemPtrUint32(E))
+          return false;
+        if (!this->visitAPValueInitializer(Elem, E, ElemType))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
+      }
+    }
+    return true;
   }
   // TODO: Other types.
 
@@ -4787,8 +4792,12 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
   // Explicit calls to trivial destructors
   if (const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(FuncDecl);
-      DD && DD->isTrivial())
-    return true;
+      DD && DD->isTrivial()) {
+    const auto *MemberCall = cast<CXXMemberCallExpr>(E);
+    if (!this->visit(MemberCall->getImplicitObjectArgument()))
+      return false;
+    return this->emitCheckDestruction(E) && this->emitPopPtr(E);
+  }
 
   QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
   std::optional<PrimType> T = classify(ReturnType);
@@ -5093,7 +5102,7 @@ template <class Emitter> bool Compiler<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::CompoundStmtClass:
     return visitCompoundStmt(cast<CompoundStmt>(S));
   case Stmt::DeclStmtClass:
-    return visitDeclStmt(cast<DeclStmt>(S));
+    return visitDeclStmt(cast<DeclStmt>(S), /*EvaluateConditionDecl=*/true);
   case Stmt::ReturnStmtClass:
     return visitReturnStmt(cast<ReturnStmt>(S));
   case Stmt::IfStmtClass:
@@ -5147,7 +5156,18 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
+bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
+    for (auto *BD : DD->bindings())
+      if (auto *KD = BD->getHoldingVar(); KD && !this->visitVarDecl(KD))
+        return false;
+  }
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
+                                      bool EvaluateConditionDecl) {
   for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
             FunctionDecl, NamespaceAliasDecl, UsingDirectiveDecl>(D))
@@ -5160,13 +5180,8 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
       return false;
 
     // Register decomposition decl holding vars.
-    if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-      for (auto *BD : DD->bindings())
-        if (auto *KD = BD->getHoldingVar()) {
-          if (!this->visitVarDecl(KD))
-            return false;
-        }
-    }
+    if (EvaluateConditionDecl && !this->maybeEmitDeferredVarInit(VD))
+      return false;
   }
 
   return true;
@@ -5249,6 +5264,9 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
   }
 
+  if (!this->maybeEmitDeferredVarInit(IS->getConditionVariable()))
+    return false;
+
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
     LabelTy LabelEnd = this->getLabel();
@@ -5294,6 +5312,10 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!this->visitBool(Cond))
       return false;
+
+    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+      return false;
+
     if (!this->jumpFalse(EndLabel))
       return false;
 
@@ -5374,6 +5396,9 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
       if (!this->jumpFalse(EndLabel))
         return false;
     }
+
+    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+      return false;
 
     if (Body && !this->visitStmt(Body))
       return false;
@@ -5495,6 +5520,9 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   if (!this->visit(Cond))
     return false;
   if (!this->emitSetLocal(CondT, CondVar, S))
+    return false;
+
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
     return false;
 
   CaseMap CaseLabels;
@@ -5808,6 +5836,9 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
   }
 
   if (!this->emitThis(Dtor))
+    return false;
+
+  if (!this->emitCheckDestruction(Dtor))
     return false;
 
   assert(R);
@@ -6355,7 +6386,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         return this->emitInitGlobal(*T, *Index, E);
       }
-      return this->visitAPValueInitializer(TPOD->getValue(), E);
+      return this->visitAPValueInitializer(TPOD->getValue(), E,
+                                           TPOD->getType());
     }
     return false;
   }

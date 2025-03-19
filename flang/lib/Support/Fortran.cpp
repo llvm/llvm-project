@@ -111,6 +111,9 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   bool isCudaUnified{features
           ? features->IsEnabled(common::LanguageFeature::CudaUnified)
           : false};
+  if (ignoreTKR.test(common::IgnoreTKR::Device)) {
+    return true;
+  }
   if (!x && !y) {
     return true;
   } else if (x && y && *x == *y) {

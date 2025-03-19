@@ -765,7 +765,7 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
                                           const NamedDecl *Pattern,
                                           const NamedDecl *PatternDef,
                                           TemplateSpecializationKind TSK,
-                                          bool Complain /*= true*/) {
+                                          bool Complain, bool *Unreachable) {
   assert(isa<TagDecl>(Instantiation) || isa<FunctionDecl>(Instantiation) ||
          isa<VarDecl>(Instantiation));
 
@@ -778,6 +778,8 @@ bool Sema::DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
     if (!hasReachableDefinition(const_cast<NamedDecl *>(PatternDef),
                                 &SuggestedDef,
                                 /*OnlyNeedComplete*/ false)) {
+      if (Unreachable)
+        *Unreachable = true;
       // If we're allowed to diagnose this and recover, do so.
       bool Recover = Complain && !isSFINAEContext();
       if (Complain)
@@ -5845,7 +5847,7 @@ bool Sema::CheckTemplateArgumentList(
       ThisQuals = Method->getMethodQualifiers();
 
     ContextRAII Context(*this, NewContext);
-    CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
+    CXXThisScopeRAII Scope(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
         Template, NewContext, /*Final=*/false, CTAI.CanonicalConverted,
@@ -10930,20 +10932,15 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
       //
       // FIXME: That's not strictly true: mem-initializer-id lookup does not
       // ignore functions, but that appears to be an oversight.
-      auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(Ctx);
-      auto *FoundRD = dyn_cast<CXXRecordDecl>(Type);
-      if (Keyword == ElaboratedTypeKeyword::Typename && LookupRD && FoundRD &&
-          FoundRD->isInjectedClassName() &&
-          declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
-        Diag(IILoc, diag::ext_out_of_line_qualified_id_type_names_constructor)
-            << &II << 1 << 0 /*'typename' keyword used*/;
-
+      QualType T = getTypeDeclType(Ctx,
+                                   Keyword == ElaboratedTypeKeyword::Typename
+                                       ? DiagCtorKind::Typename
+                                       : DiagCtorKind::None,
+                                   Type, IILoc);
       // We found a type. Build an ElaboratedType, since the
       // typename-specifier was just sugar.
-      MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
-      return Context.getElaboratedType(Keyword,
-                                       QualifierLoc.getNestedNameSpecifier(),
-                                       Context.getTypeDeclType(Type));
+      return Context.getElaboratedType(
+          Keyword, QualifierLoc.getNestedNameSpecifier(), T);
     }
 
     // C++ [dcl.type.simple]p2:

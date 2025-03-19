@@ -280,6 +280,13 @@ multiclass PowerPC_MMA_ACC_PP_Intrinsic<list<LLVMType> args> {
                                  [IntrNoMem]>;
 }
 
+multiclass PowerPC_MMA_DMR_PP_Intrinsic<list<LLVMType> args> {
+  def NAME: DefaultAttrsIntrinsic<[llvm_v1024i1_ty], args, [IntrNoMem]>;
+  def pp : DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                                 !listconcat([llvm_v1024i1_ty], args),
+                                 [IntrNoMem]>;
+}
+
 //===----------------------------------------------------------------------===//
 // PowerPC Altivec Intrinsic Class Definitions.
 //
@@ -1644,6 +1651,16 @@ let TargetPrefix = "ppc" in {
   def int_ppc_mma_xxsetaccz :
       DefaultAttrsIntrinsic<[llvm_v512i1_ty], [], [IntrNoMem]>;
 
+  def int_ppc_mma_dmsetdmrz :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [], [IntrNoMem]>;
+
+  def int_ppc_mma_dmmr :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty], [IntrNoMem]>;
+
+  def int_ppc_mma_dmxor :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty], [llvm_v1024i1_ty,
+                             llvm_v1024i1_ty], [IntrNoMem]>;
+
   // MMA Reduced-Precision: Outer Product Intrinsic Definitions.
   defm int_ppc_mma_xvi4ger8 :
         PowerPC_MMA_ACC_PP_Intrinsic<[llvm_v16i8_ty, llvm_v16i8_ty]>;
@@ -1699,6 +1716,20 @@ let TargetPrefix = "ppc" in {
   def int_ppc_mma_pmxvi8ger4spp :
       DefaultAttrsIntrinsic<[llvm_v512i1_ty],
                             [llvm_v512i1_ty, llvm_v16i8_ty, llvm_v16i8_ty,
+                             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                            [IntrNoMem]>;
+  defm int_ppc_mma_dmxvi8gerx4 :
+       PowerPC_MMA_DMR_PP_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty]>;
+  defm int_ppc_mma_pmdmxvi8gerx4 :
+       PowerPC_MMA_DMR_PP_Intrinsic<[llvm_v256i1_ty, llvm_v16i8_ty, llvm_i32_ty,
+                                     llvm_i32_ty, llvm_i32_ty]>;
+  def int_ppc_mma_dmxvi8gerx4spp :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                            [llvm_v1024i1_ty, llvm_v256i1_ty, llvm_v16i8_ty],
+                            [IntrNoMem]>;
+  def int_ppc_mma_pmdmxvi8gerx4spp :
+      DefaultAttrsIntrinsic<[llvm_v1024i1_ty],
+                            [llvm_v1024i1_ty, llvm_v256i1_ty, llvm_v16i8_ty,
                              llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem]>;
 }
