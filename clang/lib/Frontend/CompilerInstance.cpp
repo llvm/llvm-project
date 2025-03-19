@@ -1360,10 +1360,17 @@ static bool compileModule(CompilerInstance &ImportingInstance,
 
     StringRef ModuleMapFilePath = ModuleMapFile->getNameAsRequested();
 
+    // Use the systemness of the module map as parsed instead of using the
+    // IsSystem attribute of the module. If the module has [system] but the
+    // module map is not in a system path, then this would incorrectly parse
+    // any other modules in that module map as system too.
+    const SrcMgr::SLocEntry &SLoc = SourceMgr.getSLocEntry(ModuleMapFID);
+    bool IsSystem = isSystem(SLoc.getFile().getFileCharacteristic());
+
     // Use the module map where this module resides.
     Result = compileModuleImpl(
         ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
-        FrontendInputFile(ModuleMapFilePath, IK, +Module->IsSystem),
+        FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
   } else {
     // FIXME: We only need to fake up an input file here as a way of
