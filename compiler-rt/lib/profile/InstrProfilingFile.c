@@ -419,17 +419,17 @@ static int getProfileFileSizeForMerging(FILE *ProfileFile,
  * \p ProfileBuffer. Returns -1 on failure. On success, the caller is
  * responsible for unmapping the mmap'd buffer in \p ProfileBuffer. */
 static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
-                                 ManagedMemory *ProfileBuffer) {
-  lprofGetFileContentBuffer(ProfileFile, ProfileFileSize, ProfileBuffer);
-
-  if (ProfileBuffer->Status == MS_INVALID) {
-    PROF_ERR("Unable to merge profile data: %s\n", "reading file failed");
+                                 char **ProfileBuffer) {
+  *ProfileBuffer = mmap(NULL, ProfileFileSize, PROT_READ, MAP_SHARED | MAP_FILE,
+                        fileno(ProfileFile), 0);
+  if (*ProfileBuffer == MAP_FAILED) {
+    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
+             strerror(errno));
     return -1;
   }
 
-  if (__llvm_profile_check_compatibility(ProfileBuffer->Addr,
-                                         ProfileFileSize)) {
-    (void)lprofReleaseBuffer(ProfileBuffer, ProfileFileSize);
+  if (__llvm_profile_check_compatibility(*ProfileBuffer, ProfileFileSize)) {
+    (void)munmap(*ProfileBuffer, ProfileFileSize);
     PROF_WARN("Unable to merge profile data: %s\n",
               "source profile file is not compatible.");
     return -1;
@@ -444,7 +444,7 @@ static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
 */
 static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   uint64_t ProfileFileSize;
-  ManagedMemory ProfileBuffer;
+  char *ProfileBuffer;
 
   /* Get the size of the profile on disk. */
   if (getProfileFileSizeForMerging(ProfileFile, &ProfileFileSize) == -1)
@@ -460,9 +460,9 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
     return -1;
 
   /* Now start merging */
-  if (__llvm_profile_merge_from_buffer(ProfileBuffer.Addr, ProfileFileSize)) {
+  if (__llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize)) {
     PROF_ERR("%s\n", "Invalid profile data to merge");
-    (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
+    (void)munmap(ProfileBuffer, ProfileFileSize);
     return -1;
   }
 
@@ -471,7 +471,7 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   (void)COMPILER_RT_FTRUNCATE(ProfileFile,
                               __llvm_profile_get_size_for_buffer());
 
-  (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
+  (void)munmap(ProfileBuffer, ProfileFileSize);
   *MergeDone = 1;
 
   return 0;
@@ -672,13 +672,13 @@ static void initializeProfileForContinuousMode(void) {
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
-      ManagedMemory ProfileBuffer;
+      char *ProfileBuffer;
       if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         fclose(File);
         return;
       }
-      (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
+      (void)munmap(ProfileBuffer, ProfileFileSize);
     }
   } else {
     File = fopen(Filename, FileOpenMode);
@@ -1257,12 +1257,12 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
-      ManagedMemory ProfileBuffer;
+      char *ProfileBuffer;
       if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         return 1;
       }
-      (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
+      (void)munmap(ProfileBuffer, ProfileFileSize);
     }
     mmapForContinuousMode(0, File);
     lprofUnlockFileHandle(File);
