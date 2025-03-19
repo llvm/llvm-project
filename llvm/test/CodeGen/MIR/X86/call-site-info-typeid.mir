@@ -1,17 +1,14 @@
 # Test MIR printer and parser for type id field in callSites. It is used
-# for propogating call site type identifiers to emit in the call graph section.
+# for propagating call site type identifiers to emit in the call graph section.
 
 # RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
 # CHECK: name: main
 # CHECK: callSites:
-# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
 # CHECK-NEXT: 123456789 }
 
 --- |
-  define dso_local void @foo(i8 signext %a) {
-  entry:
-    ret void
-  }
+  declare void @foo(i8 signext %a)
   
   define dso_local i32 @main() {
   entry:
@@ -28,7 +25,7 @@
 ---
 name:            main
 callSites:
-  - { bb: 0, offset: 1, fwdArgRegs: [], typeId: 
+  - { bb: 0, offset: 1, fwdArgRegs: [], calleeTypeId: 
     123456789 }
 body:             |
   bb.0.entry:    
