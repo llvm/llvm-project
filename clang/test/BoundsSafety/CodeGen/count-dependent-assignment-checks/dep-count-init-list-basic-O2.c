@@ -11,7 +11,7 @@ struct S {
 
 // CHECK-LABEL: @TestInitFail1(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void TestInitFail1() {
@@ -22,7 +22,7 @@ void TestInitFail1() {
 
 // CHECK-LABEL: @TestInitFail2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void TestInitFail2() {
@@ -39,7 +39,7 @@ struct SU {
 
 // CHECK-LABEL: @TestUInitFail(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void TestUInitFail() {
@@ -83,7 +83,7 @@ void TestAccessOK() {
 
 // CHECK-LABEL: @TestAccessFail(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void TestAccessFail() {
@@ -96,19 +96,18 @@ void TestAccessFail() {
 // CHECK-LABEL: @TestAccessFail2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [9 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR7:[0-9]+]]
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 16 dereferenceable(36) [[ARR]], i8 0, i64 36, i1 false)
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 36
-// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[TMP0]], [[UPPER]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[TMP0]], [[ARR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
+// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[UPPER]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[ARR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT47:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont47:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR7]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void TestAccessFail2() {
@@ -120,7 +119,7 @@ void TestAccessFail2() {
 
 // CHECK-LABEL: @TestAccessFail3(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void TestAccessFail3() {
