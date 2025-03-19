@@ -228,6 +228,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
+  bool HasBVHDualInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
@@ -1363,6 +1364,8 @@ public:
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+
+  bool hasBVHDualInst() const { return HasBVHDualInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
