@@ -413,9 +413,11 @@ public:
   unsigned UseClangIRPipeline : 1;
 
   /// Disable Clang IR specific (CIR) passes
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisablePasses : 1;
 
   /// Disable Clang IR (CIR) verifier
+  LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
   CodeCompleteOptions CodeCompleteOpts;

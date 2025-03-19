@@ -101,7 +101,6 @@ public:
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
-      std::string passOptParsingFailure;
       if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
                             !FEOptions.ClangIRDisableCIRVerifier)
               .failed()) {

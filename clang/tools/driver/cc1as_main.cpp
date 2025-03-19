@@ -326,7 +326,6 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
     }
   }
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
-
   Opts.OutputPath = std::string(Args.getLastArgValue(OPT_o));
   Opts.SplitDwarfOutput =
       std::string(Args.getLastArgValue(OPT_split_dwarf_output));

@@ -68,14 +68,12 @@ struct RemoveEmptyScope
   LogicalResult match(ScopeOp op) const final {
     // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
     // trivially dead operations
-    if (op.isEmpty()) {
+    if (op.isEmpty())
       return success();
-    }
 
-    Region *region = &(op.getScopeRegion()); // getRegions().front();
-    if (region && region->getBlocks().front().getOperations().size() == 1) {
-      return success(isa<YieldOp>(region->getBlocks().front().front()));
-    }
+    Region &region = op.getScopeRegion();
+    if (region.getBlocks().front().getOperations().size() == 1)
+      return success(isa<YieldOp>(region.getBlocks().front().front()));
 
     return failure();
   }

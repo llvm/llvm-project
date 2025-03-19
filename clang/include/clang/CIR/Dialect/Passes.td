@@ -17,9 +17,9 @@ def CIRCanonicalize : Pass<"cir-canonicalize"> {
     Perform canonicalizations on CIR and removes some redundant operations.
 
     This pass performs basic cleanup and canonicalization transformations that
-    hopefully do not affect CIR-to-source fidelity and high-level code analysis
-    passes too much. Example transformations performed in this pass include
-    empty scope cleanup, trivial try cleanup, redundant branch cleanup, etc.
+    are not intended to affect CIR-to-source fidelity and high-level code
+    analysis passes. Example transformations performed in this pass include
+    empty scope cleanup, trivial `try` cleanup, redundant branch cleanup, etc.
     Those more "heavyweight" transformations and those transformations that
     could significantly affect CIR-to-source fidelity are performed in the
     `cir-simplify` pass.
