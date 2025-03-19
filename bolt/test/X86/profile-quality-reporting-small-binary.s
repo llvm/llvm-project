@@ -8,7 +8,7 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --data=%t.fdata \
 # RUN:     2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: profile quality metrics for the hottest 2 functions (reporting top 5% values): function CFG discontinuity 0.00%; call graph flow conservation gap 0.00%; CFG flow conservation gap 0.00% (weighted) 0.00% (worst)
+# CHECK: BOLT-INFO: profile quality metrics for the hottest 2 functions (reporting top 5% values): function CFG discontinuity 0.00%; call graph flow conservation gap 0.00%; CFG flow conservation gap 0.00% (weighted) 0.00% (worst); exception handling usage 0.00% (of total BBEC) 0.00% (of total InvokeEC)
 # CHECK-NEXT: BOLT-INFO:
 
         .text
