@@ -36,6 +36,7 @@ struct BuildAttributeItem {
   BuildAttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
       : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
 };
+
 struct BuildAttributeSubSection {
   std::string Name;
   unsigned IsOptional;
