@@ -992,6 +992,19 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+
+  // TODO: Split off.
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
+    if (!RepR->getParent()->getParent() &&
+        RepR->getParent()->getPlan()->getVectorLoopRegion()) {
+      auto *Clone = new VPReplicateRecipe(RepR->getUnderlyingInstr(),
+                                          RepR->operands(), true);
+      Clone->insertBefore(RepR);
+      RepR->replaceAllUsesWith(Clone);
+      RepR->eraseFromParent();
+      return;
+    }
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
@@ -2082,6 +2095,21 @@ void VPlanTransforms::createInterleaveGroups(
 }
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+  // Replace loop regions with explicity CFG.
+  SmallVector<VPRegionBlock *> LoopRegions;
+  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    if (!R->isReplicator())
+      LoopRegions.push_back(R);
+  }
+  for (VPRegionBlock *R : LoopRegions) {
+    VPBlockBase *Header = R->getEntry();
+    VPBlockBase *Latch = R->getExiting();
+    R->removeRegion();
+    // Add explicit backedge.
+    VPBlockUtils::connectBlocks(Latch, Header);
+  }
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {

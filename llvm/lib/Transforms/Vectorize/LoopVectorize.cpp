@@ -2433,12 +2433,6 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
   // End if-block.
   VPRegionBlock *Parent = RepRecipe->getParent()->getParent();
   bool IfPredicateInstr = Parent ? Parent->isReplicator() : false;
-  assert(
-      (Parent || !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
-       all_of(RepRecipe->operands(),
-              [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
-      "Expected a recipe is either within a region or all of its operands "
-      "are defined outside the vectorized region.");
   if (IfPredicateInstr)
     PredicatedInstructions.push_back(Cloned);
 }
@@ -2947,14 +2941,18 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
 
   // Don't apply optimizations below when no vector region remains, as they all
   // require a vector loop at the moment.
-  if (!State.Plan->getVectorLoopRegion())
+  VPBasicBlock *HeaderVPBB = find_singleton<VPBasicBlock>(
+      vp_depth_first_shallow(State.Plan->getEntry()),
+      [&State](VPBlockBase *VPB, bool) {
+        auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+        return VPBB && VPBB->isHeader(State.VPDT) ? VPBB : nullptr;
+      });
+  if (!HeaderVPBB)
     return;
 
   for (Instruction *PI : PredicatedInstructions)
     sinkScalarOperands(&*PI);
 
-  VPRegionBlock *VectorRegion = State.Plan->getVectorLoopRegion();
-  VPBasicBlock *HeaderVPBB = VectorRegion->getEntryBasicBlock();
   BasicBlock *HeaderBB = State.CFG.VPBB2IRBB[HeaderVPBB];
 
   // Remove redundant induction instructions.
@@ -3055,7 +3053,7 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
 }
 
 void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
-  auto Iter = vp_depth_first_deep(Plan.getEntry());
+  auto Iter = vp_depth_first_shallow(Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &P : VPBB->phis()) {
       VPWidenPHIRecipe *VPPhi = dyn_cast<VPWidenPHIRecipe>(&P);
@@ -7812,14 +7810,19 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 2.6. Maintain Loop Hints
   // Keep all loop hints from the original loop on the vector loop (we'll
   // replace the vectorizer-specific hints below).
-  if (auto *LoopRegion = BestVPlan.getVectorLoopRegion()) {
+  auto BlockRange = vp_depth_first_shallow(BestVPlan.getEntry());
+  auto HeaderVPBBIter = find_if(BlockRange, [&State](VPBlockBase *VPB) {
+    auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+    return VPBB && VPBB->isHeader(State.VPDT) ? VPBB : nullptr;
+  });
+  if (HeaderVPBBIter != BlockRange.end()) {
+    VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(*HeaderVPBBIter);
     MDNode *OrigLoopID = OrigLoop->getLoopID();
 
     std::optional<MDNode *> VectorizedLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                         LLVMLoopVectorizeFollowupVectorized});
 
-    VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
     Loop *L = LI->getLoopFor(State.CFG.VPBB2IRBB[HeaderVPBB]);
     if (VectorizedLoopID) {
       L->setLoopID(*VectorizedLoopID);
@@ -7845,7 +7848,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   ILV.printDebugTracesAtEnd();
 
   // 4. Adjust branch weight of the branch in the middle block.
-  if (BestVPlan.getVectorLoopRegion()) {
+  if (HeaderVPBBIter != BlockRange.end()) {
     auto *MiddleVPBB = BestVPlan.getMiddleBlock();
     auto *MiddleTerm =
         cast<BranchInst>(State.CFG.VPBB2IRBB[MiddleVPBB]->getTerminator());
