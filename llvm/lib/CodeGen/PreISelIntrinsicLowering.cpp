@@ -395,11 +395,11 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       const DataLayout &DL = Memset->getDataLayout();
 
       Type *DestPtrTy = Memset->getRawDest()->getType();
-      Type *IntIdxTy = TLI.getSizeTType(*M);
+      Type *SizeTTy = TLI.getSizeTType(*M);
       StringRef FuncName = "memset_pattern16";
       FunctionCallee MSP = getOrInsertLibFunc(M, TLI, LibFunc_memset_pattern16,
                                               Builder.getVoidTy(), DestPtrTy,
-                                              Builder.getPtrTy(), IntIdxTy);
+                                              Builder.getPtrTy(), SizeTTy);
       inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
 
       // Otherwise we should form a memset_pattern16.  PatternValue is known
@@ -418,7 +418,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       Value *NumBytes = Builder.CreateMul(
           TLI.getAsSizeT(DL.getTypeAllocSize(Memset->getValue()->getType()),
                          *M),
-          Builder.CreateZExtOrTrunc(Memset->getLength(), IntIdxTy));
+          Builder.CreateZExtOrTrunc(Memset->getLength(), SizeTTy));
       CallInst *MemsetPattern16Call =
           Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
       MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
