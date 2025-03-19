@@ -1644,11 +1644,16 @@ public:
   /// larger size, needs to be expanded to some other code sequence, or the
   /// target has a custom expander for it.
   LegalizeAction getPartialReduceMLAAction(EVT AccVT, EVT InputVT) const {
-    unsigned AccI = (unsigned)AccVT.getSimpleVT().SimpleTy;
-    unsigned InputI = (unsigned)InputVT.getSimpleVT().SimpleTy;
-    assert(AccI < MVT::VALUETYPE_SIZE && InputI < MVT::VALUETYPE_SIZE &&
-           "Table isn't big enough!");
-    return PartialReduceMLAActions[AccI][InputI];
+    auto AccSVT = AccVT.getSimpleVT();
+    auto InputSVT = InputVT.getSimpleVT();
+    assert(AccSVT.isValid() && InputSVT.isValid() &&
+           "getPartialReduceMLAAction types aren't valid");
+    uint16_t AccI = AccSVT.SimpleTy;
+    uint16_t InputI = InputSVT.SimpleTy;
+    uint32_t TypeHash = (AccI << 16) + InputI;
+    if (PartialReduceMLAActions.contains(TypeHash))
+      return PartialReduceMLAActions.at(TypeHash);
+    return Expand;
   }
 
   /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
@@ -2737,8 +2742,12 @@ protected:
   /// sequence, or the target has a custom expander for it.
   void setPartialReduceMLAAction(MVT AccVT, MVT InputVT,
                                  LegalizeAction Action) {
-    assert(AccVT.isValid() && InputVT.isValid() && "Table isn't big enough!");
-    PartialReduceMLAActions[AccVT.SimpleTy][InputVT.SimpleTy] = Action;
+    assert(AccVT.isValid() && InputVT.isValid() &&
+           "setPartialReduceMLAAction types aren't valid");
+    uint16_t AccI = AccVT.SimpleTy;
+    uint16_t InputI = InputVT.SimpleTy;
+    uint32_t TypeHash = (AccI << 16) + InputI;
+    PartialReduceMLAActions[TypeHash] = Action;
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3690,8 +3699,11 @@ private:
   /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
   /// nodes, keep a LegalizeAction which indicates how instruction selection
   /// should deal with this operation.
-  LegalizeAction PartialReduceMLAActions[MVT::VALUETYPE_SIZE]
-                                        [MVT::VALUETYPE_SIZE];
+  /// The key is made up of the accumulator type (AccTy) and the input type
+  /// (InTy) in the format of `(AccTy << 16) + InTy`.
+  /// If no entry exists for a given key, Expand is assumed as this
+  /// is the most common action.
+  DenseMap<uint32_t, LegalizeAction> PartialReduceMLAActions;
 
   ValueTypeActionImpl ValueTypeActions;
 
