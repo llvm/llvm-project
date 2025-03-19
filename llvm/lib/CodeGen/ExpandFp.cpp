@@ -36,7 +36,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-#define DEBUG_TYPE "expand-large-fp-convert"
+#define DEBUG_TYPE "expand-fp"
 
 using namespace llvm;
 
