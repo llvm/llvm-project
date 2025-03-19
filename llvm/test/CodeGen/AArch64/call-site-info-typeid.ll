@@ -1,14 +1,11 @@
-;; Tests that call site type ids can be extracted and set from type operand
+;; Tests that call site type ids can be extracted and set from callee_type operand
 ;; bundles.
 
-;; Verify the exact typeId value to ensure it is not garbage but the value
-;; computed as the type id from the type operand bundle.
+;; Verify the exact calleeTypeId value to ensure it is not garbage but the value
+;; computed as the type id from the callee_type operand bundle.
 ; RUN: llc --call-graph-section -mtriple aarch64-linux-gnu < %s -stop-before=finalize-isel -o - | FileCheck %s
 
-define dso_local void @foo(i8 signext %a) !type !0 {
-entry:
-  ret void
-}
+declare !type !0 void @foo(i8 signext %a)
 
 ; CHECK: name: main
 define dso_local i32 @main() !type !1 {
@@ -19,7 +16,7 @@ entry:
   store ptr @foo, ptr %fp, align 8
   %fp_val = load ptr, ptr %fp, align 8
   ; CHECK: callSites:
-  ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+  ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
   ; CHECK-NEXT: 7854600665770582568 }
   call void %fp_val(i8 signext 97) [ "callee_type"(metadata !"_ZTSFvcE.generalized") ]
   ret i32 0

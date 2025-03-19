@@ -2054,7 +2054,7 @@ void AsmPrinter::emitFunctionBody() {
         // Only indirect calls have type identifiers set.
         const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
         if (CallSiteInfo != CallSitesInfoMap.end()) {
-          if (auto *TypeId = CallSiteInfo->second.TypeId) {
+          if (auto *TypeId = CallSiteInfo->second.CalleeTypeId) {
             // Emit label.
             MCSymbol *S = MF->getContext().createTempSymbol();
             OutStreamer->emitLabel(S);
