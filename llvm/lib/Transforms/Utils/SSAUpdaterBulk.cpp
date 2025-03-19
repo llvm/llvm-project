@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -181,4 +182,50 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       U->set(V);
     }
   }
+}
+
+static bool isEquivalentPHI(PHINode *PHI1, PHINode *PHI2) {
+  if (PHI1->getNumIncomingValues() != PHI2->getNumIncomingValues())
+    return false;
+
+  unsigned I = 0, NumValues = PHI1->getNumIncomingValues();
+  for (; I != NumValues; ++I) {
+    if (PHI1->getIncomingBlock(I) != PHI2->getIncomingBlock(I))
+      break;
+    if (PHI1->getIncomingValue(I) != PHI2->getIncomingValue(I))
+      return false;
+  }
+  // TODO: add procesing if phis have different order of incoming values.
+  return I == NumValues;
+}
+
+bool SSAUpdaterBulk::simplifyPass(SmallVectorImpl<PHINode *> &Worklist) {
+  if (Worklist.empty())
+    return false;
+
+  auto findEquivalentPHI = [](PHINode *PHI) -> Value * {
+    BasicBlock *BB = PHI->getParent();
+    for (auto &OtherPHI : BB->phis()) {
+      if (PHI != &OtherPHI && isEquivalentPHI(PHI, &OtherPHI)) {
+        return &OtherPHI;
+      }
+    }
+    return nullptr;
+  };
+
+  const DataLayout &DL = Worklist.front()->getParent()->getDataLayout();
+  bool Change = false;
+  for (PHINode *&PHI : Worklist) {
+    Value *Replacement = simplifyInstruction(PHI, DL);
+    if (!Replacement)
+      Replacement = findEquivalentPHI(PHI);
+
+    if (Replacement) {
+      PHI->replaceAllUsesWith(Replacement);
+      PHI->eraseFromParent();
+      PHI = nullptr; // Mark as removed
+      Change = true;
+    }
+  }
+  return Change;
 }
