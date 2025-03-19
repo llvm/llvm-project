@@ -34,7 +34,7 @@ TEST_F(LlvmLibcSinpiTest, InDoubleRange) {
     uint64_t count = 0;
     uint64_t cc = 0;
     double mx, mr = 0.0;
-    double tol = 2.0;
+    double tol = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
@@ -49,7 +49,7 @@ TEST_F(LlvmLibcSinpiTest, InDoubleRange) {
       ++count;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sinpi, x, result,
-                                             2.0, rounding_mode)) {
+                                             0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Sinpi, x,
                                                   result, tol, rounding_mode)) {
