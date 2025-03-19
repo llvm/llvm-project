@@ -916,10 +916,7 @@ needDeallocationOrFinalization(const Fortran::lower::pft::Variable &var) {
 /// point 7.
 /// Must be nonpointer, nonallocatable, INTENT (OUT) dummy argument.
 static bool
-needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
-  if (!var.hasSymbol())
-    return false;
-  const Fortran::semantics::Symbol &sym = var.getSymbol();
+needDummyIntentoutFinalization(const Fortran::semantics::Symbol &sym) {
   if (!Fortran::semantics::IsDummy(sym) ||
       !Fortran::semantics::IsIntentOut(sym) ||
       Fortran::semantics::IsAllocatable(sym) ||
@@ -936,6 +933,16 @@ needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
   // p6). Calling finalization runtime for this works even if the components
   // have no final procedures.
   return hasFinalization(sym) || hasAllocatableDirectComponent(sym);
+}
+
+/// Check whether a variable needs the be finalized according to clause 7.5.6.3
+/// point 7.
+/// Must be nonpointer, nonallocatable, INTENT (OUT) dummy argument.
+static bool
+needDummyIntentoutFinalization(const Fortran::lower::pft::Variable &var) {
+  if (!var.hasSymbol())
+    return false;
+  return needDummyIntentoutFinalization(var.getSymbol());
 }
 
 /// Call default initialization runtime routine to initialize \p var.
@@ -1011,10 +1018,16 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
 
 static bool needsRepack(Fortran::lower::AbstractConverter &converter,
                         const Fortran::semantics::Symbol &sym) {
+  const auto &attrs = sym.attrs();
   if (!converter.getLoweringOptions().getRepackArrays() ||
       !converter.isRegisteredDummySymbol(sym) ||
       !Fortran::semantics::IsAssumedShape(sym) ||
-      Fortran::evaluate::IsSimplyContiguous(sym, converter.getFoldingContext()))
+      Fortran::evaluate::IsSimplyContiguous(sym,
+                                            converter.getFoldingContext()) ||
+      // TARGET dummy may be accessed indirectly, so it is unsafe
+      // to repack it. Some compilers provide options to override
+      // this.
+      attrs.test(Fortran::semantics::Attr::TARGET))
     return false;
 
   return true;
@@ -2613,8 +2626,12 @@ Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
   bool stackAlloc = opts.getStackArrays();
   // 1D arrays must always use 'whole' mode.
   bool isInnermostMode = !opts.getRepackArraysWhole() && sym.Rank() > 1;
-  // Avoid copy-in for 'intent(out)' variables.
-  bool noCopy = Fortran::semantics::IsIntentOut(sym);
+  // Avoid copy-in for 'intent(out)' variable, unless this is a dummy
+  // argument with INTENT(OUT) that needs finalization on entry
+  // to the subprogram. The finalization routine may read the initial
+  // value of the array.
+  bool noCopy = Fortran::semantics::IsIntentOut(sym) &&
+                !needDummyIntentoutFinalization(sym);
   auto boxType = mlir::cast<fir::BaseBoxType>(fir::getBase(exv).getType());
   mlir::Type elementType = boxType.unwrapInnerType();
   llvm::SmallVector<mlir::Value> elidedLenParams =
