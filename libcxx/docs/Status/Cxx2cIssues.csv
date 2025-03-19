@@ -84,7 +84,7 @@
 "`LWG3918 <https://wg21.link/LWG3918>`__","``std::uninitialized_move/_n`` and guaranteed copy elision","2024-11 (Wrocław)","","",""
 "`LWG4014 <https://wg21.link/LWG4014>`__","LWG 3809 changes behavior of some existing ``std::subtract_with_carry_engine code``","2024-11 (Wrocław)","","",""
 "`LWG4024 <https://wg21.link/LWG4024>`__","Underspecified destruction of objects created in ``std::make_shared_for_overwrite``/``std::allocate_shared_for_overwrite``","2024-11 (Wrocław)","","16",""
-"`LWG4027 <https://wg21.link/LWG4027>`__","``possibly-const-range`` should prefer returning ``const R&``","2024-11 (Wrocław)","","",""
+"`LWG4027 <https://wg21.link/LWG4027>`__","``possibly-const-range`` should prefer returning ``const R&``","2024-11 (Wrocław)","|Complete|","21",""
 "`LWG4044 <https://wg21.link/LWG4044>`__","Confusing requirements for ``std::print`` on POSIX platforms","2024-11 (Wrocław)","","",""
 "`LWG4064 <https://wg21.link/LWG4064>`__","Clarify that ``std::launder`` is not needed when using the result of ``std::memcpy``","2024-11 (Wrocław)","","",""
 "`LWG4072 <https://wg21.link/LWG4072>`__","``std::optional`` comparisons: constrain harder","2024-11 (Wrocław)","","",""
