@@ -147,14 +147,14 @@ class RequestHandler : public BaseRequestHandler {
 class AttachRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "attach"; }
+  static llvm::StringLiteral GetCommand() { return "attach"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class BreakpointLocationsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "breakpointLocations"; }
+  static llvm::StringLiteral GetCommand() { return "breakpointLocations"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsBreakpointLocationsRequest", true}};
   }
@@ -164,7 +164,7 @@ public:
 class CompletionsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "completions"; }
+  static llvm::StringLiteral GetCommand() { return "completions"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsCompletionsRequest", true}};
   }
@@ -174,14 +174,14 @@ public:
 class ContinueRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "continue"; }
+  static llvm::StringLiteral GetCommand() { return "continue"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class ConfigurationDoneRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "configurationDone"; }
+  static llvm::StringLiteral GetCommand() { return "configurationDone"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsConfigurationDoneRequest", true}};
   }
@@ -193,7 +193,7 @@ class DisconnectRequestHandler
                             protocol::DisconnectResponse> {
 public:
   using RequestHandler::RequestHandler;
-  static llvm::StringLiteral getCommand() { return "disconnect"; }
+  static llvm::StringLiteral GetCommand() { return "disconnect"; }
   llvm::Expected<protocol::DisconnectResponse>
   Run(const std::optional<protocol::DisconnectArguments> &args) const override;
 };
@@ -201,14 +201,14 @@ public:
 class EvaluateRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "evaluate"; }
+  static llvm::StringLiteral GetCommand() { return "evaluate"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class ExceptionInfoRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "exceptionInfo"; }
+  static llvm::StringLiteral GetCommand() { return "exceptionInfo"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsExceptionInfoRequest", true}};
   }
@@ -218,7 +218,7 @@ public:
 class InitializeRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "initialize"; }
+  static llvm::StringLiteral GetCommand() { return "initialize"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsRunInTerminalRequest", true}};
   }
@@ -228,14 +228,14 @@ public:
 class LaunchRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "launch"; }
+  static llvm::StringLiteral GetCommand() { return "launch"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class RestartRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "restart"; }
+  static llvm::StringLiteral GetCommand() { return "restart"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsRestartRequest", true}};
   }
@@ -245,21 +245,21 @@ public:
 class NextRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "next"; }
+  static llvm::StringLiteral GetCommand() { return "next"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class StepInRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "stepIn"; }
+  static llvm::StringLiteral GetCommand() { return "stepIn"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class StepInTargetsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "stepInTargets"; }
+  static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsStepInTargetsRequest", true}};
   }
@@ -269,14 +269,14 @@ public:
 class StepOutRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "stepOut"; }
+  static llvm::StringLiteral GetCommand() { return "stepOut"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class SetBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "setBreakpoints"; }
+  static llvm::StringLiteral GetCommand() { return "setBreakpoints"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsConditionalBreakpoints", true},
             {"supportsHitConditionalBreakpoints", true}};
@@ -287,14 +287,14 @@ public:
 class SetExceptionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "setExceptionBreakpoints"; }
+  static llvm::StringLiteral GetCommand() { return "setExceptionBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class SetFunctionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "setFunctionBreakpoints"; }
+  static llvm::StringLiteral GetCommand() { return "setFunctionBreakpoints"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsFunctionBreakpoints", true}};
   }
@@ -304,21 +304,21 @@ public:
 class DataBreakpointInfoRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "dataBreakpointInfo"; }
+  static llvm::StringLiteral GetCommand() { return "dataBreakpointInfo"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class SetDataBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "setDataBreakpoints"; }
+  static llvm::StringLiteral GetCommand() { return "setDataBreakpoints"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class SetInstructionBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() {
+  static llvm::StringLiteral GetCommand() {
     return "setInstructionBreakpoints";
   }
   void operator()(const llvm::json::Object &request) const override;
@@ -327,14 +327,14 @@ public:
 class CompileUnitsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "compileUnits"; }
+  static llvm::StringLiteral GetCommand() { return "compileUnits"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class ModulesRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "modules"; }
+  static llvm::StringLiteral GetCommand() { return "modules"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsModulesRequest", true}};
   }
@@ -344,21 +344,21 @@ public:
 class PauseRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "pause"; }
+  static llvm::StringLiteral GetCommand() { return "pause"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class ScopesRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "scopes"; }
+  static llvm::StringLiteral GetCommand() { return "scopes"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class SetVariableRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "setVariable"; }
+  static llvm::StringLiteral GetCommand() { return "setVariable"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsSetVariable", true}};
   }
@@ -370,7 +370,7 @@ class SourceRequestHandler
                             protocol::SourceResponseBody> {
 public:
   using RequestHandler::RequestHandler;
-  static llvm::StringLiteral getCommand() { return "source"; }
+  static llvm::StringLiteral GetCommand() { return "source"; }
   llvm::Expected<protocol::SourceResponseBody>
   Run(const protocol::SourceArguments &args) const override;
 };
@@ -378,35 +378,35 @@ public:
 class StackTraceRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "stackTrace"; }
+  static llvm::StringLiteral GetCommand() { return "stackTrace"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class ThreadsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "threads"; }
+  static llvm::StringLiteral GetCommand() { return "threads"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class VariablesRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "variables"; }
+  static llvm::StringLiteral GetCommand() { return "variables"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class LocationsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "locations"; }
+  static llvm::StringLiteral GetCommand() { return "locations"; }
   void operator()(const llvm::json::Object &request) const override;
 };
 
 class DisassembleRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "disassemble"; }
+  static llvm::StringLiteral GetCommand() { return "disassemble"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsDisassembleRequest", true}};
   }
@@ -416,7 +416,7 @@ public:
 class ReadMemoryRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "readMemory"; }
+  static llvm::StringLiteral GetCommand() { return "readMemory"; }
   llvm::StringMap<bool> GetCapabilities() const override {
     return {{"supportsReadMemoryRequest", true}};
   }
@@ -430,7 +430,7 @@ public:
 class TestGetTargetBreakpointsRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() {
+  static llvm::StringLiteral GetCommand() {
     return "_testGetTargetBreakpoints";
   }
   void operator()(const llvm::json::Object &request) const override;
