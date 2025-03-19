@@ -1193,6 +1193,12 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "Has v_prng_b32 instruction"
 >;
 
+def FeatureBVHDualAndBVH8Insts : SubtargetFeature<"bvh-dual-bvh-8-insts",
+  "HasBVHDualAndBVH8Insts",
+  "true",
+  "Has image_bvh_dual_intersect_ray and image_bvh_8_intersect_ray instructions"
+>;
+
 def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Has64BitLiterals",
   "true",
@@ -2054,7 +2060,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
-   FeatureMemoryAtomicFAddF32DenormalSupport
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureBVHDualAndBVH8Insts
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2192,7 +2199,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureVGPRSingleUseHintInsts,
    FeatureVmemPrefInsts,
    FeatureCvtPkF16F32Inst,
-   FeatureF16BF16ToFP6BF6ConversionScaleInsts
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureBVHDualAndBVH8Insts
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -2952,6 +2960,9 @@ def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts(
 
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
+
+def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
+  AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
 
 def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
   AssemblerPredicate<(all_of Feature64BitLiterals)>;

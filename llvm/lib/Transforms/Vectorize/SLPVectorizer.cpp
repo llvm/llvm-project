@@ -4802,7 +4802,9 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
     if (!Entries.front().front()->ReuseShuffleIndices.empty() &&
         TE.getVectorFactor() == 2 && Mask.size() == 2 &&
         any_of(enumerate(Entries.front().front()->ReuseShuffleIndices),
-               [](const auto &P) { return P.value() % 2 != P.index() % 2; }))
+               [](const auto &P) {
+                 return P.value() % 2 != static_cast<int>(P.index()) % 2;
+               }))
       return std::nullopt;
 
     // Perfect match in the graph, will reuse the previously vectorized
@@ -14086,11 +14088,18 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   auto CheckParentNodes = [&](const TreeEntry *User1, const TreeEntry *User2,
                               unsigned EdgeIdx) {
     const TreeEntry *Ptr1 = User1;
+    const TreeEntry *Ptr2 = User2;
+    SmallDenseMap<const TreeEntry *, unsigned> PtrToIdx;
+    while (Ptr2) {
+      PtrToIdx.try_emplace(Ptr2, EdgeIdx);
+      EdgeIdx = Ptr2->UserTreeIndex.EdgeIdx;
+      Ptr2 = Ptr2->UserTreeIndex.UserTE;
+    }
     while (Ptr1) {
       unsigned Idx = Ptr1->UserTreeIndex.EdgeIdx;
       Ptr1 = Ptr1->UserTreeIndex.UserTE;
-      if (Ptr1 == User2)
-        return Idx < EdgeIdx;
+      if (auto It = PtrToIdx.find(Ptr1); It != PtrToIdx.end())
+        return Idx < It->second;
     }
     return false;
   };
