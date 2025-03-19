@@ -31,8 +31,8 @@ class PairStore_rri<string opcodestr, DAGOperand RC>
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32GPRPair" in {
+let Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only" in {
 def LD_RV32 : PairLoad_ri<"ld", GPRPairRV32>, Sched<[WriteLDD, ReadMemBase]>;
 def SD_RV32 : PairStore_rri<"sd", GPRPairRV32>, Sched<[WriteSTD, ReadStoreData,
                             ReadMemBase]>;
-} // Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32GPRPair"
+} // Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only"
