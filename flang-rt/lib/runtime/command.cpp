@@ -292,7 +292,7 @@ std::int32_t RTNAME(Hostnm)(
 
   if (status == 0) {
     std::int64_t strLen{StringLength(buf)};
-    std::int32_t status{CopyCharsToDescriptor(res, buf, strLen)};
+    status = CopyCharsToDescriptor(res, buf, strLen);
   }
 
   return status;
