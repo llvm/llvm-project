@@ -12690,14 +12690,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
 
-      auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      unsigned OpIdx = isa<UnaryOperator>(VI) ? 0 : 1;
-      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(VI->getOperand(0));
-      TTI::OperandValueInfo Op2Info =
-          TTI::getOperandInfo(VI->getOperand(OpIdx));
-      SmallVector<const Value *> Operands(VI->operand_values());
+      // We cannot retrieve the operand from UniqueValues[Idx] because an
+      // interchangeable instruction may be used. The order and the actual
+      // operand might differ from what is retrieved from UniqueValues[Idx].
+      Value *Op1 = E->getOperand(0)[Idx];
+      Value *Op2;
+      SmallVector<const Value *, 2> Operands({Op1});
+      if (isa<UnaryOperator>(UniqueValues[Idx])) {
+        Op2 = Op1;
+      } else {
+        Op2 = E->getOperand(1)[Idx];
+        Operands.push_back(Op2);
+      }
+      TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
+      TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Op2);
       return TTI->getArithmeticInstrCost(ShuffleOrOp, OrigScalarTy, CostKind,
-                                         Op1Info, Op2Info, Operands, VI);
+                                         Op1Info, Op2Info, Operands);
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       if (ShuffleOrOp == Instruction::And && It != MinBWs.end()) {
