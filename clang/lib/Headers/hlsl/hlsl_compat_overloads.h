@@ -20,38 +20,22 @@ namespace hlsl {
 // clamp builtins overloads
 //===----------------------------------------------------------------------===//
 
-template <typename T, typename R, typename U, uint N>
-constexpr __detail::enable_if_t<
-    __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
-clamp(vector<T, N> p0, vector<R, N> p1, U p2) {
-  return clamp(p0, (vector<T, N>)p1, (vector<T, N>)p2);
-}
-template <typename T, typename R, typename U, uint N>
-constexpr __detail::enable_if_t<
-    __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
-clamp(vector<T, N> p0, U p1, vector<R, N> p2) {
-  return clamp(p0, (vector<T, N>)p1, (vector<T, N>)p2);
-}
-template <typename T, typename U, typename V, uint N>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value &&
-                                    __detail::is_arithmetic<V>::Value &&
-                                    (N > 1 && N <= 4),
-                                vector<T, N>>
-clamp(vector<T, N> p0, U p1, V p2) {
-  return clamp(p0, (vector<T, N>)p1, (vector<T, N>)p2);
-}
-template <typename T, typename R, typename S, uint N>
+template <typename T, uint N>
 constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-clamp(vector<T, N> p0, vector<R, N> p1, vector<S, N> p2) {
-  return clamp(p0, (vector<T, N>)p1, (vector<T, N>)p2);
+clamp(vector<T, N> p0, vector<T, N> p1, T p2) {
+  return clamp(p0, p1, (vector<T, N>)p2);
 }
-template <typename U, typename V, typename W>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value &&
-                                    __detail::is_arithmetic<V>::Value &&
-                                    __detail::is_arithmetic<W>::Value,
-                                U>
-clamp(U p0, V p1, W p2) {
-  return clamp(p0, (U)p1, (U)p2);
+
+template <typename T, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
+clamp(vector<T, N> p0, T p1, vector<T, N> p2) {
+  return clamp(p0, (vector<T, N>)p1, p2);
+}
+
+template <typename T, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
+clamp(vector<T, N> p0, T p1, T p2) {
+  return clamp(p0, (vector<T, N>)p1, (vector<T, N>)p2);
 }
 
 } // namespace hlsl
