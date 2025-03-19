@@ -25,7 +25,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
-#include "llvm/ADT/SmallSet.h"
+#include "VPlanConstantFolder.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -46,6 +46,7 @@ struct VFRange;
 class VPBuilder {
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
+  VPConstantFolder Folder;
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
@@ -64,6 +65,11 @@ class VPBuilder {
                                    std::initializer_list<VPValue *> Operands,
                                    DebugLoc DL, const Twine &Name = "") {
     return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name);
+  }
+
+  VPValue *getOrAddLiveIn(Value *V) {
+    assert(BB && "Expected insertion point to be set");
+    return BB->getPlan()->getOrAddLiveIn(V);
   }
 
 public:
@@ -180,17 +186,25 @@ public:
 
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
+    if (auto *V = Folder.foldNot(Operand))
+      if (BB)
+        return getOrAddLiveIn(V);
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
   VPValue *createAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                      const Twine &Name = "") {
+    if (auto *V = Folder.foldAnd(LHS, RHS))
+      if (BB)
+        return getOrAddLiveIn(V);
     return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
   VPValue *createOr(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                     const Twine &Name = "") {
-
+    if (auto *V = Folder.foldOr(LHS, RHS))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(new VPInstruction(
         Instruction::BinaryOps::Or, {LHS, RHS},
         VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
@@ -198,6 +212,9 @@ public:
 
   VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS, DebugLoc DL = {},
                             const Twine &Name = "") {
+    if (auto *V = Folder.foldLogicalAnd(LHS, RHS))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(
         new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
   }
@@ -205,6 +222,9 @@ public:
   VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
                         DebugLoc DL = {}, const Twine &Name = "",
                         std::optional<FastMathFlags> FMFs = std::nullopt) {
+    if (auto *V = Folder.foldSelect(Cond, TrueVal, FalseVal))
+      if (BB)
+        return getOrAddLiveIn(V);
     auto *Select =
         FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
                                  *FMFs, DL, Name)
@@ -220,17 +240,26 @@ public:
                       DebugLoc DL = {}, const Twine &Name = "") {
     assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
            Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
+    if (auto *V = Folder.foldCmp(Pred, A, B))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(
         new VPInstruction(Instruction::ICmp, Pred, A, B, DL, Name));
   }
 
-  VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
-                              const Twine &Name = "") {
+  VPValue *createPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
+                        const Twine &Name = "") {
+    if (auto *V = Folder.foldPtrAdd(Ptr, Offset, GEPNoWrapFlags::none()))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name));
   }
   VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset, DebugLoc DL = {},
                                 const Twine &Name = "") {
+    if (auto *V = Folder.foldPtrAdd(Ptr, Offset, GEPNoWrapFlags::inBounds()))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(
         new VPInstruction(Ptr, Offset, GEPNoWrapFlags::inBounds(), DL, Name));
   }
@@ -246,14 +275,20 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
-  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy, DebugLoc DL) {
+  VPValue *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                            Type *ResultTy, DebugLoc DL) {
+    if (auto *V = Folder.foldCast(Opcode, Op, ResultTy))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(
         new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
   }
 
-  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
-                                     Type *ResultTy) {
+  VPValue *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
+                           Type *ResultTy) {
+    if (auto *V = Folder.foldCast(Opcode, Op, ResultTy))
+      if (BB)
+        return getOrAddLiveIn(V);
     return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
   }
 
