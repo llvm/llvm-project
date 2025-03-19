@@ -8,6 +8,7 @@
 
 #include "EventHelper.h"
 #include "DAP.h"
+#include "DAPLog.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "lldb/API/SBFileSpec.h"
