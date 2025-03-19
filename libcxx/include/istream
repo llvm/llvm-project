@@ -225,6 +225,10 @@ protected:
   }
 
 public:
+  // Required by iostream to create cin as uninitialized.
+  _LIBCPP_HIDE_FROM_ABI explicit basic_istream(__uninitialized_ios_tag __uninit)
+      : basic_ios<_CharT, _Traits>(__uninit) {}
+
   basic_istream(const basic_istream& __rhs)            = delete;
   basic_istream& operator=(const basic_istream& __rhs) = delete;
 

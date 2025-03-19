@@ -57,6 +57,10 @@ public:
   }
   ~basic_ostream() override;
 
+  // Required by iostream to create cin as uninitialized.
+  _LIBCPP_HIDE_FROM_ABI explicit basic_ostream(__uninitialized_ios_tag __uninit)
+      : basic_ios<_CharT, _Traits>(__uninit) {}
+
   basic_ostream(const basic_ostream& __rhs)            = delete;
   basic_ostream& operator=(const basic_ostream& __rhs) = delete;
 

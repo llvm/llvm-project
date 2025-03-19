@@ -251,6 +251,10 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 typedef ptrdiff_t streamsize;
 
+struct _LIBCPP_HIDE_FROM_ABI __uninitialized_ios_tag {
+  _LIBCPP_HIDE_FROM_ABI explicit __uninitialized_ios_tag() = default;
+};
+
 class _LIBCPP_EXPORTED_FROM_ABI ios_base {
 public:
   class _LIBCPP_EXPORTED_FROM_ABI failure;
@@ -370,6 +374,9 @@ protected:
     // test/libcxx/input.output/iostreams.base/ios.base/ios.base.cons/dtor.uninitialized.pass.cpp
     // for the details.
   }
+
+  // Intentionally do not make this constexpr. Members cannot be uninitialized when using constexpr.
+  _LIBCPP_HIDE_FROM_ABI ios_base(__uninitialized_ios_tag) {}
 
   void init(void* __sb);
   _LIBCPP_HIDE_FROM_ABI void* rdbuf() const { return __rdbuf_; }
@@ -619,6 +626,9 @@ protected:
     // purposefully does no initialization
     // since the destructor does nothing this does not have ios_base issues.
   }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_ios(__uninitialized_ios_tag __uninit) : ios_base(__uninit) {}
+
   _LIBCPP_HIDE_FROM_ABI void init(basic_streambuf<char_type, traits_type>* __sb);
 
   _LIBCPP_HIDE_FROM_ABI void move(basic_ios& __rhs);

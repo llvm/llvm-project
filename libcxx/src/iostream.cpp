@@ -9,21 +9,19 @@
 #include "std_stream.h"
 
 #include <__memory/construct_at.h>
-#include <__ostream/basic_ostream.h>
-#include <istream>
+#include <iostream>
 
 #define ABI_NAMESPACE_STR _LIBCPP_TOSTRING(_LIBCPP_ABI_NAMESPACE)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-template <class StreamT, class BufferT>
+template <class BufferT, typename StreamT, StreamT& stream>
 union stream_data {
   constexpr stream_data() {}
   constexpr ~stream_data() {}
+  // Make this a struct inside a union so it can be uninitialized.
   struct {
-    // The stream has to be the first element, since that's referenced by the stream declarations in <iostream>
-    StreamT stream;
     BufferT buffer;
     mbstate_t mb;
   };
@@ -51,11 +49,15 @@ union stream_data {
         "?" #var "@" ABI_NAMESPACE_STR "@std@@3V?$" #StreamT                                                           \
         "@" CHAR_MANGLING(CharT) "U?$char_traits@" CHAR_MANGLING(CharT) "@" ABI_NAMESPACE_STR "@std@@@12@A")
 #else
-#  define STREAM(StreamT, BufferT, CharT, var) STRING_DATA_CONSTINIT stream_data<StreamT<CharT>, BufferT<CharT>> var
-#endif
 
-// These definitions and the declarations in <iostream> technically cause ODR violations, since they have different
-// types (stream_data and {i,o}stream respectively). This means that <iostream> should never be included in this TU.
+// To avoid ODR violations without breaking the ABI, we need to define it as a StreamT<CharT>.
+// However, since initialization order of statics is arbitrary, we could run DoIOSInit first and then
+// construct the stream for a second time, overwriting the data in it.
+// To avoid this, we call a constructor overload that specifically avoids initializing any members.
+#  define STREAM(StreamT, BufferT, CharT, var)                                                                         \
+    StreamT<CharT> var{std::__uninitialized_ios_tag{}};                                                                \
+    stream_data<BufferT<CharT>, StreamT<CharT>, var> sd_##var
+#endif
 
 _LIBCPP_EXPORTED_FROM_ABI STREAM(basic_istream, __stdinbuf, char, cin);
 _LIBCPP_EXPORTED_FROM_ABI STREAM(basic_ostream, __stdoutbuf, char, cout);
@@ -99,34 +101,34 @@ public:
 DoIOSInit::DoIOSInit() {
   force_locale_initialization();
 
-  cin.init(stdin);
-  cout.init(stdout);
-  cerr.init(stderr);
-  clog.init(stderr);
+  sd_cin.init(stdin);
+  sd_cout.init(stdout);
+  sd_cerr.init(stderr);
+  sd_clog.init(stderr);
 
-  cin.stream.tie(&cout.stream);
-  std::unitbuf(cerr.stream);
-  cerr.stream.tie(&cout.stream);
+  cin.tie(&cout);
+  std::unitbuf(cerr);
+  cerr.tie(&cout);
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-  wcin.init(stdin);
-  wcout.init(stdout);
-  wcerr.init(stderr);
-  wclog.init(stderr);
+  sd_wcin.init(stdin);
+  sd_wcout.init(stdout);
+  sd_wcerr.init(stderr);
+  sd_wclog.init(stderr);
 
-  wcin.stream.tie(&wcout.stream);
-  std::unitbuf(wcerr.stream);
-  wcerr.stream.tie(&wcout.stream);
+  wcin.tie(&wcout);
+  std::unitbuf(wcerr);
+  wcerr.tie(&wcout);
 #endif
 }
 
 DoIOSInit::~DoIOSInit() {
-  cout.stream.flush();
-  clog.stream.flush();
+  cout.flush();
+  clog.flush();
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
-  wcout.stream.flush();
-  wclog.stream.flush();
+  wcout.flush();
+  wclog.flush();
 #endif
 }
 
