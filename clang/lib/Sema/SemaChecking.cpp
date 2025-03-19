@@ -3982,17 +3982,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         return true;
       if (ValType->isPointerType())
         return AllowedType & AOEVT_Pointer;
-      if (ValType->isVectorType()) {
-        if (ValType->isSizelessVectorType() ||
-            !ValType->castAs<VectorType>()
-                 ->getElementType()
-                 ->isFloatingType() ||
-            !(AllowedType & AOEVT_FPorFPVec))
-          return false;
-        // Only floating point fixed vectors are supported in IR
-        return true;
-      }
-      if (!(ValType->isFloatingType() && (AllowedType & AOEVT_FPorFPVec)))
+      if (!(ValType->isFPAtomicCompatibleType() &&
+            (AllowedType & AOEVT_FPorFPVec)))
         return false;
       // LLVM Parser does not allow atomicrmw with x86_fp80 type.
       if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&

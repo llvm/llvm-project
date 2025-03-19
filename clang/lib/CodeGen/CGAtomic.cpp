@@ -531,12 +531,7 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   bool PostOpMinMax = false;
   unsigned PostOp = 0;
 
-  auto IsFloat = E->getValueType()->isVectorType()
-                     ? E->getValueType()
-                           ->castAs<VectorType>()
-                           ->getElementType()
-                           ->isFloatingType()
-                     : E->getValueType()->isFloatingType();
+  bool IsFloat = E->getValueType()->isFPAtomicCompatibleType();
   switch (E->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
   case AtomicExpr::AO__opencl_atomic_init:
@@ -984,10 +979,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
-    ShouldCastToIntPtrTy =
-        MemTy->isVectorType()
-            ? !MemTy->castAs<VectorType>()->getElementType()->isFloatingType()
-            : !MemTy->isFloatingType();
+    ShouldCastToIntPtrTy = !MemTy->isFPAtomicCompatibleType();
     [[fallthrough]];
   case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__atomic_fetch_nand:

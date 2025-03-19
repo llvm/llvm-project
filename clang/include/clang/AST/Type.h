@@ -2738,6 +2738,9 @@ public:
   /// Determine wither this type is a C++ elaborated-type-specifier.
   bool isElaboratedTypeSpecifier() const;
 
+  // check whether the type is compatible with fp atomics.
+  bool isFPAtomicCompatibleType() const;
+
   bool canDecayToPointerType() const;
 
   /// Whether this type is represented natively as a pointer.  This includes

@@ -1,19 +1,19 @@
-// RUN: %clang_cc1 %s -verify=expected,fp80,noi128 -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify=expected,fp80,noi128 -fenable-matrix -fgnuc-version=4.2.1 -ffreestanding \
 // RUN:   -fsyntax-only -triple=i686-linux-gnu -std=c11
-// RUN: %clang_cc1 %s -verify=expected,noi128 -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify=expected,noi128 -fenable-matrix -fgnuc-version=4.2.1 -ffreestanding \
 // RUN:   -fsyntax-only -triple=i686-linux-android -std=c11
-// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -fenable-matrix -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
-// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -fenable-matrix -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr7
-// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -fenable-matrix -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64le-linux-gnu -std=c11 \
 // RUN:   -target-cpu pwr8 -DPPC64_PWR8
-// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -fenable-matrix -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
 // RUN:   -target-cpu pwr8
-// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -fenable-matrix -ffreestanding \
 // RUN:   -fsyntax-only -triple=powerpc64-unknown-aix -std=c11 \
 // RUN:   -mabi=quadword-atomics -target-cpu pwr8 -DPPC64_PWR8
 
@@ -154,6 +154,9 @@ typedef float __attribute__((ext_vector_type(4))) vector_float;
 typedef double __attribute__((ext_vector_type(2))) vector_double;
 typedef int __attribute__((ext_vector_type(4))) vector_int;
 
+typedef float float_mat_5x5 __attribute__((matrix_type(5, 5)));
+typedef _Complex double ComplexDouble;
+
 #define _AS1 __attribute__((address_space(1)))
 #define _AS2 __attribute__((address_space(2)))
 
@@ -164,7 +167,8 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
        int **P, float *F, double *D, struct S *s1, struct S *s2,
        atomic_vector_float* vf, atomic_vector_double* vd, 
        atomic_vector_int* vi, vector_float* evf, 
-       vector_double* evd, vector_int* evi) {
+       vector_double* evd, vector_int* evi, float_mat_5x5* fm,
+       ComplexDouble* cd) {
   __c11_atomic_init(I, 5); // expected-error {{pointer to _Atomic}}
   __c11_atomic_init(ci, 5); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
 
@@ -258,6 +262,12 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __atomic_fetch_sub(evf, fvec, memory_order_seq_cst);
   __atomic_fetch_sub(evd, dvec, memory_order_seq_cst);
   __atomic_fetch_sub(evi, ivec, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+
+  float_mat_5x5 f1;
+  __atomic_fetch_sub(fm, f1, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+  ComplexDouble f2 = {1.0, 2.0};
+  __atomic_fetch_sub(cd, f2, memory_order_seq_cst); // expected-error {{must be a pointer to integer, pointer or supported floating point type}}
+
   __atomic_fetch_min(F, 3, memory_order_seq_cst);
   __atomic_fetch_min(D, 3, memory_order_seq_cst);
   __atomic_fetch_max(F, 3, memory_order_seq_cst);
