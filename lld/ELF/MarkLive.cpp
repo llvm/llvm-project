@@ -48,11 +48,11 @@ namespace {
 using SecOffset = std::pair<InputSectionBase *, unsigned>;
 
 // Something that can have an independent reason for being live.
-using LiveObject = std::variant<InputSectionBase *, Symbol *, SecOffset>;
+using LiveItem = std::variant<InputSectionBase *, Symbol *, SecOffset>;
 
-// The most proximate reason that an object is live.
+// The most proximate reason that something is live.
 struct LiveReason {
-  std::optional<LiveObject> obj;
+  std::optional<LiveItem> item;
   StringRef desc;
 };
 
@@ -88,7 +88,7 @@ private:
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 
   // The most proximate reason that something is live.
-  DenseMap<LiveObject, LiveReason> whyLive;
+  DenseMap<LiveItem, LiveReason> whyLive;
 };
 } // namespace
 
@@ -164,7 +164,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
   }
 
   for (InputSectionBase *sec : cNamedSections.lookup(sym.getName()))
-    enqueue(sec, 0, nullptr, reason);
+    enqueue(sec, /*offset=*/0, /*sym=*/nullptr, reason);
 }
 
 // The .eh_frame section is an unfortunate special case.
@@ -240,12 +240,12 @@ void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
 
   if (TrackWhyLive) {
     if (sym) {
-      // If a specific symbol is referenced, that makes it alive. It may in turn
-      // make its section alive.
+      // If a specific symbol is referenced, that keeps it live. The symbol then
+      // keeps its section live.
       whyLive.try_emplace(sym, reason);
       whyLive.try_emplace(sec, LiveReason{sym, "contained live symbol"});
     } else {
-      // Otherwise, the reference generically makes the section live.
+      // Otherwise, the reference generically keeps the section live.
       whyLive.try_emplace(sec, reason);
     }
   }
@@ -268,57 +268,49 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
   auto msg = Msg(ctx);
 
   const auto printSymbol = [&](Symbol *s) {
-    if (s->isLocal())
-      msg << s->file << ":(" << s << ')';
-    else
-      msg << s;
+    msg << s->file << ":(" << s << ')';
   };
 
   msg << "live symbol: ";
   printSymbol(s);
 
-  LiveObject cur = s;
+  LiveItem cur = s;
   while (true) {
     auto it = whyLive.find(cur);
     LiveReason reason;
-    // If there is a specific reason this object is live...
+    // If there is a specific reason this item is live...
     if (it != whyLive.end()) {
       reason = it->second;
     } else {
-      // This object is live, but it has no tracked reason. It must be an
+      // This item is live, but it has no tracked reason. It must be an
       // unreferenced symbol in a live section or a symbol with no section.
-      const auto getParentSec = [&]() -> InputSectionBase * {
-        auto *d = dyn_cast<Defined>(std::get<Symbol *>(cur));
-        if (!d)
-          return nullptr;
-        return dyn_cast_or_null<InputSectionBase>(d->section);
-      };
-      InputSectionBase *sec = getParentSec();
+      InputSectionBase *sec = nullptr;
+      if (auto *d = dyn_cast<Defined>(std::get<Symbol *>(cur)))
+        sec = dyn_cast_or_null<InputSectionBase>(d->section);
       reason = sec ? LiveReason{sec, "in live section"}
                    : LiveReason{std::nullopt, "no section"};
     }
 
-    if (reason.obj) {
-      msg << "\n>>> " << reason.desc << ": ";
-      // The reason may not yet have been resolved to a symbol; do so now.
-      if (std::holds_alternative<SecOffset>(*reason.obj)) {
-        const auto &so = std::get<SecOffset>(*reason.obj);
-        InputSectionBase *sec = so.first;
-        Defined *sym = sec->getEnclosingSymbol(so.second);
-        cur = sym ? LiveObject(sym) : LiveObject(sec);
-      } else {
-        cur = *reason.obj;
-      }
-
-      if (std::holds_alternative<Symbol *>(cur))
-        printSymbol(std::get<Symbol *>(cur));
-      else
-        msg << std::get<InputSectionBase *>(cur);
-    }
-    if (!reason.obj) {
+    if (!reason.item) {
       msg << " (" << reason.desc << ')';
       break;
     }
+
+    msg << "\n>>> " << reason.desc << ": ";
+    // The reason may not yet have been resolved to a symbol; do so now.
+    if (std::holds_alternative<SecOffset>(*reason.item)) {
+      const auto &so = std::get<SecOffset>(*reason.item);
+      InputSectionBase *sec = so.first;
+      Defined *sym = sec->getEnclosingSymbol(so.second);
+      cur = sym ? LiveItem(sym) : LiveItem(sec);
+    } else {
+      cur = *reason.item;
+    }
+
+    if (std::holds_alternative<Symbol *>(cur))
+      printSymbol(std::get<Symbol *>(cur));
+    else
+      msg << std::get<InputSectionBase *>(cur);
   }
 }
 
@@ -374,7 +366,7 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   }
   for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->flags & SHF_GNU_RETAIN) {
-      enqueue(sec, 0, nullptr, {std::nullopt, "retained"});
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "retained"});
       continue;
     }
     if (sec->flags & SHF_LINK_ORDER)
@@ -413,9 +405,10 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     // Preserve special sections and those which are specified in linker
     // script KEEP command.
     if (isReserved(sec)) {
-      enqueue(sec, 0, nullptr, {std::nullopt, "reserved"});
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, {std::nullopt, "reserved"});
     } else if (ctx.script->shouldKeep(sec)) {
-      enqueue(sec, 0, nullptr, {std::nullopt, "KEEP in linker script"});
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr,
+              {std::nullopt, "KEEP in linker script"});
     } else if ((!ctx.arg.zStartStopGC || sec->name.starts_with("__libc_")) &&
                isValidCIdentifier(sec->name)) {
       // As a workaround for glibc libc.a before 2.34
@@ -460,11 +453,11 @@ void MarkLive<ELFT, TrackWhyLive>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, 0, nullptr, {&sec, "dependent section"});
+      enqueue(isec, /*offset=*/0, /*sym=*/nullptr, {&sec, "dependent section"});
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
-      enqueue(sec.nextInSectionGroup, 0, nullptr,
+      enqueue(sec.nextInSectionGroup, /*offset=*/0, /*sym=*/nullptr,
               {&sec, "next in section group"});
   }
 }
@@ -492,7 +485,7 @@ void MarkLive<ELFT, TrackWhyLive>::moveToMain() {
       continue;
     if (ctx.symtab->find(("__start_" + sec->name).str()) ||
         ctx.symtab->find(("__stop_" + sec->name).str()))
-      enqueue(sec, 0, nullptr, {});
+      enqueue(sec, /*offset=*/0, /*sym=*/nullptr, /*reason=*/{});
   }
 
   mark();
