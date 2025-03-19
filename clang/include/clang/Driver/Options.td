@@ -624,6 +624,7 @@ defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar cpp23 = LangOpts<"CPlusPlus23">;
+defvar cpp26 = LangOpts<"CPlusPlus26">;
 defvar c99 = LangOpts<"C99">;
 defvar c23 = LangOpts<"C23">;
 defvar lang_std = LangOpts<"LangStd">;
@@ -3521,9 +3522,9 @@ def : Flag<["-"], "faligned-new">, Alias<faligned_allocation>;
 def : Flag<["-"], "fno-aligned-new">, Alias<fno_aligned_allocation>;
 def faligned_new_EQ : Joined<["-"], "faligned-new=">;
 
-defm cxx_type_aware_allocators : BoolFOption<"experimental-cxx-type-aware-allocators",
-  LangOpts<"TypeAwareAllocators">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable experimental C++ type aware allocator operators">,
+defm cxx_type_aware_allocators : BoolFOption<"cxx-type-aware-allocators",
+  LangOpts<"TypeAwareAllocators">, Default<cpp26.KeyPath>,
+  PosFlag<SetTrue, [], [ClangOption], "Enable C++26 type aware allocator operators">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 def fobjc_legacy_dispatch : Flag<["-"], "fobjc-legacy-dispatch">, Group<f_Group>;
 def fobjc_new_property : Flag<["-"], "fobjc-new-property">, Group<clang_ignored_f_Group>;

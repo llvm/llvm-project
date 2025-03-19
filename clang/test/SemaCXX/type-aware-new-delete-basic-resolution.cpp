@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions    -fsized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions    -fsized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fexperimental-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -DTADD -std=c++23 -fexperimental-cxx-type-aware-allocators -fexperimental-cxx-type-aware-destroying-delete -fexceptions
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fcxx-type-aware-allocators -fexceptions    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fcxx-type-aware-allocators -fexceptions -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fcxx-type-aware-allocators -fexceptions    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s        -std=c++23 -fcxx-type-aware-allocators -fexceptions -fno-sized-deallocation -fno-aligned-allocation
 
 namespace std {
   template <class T> struct type_identity {};
@@ -11,12 +10,6 @@ namespace std {
 }
 
 static_assert(__has_feature(cxx_type_aware_allocators));
-#ifdef TADD
-static_assert(__has_feature(cxx_type_aware_destroying_delete));
-#else
-static_assert(!__has_feature(cxx_type_aware_destroying_delete));
-#endif
-
 #if defined(__cpp_aligned_new)
 #define ALLOCATION_ALIGNMENT , std::align_val_t
 #else
@@ -263,6 +256,11 @@ struct MultiDimensionArrayTest3 {
   template <unsigned N> requires (N%4 == 0) void operator delete[](std::type_identity<MultiDimensionArrayTest3[N]>, void*, size_t, std::align_val_t) = delete; // #69
 };
 
+struct ClassScopedTemplatePackStruct {
+  template <class T, class... Pack> void *operator new(std::type_identity<T>, size_t, std::align_val_t, Pack...);
+  template <class T, class... Pack> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t, Pack...); // #70
+};
+
 void test() {
   
   // untyped in class declaration wins
@@ -464,5 +462,11 @@ void test() {
     delete [] O29;
     // expected-error@-1 {{attempt to use a deleted function}}
     // expected-note@#69 {{'operator delete[]<4U>' has been explicitly marked deleted here}}
+  }
+  {
+    ClassScopedTemplatePackStruct *O30 = new ClassScopedTemplatePackStruct;
+    delete O30;
+    // expected-error@-1 {{no suitable member 'operator delete' in 'ClassScopedTemplatePackStruct'}}
+    // expected-note@#70 {{member 'operator delete' declared here}}
   }
 }

@@ -9839,10 +9839,14 @@ def err_operator_delete_param_type : Error<
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
+
 def err_type_aware_destroying_operator_delete : Error<
-  "type aware destroying delete is not permitted, enable with '-fexperimental-cxx-type-aware-destroying-delete'">;
+  "type aware destroying delete is not permitted in C++26">;
 def err_unsupported_type_aware_allocator : Error<
-  "type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'">;
+  "type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'">;
+def warn_cxx26_type_aware_allocator : Warning<
+  "use or declaration of type aware allocators are incompatible with C++ standards before C++26">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_no_type_aware_cleanup_operator_delete : Error<
   "type aware %0 requires there to be a corresponding cleanup %1 in %2">;
 def err_type_aware_cleanup_deallocator_context_mismatch : Error<

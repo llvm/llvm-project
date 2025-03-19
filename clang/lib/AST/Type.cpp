@@ -3134,6 +3134,12 @@ bool Type::isStdByteType() const {
   return false;
 }
 
+bool Type::isDestroyingDeleteT() const {
+  auto *RD = getAsCXXRecordDecl();
+  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
+         RD->getIdentifier()->isStr("destroying_delete_t");
+}
+
 TemplateDecl *Type::TryGetSpecializedTemplateDecl() const {
   auto UnderlyingType = getCanonicalTypeInternal();
   if (auto *TST = UnderlyingType->getAs<TemplateSpecializationType>())

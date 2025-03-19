@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators -fno-sized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++23 -fexperimental-cxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -DNO_TAA -std=c++23 -fno-experimental-cxx-type-aware-allocators
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -fcxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -fcxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -fcxx-type-aware-allocators -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s          -std=c++26 -fcxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -triple arm64-apple-macosx -fsyntax-only -verify %s -DNO_TAA -std=c++26 -fno-cxx-type-aware-allocators
 
 namespace std {
   template <class T> struct type_identity {};
@@ -15,7 +15,6 @@ using size_t = __SIZE_TYPE__;
 struct TestType {};
 template <typename T> struct TemplateTestType {};
 
-
 // Valid free declarations
 void *operator new(std::type_identity<int>, size_t, std::align_val_t); // #1
 void *operator new(std::type_identity<int>, size_t, std::align_val_t, TestType&); // #2
@@ -25,13 +24,13 @@ template <typename T> void *operator new(std::type_identity<TemplateTestType<T>>
 template <typename T, typename U> void *operator new(std::type_identity<T>, size_t, std::align_val_t, TemplateTestType<U>&); // #6
 template <template <typename> class T> void *operator new(std::type_identity<T<int>>, size_t, std::align_val_t); // #7
 #if defined(NO_TAA)
-//expected-error@#1 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#2 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#3 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#4 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#5 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#6 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#7 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+//expected-error@#1 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#2 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#3 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#4 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#5 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#6 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#7 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
 #endif
 
 void operator delete(std::type_identity<int>, void *, size_t, std::align_val_t); // #8
@@ -40,28 +39,28 @@ template <typename T> void operator delete(std::type_identity<TemplateTestType<T
 template <template <typename> class T> void operator delete(std::type_identity<T<int>>, void *, size_t, std::align_val_t); // #11
 
 #if defined(NO_TAA)
-//expected-error@#8 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#9 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#10 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
-//expected-error@#11 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+//expected-error@#8 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#9 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#10 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
+//expected-error@#11 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
 #endif
 
 typedef std::type_identity<float> TypeIdentityAlias1;
 void *operator new(TypeIdentityAlias1, size_t, std::align_val_t); // #12
 #if defined(NO_TAA)
-//expected-error@#12 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+//expected-error@#12 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
 #endif
 
 using TypeIdentityAlias2 = std::type_identity<double>;
 void *operator new(TypeIdentityAlias2, size_t, std::align_val_t); // #13
 #if defined(NO_TAA)
-//expected-error@#13 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+//expected-error@#13 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
 #endif
 
 template <typename T> using TypeIdentityAlias3 = std::type_identity<T>;
 template <typename T> void *operator new(TypeIdentityAlias3<T>, size_t, std::align_val_t); // #14
 #if defined(NO_TAA)
-//expected-error@#14 {{type aware allocation operators are disabled, enable with '-fexperimental-cxx-type-aware-allocators'}}
+//expected-error@#14 {{type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'}}
 #endif
 
 

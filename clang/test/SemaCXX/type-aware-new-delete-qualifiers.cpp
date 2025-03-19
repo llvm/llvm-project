@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++23 -fexperimental-cxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++23 -fexperimental-cxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++23 -fexperimental-cxx-type-aware-allocators -fno-sized-deallocation -fno-aligned-allocation
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++23 -fexperimental-cxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++26 -fcxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++26 -fcxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++26 -fcxx-type-aware-allocators -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DNO_TADD -std=c++26 -fcxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation
 namespace std {
   template <class T> struct type_identity {
     typedef T type;

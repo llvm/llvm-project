@@ -3395,22 +3395,36 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
-  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
-  // address, (size or hot_cold_t), alignment, no_throw_t
-  unsigned MaxImplicitParameters = 4;
-  unsigned MaxParamCount = IsTypeAware + MaxImplicitParameters;
-  const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > MaxParamCount ||
-      FPT->isVariadic())
+  if (isVariadic())
     return false;
 
-  unsigned MinimumParamCount = IsTypeAware + 1;
+  if (isTypeAwareOperatorNewOrDelete()) {
+    bool IsDelete = getDeclName().isOperatorDelete();
+    unsigned RequiredParameterCount = IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount : FunctionDecl::RequiredTypeAwareNewParameterCount;
+    if (AlignmentParam)
+      *AlignmentParam = /* type identity */ 1  + /* address */ IsDelete + /* size */ 1;
+    if (RequiredParameterCount == getNumParams())
+      return true;
+    if (getNumParams() > RequiredParameterCount + 1)
+      return false;
+    if (!getParamDecl(RequiredParameterCount)->getType()->isNothrowT())
+      return false;
+
+    if (IsNothrow)
+        *IsNothrow = true;
+    return true;
+  }
+
+  const auto *FPT = getType()->castAs<FunctionProtoType>();
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4)
+    return false;
+
   // If this is a single-parameter function, it must be a replaceable global
   // allocation or deallocation function.
-  if (FPT->getNumParams() == MinimumParamCount)
+  if (FPT->getNumParams() == 1)
     return true;
 
-  unsigned Params = MinimumParamCount;
+  unsigned Params = 1;
   QualType Ty = FPT->getParamType(Params);
   const ASTContext &Ctx = getASTContext();
 
@@ -3421,7 +3435,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
 
   // In C++14, the next parameter can be a 'std::size_t' for sized delete.
   bool IsSizedDelete = false;
-  if ((IsTypeAware || Ctx.getLangOpts().SizedDeallocation) &&
+  if (Ctx.getLangOpts().SizedDeallocation &&
       (getDeclName().getCXXOverloadedOperator() == OO_Delete ||
        getDeclName().getCXXOverloadedOperator() == OO_Array_Delete) &&
       Ctx.hasSameType(Ty, Ctx.getSizeType())) {
@@ -3431,8 +3445,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
 
   // In C++17, the next parameter can be a 'std::align_val_t' for aligned
   // new/delete.
-  if ((IsTypeAware || Ctx.getLangOpts().AlignedAllocation) && !Ty.isNull() &&
-      Ty->isAlignValT()) {
+  if (Ctx.getLangOpts().AlignedAllocation && !Ty.isNull() && Ty->isAlignValT()) {
     Consume();
     if (AlignmentParam)
       *AlignmentParam = Params;
@@ -3505,9 +3518,7 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
   if (isTypeAwareOperatorNewOrDelete())
     return false;
 
-  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
-  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
-         RD->getIdentifier()->isStr("destroying_delete_t");
+  return getParamDecl(1)->getType()->isDestroyingDeleteT();
 }
 
 bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
