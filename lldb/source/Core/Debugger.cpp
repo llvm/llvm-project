@@ -783,8 +783,8 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 
 void Debugger::DispatchClientTelemetry(
     const lldb_private::StructuredDataImpl &entry) {
-  lldb_private::telemetry::TelemeryManager::GetInstance()
-      ->DispatchClientTelemetry(entry);
+  lldb_private::telemetry::TelemetryManager::GetInstance()
+      ->DispatchClientTelemetry(entry, this);
 }
 
 void Debugger::HandleDestroyCallback() {

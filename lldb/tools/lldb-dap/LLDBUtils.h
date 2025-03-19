@@ -157,37 +157,47 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
+/// Helper for sending telemetry to lldb server.
 class TelemetryDispatcher {
 public:
-  TelemetryDispatcher(SBDebugger *debugger) {
-    m_telemetry_array =
-        ({"start_time",
-          std::chrono::steady_clock::now().time_since_epoch().count()});
+  TelemetryDispatcher(lldb::SBDebugger *debugger) {
+    m_telemetry_json = llvm::json::Object();
+    m_telemetry_json.try_emplace(
+        "start_time",
+        std::chrono::steady_clock::now().time_since_epoch().count());
     this->debugger = debugger;
   }
 
   void Set(std::string key, std::string value) {
-    m_telemetry_array.push_back(llvm::json::Value{key, value})
+    m_telemetry_json.try_emplace(key, value);
   }
 
   void Set(std::string key, int64_t value) {
-    m_telemetry_array.push_back(llvm::json::Value{key, value})
+    m_telemetry_json.try_emplace(key, value);
   }
 
   ~TelemetryDispatcher() {
-    m_telemetry_array.push_back(
-        {"end_time",
-         std::chrono::steady_clock::now().time_since_epoch().count()});
+    m_telemetry_json.try_emplace(
+        "end_time",
+        std::chrono::steady_clock::now().time_since_epoch().count());
+
     lldb::SBStructuredData telemetry_entry;
-    llvm::json::Value val(std::move(telemetry_array));
-    std::string string_rep = lldb_dap::JSONToString(val);
+    llvm::json::Value val(std::move(m_telemetry_json));
+
+    std::string string_rep = JSONToString(val);
     telemetry_entry.SetFromJSON(string_rep.c_str());
     debugger->DispatchClientTelemetry(telemetry_entry);
   }
 
 private:
-  llvm::json::Array m_telemetry_array;
-  SBDebugger *debugger;
+  static std::string JSONToString(const llvm::json::Value &json) {
+  std::string data;
+  llvm::raw_string_ostream os(data);
+  os << json;
+  return data;
+}
+  llvm::json::Object m_telemetry_json;
+  lldb::SBDebugger *debugger;
 };
 
 /// Take ownership of the stored error.
