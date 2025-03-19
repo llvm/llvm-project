@@ -265,6 +265,8 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpLabel:
       case MCCFIInstruction::OpValOffset:
         break;
+      case MCCFIInstruction::OpLLVMRegOffset:
+        llvm_unreachable("Can't handle llvm_reg_offset yet!");
       }
       if (CSRReg || CSROffset) {
         auto It = CSRLocMap.find(CFI.getRegister());
