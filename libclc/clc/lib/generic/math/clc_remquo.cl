@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
 #include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_clz.h>
+#include <clc/internal/clc.h>
 #include <clc/math/clc_floor.h>
 #include <clc/math/clc_fma.h>
+#include <clc/math/clc_ldexp.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
@@ -115,6 +116,9 @@ __VEC_REMQUO(float, 8, 4)
 __VEC_REMQUO(float, 16, 8)
 
 #ifdef cl_khr_fp64
+
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+
 _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
                                            __private int *pquo) {
   ulong ux = __clc_as_ulong(x);
@@ -143,7 +147,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
   // but it doesn't matter - it just means that we'll go round
   // the loop below one extra time.
   int ntimes = __clc_max(0, (xexp1 - yexp1) / 53);
-  double w = ldexp(dy, ntimes * 53);
+  double w = __clc_ldexp(dy, ntimes * 53);
   w = ntimes == 0 ? dy : w;
   double scale = ntimes == 0 ? 1.0 : 0x1.0p-53;
 
