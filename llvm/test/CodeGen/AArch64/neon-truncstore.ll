@@ -90,8 +90,7 @@ define void @v2i32_v2i8(<2 x i32> %a, ptr %result) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    strb w8, [x0, #1]
 ; CHECK-NEXT:    ret
   %b = trunc <2 x i32> %a to <2 x i8>
@@ -157,8 +156,7 @@ define void @v2i16_v2i8(<2 x i16> %a, ptr %result) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    strb w8, [x0, #1]
 ; CHECK-NEXT:    ret
   %b = trunc <2 x i16> %a to <2 x i8>

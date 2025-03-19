@@ -31,8 +31,7 @@ define void @v2i8(ptr %p1) {
 ; CHECK-NEXT:    clz v0.2s, v0.2s
 ; CHECK-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    strb w9, [x0]
+; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    strb w8, [x0, #1]
 ; CHECK-NEXT:    ret
 entry:
