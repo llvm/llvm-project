@@ -42,6 +42,11 @@ public:
 
   /// Reads the next Debug Adater Protocol message from the input stream.
   ///
+  /// \param timeout[in]
+  ///     A timeout to wait for reading the initial header. Once a message
+  ///     header is recieved, this will block until the full message is
+  ///     read.
+  ///
   /// \returns Returns the next protocol message or nullopt if EOF is reached.
   llvm::Expected<std::optional<protocol::Message>>
   Read(const std::chrono::microseconds &timeout);

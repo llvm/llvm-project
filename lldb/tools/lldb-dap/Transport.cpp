@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -30,14 +31,15 @@ using namespace lldb_dap::protocol;
 /// encountered, an empty string is returned.
 static Expected<std::string>
 ReadFull(IOObject &descriptor, size_t length,
-         const std::chrono::microseconds &timeout) {
+         std::optional<std::chrono::microseconds> timeout = std::nullopt) {
   if (!descriptor.IsValid())
     return createStringError("transport output is closed");
 
 #ifndef _WIN32
   // FIXME: SelectHelper does not work with NativeFile on Win32.
   SelectHelper sh;
-  sh.SetTimeout(timeout);
+  if (timeout)
+    sh.SetTimeout(*timeout);
   sh.FDSetRead(descriptor.GetWaitableHandle());
   Status status = sh.Select();
   if (status.Fail())
@@ -55,7 +57,7 @@ ReadFull(IOObject &descriptor, size_t length,
 
 static Expected<std::string>
 ReadUntil(IOObject &descriptor, StringRef delimiter,
-          const std::chrono::microseconds &timeout) {
+          std::optional<std::chrono::microseconds> timeout = std::nullopt) {
   std::string buffer;
   buffer.reserve(delimiter.size() + 1);
   while (!llvm::StringRef(buffer).ends_with(delimiter)) {
@@ -104,7 +106,7 @@ Transport::Read(const std::chrono::microseconds &timeout) {
                                  .str());
 
   Expected<std::string> raw_length =
-      ReadUntil(*input, kHeaderSeparator, timeout);
+      ReadUntil(*input, kHeaderSeparator);
   if (!raw_length)
     return raw_length.takeError();
   if (raw_length->empty())
@@ -115,7 +117,7 @@ Transport::Read(const std::chrono::microseconds &timeout) {
     return createStringError(
         formatv("invalid content length {0}", *raw_length).str());
 
-  Expected<std::string> raw_json = ReadFull(*input, length, timeout);
+  Expected<std::string> raw_json = ReadFull(*input, length);
   if (!raw_json)
     return raw_json.takeError();
   // If we got less than the expected number of bytes then we hit EOF.
