@@ -106,6 +106,21 @@ static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
   llvm_unreachable("unknown shuffle kind");
 }
 
+static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
+                                                   NVVM::MatchSyncKind kind) {
+  switch (kind) {
+  case NVVM::MatchSyncKind::any:
+    return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_any_sync_i32
+                                 : llvm::Intrinsic::nvvm_match_any_sync_i64;
+  case NVVM::MatchSyncKind::all:
+    // match.all instruction has two variants -- one returns a single value,
+    // another returns a pair {value, predicate}. We currently only implement
+    // the latter as that's the variant exposed by CUDA API.
+    return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
+                                 : llvm::Intrinsic::nvvm_match_all_sync_i64p;
+  }
+}
+
 /// Return the intrinsic ID associated with ldmatrix for the given paramters.
 static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
                                                   int32_t num) {

@@ -14,6 +14,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/SourceMgr.h"
+#include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -191,4 +193,121 @@ TEST(SSAUpdaterBulk, Irreducible) {
   EXPECT_NE(UpdatePhi, nullptr);
   EXPECT_EQ(UpdatePhi->getIncomingValueForBlock(LoopStartBB), AddOp2);
   EXPECT_EQ(UpdatePhi->getIncomingValueForBlock(IfBB), UndefValue::get(I32Ty));
+}
+
+TEST(SSAUpdaterBulk, SingleBBLoop) {
+  const char *IR = R"(
+      define void @main() {
+      entry:
+          br label %loop
+      loop:
+          %i = add i32 0, 1
+          %cmp = icmp slt i32 %i, 42
+          br i1 %cmp, label %loop, label %exit
+      exit:
+          ret void
+      }
+  )";
+
+  llvm::LLVMContext Context;
+  llvm::SMDiagnostic Err;
+  std::unique_ptr<llvm::Module> M = llvm::parseAssemblyString(IR, Err, Context);
+  ASSERT_NE(M, nullptr) << "Failed to parse IR: " << Err.getMessage();
+
+  Function *F = M->getFunction("main");
+  auto *Entry = &F->getEntryBlock();
+  auto *Loop = Entry->getSingleSuccessor();
+  auto *I = &Loop->front();
+
+  // Rewrite first operand of "%i = add i32 0, 1" to use incoming values entry:0
+  // or loop:%i (that is the value of %i from the previous iteration).
+  SSAUpdaterBulk Updater;
+  Type *I32Ty = Type::getInt32Ty(Context);
+  unsigned PrevI = Updater.AddVariable("i.prev", I32Ty);
+  Updater.AddAvailableValue(PrevI, Entry, ConstantInt::get(I32Ty, 0));
+  Updater.AddAvailableValue(PrevI, Loop, I);
+  Updater.AddUse(PrevI, &I->getOperandUse(0));
+
+  SmallVector<PHINode *, 1> Inserted;
+  DominatorTree DT(*F);
+  Updater.RewriteAllUses(&DT, &Inserted);
+
+#if 0 // Enable for debugging.
+  Loop->dump();
+  // Output:
+  // loop: ; preds = %loop, %entry
+  //   %i.prev = phi i32 [ %i.prev, %loop ], [ 0, %entry ]
+  //   %i = add i32 %i.prev, 1
+  //   %cmp = icmp slt i32 %i, 42
+  //   br i1 %cmp, label %loop, label %exit
+#endif
+
+  ASSERT_EQ(Inserted.size(), 1u);
+  PHINode *Phi = Inserted[0];
+  EXPECT_EQ(Phi, dyn_cast<PHINode>(I->getOperand(0)));
+  EXPECT_EQ(Phi->getIncomingValueForBlock(Entry), ConstantInt::get(I32Ty, 0));
+  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I),
+                          "Expected equality of these values");
+}
+
+TEST(SSAUpdaterBulk, TwoBBLoop) {
+  const char *IR = R"(
+      define void @main() {
+      entry:
+          br label %loop_header
+      loop_header:
+          br label %loop
+      loop:
+          %i = add i32 0, 1
+          %cmp = icmp slt i32 %i, 42
+          br i1 %cmp, label %loop_header, label %exit
+      exit:
+          ret void
+      }
+  )";
+
+  llvm::LLVMContext Context;
+  llvm::SMDiagnostic Err;
+  std::unique_ptr<llvm::Module> M = llvm::parseAssemblyString(IR, Err, Context);
+  ASSERT_NE(M, nullptr) << "Failed to parse IR: " << Err.getMessage();
+
+  Function *F = M->getFunction("main");
+  auto *Entry = &F->getEntryBlock();
+  auto *LoopHdr = Entry->getSingleSuccessor();
+  auto *Loop = LoopHdr->getSingleSuccessor();
+  auto *I = &Loop->front();
+
+  // Rewrite first operand of "%i = add i32 0, 1" to use incoming values entry:0
+  // or loop:%i (that is the value of %i from the previous iteration).
+  SSAUpdaterBulk Updater;
+  Type *I32Ty = Type::getInt32Ty(Context);
+  unsigned PrevI = Updater.AddVariable("i.prev", I32Ty);
+  Updater.AddAvailableValue(PrevI, Entry, ConstantInt::get(I32Ty, 0));
+  Updater.AddAvailableValue(PrevI, Loop, I);
+  Updater.AddUse(PrevI, &I->getOperandUse(0));
+
+  SmallVector<PHINode *, 1> Inserted;
+  DominatorTree DT(*F);
+  Updater.RewriteAllUses(&DT, &Inserted);
+
+#if 0 // Enable for debugging.
+  LoopHdr->dump();
+  Loop->dump();
+  // Output:
+  // loop_header:                                      ; preds = %loop, %entry
+  //   %i.prev = phi i32 [ %i, %loop ], [ 0, %entry ]
+  //   br label %loop
+  // loop:                                             ; preds = %loop_header
+  //   %i = add i32 %i, 1
+  //   %cmp = icmp slt i32 %i, 42
+  //   br i1 %cmp, label %loop_header, label %exit
+#endif
+
+  ASSERT_EQ(Inserted.size(), 1u);
+  PHINode *Phi = Inserted[0];
+  EXPECT_NONFATAL_FAILURE(EXPECT_EQ(Phi, dyn_cast<PHINode>(I->getOperand(0))),
+                          "Expected equality of these values");
+  EXPECT_EQ(Phi->getParent(), LoopHdr);
+  EXPECT_EQ(Phi->getIncomingValueForBlock(Entry), ConstantInt::get(I32Ty, 0));
+  EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I);
 }
