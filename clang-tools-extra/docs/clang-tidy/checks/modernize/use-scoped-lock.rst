@@ -4,10 +4,11 @@ modernize-use-scoped-lock
 =========================
 
 Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
-alternative ``std::scoped_lock``. The check will automatically transform only
-single declarations of ``std::lock_guard`` and emit warnings for multiple
-declarations of ``std::lock_guard`` that can be replaced with a single
-declaration of ``std::scoped_lock``.
+alternative ``std::scoped_lock``.
+
+Fix-its are provided for single declarations of ``std::lock_guard`` and warning
+is emitted for multiple declarations of ``std::lock_guard`` that can be
+replaced with a single declaration of ``std::scoped_lock``.
 
 Examples
 --------
