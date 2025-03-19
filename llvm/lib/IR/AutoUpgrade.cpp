@@ -57,6 +57,9 @@ using namespace llvm;
 static cl::opt<bool>
     DisableAutoUpgradeDebugInfo("disable-auto-upgrade-debug-info",
                                 cl::desc("Disable autoupgrade of debug info"));
+static cl::opt<bool> LLVMVerifyFatalErrors(
+    "auto-upgrade-llvm-verify-fatal-errors", cl::init(true),
+    cl::desc("If true, report LLVM verify errors as fatal"));
 
 static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
@@ -5005,7 +5008,8 @@ bool llvm::UpgradeDebugInfo(Module &M) {
   if (Version == DEBUG_METADATA_VERSION) {
     bool BrokenDebugInfo = false;
     if (verifyModule(M, &llvm::errs(), &BrokenDebugInfo))
-      report_fatal_error("Broken module found, compilation aborted!");
+      if (LLVMVerifyFatalErrors)
+        report_fatal_error("Broken module found, compilation aborted!");
     if (!BrokenDebugInfo)
       // Everything is ok.
       return false;
