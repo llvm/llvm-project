@@ -8103,7 +8103,8 @@ public:
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast) << diag::CastKind::Reinterpret;
+    CCEDiag(E, diag::note_constexpr_invalid_cast)
+        << diag::CastKind::Reinterpret;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
   bool VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
@@ -8833,7 +8834,8 @@ public:
 
     case CK_LValueBitCast:
       this->CCEDiag(E, diag::note_constexpr_invalid_cast)
-          << diag::CastKind::ThisCastOrReinterpret << Info.Ctx.getLangOpts().CPlusPlus;
+          << diag::CastKind::ThisCastOrReinterpret
+          << Info.Ctx.getLangOpts().CPlusPlus;
       if (!Visit(E->getSubExpr()))
         return false;
       Result.Designator.setInvalid();
@@ -9673,7 +9675,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
                 << diag::CastKind::CastFrom << SubExpr->getType();
         } else
           CCEDiag(E, diag::note_constexpr_invalid_cast)
-              << diag::CastKind::ThisCastOrReinterpret << Info.Ctx.getLangOpts().CPlusPlus;
+              << diag::CastKind::ThisCastOrReinterpret
+              << Info.Ctx.getLangOpts().CPlusPlus;
         Result.Designator.setInvalid();
       }
     }
@@ -9712,7 +9715,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
   case CK_IntegralToPointer: {
     CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::CastKind::ThisCastOrReinterpret << Info.Ctx.getLangOpts().CPlusPlus;
+        << diag::CastKind::ThisCastOrReinterpret
+        << Info.Ctx.getLangOpts().CPlusPlus;
 
     APValue Value;
     if (!EvaluateIntegerOrLValue(SubExpr, Value, Info))
@@ -11177,7 +11181,8 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
       // Give up if the input isn't an int, float, or vector.  For example, we
       // reject "(v4i16)(intptr_t)&a".
       Info.FFDiag(E, diag::note_constexpr_invalid_cast)
-          << diag::CastKind::ThisCastOrReinterpret << Info.Ctx.getLangOpts().CPlusPlus;
+          << diag::CastKind::ThisCastOrReinterpret
+          << Info.Ctx.getLangOpts().CPlusPlus;
       return false;
     }
 
@@ -15196,7 +15201,8 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
   case CK_PointerToIntegral: {
     CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::CastKind::ThisCastOrReinterpret << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
+        << diag::CastKind::ThisCastOrReinterpret
+        << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
     LValue LV;
     if (!EvaluatePointer(SubExpr, LV, Info))

@@ -2366,12 +2366,14 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
     } else if (!S.getLangOpts().CPlusPlus26) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-          << diag::CastKind::CastFrom << "'void *'" << S.Current->getRange(OpPC);
+          << diag::CastKind::CastFrom << "'void *'"
+          << S.Current->getRange(OpPC);
     }
   } else {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::CastKind::ThisCastOrReinterpret << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+        << diag::CastKind::ThisCastOrReinterpret << S.getLangOpts().CPlusPlus
+        << S.Current->getRange(OpPC);
   }
 
   return true;
