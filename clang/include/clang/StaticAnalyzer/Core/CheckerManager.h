@@ -116,6 +116,19 @@ public:
   operator StringRef() const { return Name; }
 };
 
+/// A single checker class (and its singleton instance) can act as the
+/// implementation of several (user-facing or modeling) checker parts that
+/// have shared state and logic, but have their own names and can be enabled or
+/// disabled separately.
+/// Each checker class that implement multiple parts introduces its own enum
+/// type to assign small numerical indices (0, 1, 2 ...) to their parts. The
+/// type alias 'CheckerPartIdx' is conceptually the union of these enum types.
+using CheckerPartIdx = unsigned;
+
+/// If a checker doesn't have multiple parts, then its single part is
+/// represented by this index.
+constexpr inline CheckerPartIdx DefaultPart = 0;
+
 enum class ObjCMessageVisitKind {
   Pre,
   Post,
@@ -182,6 +195,13 @@ public:
   /// checker option value.
   void reportInvalidCheckerOptionValue(const CheckerBase *C,
                                        StringRef OptionName,
+                                       StringRef ExpectedValueDesc) const {
+    reportInvalidCheckerOptionValue(C, DefaultPart, OptionName,
+                                    ExpectedValueDesc);
+  }
+
+  void reportInvalidCheckerOptionValue(const CheckerBase *C, CheckerPartIdx Idx,
+                                       StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 
   using CheckerTag = const void *;
@@ -190,23 +210,38 @@ public:
   // Checker registration.
   //===--------------------------------------------------------------------===//
 
-  /// Used to register checkers.
-  /// All arguments are automatically passed through to the checker
-  /// constructor.
+  /// Construct the singleton instance of a checker, register it for the
+  /// supported callbacks and record its name with `registerCheckerPart()`.
+  /// Arguments passed to this function are forwarded to the constructor of the
+  /// checker.
+  ///
+  /// If `CHECKER` has multiple parts, then the constructor call and the
+  /// callback registration only happen within the first `registerChecker()`
+  /// call; while the subsequent calls only enable additional parts of the
+  /// existing checker object (while registering their names).
   ///
   /// \returns a pointer to the checker object.
-  template <typename CHECKER, typename... AT>
-  CHECKER *registerChecker(AT &&... Args) {
-    CheckerTag Tag = getTag<CHECKER>();
-    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
-    assert(!Ref && "Checker already registered, use getChecker!");
+  template <typename CHECKER, CheckerPartIdx Idx = DefaultPart, typename... AT>
+  CHECKER *registerChecker(AT &&...Args) {
+    // This assert could be removed but then we need to make sure that calls
+    // registering different parts of the same checker pass the same arguments.
+    static_assert(
+        Idx == DefaultPart || !sizeof...(AT),
+        "Argument forwarding isn't supported with multi-part checkers!");
 
-    std::unique_ptr<CHECKER> Checker =
-        std::make_unique<CHECKER>(std::forward<AT>(Args)...);
-    Checker->Name = CurrentCheckerName;
-    CHECKER::_register(Checker.get(), *this);
-    Ref = std::move(Checker);
-    return static_cast<CHECKER *>(Ref.get());
+    CheckerTag Tag = getTag<CHECKER>();
+
+    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
+    if (!Ref) {
+      std::unique_ptr<CHECKER> Checker =
+          std::make_unique<CHECKER>(std::forward<AT>(Args)...);
+      CHECKER::_register(Checker.get(), *this);
+      Ref = std::move(Checker);
+    }
+
+    CHECKER *Result = static_cast<CHECKER *>(Ref.get());
+    Result->registerCheckerPart(Idx, CurrentCheckerName);
+    return Result;
   }
 
   template <typename CHECKER>

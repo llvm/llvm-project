@@ -8,7 +8,7 @@
 
 #include "Transport.h"
 #include "DAPLog.h"
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -63,8 +63,8 @@ static constexpr StringLiteral kHeaderSeparator = "\r\n\r\n";
 
 namespace lldb_dap {
 
-Transport::Transport(StringRef client_name, std::ofstream *log,
-                     IOObjectSP input, IOObjectSP output)
+Transport::Transport(StringRef client_name, Log *log, IOObjectSP input,
+                     IOObjectSP output)
     : m_client_name(client_name), m_log(log), m_input(std::move(input)),
       m_output(std::move(output)) {}
 
@@ -103,7 +103,7 @@ Expected<std::optional<Message>> Transport::Read() {
   if (raw_json->length() != length)
     return createStringError("unexpected EOF parse DAP message body");
 
-  DAP_LOG(m_log, "<-- ({0}) {1}", m_client_name, *raw_json);
+  DAP_LOG(m_log, "--> ({0}) {1}", m_client_name, *raw_json);
 
   return json::parse<Message>(*raw_json);
 }
@@ -114,7 +114,7 @@ Error Transport::Write(const Message &message) {
 
   std::string json = formatv("{0}", toJSON(message)).str();
 
-  DAP_LOG(m_log, "--> ({0}) {1}", m_client_name, json);
+  DAP_LOG(m_log, "<-- ({0}) {1}", m_client_name, json);
 
   std::string Output;
   raw_string_ostream OS(Output);

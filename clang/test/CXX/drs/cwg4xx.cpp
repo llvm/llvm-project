@@ -1062,7 +1062,7 @@ namespace cwg471 { // cwg471: 2.8
   //   expected-note@#cwg471-G-using {{declared private here}}
 } // namespace cwg471
 
-namespace cwg472 { // cwg472: no drafting 2011-04
+namespace cwg472 { // cwg472: no open 2011-04
 struct B {
   int i; // #cwg472-i
 };

@@ -93,6 +93,7 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -1312,7 +1313,9 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
     else if (ParamName == "ignore-single-use")
       Result.IgnoreSingleUse = Enable;
     else if (ParamName == "merge-const")
-      Result.MergeConst = Enable;
+      Result.MergeConstantGlobals = Enable;
+    else if (ParamName == "merge-const-aggressive")
+      Result.MergeConstAggressive = Enable;
     else if (ParamName == "merge-external")
       Result.MergeExternal = Enable;
     else if (ParamName.consume_front("max-offset=")) {
@@ -1321,6 +1324,10 @@ Expected<GlobalMergeOptions> parseGlobalMergeOptions(StringRef Params) {
             formatv("invalid GlobalMergePass parameter '{0}' ", ParamName)
                 .str(),
             inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid global-merge pass parameter '{0}' ", Params).str(),
+          inconvertibleErrorCode());
     }
   }
   return Result;
