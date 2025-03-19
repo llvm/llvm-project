@@ -34,7 +34,7 @@ body:             |
     ; CHECK-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0(tied-def 0) :: (load (s32) from %stack.0, addrspace 5)
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
-    renamable $sgpr0 = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $sgpr0 = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 14, implicit $exec
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
 
@@ -70,7 +70,7 @@ body:             |
     ; CHECK-NEXT: $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0
-    renamable $sgpr0 = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $sgpr0 = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $vgpr40 = V_MOV_B32_e32 14, implicit $exec
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0
 
@@ -112,7 +112,7 @@ body:             |
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $vcc_lo
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $vcc_lo
     $vgpr192 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr192
-    renamable $vcc_lo = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $vcc_lo = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $sgpr20 = S_MOV_B32 14, implicit $exec
     $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr192, 0
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $vcc_lo
@@ -153,7 +153,7 @@ body:             |
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $vcc_lo
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $vcc_lo
     $vgpr191 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr191
-    renamable $vcc_lo = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $vcc_lo = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $sgpr20 = S_MOV_B32 14, implicit $exec
     $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr191, 0
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $vcc_lo
@@ -209,7 +209,7 @@ body:             |
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $vcc_lo
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $vcc_lo
     $vgpr191 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr191
-    renamable $vcc_lo = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $vcc_lo = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     S_NOP 0, implicit-def $vgpr40, implicit-def $sgpr20
     S_NOP 0, implicit-def $vgpr49, implicit-def $sgpr40
     $sgpr20 = SI_RESTORE_S32_FROM_VGPR $vgpr191, 0
@@ -267,7 +267,7 @@ body:             |
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr3
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr3
     $vgpr191 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr191
-    renamable $vcc_lo = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $vcc_lo = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     S_NOP 0, implicit-def $vgpr40, implicit-def $sgpr20
     $sgpr3 = COPY $vcc_lo
     S_NOP 0, implicit-def $vgpr49, implicit-def $sgpr40
@@ -323,7 +323,7 @@ body:             |
     ; CHECK-NEXT: $vgpr5 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.4, addrspace 5)
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
-    renamable $sgpr0 = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $sgpr0 = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $vgpr0 = V_MOV_B32_e32 14, implicit $exec
     S_NOP 0, implicit-def $vgpr2_vgpr3_vgpr4_vgpr5, implicit-def $vgpr40_vgpr41_vgpr42
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
@@ -364,7 +364,7 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit $vgpr0, implicit $vgpr20, implicit $vgpr40
     ; CHECK-NEXT: $exec_lo = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
-    renamable $sgpr0 = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $sgpr0 = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     S_NOP 0, implicit $vgpr0, implicit $vgpr20, implicit $vgpr40
     SI_WHOLE_WAVE_FUNC_RETURN killed renamable $sgpr0, implicit killed $vgpr0
 
@@ -427,7 +427,7 @@ body:             |
     successors: %bb.1, %bb.2
     liveins: $vgpr0, $vgpr1
 
-    renamable $vcc_lo = SI_SETUP_WHOLE_WAVE_FUNC implicit-def dead $exec, implicit $exec
+    renamable $vcc_lo = SI_WHOLE_WAVE_FUNC_SETUP implicit-def dead $exec, implicit $exec
     $sgpr1 = S_MOV_B32 $exec_lo
     V_CMPX_EQ_U32_nosdst_e64 $vgpr0, $vgpr1, implicit-def $exec, implicit $exec
     S_CBRANCH_EXECZ %bb.2, implicit $exec
