@@ -34,7 +34,9 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <system_error>
@@ -213,6 +215,14 @@ public:
   /// Return a counter that represents the expression that subtracts RHS from
   /// LHS.
   Counter subtract(Counter LHS, Counter RHS, bool Simplify = true);
+
+  /// K to V map. K will be Counter in most cases. V may be Counter or
+  /// Expression.
+  using SubstMap = std::map<Counter, Counter>;
+
+  /// \return A counter equivalent to \C, with each term in its
+  /// expression replaced with term from \p Map.
+  Counter subst(Counter C, const SubstMap &Map);
 };
 
 using LineColPair = std::pair<unsigned, unsigned>;
@@ -448,19 +458,22 @@ struct MCDCRecord {
 private:
   CounterMappingRegion Region;
   TestVectors TV;
-  TVPairMap IndependencePairs;
+  std::optional<TVPairMap> IndependencePairs;
   BoolVector Folded;
   CondIDMap PosToID;
   LineColPairMap CondLoc;
 
 public:
   MCDCRecord(const CounterMappingRegion &Region, TestVectors &&TV,
-             TVPairMap &&IndependencePairs, BoolVector &&Folded,
-             CondIDMap &&PosToID, LineColPairMap &&CondLoc)
-      : Region(Region), TV(std::move(TV)),
-        IndependencePairs(std::move(IndependencePairs)),
-        Folded(std::move(Folded)), PosToID(std::move(PosToID)),
-        CondLoc(std::move(CondLoc)){};
+             BoolVector &&Folded, CondIDMap &&PosToID, LineColPairMap &&CondLoc)
+      : Region(Region), TV(std::move(TV)), Folded(std::move(Folded)),
+        PosToID(std::move(PosToID)), CondLoc(std::move(CondLoc)) {
+    findIndependencePairs();
+  }
+
+  // Compare executed test vectors against each other to find an independence
+  // pairs for each condition.  This processing takes the most time.
+  void findIndependencePairs();
 
   const CounterMappingRegion &getDecisionRegion() const { return Region; }
   unsigned getNumConditions() const {
@@ -493,10 +506,10 @@ public:
   /// TestVectors requires a translation from a ordinal position to actual
   /// condition ID. This is done via PosToID[].
   bool isConditionIndependencePairCovered(unsigned Condition) const {
+    assert(IndependencePairs);
     auto It = PosToID.find(Condition);
-    if (It != PosToID.end())
-      return IndependencePairs.contains(It->second);
-    llvm_unreachable("Condition ID without an Ordinal mapping");
+    assert(It != PosToID.end() && "Condition ID without an Ordinal mapping");
+    return IndependencePairs->contains(It->second);
   }
 
   /// Return the Independence Pair that covers the given condition. Because
@@ -506,7 +519,8 @@ public:
   /// via PosToID[].
   TVRowPair getConditionIndependencePair(unsigned Condition) {
     assert(isConditionIndependencePairCovered(Condition));
-    return IndependencePairs[PosToID[Condition]];
+    assert(IndependencePairs);
+    return (*IndependencePairs)[PosToID[Condition]];
   }
 
   float getPercentCovered() const {
@@ -527,9 +541,9 @@ public:
 
   std::string getConditionHeaderString(unsigned Condition) {
     std::ostringstream OS;
-    OS << "Condition C" << Condition + 1 << " --> (";
-    OS << CondLoc[Condition].first << ":" << CondLoc[Condition].second;
-    OS << ")\n";
+    const auto &[Line, Col] = CondLoc[Condition];
+    OS << "Condition C" << Condition + 1 << " --> (" << Line << ":" << Col
+       << ")\n";
     return OS.str();
   }
 
@@ -734,10 +748,15 @@ struct FunctionRecord {
 };
 
 /// Iterator over Functions, optionally filtered to a single file.
+/// When filtering to a single file, the iterator requires a list of potential
+/// indices where to find the desired records to avoid quadratic behavior when
+/// repeatedly iterating over functions from different files.
 class FunctionRecordIterator
     : public iterator_facade_base<FunctionRecordIterator,
                                   std::forward_iterator_tag, FunctionRecord> {
   ArrayRef<FunctionRecord> Records;
+  ArrayRef<unsigned> RecordIndices;
+  ArrayRef<unsigned>::iterator CurrentIndex;
   ArrayRef<FunctionRecord>::iterator Current;
   StringRef Filename;
 
@@ -746,8 +765,17 @@ class FunctionRecordIterator
 
 public:
   FunctionRecordIterator(ArrayRef<FunctionRecord> Records_,
-                         StringRef Filename = "")
-      : Records(Records_), Current(Records.begin()), Filename(Filename) {
+                         StringRef Filename = "",
+                         ArrayRef<unsigned> RecordIndices_ = {})
+      : Records(Records_), RecordIndices(RecordIndices_),
+        CurrentIndex(RecordIndices.begin()),
+        // If `RecordIndices` is provided, we can skip directly to the first
+        // index it provides.
+        Current(CurrentIndex == RecordIndices.end() ? Records.begin()
+                                                    : &Records[*CurrentIndex]),
+        Filename(Filename) {
+    assert(Filename.empty() == RecordIndices_.empty() &&
+           "If `Filename` is specified, `RecordIndices` must also be provided");
     skipOtherFiles();
   }
 
@@ -760,10 +788,28 @@ public:
   const FunctionRecord &operator*() const { return *Current; }
 
   FunctionRecordIterator &operator++() {
-    assert(Current != Records.end() && "incremented past end");
-    ++Current;
+    advanceOne();
     skipOtherFiles();
     return *this;
+  }
+
+private:
+  void advanceOne() {
+    if (RecordIndices.empty()) {
+      // Iteration over all entries, advance in the list of records.
+      assert(Current != Records.end() && "incremented past end");
+      ++Current;
+    } else {
+      // Iterator over entries filtered by file name. Advance in the list of
+      // indices, and adjust the cursor in the list of records accordingly.
+      assert(CurrentIndex != RecordIndices.end() && "incremented past end");
+      ++CurrentIndex;
+      if (CurrentIndex == RecordIndices.end()) {
+        Current = Records.end();
+      } else {
+        Current = &Records[*CurrentIndex];
+      }
+    }
   }
 };
 
@@ -1023,8 +1069,10 @@ public:
   /// Gets all of the functions in a particular file.
   iterator_range<FunctionRecordIterator>
   getCoveredFunctions(StringRef Filename) const {
-    return make_range(FunctionRecordIterator(Functions, Filename),
-                      FunctionRecordIterator());
+    return make_range(
+        FunctionRecordIterator(Functions, Filename,
+                               getImpreciseRecordIndicesForFilename(Filename)),
+        FunctionRecordIterator());
   }
 
   /// Get the list of function instantiation groups in a particular file.

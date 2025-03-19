@@ -56,8 +56,7 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) worker
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) nohost
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'default' may not follow a 'device_type' clause in a 'kernels loop' construct}}
@@ -100,28 +99,24 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*) detach(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_type(*) device(VarPtr)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'deviceptr' may not follow a 'device_type' clause in a 'serial loop' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc serial loop device_type(*) deviceptr(VarPtr)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'device_resident' may not follow a 'device_type' clause in a 'kernels loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device_resident' clause is not valid on 'kernels loop' directive}}
 #pragma acc kernels loop device_type(*)  device_resident(VarPtr)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'firstprivate' may not follow a 'device_type' clause in a 'parallel loop' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop device_type(*) firstprivate(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'host' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) host(Var)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'link' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'link' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_type(*) link(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC clause 'no_create' may not follow a 'device_type' clause in a 'serial loop' construct}}
@@ -178,8 +173,7 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 #pragma acc serial loop device_type(*) collapse(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'bind' may not follow a 'device_type' clause in a 'parallel loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop device_type(*) bind(Var)
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'vector_length' clause is not valid on 'serial loop' directive}}
@@ -193,8 +187,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'device_num' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) device_num(1)
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'default_async' may not follow a 'device_type' clause in a 'serial loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'default_async' clause is not valid on 'serial loop' directive}}
 #pragma acc serial loop device_type(*) default_async(1)
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop device_type(*) async

@@ -32,6 +32,63 @@
 
 using namespace llvm;
 
+bool Xtensa::isValidAddrOffset(int Scale, int64_t OffsetVal) {
+  bool Valid = false;
+
+  switch (Scale) {
+  case 1:
+    Valid = (OffsetVal >= 0 && OffsetVal <= 255);
+    break;
+  case 2:
+    Valid = (OffsetVal >= 0 && OffsetVal <= 510) && ((OffsetVal & 0x1) == 0);
+    break;
+  case 4:
+    Valid = (OffsetVal >= 0 && OffsetVal <= 1020) && ((OffsetVal & 0x3) == 0);
+    break;
+  default:
+    break;
+  }
+  return Valid;
+}
+
+bool Xtensa::isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset) {
+  int Scale = 0;
+
+  switch (Opcode) {
+  case Xtensa::L8UI:
+  case Xtensa::S8I:
+    Scale = 1;
+    break;
+  case Xtensa::L16SI:
+  case Xtensa::L16UI:
+  case Xtensa::S16I:
+    Scale = 2;
+    break;
+  case Xtensa::LEA_ADD:
+    return (Offset >= -128 && Offset <= 127);
+  default:
+    // assume that MI is 32-bit load/store operation
+    Scale = 4;
+    break;
+  }
+  return isValidAddrOffset(Scale, Offset);
+}
+
+// Verify Special Register
+bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
+  switch (RegNo) {
+  case Xtensa::BREG:
+    return FeatureBits[Xtensa::FeatureBoolean];
+  case Xtensa::WINDOWBASE:
+  case Xtensa::WINDOWSTART:
+    return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::NoRegister:
+    return false;
+  }
+
+  return true;
+}
+
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT,
                                         const MCTargetOptions &Options) {

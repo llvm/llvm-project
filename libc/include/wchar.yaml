@@ -1,0 +1,29 @@
+header: wchar.h
+header_template: wchar.h.def
+macros: []
+types:
+  - type_name: size_t
+  - type_name: wint_t
+  - type_name: wchar_t
+  - type_name: mbstate_t
+enums: []
+objects: []
+functions:
+  - name: wcslen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+  - name: wctob
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: btowc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: int

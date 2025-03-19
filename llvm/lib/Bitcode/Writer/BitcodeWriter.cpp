@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -326,6 +327,8 @@ private:
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIDerivedType(const DIDerivedType *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDISubrangeType(const DISubrangeType *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDICompositeType(const DICompositeType *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDISubroutineType(const DISubroutineType *N,
@@ -494,6 +497,9 @@ public:
     // are currently saved in the index in terms of GUID.
     forEachSummary([&](GVInfo I, bool IsAliasee) {
       GUIDToValueIdMap[I.first] = ++GlobalValueId;
+      // If this is invoked for an aliasee, we want to record the above mapping,
+      // but not the information needed for its summary entry (if the aliasee is
+      // to be imported, we will invoke this separately with IsAliasee=false).
       if (IsAliasee)
         return;
       auto *FS = dyn_cast<FunctionSummary>(I.second);
@@ -765,8 +771,6 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_BUILTIN;
   case Attribute::NoCallback:
     return bitc::ATTR_KIND_NO_CALLBACK;
-  case Attribute::NoCapture:
-    return bitc::ATTR_KIND_NO_CAPTURE;
   case Attribute::NoDivergenceSource:
     return bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE;
   case Attribute::NoDuplicate:
@@ -907,6 +911,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_INITIALIZES;
   case Attribute::NoExt:
     return bitc::ATTR_KIND_NO_EXT;
+  case Attribute::Captures:
+    return bitc::ATTR_KIND_CAPTURES;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -973,8 +979,15 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
       } else if (Attr.isIntAttribute()) {
         Record.push_back(1);
-        Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        Record.push_back(Attr.getValueAsInt());
+        Attribute::AttrKind Kind = Attr.getKindAsEnum();
+        Record.push_back(getAttrKindEncoding(Kind));
+        if (Kind == Attribute::Memory) {
+          // Version field for upgrading old memory effects.
+          const uint64_t Version = 1;
+          Record.push_back((Version << 56) | Attr.getValueAsInt());
+        } else {
+          Record.push_back(Attr.getValueAsInt());
+        }
       } else if (Attr.isStringAttribute()) {
         StringRef Kind = Attr.getKindAsString();
         StringRef Val = Attr.getValueAsString();
@@ -1436,8 +1449,8 @@ serializeSanitizerMetadata(const GlobalValue::SanitizerMetadata &Meta) {
 void ModuleBitcodeWriter::writeModuleInfo() {
   // Emit various pieces of data attached to a module.
   if (!M.getTargetTriple().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, M.getTargetTriple(),
-                      0 /*TODO*/);
+    writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE,
+                      M.getTargetTriple().str(), 0 /*TODO*/);
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
@@ -1926,6 +1939,27 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
   Record.clear();
 }
 
+void ModuleBitcodeWriter::writeDISubrangeType(const DISubrangeType *N,
+                                              SmallVectorImpl<uint64_t> &Record,
+                                              unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
+  Record.push_back(N->getSizeInBits());
+  Record.push_back(N->getAlignInBits());
+  Record.push_back(N->getFlags());
+  Record.push_back(VE.getMetadataOrNullID(N->getBaseType()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawLowerBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawUpperBound()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawStride()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawBias()));
+
+  Stream.EmitRecord(bitc::METADATA_SUBRANGE_TYPE, Record, Abbrev);
+  Record.clear();
+}
+
 void ModuleBitcodeWriter::writeDICompositeType(
     const DICompositeType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -1954,6 +1988,8 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getAnnotations().get()));
   Record.push_back(N->getNumExtraInhabitants());
   Record.push_back(VE.getMetadataOrNullID(N->getRawSpecification()));
+  Record.push_back(
+      N->getEnumKind().value_or(dwarf::DW_APPLE_ENUM_KIND_invalid));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
@@ -4845,6 +4881,11 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   // radix tree array are identified based on this order.
   MapVector<CallStackId, llvm::SmallVector<LinearFrameId>> CallStacks;
   forEachSummary([&](GVInfo I, bool IsAliasee) {
+    // Don't collect this when invoked for an aliasee, as it is not needed for
+    // the alias summary. If the aliasee is to be imported, we will invoke this
+    // separately with IsAliasee=false.
+    if (IsAliasee)
+      return;
     GlobalValueSummary *S = I.second;
     assert(S);
     auto *FS = dyn_cast<FunctionSummary>(S);
@@ -5023,33 +5064,29 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  if (!Index.cfiFunctionDefs().empty()) {
-    for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
+  SmallVector<StringRef, 4> Functions;
+  auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                              bitc::GlobalValueSummarySymtabCodes Code) {
+    if (CfiIndex.empty())
+      return;
+    for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
+      auto Defs = CfiIndex.forGuid(GUID);
+      Functions.insert(Functions.end(), Defs.begin(), Defs.end());
     }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
-      NameVals.clear();
+    if (Functions.empty())
+      return;
+    llvm::sort(Functions);
+    for (const auto &S : Functions) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
     }
-  }
+    Stream.EmitRecord(Code, NameVals);
+    NameVals.clear();
+    Functions.clear();
+  };
 
-  if (!Index.cfiFunctionDecls().empty()) {
-    for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
-    }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
-      NameVals.clear();
-    }
-  }
+  EmitCfiFunctions(Index.cfiFunctionDefs(), bitc::FS_CFI_FUNCTION_DEFS);
+  EmitCfiFunctions(Index.cfiFunctionDecls(), bitc::FS_CFI_FUNCTION_DECLS);
 
   // Walk the GUIDs that were referenced, and write the
   // corresponding type id records.
@@ -5290,7 +5327,7 @@ void BitcodeWriter::writeSymtab() {
 
     std::string Err;
     const Triple TT(M->getTargetTriple());
-    const Target *T = TargetRegistry::lookupTarget(TT.str(), Err);
+    const Target *T = TargetRegistry::lookupTarget(TT, Err);
     if (!T || !T->hasMCAsmParser())
       return;
   }

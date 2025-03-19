@@ -126,6 +126,14 @@ private:
   ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
                                           const ReturnStmt *RS);
 
+  /// Helper function called by `HandleBranch()`. If the currently handled
+  /// branch corresponds to a loop, this returns the number of already
+  /// completed iterations in that loop, otherwise the return value is
+  /// `std::nullopt`. Note that this counts _all_ earlier iterations, including
+  /// ones that were performed within an earlier iteration of an outer loop.
+  std::optional<unsigned> getCompletedIterationCount(const CFGBlock *B,
+                                                     ExplodedNode *Pred) const;
+
 public:
   /// Construct a CoreEngine object to analyze the provided CFG.
   CoreEngine(ExprEngine &exprengine,
@@ -148,7 +156,7 @@ public:
   void dispatchWorkItem(ExplodedNode* Pred, ProgramPoint Loc,
                         const WorkListUnit& WU);
 
-  // Functions for external checking of whether we have unfinished work
+  // Functions for external checking of whether we have unfinished work.
   bool wasBlockAborted() const { return !blocksAborted.empty(); }
   bool wasBlocksExhausted() const { return !blocksExhausted.empty(); }
   bool hasWorkRemaining() const { return wasBlocksExhausted() ||

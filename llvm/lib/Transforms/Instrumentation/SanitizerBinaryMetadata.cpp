@@ -374,7 +374,7 @@ bool SanitizerBinaryMetadata::pretendAtomicAccess(const Value *Addr) {
   // Some compiler-generated accesses are known racy, to avoid false positives
   // in data-race analysis pretend they're atomic.
   if (GV->hasSection()) {
-    const auto OF = Triple(Mod.getTargetTriple()).getObjectFormat();
+    const auto OF = Mod.getTargetTriple().getObjectFormat();
     const auto ProfSec =
         getInstrProfSectionName(IPSK_cnts, OF, /*AddSegmentInfo=*/false);
     if (GV->getSection().ends_with(ProfSec))
@@ -394,7 +394,7 @@ bool maybeSharedMutable(const Value *Addr) {
     return true;
 
   if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
-      !PointerMayBeCaptured(Addr, true, true))
+      !PointerMayBeCaptured(Addr, /*ReturnCaptures=*/true))
     return false; // Object is on stack but does not escape.
 
   Addr = Addr->stripInBoundsOffsets();

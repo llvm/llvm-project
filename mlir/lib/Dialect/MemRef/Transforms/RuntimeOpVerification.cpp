@@ -23,6 +23,18 @@ using namespace mlir;
 namespace mlir {
 namespace memref {
 namespace {
+/// Generate a runtime check for lb <= value < ub.
+Value generateInBoundsCheck(OpBuilder &builder, Location loc, Value value,
+                            Value lb, Value ub) {
+  Value inBounds1 = builder.createOrFold<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::sge, value, lb);
+  Value inBounds2 = builder.createOrFold<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::slt, value, ub);
+  Value inBounds =
+      builder.createOrFold<arith::AndIOp>(loc, inBounds1, inBounds2);
+  return inBounds;
+}
+
 struct CastOpInterface
     : public RuntimeVerifiableOpInterface::ExternalModel<CastOpInterface,
                                                          CastOp> {
@@ -91,7 +103,7 @@ struct CastOpInterface
     // Get result offset and strides.
     int64_t resultOffset;
     SmallVector<int64_t> resultStrides;
-    if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
+    if (failed(resultType.getStridesAndOffset(resultStrides, resultOffset)))
       return;
 
     // Check offset.
@@ -128,6 +140,65 @@ struct CastOpInterface
   }
 };
 
+struct CopyOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<CopyOpInterface,
+                                                         CopyOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto copyOp = cast<CopyOp>(op);
+    BaseMemRefType sourceType = copyOp.getSource().getType();
+    BaseMemRefType targetType = copyOp.getTarget().getType();
+    auto rankedSourceType = dyn_cast<MemRefType>(sourceType);
+    auto rankedTargetType = dyn_cast<MemRefType>(targetType);
+
+    // TODO: Verification for unranked memrefs is not supported yet.
+    if (!rankedSourceType || !rankedTargetType)
+      return;
+
+    assert(sourceType.getRank() == targetType.getRank() && "rank mismatch");
+    for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+      // Fully static dimensions in both source and target operand are already
+      // verified by the op verifier.
+      if (!rankedSourceType.isDynamicDim(i) &&
+          !rankedTargetType.isDynamicDim(i))
+        continue;
+      auto getDimSize = [&](Value memRef, MemRefType type,
+                            int64_t dim) -> Value {
+        return type.isDynamicDim(dim)
+                   ? builder.create<DimOp>(loc, memRef, dim).getResult()
+                   : builder
+                         .create<arith::ConstantIndexOp>(loc,
+                                                         type.getDimSize(dim))
+                         .getResult();
+      };
+      Value sourceDim = getDimSize(copyOp.getSource(), rankedSourceType, i);
+      Value targetDim = getDimSize(copyOp.getTarget(), rankedTargetType, i);
+      Value sameDimSize = builder.create<arith::CmpIOp>(
+          loc, arith::CmpIPredicate::eq, sourceDim, targetDim);
+      builder.create<cf::AssertOp>(
+          loc, sameDimSize,
+          RuntimeVerifiableOpInterface::generateErrorMessage(
+              op, "size of " + std::to_string(i) +
+                      "-th source/target dim does not match"));
+    }
+  }
+};
+
+struct DimOpInterface
+    : public RuntimeVerifiableOpInterface::ExternalModel<DimOpInterface,
+                                                         DimOp> {
+  void generateRuntimeVerification(Operation *op, OpBuilder &builder,
+                                   Location loc) const {
+    auto dimOp = cast<DimOp>(op);
+    Value rank = builder.create<RankOp>(loc, dimOp.getSource());
+    Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+    builder.create<cf::AssertOp>(
+        loc, generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
+        RuntimeVerifiableOpInterface::generateErrorMessage(
+            op, "index is out of bounds"));
+  }
+};
+
 /// Verifies that the indices on load/store ops are in-bounds of the memref's
 /// index space: 0 <= index#i < dim#i
 template <typename LoadStoreOp>
@@ -148,19 +219,12 @@ struct LoadStoreOpInterface
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
     Value assertCond;
     for (auto i : llvm::seq<int64_t>(0, rank)) {
-      auto index = indices[i];
-
-      auto dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
-
-      auto geLow = builder.createOrFold<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::sge, index, zero);
-      auto ltHigh = builder.createOrFold<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::slt, index, dimOp);
-      auto andOp = builder.createOrFold<arith::AndIOp>(loc, geLow, ltHigh);
-
+      Value dimOp = builder.createOrFold<memref::DimOp>(loc, memref, i);
+      Value inBounds =
+          generateInBoundsCheck(builder, loc, indices[i], zero, dimOp);
       assertCond =
-          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, andOp)
-                : andOp;
+          i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, inBounds)
+                : inBounds;
     }
     builder.create<cf::AssertOp>(
         loc, assertCond,
@@ -335,6 +399,8 @@ void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     CastOp::attachInterface<CastOpInterface>(*ctx);
+    CopyOp::attachInterface<CopyOpInterface>(*ctx);
+    DimOp::attachInterface<DimOpInterface>(*ctx);
     ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
     LoadOp::attachInterface<LoadStoreOpInterface<LoadOp>>(*ctx);
     ReinterpretCastOp::attachInterface<ReinterpretCastOpInterface>(*ctx);

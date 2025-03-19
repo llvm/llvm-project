@@ -1073,6 +1073,11 @@ public:
   /// Build and insert an unmerge of \p Res sized pieces to cover \p Op
   MachineInstrBuilder buildUnmerge(LLT Res, const SrcOp &Op);
 
+  /// Build and insert an unmerge of pieces with \p Attrs register attributes to
+  /// cover \p Op
+  MachineInstrBuilder buildUnmerge(MachineRegisterInfo::VRegAttrs Attrs,
+                                   const SrcOp &Op);
+
   /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ...
   ///
   /// G_BUILD_VECTOR creates a vector value from multiple scalar registers.
@@ -1370,10 +1375,9 @@ public:
   MachineInstrBuilder buildExtractVectorElementConstant(const DstOp &Res,
                                                         const SrcOp &Val,
                                                         const int Idx) {
-    auto TLI = getMF().getSubtarget().getTargetLowering();
-    unsigned VecIdxWidth = TLI->getVectorIdxTy(getDataLayout()).getSizeInBits();
-    return buildExtractVectorElement(
-        Res, Val, buildConstant(LLT::scalar(VecIdxWidth), Idx));
+    const TargetLowering *TLI = getMF().getSubtarget().getTargetLowering();
+    LLT IdxTy = TLI->getVectorIdxLLT(getDataLayout());
+    return buildExtractVectorElement(Res, Val, buildConstant(IdxTy, Idx));
   }
 
   /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx

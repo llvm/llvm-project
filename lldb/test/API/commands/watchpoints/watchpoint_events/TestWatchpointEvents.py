@@ -82,27 +82,45 @@ class TestWatchpointEvents(TestBase):
             'make sure watchpoint condition is "' + condition + '"',
         )
 
-    def GetWatchpointEvent(self, event_type):
+        target.DeleteWatchpoint(local_watch.GetID())
+        self.GetWatchpointEvent(
+            lldb.eWatchpointEventTypeDisabled, lldb.eWatchpointEventTypeRemoved
+        )
+
+        # Re-create it so that we can check DeleteAllWatchpoints
+        local_watch = local_var.Watch(True, False, True, error)
+        if not error.Success():
+            self.fail(
+                "Failed to make watchpoint for local_var: %s" % (error.GetCString())
+            )
+        self.GetWatchpointEvent(lldb.eWatchpointEventTypeAdded)
+        target.DeleteAllWatchpoints()
+        self.GetWatchpointEvent(
+            lldb.eWatchpointEventTypeDisabled, lldb.eWatchpointEventTypeRemoved
+        )
+
+    def GetWatchpointEvent(self, *event_types):
         # We added a watchpoint so we should get a watchpoint added event.
         event = lldb.SBEvent()
-        success = self.listener.WaitForEvent(1, event)
-        self.assertTrue(success, "Successfully got watchpoint event")
-        self.assertTrue(
-            lldb.SBWatchpoint.EventIsWatchpointEvent(event),
-            "Event is a watchpoint event.",
-        )
-        found_type = lldb.SBWatchpoint.GetWatchpointEventTypeFromEvent(event)
-        self.assertEqual(
-            found_type,
-            event_type,
-            "Event is not correct type, expected: %d, found: %d"
-            % (event_type, found_type),
-        )
+        for event_type in event_types:
+            success = self.listener.WaitForEvent(1, event)
+            self.assertTrue(success, "Successfully got watchpoint event")
+            self.assertTrue(
+                lldb.SBWatchpoint.EventIsWatchpointEvent(event),
+                "Event is a watchpoint event.",
+            )
+            found_type = lldb.SBWatchpoint.GetWatchpointEventTypeFromEvent(event)
+            self.assertEqual(
+                found_type,
+                event_type,
+                "Event is not correct type, expected: %d, found: %d"
+                % (event_type, found_type),
+            )
         # There shouldn't be another event waiting around:
         found_event = self.listener.PeekAtNextEventForBroadcasterWithType(
-            self.target_bcast, lldb.SBTarget.eBroadcastBitBreakpointChanged, event
+            self.target_bcast, lldb.SBTarget.eBroadcastBitWatchpointChanged, event
         )
         if found_event:
-            print("Found an event I didn't expect: ", event)
+            print("Found an event I didn't expect: ", event.GetType())
 
-        self.assertTrue(not found_event, "Only one event per change.")
+        self.assertTrue(not found_event, f"Only expected {len(event_types)} events.")

@@ -1,4 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 <%s | FileCheck %s --check-prefixes=CHECK,GFX11
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr <%s | FileCheck %s --check-prefixes=CHECK,DVGPR
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 4
@@ -8,6 +10,7 @@
 ; CHECK-NEXT: amdpal.pipelines:
 ; CHECK-NEXT:   - .api:            Vulkan
 ; CHECK-NEXT:     .compute_registers:
+; DVGPR-NEXT:       .dynamic_vgpr_en:   true
 ; CHECK-NEXT:       .tg_size_en:     true
 ; CHECK-NEXT:       .tgid_x_en:      false
 ; CHECK-NEXT:       .tgid_y_en:      false
@@ -53,10 +56,11 @@
 ; CHECK-NEXT:      .cs:
 ; CHECK-NEXT:        .checksum_value: 0x9444d7d0
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    _amdgpu_cs_main
+; CHECK-NEXT:        .entry_point:    _amdgpu_cs
+; CHECK-NEXT:        .entry_point_symbol:    _amdgpu_cs_main
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
-; CHECK-NEXT:        .ieee_mode:      false
+; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .image_op:       false
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
@@ -109,8 +113,9 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .gs:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    gs_shader
-; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .entry_point:    _amdgpu_gs
+; CHECK-NEXT:        .entry_point_symbol:    gs_shader
+; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x200
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
@@ -120,8 +125,9 @@
 ; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .hs:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    hs_shader
-; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .entry_point:    _amdgpu_hs
+; CHECK-NEXT:        .entry_point_symbol:    hs_shader
+; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0x1000
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
@@ -131,8 +137,9 @@
 ; CHECK-NEXT:        .wgp_mode:       true
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    ps_shader
-; CHECK-NEXT:        .ieee_mode:      false
+; CHECK-NEXT:        .entry_point:    _amdgpu_ps
+; CHECK-NEXT:        .entry_point_symbol:    ps_shader
+; GFX11-NEXT:        .ieee_mode:      false
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false

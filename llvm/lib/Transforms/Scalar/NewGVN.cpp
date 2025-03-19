@@ -1964,18 +1964,10 @@ NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
         if (PBranch->TrueEdge) {
           // If we know the previous predicate is true and we are in the true
           // edge then we may be implied true or false.
-          if (CmpInst::isImpliedTrueByMatchingCmp(BranchPredicate,
-                                                  OurPredicate)) {
-            return ExprResult::some(
-                createConstantExpression(ConstantInt::getTrue(CI->getType())),
-                PI);
-          }
-
-          if (CmpInst::isImpliedFalseByMatchingCmp(BranchPredicate,
-                                                   OurPredicate)) {
-            return ExprResult::some(
-                createConstantExpression(ConstantInt::getFalse(CI->getType())),
-                PI);
+          if (auto R = ICmpInst::isImpliedByMatchingCmp(BranchPredicate,
+                                                        OurPredicate)) {
+            auto *C = ConstantInt::getBool(CI->getType(), *R);
+            return ExprResult::some(createConstantExpression(C), PI);
           }
         } else {
           // Just handle the ne and eq cases, where if we have the same
@@ -2808,7 +2800,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       Instruction *ValueOp = I->clone();
       // Emit the temporal instruction in the predecessor basic block where the
       // corresponding value is defined.
-      ValueOp->insertBefore(PredBB->getTerminator());
+      ValueOp->insertBefore(PredBB->getTerminator()->getIterator());
       if (MemAccess)
         TempToMemory.insert({ValueOp, MemAccess});
       bool SafeForPHIOfOps = true;
@@ -3064,13 +3056,8 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
 
 void NewGVN::updateProcessedCount(const Value *V) {
 #ifndef NDEBUG
-  if (ProcessedCount.count(V) == 0) {
-    ProcessedCount.insert({V, 1});
-  } else {
-    ++ProcessedCount[V];
-    assert(ProcessedCount[V] < 100 &&
-           "Seem to have processed the same Value a lot");
-  }
+  assert(++ProcessedCount[V] < 100 &&
+         "Seem to have processed the same Value a lot");
 #endif
 }
 
@@ -4020,7 +4007,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
             LLVM_DEBUG(dbgs() << "Inserting fully real phi of ops" << *Def
                               << " into block "
                               << getBlockName(getBlockForValue(Def)) << "\n");
-            PN->insertBefore(&DefBlock->front());
+            PN->insertBefore(DefBlock->begin());
             Def = PN;
             NumGVNPHIOfOpsEliminations++;
           }

@@ -2,10 +2,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck -check-prefixes=CHECK,CHECK-SD %s
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:  warning: Instruction selection used fallback path for fabds
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fabdd
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for uabd_i64
-
 define <8 x i16> @sabdl8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sabdl8h:
 ; CHECK:       // %bb.0:
@@ -443,8 +439,8 @@ define i32 @sabd8h_rdx(<8 x i16> %a, <8 x i16> %b) {
 define i32 @uabdl4s_rdx_i32(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: uabdl4s_rdx_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    uabdl.4s v0, v0, v1
-; CHECK-SD-NEXT:    addv.4s s0, v0
+; CHECK-SD-NEXT:    uabd.4h v0, v0, v1
+; CHECK-SD-NEXT:    uaddlv.4h s0, v0
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;

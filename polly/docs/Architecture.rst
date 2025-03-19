@@ -27,7 +27,7 @@ executed in the so-called **Inliner cycle**, This is again a set of **Scalar
 Simplification** passes, a set of **Simple Loop Optimizations**, and the
 **Inliner** itself. Even though these passes make up the majority of the LLVM
 pass pipeline, the primary goal of these passes is still canonicalization
-without loosing semantic information that complicates later analysis. As part of
+without losing semantic information that complicates later analysis. As part of
 the inliner cycle, the LLVM inliner step-by-step tries to inline functions, runs
 canonicalization passes to exploit newly exposed simplification opportunities,
 and then tries to inline the further simplified functions. Some simple loop

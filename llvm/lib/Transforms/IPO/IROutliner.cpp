@@ -197,7 +197,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHIOrDbg();
+  Instruction *FirstNonPHI = &*BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)
@@ -1184,21 +1184,21 @@ static std::optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
   for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
     Incoming = PN->getIncomingValue(Idx);
     IncomingBlock = PN->getIncomingBlock(Idx);
+    // If the incoming block isn't in the region, we don't have to worry about
+    // this incoming value.
+    if (!Blocks.contains(IncomingBlock))
+      continue;
+
     // If we cannot find a GVN, and the incoming block is included in the region
     // this means that the input to the PHINode is not included in the region we
     // are trying to analyze, meaning, that if it was outlined, we would be
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
     std::optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN && Blocks.contains(IncomingBlock)) {
+    if (!OGVN) {
       Region.IgnoreRegion = true;
       return std::nullopt;
     }
-
-    // If the incoming block isn't in the region, we don't have to worry about
-    // this incoming value.
-    if (!Blocks.contains(IncomingBlock))
-      continue;
 
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = *OGVN;
@@ -1478,8 +1478,9 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
     }
 
     // If it is a constant, we simply add it to the argument list as a value.
-    if (Region.AggArgToConstant.contains(AggArgIdx)) {
-      Constant *CST = Region.AggArgToConstant.find(AggArgIdx)->second;
+    if (auto It = Region.AggArgToConstant.find(AggArgIdx);
+        It != Region.AggArgToConstant.end()) {
+      Constant *CST = It->second;
       LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to value "
                         << *CST << "\n");
       NewCallArgs.push_back(CST);
@@ -1612,9 +1613,10 @@ getPassedArgumentAndAdjustArgumentLocation(const Argument *A,
   
   // If it is a constant, we can look at our mapping from when we created
   // the outputs to figure out what the constant value is.
-  if (Region.AggArgToConstant.count(ArgNum))
-    return Region.AggArgToConstant.find(ArgNum)->second;
-  
+  if (auto It = Region.AggArgToConstant.find(ArgNum);
+      It != Region.AggArgToConstant.end())
+    return It->second;
+
   // If it is not a constant, and we are not looking at the overall function, we
   // need to adjust which argument we are looking at.
   ArgNum = Region.AggArgToExtracted.find(ArgNum)->second;
@@ -1754,7 +1756,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
   // If we've made it here, it means we weren't able to replace the PHINode, so
   // we must insert it ourselves.
   PHINode *NewPN = cast<PHINode>(PN.clone());
-  NewPN->insertBefore(&*OverallPhiBlock->begin());
+  NewPN->insertBefore(OverallPhiBlock->begin());
   for (unsigned Idx = 0, Edx = NewPN->getNumIncomingValues(); Idx < Edx;
        Idx++) {
     Value *IncomingVal = NewPN->getIncomingValue(Idx);
@@ -2693,12 +2695,13 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
   if (!OutputIdx)
     return;
 
-  if (!OutputMappings.contains(Outputs[*OutputIdx])) {
+  auto It = OutputMappings.find(Outputs[*OutputIdx]);
+  if (It == OutputMappings.end()) {
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *LI << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Outputs[*OutputIdx]));
   } else {
-    Value *Orig = OutputMappings.find(Outputs[*OutputIdx])->second;
+    Value *Orig = It->second;
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *Orig << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Orig));

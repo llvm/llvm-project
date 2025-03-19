@@ -619,6 +619,7 @@ enum {
   EF_HEXAGON_MACH_V5 = 0x00000004,   // Hexagon V5
   EF_HEXAGON_MACH_V55 = 0x00000005,  // Hexagon V55
   EF_HEXAGON_MACH_V60 = 0x00000060,  // Hexagon V60
+  EF_HEXAGON_MACH_V61 = 0x00000061,  // Hexagon V61
   EF_HEXAGON_MACH_V62 = 0x00000062,  // Hexagon V62
   EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
   EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
@@ -630,7 +631,11 @@ enum {
   EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
   EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
   EF_HEXAGON_MACH_V75 = 0x00000075,  // Hexagon V75
+  EF_HEXAGON_MACH_V77 = 0x00000077,  // Hexagon V77
   EF_HEXAGON_MACH_V79 = 0x00000079,  // Hexagon V79
+  EF_HEXAGON_MACH_V81 = 0x00000081,  // Hexagon V81
+  EF_HEXAGON_MACH_V83 = 0x00000083,  // Hexagon V83
+  EF_HEXAGON_MACH_V85 = 0x00000085,  // Hexagon V85
   EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
 
   // Highest ISA version flags
@@ -642,6 +647,7 @@ enum {
   EF_HEXAGON_ISA_V5 = 0x00000040,   // Hexagon V5 ISA
   EF_HEXAGON_ISA_V55 = 0x00000050,  // Hexagon V55 ISA
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V61 = 0x00000061,  // Hexagon V61 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
   EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
@@ -651,7 +657,11 @@ enum {
   EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
   EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
   EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
+  EF_HEXAGON_ISA_V77 = 0x00000077,  // Hexagon V77 ISA
   EF_HEXAGON_ISA_V79 = 0x00000079,  // Hexagon V79 ISA
+  EF_HEXAGON_ISA_V81 = 0x00000081,  // Hexagon V81 ISA
+  EF_HEXAGON_ISA_V83 = 0x00000083,  // Hexagon V83 ISA
+  EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 };
 
@@ -689,6 +699,9 @@ enum : unsigned {
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
+#define ELF_RISCV_NONSTANDARD_RELOC(_vendor, name, value) name = value,
+#include "ELFRelocs/RISCV_nonstandard.def"
+#undef ELF_RISCV_NONSTANDARD_RELOC
 };
 
 enum {
@@ -801,7 +814,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
   EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
   EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40   = 0x040,
   EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
   EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
   EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
@@ -812,7 +825,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
@@ -1155,6 +1168,8 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Support for AArch64 build attributes
+  SHT_AARCH64_ATTRIBUTES = 0x70000003U,
   // Special aarch64-specific section for MTE support, as described in:
   // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#section-types
   SHT_AARCH64_AUTH_RELR = 0x70000004U,
@@ -1284,8 +1299,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -1783,6 +1801,7 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
   GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+  GNU_PROPERTY_RISCV_FEATURE_1_AND = 0xc0000000,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
   GNU_PROPERTY_X86_FEATURE_2_NEEDED = GNU_PROPERTY_X86_UINT32_OR_LO + 1,
@@ -1845,6 +1864,13 @@ enum : unsigned {
   GNU_PROPERTY_X86_ISA_1_V2 = 1 << 1,
   GNU_PROPERTY_X86_ISA_1_V3 = 1 << 2,
   GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
+};
+
+// RISC-V processor feature bits.
+enum : unsigned {
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED = 1 << 0,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS = 1 << 1,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG = 1 << 2,
 };
 
 // FreeBSD note types.

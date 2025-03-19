@@ -31,7 +31,7 @@
 # RUN: llvm-readobj --arch-specific out3 | FileCheck %s --check-prefix=CHECK3
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 invalid_arch1.s -o invalid_arch1.o
-# RUN: not ld.lld invalid_arch1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID_ARCH1 --implicit-check-not=error:
+# RUN: not ld.lld invalid_arch1.o 2>&1 | FileCheck %s --check-prefix=INVALID_ARCH1 --implicit-check-not=error:
 # INVALID_ARCH1: error: invalid_arch1.o:(.riscv.attributes): rv64i2: extension lacks version in expected format
 
 ## A zero value attribute is not printed.
@@ -41,20 +41,20 @@
 
 ## Differing stack_align values lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 diff_stack_align.s -o diff_stack_align.o
-# RUN: not ld.lld a.o b.o c.o diff_stack_align.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=STACK_ALIGN --implicit-check-not=error:
+# RUN: not ld.lld a.o b.o c.o diff_stack_align.o 2>&1 | FileCheck %s --check-prefix=STACK_ALIGN --implicit-check-not=error:
 # STACK_ALIGN: error: diff_stack_align.o:(.riscv.attributes) has stack_align=32 but a.o:(.riscv.attributes) has stack_align=16
 
 ## RISC-V tag merging for atomic_abi values A6C and A7 lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6C.s -o atomic_abi_A6C.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A7.s -o atomic_abi_A7.o
-# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
+# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
 # ATOMIC_ABI_ERROR: error: atomic abi mismatch for .riscv.attributes
 # ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A6C.o:(.riscv.attributes): atomic_abi=1
 # ATOMIC_ABI_ERROR-NEXT: >>> atomic_abi_A7.o:(.riscv.attributes): atomic_abi=3
 
 ## RISC-V tag merging for atomic_abi values A6C and invalid lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_invalid.s -o atomic_abi_invalid.o
-# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_invalid.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_INVALID --implicit-check-not=error:
+# RUN: not ld.lld atomic_abi_A6C.o atomic_abi_invalid.o 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_INVALID --implicit-check-not=error:
 # ATOMIC_ABI_INVALID: error: unknown atomic abi for .riscv.attributes
 # ATOMIC_ABI_INVALID-NEXT: >>> atomic_abi_invalid.o:(.riscv.attributes): atomic_abi=42
 

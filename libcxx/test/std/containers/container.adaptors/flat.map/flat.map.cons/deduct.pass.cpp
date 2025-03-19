@@ -169,6 +169,24 @@ void test_iter_iter() {
     std::flat_map m(mo.cbegin(), mo.cend());
     ASSERT_SAME_TYPE(decltype(m), decltype(mo));
   }
+  {
+    std::pair<int, int> source[3] = {{1, 1}, {2, 2}, {3, 3}};
+    std::flat_map s               = {source, source + 3}; // flat_map(InputIterator, InputIterator)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, int>);
+    assert(s.size() == 3);
+  }
+  {
+    std::pair<int, int> source[3] = {{1, 1}, {2, 2}, {3, 3}};
+    std::flat_map s{source, source + 3}; // flat_map(InputIterator, InputIterator)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, int>);
+    assert(s.size() == 3);
+  }
+  {
+    std::pair<int, int> source[3] = {{1, 1}, {2, 2}, {3, 3}};
+    std::flat_map s{std::sorted_unique, source, source + 3}; // flat_map(sorted_unique_t, InputIterator, InputIterator)
+    static_assert(std::is_same_v<decltype(s), std::flat_map<int, int>>);
+    assert(s.size() == 3);
+  }
 }
 
 void test_iter_iter_compare() {
@@ -226,6 +244,19 @@ void test_initializer_list() {
 
     ASSERT_SAME_TYPE(decltype(m), std::flat_map<int, long>);
     assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_map s = {std::make_pair(1, 'a')}; // flat_map(initializer_list<pair<int, char>>)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, char>);
+    assert(s.size() == 1);
+  }
+  {
+    using M = std::flat_map<int, short>;
+    M m;
+    std::flat_map s = {std::make_pair(m, m)}; // flat_map(initializer_list<pair<M, M>>)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_map<M, M>);
+    assert(s.size() == 1);
+    assert(s[m] == m);
   }
 }
 
@@ -305,38 +336,6 @@ int main(int, char**) {
   test_from_range_compare();
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_map, std::flat_map<int, short>>();
-  {
-    std::flat_map s = {std::make_pair(1, 'a')}; // flat_map(initializer_list<pair<int, char>>)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, char>);
-    assert(s.size() == 1);
-  }
-  {
-    using M = std::flat_map<int, short>;
-    M m;
-    std::flat_map s = {std::make_pair(m, m)}; // flat_map(initializer_list<pair<M, M>>)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<M, M>);
-    assert(s.size() == 1);
-    assert(s[m] == m);
-  }
-
-  {
-    std::pair<int, int> source[3] = {{1, 1}, {2, 2}, {3, 3}};
-    std::flat_map s               = {source, source + 3}; // flat_map(InputIterator, InputIterator)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, int>);
-    assert(s.size() == 3);
-  }
-  {
-    std::pair<int, int> source[3] = {{1, 1}, {2, 2}, {3, 3}};
-    std::flat_map s{source, source + 3}; // flat_map(InputIterator, InputIterator)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_map<int, int>);
-    assert(s.size() == 3);
-  }
-  {
-    std::pair<int, int> source[3] = {{1, 1}, {2, 2}, {3, 3}};
-    std::flat_map s{std::sorted_unique, source, source + 3}; // flat_map(sorted_unique_t, InputIterator, InputIterator)
-    static_assert(std::is_same_v<decltype(s), std::flat_map<int, int>>);
-    assert(s.size() == 3);
-  }
 
   return 0;
 }

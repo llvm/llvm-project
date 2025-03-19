@@ -25,14 +25,13 @@ struct ForcedBesselJn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(
-          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
 };
@@ -42,14 +41,13 @@ struct ForcedBesselJn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselJn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(
-          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
 };
@@ -63,9 +61,8 @@ struct ForcedBesselJnX0_10 {
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
-                                     {noneTy});
+                                     {});
     };
   }
 };
@@ -79,9 +76,8 @@ struct ForcedBesselJnX0_16 {
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
-                                     {noneTy});
+                                     {});
     };
   }
 };
@@ -91,14 +87,13 @@ struct ForcedBesselYn_10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(
-          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
 };
@@ -108,14 +103,13 @@ struct ForcedBesselYn_16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(BesselYn_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(
-          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {noneTy});
+          ctx, {boxTy, intTy, intTy, ty, ty, ty, strTy, intTy}, {});
     };
   }
 };
@@ -129,9 +123,8 @@ struct ForcedBesselYnX0_10 {
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
-                                     {noneTy});
+                                     {});
     };
   }
 };
@@ -145,9 +138,8 @@ struct ForcedBesselYnX0_16 {
           fir::runtime::getModel<Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 32);
-      auto noneTy = mlir::NoneType::get(ctx);
       return mlir::FunctionType::get(ctx, {boxTy, intTy, intTy, strTy, intTy},
-                                     {noneTy});
+                                     {});
     };
   }
 };
@@ -339,9 +331,8 @@ struct ForcedMatmulTypeModel {
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::runtime::getModel<const char *>()(ctx);
       auto intTy = fir::runtime::getModel<int>()(ctx);
-      auto voidTy = fir::runtime::getModel<void>()(ctx);
       return mlir::FunctionType::get(
-          ctx, {boxRefTy, boxTy, boxTy, strTy, intTy}, {voidTy});
+          ctx, {boxRefTy, boxTy, boxTy, strTy, intTy}, {});
     };
   }
 };
@@ -481,6 +472,26 @@ void fir::runtime::genReshape(fir::FirOpBuilder &builder, mlir::Location loc,
                                             sourceBox, shapeBox, padBox,
                                             orderBox, sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to ShallowCopy[Direct] runtime routine.
+/// ShallowCopyDirect is used iff \p resultIsAllocated is true.
+void fir::runtime::genShallowCopy(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, mlir::Value resultBox,
+                                  mlir::Value arrayBox,
+                                  bool resultIsAllocated) {
+  auto packFunc =
+      resultIsAllocated
+          ? fir::runtime::getRuntimeFunc<mkRTKey(ShallowCopyDirect)>(loc,
+                                                                     builder)
+          : fir::runtime::getRuntimeFunc<mkRTKey(ShallowCopy)>(loc, builder);
+  auto fTy = packFunc.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
+  auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox,
+                                            arrayBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, packFunc, args);
 }
 
 /// Generate call to Spread intrinsic runtime routine.

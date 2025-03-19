@@ -33,14 +33,16 @@ enum LineType {
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
   LT_CommentAbovePPDirective,
+  LT_RequiresExpression,
+  LT_SimpleRequirement,
 };
 
 enum ScopeType {
-  // Contained in child block.
-  ST_ChildBlock,
   // Contained in class declaration/definition.
   ST_Class,
-  // Contained within other scope block (function, loop, if/else, etc).
+  // Contained in compound requirement.
+  ST_CompoundRequirement,
+  // Contained in other blocks (function, lambda, loop, if/else, child, etc).
   ST_Other,
 };
 
@@ -152,6 +154,11 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
+  /// \c true if this line starts a C++ export block.
+  bool startsWithExportBlock() const {
+    return startsWith(tok::kw_export, tok::l_brace);
+  }
+
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;
@@ -218,7 +225,7 @@ public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
       : Style(Style), IsCpp(Style.isCpp()),
         LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {
-    assert(IsCpp == LangOpts.CXXOperatorNames);
+    assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
   }
 
   /// Adapts the indent levels of comment lines to the indent of the

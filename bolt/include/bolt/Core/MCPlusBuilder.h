@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -472,7 +473,7 @@ public:
   ///
   /// For X86, they might be used in scanExternalRefs when we want to skip
   /// a function but still patch references inside it.
-  virtual bool shouldRecordCodeRelocation(uint64_t RelType) const {
+  virtual bool shouldRecordCodeRelocation(uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -550,6 +551,22 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  virtual bool isAuthenticationOfReg(const MCInst &Inst,
+                                     MCPhysReg AuthenticatedReg) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
@@ -620,8 +637,14 @@ public:
     return false;
   }
 
-  virtual void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const {
+  virtual bool isAddXri(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isMOVW(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
   }
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
@@ -1061,7 +1084,7 @@ public:
   /// MCExpr referencing \p Symbol + \p Addend.
   virtual bool setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                      const MCSymbol *Symbol, int64_t Addend,
-                                     MCContext *Ctx, uint64_t RelType) const;
+                                     MCContext *Ctx, uint32_t RelType) const;
 
   /// Replace an immediate operand in the instruction \p Inst with a reference
   /// of the passed \p Symbol plus \p Addend. If the instruction does not have
@@ -1069,7 +1092,7 @@ public:
   /// return true.
   virtual bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                        int64_t Addend, MCContext *Ctx,
-                                       int64_t &Value, uint64_t RelType) const {
+                                       int64_t &Value, uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1204,6 +1227,11 @@ public:
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
 
+  /// Get target-specific instruction size.
+  virtual std::optional<uint32_t> getInstructionSize(const MCInst &Inst) const {
+    return std::nullopt;
+  }
+
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
@@ -1269,7 +1297,7 @@ public:
   /// Return the MCExpr used for absolute references in this target
   virtual const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                          MCContext &Ctx,
-                                         uint64_t RelType) const {
+                                         uint32_t RelType) const {
     return Expr;
   }
 
@@ -1421,11 +1449,12 @@ public:
   }
 
   /// Creates an indirect call to the function within the \p DirectCall PLT
-  /// stub. The function's memory location is pointed by the \p TargetLocation
+  /// stub. The function's address location is pointed by the \p TargetLocation
   /// symbol.
+  /// Move instruction annotations from \p DirectCall to the indirect call.
   virtual InstructionListType
-  createIndirectPltCall(const MCInst &DirectCall,
-                        const MCSymbol *TargetLocation, MCContext *Ctx) {
+  createIndirectPLTCall(MCInst &&DirectCall, const MCSymbol *TargetLocation,
+                        MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return {};
   }
@@ -1512,6 +1541,13 @@ public:
 
   virtual void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,
                               MCContext *Ctx, bool IsTailCall = false) {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Undo the linker's ADRP+ADD to ADR relaxation. Take \p ADRInst and return
+  /// ADRP+ADD instruction sequence.
+  virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

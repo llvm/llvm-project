@@ -211,3 +211,19 @@ svfloat64_t test_svdup_laneq_f64(svfloat64_t zn) {
 svbfloat16_t test_svdup_laneq_bf16(svbfloat16_t zn) {
     return SVE_ACLE_FUNC(svdup_laneq, _bf16)(zn, 3);
 }
+
+// CHECK-LABEL: define dso_local <vscale x 16 x i8> @test_svdup_laneq_mf8
+// CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.laneq.nxv16i8(<vscale x 16 x i8> [[ZN]], i32 1)
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+// CPP-CHECK-LABEL: define dso_local <vscale x 16 x i8> @_Z20test_svdup_laneq_mf8u13__SVMfloat8_t
+// CPP-CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0]] {
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dup.laneq.nxv16i8(<vscale x 16 x i8> [[ZN]], i32 1)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+svmfloat8_t test_svdup_laneq_mf8(svmfloat8_t zn) {
+    return SVE_ACLE_FUNC(svdup_laneq, _mf8)(zn, 1);
+}

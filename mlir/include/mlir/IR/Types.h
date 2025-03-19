@@ -125,17 +125,6 @@ public:
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
   bool isIndex() const;
-  bool isFloat4E2M1FN() const;
-  bool isFloat6E2M3FN() const;
-  bool isFloat6E3M2FN() const;
-  bool isFloat8E5M2() const;
-  bool isFloat8E4M3() const;
-  bool isFloat8E4M3FN() const;
-  bool isFloat8E5M2FNUZ() const;
-  bool isFloat8E4M3FNUZ() const;
-  bool isFloat8E4M3B11FNUZ() const;
-  bool isFloat8E3M4() const;
-  bool isFloat8E8M0FNU() const;
   bool isBF16() const;
   bool isF16() const;
   bool isTF32() const;
@@ -143,6 +132,9 @@ public:
   bool isF64() const;
   bool isF80() const;
   bool isF128() const;
+  /// Return true if this is an float type (with the specified width).
+  bool isFloat() const;
+  bool isFloat(unsigned width) const;
 
   /// Return true if this is an integer type (with the specified width).
   bool isInteger() const;

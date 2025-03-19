@@ -86,7 +86,9 @@ void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
       [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
-  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns);
+  // Set higher benefit, so patterns will run before generic LLVM lowering.
+  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
+                                      getBenefit());
 }
 
 LogicalResult

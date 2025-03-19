@@ -17,10 +17,8 @@ end
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
 ! CHECK: cf.cond_br %{{.*}}, ^bb1, ^bb2
 ! CHECK-NEXT: ^bb1:
-! CHECK-NEXT: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
 ! CHECK-NEXT: return
 ! CHECK-NEXT: ^bb2:
-! CHECK-NEXT: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
 ! CHECK-NEXT: return
 ! CHECK-NEXT: }
 

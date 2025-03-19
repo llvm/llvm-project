@@ -236,6 +236,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getsid
+  SRCS
+    getsid.cpp
+  HDRS
+    ../getsid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   getuid
   SRCS
     getuid.cpp
@@ -460,6 +473,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setsid
+  SRCS
+    setsid.cpp
+  HDRS
+    ../setsid.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   symlink
   SRCS
     symlink.cpp
@@ -566,6 +591,21 @@ add_entrypoint_object(
     libc.hdr.types.ssize_t
     libc.hdr.fcntl_macros
     libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getentropy
+  SRCS
+    getentropy.cpp
+  HDRS
+    ../getentropy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.hdr.errno_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno

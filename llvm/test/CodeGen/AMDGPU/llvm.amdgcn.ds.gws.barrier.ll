@@ -127,7 +127,7 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) #0 {
   ret void
 }
 
-@lds = internal unnamed_addr addrspace(3) global i32 undef
+@lds = internal unnamed_addr addrspace(3) global i32 poison
 
 ; Check if m0 initialization is shared
 ; GCN-LABEL: {{^}}gws_barrier_save_m0_barrier_constant_offset:

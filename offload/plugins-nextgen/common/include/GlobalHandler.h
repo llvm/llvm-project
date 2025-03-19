@@ -1,4 +1,4 @@
-//===- GlobalHandler.h - Target independent global & enviroment handling --===//
+//===- GlobalHandler.h - Target independent global & environment handling -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -63,14 +63,22 @@ struct __llvm_profile_data {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+extern "C" {
+extern int __attribute__((weak)) __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+}
+
 /// PGO profiling data extracted from a GPU device
 struct GPUProfGlobals {
-  SmallVector<uint8_t> NamesData;
-  SmallVector<SmallVector<int64_t>> Counts;
+  SmallVector<int64_t> Counts;
   SmallVector<__llvm_profile_data> Data;
+  SmallVector<uint8_t> NamesData;
   Triple TargetTriple;
 
   void dump() const;
+  Error write() const;
 };
 
 /// Subclass of GlobalTy that holds the memory for a global of \p Ty.
@@ -100,7 +108,7 @@ public:
 
 /// Helper class to do the heavy lifting when it comes to moving globals between
 /// host and device. Through the GenericDeviceTy we access memcpy DtoH and HtoD,
-/// which means the only things specialized by the subclass is the retrival of
+/// which means the only things specialized by the subclass is the retrieval of
 /// global metadata (size, addr) from the device.
 /// \see getGlobalMetadataFromDevice
 class GenericGlobalHandlerTy {

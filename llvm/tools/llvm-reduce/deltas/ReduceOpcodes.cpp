@@ -106,10 +106,7 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
   if (!PtrArg) {
     unsigned AS = CB->getDataLayout().getAllocaAddrSpace();
 
-    PointerType *PtrTy =
-        PointerType::get(DataArg ? DataArg->getType()
-                                 : IntegerType::getInt32Ty(CB->getContext()),
-                         AS);
+    PointerType *PtrTy = PointerType::get(CB->getContext(), AS);
 
     PtrArg = ConstantPointerNull::get(PtrTy);
   }

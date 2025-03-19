@@ -3,7 +3,7 @@
 
 %struct.S = type { [32 x i32] }
 
-@shared = addrspace(3) global %struct.S undef, align 4
+@shared = addrspace(3) global %struct.S poison, align 4
 
 define amdgpu_kernel void @memcpy_p0_p0_minsize(ptr %dest, ptr readonly %src) #0 {
 ; CHECK-LABEL: memcpy_p0_p0_minsize:
@@ -589,6 +589,6 @@ declare void @llvm.memcpy.p3.p4.i64(ptr addrspace(3) noalias nocapture writeonly
 
 declare void @llvm.memcpy.p0.p3.i64(ptr noalias nocapture writeonly, ptr addrspace(3) noalias nocapture readonly, i64, i1 immarg) #2
 
-attributes #0 = { minsize }
-attributes #1 = { optsize }
+attributes #0 = { minsize "amdgpu-flat-work-group-size"="1024,1024" }
+attributes #1 = { optsize "amdgpu-flat-work-group-size"="1024,1024" }
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
