@@ -213,6 +213,10 @@ void ento::registerPureVirtualCallChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<VirtualCallChecker, VirtualCallChecker::PureChecker>();
 }
 
+bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &Mgr) {
+  return Mgr.getLangOpts().CPlusPlus;
+}
+
 void ento::registerVirtualCallChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.registerChecker<VirtualCallChecker,
                                   VirtualCallChecker::ImpureChecker>();
@@ -220,12 +224,6 @@ void ento::registerVirtualCallChecker(CheckerManager &Mgr) {
       Mgr.getCurrentCheckerName(), "ShowFixIts");
 }
 
-bool ento::shouldRegisterPureVirtualCallChecker(const CheckerManager &mgr) {
-  const LangOptions &LO = mgr.getLangOpts();
-  return LO.CPlusPlus;
-}
-
-bool ento::shouldRegisterVirtualCallChecker(const CheckerManager &mgr) {
-  const LangOptions &LO = mgr.getLangOpts();
-  return LO.CPlusPlus;
+bool ento::shouldRegisterVirtualCallChecker(const CheckerManager &Mgr) {
+  return Mgr.getLangOpts().CPlusPlus;
 }
