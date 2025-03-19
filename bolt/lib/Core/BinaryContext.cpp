@@ -645,24 +645,19 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
     // Function or one of its fragments.
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
-    const bool DoesBelongToFunction =
-        BF.containsAddress(Value) ||
-        (TargetBF && areRelatedFragments(TargetBF, &BF));
-    if (!DoesBelongToFunction) {
+    if (!TargetBF || !areRelatedFragments(TargetBF, &BF)) {
       LLVM_DEBUG({
-        if (!BF.containsAddress(Value)) {
-          dbgs() << "FAIL: function doesn't contain this address\n";
-          if (TargetBF) {
-            dbgs() << "  ! function containing this address: "
-                   << TargetBF->getPrintName() << '\n';
-            if (TargetBF->isFragment()) {
-              dbgs() << "  ! is a fragment";
-              for (BinaryFunction *Parent : TargetBF->ParentFragments)
-                dbgs() << ", parent: " << Parent->getPrintName();
-              dbgs() << '\n';
-            }
-          }
-        }
+        dbgs() << "FAIL: function doesn't contain this address\n";
+        if (!TargetBF)
+          break;
+        dbgs() << "  ! function containing this address: " << *TargetBF << '\n';
+        if (!TargetBF->isFragment())
+          break;
+        dbgs() << "  ! is a fragment with parents: ";
+        ListSeparator LS;
+        for (BinaryFunction *Parent : TargetBF->ParentFragments)
+          dbgs() << LS << *Parent;
+        dbgs() << '\n';
       });
       break;
     }
@@ -702,10 +697,8 @@ void BinaryContext::populateJumpTables() {
        ++JTI) {
     JumpTable *JT = JTI->second;
 
-    bool NonSimpleParent = false;
-    for (BinaryFunction *BF : JT->Parents)
-      NonSimpleParent |= !BF->isSimple();
-    if (NonSimpleParent)
+    auto isSimple = std::bind(&BinaryFunction::isSimple, std::placeholders::_1);
+    if (!llvm::all_of(JT->Parents, isSimple))
       continue;
 
     uint64_t NextJTAddress = 0;
@@ -839,33 +832,26 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     assert(JT->Type == Type && "jump table types have to match");
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
 
-    // Prevent associating a jump table to a specific fragment twice.
-    if (!llvm::is_contained(JT->Parents, &Function)) {
-      assert(llvm::all_of(JT->Parents,
-                          [&](const BinaryFunction *BF) {
-                            return areRelatedFragments(&Function, BF);
-                          }) &&
-             "cannot re-use jump table of a different function");
-      // Duplicate the entry for the parent function for easy access
-      JT->Parents.push_back(&Function);
-      if (opts::Verbosity > 2) {
-        this->outs() << "BOLT-INFO: Multiple fragments access same jump table: "
-                     << JT->Parents[0]->getPrintName() << "; "
-                     << Function.getPrintName() << "\n";
-        JT->print(this->outs());
-      }
-      Function.JumpTables.emplace(Address, JT);
-      for (BinaryFunction *Parent : JT->Parents)
-        Parent->setHasIndirectTargetToSplitFragment(true);
-    }
+    if (llvm::is_contained(JT->Parents, &Function))
+      return JT->getFirstLabel();
 
-    bool IsJumpTableParent = false;
-    (void)IsJumpTableParent;
-    for (BinaryFunction *Frag : JT->Parents)
-      if (Frag == &Function)
-        IsJumpTableParent = true;
-    assert(IsJumpTableParent &&
+    // Prevent associating a jump table to a specific fragment twice.
+    auto isSibling = std::bind(&BinaryContext::areRelatedFragments, this,
+                               &Function, std::placeholders::_1);
+    assert(llvm::all_of(JT->Parents, isSibling) &&
            "cannot re-use jump table of a different function");
+    if (opts::Verbosity > 2) {
+      this->outs() << "BOLT-INFO: Multiple fragments access same jump table: "
+                   << JT->Parents[0]->getPrintName() << "; "
+                   << Function.getPrintName() << "\n";
+      JT->print(this->outs());
+    }
+    if (JT->Parents.size() == 1)
+      JT->Parents.front()->setHasIndirectTargetToSplitFragment(true);
+    Function.setHasIndirectTargetToSplitFragment(true);
+    // Duplicate the entry for the parent function for easy access
+    JT->Parents.push_back(&Function);
+    Function.JumpTables.emplace(Address, JT);
     return JT->getFirstLabel();
   }
 
