@@ -21195,7 +21195,6 @@ bool DAGCombiner::hasCallInLdStChain(SmallVectorImpl<MemOpLink> &StoreNodes,
         break;
       }
     }
-    return false;
   }
   return false;
 }
