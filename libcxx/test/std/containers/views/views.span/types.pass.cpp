@@ -37,33 +37,31 @@
 #include "test_macros.h"
 
 template <typename S, typename Iter>
-void testIterator()
-{
-    typedef std::iterator_traits<Iter> ItT;
+void testIterator() {
+  typedef std::iterator_traits<Iter> ItT;
 
-    ASSERT_SAME_TYPE(typename ItT::iterator_category, std::random_access_iterator_tag);
-    ASSERT_SAME_TYPE(typename ItT::value_type,        typename S::value_type);
-    ASSERT_SAME_TYPE(typename ItT::reference,         typename S::reference);
-    ASSERT_SAME_TYPE(typename ItT::pointer,           typename S::pointer);
-    ASSERT_SAME_TYPE(typename ItT::difference_type,   typename S::difference_type);
+  ASSERT_SAME_TYPE(typename ItT::iterator_category, std::random_access_iterator_tag);
+  ASSERT_SAME_TYPE(typename ItT::value_type, typename S::value_type);
+  ASSERT_SAME_TYPE(typename ItT::reference, typename S::reference);
+  ASSERT_SAME_TYPE(typename ItT::pointer, typename S::pointer);
+  ASSERT_SAME_TYPE(typename ItT::difference_type, typename S::difference_type);
 }
 
 template <typename S, typename ElementType, std::size_t Size>
-void testSpan()
-{
-    ASSERT_SAME_TYPE(typename S::element_type,    ElementType);
-    ASSERT_SAME_TYPE(typename S::value_type,      std::remove_cv_t<ElementType>);
-    ASSERT_SAME_TYPE(typename S::size_type,       std::size_t);
-    ASSERT_SAME_TYPE(typename S::difference_type, std::ptrdiff_t);
-    ASSERT_SAME_TYPE(typename S::pointer,         ElementType *);
-    ASSERT_SAME_TYPE(typename S::const_pointer,   const ElementType *);
-    ASSERT_SAME_TYPE(typename S::reference,       ElementType &);
-    ASSERT_SAME_TYPE(typename S::const_reference, const ElementType &);
+void testSpan() {
+  ASSERT_SAME_TYPE(typename S::element_type, ElementType);
+  ASSERT_SAME_TYPE(typename S::value_type, std::remove_cv_t<ElementType>);
+  ASSERT_SAME_TYPE(typename S::size_type, std::size_t);
+  ASSERT_SAME_TYPE(typename S::difference_type, std::ptrdiff_t);
+  ASSERT_SAME_TYPE(typename S::pointer, ElementType*);
+  ASSERT_SAME_TYPE(typename S::const_pointer, const ElementType*);
+  ASSERT_SAME_TYPE(typename S::reference, ElementType&);
+  ASSERT_SAME_TYPE(typename S::const_reference, const ElementType&);
 
-    static_assert(S::extent == Size); // check that it exists
+  static_assert(S::extent == Size); // check that it exists
 
-    testIterator<S, typename S::iterator>();
-    testIterator<S, typename S::reverse_iterator>();
+  testIterator<S, typename S::iterator>();
+  testIterator<S, typename S::reverse_iterator>();
 }
 
 template <typename T>
