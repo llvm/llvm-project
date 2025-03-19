@@ -278,6 +278,8 @@ Improvements to Clang's diagnostics
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
+- Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
