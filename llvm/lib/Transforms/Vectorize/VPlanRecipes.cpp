@@ -2399,8 +2399,13 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
            Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
-                                                   Ctx.CostKind);
+  if (ElementTy->isFloatingPointTy())
+    return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
+                                              Ctx.CostKind);
+  // Cannot get correct cost when quering TTI with FMFs not contains `reassoc`
+  // for non-FP reductions.
+  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, std::nullopt,
+                                            Ctx.CostKind);
 }
 
 InstructionCost

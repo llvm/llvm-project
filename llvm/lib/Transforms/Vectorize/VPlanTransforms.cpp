@@ -2146,7 +2146,7 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   }
 
   // Generate VPWidenRecipe.
-  std::array<VPValue *, 2> MulOps = {Op0, Op1};
+  ArrayRef<VPValue *> MulOps = {Op0, Op1};
   auto *Mul = new VPWidenRecipe(
       Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
       MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),

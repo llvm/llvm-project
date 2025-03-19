@@ -2437,14 +2437,6 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
   /// Opcode of the extend recipe will be lowered to.
   Instruction::CastOps ExtOp;
 
-public:
-  VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
-      : VPReductionRecipe(VPDef::VPExtendedReductionSC,
-                          R->getRecurrenceDescriptor(),
-                          {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
-                          R->isOrdered(), Ext->isNonNeg(), Ext->getDebugLoc()),
-        ExtOp(Ext->getOpcode()) {}
-
   /// For cloning VPExtendedReductionRecipe.
   VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
       : VPReductionRecipe(
@@ -2452,6 +2444,14 @@ public:
             {ExtRed->getChainOp(), ExtRed->getVecOp()}, ExtRed->getCondOp(),
             ExtRed->isOrdered(), ExtRed->isNonNeg(), ExtRed->getDebugLoc()),
         ExtOp(ExtRed->getExtOpcode()) {}
+
+public:
+  VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
+      : VPReductionRecipe(VPDef::VPExtendedReductionSC,
+                          R->getRecurrenceDescriptor(),
+                          {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
+                          R->isOrdered(), Ext->isNonNeg(), Ext->getDebugLoc()),
+        ExtOp(Ext->getOpcode()) {}
 
   ~VPExtendedReductionRecipe() override = default;
 
@@ -2500,8 +2500,16 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   /// Non-neg flag of the extend recipe.
   bool IsNonNeg = false;
 
-  /// Is this multiply-accumulate-reduction recipe contains extend?
-  bool IsExtended = false;
+  /// For cloning VPMulAccumulateReductionRecipe.
+  VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
+      : VPReductionRecipe(
+            VPDef::VPMulAccumulateReductionSC,
+            MulAcc->getRecurrenceDescriptor(),
+            {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
+            MulAcc->getCondOp(), MulAcc->isOrdered(),
+            MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
+            MulAcc->getDebugLoc()),
+        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()) {}
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2516,7 +2524,6 @@ public:
     assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
-    IsExtended = true;
   }
 
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
@@ -2524,23 +2531,12 @@ public:
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
             {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
             R->getCondOp(), R->isOrdered(), Mul->hasNoUnsignedWrap(),
-            Mul->hasNoSignedWrap(), R->getDebugLoc()) {
+            Mul->hasNoSignedWrap(), R->getDebugLoc()),
+        ExtOp(Instruction::CastOps::CastOpsEnd) {
     assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
            "Add");
   }
-
-  /// For cloning VPMulAccumulateReductionRecipe.
-  VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
-      : VPReductionRecipe(
-            VPDef::VPMulAccumulateReductionSC,
-            MulAcc->getRecurrenceDescriptor(),
-            {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
-            MulAcc->getCondOp(), MulAcc->isOrdered(),
-            MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
-            MulAcc->getDebugLoc()),
-        ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()),
-        IsExtended(MulAcc->isExtended()) {}
 
   ~VPMulAccumulateReductionRecipe() override = default;
 
@@ -2571,7 +2567,7 @@ public:
   VPValue *getVecOp1() const { return getOperand(2); }
 
   /// Return if this MulAcc recipe contains extend instructions.
-  bool isExtended() const { return IsExtended; }
+  bool isExtended() const { return ExtOp != Instruction::CastOps::CastOpsEnd; }
 
   /// Return if the operands of mul instruction come from same extend.
   bool isSameExtend() const { return getVecOp0() == getVecOp1(); }
@@ -2580,11 +2576,7 @@ public:
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
   /// Return if the extend opcode is ZExt.
-  bool isZExt() const {
-    if (!isExtended())
-      return true;
-    return ExtOp == Instruction::CastOps::ZExt;
-  }
+  bool isZExt() const { return ExtOp == Instruction::CastOps::ZExt; }
 
   /// Return the non negative flag of the ext recipe.
   bool isNonNeg() const { return IsNonNeg; }
