@@ -873,10 +873,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         sections[i] = &InputSection::discarded;
     } break;
     }
-
-    // Read a symbol table.
-    initializeSymbols(obj);
   }
+  // Read a symbol table.
+  initializeSymbols(obj);
 }
 
 // Sections with SHT_GROUP and comdat bits define comdat section groups.
