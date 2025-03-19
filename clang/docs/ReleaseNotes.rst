@@ -152,6 +152,7 @@ Non-comprehensive list of changes in this release
 
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
+- Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
 
 New Compiler Flags
 ------------------
