@@ -17,34 +17,36 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
-#include <iterator>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-
-bool isLockGuard(const QualType &Type) {
+static bool isLockGuard(const QualType &Type) {
   if (const auto *Record = Type->getAs<RecordType>())
-    if (const RecordDecl *Decl = Record->getDecl())
+    if (const RecordDecl *Decl = Record->getDecl()) {
+      assert(Decl->getDeclName().isIdentifier() && "Decl is not identifier");
       return Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
+    }
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
     if (const TemplateDecl *Decl =
-            TemplateSpecType->getTemplateName().getAsTemplateDecl())
+            TemplateSpecType->getTemplateName().getAsTemplateDecl()) {
+      assert(Decl->getDeclName().isIdentifier() && "Decl is not identifier");
       return Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
+    }
 
   return false;
 }
 
-llvm::SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
+static llvm::SmallVector<const VarDecl *>
+getLockGuardsFromDecl(const DeclStmt *DS) {
   llvm::SmallVector<const VarDecl *> LockGuards;
 
   for (const Decl *Decl : DS->decls()) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
       const QualType Type =
-          VD->getType().getUnqualifiedType().getCanonicalType();
+          VD->getType().getCanonicalType().getUnqualifiedType();
       if (isLockGuard(Type))
         LockGuards.push_back(VD);
     }
@@ -55,7 +57,7 @@ llvm::SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
 
 // Scans through the statements in a block and groups consecutive
 // 'std::lock_guard' variable declarations together.
-llvm::SmallVector<llvm::SmallVector<const VarDecl *>>
+static llvm::SmallVector<llvm::SmallVector<const VarDecl *>>
 findLocksInCompoundStmt(const CompoundStmt *Block,
                         const ast_matchers::MatchFinder::MatchResult &Result) {
   // store groups of consecutive 'std::lock_guard' declarations
@@ -74,10 +76,7 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
       llvm::SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
 
       if (!LockGuards.empty()) {
-        CurrentLockGuardGroup.insert(
-            CurrentLockGuardGroup.end(),
-            std::make_move_iterator(LockGuards.begin()),
-            std::make_move_iterator(LockGuards.end()));
+        CurrentLockGuardGroup.append(LockGuards);
         continue;
       }
     }
@@ -89,7 +88,7 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
   return LockGuardGroups;
 }
 
-TemplateSpecializationTypeLoc
+static TemplateSpecializationTypeLoc
 getTemplateLockGuardTypeLoc(const TypeSourceInfo *SourceInfo) {
   const TypeLoc Loc = SourceInfo->getTypeLoc();
 
@@ -101,7 +100,7 @@ getTemplateLockGuardTypeLoc(const TypeSourceInfo *SourceInfo) {
 }
 
 // Find the exact source range of the 'lock_guard' token
-SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
+static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
   const TypeLoc LockGuardTypeLoc = SourceInfo->getTypeLoc();
 
   return SourceRange(LockGuardTypeLoc.getBeginLoc(),
@@ -109,7 +108,7 @@ SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
 }
 
 // Find the exact source range of the 'lock_guard' name token
-SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
+static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
   const TemplateSpecializationTypeLoc TemplateLoc =
       getTemplateLockGuardTypeLoc(SourceInfo);
   if (!TemplateLoc)
@@ -118,6 +117,8 @@ SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
   return SourceRange(TemplateLoc.getTemplateNameLoc(),
                      TemplateLoc.getLAngleLoc().getLocWithOffset(-1));
 }
+
+namespace {
 
 AST_MATCHER_P(CompoundStmt, hasMultiple, ast_matchers::internal::Matcher<Stmt>,
               InnerMatcher) {
