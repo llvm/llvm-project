@@ -537,3 +537,31 @@ class TargetAPITestCase(TestBase):
         """Make sure we don't crash when trying to select invalid target."""
         target = lldb.SBTarget()
         self.dbg.SetSelectedTarget(target)
+
+    @no_debug_info_test
+    def test_acquire_sblock(self):
+        """Make sure we can acquire the API lock from Python."""
+        target = self.dbg.GetDummyTarget()
+
+        lock = target.AcquireAPILock()
+        self.assertTrue(lock.IsValid())
+        # The API call below doesn't actually matter, it's just there to
+        # confirm we don't block on the API lock.
+        target.BreakpointCreateByName("foo", "bar")
+        lock.Unlock()
+        self.assertFalse(lock.IsValid())
+
+    @no_debug_info_test
+    def test_acquire_sblock_with_statement(self):
+        """Make sure we can acquire the API lock using a with-statement from Python."""
+        target = self.dbg.GetDummyTarget()
+
+        lock_copy = None
+        with target.AcquireAPILock() as lock:
+            self.assertTrue(lock.IsValid())
+            # The API call below doesn't actually matter, it's just there to
+            # confirm we don't block on the API lock.
+            target.BreakpointCreateByName("foo", "bar")
+            lock_copy = lock
+            self.assertTrue(lock.IsValid())
+        self.assertFalse(lock_copy.IsValid())

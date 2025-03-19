@@ -77,6 +77,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBLaunchInfo.cpp
   SBLineEntry.cpp
   SBListener.cpp
+  SBLock.cpp
   SBMemoryRegionInfo.cpp
   SBMemoryRegionInfoList.cpp
   SBModule.cpp
