@@ -30,10 +30,6 @@ _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
 
-// Defined in gpuintrin.h, used later in this file.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x);
-
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
@@ -146,57 +142,25 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __match_mask = 0;
-
-  bool __done = 0;
-  while (__gpu_ballot(__lane_mask, !__done)) {
-    if (!__done) {
-      uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
-      if (__first == __x) {
-        __match_mask = __gpu_lane_mask();
-        __done = 1;
-      }
-    }
-  }
-  __gpu_sync_lane(__lane_mask);
-  return __match_mask;
+  return __gpu_match_any_u32_impl(__lane_mask, __x);
 }
 
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
-  uint64_t __match_mask = 0;
-
-  bool __done = 0;
-  while (__gpu_ballot(__lane_mask, !__done)) {
-    if (!__done) {
-      uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
-      if (__first == __x) {
-        __match_mask = __gpu_lane_mask();
-        __done = 1;
-      }
-    }
-  }
-  __gpu_sync_lane(__lane_mask);
-  return __match_mask;
+  return __gpu_match_any_u64_impl(__lane_mask, __x);
 }
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
-  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  __gpu_sync_lane(__lane_mask);
-  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+  return __gpu_match_all_u32_impl(__lane_mask, __x);
 }
 
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
-  uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
-  uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
-  __gpu_sync_lane(__lane_mask);
-  return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;
+  return __gpu_match_all_u64_impl(__lane_mask, __x);
 }
 
 // Returns true if the flat pointer points to AMDGPU 'shared' memory.

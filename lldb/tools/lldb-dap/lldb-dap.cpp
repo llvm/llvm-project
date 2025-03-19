@@ -48,6 +48,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -281,7 +282,7 @@ validateConnection(llvm::StringRef conn) {
 
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
-                std::ofstream *log, llvm::StringRef program_path,
+                Log *log, llvm::StringRef program_path,
                 const ReplMode default_repl_mode,
                 const std::vector<std::string> &pre_init_commands) {
   Status status;
@@ -374,11 +375,11 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   {
     std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
     for (auto [sock, dap] : dap_sessions) {
-      auto error = dap->Disconnect();
-      if (error.Fail()) {
+      if (llvm::Error error = dap->Disconnect()) {
         client_failed = true;
         llvm::errs() << "DAP client " << dap->transport.GetClientName()
-                     << " disconnected failed: " << error.GetCString() << "\n";
+                     << " disconnected failed: "
+                     << llvm::toString(std::move(error)) << "\n";
       }
       // Close the socket to ensure the DAP::Loop read finishes.
       sock->Close();
@@ -484,10 +485,17 @@ int main(int argc, char *argv[]) {
   }
 #endif
 
-  std::unique_ptr<std::ofstream> log = nullptr;
+  std::unique_ptr<Log> log = nullptr;
   const char *log_file_path = getenv("LLDBDAP_LOG");
-  if (log_file_path)
-    log = std::make_unique<std::ofstream>(log_file_path);
+  if (log_file_path) {
+    std::error_code EC;
+    log = std::make_unique<Log>(log_file_path, EC);
+    if (EC) {
+      llvm::logAllUnhandledErrors(llvm::errorCodeToError(EC), llvm::errs(),
+                                  "Failed to create log file: ");
+      return EXIT_FAILURE;
+    }
+  }
 
   // Initialize LLDB first before we do anything.
   lldb::SBError error = lldb::SBDebugger::InitializeWithErrorHandling();

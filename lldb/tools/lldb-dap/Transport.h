@@ -14,11 +14,11 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_TRANSPORT_H
 #define LLDB_TOOLS_LLDB_DAP_TRANSPORT_H
 
-#include "Protocol.h"
+#include "DAPForward.h"
+#include "Protocol/ProtocolBase.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include <fstream>
 #include <optional>
 
 namespace lldb_dap {
@@ -27,8 +27,8 @@ namespace lldb_dap {
 /// with the client.
 class Transport {
 public:
-  Transport(llvm::StringRef client_name, std::ofstream *log,
-            lldb::IOObjectSP input, lldb::IOObjectSP output);
+  Transport(llvm::StringRef client_name, Log *log, lldb::IOObjectSP input,
+            lldb::IOObjectSP output);
   ~Transport() = default;
 
   /// Transport is not copyable.
@@ -51,7 +51,7 @@ public:
 
 private:
   llvm::StringRef m_client_name;
-  std::ofstream *m_log;
+  Log *m_log;
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
 };

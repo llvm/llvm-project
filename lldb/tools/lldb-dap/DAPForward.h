@@ -19,6 +19,9 @@ struct SourceBreakpoint;
 struct Watchpoint;
 struct InstructionBreakpoint;
 struct DAP;
+class Log;
+class BaseRequestHandler;
+class ResponseHandler;
 } // namespace lldb_dap
 
 namespace lldb {

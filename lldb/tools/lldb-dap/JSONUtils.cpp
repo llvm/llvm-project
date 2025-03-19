@@ -70,34 +70,17 @@ llvm::StringRef GetAsString(const llvm::json::Value &value) {
 }
 
 // Gets a string from a JSON object using the key, or returns an empty string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue) {
-  if (std::optional<llvm::StringRef> value = obj.getString(key))
-    return *value;
-  return defaultValue;
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key) {
+  return obj.getString(key);
 }
 
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue) {
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key) {
   if (obj == nullptr)
-    return defaultValue;
-  return GetString(*obj, key, defaultValue);
-}
+    return std::nullopt;
 
-// Gets an unsigned integer from a JSON object using the key, or returns the
-// specified fail value.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (auto value = obj.getInteger(key))
-    return (uint64_t)*value;
-  return fail_value;
-}
-
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value) {
-  if (obj == nullptr)
-    return fail_value;
-  return GetUnsigned(*obj, key, fail_value);
+  return GetString(*obj, key);
 }
 
 std::optional<bool> GetBoolean(const llvm::json::Object &obj,
@@ -114,6 +97,19 @@ std::optional<bool> GetBoolean(const llvm::json::Object *obj,
   if (obj != nullptr)
     return GetBoolean(*obj, key);
   return std::nullopt;
+}
+
+std::optional<int64_t> GetSigned(const llvm::json::Object &obj,
+                                 llvm::StringRef key) {
+  return obj.getInteger(key);
+}
+
+std::optional<int64_t> GetSigned(const llvm::json::Object *obj,
+                                 llvm::StringRef key) {
+  if (obj == nullptr)
+    return std::nullopt;
+
+  return GetSigned(*obj, key);
 }
 
 bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
@@ -265,8 +261,9 @@ void FillResponse(const llvm::json::Object &request,
   // to true by default.
   response.try_emplace("type", "response");
   response.try_emplace("seq", (int64_t)0);
-  EmplaceSafeString(response, "command", GetString(request, "command"));
-  const auto seq = GetInteger<int64_t>(request, "seq").value_or(0);
+  EmplaceSafeString(response, "command",
+                    GetString(request, "command").value_or(""));
+  const int64_t seq = GetSigned(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
 }
@@ -990,6 +987,9 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");
     break;
+  case lldb::eStopReasonHistoryBoundary:
+    body.try_emplace("reason", "history boundary");
+    break;
   case lldb::eStopReasonSignal:
   case lldb::eStopReasonException:
     body.try_emplace("reason", "exception");
@@ -1439,13 +1439,14 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
     args.push_back(std::to_string(debugger_pid));
   }
   args.push_back("--launch-target");
-  args.push_back(GetString(launch_request_arguments, "program").str());
+  args.push_back(
+      GetString(launch_request_arguments, "program").value_or("").str());
   std::vector<std::string> target_args =
       GetStrings(launch_request_arguments, "args");
   args.insert(args.end(), target_args.begin(), target_args.end());
   run_in_terminal_args.try_emplace("args", args);
 
-  const auto cwd = GetString(launch_request_arguments, "cwd");
+  const auto cwd = GetString(launch_request_arguments, "cwd").value_or("");
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
