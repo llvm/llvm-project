@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
-#include <clc/integer/clc_clz.h>
-#include <clc/internal/clc.h>
-
-#define __CLC_BODY <clc_clz.inc>
-#include <clc/integer/gentype.inc>
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_ctz(__CLC_GENTYPE x) {
+  return __builtin_elementwise_cttz(x, (__CLC_GENTYPE)__CLC_GENSIZE);
+}
