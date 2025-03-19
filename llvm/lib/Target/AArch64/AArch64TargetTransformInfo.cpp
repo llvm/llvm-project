@@ -68,6 +68,11 @@ static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
 static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
                                       cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> SmallMultiExitLoopUF(
+    "small-multi-exit-loop-unroll-factor", cl::init(0), cl::Hidden,
+    cl::desc(
+        "Force unrolling of small multi-exit loops with given unroll factor"));
+
 // A complete guess as to a reasonable cost.
 static cl::opt<unsigned>
     BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
@@ -4237,6 +4242,70 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
+static bool shouldUnrollLoopWithInstruction(Instruction &I,
+                                            AArch64TTIImpl &TTI) {
+  // Don't unroll vectorised loop.
+  if (I.getType()->isVectorTy())
+    return false;
+
+  if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+    if (const Function *F = cast<CallBase>(I).getCalledFunction())
+      if (!TTI.isLoweredToCall(F))
+        return true;
+    return false;
+  }
+
+  return true;
+}
+
+static bool shouldUnrollSmallMultiExitLoop(Loop *L, ScalarEvolution &SE,
+                                           AArch64TTIImpl &TTI) {
+  // Small search loops with multiple exits can be highly beneficial to unroll.
+  // We only care about loops with exactly two exiting blocks, although each
+  // block could jump to the same exit block.
+  SmallVector<BasicBlock *> Blocks(L->getBlocks());
+  if (Blocks.size() != 2 || L->getExitingBlock())
+    return false;
+
+  if (any_of(Blocks, [](BasicBlock *BB) {
+        return !isa<BranchInst>(BB->getTerminator());
+      }))
+    return false;
+
+  // Only consider loops with unknown trip counts for which we can determine
+  // a symbolic expression. Multi-exit loops with small known trip counts will
+  // likely be unrolled anyway.
+  const SCEV *BTC = SE.getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVConstant>(BTC) || isa<SCEVCouldNotCompute>(BTC))
+    return false;
+
+  // It might not be worth unrolling loops with low max trip counts. Restrict
+  // this to max trip counts > 32 for now.
+  unsigned MaxTC = SE.getSmallConstantMaxTripCount(L);
+  if (MaxTC > 0 && MaxTC <= 32)
+    return false;
+
+  // Estimate the size of the loop.
+  int64_t Size = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (!shouldUnrollLoopWithInstruction(I, TTI))
+        return false;
+
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      InstructionCost Cost =
+          TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
+      // This can happen with intrinsics that don't currently have a cost model
+      // or for some operations that require SVE.
+      if (!Cost.isValid())
+        return false;
+      Size += *Cost.getValue();
+    }
+  }
+
+  return Size < 6;
+}
+
 /// For Apple CPUs, we want to runtime-unroll loops to make better use if the
 /// OOO engine's wide instruction window and various predictors.
 static void
@@ -4412,22 +4481,23 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     break;
   }
 
+  if (SmallMultiExitLoopUF && shouldUnrollSmallMultiExitLoop(L, SE, *this)) {
+    UP.RuntimeUnrollMultiExit = true;
+    UP.Runtime = true;
+    // Limit unroll count.
+    UP.DefaultUnrollRuntimeCount = SmallMultiExitLoopUF;
+    // Allow slightly more costly trip-count expansion to catch search loops
+    // with pointer inductions.
+    UP.SCEVExpansionBudget = 5;
+  }
+
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining. Don't unroll vector loops either, as they don't benefit much from
   // unrolling.
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Don't unroll vectorised loop.
-      if (I.getType()->isVectorTy())
+      if (!shouldUnrollLoopWithInstruction(I, *this))
         return;
-
-      if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
-      }
     }
   }
 
