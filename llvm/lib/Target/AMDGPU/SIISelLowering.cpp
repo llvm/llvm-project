@@ -3710,10 +3710,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Convert constants into TargetConstants, so they become immediate operands
     // instead of being selected into S_MOV.
     auto PushNodeOrTargetConstant = [&](TargetLowering::ArgListEntry Arg) {
-      if (auto ArgNode = dyn_cast<ConstantSDNode>(Arg.Node))
+      if (const auto *ArgNode = dyn_cast<ConstantSDNode>(Arg.Node)) {
         ChainCallSpecialArgs.push_back(DAG.getTargetConstant(
             ArgNode->getAPIntValue(), DL, ArgNode->getValueType(0)));
-      else
+      } else
         ChainCallSpecialArgs.push_back(Arg.Node);
     };
 
