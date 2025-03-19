@@ -19,35 +19,30 @@
 #include "test_macros.h"
 
 template <class Span, class Iter>
-constexpr bool testSpanImpl(Span s, Iter last) {
-  bool ret = true;
+constexpr void testSpanImpl(Span s, Iter last) {
   if (s.empty()) {
-    ret = ret && (last == s.begin());
+    assert(last == s.begin());
   } else {
-    ret = ret && (last != s.begin());
-    ret = ret && (&*(last - 1) == s.data() + s.size() - 1);
+    assert(last != s.begin());
+    assert(&*(last - 1) == s.data() + s.size() - 1);
   }
-  ret = ret && (static_cast<size_t>(last - s.begin()) == s.size());
-  return ret;
+  assert(static_cast<size_t>(last - s.begin()) == s.size());
 }
 
 template <class EType, size_t Extent, class... Args>
-constexpr bool testSpan(Args&&... args) {
-  auto s1  = std::span<EType>(std::forward<Args>(args)...);
-  bool ret = true;
+constexpr void testSpan(Args&&... args) {
+  auto s1 = std::span<EType>(std::forward<Args>(args)...);
 
-  ret = ret && testSpanImpl(s1, s1.end());
+  testSpanImpl(s1, s1.end());
 #if TEST_STD_VER >= 23
-  ret = ret && testSpanImpl(s1, s1.cend());
+  testSpanImpl(s1, s1.cend());
 #endif
 
   auto s2 = std::span<EType, Extent>(std::forward<Args>(args)...);
-  ret     = ret && testSpanImpl(s2, s2.end());
+  testSpanImpl(s2, s2.end());
 #if TEST_STD_VER >= 23
-  ret = ret && testSpanImpl(s2, s2.cend());
+  testSpanImpl(s2, s2.cend());
 #endif
-
-  return ret;
 }
 
 struct A {};
@@ -56,18 +51,29 @@ bool operator==(A, A) { return true; }
 constexpr int iArr1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 int iArr2[]           = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
-int main(int, char**) {
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<int, 0>());
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<long, 0>());
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<double, 0>());
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<A, 0>());
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<std::string, 0>());
+constexpr bool test_runtime_and_constexpr() {
+  testSpan<int, 0>();
+  testSpan<long, 0>();
+  testSpan<double, 0>();
+  testSpan<A, 0>();
+  testSpan<std::string, 0>();
 
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 1>(iArr1, 1));
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 2>(iArr1, 2));
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 3>(iArr1, 3));
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 4>(iArr1, 4));
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 5>(iArr1, 5));
+  testSpan<const int, 1>(iArr1, 1);
+  testSpan<const int, 2>(iArr1, 2);
+  testSpan<const int, 3>(iArr1, 3);
+  testSpan<const int, 4>(iArr1, 4);
+  testSpan<const int, 5>(iArr1, 5);
+
+  const std::string s2;
+  testSpan<const std::string, 0>(&s2, static_cast<size_t>(0));
+  testSpan<const std::string, 1>(&s2, 1);
+
+  return true;
+}
+
+int main(int, char**) {
+  test_runtime_and_constexpr();
+  static_assert(test_runtime_and_constexpr());
 
   testSpan<int, 1>(iArr2, 1);
   testSpan<int, 2>(iArr2, 2);
@@ -76,11 +82,8 @@ int main(int, char**) {
   testSpan<int, 5>(iArr2, 5);
 
   std::string s1;
-  constexpr static std::string s2;
   testSpan<std::string, 0>(&s1, static_cast<size_t>(0));
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const std::string, 0>(&s2, static_cast<size_t>(0)));
   testSpan<std::string, 1>(&s1, 1);
-  ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const std::string, 1>(&s2, 1));
 
   return 0;
 }
