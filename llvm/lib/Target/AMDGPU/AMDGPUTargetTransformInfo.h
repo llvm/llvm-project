@@ -226,6 +226,12 @@ public:
 
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                     IntrinsicInst &II) const;
+
+  Value *simplifyAMDGCNLaneIntrinsicDemanded(InstCombiner &IC,
+                                             IntrinsicInst &II,
+                                             const APInt &DemandedElts,
+                                             APInt &UndefElts) const;
+
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(
       InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,

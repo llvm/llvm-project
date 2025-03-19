@@ -22,14 +22,12 @@ define hidden void @julia_tryparse_internal_45896() #0 {
 ; CHECK-NEXT:    li r5, -3
 ; CHECK-NEXT:    sradi r4, r3, 63
 ; CHECK-NEXT:    rldic r5, r5, 4, 32
-; CHECK-NEXT:    mulld r6, r4, r5
 ; CHECK-NEXT:    mulhdu r3, r3, r5
-; CHECK-NEXT:    mulhdu r4, r4, r5
-; CHECK-NEXT:    addc r3, r3, r6
-; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    addze r3, r3
-; CHECK-NEXT:    or. r3, r4, r3
-; CHECK-NEXT:    beq cr0, .LBB0_9
+; CHECK-NEXT:    maddld r6, r4, r5, r3
+; CHECK-NEXT:    cmpld cr1, r6, r3
+; CHECK-NEXT:    mulhdu. r3, r4, r5
+; CHECK-NEXT:    crorc 4*cr5+lt, 4*cr1+lt, eq
+; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_9
 ; CHECK-NEXT:  # %bb.8: # %L917
 ; CHECK-NEXT:  .LBB0_9: # %L994
 top:

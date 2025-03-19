@@ -620,7 +620,7 @@ protected:
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
-    DenseMap<unsigned, unsigned> TempRegisters;
+    DenseMap<unsigned, Register> TempRegisters;
     /// Named operands that predicate with 'let PredicateCodeUsesOperands = 1'
     /// referenced in its argument list. Operands are inserted at index set by
     /// emitter, it corresponds to the order in which names appear in argument

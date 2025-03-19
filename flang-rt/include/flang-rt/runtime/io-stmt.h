@@ -627,7 +627,7 @@ private:
   Fortran::common::optional<Action> action_;
   Convert convert_{Convert::Unknown};
   OwningPtr<char> path_;
-  std::size_t pathLength_;
+  std::size_t pathLength_{};
   Fortran::common::optional<bool> isUnformatted_;
   Fortran::common::optional<Access> access_;
 };

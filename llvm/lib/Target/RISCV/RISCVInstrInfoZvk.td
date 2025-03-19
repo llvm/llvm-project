@@ -46,7 +46,7 @@ class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_OP_V.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
 }
 

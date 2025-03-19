@@ -169,16 +169,8 @@ public:
   static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
     for (auto *Pred : to_vector(Old->getPredecessors()))
       Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors())) {
+    for (auto *Succ : to_vector(Old->getSuccessors()))
       Succ->replacePredecessor(Old, New);
-
-      // Replace any references to Old in widened phi incoming blocks.
-      for (auto &R : Succ->getEntryBasicBlock()->phis())
-        if (auto *WidenPhiR = dyn_cast<VPWidenPHIRecipe>(&R))
-          for (unsigned I = 0; I < WidenPhiR->getNumOperands(); I++)
-            if (WidenPhiR->getIncomingBlock(I) == Old)
-              WidenPhiR->setIncomingBlock(I, cast<VPBasicBlock>(New));
-    }
     New->setPredecessors(Old->getPredecessors());
     New->setSuccessors(Old->getSuccessors());
     Old->clearPredecessors();

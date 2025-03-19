@@ -119,6 +119,12 @@ def FeatureUnalignedDSAccess : SubtargetFeature<"unaligned-ds-access",
   "Hardware supports unaligned local and region loads and stores"
 >;
 
+def FeatureRelaxedBufferOOBMode : SubtargetFeature<"relaxed-buffer-oob-mode",
+  "RelaxedBufferOOBMode",
+  "true",
+  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially cause an adjacent access to be treated as if it were also OOB"
+>;
+
 def FeatureApertureRegs : SubtargetFeature<"aperture-regs",
   "HasApertureRegs",
   "true",
@@ -236,6 +242,12 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "HasInstFwdPrefetchBug",
   "true",
   "S_INST_PREFETCH instruction causes shader to hang"
+>;
+
+def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
+  "HasSafeSmemPrefetch",
+  "true",
+  "SMEM prefetches do not fail on illegal address"
 >;
 
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
@@ -1040,12 +1052,6 @@ def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result"
 >;
 
-def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
-  "HasForceStoreSC0SC1",
-  "true",
-  "Has SC0 and SC1 on stores"
->;
-
 def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
   "HasSALUFloatInsts",
   "true",
@@ -1086,6 +1092,12 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
   "Has v_prng_b32 instruction"
+>;
+
+def FeatureBVHDualAndBVH8Insts : SubtargetFeature<"bvh-dual-bvh-8-insts",
+  "HasBVHDualAndBVH8Insts",
+  "true",
+  "Has image_bvh_dual_intersect_ray and image_bvh8_intersect_ray instructions"
 >;
 
 //===------------------------------------------------------------===//
@@ -1244,6 +1256,18 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "Has instructions that support xf32 format, such as "
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
+
+def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
+  "DynamicVGPR",
+  "true",
+  "Enable dynamic VGPR mode"
+>;
+
+def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
+  "DynamicVGPRBlockSize32",
+  "true",
+  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
+>;
 
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
@@ -1619,28 +1643,6 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst
    ])>;
 
-def FeatureISAVersion9_4_0 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
-def FeatureISAVersion9_4_1 : FeatureSet<
-  !listconcat(FeatureISAVersion9_4_Common.Features,
-    [
-      FeatureAddressableLocalMemorySize65536,
-      FeatureForceStoreSC0SC1,
-      FeatureFP8Insts,
-      FeatureFP8ConversionInsts,
-      FeatureCvtFP8VOP1Bug,
-      FeatureXF32Insts
-    ])>;
-
 def FeatureISAVersion9_4_2 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
     [
@@ -1854,7 +1856,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
-   FeatureMemoryAtomicFAddF32DenormalSupport
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureBVHDualAndBVH8Insts
    ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2509,6 +2512,9 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
+
+def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
+  AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

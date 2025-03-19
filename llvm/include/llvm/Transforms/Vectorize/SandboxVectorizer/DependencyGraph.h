@@ -101,7 +101,7 @@ protected:
   /// The scheduler bundle that this node belongs to.
   SchedBundle *SB = nullptr;
 
-  void setSchedBundle(SchedBundle &SB) { this->SB = &SB; }
+  void setSchedBundle(SchedBundle &SB);
   void clearSchedBundle() { this->SB = nullptr; }
   friend class SchedBundle; // For setSchedBundle(), clearSchedBundle().
 
@@ -123,6 +123,10 @@ public:
     --UnscheduledSuccs;
   }
   void incrUnscheduledSuccs() { ++UnscheduledSuccs; }
+  void resetScheduleState() {
+    UnscheduledSuccs = 0;
+    Scheduled = false;
+  }
   /// \Returns true if all dependent successors have been scheduled.
   bool ready() const { return UnscheduledSuccs == 0; }
   /// \Returns true if this node has been scheduled.

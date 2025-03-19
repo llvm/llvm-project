@@ -27,7 +27,7 @@ namespace {
 /// A pass converting MLIR MemRef operations into the SPIR-V dialect.
 class ConvertMemRefToSPIRVPass
     : public impl::ConvertMemRefToSPIRVPassBase<ConvertMemRefToSPIRVPass> {
-  using ConvertMemRefToSPIRVPassBase::ConvertMemRefToSPIRVPassBase;
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace

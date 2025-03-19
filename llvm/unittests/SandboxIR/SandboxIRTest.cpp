@@ -6166,3 +6166,26 @@ define void @bar() {
   // This should not crash, even though there is already a value for LLVMBar.
   Ctx.createFunction(&LLVMBar);
 }
+
+TEST_F(SandboxIRTest, OpaqueValue) {
+  parseIR(C, R"IR(
+declare void @bar(metadata)
+define void @foo() {
+  call void @bar(metadata !1)
+  call void asm "asm", ""()
+  ret void
+}
+!1 = !{}
+)IR");
+  Function &LLVMFoo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(&LLVMFoo);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Call = cast<sandboxir::CallInst>(&*It++);
+  auto *Op0 = Call->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::OpaqueValue>(Op0));
+  auto *Asm = cast<sandboxir::CallInst>(&*It++);
+  auto *AsmOp0 = Asm->getOperand(0);
+  EXPECT_TRUE(isa<sandboxir::OpaqueValue>(AsmOp0));
+}

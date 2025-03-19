@@ -121,16 +121,14 @@ define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_3: // %cond.store
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    str x9, [x10]
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    str d0, [x9]
 ; CHECK-NEXT:    tbz w8, #1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4: // %cond.store1
-; CHECK-NEXT:    mov z0.d, z0.d[1]
 ; CHECK-NEXT:    mov z1.d, z1.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    str x8, [x9]
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 ;
