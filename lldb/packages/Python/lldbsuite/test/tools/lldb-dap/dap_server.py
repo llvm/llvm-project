@@ -110,7 +110,11 @@ def read_packet_thread(vs_comm, log_file):
         # Wait for the process to fully exit before dumping the log file to
         # ensure we have the entire log contents.
         if vs_comm.process is not None:
-            vs_comm.process.wait()
+            try:
+                # Do not wait forever, some logs are better than none.
+                vs_comm.process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                pass
         dump_dap_log(log_file)
 
 
@@ -1278,7 +1282,11 @@ class DebugAdapterServer(DebugCommunication):
         super(DebugAdapterServer, self).terminate()
         if self.process is not None:
             self.process.terminate()
-            self.process.wait()
+            try:
+                self.process.wait(timeout=20)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
             self.process = None
 
 
