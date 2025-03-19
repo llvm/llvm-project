@@ -113,6 +113,159 @@ func.func @bubble_up_extract_slice_affine_apply_not_folded(%src: tensor<60xf32>,
   return %extract : tensor<?x5x2xf32>
 }
 
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(
+// CHECK-SAME:                   %[[SRC:.*]]: tensor<6x5x2xf32>) -> tensor<1xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][0, 0, 0] [1, 1, 1] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(%src: tensor<6x5x2xf32>) -> tensor<1xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<6x5x2xf32> into tensor<60xf32>
+  %extract = tensor.extract_slice %collapse[0][1][1] : tensor<60xf32> to tensor<1xf32>
+  return %extract : tensor<1xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group(
+// CHECK-SAME:                      %[[VAL_0:.*]]: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
+// CHECK:           %[[VAL_1:.*]] = tensor.extract_slice %[[VAL_0]][1, 0, 1, 0] [3, 5, 1, 10] [1, 1, 1, 1]
+// CHECK:           %[[VAL_2:.*]] = tensor.collapse_shape %[[VAL_1]] {{\[\[}}0, 1], [2, 3]]
+// CHECK:           return %[[VAL_2]]
+func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group(%src: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1], [2, 3]] : tensor<6x5x3x10xf32> into tensor<30x30xf32>
+  %extract = tensor.extract_slice %collapse[5, 10][15, 10][1, 1] : tensor<30x30xf32> to tensor<15x10xf32>
+  return %extract : tensor<15x10xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_offset_on_leading_dim(
+// CHECK-SAME:                         %[[VAL_0:.*]]: tensor<6x5x2xf32>) -> tensor<4xf32> {
+// CHECK:           %[[VAL_1:.*]] = tensor.extract_slice %[[VAL_0]][2, 0, 0] [1, 2, 2] [1, 1, 1] 
+// CHECK:           %[[VAL_2:.*]] = tensor.collapse_shape %[[VAL_1]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[VAL_2]]
+func.func @bubble_up_extract_slice_through_collapse_shape_offset_on_leading_dim(%src: tensor<6x5x2xf32>) -> tensor<4xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<6x5x2xf32> into tensor<60xf32>
+  %extract = tensor.extract_slice %collapse[20][4][1] : tensor<60xf32> to tensor<4xf32>
+  return %extract : tensor<4xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_size(
+// CHECK-SAME:                    %[[SRC:.*]]: tensor<1x5x1xf32>,
+// CHECK-SAME:                    %[[SIZE:.*]]: index) -> tensor<?xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][0, 0, 0] [1, %[[SIZE]], 1] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_size(%src: tensor<1x5x1xf32>, %size : index) -> tensor<?xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<1x5x1xf32> into tensor<5xf32>
+  %extract = tensor.extract_slice %collapse[0][%size][1] : tensor<5xf32> to tensor<?xf32>
+  return %extract : tensor<?xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_size_and_src(
+// CHECK-SAME:                    %[[SRC:.*]]: tensor<1x?x1xf32>,
+// CHECK-SAME:                    %[[SIZE:.*]]: index) -> tensor<?xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][0, 0, 0] [1, %[[SIZE]], 1] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_size_and_src(%src: tensor<1x?x1xf32>, %size : index) -> tensor<?xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<1x?x1xf32> into tensor<?xf32>
+  %extract = tensor.extract_slice %collapse[0][%size][1] : tensor<?xf32> to tensor<?xf32>
+  return %extract : tensor<?xf32>
+}
+
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_offset(
+// CHECK-SAME:                       %[[SRC:.*]]: tensor<1x5x1xf32>,
+// CHECK-SAME:                       %[[OFFSET:.*]]: index) -> tensor<3xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][0, %[[OFFSET]], 0] [1, 3, 1] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_offset(%src: tensor<1x5x1xf32>, %offset : index) -> tensor<3xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<1x5x1xf32> into tensor<5xf32>
+  %extract = tensor.extract_slice %collapse[%offset][3][1] : tensor<5xf32> to tensor<3xf32>
+  return %extract : tensor<3xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_offset_and_size(
+// CHECK-SAME:                     %[[SRC:.*]]: tensor<14x1xf32>,
+// CHECK-SAME:                     %[[OFFSET:.*]]: index,
+// CHECK-SAME:                     %[[SIZE:.*]]: index) -> tensor<?xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[OFFSET]], 0] {{\[}}%[[SIZE]], 1] [1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_offset_and_size(%src: tensor<14x1xf32>, %offset : index, %size : index) -> tensor<?xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1]] : tensor<14x1xf32> into tensor<14xf32>
+  %extract = tensor.extract_slice %collapse[%offset][%size][1] : tensor<14xf32> to tensor<?xf32>
+  return %extract : tensor<?xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_and_static_groups(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<5x10x1x1x40xf32>,
+// CHECK-SAME:                      %[[OFFSET:.*]]: index,
+// CHECK-SAME:                      %[[SIZE:.*]]: index) -> tensor<20x?xf32> {
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][1, 0, 0, 0, %[[OFFSET]]] [2, 10, 1, 1, %[[SIZE]]] [1, 1, 1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1], [2, 3, 4]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_and_static_groups(%src: tensor<5x10x1x1x40xf32>, %offset : index, %size : index) -> tensor<20x?xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1], [2, 3, 4]] : tensor<5x10x1x1x40xf32> into tensor<50x40xf32>
+  %extract = tensor.extract_slice %collapse[10, %offset][20, %size][1, 1] : tensor<50x40xf32> to tensor<20x?xf32>
+  return %extract : tensor<20x?xf32>
+}
+
+// This is a case where the bubble up cannot occur because the contiguous size extracted from the collapsed
+// shape cannot be defined as a contiguous size in the expanded shape due to size extracted not being suited
+// for the expanded shape.
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_1(
+// CHECK-SAME:                              %[[SRC:.*]]: tensor<2x3x10xf32>) -> tensor<15xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_1(%src: tensor<2x3x10xf32>) -> tensor<15xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  %extract = tensor.extract_slice %collapse[0][15][1] : tensor<60xf32> to tensor<15xf32>
+  return %extract : tensor<15xf32>
+}
+
+// This is a case where the bubble up cannot occur because the contiguous size extracted from the collapsed
+// shape cannot be defined as a contiguous size in the expanded shape due to an unsuitable offset even though
+// the size extracted is suited for the expanded shape.
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_2(
+// CHECK-SAME:                              %[[SRC:.*]]: tensor<2x3x10xf32>) -> tensor<20xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_2(%src: tensor<2x3x10xf32>) -> tensor<20xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  %extract = tensor.extract_slice %collapse[20][20][1] : tensor<60xf32> to tensor<20xf32>
+  return %extract : tensor<20xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_stride(
+// CHECK-SAME:                              %[[SRC:.*]]: tensor<2x3x10xf32>) -> tensor<5xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+func.func @no_bubble_up_extract_slice_through_collapse_shape_on_stride(%src: tensor<2x3x10xf32>) -> tensor<5xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  %extract = tensor.extract_slice %collapse[0][5][2] : tensor<60xf32> to tensor<5xf32>
+  return %extract : tensor<5xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_rank_reducing(
+// CHECK-SAME:                              %[[SRC:.*]]: tensor<6x5x2x1xf32>) -> tensor<1xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+func.func @no_bubble_up_extract_slice_through_collapse_shape_on_rank_reducing(%src: tensor<6x5x2x1xf32>) -> tensor<1xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2], [3]] : tensor<6x5x2x1xf32> into tensor<60x1xf32>
+  %extract = tensor.extract_slice %collapse[0, 0][1, 1][1, 1] : tensor<60x1xf32> to tensor<1xf32>
+  return %extract : tensor<1xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_unsupported_dynamic(
+// CHECK-SAME:                              %[[SRC:.*]]: tensor<1x5x2xf32>,
+// CHECK-SAME:                              %[[SIZE:.*]]: index) -> tensor<?xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+func.func @no_bubble_up_extract_slice_through_collapse_shape_on_unsupported_dynamic(%src: tensor<1x5x2xf32>, %size : index) -> tensor<?xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<1x5x2xf32> into tensor<10xf32>
+  %extract = tensor.extract_slice %collapse[0][%size][1] : tensor<10xf32> to tensor<?xf32>
+  return %extract : tensor<?xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
