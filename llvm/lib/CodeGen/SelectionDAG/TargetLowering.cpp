@@ -157,10 +157,13 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   Args.reserve(Ops.size());
 
   TargetLowering::ArgListEntry Entry;
+  ArrayRef<Type *> OpsTypeOverrides = CallOptions.OpsTypeOverrides;
   for (unsigned i = 0; i < Ops.size(); ++i) {
     SDValue NewOp = Ops[i];
     Entry.Node = NewOp;
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    Entry.Ty = i < OpsTypeOverrides.size() && OpsTypeOverrides[i]
+                   ? OpsTypeOverrides[i]
+                   : Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
     Entry.IsSExt =
         shouldSignExtendTypeInLibCall(Entry.Ty, CallOptions.IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
@@ -447,23 +450,12 @@ unsigned TargetLowering::getJumpTableEncoding() const {
   if (!isPositionIndependent())
     return MachineJumpTableInfo::EK_BlockAddress;
 
-  // In PIC mode, if the target supports a GPRel32 directive, use it.
-  if (getTargetMachine().getMCAsmInfo()->getGPRel32Directive() != nullptr)
-    return MachineJumpTableInfo::EK_GPRel32BlockAddress;
-
   // Otherwise, use a label difference.
   return MachineJumpTableInfo::EK_LabelDifference32;
 }
 
 SDValue TargetLowering::getPICJumpTableRelocBase(SDValue Table,
                                                  SelectionDAG &DAG) const {
-  // If our PIC model is GP relative, use the global offset table as the base.
-  unsigned JTEncoding = getJumpTableEncoding();
-
-  if ((JTEncoding == MachineJumpTableInfo::EK_GPRel64BlockAddress) ||
-      (JTEncoding == MachineJumpTableInfo::EK_GPRel32BlockAddress))
-    return DAG.getGLOBAL_OFFSET_TABLE(getPointerTy(DAG.getDataLayout()));
-
   return Table;
 }
 
@@ -8488,8 +8480,7 @@ TargetLowering::createSelectForFMINNUM_FMAXNUM(SDNode *Node,
 }
 
 SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
-                                              SelectionDAG &DAG,
-                                              bool ShouldCanonicalize) const {
+                                              SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(Node, DAG))
     return Expanded;
 
@@ -8506,7 +8497,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
     SDValue Quiet0 = Node->getOperand(0);
     SDValue Quiet1 = Node->getOperand(1);
 
-    if (ShouldCanonicalize && !Node->getFlags().hasNoNaNs()) {
+    if (!Node->getFlags().hasNoNaNs()) {
       // Insert canonicalizes if it's possible we need to quiet to get correct
       // sNaN behavior.
       if (!DAG.isKnownNeverSNaN(Quiet0)) {

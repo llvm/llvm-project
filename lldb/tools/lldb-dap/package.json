@@ -4,7 +4,7 @@
   "version": "0.2.10",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
-  "description": "LLDB debugging from VSCode",
+  "description": "Debugging with LLDB in Visual Studio Code",
   "license": "Apache 2.0 License with LLVM exceptions",
   "repository": {
     "type": "git",
@@ -35,7 +35,8 @@
     "typescript": "^5.7.3"
   },
   "activationEvents": [
-    "onDebug"
+    "onDebug",
+    "onUri"
   ],
   "main": "./out/extension",
   "scripts": {
@@ -88,6 +89,12 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "lldb-dap.serverMode": {
+          "scope": "resource",
+          "type": "boolean",
+          "markdownDescription": "Run lldb-dap in server mode.\n\nWhen enabled, lldb-dap will start a background server that will be reused between debug sessions. This allows caching of debug symbols between sessions and improves launch performance.",
+          "default": false
         }
       }
     },

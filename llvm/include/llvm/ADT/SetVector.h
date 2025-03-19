@@ -20,6 +20,7 @@
 #ifndef LLVM_ADT_SETVECTOR_H
 #define LLVM_ADT_SETVECTOR_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -182,6 +183,10 @@ public:
   void insert(It Start, It End) {
     for (; Start != End; ++Start)
       insert(*Start);
+  }
+
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
   }
 
   /// Remove an item from the set vector.

@@ -23,7 +23,6 @@
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
@@ -32,11 +31,9 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
-#include <__type_traits/remove_cvref.h>
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>

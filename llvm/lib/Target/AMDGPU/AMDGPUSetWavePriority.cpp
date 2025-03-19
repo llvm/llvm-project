@@ -200,12 +200,12 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (MachineBasicBlock *MBB : PriorityLoweringBlocks) {
-    BuildSetprioMI(
-        *MBB,
-        MBBInfos[MBB].LastVMEMLoad
-            ? std::next(MachineBasicBlock::iterator(MBBInfos[MBB].LastVMEMLoad))
-            : MBB->begin(),
-        LowPriority);
+    MachineInstr *LastVMEMLoad = MBBInfos[MBB].LastVMEMLoad;
+    BuildSetprioMI(*MBB,
+                   LastVMEMLoad
+                       ? std::next(MachineBasicBlock::iterator(LastVMEMLoad))
+                       : MBB->begin(),
+                   LowPriority);
   }
 
   return true;

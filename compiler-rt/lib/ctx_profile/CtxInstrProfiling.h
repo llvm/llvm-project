@@ -73,14 +73,16 @@ static_assert(alignof(Arena) == ExpectedAlignment);
 // sure the inlined vectors are appropriately aligned.
 static_assert(alignof(ContextNode) == ExpectedAlignment);
 
-/// ContextRoots are allocated by LLVM for entrypoints. LLVM is only concerned
-/// with allocating and zero-initializing the global value (as in, GlobalValue)
-/// for it.
+/// ContextRoots hold memory and the start of the contextual profile tree for a
+/// root function.
 struct ContextRoot {
   ContextNode *FirstNode = nullptr;
   Arena *FirstMemBlock = nullptr;
   Arena *CurrentMem = nullptr;
-  // This is init-ed by the static zero initializer in LLVM.
+
+  // Count the number of entries - regardless if we could take the `Taken` mutex
+  ::__sanitizer::atomic_uint64_t TotalEntries = {};
+
   // Taken is used to ensure only one thread traverses the contextual graph -
   // either to read it or to write it. On server side, the same entrypoint will
   // be entered by numerous threads, but over time, the profile aggregated by
@@ -105,12 +107,41 @@ struct ContextRoot {
   // or with more concurrent collections (==more memory) and less collection
   // time. Note that concurrent collection does happen for different
   // entrypoints, regardless.
-  ::__sanitizer::StaticSpinMutex Taken;
+  ::__sanitizer::SpinMutex Taken;
+};
 
+// This is allocated and zero-initialized by the compiler, the in-place
+// initialization serves mostly as self-documentation and for testing.
+// The design is influenced by the observation that typically (at least for
+// datacenter binaries, which is the motivating target of this profiler) less
+// than 10% of functions in a binary even appear in a profile (of any kind).
+//
+// 1) We could pre-allocate the flat profile storage in the compiler, just like
+// the flat instrumented profiling does. But that penalizes the static size of
+// the binary for little reason
+//
+// 2) We could do the above but zero-initialize the buffers (which should place
+// them in .bss), and dynamically populate them. This, though, would page-in
+// more memory upfront for the binary's runtime
+//
+// The current design trades off a bit of overhead at the first time a function
+// is encountered *for flat profiling* for avoiding size penalties.
+struct FunctionData {
+  // Constructor for test only - since this is expected to be
+  // initialized by the compiler.
+  FunctionData() { Mutex.Init(); }
+
+  FunctionData *Next = nullptr;
+  ContextRoot *volatile CtxRoot = nullptr;
+  ContextNode *volatile FlatCtx = nullptr;
+
+  ContextRoot *getOrAllocateContextRoot();
+
+  ::__sanitizer::StaticSpinMutex Mutex;
   // If (unlikely) StaticSpinMutex internals change, we need to modify the LLVM
   // instrumentation lowering side because it is responsible for allocating and
   // zero-initializing ContextRoots.
-  static_assert(sizeof(Taken) == 1);
+  static_assert(sizeof(Mutex) == 1);
 };
 
 /// This API is exposed for testing. See the APIs below about the contract with
@@ -142,17 +173,18 @@ extern __thread __ctx_profile::ContextRoot
 
 /// called by LLVM in the entry BB of a "entry point" function. The returned
 /// pointer may be "tainted" - its LSB set to 1 - to indicate it's scratch.
-ContextNode *__llvm_ctx_profile_start_context(__ctx_profile::ContextRoot *Root,
-                                              GUID Guid, uint32_t Counters,
-                                              uint32_t Callsites);
+ContextNode *
+__llvm_ctx_profile_start_context(__ctx_profile::FunctionData *FData, GUID Guid,
+                                 uint32_t Counters, uint32_t Callsites);
 
 /// paired with __llvm_ctx_profile_start_context, and called at the exit of the
 /// entry point function.
-void __llvm_ctx_profile_release_context(__ctx_profile::ContextRoot *Root);
+void __llvm_ctx_profile_release_context(__ctx_profile::FunctionData *FData);
 
 /// called for any other function than entry points, in the entry BB of such
 /// function. Same consideration about LSB of returned value as .._start_context
-ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
+ContextNode *__llvm_ctx_profile_get_context(__ctx_profile::FunctionData *FData,
+                                            void *Callee, GUID Guid,
                                             uint32_t NumCounters,
                                             uint32_t NumCallsites);
 
@@ -169,7 +201,6 @@ void __llvm_ctx_profile_free();
 /// The Writer's first parameter plays the role of closure for Writer, and is
 /// what the caller of __llvm_ctx_profile_fetch passes as the Data parameter.
 /// The second parameter is the root of a context tree.
-bool __llvm_ctx_profile_fetch(void *Data,
-                              bool (*Writer)(void *, const ContextNode &));
+bool __llvm_ctx_profile_fetch(ProfileWriter &);
 }
 #endif // CTX_PROFILE_CTXINSTRPROFILING_H_

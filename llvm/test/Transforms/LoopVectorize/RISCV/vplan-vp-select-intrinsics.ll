@@ -32,8 +32,8 @@
 
  ; IF-EVL: <x1> vector loop: {
  ; IF-EVL-NEXT:   vector.body:
- ; IF-EVL-NEXT:     SCALAR-PHI vp<[[IV:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
- ; IF-EVL-NEXT:     SCALAR-PHI vp<[[EVL_PHI:%[0-9]+]]>  = phi ir<0>, vp<[[IV_NEX:%.+]]>
+ ; IF-EVL-NEXT:     EMIT vp<[[IV:%.+]]> = phi ir<0>, vp<[[IV_NEXT_EXIT:%.+]]>
+ ; IF-EVL-NEXT:     EMIT vp<[[EVL_PHI:%.+]]>  = phi ir<0>, vp<[[IV_NEX:%.+]]>
  ; IF-EVL-NEXT:     EMIT vp<[[AVL:%.+]]> = sub ir<%N>, vp<[[EVL_PHI]]>
  ; IF-EVL-NEXT:     EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
  ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
@@ -44,9 +44,9 @@
  ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
  ; IF-EVL-NEXT:     WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
  ; IF-EVL-NEXT:     WIDEN ir<[[CMP:%.+]]> = icmp sgt ir<[[LD1]]>, ir<[[LD2]]>
- ; IF-EVL-NEXT:     WIDEN ir<[[SUB:%.+]]> = vp.sub ir<0>, ir<[[LD2]]>, vp<[[EVL]]>
+ ; IF-EVL-NEXT:     WIDEN ir<[[SUB:%.+]]> = sub ir<0>, ir<[[LD2]]>
  ; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SELECT:%.+]]> = call llvm.vp.select(ir<[[CMP]]>, ir<[[LD2]]>, ir<[[SUB]]>, vp<[[EVL]]>)
- ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = vp.add vp<[[SELECT]]>, ir<[[LD1]]>, vp<[[EVL]]>
+ ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = add vp<[[SELECT]]>, ir<[[LD1]]>
  ; IF-EVL-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
  ; IF-EVL-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
  ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR3]]>, ir<[[ADD]]>, vp<[[EVL]]>

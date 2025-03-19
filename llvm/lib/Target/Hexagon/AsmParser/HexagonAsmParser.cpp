@@ -1247,11 +1247,11 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
               Expr, MCConstantExpr::create(0xffff, Context), Context);
       } else {
         MCValue Value;
-        if (Expr->evaluateAsRelocatable(Value, nullptr, nullptr)) {
+        if (Expr->evaluateAsRelocatable(Value, nullptr)) {
           if (!Value.isAbsolute()) {
-            switch (Value.getAccessVariant()) {
-            case MCSymbolRefExpr::VariantKind::VK_TPREL:
-            case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+            switch (HexagonMCExpr::VariantKind(Value.getAccessVariant())) {
+            case HexagonMCExpr::VK_TPREL:
+            case HexagonMCExpr::VK_DTPREL:
               // Don't lazy extend these expression variants
               MustNotExtend = !MustExtend;
               break;

@@ -6,48 +6,48 @@
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
-qc.slasat x10, x3, 17
+qc.shlsat x10, x3, 17
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
-qc.slasat x10, x3
+qc.shlsat x10, x3
 
 # CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
-qc.slasat x0, x3, x17
+qc.shlsat x0, x3, x17
 
 # CHECK-PLUS: :[[@LINE+2]]:16: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
-qc.slasat x10, x0, x17
+qc.shlsat x10, x0, x17
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
-qc.slasat x10, x3, x0
+qc.shlsat x10, x3, x0
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcia' (Qualcomm uC Arithmetic Extension)
-qc.slasat x10, x3, x17
+qc.shlsat x10, x3, x17
 
 
-# CHECK-PLUS: :[[@LINE+2]]:21: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
-qc.sllsat x23, x25, 27
+# CHECK-PLUS: :[[@LINE+2]]:22: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:22: error: invalid operand for instruction
+qc.shlusat x23, x25, 27
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
-qc.sllsat x23, x25
+qc.shlusat x23, x25
 
-# CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
-qc.sllsat x0, x25, x27
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
+qc.shlusat x0, x25, x27
 
-# CHECK-PLUS: :[[@LINE+2]]:16: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
-qc.sllsat x23, x0, x27
+# CHECK-PLUS: :[[@LINE+2]]:17: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
+qc.shlusat x23, x0, x27
 
-# CHECK-PLUS: :[[@LINE+2]]:21: error: register must be a GPR excluding zero (x0)
-# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
-qc.sllsat x23, x25, x0
+# CHECK-PLUS: :[[@LINE+2]]:22: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:22: error: invalid operand for instruction
+qc.shlusat x23, x25, x0
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcia' (Qualcomm uC Arithmetic Extension)
-qc.sllsat x23, x25, x27
+qc.shlusat x23, x25, x27
 
 
 # CHECK-PLUS: :[[@LINE+2]]:21: error: register must be a GPR excluding zero (x0)

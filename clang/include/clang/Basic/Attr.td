@@ -1721,17 +1721,10 @@ def EnableIf : InheritableAttr {
   let Documentation = [EnableIfDocs];
 }
 
-def ExtVectorType : Attr {
-  // This is an OpenCL-related attribute and does not receive a [[]] spelling.
-  let Spellings = [GNU<"ext_vector_type">];
-  // FIXME: This subject list is wrong; this is a type attribute.
-  let Subjects = SubjectList<[TypedefName], ErrorDiag>;
+def ExtVectorType : TypeAttr {
+  let Spellings = [Clang<"ext_vector_type">];
   let Args = [ExprArgument<"NumElements">];
-  let ASTNode = 0;
-  let Documentation = [Undocumented];
-  // This is a type attribute with an incorrect subject list, so should not be
-  // permitted by #pragma clang attribute.
-  let PragmaAttributeSupport = 0;
+  let Documentation = [ExtVectorTypeDocs];
 }
 
 def FallThrough : StmtAttr {
@@ -1834,6 +1827,16 @@ def Format : InheritableAttr {
   let Documentation = [FormatDocs];
 }
 
+def FormatMatches : InheritableAttr {
+  let Spellings = [GCC<"format_matches">];
+  let Args = [IdentifierArgument<"Type">, IntArgument<"FormatIdx">, ExprArgument<"ExpectedFormat">];
+  let AdditionalMembers = [{
+    StringLiteral *getFormatString() const;
+  }];
+  let Subjects = SubjectList<[ObjCMethod, Block, HasFunctionProto]>;
+  let Documentation = [FormatMatchesDocs];
+}
+
 def FormatArg : InheritableAttr {
   let Spellings = [GCC<"format_arg">];
   let Args = [ParamIdxArgument<"FormatIdx">];
@@ -1894,6 +1897,8 @@ def IFunc : Attr, TargetSpecificAttr<TargetIFuncSupport> {
 
 def Restrict : InheritableAttr {
   let Spellings = [Declspec<"restrict">, GCC<"malloc">];
+  let Args = [ExprArgument<"Deallocator", /*opt=*/ 1>,
+              ParamIdxArgument<"DeallocatorPtrArgIndex", /*opt=*/ 1>];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [RestrictDocs];
 }
@@ -2220,8 +2225,8 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
   let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine"],
-                           ["supervisor", "machine"],
+                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
+                           ["supervisor", "machine", "qcinest", "qcinonest"],
                            1>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
@@ -3302,6 +3307,14 @@ def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
                   C23<"riscv", "vector_cc">,
                   Clang<"riscv_vector_cc">];
  let Documentation = [RISCVVectorCCDocs];
+}
+
+def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
+ let Spellings = [CXX11<"riscv", "vls_cc">,
+                  C23<"riscv", "vls_cc">,
+                  Clang<"riscv_vls_cc">];
+ let Args = [UnsignedArgument<"VectorWidth", /*opt*/1>];
+ let Documentation = [RISCVVLSCCDocs];
 }
 
 def Target : InheritableAttr {
@@ -4704,21 +4717,21 @@ def HLSLNumThreads: InheritableAttr {
 }
 
 def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_groupthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupThreadIDDocs];
 }
 
 def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupID">];
+  let Spellings = [HLSLAnnotation<"sv_groupid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIDDocs];
 }
 
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
+  let Spellings = [HLSLAnnotation<"sv_groupindex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIndexDocs];
@@ -4770,7 +4783,7 @@ def HLSLPackOffset: HLSLAnnotationAttr {
 }
 
 def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_DispatchThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_dispatchthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_DispatchThreadIDDocs];
@@ -4797,33 +4810,6 @@ def HLSLShader : InheritableAttr {
     return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
-}
-
-def HLSLResource : InheritableAttr {
-  let Spellings = [];
-  let Subjects = SubjectList<[Struct]>;
-  let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<
-        "ResourceKind", "llvm::hlsl::ResourceKind",
-        /*is_string=*/0,
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
-  ];
-  let Documentation = [InternalOnly];
 }
 
 def HLSLROV : TypeAttr {
@@ -4990,4 +4976,30 @@ def NoTrivialAutoVarInit: InheritableAttr {
   let Subjects = SubjectList<[Function, Tag]>;
   let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
+}
+
+def Atomic : StmtAttr {
+  let Spellings = [Clang<"atomic">];
+  let Args = [VariadicEnumArgument<"AtomicOptions", "ConsumedOption",
+                                   /*is_string=*/false,
+                                   ["remote_memory", "no_remote_memory",
+                                    "fine_grained_memory", "no_fine_grained_memory",
+                                    "ignore_denormal_mode", "no_ignore_denormal_mode"],
+                                   ["remote_memory", "no_remote_memory",
+                                    "fine_grained_memory", "no_fine_grained_memory",
+                                    "ignore_denormal_mode", "no_ignore_denormal_mode"]>];
+  let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
+  let Documentation = [AtomicDocs];
+  let StrictEnumParameters = 1;
+}
+
+def OpenACCRoutineAnnot : InheritableAttr {
+  // This attribute is used to mark that a function is targetted by a `routine`
+  // directive, so it dones't have a spelling and is always implicit.
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+  let AdditionalMembers = [{
+    SourceLocation BindClause;
+  }];
 }

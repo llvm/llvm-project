@@ -35,9 +35,10 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 } // end namespace llvm
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size);
+llvm_orc_registerEHFrameSectionAllocAction(const char *ArgData, size_t ArgSize);
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size);
+llvm_orc_deregisterEHFrameSectionAllocAction(const char *ArgData,
+                                             size_t ArgSize);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REGISTEREHFRAMES_H

@@ -413,11 +413,12 @@ define amdgpu_kernel void @v_clamp_negzero_maybe_snan_f32(ptr addrspace(1) %out,
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v1, v1, v1
 ; GFX12-NEXT:    v_maxmin_num_f32 v1, v1, 0x80000000, 1.0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
@@ -517,7 +518,9 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_max_num_f32_e32 v1, v1, v1
 ; GFX12-NEXT:    v_max_num_f32_e32 v1, 0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e32 v2, 1.0, v1
 ; GFX12-NEXT:    global_store_b32 v0, v2, s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
@@ -532,7 +535,7 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(ptr addrspace(1) %out, ptr 
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
   store float %med, ptr addrspace(1) %out.gep
-  store volatile float %max, ptr addrspace(1) undef
+  store volatile float %max, ptr addrspace(1) poison
   ret void
 }
 
@@ -3063,8 +3066,8 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_elt(ptr addrspace(1) %out, ptr ad
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
-  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half poison, half 0.0>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half poison>)
 
   store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
@@ -3154,7 +3157,9 @@ define amdgpu_kernel void @v_clamp_v2f16_not_zero(ptr addrspace(1) %out, ptr add
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
 ; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, 2.0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, 1.0 op_sel_hi:[1,0]
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
@@ -3252,7 +3257,9 @@ define amdgpu_kernel void @v_clamp_v2f16_not_one(ptr addrspace(1) %out, ptr addr
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v1, v0, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
 ; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
@@ -3721,7 +3728,7 @@ define amdgpu_kernel void @v_clamp_v2f16_shuffle(ptr addrspace(1) %out, ptr addr
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %shuf = shufflevector <2 x half> %a, <2 x half> undef, <2 x i32> <i32 1, i32 0>
+  %shuf = shufflevector <2 x half> %a, <2 x half> poison, <2 x i32> <i32 1, i32 0>
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %shuf, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
@@ -3820,8 +3827,8 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(ptr addrspace(1) %out
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half undef>)
-  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half undef, half 1.0>)
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half poison>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half poison, half 1.0>)
 
   store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
@@ -3918,8 +3925,8 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(ptr addrspace(1) %out
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
-  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half poison, half 0.0>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half poison>)
 
   store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void

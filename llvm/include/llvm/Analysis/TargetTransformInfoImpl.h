@@ -364,7 +364,7 @@ public:
                               Scale, AddrSpace, /*I=*/nullptr,
                               BaseOffset.getScalable()))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool LSRWithInstrQueries() const { return false; }
@@ -885,7 +885,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -1006,13 +1006,10 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return false;
-  }
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const { return false; }
+  bool preferAlternateOpcodeVectorization() const { return true; }
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return false;
   }
 

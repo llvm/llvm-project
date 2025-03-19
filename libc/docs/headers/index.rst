@@ -14,6 +14,7 @@ Implementation Status
    errno
    fenv
    float
+   glob
    inttypes
    locale
    math/index.rst
@@ -23,6 +24,7 @@ Implementation Status
    setjmp
    signal
    stdbit
+   stdfix
    stdio
    stdlib
    string
@@ -38,6 +40,7 @@ Implementation Status
    time
    uchar
    unistd
+   sys/utsname
    wchar
    wctype
 ..

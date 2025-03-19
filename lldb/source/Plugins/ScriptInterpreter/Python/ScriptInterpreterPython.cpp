@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
-#include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
 
@@ -33,6 +32,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Thread.h"
@@ -41,6 +41,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -489,11 +491,11 @@ def function (frame, bp_loc, internal_dict):
     break;
   }
 
-  if (instructions) {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(instructions);
-      output_sp->Flush();
+  if (instructions && interactive) {
+    if (LockableStreamFileSP stream_sp = io_handler.GetOutputStreamFileSP()) {
+      LockedStreamFile locked_stream = stream_sp->Lock();
+      locked_stream.PutCString(instructions);
+      locked_stream.Flush();
     }
   }
 }
@@ -527,10 +529,9 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
         bp_options.SetCallback(
             ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
       } else if (!batch_mode) {
-        StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
-        if (error_sp) {
-          error_sp->Printf("Warning: No command attached to breakpoint.\n");
-          error_sp->Flush();
+        if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("Warning: No command attached to breakpoint.\n");
         }
       }
     }
@@ -550,10 +551,9 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
       wp_options->SetCallback(
           ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
     } else if (!batch_mode) {
-      StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
-      if (error_sp) {
-        error_sp->Printf("Warning: No command attached to breakpoint.\n");
-        error_sp->Flush();
+      if (LockableStreamFileSP error_sp = io_handler.GetErrorStreamFileSP()) {
+        LockedStreamFile locked_stream = error_sp->Lock();
+        locked_stream.Printf("Warning: No command attached to breakpoint.\n");
       }
     }
     m_active_io_handler = eIOHandlerNone;
@@ -680,7 +680,7 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
   if (sys_module_dict.IsValid()) {
     lldb::FileSP top_in_sp;
-    lldb::StreamFileSP top_out_sp, top_err_sp;
+    lldb::LockableStreamFileSP top_out_sp, top_err_sp;
     if (!in_sp || !out_sp || !err_sp || !*in_sp || !*out_sp || !*err_sp)
       m_debugger.AdoptTopIOHandlerFilesIfInvalid(top_in_sp, top_out_sp,
                                                  top_err_sp);
@@ -696,12 +696,14 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
 
     if (!SetStdHandle(out_sp, "stdout", m_saved_stdout, "w")) {
       if (top_out_sp)
-        SetStdHandle(top_out_sp->GetFileSP(), "stdout", m_saved_stdout, "w");
+        SetStdHandle(top_out_sp->GetUnlockedFileSP(), "stdout", m_saved_stdout,
+                     "w");
     }
 
     if (!SetStdHandle(err_sp, "stderr", m_saved_stderr, "w")) {
       if (top_err_sp)
-        SetStdHandle(top_err_sp->GetFileSP(), "stderr", m_saved_stderr, "w");
+        SetStdHandle(top_err_sp->GetUnlockedFileSP(), "stderr", m_saved_stderr,
+                     "w");
     }
   }
 

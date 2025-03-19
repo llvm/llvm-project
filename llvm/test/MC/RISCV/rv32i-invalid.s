@@ -190,7 +190,7 @@ fadd.h ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the foll
 fadd.s a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfinx' (Float in Integer){{$}}
 fadd.d a0, a2, a4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer){{$}}
 fadd.h a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zhinx' (Half Float in Integer){{$}}
-flh ft0, (a0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal){{$}}
+flh ft0, (a0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
 sh1add a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zba' (Address Generation Instructions) or 'Base P' (Packed-SIMD){{$}}
 clz a0, a1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbb' (Basic Bit-Manipulation) or 'Base P' (Packed-SIMD){{$}}
 clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication) or 'Zbkc' (Carry-less multiply instructions for Cryptography){{$}}

@@ -34,8 +34,8 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, VariantKind Kind,
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   VariantKind Kind = getKind();
-  bool HasVariant = ((Kind != VK_RISCV_None) && (Kind != VK_RISCV_CALL) &&
-                     (Kind != VK_RISCV_CALL_PLT));
+  bool HasVariant =
+      ((Kind != VK_None) && (Kind != VK_CALL) && (Kind != VK_CALL_PLT));
 
   if (HasVariant)
     OS << '%' << getVariantKindName(getKind()) << '(';
@@ -46,7 +46,7 @@ void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
 const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   MCValue AUIPCLoc;
-  if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
 
   const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
@@ -89,18 +89,14 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 }
 
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm,
-                                            const MCFixup *Fixup) const {
-  // Explicitly drop the layout and assembler to prevent any symbolic folding in
-  // the expression handling.  This is required to preserve symbolic difference
-  // expressions to emit the paired relocations.
-  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr, nullptr))
+                                            const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   Res =
       MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? getKind() == VK_RISCV_None : true;
+  return Res.getSymB() ? getKind() == VK_None : true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
@@ -109,122 +105,72 @@ void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 
 RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
   return StringSwitch<RISCVMCExpr::VariantKind>(name)
-      .Case("lo", VK_RISCV_LO)
-      .Case("hi", VK_RISCV_HI)
-      .Case("pcrel_lo", VK_RISCV_PCREL_LO)
-      .Case("pcrel_hi", VK_RISCV_PCREL_HI)
-      .Case("got_pcrel_hi", VK_RISCV_GOT_HI)
-      .Case("tprel_lo", VK_RISCV_TPREL_LO)
-      .Case("tprel_hi", VK_RISCV_TPREL_HI)
-      .Case("tprel_add", VK_RISCV_TPREL_ADD)
-      .Case("tls_ie_pcrel_hi", VK_RISCV_TLS_GOT_HI)
-      .Case("tls_gd_pcrel_hi", VK_RISCV_TLS_GD_HI)
-      .Case("tlsdesc_hi", VK_RISCV_TLSDESC_HI)
-      .Case("tlsdesc_load_lo", VK_RISCV_TLSDESC_LOAD_LO)
-      .Case("tlsdesc_add_lo", VK_RISCV_TLSDESC_ADD_LO)
-      .Case("tlsdesc_call", VK_RISCV_TLSDESC_CALL)
-      .Default(VK_RISCV_Invalid);
+      .Case("lo", VK_LO)
+      .Case("hi", VK_HI)
+      .Case("pcrel_lo", VK_PCREL_LO)
+      .Case("pcrel_hi", VK_PCREL_HI)
+      .Case("got_pcrel_hi", VK_GOT_HI)
+      .Case("tprel_lo", VK_TPREL_LO)
+      .Case("tprel_hi", VK_TPREL_HI)
+      .Case("tprel_add", VK_TPREL_ADD)
+      .Case("tls_ie_pcrel_hi", VK_TLS_GOT_HI)
+      .Case("tls_gd_pcrel_hi", VK_TLS_GD_HI)
+      .Case("tlsdesc_hi", VK_TLSDESC_HI)
+      .Case("tlsdesc_load_lo", VK_TLSDESC_LOAD_LO)
+      .Case("tlsdesc_add_lo", VK_TLSDESC_ADD_LO)
+      .Case("tlsdesc_call", VK_TLSDESC_CALL)
+      .Default(VK_Invalid);
 }
 
 StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
-  case VK_RISCV_Invalid:
-  case VK_RISCV_None:
+  case VK_Invalid:
+  case VK_None:
     llvm_unreachable("Invalid ELF symbol kind");
-  case VK_RISCV_LO:
+  case VK_LO:
     return "lo";
-  case VK_RISCV_HI:
+  case VK_HI:
     return "hi";
-  case VK_RISCV_PCREL_LO:
+  case VK_PCREL_LO:
     return "pcrel_lo";
-  case VK_RISCV_PCREL_HI:
+  case VK_PCREL_HI:
     return "pcrel_hi";
-  case VK_RISCV_GOT_HI:
+  case VK_GOT_HI:
     return "got_pcrel_hi";
-  case VK_RISCV_TPREL_LO:
+  case VK_TPREL_LO:
     return "tprel_lo";
-  case VK_RISCV_TPREL_HI:
+  case VK_TPREL_HI:
     return "tprel_hi";
-  case VK_RISCV_TPREL_ADD:
+  case VK_TPREL_ADD:
     return "tprel_add";
-  case VK_RISCV_TLS_GOT_HI:
+  case VK_TLS_GOT_HI:
     return "tls_ie_pcrel_hi";
-  case VK_RISCV_TLSDESC_HI:
+  case VK_TLSDESC_HI:
     return "tlsdesc_hi";
-  case VK_RISCV_TLSDESC_LOAD_LO:
+  case VK_TLSDESC_LOAD_LO:
     return "tlsdesc_load_lo";
-  case VK_RISCV_TLSDESC_ADD_LO:
+  case VK_TLSDESC_ADD_LO:
     return "tlsdesc_add_lo";
-  case VK_RISCV_TLSDESC_CALL:
+  case VK_TLSDESC_CALL:
     return "tlsdesc_call";
-  case VK_RISCV_TLS_GD_HI:
+  case VK_TLS_GD_HI:
     return "tls_gd_pcrel_hi";
-  case VK_RISCV_CALL:
+  case VK_CALL:
     return "call";
-  case VK_RISCV_CALL_PLT:
+  case VK_CALL_PLT:
     return "call_plt";
-  case VK_RISCV_32_PCREL:
+  case VK_32_PCREL:
     return "32_pcrel";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }
 
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expression");
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
-void RISCVMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getKind()) {
-  default:
-    return;
-  case VK_RISCV_TPREL_HI:
-  case VK_RISCV_TLS_GOT_HI:
-  case VK_RISCV_TLS_GD_HI:
-  case VK_RISCV_TLSDESC_HI:
-    break;
-  }
-
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
-}
-
 bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
-
-  if (Kind == VK_RISCV_PCREL_HI || Kind == VK_RISCV_PCREL_LO ||
-      Kind == VK_RISCV_GOT_HI || Kind == VK_RISCV_TPREL_HI ||
-      Kind == VK_RISCV_TPREL_LO || Kind == VK_RISCV_TPREL_ADD ||
-      Kind == VK_RISCV_TLS_GOT_HI || Kind == VK_RISCV_TLS_GD_HI ||
-      Kind == VK_RISCV_TLSDESC_HI || Kind == VK_RISCV_TLSDESC_LOAD_LO ||
-      Kind == VK_RISCV_TLSDESC_ADD_LO || Kind == VK_RISCV_TLSDESC_CALL ||
-      Kind == VK_RISCV_CALL || Kind == VK_RISCV_CALL_PLT)
+  if (Kind != VK_LO && Kind != VK_HI)
     return false;
 
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
     return false;
 
   if (!Value.isAbsolute())
@@ -238,9 +184,9 @@ int64_t RISCVMCExpr::evaluateAsInt64(int64_t Value) const {
   switch (Kind) {
   default:
     llvm_unreachable("Invalid kind");
-  case VK_RISCV_LO:
+  case VK_LO:
     return SignExtend64<12>(Value);
-  case VK_RISCV_HI:
+  case VK_HI:
     // Add 1 if bit 11 is 1, to compensate for low 12 bits being negative.
     return ((Value + 0x800) >> 12) & 0xfffff;
   }

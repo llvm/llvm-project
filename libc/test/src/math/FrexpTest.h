@@ -33,10 +33,10 @@ public:
     ASSERT_FP_EQ(inf, func(inf, &exponent));
     ASSERT_FP_EQ(neg_inf, func(neg_inf, &exponent));
 
-    ASSERT_FP_EQ(0.0, func(0.0, &exponent));
+    ASSERT_FP_EQ(zero, func(zero, &exponent));
     ASSERT_EQ(exponent, 0);
 
-    ASSERT_FP_EQ(-0.0, func(-0.0, &exponent));
+    ASSERT_FP_EQ(neg_zero, func(neg_zero, &exponent));
     ASSERT_EQ(exponent, 0);
   }
 

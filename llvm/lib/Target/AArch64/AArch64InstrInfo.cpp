@@ -4988,8 +4988,8 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
@@ -5068,8 +5068,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     auto ToPPR = [](MCRegister R) -> MCRegister {
       return (R - AArch64::PN0) + AArch64::P0;
     };
-    MCRegister PPRSrcReg = SrcIsPNR ? ToPPR(SrcReg) : SrcReg;
-    MCRegister PPRDestReg = DestIsPNR ? ToPPR(DestReg) : DestReg;
+    MCRegister PPRSrcReg = SrcIsPNR ? ToPPR(SrcReg) : SrcReg.asMCReg();
+    MCRegister PPRDestReg = DestIsPNR ? ToPPR(DestReg) : DestReg.asMCReg();
 
     if (PPRSrcReg != PPRDestReg) {
       auto NewMI = BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
@@ -7360,7 +7360,7 @@ static MachineInstr *genFusedMultiplyAcc(
 static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
                        const TargetInstrInfo *TII, MachineInstr &Root,
                        SmallVectorImpl<MachineInstr *> &InsInstrs,
-                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
+                       DenseMap<Register, unsigned> &InstrIdxForVirtReg,
                        unsigned MnegOpc, const TargetRegisterClass *RC) {
   Register NewVR = MRI.createVirtualRegister(RC);
   MachineInstrBuilder MIB =
@@ -7379,7 +7379,7 @@ static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
 static MachineInstr *genFusedMultiplyAccNeg(
     MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
     MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
     unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1);
 
@@ -7406,7 +7406,7 @@ static MachineInstr *genFusedMultiplyIdx(
 static MachineInstr *genFusedMultiplyIdxNeg(
     MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
     MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
     unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1);
 
@@ -7472,13 +7472,12 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
 /// Do the following transformation
 /// A - (B + C)  ==>   (A - B) - C
 /// A - (B + C)  ==>   (A - C) - B
-static void
-genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
-                 const TargetInstrInfo *TII, MachineInstr &Root,
-                 SmallVectorImpl<MachineInstr *> &InsInstrs,
-                 SmallVectorImpl<MachineInstr *> &DelInstrs,
-                 unsigned IdxOpd1,
-                 DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
+                             const TargetInstrInfo *TII, MachineInstr &Root,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             SmallVectorImpl<MachineInstr *> &DelInstrs,
+                             unsigned IdxOpd1,
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
   assert(IdxOpd1 == 1 || IdxOpd1 == 2);
   unsigned IdxOtherOpd = IdxOpd1 == 1 ? 2 : 1;
   MachineInstr *AddMI = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
@@ -7531,7 +7530,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineFunction &MF = *MBB.getParent();

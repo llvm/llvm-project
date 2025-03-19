@@ -13,7 +13,6 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -102,22 +101,6 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     if (Stmt *SubStmt = cast<CapturedStmt>(S)->getCapturedStmt()) {
       M[SubStmt] = S;
       BuildParentMap(M, SubStmt, OVMode);
-    }
-    break;
-  case Stmt::CXXDefaultArgExprClass:
-    if (auto *Arg = dyn_cast<CXXDefaultArgExpr>(S)) {
-      if (Arg->hasRewrittenInit()) {
-        M[Arg->getExpr()] = S;
-        BuildParentMap(M, Arg->getExpr(), OVMode);
-      }
-    }
-    break;
-  case Stmt::CXXDefaultInitExprClass:
-    if (auto *Init = dyn_cast<CXXDefaultInitExpr>(S)) {
-      if (Init->hasRewrittenInit()) {
-        M[Init->getExpr()] = S;
-        BuildParentMap(M, Init->getExpr(), OVMode);
-      }
     }
     break;
   default:
