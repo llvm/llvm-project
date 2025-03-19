@@ -3408,7 +3408,7 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
         !OpenMPFiltered.contains(A->getOption().getID()))
       DAL->append(A);
 
-  // Request the shared library for CPU offloading. Given that these options
+  // Request a shared library for CPU offloading. Given that these options
   // are decided implicitly, they do not refer to any base argument.
   const OptTable &Opts = getDriver().getOpts();
   if (DeviceOffloadKind == Action::OFK_OpenMP) {
