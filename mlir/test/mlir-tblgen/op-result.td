@@ -203,6 +203,18 @@ def OpL6 : NS_Op<"op_with_same_and_constraint_results",
 // CHECK: inferredReturnTypes[1] = odsInferredType1;
 // CHECK: inferredReturnTypes[2] = odsInferredType2;
 
+def OpL7 : NS_Op<"one_variadic_and_one_normal_operand_with_infer_result_op",
+    [TypesMatchWith<"", "input2", "output1", "infer0($_self)">]> {
+  let arguments = (ins Variadic<AnyTensor>:$input1, AnyTensor:$input2);
+  let results = (outs AnyTensor:$output1);
+}
+
+// CHECK-LABEL: LogicalResult OpL7::inferReturnTypes
+// CHECK-NOT: }
+// CHECK: OpL7::Adaptor adaptor
+// CHECK: odsInferredType0 = infer0(adaptor.getInput2().getType())
+// CHECK: inferredReturnTypes[0] = odsInferredType0
+
 def OpM : NS_Op<"mix_diff_size_variadic_and_normal_results_op", [AttrSizedResultSegments]> {
   let results = (outs Variadic<AnyTensor>:$output1, AnyTensor:$output2, Optional<AnyTensor>:$output3);
 }
