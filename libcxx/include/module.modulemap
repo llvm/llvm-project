@@ -369,6 +369,14 @@ module std_core [system] {
     module negation                                   { header "__type_traits/negation.h" }
     module promote                                    { header "__type_traits/promote.h" }
     module rank                                       { header "__type_traits/rank.h" }
+    module reference_constructs_from_temporary {
+      header "__type_traits/reference_constructs_from_temporary.h"
+      export std_core.type_traits.integral_constant
+    }
+    module reference_converts_from_temporary {
+      header "__type_traits/reference_converts_from_temporary.h"
+      export std_core.type_traits.integral_constant
+    }
     module remove_all_extents                         { header "__type_traits/remove_all_extents.h" }
     module remove_const_ref                           { header "__type_traits/remove_const_ref.h" }
     module remove_const                               { header "__type_traits/remove_const.h" }
@@ -535,11 +543,17 @@ module std [system] {
     }
     module ranges_fill_n                          { header "__algorithm/ranges_fill_n.h" }
     module ranges_fill                            { header "__algorithm/ranges_fill.h" }
-    module ranges_find_end                        { header "__algorithm/ranges_find_end.h" }
+    module ranges_find_end {
+      header "__algorithm/ranges_find_end.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_find_first_of                   { header "__algorithm/ranges_find_first_of.h" }
     module ranges_find_if_not                     { header "__algorithm/ranges_find_if_not.h" }
     module ranges_find_if                         { header "__algorithm/ranges_find_if.h" }
-    module ranges_find_last                       { header "__algorithm/ranges_find_last.h" }
+    module ranges_find_last {
+      header "__algorithm/ranges_find_last.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_find                            { header "__algorithm/ranges_find.h" }
     module ranges_fold                            { header "__algorithm/ranges_fold.h" }
     module ranges_for_each_n {
@@ -700,6 +714,7 @@ module std [system] {
     }
     module ranges_remove {
       header "__algorithm/ranges_remove.h"
+      export std.ranges.subrange // return type
     }
     module ranges_replace_copy_if {
       header "__algorithm/ranges_replace_copy_if.h"
@@ -724,12 +739,18 @@ module std [system] {
     }
     module ranges_rotate_copy {
       header "__algorithm/ranges_rotate_copy.h"
-      export std.algorithm.in_out_result
+      export std.ranges.subrange // return type
     }
     module ranges_rotate                          { header "__algorithm/ranges_rotate.h" }
     module ranges_sample                          { header "__algorithm/ranges_sample.h" }
-    module ranges_search_n                        { header "__algorithm/ranges_search_n.h" }
-    module ranges_search                          { header "__algorithm/ranges_search.h" }
+    module ranges_search_n {
+      header "__algorithm/ranges_search_n.h"
+      export std.ranges.subrange // return type
+    }
+    module ranges_search {
+      header "__algorithm/ranges_search.h"
+      export std.ranges.subrange // return type
+    }
     module ranges_set_difference {
       header "__algorithm/ranges_set_difference.h"
       export std.functional.ranges_operations
@@ -1229,7 +1250,11 @@ module std [system] {
   module filesystem {
     module copy_options                   { header "__filesystem/copy_options.h" }
     module directory_entry                { header "__filesystem/directory_entry.h" }
-    module directory_iterator             { header "__filesystem/directory_iterator.h" }
+    module directory_iterator             {
+      header "__filesystem/directory_iterator.h"
+      // This is a workaround for https://github.com/llvm/llvm-project/issues/120108.
+      export *
+    }
     module directory_options              { header "__filesystem/directory_options.h" }
     module file_status                    { header "__filesystem/file_status.h" }
     module file_time_type                 { header "__filesystem/file_time_type.h" }

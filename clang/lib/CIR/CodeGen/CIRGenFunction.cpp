@@ -135,6 +135,13 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
+void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
+                                            CharUnits alignment) {
+  if (!type->isVoidType()) {
+    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment);
+  }
+}
+
 void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
@@ -149,6 +156,118 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 }
 
+void CIRGenFunction::LexicalScope::cleanup() {
+  CIRGenBuilderTy &builder = cgf.builder;
+  LexicalScope *localScope = cgf.curLexScope;
+
+  if (returnBlock != nullptr) {
+    // Write out the return block, which loads the value from `__retval` and
+    // issues the `cir.return`.
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(returnBlock);
+    (void)emitReturn(*returnLoc);
+  }
+
+  mlir::Block *curBlock = builder.getBlock();
+  if (isGlobalInit() && !curBlock)
+    return;
+  if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
+    return;
+
+  // Get rid of any empty block at the end of the scope.
+  bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
+  if (!entryBlock && curBlock->empty()) {
+    curBlock->erase();
+    if (returnBlock != nullptr && returnBlock->getUses().empty())
+      returnBlock->erase();
+    return;
+  }
+
+  // Reached the end of the scope.
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(curBlock);
+
+    if (localScope->depth == 0) {
+      // Reached the end of the function.
+      if (returnBlock != nullptr) {
+        if (returnBlock->getUses().empty())
+          returnBlock->erase();
+        else {
+          builder.create<cir::BrOp>(*returnLoc, returnBlock);
+          return;
+        }
+      }
+      emitImplicitReturn();
+      return;
+    }
+    // Reached the end of a non-function scope.  Some scopes, such as those
+    // used with the ?: operator, can return a value.
+    if (!localScope->isTernary() && !curBlock->mightHaveTerminator()) {
+      !retVal ? builder.create<cir::YieldOp>(localScope->endLoc)
+              : builder.create<cir::YieldOp>(localScope->endLoc, retVal);
+    }
+  }
+}
+
+cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  if (!cgf.curFn.getFunctionType().hasVoidReturn()) {
+    // Load the value from `__retval` and return it via the `cir.return` op.
+    auto value = builder.create<cir::LoadOp>(
+        loc, cgf.curFn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+    return builder.create<cir::ReturnOp>(loc,
+                                         llvm::ArrayRef(value.getResult()));
+  }
+  return builder.create<cir::ReturnOp>(loc);
+}
+
+// This is copied from CodeGenModule::MayDropFunctionReturn.  This is a
+// candidate for sharing between CIRGen and CodeGen.
+static bool mayDropFunctionReturn(const ASTContext &astContext,
+                                  QualType returnType) {
+  // We can't just discard the return value for a record type with a complex
+  // destructor or a non-trivially copyable type.
+  if (const RecordType *recordType =
+          returnType.getCanonicalType()->getAs<RecordType>()) {
+    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(recordType->getDecl()))
+      return classDecl->hasTrivialDestructor();
+  }
+  return returnType.isTriviallyCopyableType(astContext);
+}
+
+void CIRGenFunction::LexicalScope::emitImplicitReturn() {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  LexicalScope *localScope = cgf.curLexScope;
+
+  const auto *fd = cast<clang::FunctionDecl>(cgf.curGD.getDecl());
+
+  // In C++, flowing off the end of a non-void function is always undefined
+  // behavior. In C, flowing off the end of a non-void function is undefined
+  // behavior only if the non-existent return value is used by the caller.
+  // That influences whether the terminating op is trap, unreachable, or
+  // return.
+  if (cgf.getLangOpts().CPlusPlus && !fd->hasImplicitReturnZero() &&
+      !cgf.sawAsmBlock && !fd->getReturnType()->isVoidType() &&
+      builder.getInsertionBlock()) {
+    bool shouldEmitUnreachable =
+        cgf.cgm.getCodeGenOpts().StrictReturn ||
+        !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
+
+    if (shouldEmitUnreachable) {
+      if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
+        builder.create<cir::TrapOp>(localScope->endLoc);
+      else
+        builder.create<cir::UnreachableOp>(localScope->endLoc);
+      builder.clearInsertionPoint();
+      return;
+    }
+  }
+
+  (void)emitReturn(localScope->endLoc);
+}
+
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
                                    cir::FuncOp fn, cir::FuncType funcType,
                                    FunctionArgList args, SourceLocation loc,
@@ -156,7 +275,6 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   assert(!curFn &&
          "CIRGenFunction can only be used for one function at a time");
 
-  fnRetTy = returnType;
   curFn = fn;
 
   const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
@@ -194,6 +312,12 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     builder.CIRBaseBuilderTy::createStore(fnBodyBegin, paramVal, addrVal);
   }
   assert(builder.getInsertionBlock() && "Should be valid");
+
+  // When the current function is not void, create an address to store the
+  // result value.
+  if (!returnType->isVoidType())
+    emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
+                           getContext().getTypeAlignInChars(returnType));
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {}
@@ -208,9 +332,24 @@ mlir::LogicalResult CIRGenFunction::emitFunctionBody(const clang::Stmt *body) {
   return result;
 }
 
+static void eraseEmptyAndUnusedBlocks(cir::FuncOp func) {
+  // Remove any leftover blocks that are unreachable and empty, since they do
+  // not represent unreachable code useful for warnings nor anything deemed
+  // useful in general.
+  SmallVector<mlir::Block *> blocksToDelete;
+  for (mlir::Block &block : func.getBlocks()) {
+    if (block.empty() && block.getUses().empty())
+      blocksToDelete.push_back(&block);
+  }
+  for (mlir::Block *block : blocksToDelete)
+    block->erase();
+}
+
 cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
   const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
+  curGD = gd;
+
   SourceLocation loc = funcDecl->getLocation();
   Stmt *body = funcDecl->getBody();
   SourceRange bodyRange =
@@ -219,55 +358,53 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
                                                  : builder.getUnknownLoc()};
 
-  // This will be used once more code is upstreamed.
-  [[maybe_unused]] mlir::Block *entryBB = fn.addEntryBlock();
+  auto validMLIRLoc = [&](clang::SourceLocation clangLoc) {
+    return clangLoc.isValid() ? getLoc(clangLoc) : builder.getUnknownLoc();
+  };
+  const mlir::Location fusedLoc = mlir::FusedLoc::get(
+      &getMLIRContext(),
+      {validMLIRLoc(bodyRange.getBegin()), validMLIRLoc(bodyRange.getEnd())});
+  mlir::Block *entryBB = fn.addEntryBlock();
 
   FunctionArgList args;
   QualType retTy = buildFunctionArgList(gd, args);
 
-  startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+  {
+    LexicalScope lexScope(*this, fusedLoc, entryBB);
 
-  if (isa<CXXDestructorDecl>(funcDecl))
-    getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
-  else if (isa<CXXConstructorDecl>(funcDecl))
-    getCIRGenModule().errorNYI(bodyRange, "C++ constructor definition");
-  else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
-           funcDecl->hasAttr<CUDAGlobalAttr>())
-    getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
-  else if (isa<CXXMethodDecl>(funcDecl) &&
-           cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
-    getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
-  else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
-           (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
-            cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
-    getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
-  else if (body) {
-    if (mlir::failed(emitFunctionBody(body))) {
-      fn.erase();
-      return nullptr;
-    }
-  } else
-    llvm_unreachable("no definition for normal function");
+    startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
-  // This code to insert a cir.return or cir.trap at the end of the function is
-  // temporary until the function return code, including
-  // CIRGenFunction::LexicalScope::emitImplicitReturn(), is upstreamed.
-  mlir::Block &lastBlock = fn.getRegion().back();
-  if (lastBlock.empty() || !lastBlock.mightHaveTerminator() ||
-      !lastBlock.getTerminator()->hasTrait<mlir::OpTrait::IsTerminator>()) {
-    builder.setInsertionPointToEnd(&lastBlock);
-    if (mlir::isa<cir::VoidType>(funcType.getReturnType())) {
-      builder.create<cir::ReturnOp>(getLoc(bodyRange.getEnd()));
+    if (isa<CXXDestructorDecl>(funcDecl))
+      getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
+    else if (isa<CXXConstructorDecl>(funcDecl))
+      getCIRGenModule().errorNYI(bodyRange, "C++ constructor definition");
+    else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+             funcDecl->hasAttr<CUDAGlobalAttr>())
+      getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
+    else if (isa<CXXMethodDecl>(funcDecl) &&
+             cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
+      getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
+    else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
+             (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
+              cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
+      getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
+    else if (body) {
+      if (mlir::failed(emitFunctionBody(body))) {
+        fn.erase();
+        return nullptr;
+      }
     } else {
-      builder.create<cir::TrapOp>(getLoc(bodyRange.getEnd()));
+      // Anything without a body should have been handled above.
+      llvm_unreachable("no definition for normal function");
     }
+
+    if (mlir::failed(fn.verifyBody()))
+      return nullptr;
+
+    finishFunction(bodyRange.getEnd());
   }
 
-  if (mlir::failed(fn.verifyBody()))
-    return nullptr;
-
-  finishFunction(bodyRange.getEnd());
-
+  eraseEmptyAndUnusedBlocks(fn);
   return fn;
 }
 
@@ -305,6 +442,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                std::string("l-value not implemented for '") +
                                    e->getStmtClassName() + "'");
     return LValue();
+  case Expr::UnaryOperatorClass:
+    return emitUnaryOpLValue(cast<UnaryOperator>(e));
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   }

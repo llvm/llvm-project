@@ -210,7 +210,8 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   };
 
   bool UsePath = true;
-  if (getType()->isLValueReferenceType())
+  if (const ValueDecl *VD = getDeclDesc()->asValueDecl();
+      VD && VD->getType()->isLValueReferenceType())
     UsePath = false;
 
   // Build the path into the object.

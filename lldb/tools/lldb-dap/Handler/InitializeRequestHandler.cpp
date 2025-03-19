@@ -18,8 +18,32 @@ using namespace lldb;
 
 namespace lldb_dap {
 
-static void ProgressEventThreadFunction(DAP &dap) {
-  llvm::set_thread_name(dap.name + ".progress_handler");
+static std::string GetStringFromStructuredData(lldb::SBStructuredData &data,
+                                               const char *key) {
+  lldb::SBStructuredData keyValue = data.GetValueForKey(key);
+  if (!keyValue)
+    return std::string();
+
+  const size_t length = keyValue.GetStringValue(nullptr, 0);
+
+  if (length == 0)
+    return std::string();
+
+  std::string str(length + 1, 0);
+  keyValue.GetStringValue(&str[0], length + 1);
+  return str;
+}
+
+static uint64_t GetUintFromStructuredData(lldb::SBStructuredData &data,
+                                          const char *key) {
+  lldb::SBStructuredData keyValue = data.GetValueForKey(key);
+
+  if (!keyValue.IsValid())
+    return 0;
+  return keyValue.GetUnsignedIntegerValue();
+}
+
+void ProgressEventThreadFunction(DAP &dap) {
   lldb::SBListener listener("lldb-dap.progress.listener");
   dap.debugger.GetBroadcaster().AddListener(
       listener, lldb::SBDebugger::eBroadcastBitProgress |
@@ -35,14 +59,47 @@ static void ProgressEventThreadFunction(DAP &dap) {
           done = true;
         }
       } else {
-        uint64_t progress_id = 0;
-        uint64_t completed = 0;
-        uint64_t total = 0;
-        bool is_debugger_specific = false;
-        const char *message = lldb::SBDebugger::GetProgressFromEvent(
-            event, progress_id, completed, total, is_debugger_specific);
-        if (message)
-          dap.SendProgressEvent(progress_id, message, completed, total);
+        lldb::SBStructuredData data =
+            lldb::SBDebugger::GetProgressDataFromEvent(event);
+
+        const uint64_t progress_id =
+            GetUintFromStructuredData(data, "progress_id");
+        const uint64_t completed = GetUintFromStructuredData(data, "completed");
+        const uint64_t total = GetUintFromStructuredData(data, "total");
+        const std::string details =
+            GetStringFromStructuredData(data, "details");
+
+        if (completed == 0) {
+          if (total == UINT64_MAX) {
+            // This progress is non deterministic and won't get updated until it
+            // is completed. Send the "message" which will be the combined title
+            // and detail. The only other progress event for thus
+            // non-deterministic progress will be the completed event So there
+            // will be no need to update the detail.
+            const std::string message =
+                GetStringFromStructuredData(data, "message");
+            dap.SendProgressEvent(progress_id, message.c_str(), completed,
+                                  total);
+          } else {
+            // This progress is deterministic and will receive updates,
+            // on the progress creation event VSCode will save the message in
+            // the create packet and use that as the title, so we send just the
+            // title in the progressCreate packet followed immediately by a
+            // detail packet, if there is any detail.
+            const std::string title =
+                GetStringFromStructuredData(data, "title");
+            dap.SendProgressEvent(progress_id, title.c_str(), completed, total);
+            if (!details.empty())
+              dap.SendProgressEvent(progress_id, details.c_str(), completed,
+                                    total);
+          }
+        } else {
+          // This progress event is either the end of the progress dialog, or an
+          // update with possible detail. The "detail" string we send to VS Code
+          // will be appended to the progress dialog's initial text from when it
+          // was created.
+          dap.SendProgressEvent(progress_id, details.c_str(), completed, total);
+        }
       }
     }
   }
@@ -54,7 +111,7 @@ static void ProgressEventThreadFunction(DAP &dap) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 static void EventThreadFunction(DAP &dap) {
-  llvm::set_thread_name(dap.name + ".event_handler");
+  llvm::set_thread_name(dap.transport.GetClientName() + ".event_handler");
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
   dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
@@ -258,7 +315,8 @@ void InitializeRequestHandler::operator()(
   // sourceInitFile option is not from formal DAP specification. It is only
   // used by unit tests to prevent sourcing .lldbinit files from environment
   // which may affect the outcome of tests.
-  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
+  bool source_init_file =
+      GetBoolean(arguments, "sourceInitFile").value_or(true);
 
   // Do not source init files until in/out/err are configured.
   dap.debugger = lldb::SBDebugger::Create(false);
@@ -300,7 +358,7 @@ void InitializeRequestHandler::operator()(
   dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
-  if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
+  if (GetBoolean(arguments, "supportsStartDebuggingRequest").value_or(false)) {
     cmd.AddCommand(
         "start-debugging", new StartDebuggingRequestHandler(dap),
         "Sends a startDebugging request from the debug adapter to the client "
@@ -319,49 +377,15 @@ void InitializeRequestHandler::operator()(
   // process and more.
   dap.event_thread = std::thread(EventThreadFunction, std::ref(dap));
 
-  // The debug adapter supports the configurationDoneRequest.
-  body.try_emplace("supportsConfigurationDoneRequest", true);
-  // The debug adapter supports function breakpoints.
-  body.try_emplace("supportsFunctionBreakpoints", true);
-  // The debug adapter supports conditional breakpoints.
-  body.try_emplace("supportsConditionalBreakpoints", true);
-  // The debug adapter supports breakpoints that break execution after a
-  // specified number of hits.
-  body.try_emplace("supportsHitConditionalBreakpoints", true);
-  // The debug adapter supports a (side effect free) evaluate request for
-  // data hovers.
-  body.try_emplace("supportsEvaluateForHovers", true);
+  llvm::StringMap<bool> capabilities = dap.GetCapabilities();
+  for (auto &kv : capabilities)
+    body.try_emplace(kv.getKey(), kv.getValue());
+
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : *dap.exception_breakpoints) {
+  for (const auto &exc_bp : *dap.exception_breakpoints)
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
-  }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
-  // The debug adapter supports launching a debugee in intergrated VSCode
-  // terminal.
-  body.try_emplace("supportsRunInTerminalRequest", true);
-  // The debug adapter supports stepping back via the stepBack and
-  // reverseContinue requests.
-  body.try_emplace("supportsStepBack", false);
-  // The debug adapter supports setting a variable to a value.
-  body.try_emplace("supportsSetVariable", true);
-  // The debug adapter supports restarting a frame.
-  body.try_emplace("supportsRestartFrame", false);
-  // The debug adapter supports the gotoTargetsRequest.
-  body.try_emplace("supportsGotoTargetsRequest", false);
-  // The debug adapter supports the stepInTargetsRequest.
-  body.try_emplace("supportsStepInTargetsRequest", true);
-  // The debug adapter supports the completions request.
-  body.try_emplace("supportsCompletionsRequest", true);
-  // The debug adapter supports the disassembly request.
-  body.try_emplace("supportsDisassembleRequest", true);
-  // The debug adapter supports the `breakpointLocations` request.
-  body.try_emplace("supportsBreakpointLocationsRequest", true);
-  // The debug adapter supports stepping granularities (argument `granularity`)
-  // for the stepping requests.
-  body.try_emplace("supportsSteppingGranularity", true);
-  // The debug adapter support for instruction breakpoint.
-  body.try_emplace("supportsInstructionBreakpoints", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -369,42 +393,6 @@ void InitializeRequestHandler::operator()(
   completion_characters.emplace_back("\t");
   body.try_emplace("completionTriggerCharacters",
                    std::move(completion_characters));
-
-  // The debug adapter supports the modules request.
-  body.try_emplace("supportsModulesRequest", true);
-  // The set of additional module information exposed by the debug adapter.
-  //   body.try_emplace("additionalModuleColumns"] = ColumnDescriptor
-  // Checksum algorithms supported by the debug adapter.
-  //   body.try_emplace("supportedChecksumAlgorithms"] = ChecksumAlgorithm
-  // The debug adapter supports the RestartRequest. In this case a client
-  // should not implement 'restart' by terminating and relaunching the adapter
-  // but by calling the RestartRequest.
-  body.try_emplace("supportsRestartRequest", true);
-  // The debug adapter supports 'exceptionOptions' on the
-  // setExceptionBreakpoints request.
-  body.try_emplace("supportsExceptionOptions", true);
-  // The debug adapter supports a 'format' attribute on the stackTraceRequest,
-  // variablesRequest, and evaluateRequest.
-  body.try_emplace("supportsValueFormattingOptions", true);
-  // The debug adapter supports the exceptionInfo request.
-  body.try_emplace("supportsExceptionInfoRequest", true);
-  // The debug adapter supports the 'terminateDebuggee' attribute on the
-  // 'disconnect' request.
-  body.try_emplace("supportTerminateDebuggee", true);
-  // The debug adapter supports the delayed loading of parts of the stack,
-  // which requires that both the 'startFrame' and 'levels' arguments and the
-  // 'totalFrames' result of the 'StackTrace' request are supported.
-  body.try_emplace("supportsDelayedStackTraceLoading", true);
-  // The debug adapter supports the 'loadedSources' request.
-  body.try_emplace("supportsLoadedSourcesRequest", false);
-  // The debug adapter supports sending progress reporting events.
-  body.try_emplace("supportsProgressReporting", true);
-  // The debug adapter supports 'logMessage' in breakpoint.
-  body.try_emplace("supportsLogPoints", true);
-  // The debug adapter supports data watchpoints.
-  body.try_emplace("supportsDataBreakpoints", true);
-  // The debug adapter supports the `readMemory` request.
-  body.try_emplace("supportsReadMemoryRequest", true);
 
   // Put in non-DAP specification lldb specific information.
   llvm::json::Object lldb_json;

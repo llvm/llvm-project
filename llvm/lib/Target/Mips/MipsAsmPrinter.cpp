@@ -1199,8 +1199,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
 
   // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
   // start of function
-  const MCExpr *TargetExpr = MCSymbolRefExpr::create(
-      Target, MCSymbolRefExpr::VariantKind::VK_None, OutContext);
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
                                    .addReg(Mips::ZERO)
                                    .addReg(Mips::ZERO)

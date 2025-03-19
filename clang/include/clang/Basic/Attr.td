@@ -1721,17 +1721,10 @@ def EnableIf : InheritableAttr {
   let Documentation = [EnableIfDocs];
 }
 
-def ExtVectorType : Attr {
-  // This is an OpenCL-related attribute and does not receive a [[]] spelling.
-  let Spellings = [GNU<"ext_vector_type">];
-  // FIXME: This subject list is wrong; this is a type attribute.
-  let Subjects = SubjectList<[TypedefName], ErrorDiag>;
+def ExtVectorType : TypeAttr {
+  let Spellings = [Clang<"ext_vector_type">];
   let Args = [ExprArgument<"NumElements">];
-  let ASTNode = 0;
-  let Documentation = [Undocumented];
-  // This is a type attribute with an incorrect subject list, so should not be
-  // permitted by #pragma clang attribute.
-  let PragmaAttributeSupport = 0;
+  let Documentation = [ExtVectorTypeDocs];
 }
 
 def FallThrough : StmtAttr {
@@ -2232,8 +2225,8 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
   let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine"],
-                           ["supervisor", "machine"],
+                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
+                           ["supervisor", "machine", "qcinest", "qcinonest"],
                            1>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
@@ -3051,8 +3044,7 @@ def NoDeref : TypeAttr {
 def ReqdWorkGroupSize : InheritableAttr {
   // Does not have a [[]] spelling because it is an OpenCL-related attribute.
   let Spellings = [GNU<"reqd_work_group_size">];
-  let Args = [UnsignedArgument<"XDim">, UnsignedArgument<"YDim">,
-              UnsignedArgument<"ZDim">];
+  let Args = [ExprArgument<"XDim">, ExprArgument<"YDim">, ExprArgument<"ZDim">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
@@ -3060,9 +3052,7 @@ def ReqdWorkGroupSize : InheritableAttr {
 def WorkGroupSizeHint :  InheritableAttr {
   // Does not have a [[]] spelling because it is an OpenCL-related attribute.
   let Spellings = [GNU<"work_group_size_hint">];
-  let Args = [UnsignedArgument<"XDim">,
-              UnsignedArgument<"YDim">,
-              UnsignedArgument<"ZDim">];
+  let Args = [ExprArgument<"XDim">, ExprArgument<"YDim">, ExprArgument<"ZDim">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
   let Documentation = [Undocumented];
 }
@@ -4724,21 +4714,21 @@ def HLSLNumThreads: InheritableAttr {
 }
 
 def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_groupthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupThreadIDDocs];
 }
 
 def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupID">];
+  let Spellings = [HLSLAnnotation<"sv_groupid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIDDocs];
 }
 
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
+  let Spellings = [HLSLAnnotation<"sv_groupindex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIndexDocs];
@@ -4790,7 +4780,7 @@ def HLSLPackOffset: HLSLAnnotationAttr {
 }
 
 def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"SV_DispatchThreadID">];
+  let Spellings = [HLSLAnnotation<"sv_dispatchthreadid">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_DispatchThreadIDDocs];
@@ -4817,33 +4807,6 @@ def HLSLShader : InheritableAttr {
     return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
-}
-
-def HLSLResource : InheritableAttr {
-  let Spellings = [];
-  let Subjects = SubjectList<[Struct]>;
-  let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<
-        "ResourceKind", "llvm::hlsl::ResourceKind",
-        /*is_string=*/0,
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        [
-          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
-          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
-          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
-          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
-          "FeedbackTexture2D", "FeedbackTexture2DArray"
-        ],
-        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
-  ];
-  let Documentation = [InternalOnly];
 }
 
 def HLSLROV : TypeAttr {
@@ -5025,4 +4988,15 @@ def Atomic : StmtAttr {
   let Subjects = SubjectList<[CompoundStmt], ErrorDiag, "compound statements">;
   let Documentation = [AtomicDocs];
   let StrictEnumParameters = 1;
+}
+
+def OpenACCRoutineAnnot : InheritableAttr {
+  // This attribute is used to mark that a function is targetted by a `routine`
+  // directive, so it dones't have a spelling and is always implicit.
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+  let AdditionalMembers = [{
+    SourceLocation BindClause;
+  }];
 }

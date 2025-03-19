@@ -45,3 +45,17 @@ func.func @no_bubble_partial_intersecting_reshapes(%arg0: tensor<?x?x?x?xf32>, %
 //      CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2], [3]]
 //      CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %[[COLLAPSE]] {{\[}}[0, 1], [2, 3]]
 //      CHECK:   return %[[EXPAND]]
+
+// -----
+
+func.func @no_bubble_0d_tensor_reshapes(%arg0: tensor<?xf32>, %s0: index, %s1: index, %s2: index, %s3: index) -> tensor<?x?x?x?xf32> {
+  %collapse = tensor.collapse_shape %arg0 [] : tensor<?xf32> into tensor<f32>
+  %expand = tensor.expand_shape %collapse []
+              output_shape [%s0, %s1, %s2, %s3] : tensor<f32> into tensor<?x?x?x?xf32>
+  return %expand : tensor<?x?x?x?xf32>
+}
+//      CHECK: func @no_bubble_0d_tensor_reshapes
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<?xf32>
+//      CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}]
+//      CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %[[COLLAPSE]] {{\[}}]
+//      CHECK:   return %[[EXPAND]]

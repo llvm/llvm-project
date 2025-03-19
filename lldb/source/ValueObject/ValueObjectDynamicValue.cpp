@@ -98,7 +98,7 @@ ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
     return m_parent->GetNumChildren(max);
 }
 
-std::optional<uint64_t> ValueObjectDynamicValue::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectDynamicValue::GetByteSize() {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -248,7 +248,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
       // If we found a host address but it doesn't fit in the buffer, there's
       // nothing we can do.
       if (local_buffer.size() <
-          m_dynamic_type_info.GetCompilerType().GetByteSize(exe_scope)) {
+          llvm::expectedToOptional(
+              m_dynamic_type_info.GetCompilerType().GetByteSize(exe_scope))) {
         SetValueIsValid(false);
         return false;
       }

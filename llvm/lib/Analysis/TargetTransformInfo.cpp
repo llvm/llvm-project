@@ -1251,7 +1251,7 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
 
 InstructionCost TargetTransformInfo::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) const {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   return TTIImpl->getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                            CostKind);
 }
@@ -1379,14 +1379,18 @@ bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
   return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
-bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                                ReductionFlags Flags) const {
-  return TTIImpl->preferInLoopReduction(Opcode, Ty, Flags);
+bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode,
+                                                Type *Ty) const {
+  return TTIImpl->preferInLoopReduction(Opcode, Ty);
 }
 
-bool TargetTransformInfo::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, ReductionFlags Flags) const {
-  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty, Flags);
+bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
+  return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
+                                                          Type *Ty) const {
+  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
 }
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {

@@ -128,10 +128,17 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
       Fortran::common::visitors{
           [&](const OpenMPStandaloneConstruct &c) -> std::string {
             return std::visit(
-                [&](const auto &c) {
-                  // Get source from the directive or verbatim fields
-                  const CharBlock &source{std::get<0>(c.t).source};
-                  return normalize_construct_name(source.ToString());
+                Fortran::common::visitors{
+                    [&](const OpenMPSimpleStandaloneConstruct &d) {
+                      const CharBlock &source{
+                          std::get<OmpDirectiveName>(d.v.t).source};
+                      return normalize_construct_name(source.ToString());
+                    },
+                    [&](const auto &c) {
+                      // Get source from the directive or verbatim fields
+                      const CharBlock &source{std::get<0>(c.t).source};
+                      return normalize_construct_name(source.ToString());
+                    },
                 },
                 c.u);
           },
@@ -264,9 +271,6 @@ void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
 void OpenMPCounterVisitor::Post(const OmpDirectiveNameModifier &c) {
   clauseDetails +=
       "name_modifier=" + llvm::omp::getOpenMPDirectiveName(c.v).str() + ";";
-}
-void OpenMPCounterVisitor::Post(const OmpCancelType::Type &c) {
-  clauseDetails += "type=" + std::string{OmpCancelType::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpClause &c) {
   PostClauseCommon(normalize_clause_name(c.source.ToString()));
