@@ -379,7 +379,7 @@ void PlainCFGBuilder::buildPlainCFG(
     VPRegionBlock *Region = VPBB->getParent();
     Loop *LoopForBB = LI->getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
-    if (!isHeaderBB(BB, LoopForBB)) {
+    if (LoopForBB && !isHeaderBB(BB, LoopForBB)) {
       setVPBBPredsFromBB(VPBB, BB);
     } else if (Region) {
       // BB is a loop header and there's a corresponding region, set the
@@ -390,7 +390,7 @@ void PlainCFGBuilder::buildPlainCFG(
     // Create VPInstructions for BB.
     createVPInstructionsForVPBB(VPBB, BB);
 
-    if (BB == TheLoop->getLoopLatch()) {
+    if (LoopForBB && BB == TheLoop->getLoopLatch()) {
       VPBasicBlock *HeaderVPBB = getOrCreateVPBB(LoopForBB->getHeader());
       VPBlockUtils::connectBlocks(VPBB, HeaderVPBB);
       continue;
@@ -423,7 +423,7 @@ void PlainCFGBuilder::buildPlainCFG(
     BasicBlock *IRSucc1 = BI->getSuccessor(1);
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
     VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
-    if (BB == LoopForBB->getLoopLatch()) {
+    if (LoopForBB && BB == LoopForBB->getLoopLatch()) {
       // For a latch we need to set the successor of the region rather than that
       // of VPBB and it should be set to the exit, i.e., non-header successor,
       // except for the top region, which is handled elsewhere.
