@@ -76,13 +76,13 @@ define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
   ret void
 }
 
-define void @f1(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
+define void @f1(ptr %p, ptr %q, double %t) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    fcvt.wu.d a0, fa0, rtz
-; CHECK-NEXT:    vse64.v v8, (a3)
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %x0 = load i64, ptr %p
   %p.1 = getelementptr i64, ptr %p, i64 1
