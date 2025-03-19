@@ -289,8 +289,8 @@ HostInfoMacOSX::GetSwiftResourceDir(llvm::Triple triple,
       platform_sdk_path, swift_stdlib_os_dir,
       HostInfo::GetSwiftResourceDir().GetPath(),
       HostInfo::GetXcodeContentsDirectory().GetPath(),
-      PlatformDarwin::GetCurrentToolchainDirectory().GetPath(),
-      PlatformDarwin::GetCurrentCommandLineToolsDirectory().GetPath());
+      HostInfoMacOSX::GetCurrentXcodeToolchainDirectory().GetPath(),
+      HostInfoMacOSX::GetCurrentCommandLineToolsDirectory().GetPath());
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];
 }
