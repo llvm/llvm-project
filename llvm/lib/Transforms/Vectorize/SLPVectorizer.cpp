@@ -6451,7 +6451,7 @@ void BoUpSLP::reorderTopToBottom() {
             // because ShuffleVectorInst supports only a limited set of
             // patterns). Only do reorderNodeWithReuses if the user is not
             // ShuffleVectorInst.
-            if (TE->UserTreeIndex &&
+            if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->hasState() &&
                 isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
               continue;
           }
