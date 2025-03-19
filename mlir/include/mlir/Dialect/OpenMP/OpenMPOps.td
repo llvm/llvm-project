@@ -891,17 +891,6 @@ def FlushOp : OpenMP_Op<"flush", clauses = [
 
   // Override inherited assembly format to include `varList`.
   let assemblyFormat = "( `(` $varList^ `:` type($varList) `)` )? attr-dict";
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      return getOperation()->getNumOperands();
-    }
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      return getOperand(i);
-    }
-  }] # clausesExtraClassDeclaration;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1001,18 +990,6 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
     ) attr-dict
   }];
 
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      return getNumOperands();
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      return getOperands()[i];
-    }
-  }];
-
   let hasVerifier = 1;
 }
 
@@ -1097,18 +1074,6 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
       | `bounds` `(` $bounds `)`
     ) `->` type($omp_ptr) attr-dict
-  }];
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      return getNumOperands();
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      return getOperands()[i];
-    }
   }];
 }
 
@@ -1515,21 +1480,6 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", traits = [
     clausesOptAssemblyFormat #
     ") `:` type($v) `,` type($x) `,` $element_type attr-dict";
 
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getX() && "expected 'x' operand");
-      assert(getV() && "expected 'v' operand");
-      return 2;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? getX() : getV();
-    }
-  }] # clausesExtraClassDeclaration;
-
   let hasVerifier = 1;
 }
 
@@ -1554,21 +1504,6 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write", traits = [
   // Override clause-based assemblyFormat.
   let assemblyFormat = "$x `=` $expr" # clausesReqAssemblyFormat # " oilist(" #
     clausesOptAssemblyFormat # ") `:` type($x) `,` type($expr) attr-dict";
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getX() && "expected address operand");
-      assert(getExpr() && "expected value operand");
-      return 2;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? getX() : getExpr();
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1613,20 +1548,6 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update", traits = [
   // Override clause-based assemblyFormat.
   let assemblyFormat = clausesAssemblyFormat #
     "$x `:` type($x) $region attr-dict";
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getX() && "expected 'x' operand");
-      return 1;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i == 0 && "invalid index position for an operand");
-      return getX();
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -1714,19 +1635,6 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate",
   let results = (outs OpenMP_PointerLikeType:$tls_addr);
   let assemblyFormat = [{
     $sym_addr `:` type($sym_addr) `->` type($tls_addr) attr-dict
-  }];
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getSymAddr() && "expected one variable operand");
-      return 1;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i == 0 && "invalid index position for an operand");
-      return getSymAddr();
-    }
   }];
 }
 
