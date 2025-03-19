@@ -1016,6 +1016,10 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+/// Return true iff the given symbol represents a dummy array
+/// that needs to be repacked when -frepack-arrays is set.
+/// In general, the repacking is done for assumed-shape
+/// dummy arguments, but there are limitations.
 static bool needsRepack(Fortran::lower::AbstractConverter &converter,
                         const Fortran::semantics::Symbol &sym) {
   const auto &attrs = sym.attrs();
@@ -1027,7 +1031,10 @@ static bool needsRepack(Fortran::lower::AbstractConverter &converter,
       // TARGET dummy may be accessed indirectly, so it is unsafe
       // to repack it. Some compilers provide options to override
       // this.
-      attrs.test(Fortran::semantics::Attr::TARGET))
+      // Repacking of VOLATILE and ASYNCHRONOUS is also unsafe.
+      attrs.HasAny({Fortran::semantics::Attr::ASYNCHRONOUS,
+                    Fortran::semantics::Attr::TARGET,
+                    Fortran::semantics::Attr::VOLATILE}))
     return false;
 
   return true;
