@@ -576,6 +576,9 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
     }
+    // Get type id.
+    if (CSInfo.second.CalleeTypeId)
+      YmlCS.CalleeTypeId = CSInfo.second.CalleeTypeId->getZExtValue();
     YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
 

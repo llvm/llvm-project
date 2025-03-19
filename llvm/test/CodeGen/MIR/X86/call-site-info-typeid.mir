@@ -1,0 +1,35 @@
+# Test MIR printer and parser for type id field in callSites. It is used
+# for propagating call site type identifiers to emit in the call graph section.
+
+# RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
+# CHECK: name: main
+# CHECK: callSites:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
+# CHECK-NEXT: 123456789 }
+
+--- |
+  declare void @foo(i8 signext %a)
+  
+  define dso_local i32 @main() {
+  entry:
+    %retval = alloca i32, align 4
+    %fp = alloca ptr, align 8
+    store i32 0, ptr %retval, align 4
+    store ptr @foo, ptr %fp, align 8
+    %fp_val = load ptr, ptr %fp, align 8
+    call void %fp_val(i8 signext 97)
+    ret i32 0
+  }
+
+...
+---
+name:            main
+callSites:
+  - { bb: 0, offset: 1, fwdArgRegs: [], calleeTypeId: 
+    123456789 }
+body:             |
+  bb.0.entry:    
+    %0:gr64 = MOV32ri64 @foo    
+    CALL64r killed %0, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp
+
+...
