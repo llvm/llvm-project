@@ -7549,7 +7549,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
     assert(N2C->getAPIntValue().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+               TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for EXTRACT_SUBVECTOR has an invalid size");
 
     // Trivial extraction.
@@ -7783,7 +7783,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                 VT.getVectorMinNumElements()) &&
            "Insert subvector overflow!");
     assert(N3->getAsAPIntVal().getBitWidth() ==
-               TLI->getVectorIdxTy(getDataLayout()).getFixedSizeInBits() &&
+               TLI->getVectorIdxWidth(getDataLayout()) &&
            "Constant index for INSERT_SUBVECTOR has an invalid size");
 
     // Trivial insertion.

@@ -74,7 +74,6 @@
 // GNU2: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB:libhipBundled\.a\.5\.2]]" "-targets=hip-amdgcn-amd-amdhsa-gfx1030" "-output=[[A1030:.*\.a]]" "-allow-missing-bundles"
 // GNU: "{{.*}}lld{{.*}}" {{.*}}"-plugin-opt=mcpu=gfx1030" {{.*}} "[[A1030]]"
 // GNU: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}[[LIB]]" "-targets=hip-amdgcn-amd-amdhsa-gfx906" "-output=[[A906:.*\.a]]" "-allow-missing-bundles"
-
 // GNU: "{{.*}}lld{{.*}}" {{.*}}"-plugin-opt=mcpu=gfx906" {{.*}} "[[A906]]"
 // GNU-L: "{{.*}}ld{{.*}}" {{.*}}"-o" "a.out" {{.*}}"-lhipBundled"
 // GNU-LA: "{{.*}}ld{{.*}}" {{.*}}"-o" "a.out" {{.*}}"-l:libhipBundled.a"

@@ -1138,6 +1138,22 @@ LogicalResult NVVM::Tcgen05CpOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::MatchSyncOp::verify() {
+  if (getKind() == NVVM::MatchSyncKind::all) {
+    auto Type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
+    if (!Type || Type.getBody().size() != 2 ||
+        !Type.getBody()[0].isInteger(32) || !Type.getBody()[1].isInteger(1)) {
+      return emitOpError("match.sync 'all' returns a two element struct with "
+                         "first element as i32 and second element as i1");
+    }
+  } else {
+    if (!getType().isInteger(32)) {
+      return emitOpError("match.sync 'any' returns an i32");
+    }
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//

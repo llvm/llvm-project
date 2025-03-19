@@ -4500,7 +4500,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPInstructionSC:
       case VPDef::VPCanonicalIVPHISC:
       case VPDef::VPVectorPointerSC:
-      case VPDef::VPReverseVectorPointerSC:
+      case VPDef::VPVectorEndPointerSC:
       case VPDef::VPExpandSCEVSC:
       case VPDef::VPEVLBasedIVPHISC:
       case VPDef::VPPredInstPHISC:
@@ -8352,7 +8352,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
           (CM.foldTailByMasking() || !GEP || !GEP->isInBounds())
               ? GEPNoWrapFlags::none()
               : GEPNoWrapFlags::inBounds();
-      VectorPtr = new VPReverseVectorPointerRecipe(
+      VectorPtr = new VPVectorEndPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I), Flags, I->getDebugLoc());
     } else {
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),

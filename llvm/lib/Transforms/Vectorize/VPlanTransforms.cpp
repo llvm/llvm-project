@@ -1768,7 +1768,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
+    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
 
@@ -2203,8 +2203,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   for (VPValue *VPV : VPValues) {
     if (all_of(VPV->users(),
                [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
-        (VPV->isLiveIn() &&
-         (!VPV->getLiveInIRValue() || isa<Constant>(VPV->getLiveInIRValue()))))
+        (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
+         isa<Constant>(VPV->getLiveInIRValue())))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
