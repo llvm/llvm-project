@@ -514,6 +514,7 @@ add_entrypoint_object(
     libc.src.math.generic.sincos_eval
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.multiply_add
+    .range_reduction_double
 )
 
 add_entrypoint_object(
