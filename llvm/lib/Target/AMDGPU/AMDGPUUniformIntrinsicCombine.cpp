@@ -151,6 +151,12 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
 
+    // If there are no ICmp users, return early.
+    if (II.user_empty() ||
+        none_of(II.users(), [](User *U) { return isa<ICmpInst>(U); })) {
+      return false;
+    }
+
     bool Changed = false;
     for (User *U : make_early_inc_range(II.users())) {
       if (auto *ICmp = dyn_cast<ICmpInst>(U)) {
