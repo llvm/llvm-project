@@ -331,7 +331,7 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
 }
 
 llvm::json::Value FileSpec::ToJSON() const {
-  std::string str{};
+  std::string str;
   llvm::raw_string_ostream stream(str);
   this->Dump(stream);
   return llvm::json::Value(std::move(str));
