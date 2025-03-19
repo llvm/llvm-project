@@ -1420,7 +1420,7 @@ void RewriteInstance::updateRtFiniReloc() {
   // desired value.
   FiniArraySection->addPendingRelocation(Relocation{
       /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-      /*Optional*/ false, /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+      /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
 }
 
 void RewriteInstance::registerFragments() {

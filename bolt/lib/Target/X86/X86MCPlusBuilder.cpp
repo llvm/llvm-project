@@ -2467,8 +2467,7 @@ public:
 
     auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
-    return Relocation(
-        {RelOffset, RelSymbol, RelType, /*Optional*/ false, RelAddend, 0});
+    return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,

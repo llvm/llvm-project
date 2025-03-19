@@ -4635,8 +4635,7 @@ void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
   std::map<uint64_t, Relocation> &Rels =
       IsCI ? Islands->Relocations : Relocations;
   if (BC.MIB->shouldRecordCodeRelocation(RelType))
-    Rels[Offset] =
-        Relocation{Offset, Symbol, RelType, /*Optional*/ false, Addend, Value};
+    Rels[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
 }
 
 } // namespace bolt
