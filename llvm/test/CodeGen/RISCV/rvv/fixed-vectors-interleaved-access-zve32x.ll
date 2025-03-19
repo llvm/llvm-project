@@ -24,38 +24,35 @@ define <4 x i1> @load_large_vector(ptr %p) {
 ; ZVE32X-NEXT:    xor a0, a7, a0
 ; ZVE32X-NEXT:    snez a3, a3
 ; ZVE32X-NEXT:    snez a1, a1
+; ZVE32X-NEXT:    snez a2, a2
+; ZVE32X-NEXT:    snez a0, a0
 ; ZVE32X-NEXT:    vmv.s.x v10, a3
 ; ZVE32X-NEXT:    vmv.s.x v11, a1
 ; ZVE32X-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; ZVE32X-NEXT:    vand.vi v10, v10, 1
+; ZVE32X-NEXT:    vand.vi v11, v11, 1
 ; ZVE32X-NEXT:    vmsne.vi v0, v10, 0
-; ZVE32X-NEXT:    vand.vi v10, v11, 1
-; ZVE32X-NEXT:    vmerge.vim v11, v8, 1, v0
-; ZVE32X-NEXT:    vmsne.vi v0, v10, 0
-; ZVE32X-NEXT:    snez a1, a2
-; ZVE32X-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVE32X-NEXT:    vmerge.vim v10, v9, 1, v0
-; ZVE32X-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
-; ZVE32X-NEXT:    vslideup.vi v10, v11, 1
-; ZVE32X-NEXT:    vmv.s.x v11, a1
-; ZVE32X-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVE32X-NEXT:    vmsne.vi v0, v10, 0
-; ZVE32X-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; ZVE32X-NEXT:    vand.vi v10, v11, 1
+; ZVE32X-NEXT:    vmerge.vim v10, v8, 1, v0
+; ZVE32X-NEXT:    vmsne.vi v0, v11, 0
 ; ZVE32X-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVE32X-NEXT:    vmerge.vim v11, v9, 1, v0
+; ZVE32X-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
+; ZVE32X-NEXT:    vslideup.vi v11, v10, 1
+; ZVE32X-NEXT:    vmv.s.x v10, a2
 ; ZVE32X-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; ZVE32X-NEXT:    vand.vi v10, v10, 1
 ; ZVE32X-NEXT:    vmsne.vi v0, v10, 0
-; ZVE32X-NEXT:    snez a0, a0
 ; ZVE32X-NEXT:    vmerge.vim v10, v8, 1, v0
+; ZVE32X-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32X-NEXT:    vmsne.vi v0, v11, 0
+; ZVE32X-NEXT:    vmerge.vim v11, v9, 1, v0
 ; ZVE32X-NEXT:    vsetivli zero, 3, e8, mf4, tu, ma
 ; ZVE32X-NEXT:    vslideup.vi v11, v10, 2
 ; ZVE32X-NEXT:    vmv.s.x v10, a0
-; ZVE32X-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVE32X-NEXT:    vmsne.vi v0, v11, 0
 ; ZVE32X-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; ZVE32X-NEXT:    vand.vi v10, v10, 1
 ; ZVE32X-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVE32X-NEXT:    vmsne.vi v0, v11, 0
 ; ZVE32X-NEXT:    vmerge.vim v9, v9, 1, v0
 ; ZVE32X-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; ZVE32X-NEXT:    vmsne.vi v0, v10, 0

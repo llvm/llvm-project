@@ -7,11 +7,11 @@ define <2 x i1> @test_vp_reverse_v2i1_masked(<2 x i1> %src, <2 x i1> %mask, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
@@ -46,11 +46,11 @@ define <4 x i1> @test_vp_reverse_v4i1_masked(<4 x i1> %src, <4 x i1> %mask, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
@@ -85,11 +85,11 @@ define <8 x i1> @test_vp_reverse_v8i1_masked(<8 x i1> %src, <8 x i1> %mask, i32 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
@@ -124,11 +124,11 @@ define <16 x i1> @test_vp_reverse_v16i1_masked(<16 x i1> %src, <16 x i1> %mask, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    vrsub.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v9, v10, v0.t

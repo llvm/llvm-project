@@ -2435,11 +2435,11 @@ define <vscale x 16 x double> @vpgather_nxv16f64(<vscale x 16 x ptr> %ptrs, <vsc
 ; RV32-NEXT:    vmv1r.v v24, v0
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    sub a2, a0, a1
-; RV32-NEXT:    srli a3, a1, 3
-; RV32-NEXT:    vslidedown.vx v0, v0, a3
 ; RV32-NEXT:    sltu a3, a0, a2
 ; RV32-NEXT:    addi a3, a3, -1
 ; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    srli a3, a1, 3
+; RV32-NEXT:    vslidedown.vx v0, v0, a3
 ; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vluxei32.v v16, (zero), v12, v0.t
 ; RV32-NEXT:    bltu a0, a1, .LBB111_2
@@ -2458,11 +2458,11 @@ define <vscale x 16 x double> @vpgather_nxv16f64(<vscale x 16 x ptr> %ptrs, <vsc
 ; RV64-NEXT:    vmv1r.v v24, v0
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    sub a2, a0, a1
-; RV64-NEXT:    srli a3, a1, 3
-; RV64-NEXT:    vslidedown.vx v0, v0, a3
 ; RV64-NEXT:    sltu a3, a0, a2
 ; RV64-NEXT:    addi a3, a3, -1
 ; RV64-NEXT:    and a2, a3, a2
+; RV64-NEXT:    srli a3, a1, 3
+; RV64-NEXT:    vslidedown.vx v0, v0, a3
 ; RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV64-NEXT:    vluxei64.v v16, (zero), v16, v0.t
 ; RV64-NEXT:    bltu a0, a1, .LBB111_2
@@ -2495,9 +2495,9 @@ define <vscale x 16 x double> @vpgather_baseidx_nxv16i16_nxv16f64(ptr %base, <vs
 ; RV32-NEXT:    srli a2, a2, 3
 ; RV32-NEXT:    sltu a1, a1, a3
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a2
 ; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a2
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vluxei32.v v16, (a0), v28, v0.t
 ; RV32-NEXT:    ret
@@ -2510,12 +2510,12 @@ define <vscale x 16 x double> @vpgather_baseidx_nxv16i16_nxv16f64(ptr %base, <vs
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    sub a3, a1, a2
-; RV64-NEXT:    srli a4, a2, 3
-; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    sltu a4, a1, a3
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
+; RV64-NEXT:    srli a4, a2, 3
+; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    vluxei64.v v16, (a0), v16, v0.t
 ; RV64-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
@@ -2552,9 +2552,9 @@ define <vscale x 16 x double> @vpgather_baseidx_sext_nxv16i16_nxv16f64(ptr %base
 ; RV32-NEXT:    srli a2, a2, 3
 ; RV32-NEXT:    sltu a1, a1, a3
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a2
 ; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a2
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vluxei32.v v16, (a0), v28, v0.t
 ; RV32-NEXT:    ret
@@ -2567,12 +2567,12 @@ define <vscale x 16 x double> @vpgather_baseidx_sext_nxv16i16_nxv16f64(ptr %base
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    vsll.vi v16, v16, 3
 ; RV64-NEXT:    sub a3, a1, a2
-; RV64-NEXT:    srli a4, a2, 3
-; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    sltu a4, a1, a3
 ; RV64-NEXT:    addi a4, a4, -1
 ; RV64-NEXT:    and a3, a4, a3
+; RV64-NEXT:    srli a4, a2, 3
+; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a4
 ; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    vluxei64.v v16, (a0), v16, v0.t
 ; RV64-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
@@ -2610,9 +2610,9 @@ define <vscale x 16 x double> @vpgather_baseidx_zext_nxv16i16_nxv16f64(ptr %base
 ; RV32-NEXT:    srli a2, a2, 3
 ; RV32-NEXT:    sltu a1, a1, a3
 ; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a2
 ; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a2
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vluxei32.v v16, (a0), v28, v0.t
 ; RV32-NEXT:    ret
@@ -2634,9 +2634,9 @@ define <vscale x 16 x double> @vpgather_baseidx_zext_nxv16i16_nxv16f64(ptr %base
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    sltu a1, a1, a3
 ; RV64-NEXT:    addi a1, a1, -1
-; RV64-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vx v0, v0, a2
 ; RV64-NEXT:    and a1, a1, a3
+; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a2
 ; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    vluxei32.v v16, (a0), v28, v0.t
 ; RV64-NEXT:    ret

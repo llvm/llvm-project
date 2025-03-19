@@ -439,15 +439,15 @@ define void @vpstore_nxv16f64(<vscale x 16 x double> %val, ptr %ptr, <vscale x 1
 ; CHECK-NEXT:  .LBB35_2:
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0), v0.t
-; CHECK-NEXT:    srli a3, a2, 3
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v0, a3
+; CHECK-NEXT:    slli a3, a2, 3
+; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    sub a3, a1, a2
-; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    srli a2, a2, 3
 ; CHECK-NEXT:    sltu a1, a1, a3
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a3
-; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
@@ -476,8 +476,8 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a6, a3
 ; CHECK-NEXT:  .LBB36_4:
-; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1), v0.t
 ; CHECK-NEXT:    sub a0, a5, a3
@@ -501,9 +501,9 @@ define void @vpstore_nxv17f64(<vscale x 17 x double> %val, ptr %ptr, <vscale x 1
 ; CHECK-NEXT:  .LBB36_6:
 ; CHECK-NEXT:    slli a2, a3, 4
 ; CHECK-NEXT:    srli a3, a3, 2
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v7, a3
 ; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v7, a3
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v24, (a1), v0.t
 ; CHECK-NEXT:    ret

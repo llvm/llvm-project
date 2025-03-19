@@ -12,13 +12,12 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_v16i1_v32i1(<32 x i1> %vec) {
 ; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v9, 8
+; CHECK-NEXT:    vnsrl.wi v10, v9, 0
 ; CHECK-NEXT:    vnsrl.wi v11, v8, 0
+; CHECK-NEXT:    vnsrl.wi v9, v9, 8
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v11, 8
@@ -91,29 +90,27 @@ define {<4 x i64>, <4 x i64>} @vector_deinterleave_v4i64_v8i64(<8 x i64> %vec) {
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v16, v8, 4
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 2
-; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vslideup.vi v14, v12, 2
+; CHECK-NEXT:    vslideup.vi v14, v12, 1, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v11, 12
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; CHECK-NEXT:    vslideup.vi v14, v16, 2
-; CHECK-NEXT:    vslideup.vi v14, v16, 1, v0.t
+; CHECK-NEXT:    vslidedown.vi v16, v8, 1
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vslidedown.vi v12, v8, 1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v11
-; CHECK-NEXT:    vmerge.vvm v12, v12, v14, v0
-; CHECK-NEXT:    vslidedown.vi v14, v8, 1
-; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vslidedown.vi v14, v8, 2, v0.t
+; CHECK-NEXT:    vslidedown.vi v16, v8, 2, v0.t
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vmv2r.v v8, v16
+; CHECK-NEXT:    vmv2r.v v18, v12
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; CHECK-NEXT:    vslideup.vi v8, v16, 1, v0.t
+; CHECK-NEXT:    vslideup.vi v18, v12, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
-; CHECK-NEXT:    vmerge.vvm v10, v14, v8, v0
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vmerge.vvm v8, v8, v14, v0
+; CHECK-NEXT:    vmerge.vvm v10, v16, v18, v0
 ; CHECK-NEXT:    ret
   %retval = call {<4 x i64>, <4 x i64>} @llvm.vector.deinterleave2.v8i64(<8 x i64> %vec)
   ret {<4 x i64>, <4 x i64>} %retval
@@ -135,15 +132,13 @@ define {<8 x i64>, <8 x i64>} @vector_deinterleave_v8i64_v16i64(<16 x i64> %vec)
 ; CHECK-NEXT:    vmv.s.x v21, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vcompress.vm v16, v8, v12
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v22, v20, -8
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vcompress.vm v12, v8, v21
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v20, -7
+; CHECK-NEXT:    vadd.vi v8, v20, -8
+; CHECK-NEXT:    vadd.vi v9, v20, -7
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vrgatherei16.vv v16, v24, v22, v0.t
-; CHECK-NEXT:    vrgatherei16.vv v12, v24, v8, v0.t
+; CHECK-NEXT:    vrgatherei16.vv v16, v24, v8, v0.t
+; CHECK-NEXT:    vrgatherei16.vv v12, v24, v9, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %retval = call {<8 x i64>, <8 x i64>} @llvm.vector.deinterleave2.v16i64(<16 x i64> %vec)
@@ -499,29 +494,27 @@ define {<4 x double>, <4 x double>} @vector_deinterleave_v4f64_v8f64(<8 x double
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v16, v8, 4
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 2
-; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vslideup.vi v14, v12, 2
+; CHECK-NEXT:    vslideup.vi v14, v12, 1, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v11, 12
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; CHECK-NEXT:    vslideup.vi v14, v16, 2
-; CHECK-NEXT:    vslideup.vi v14, v16, 1, v0.t
+; CHECK-NEXT:    vslidedown.vi v16, v8, 1
 ; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vslidedown.vi v12, v8, 1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v11
-; CHECK-NEXT:    vmerge.vvm v12, v12, v14, v0
-; CHECK-NEXT:    vslidedown.vi v14, v8, 1
-; CHECK-NEXT:    vmv1r.v v0, v10
-; CHECK-NEXT:    vslidedown.vi v14, v8, 2, v0.t
+; CHECK-NEXT:    vslidedown.vi v16, v8, 2, v0.t
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vmv2r.v v8, v16
+; CHECK-NEXT:    vmv2r.v v18, v12
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; CHECK-NEXT:    vslideup.vi v8, v16, 1, v0.t
+; CHECK-NEXT:    vslideup.vi v18, v12, 1, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
-; CHECK-NEXT:    vmerge.vvm v10, v14, v8, v0
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vmerge.vvm v8, v8, v14, v0
+; CHECK-NEXT:    vmerge.vvm v10, v16, v18, v0
 ; CHECK-NEXT:    ret
 %retval = call {<4 x double>, <4 x double>} @llvm.vector.deinterleave2.v8f64(<8 x double> %vec)
 ret {<4 x double>, <4 x double>} %retval

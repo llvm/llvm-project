@@ -13,10 +13,10 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0
@@ -34,10 +34,10 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
 ; ZVBB-NEXT:    vmv1r.v v9, v0
-; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmv.v.i v10, 0
 ; ZVBB-NEXT:    li a0, 1
 ; ZVBB-NEXT:    csrr a1, vlenb
+; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmerge.vim v10, v10, 1, v0
 ; ZVBB-NEXT:    srli a1, a1, 2
 ; ZVBB-NEXT:    vwsll.vi v12, v10, 8
@@ -130,9 +130,9 @@ define <vscale x 4 x i64> @vector_interleave_nxv4i64_nxv2i64(<vscale x 2 x i64> 
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    vand.vi v13, v12, 1
-; CHECK-NEXT:    vmsne.vi v0, v13, 0
 ; CHECK-NEXT:    vsrl.vi v16, v12, 1
+; CHECK-NEXT:    vand.vi v12, v12, 1
+; CHECK-NEXT:    vmsne.vi v0, v12, 0
 ; CHECK-NEXT:    vadd.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
@@ -145,9 +145,9 @@ define <vscale x 4 x i64> @vector_interleave_nxv4i64_nxv2i64(<vscale x 2 x i64> 
 ; ZVBB-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
 ; ZVBB-NEXT:    vid.v v12
 ; ZVBB-NEXT:    srli a0, a0, 2
-; ZVBB-NEXT:    vand.vi v13, v12, 1
-; ZVBB-NEXT:    vmsne.vi v0, v13, 0
 ; ZVBB-NEXT:    vsrl.vi v16, v12, 1
+; ZVBB-NEXT:    vand.vi v12, v12, 1
+; ZVBB-NEXT:    vmsne.vi v0, v12, 0
 ; ZVBB-NEXT:    vadd.vx v16, v16, a0, v0.t
 ; ZVBB-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; ZVBB-NEXT:    vrgatherei16.vv v12, v8, v16
@@ -163,9 +163,9 @@ define <vscale x 128 x i1> @vector_interleave_nxv128i1_nxv64i1(<vscale x 64 x i1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v16, v24, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
@@ -293,13 +293,13 @@ define <vscale x 16 x i64> @vector_interleave_nxv16i64_nxv8i64(<vscale x 8 x i64
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vmv4r.v v28, v16
 ; CHECK-NEXT:    vmv4r.v v16, v12
+; CHECK-NEXT:    vsrl.vi v4, v6, 1
 ; CHECK-NEXT:    vand.vi v8, v6, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vsrl.vi v6, v6, 1
-; CHECK-NEXT:    vadd.vx v6, v6, a0, v0.t
+; CHECK-NEXT:    vadd.vx v4, v4, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v8, v24, v6
-; CHECK-NEXT:    vrgatherei16.vv v24, v16, v6
+; CHECK-NEXT:    vrgatherei16.vv v8, v24, v4
+; CHECK-NEXT:    vrgatherei16.vv v24, v16, v4
 ; CHECK-NEXT:    vmv.v.v v16, v24
 ; CHECK-NEXT:    ret
 ;
@@ -312,13 +312,13 @@ define <vscale x 16 x i64> @vector_interleave_nxv16i64_nxv8i64(<vscale x 8 x i64
 ; ZVBB-NEXT:    srli a0, a0, 1
 ; ZVBB-NEXT:    vmv4r.v v28, v16
 ; ZVBB-NEXT:    vmv4r.v v16, v12
+; ZVBB-NEXT:    vsrl.vi v4, v6, 1
 ; ZVBB-NEXT:    vand.vi v8, v6, 1
 ; ZVBB-NEXT:    vmsne.vi v0, v8, 0
-; ZVBB-NEXT:    vsrl.vi v6, v6, 1
-; ZVBB-NEXT:    vadd.vx v6, v6, a0, v0.t
+; ZVBB-NEXT:    vadd.vx v4, v4, a0, v0.t
 ; ZVBB-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; ZVBB-NEXT:    vrgatherei16.vv v8, v24, v6
-; ZVBB-NEXT:    vrgatherei16.vv v24, v16, v6
+; ZVBB-NEXT:    vrgatherei16.vv v8, v24, v4
+; ZVBB-NEXT:    vrgatherei16.vv v24, v16, v4
 ; ZVBB-NEXT:    vmv.v.v v16, v24
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b)
@@ -545,9 +545,9 @@ define <vscale x 4 x double> @vector_interleave_nxv4f64_nxv2f64(<vscale x 2 x do
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vid.v v12
 ; CHECK-NEXT:    srli a0, a0, 2
-; CHECK-NEXT:    vand.vi v13, v12, 1
-; CHECK-NEXT:    vmsne.vi v0, v13, 0
 ; CHECK-NEXT:    vsrl.vi v16, v12, 1
+; CHECK-NEXT:    vand.vi v12, v12, 1
+; CHECK-NEXT:    vmsne.vi v0, v12, 0
 ; CHECK-NEXT:    vadd.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
@@ -560,9 +560,9 @@ define <vscale x 4 x double> @vector_interleave_nxv4f64_nxv2f64(<vscale x 2 x do
 ; ZVBB-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
 ; ZVBB-NEXT:    vid.v v12
 ; ZVBB-NEXT:    srli a0, a0, 2
-; ZVBB-NEXT:    vand.vi v13, v12, 1
-; ZVBB-NEXT:    vmsne.vi v0, v13, 0
 ; ZVBB-NEXT:    vsrl.vi v16, v12, 1
+; ZVBB-NEXT:    vand.vi v12, v12, 1
+; ZVBB-NEXT:    vmsne.vi v0, v12, 0
 ; ZVBB-NEXT:    vadd.vx v16, v16, a0, v0.t
 ; ZVBB-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; ZVBB-NEXT:    vrgatherei16.vv v12, v8, v16
@@ -666,13 +666,13 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vmv4r.v v28, v16
 ; CHECK-NEXT:    vmv4r.v v16, v12
+; CHECK-NEXT:    vsrl.vi v4, v6, 1
 ; CHECK-NEXT:    vand.vi v8, v6, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vsrl.vi v6, v6, 1
-; CHECK-NEXT:    vadd.vx v6, v6, a0, v0.t
+; CHECK-NEXT:    vadd.vx v4, v4, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v8, v24, v6
-; CHECK-NEXT:    vrgatherei16.vv v24, v16, v6
+; CHECK-NEXT:    vrgatherei16.vv v8, v24, v4
+; CHECK-NEXT:    vrgatherei16.vv v24, v16, v4
 ; CHECK-NEXT:    vmv.v.v v16, v24
 ; CHECK-NEXT:    ret
 ;
@@ -685,13 +685,13 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ; ZVBB-NEXT:    srli a0, a0, 1
 ; ZVBB-NEXT:    vmv4r.v v28, v16
 ; ZVBB-NEXT:    vmv4r.v v16, v12
+; ZVBB-NEXT:    vsrl.vi v4, v6, 1
 ; ZVBB-NEXT:    vand.vi v8, v6, 1
 ; ZVBB-NEXT:    vmsne.vi v0, v8, 0
-; ZVBB-NEXT:    vsrl.vi v6, v6, 1
-; ZVBB-NEXT:    vadd.vx v6, v6, a0, v0.t
+; ZVBB-NEXT:    vadd.vx v4, v4, a0, v0.t
 ; ZVBB-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; ZVBB-NEXT:    vrgatherei16.vv v8, v24, v6
-; ZVBB-NEXT:    vrgatherei16.vv v24, v16, v6
+; ZVBB-NEXT:    vrgatherei16.vv v8, v24, v4
+; ZVBB-NEXT:    vrgatherei16.vv v24, v16, v4
 ; ZVBB-NEXT:    vmv.v.v v16, v24
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 16 x double> @llvm.vector.interleave2.nxv16f64(<vscale x 8 x double> %a, <vscale x 8 x double> %b)
@@ -746,10 +746,10 @@ define <vscale x 48 x i1> @vector_interleave_nxv48i1_nxv16i1(<vscale x 16 x i1> 
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
 ; CHECK-NEXT:    slli a2, a1, 1
 ; CHECK-NEXT:    vmv1r.v v0, v10
@@ -789,10 +789,10 @@ define <vscale x 48 x i1> @vector_interleave_nxv48i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVBB-NEXT:    sub sp, sp, a0
 ; ZVBB-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; ZVBB-NEXT:    vmv1r.v v10, v0
-; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmv.v.i v12, 0
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
+; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmerge.vim v16, v12, 1, v0
 ; ZVBB-NEXT:    slli a2, a1, 1
 ; ZVBB-NEXT:    vmv1r.v v0, v10
@@ -1058,14 +1058,14 @@ define <vscale x 80 x i1> @vector_interleave_nxv80i1_nxv16i1(<vscale x 16 x i1> 
 ; CHECK-NEXT:    vmerge.vim v14, v12, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v18, v12, 1, v0
-; CHECK-NEXT:    add a2, a4, a1
-; CHECK-NEXT:    srli a3, a1, 2
 ; CHECK-NEXT:    vmv2r.v v20, v14
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v16, v12, 1, v0
-; CHECK-NEXT:    vmv1r.v v21, v18
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
+; CHECK-NEXT:    add a2, a4, a1
+; CHECK-NEXT:    vmv1r.v v21, v18
+; CHECK-NEXT:    srli a3, a1, 2
 ; CHECK-NEXT:    vmv1r.v v22, v16
 ; CHECK-NEXT:    vmv1r.v v16, v19
 ; CHECK-NEXT:    add a5, a2, a1
@@ -1134,14 +1134,14 @@ define <vscale x 80 x i1> @vector_interleave_nxv80i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVBB-NEXT:    vmerge.vim v14, v12, 1, v0
 ; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmerge.vim v18, v12, 1, v0
-; ZVBB-NEXT:    add a2, a4, a1
-; ZVBB-NEXT:    srli a3, a1, 2
 ; ZVBB-NEXT:    vmv2r.v v20, v14
 ; ZVBB-NEXT:    vmv1r.v v0, v9
 ; ZVBB-NEXT:    vmerge.vim v16, v12, 1, v0
-; ZVBB-NEXT:    vmv1r.v v21, v18
 ; ZVBB-NEXT:    vmv1r.v v0, v10
 ; ZVBB-NEXT:    vmerge.vim v8, v12, 1, v0
+; ZVBB-NEXT:    add a2, a4, a1
+; ZVBB-NEXT:    vmv1r.v v21, v18
+; ZVBB-NEXT:    srli a3, a1, 2
 ; ZVBB-NEXT:    vmv1r.v v22, v16
 ; ZVBB-NEXT:    vmv1r.v v16, v19
 ; ZVBB-NEXT:    add a5, a2, a1
@@ -2073,65 +2073,65 @@ define <vscale x 112 x i1> @vector_interleave_nxv112i1_nxv16i1(<vscale x 16 x i1
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v14, 0
-; CHECK-NEXT:    addi a4, sp, 16
+; CHECK-NEXT:    addi a3, sp, 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    vmerge.vim v16, v14, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v22, v14, 1, v0
-; CHECK-NEXT:    add a3, a4, a2
-; CHECK-NEXT:    srli a1, a2, 2
-; CHECK-NEXT:    add a5, a0, a2
 ; CHECK-NEXT:    vmv4r.v v24, v16
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v18, v14, 1, v0
-; CHECK-NEXT:    add a6, a3, a2
 ; CHECK-NEXT:    vmv1r.v v25, v22
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v8, v14, 1, v0
 ; CHECK-NEXT:    vmv1r.v v26, v18
 ; CHECK-NEXT:    vmv1r.v v0, v11
 ; CHECK-NEXT:    vmerge.vim v20, v14, 1, v0
-; CHECK-NEXT:    vmv1r.v v27, v8
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vmerge.vim v10, v14, 1, v0
+; CHECK-NEXT:    add a4, a3, a1
+; CHECK-NEXT:    srli a2, a1, 2
+; CHECK-NEXT:    add a5, a0, a1
+; CHECK-NEXT:    vmv1r.v v27, v8
+; CHECK-NEXT:    add a6, a4, a1
 ; CHECK-NEXT:    vmv1r.v v28, v20
 ; CHECK-NEXT:    vmv1r.v v18, v23
-; CHECK-NEXT:    add a7, a6, a2
+; CHECK-NEXT:    add a7, a6, a1
 ; CHECK-NEXT:    vmv1r.v v29, v10
 ; CHECK-NEXT:    vmv1r.v v20, v9
 ; CHECK-NEXT:    vmv1r.v v0, v13
 ; CHECK-NEXT:    vmerge.vim v30, v14, 1, v0
 ; CHECK-NEXT:    vmv1r.v v22, v11
 ; CHECK-NEXT:    vsetvli t0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vsseg7e8.v v24, (a4)
+; CHECK-NEXT:    vsseg7e8.v v24, (a3)
 ; CHECK-NEXT:    vmv1r.v v23, v31
 ; CHECK-NEXT:    vsseg7e8.v v17, (a0)
 ; CHECK-NEXT:    vl1r.v v8, (a6)
-; CHECK-NEXT:    add a6, a7, a2
-; CHECK-NEXT:    vl1r.v v10, (a4)
-; CHECK-NEXT:    add a4, a6, a2
+; CHECK-NEXT:    add a6, a7, a1
+; CHECK-NEXT:    vl1r.v v10, (a3)
+; CHECK-NEXT:    add a3, a6, a1
 ; CHECK-NEXT:    vl1r.v v12, (a6)
-; CHECK-NEXT:    add a6, a4, a2
+; CHECK-NEXT:    add a6, a3, a1
 ; CHECK-NEXT:    vl1r.v v14, (a6)
-; CHECK-NEXT:    add a6, a5, a2
+; CHECK-NEXT:    add a6, a5, a1
 ; CHECK-NEXT:    vl1r.v v16, (a5)
-; CHECK-NEXT:    add a5, a6, a2
+; CHECK-NEXT:    add a5, a6, a1
 ; CHECK-NEXT:    vl1r.v v18, (a5)
-; CHECK-NEXT:    add a5, a5, a2
+; CHECK-NEXT:    add a5, a5, a1
 ; CHECK-NEXT:    vl1r.v v9, (a7)
-; CHECK-NEXT:    add a7, a5, a2
+; CHECK-NEXT:    add a7, a5, a1
 ; CHECK-NEXT:    vl1r.v v20, (a7)
-; CHECK-NEXT:    add a7, a7, a2
-; CHECK-NEXT:    srli a2, a2, 1
-; CHECK-NEXT:    vl1r.v v11, (a3)
-; CHECK-NEXT:    add a3, a1, a1
-; CHECK-NEXT:    vl1r.v v13, (a4)
+; CHECK-NEXT:    add a7, a7, a1
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    vl1r.v v11, (a4)
 ; CHECK-NEXT:    add a4, a2, a2
+; CHECK-NEXT:    vl1r.v v13, (a3)
+; CHECK-NEXT:    add a3, a1, a1
 ; CHECK-NEXT:    vl1r.v v15, (a0)
 ; CHECK-NEXT:    vl1r.v v19, (a5)
 ; CHECK-NEXT:    vl1r.v v17, (a6)
@@ -2144,13 +2144,13 @@ define <vscale x 112 x i1> @vector_interleave_nxv112i1_nxv16i1(<vscale x 16 x i1
 ; CHECK-NEXT:    vmsne.vi v11, v18, 0
 ; CHECK-NEXT:    vmsne.vi v8, v16, 0
 ; CHECK-NEXT:    vmsne.vi v12, v20, 0
-; CHECK-NEXT:    vsetvli zero, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v0, v22, a1
-; CHECK-NEXT:    vslideup.vx v9, v10, a1
-; CHECK-NEXT:    vslideup.vx v8, v11, a1
-; CHECK-NEXT:    vsetvli zero, a4, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v0, v9, a2
-; CHECK-NEXT:    vslideup.vx v8, v12, a2
+; CHECK-NEXT:    vsetvli zero, a4, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vx v0, v22, a2
+; CHECK-NEXT:    vslideup.vx v9, v10, a2
+; CHECK-NEXT:    vslideup.vx v8, v11, a2
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; CHECK-NEXT:    vslideup.vx v0, v9, a1
+; CHECK-NEXT:    vslideup.vx v8, v12, a1
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 14
 ; CHECK-NEXT:    mul a0, a0, a1
@@ -2167,65 +2167,65 @@ define <vscale x 112 x i1> @vector_interleave_nxv112i1_nxv16i1(<vscale x 16 x i1
 ; ZVBB-NEXT:    sub sp, sp, a0
 ; ZVBB-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; ZVBB-NEXT:    vmv.v.i v14, 0
-; ZVBB-NEXT:    addi a4, sp, 16
+; ZVBB-NEXT:    addi a3, sp, 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    add a0, sp, a0
 ; ZVBB-NEXT:    addi a0, a0, 16
-; ZVBB-NEXT:    csrr a2, vlenb
+; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    vmerge.vim v16, v14, 1, v0
 ; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmerge.vim v22, v14, 1, v0
-; ZVBB-NEXT:    add a3, a4, a2
-; ZVBB-NEXT:    srli a1, a2, 2
-; ZVBB-NEXT:    add a5, a0, a2
 ; ZVBB-NEXT:    vmv4r.v v24, v16
 ; ZVBB-NEXT:    vmv1r.v v0, v9
 ; ZVBB-NEXT:    vmerge.vim v18, v14, 1, v0
-; ZVBB-NEXT:    add a6, a3, a2
 ; ZVBB-NEXT:    vmv1r.v v25, v22
 ; ZVBB-NEXT:    vmv1r.v v0, v10
 ; ZVBB-NEXT:    vmerge.vim v8, v14, 1, v0
 ; ZVBB-NEXT:    vmv1r.v v26, v18
 ; ZVBB-NEXT:    vmv1r.v v0, v11
 ; ZVBB-NEXT:    vmerge.vim v20, v14, 1, v0
-; ZVBB-NEXT:    vmv1r.v v27, v8
 ; ZVBB-NEXT:    vmv1r.v v0, v12
 ; ZVBB-NEXT:    vmerge.vim v10, v14, 1, v0
+; ZVBB-NEXT:    add a4, a3, a1
+; ZVBB-NEXT:    srli a2, a1, 2
+; ZVBB-NEXT:    add a5, a0, a1
+; ZVBB-NEXT:    vmv1r.v v27, v8
+; ZVBB-NEXT:    add a6, a4, a1
 ; ZVBB-NEXT:    vmv1r.v v28, v20
 ; ZVBB-NEXT:    vmv1r.v v18, v23
-; ZVBB-NEXT:    add a7, a6, a2
+; ZVBB-NEXT:    add a7, a6, a1
 ; ZVBB-NEXT:    vmv1r.v v29, v10
 ; ZVBB-NEXT:    vmv1r.v v20, v9
 ; ZVBB-NEXT:    vmv1r.v v0, v13
 ; ZVBB-NEXT:    vmerge.vim v30, v14, 1, v0
 ; ZVBB-NEXT:    vmv1r.v v22, v11
 ; ZVBB-NEXT:    vsetvli t0, zero, e8, m1, ta, ma
-; ZVBB-NEXT:    vsseg7e8.v v24, (a4)
+; ZVBB-NEXT:    vsseg7e8.v v24, (a3)
 ; ZVBB-NEXT:    vmv1r.v v23, v31
 ; ZVBB-NEXT:    vsseg7e8.v v17, (a0)
 ; ZVBB-NEXT:    vl1r.v v8, (a6)
-; ZVBB-NEXT:    add a6, a7, a2
-; ZVBB-NEXT:    vl1r.v v10, (a4)
-; ZVBB-NEXT:    add a4, a6, a2
+; ZVBB-NEXT:    add a6, a7, a1
+; ZVBB-NEXT:    vl1r.v v10, (a3)
+; ZVBB-NEXT:    add a3, a6, a1
 ; ZVBB-NEXT:    vl1r.v v12, (a6)
-; ZVBB-NEXT:    add a6, a4, a2
+; ZVBB-NEXT:    add a6, a3, a1
 ; ZVBB-NEXT:    vl1r.v v14, (a6)
-; ZVBB-NEXT:    add a6, a5, a2
+; ZVBB-NEXT:    add a6, a5, a1
 ; ZVBB-NEXT:    vl1r.v v16, (a5)
-; ZVBB-NEXT:    add a5, a6, a2
+; ZVBB-NEXT:    add a5, a6, a1
 ; ZVBB-NEXT:    vl1r.v v18, (a5)
-; ZVBB-NEXT:    add a5, a5, a2
+; ZVBB-NEXT:    add a5, a5, a1
 ; ZVBB-NEXT:    vl1r.v v9, (a7)
-; ZVBB-NEXT:    add a7, a5, a2
+; ZVBB-NEXT:    add a7, a5, a1
 ; ZVBB-NEXT:    vl1r.v v20, (a7)
-; ZVBB-NEXT:    add a7, a7, a2
-; ZVBB-NEXT:    srli a2, a2, 1
-; ZVBB-NEXT:    vl1r.v v11, (a3)
-; ZVBB-NEXT:    add a3, a1, a1
-; ZVBB-NEXT:    vl1r.v v13, (a4)
+; ZVBB-NEXT:    add a7, a7, a1
+; ZVBB-NEXT:    srli a1, a1, 1
+; ZVBB-NEXT:    vl1r.v v11, (a4)
 ; ZVBB-NEXT:    add a4, a2, a2
+; ZVBB-NEXT:    vl1r.v v13, (a3)
+; ZVBB-NEXT:    add a3, a1, a1
 ; ZVBB-NEXT:    vl1r.v v15, (a0)
 ; ZVBB-NEXT:    vl1r.v v19, (a5)
 ; ZVBB-NEXT:    vl1r.v v17, (a6)
@@ -2238,13 +2238,13 @@ define <vscale x 112 x i1> @vector_interleave_nxv112i1_nxv16i1(<vscale x 16 x i1
 ; ZVBB-NEXT:    vmsne.vi v11, v18, 0
 ; ZVBB-NEXT:    vmsne.vi v8, v16, 0
 ; ZVBB-NEXT:    vmsne.vi v12, v20, 0
-; ZVBB-NEXT:    vsetvli zero, a3, e8, mf2, ta, ma
-; ZVBB-NEXT:    vslideup.vx v0, v22, a1
-; ZVBB-NEXT:    vslideup.vx v9, v10, a1
-; ZVBB-NEXT:    vslideup.vx v8, v11, a1
-; ZVBB-NEXT:    vsetvli zero, a4, e8, m1, ta, ma
-; ZVBB-NEXT:    vslideup.vx v0, v9, a2
-; ZVBB-NEXT:    vslideup.vx v8, v12, a2
+; ZVBB-NEXT:    vsetvli zero, a4, e8, mf2, ta, ma
+; ZVBB-NEXT:    vslideup.vx v0, v22, a2
+; ZVBB-NEXT:    vslideup.vx v9, v10, a2
+; ZVBB-NEXT:    vslideup.vx v8, v11, a2
+; ZVBB-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; ZVBB-NEXT:    vslideup.vx v0, v9, a1
+; ZVBB-NEXT:    vslideup.vx v8, v12, a1
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 14
 ; ZVBB-NEXT:    mul a0, a0, a1
