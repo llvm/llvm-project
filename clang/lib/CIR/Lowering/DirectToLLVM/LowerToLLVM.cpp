@@ -128,6 +128,21 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
   return value;
 }
 
+static mlir::Value
+emitCirAttrToMemory(mlir::Operation *parentOp, mlir::Attribute attr,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter,
+                    mlir::DataLayout const &dataLayout) {
+
+  mlir::Value loweredValue =
+      lowerCirAttrAsValue(parentOp, attr, rewriter, converter);
+  if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
+    return emitToMemory(rewriter, dataLayout, boolAttr.getType(), loweredValue);
+  }
+
+  return loweredValue;
+}
+
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   using CIR = cir::GlobalLinkageKind;
   using LLVM = mlir::LLVM::Linkage;
@@ -184,20 +199,34 @@ public:
 
   mlir::Value visit(mlir::Attribute attr) {
     return llvm::TypeSwitch<mlir::Attribute, mlir::Value>(attr)
-        .Case<cir::IntAttr, cir::FPAttr, cir::ConstPtrAttr>(
-            [&](auto attrT) { return visitCirAttr(attrT); })
+        .Case<cir::IntAttr, cir::FPAttr, cir::ConstArrayAttr, cir::ConstPtrAttr,
+              cir::ZeroAttr>([&](auto attrT) { return visitCirAttr(attrT); })
         .Default([&](auto attrT) { return mlir::Value(); });
   }
 
   mlir::Value visitCirAttr(cir::IntAttr intAttr);
   mlir::Value visitCirAttr(cir::FPAttr fltAttr);
   mlir::Value visitCirAttr(cir::ConstPtrAttr ptrAttr);
+  mlir::Value visitCirAttr(cir::ConstArrayAttr attr);
+  mlir::Value visitCirAttr(cir::ZeroAttr attr);
 
 private:
   mlir::Operation *parentOp;
   mlir::ConversionPatternRewriter &rewriter;
   const mlir::TypeConverter *converter;
 };
+
+/// Switches on the type of attribute and calls the appropriate conversion.
+mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
+                                const mlir::Attribute attr,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                const mlir::TypeConverter *converter) {
+  CIRAttrToValue valueConverter(parentOp, rewriter, converter);
+  mlir::Value value = valueConverter.visit(attr);
+  if (!value)
+    llvm_unreachable("unhandled attribute type");
+  return value;
+}
 
 /// IntAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
@@ -226,6 +255,42 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::FPAttr fltAttr) {
   mlir::Location loc = parentOp->getLoc();
   return rewriter.create<mlir::LLVM::ConstantOp>(
       loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
+}
+
+// ConstArrayAttr visitor
+mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
+  mlir::Type llvmTy = converter->convertType(attr.getType());
+  mlir::Location loc = parentOp->getLoc();
+  mlir::Value result;
+
+  if (auto zeros = attr.getTrailingZerosNum()) {
+    mlir::Type arrayTy = attr.getType();
+    result = rewriter.create<mlir::LLVM::ZeroOp>(
+        loc, converter->convertType(arrayTy));
+  } else {
+    result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+  }
+
+  // Iteratively lower each constant element of the array.
+  if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts())) {
+    for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
+      mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
+      mlir::Value init = visit(elt);
+      result =
+          rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+    }
+  } else {
+    llvm_unreachable("unexpected ConstArrayAttr elements");
+  }
+
+  return result;
+}
+
+/// ZeroAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
+  auto loc = parentOp->getLoc();
+  return rewriter.create<mlir::LLVM::ZeroOp>(
+      loc, converter->convertType(attr.getType()));
 }
 
 // This class handles rewriting initializer attributes for types that do not
@@ -705,7 +770,7 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert(isa<cir::ConstPtrAttr>(init));
+  assert((isa<cir::ConstArrayAttr, cir::ConstPtrAttr, cir::ZeroAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
@@ -758,7 +823,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         op.emitError() << "unsupported initializer '" << init.value() << "'";
         return mlir::failure();
       }
-    } else if (mlir::isa<cir::ConstPtrAttr>(init.value())) {
+    } else if (mlir::isa<cir::ConstArrayAttr, cir::ConstPtrAttr, cir::ZeroAttr>(
+                   init.value())) {
       // TODO(cir): once LLVM's dialect has proper equivalent attributes this
       // should be updated. For now, we use a custom op to initialize globals
       // to the appropriate value.

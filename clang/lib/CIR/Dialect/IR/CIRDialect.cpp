@@ -149,6 +149,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
+  if (isa<cir::ZeroAttr>(attrType)) {
+    if (::mlir::isa<cir::ArrayType>(opType))
+      return success();
+    return op->emitOpError("zero expects struct or array type");
+  }
+
   if (mlir::isa<cir::BoolAttr>(attrType)) {
     if (!mlir::isa<cir::BoolType>(opType))
       return op->emitOpError("result type (")
@@ -165,6 +171,9 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     }
     return success();
   }
+
+  if (mlir::isa<cir::ConstArrayAttr>(attrType))
+    return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
