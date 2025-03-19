@@ -100,6 +100,9 @@ def lto_CGO: Joined<["--"], "lto-CGO">,
     HelpText<"Set codegen optimization level for LTO (default: 2)">,
     MetaVarName<"<cgopt-level>">,
     Group<grp_lld>;
+def disable_verify : Flag<["--"], "disable_verify">,
+                     HelpText<"Do not verify LLVM modules during LTO">,
+                     Group<grp_lld>;
 def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;
@@ -197,9 +200,6 @@ def cs_profile_generate: Flag<["--"], "cs-profile-generate">,
     HelpText<"Perform context sensitive PGO instrumentation">, Group<grp_lld>;
 def cs_profile_path: Joined<["--"], "cs-profile-path=">,
     HelpText<"Context sensitive profile file path">, Group<grp_lld>;
-def disable_verify : Flag<["--"], "disable_verify">,
-                     HelpText<"Do not verify LLVM modules">,
-                     Group<grp_lld>;
 defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
   "turn on warnings about profile cfg mismatch (default)",
   "turn off warnings about profile cfg mismatch">, Group<grp_lld>;
