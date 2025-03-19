@@ -5632,6 +5632,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
            (SNaN && !C->getValueAPF().isSignaling());
   }
 
+  if (Op.isUndef())
+    return true;
+
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::FADD:
@@ -5752,6 +5755,9 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
     }
     return isKnownNeverNaN(Src, SNaN, Depth + 1);
   }
+  case ISD::INSERT_SUBVECTOR:
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   case ISD::BUILD_VECTOR: {
     unsigned NumElts = Op.getNumOperands();
     for (unsigned I = 0; I != NumElts; ++I)
