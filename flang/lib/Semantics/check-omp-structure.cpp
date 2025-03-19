@@ -878,21 +878,17 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
             }
           },
           [&](const parser::OpenMPStandaloneConstruct &c) {
-            if (const auto &simpleConstruct =
-                    std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
-                        &c.u)) {
-              const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(
-                  simpleConstruct->t)};
-              if (dir.v == llvm::omp::Directive::OMPD_ordered) {
-                const auto &clauses{
-                    std::get<parser::OmpClauseList>(simpleConstruct->t)};
-                for (const auto &clause : clauses.v) {
-                  if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
+            if (auto *ssc{std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
+                    &c.u)}) {
+              llvm::omp::Directive dirId{ssc->v.DirId()};
+              if (dirId == llvm::omp::Directive::OMPD_ordered) {
+                for (const parser::OmpClause &x : ssc->v.Clauses().v) {
+                  if (x.Id() == llvm::omp::Clause::OMPC_simd) {
                     eligibleSIMD = true;
                     break;
                   }
                 }
-              } else if (dir.v == llvm::omp::Directive::OMPD_scan) {
+              } else if (dirId == llvm::omp::Directive::OMPD_scan) {
                 eligibleSIMD = true;
               }
             }
@@ -944,15 +940,15 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
             common::visit(
                 common::visitors{
                     [&](const parser::OpenMPSimpleStandaloneConstruct &c) {
-                      const auto &dir{
-                          std::get<parser::OmpSimpleStandaloneDirective>(c.t)};
-                      if (dir.v == llvm::omp::Directive::OMPD_target_update ||
-                          dir.v ==
-                              llvm::omp::Directive::OMPD_target_enter_data ||
-                          dir.v ==
-                              llvm::omp::Directive::OMPD_target_exit_data) {
+                      switch (llvm::omp::Directive dirId{c.v.DirId()}) {
+                      case llvm::omp::Directive::OMPD_target_update:
+                      case llvm::omp::Directive::OMPD_target_enter_data:
+                      case llvm::omp::Directive::OMPD_target_exit_data:
                         eligibleTarget = false;
-                        ineligibleTargetDir = dir.v;
+                        ineligibleTargetDir = dirId;
+                        break;
+                      default:
+                        break;
                       }
                     },
                     [&](const auto &c) {},
@@ -1978,7 +1974,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
 
 void OmpStructureChecker::CheckScan(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  if (std::get<parser::OmpClauseList>(x.t).v.size() != 1) {
+  if (x.v.Clauses().v.size() != 1) {
     context_.Say(x.source,
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected"_err_en_US);
   }
@@ -2183,7 +2179,7 @@ void OmpStructureChecker::CheckDependenceType(
 
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &dir{std::get<parser::OmpDirectiveName>(x.v.t)};
   PushContextAndClauseSets(dir.source, dir.v);
   switch (dir.v) {
   case llvm::omp::Directive::OMPD_barrier:

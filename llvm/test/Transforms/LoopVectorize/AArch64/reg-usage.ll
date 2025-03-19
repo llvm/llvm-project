@@ -11,14 +11,16 @@
 ; invariant %0
 
 @string = internal unnamed_addr constant [5 x i8] c"abcd\00", align 1
+
 define void @get_invariant_reg_usage(ptr %z) {
-; CHECK: LV: Checking a loop in 'get_invariant_reg_usage'
+; CHECK-LABEL: LV: Checking a loop in 'get_invariant_reg_usage'
 ; CHECK: LV(REG): VF = vscale x 16
-; CHECK-NEXT: LV(REG): Found max usage: 1 item
+; CHECK-NEXT: LV(REG): Found max usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 1 registers 
 ; CHECK-NEXT: LV(REG): Found invariant usage: 2 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 8 registers 
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 8 registers
 
 L.entry:
   %0 = load i128, ptr %z, align 16
@@ -37,5 +39,33 @@ loopbody:                  ;preds = %L.entry, %loopbody
   br i1 %.not, label %return, label %loopbody
 
 return:                    ;preds = %loopexit, %L.entry
+  ret void
+}
+
+define void @load_and_compare_only_used_by_assume(ptr %a, ptr noalias %b) {
+; CHECK-LABEL: LV: Checking a loop in 'load_and_compare_only_used_by_assume'
+; CHECK: LV(REG): VF = vscale x 4
+; CHECK-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 1 registers
+; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %l.a = load i32, ptr %gep.a
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %l.b = load i32, ptr %gep.b
+  %c = icmp ugt i32 %l.b, 10
+  call void @llvm.assume(i1 %c)
+  store i32 %l.a, ptr %gep.b
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }

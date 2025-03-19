@@ -10,14 +10,14 @@
 
 // CHECK-LE-LABEL: @test_vcreateq_f16(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <8 x half>
 // CHECK-LE-NEXT:    ret <8 x half> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_f16(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.arm.mve.vreinterpretq.v8f16.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <8 x half> [[TMP2]]
@@ -29,14 +29,14 @@ float16x8_t test_vcreateq_f16(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_f32(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x float>
 // CHECK-LE-NEXT:    ret <4 x float> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_f32(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.arm.mve.vreinterpretq.v4f32.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <4 x float> [[TMP2]]
@@ -48,14 +48,14 @@ float32x4_t test_vcreateq_f32(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_s16(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <8 x i16>
 // CHECK-LE-NEXT:    ret <8 x i16> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_s16(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <8 x i16> [[TMP2]]
@@ -67,14 +67,14 @@ int16x8_t test_vcreateq_s16(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_s32(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    ret <4 x i32> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_s32(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <4 x i32> [[TMP2]]
@@ -86,7 +86,7 @@ int32x4_t test_vcreateq_s32(uint64_t a, uint64_t b)
 
 // CHECK-LABEL: @test_vcreateq_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 //
@@ -97,14 +97,14 @@ int64x2_t test_vcreateq_s64(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_s8(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_s8(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vreinterpretq.v16i8.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <16 x i8> [[TMP2]]
@@ -116,14 +116,14 @@ int8x16_t test_vcreateq_s8(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_u16(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <8 x i16>
 // CHECK-LE-NEXT:    ret <8 x i16> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_u16(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <8 x i16> [[TMP2]]
@@ -135,14 +135,14 @@ uint16x8_t test_vcreateq_u16(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_u32(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x i32>
 // CHECK-LE-NEXT:    ret <4 x i32> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_u32(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vreinterpretq.v4i32.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <4 x i32> [[TMP2]]
@@ -154,7 +154,7 @@ uint32x4_t test_vcreateq_u32(uint64_t a, uint64_t b)
 
 // CHECK-LABEL: @test_vcreateq_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 //
@@ -165,14 +165,14 @@ uint64x2_t test_vcreateq_u64(uint64_t a, uint64_t b)
 
 // CHECK-LE-LABEL: @test_vcreateq_u8(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-LE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-LE-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <16 x i8>
 // CHECK-LE-NEXT:    ret <16 x i8> [[TMP2]]
 //
 // CHECK-BE-LABEL: @test_vcreateq_u8(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i64 0
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[A:%.*]], i64 0
 // CHECK-BE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[B:%.*]], i64 1
 // CHECK-BE-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vreinterpretq.v16i8.v2i64(<2 x i64> [[TMP1]])
 // CHECK-BE-NEXT:    ret <16 x i8> [[TMP2]]

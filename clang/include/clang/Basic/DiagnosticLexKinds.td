@@ -52,14 +52,8 @@ def ext_multi_line_line_comment : Extension<"multi-line // comment">,
 def ext_line_comment : Extension<
   "// comments are not allowed in this language">,
   InGroup<Comment>;
-def ext_no_newline_eof : Extension<"no newline at end of file">,
-  InGroup<NewlineEOF>;
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
-
-def warn_cxx98_compat_no_newline_eof : Warning<
-  "C++98 requires newline at end of file">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 
 def ext_dollar_in_identifier : Extension<"'$' in identifier">,
   InGroup<DiagGroup<"dollar-in-identifier-extension">>;

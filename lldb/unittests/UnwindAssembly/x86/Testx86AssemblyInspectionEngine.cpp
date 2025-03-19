@@ -2222,7 +2222,6 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpillRegToStackViaMOVi386) {
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
   UnwindPlan::Row::AbstractRegisterLocation regloc;
-  UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
   std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
@@ -2251,38 +2250,28 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
   unwind_plan.SetPlanValidAddressRange(sample_range);
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  row_sp = std::make_shared<UnwindPlan::Row>();
+  {
+    UnwindPlan::Row row;
 
-  // Describe offset 0
-  row_sp->SetOffset(0);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 8);
+    // Describe offset 0
+    row.SetOffset(0);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 8);
+    regloc.SetAtCFAPlusOffset(-8);
+    row.SetRegisterInfo(k_rip, regloc);
+    unwind_plan.AppendRow(row);
 
-  regloc.SetAtCFAPlusOffset(-8);
-  row_sp->SetRegisterInfo(k_rip, regloc);
+    // Describe offset 1
+    row.SetOffset(1);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
+    regloc.SetAtCFAPlusOffset(-16);
+    row.SetRegisterInfo(k_rbp, regloc);
+    unwind_plan.AppendRow(row);
 
-  unwind_plan.AppendRow(row_sp);
-
-  // Allocate a new Row, populate it with the existing Row contents.
-  UnwindPlan::Row *new_row = new UnwindPlan::Row;
-  *new_row = *row_sp.get();
-  row_sp.reset(new_row);
-
-  // Describe offset 1
-  row_sp->SetOffset(1);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
-  regloc.SetAtCFAPlusOffset(-16);
-  row_sp->SetRegisterInfo(k_rbp, regloc);
-  unwind_plan.AppendRow(row_sp);
-
-  // Allocate a new Row, populate it with the existing Row contents.
-  new_row = new UnwindPlan::Row;
-  *new_row = *row_sp.get();
-  row_sp.reset(new_row);
-
-  // Describe offset 4
-  row_sp->SetOffset(4);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
-  unwind_plan.AppendRow(row_sp);
+    // Describe offset 4
+    row.SetOffset(4);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
+    unwind_plan.AppendRow(row);
+  }
 
   RegisterContextSP reg_ctx_sp;
   EXPECT_TRUE(engine64->AugmentUnwindPlanFromCallSite(
@@ -2313,7 +2302,6 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSpArithx86_64Augmented) {
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
   UnwindPlan::Row::AbstractRegisterLocation regloc;
-  UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
   std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
@@ -2338,38 +2326,28 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
   unwind_plan.SetPlanValidAddressRange(sample_range);
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  row_sp = std::make_shared<UnwindPlan::Row>();
+  {
+    UnwindPlan::Row row;
 
-  // Describe offset 0
-  row_sp->SetOffset(0);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 8);
+    // Describe offset 0
+    row.SetOffset(0);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 8);
+    regloc.SetAtCFAPlusOffset(-8);
+    row.SetRegisterInfo(k_rip, regloc);
+    unwind_plan.AppendRow(row);
 
-  regloc.SetAtCFAPlusOffset(-8);
-  row_sp->SetRegisterInfo(k_rip, regloc);
+    // Describe offset 1
+    row.SetOffset(1);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
+    regloc.SetAtCFAPlusOffset(-16);
+    row.SetRegisterInfo(k_rbp, regloc);
+    unwind_plan.AppendRow(row);
 
-  unwind_plan.AppendRow(row_sp);
-
-  // Allocate a new Row, populate it with the existing Row contents.
-  UnwindPlan::Row *new_row = new UnwindPlan::Row;
-  *new_row = *row_sp.get();
-  row_sp.reset(new_row);
-
-  // Describe offset 1
-  row_sp->SetOffset(1);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rsp, 16);
-  regloc.SetAtCFAPlusOffset(-16);
-  row_sp->SetRegisterInfo(k_rbp, regloc);
-  unwind_plan.AppendRow(row_sp);
-
-  // Allocate a new Row, populate it with the existing Row contents.
-  new_row = new UnwindPlan::Row;
-  *new_row = *row_sp.get();
-  row_sp.reset(new_row);
-
-  // Describe offset 4
-  row_sp->SetOffset(4);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_rbp, 16);
-  unwind_plan.AppendRow(row_sp);
+    // Describe offset 4
+    row.SetOffset(4);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_rbp, 16);
+    unwind_plan.AppendRow(row);
+  }
 
   RegisterContextSP reg_ctx_sp;
   EXPECT_TRUE(engine64->AugmentUnwindPlanFromCallSite(
@@ -2391,7 +2369,6 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
 
 TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
   UnwindPlan::Row::AbstractRegisterLocation regloc;
-  UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
   std::unique_ptr<x86AssemblyInspectionEngine> engine32 = Geti386Inspector();
@@ -2416,38 +2393,28 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
   unwind_plan.SetPlanValidAddressRange(sample_range);
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  row_sp = std::make_shared<UnwindPlan::Row>();
+  {
+    UnwindPlan::Row row;
 
-  // Describe offset 0
-  row_sp->SetOffset(0);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_esp, 4);
+    // Describe offset 0
+    row.SetOffset(0);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_esp, 4);
+    regloc.SetAtCFAPlusOffset(-4);
+    row.SetRegisterInfo(k_eip, regloc);
+    unwind_plan.AppendRow(row);
 
-  regloc.SetAtCFAPlusOffset(-4);
-  row_sp->SetRegisterInfo(k_eip, regloc);
+    // Describe offset 1
+    row.SetOffset(1);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_esp, 8);
+    regloc.SetAtCFAPlusOffset(-8);
+    row.SetRegisterInfo(k_ebp, regloc);
+    unwind_plan.AppendRow(row);
 
-  unwind_plan.AppendRow(row_sp);
-
-  // Allocate a new Row, populate it with the existing Row contents.
-  UnwindPlan::Row *new_row = new UnwindPlan::Row;
-  *new_row = *row_sp.get();
-  row_sp.reset(new_row);
-
-  // Describe offset 1
-  row_sp->SetOffset(1);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_esp, 8);
-  regloc.SetAtCFAPlusOffset(-8);
-  row_sp->SetRegisterInfo(k_ebp, regloc);
-  unwind_plan.AppendRow(row_sp);
-
-  // Allocate a new Row, populate it with the existing Row contents.
-  new_row = new UnwindPlan::Row;
-  *new_row = *row_sp.get();
-  row_sp.reset(new_row);
-
-  // Describe offset 3
-  row_sp->SetOffset(3);
-  row_sp->GetCFAValue().SetIsRegisterPlusOffset(k_ebp, 8);
-  unwind_plan.AppendRow(row_sp);
+    // Describe offset 3
+    row.SetOffset(3);
+    row.GetCFAValue().SetIsRegisterPlusOffset(k_ebp, 8);
+    unwind_plan.AppendRow(row);
+  }
 
   RegisterContextSP reg_ctx_sp;
   EXPECT_TRUE(engine32->AugmentUnwindPlanFromCallSite(
