@@ -4294,11 +4294,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Src = I.getArgOperand(numArgs - 1);
     assert(Src->getType()->isPointerTy() && "Source is not a pointer!");
 
-    const Align Alignment = Align(1);
-
     Type *SrcShadowTy = getShadowTy(Src);
     auto [SrcShadowPtr, SrcOriginPtr] =
-        getShadowOriginPtr(Src, IRB, SrcShadowTy, Alignment, /*isStore*/ false);
+        getShadowOriginPtr(Src, IRB, SrcShadowTy, Align(1), /*isStore*/ false);
     ShadowArgs.push_back(SrcShadowPtr);
 
     // The NEON vector load instructions handled by this function all have
