@@ -268,6 +268,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelLegacyPass(*PR);
+  initializeAArch64CondBrTuningPass(*PR);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
