@@ -1882,7 +1882,7 @@ def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
 
 // Introduce a use of the argument without generating any code.
 def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
-  [IntrHasSideEffects, IntrNoMem, IntrWillReturn]>;
+  [IntrHasSideEffects, IntrInaccessibleMemOnly, IntrWillReturn]>;
 
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
