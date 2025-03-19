@@ -13,7 +13,6 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStream.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace lldb;
 
