@@ -364,6 +364,9 @@ struct DAP {
     request_handlers[Handler::getCommand()] = std::make_unique<Handler>(*this);
   }
 
+  /// Return a key-value list of capabilities.
+  llvm::StringMap<bool> GetCapabilities();
+
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }
 
