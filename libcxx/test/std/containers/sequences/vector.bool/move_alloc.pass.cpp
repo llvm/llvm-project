@@ -24,16 +24,16 @@
 template <unsigned N, class A>
 TEST_CONSTEXPR_CXX20 void test(const A& a, const A& a0) {
   std::vector<bool, A> v(N, false, a);
-  std::vector<bool, A> v0(N, false, a0);
+  std::vector<bool, A> original(N, false, a0);
   for (unsigned i = 1; i < N; i += 2) {
-    v[i]  = true;
-    v0[i] = true;
+    v[i]        = true;
+    original[i] = true;
   }
   std::vector<bool, A> v2(std::move(v), a0);
-  assert(v2 == v0);
+  assert(v2 == original);
   assert(v2.get_allocator() == a0);
   if (a == a0)
-    assert(v.empty()); // After container-move, the vector is guarantted to be empty
+    assert(v.empty()); // After container-move, the vector is guaranteed to be empty
   else
     LIBCPP_ASSERT(!v.empty()); // After element-wise move, the RHS vector is not necessarily empty
 }
