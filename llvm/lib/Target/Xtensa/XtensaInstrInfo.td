@@ -725,9 +725,9 @@ def MOVSP : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
 
 // Use this pseudo operation instead of getCopyToReg function to
 // update SP register.
-let usesCustomInserter = 1, Predicates = [HasWindowed] in {
-  def MOVSP_P : Pseudo<(outs), (ins AR:$t, AR:$s),
-                      "!movsp_p\t$t, $s", [(Xtensa_movsp AR:$t, AR:$s)]>;
+let usesCustomInserter = 1, Defs = [SP], Predicates = [HasWindowed] in {
+  def MOVSP_P : Pseudo<(outs), (ins AR:$s),
+                      "!movsp_p\tsp, $s", [(Xtensa_movsp AR:$s)]>;
 }
 
 let isReturn = 1, isTerminator = 1,

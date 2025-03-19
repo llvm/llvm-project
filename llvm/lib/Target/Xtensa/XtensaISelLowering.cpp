@@ -900,7 +900,6 @@ SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
 
   if (Subtarget.isWindowedABI()) {
     return DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, Chain,
-                       DAG.getRegister(Xtensa::SP, NewSP.getValueType()),
                        NewSP);
   }
 
@@ -947,7 +946,7 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue NewSP = DAG.getNode(ISD::SUB, DL, VT, SP, SizeRoundUp); // Value
   if (Subtarget.isWindowedABI()) {
     Chain = DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, SP.getValue(1),
-                        DAG.getRegister(SPReg, NewSP.getValueType()), NewSP);
+                        NewSP);
   } else {
     Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain
   }
@@ -1390,10 +1389,9 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     return MBB;
   }
   case Xtensa::MOVSP_P: {
-    MachineOperand SP = MI.getOperand(0);
-    MachineOperand NewSP = MI.getOperand(1);
+    MachineOperand &NewSP = MI.getOperand(0);
 
-    BuildMI(*MBB, MI, DL, TII.get(Xtensa::MOVSP), SP.getReg())
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::MOVSP), Xtensa::SP)
         .addReg(NewSP.getReg());
     MI.eraseFromParent();
 

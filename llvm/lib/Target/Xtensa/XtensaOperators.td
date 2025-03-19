@@ -31,7 +31,7 @@ def SDT_XtensaSRC                 : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCi
 def SDT_XtensaEXTUI               : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
                                                          SDTCisVT<2, i32>, SDTCisVT<3, i32>]>;
 
-def SDT_XtensaMOVSP               : SDTypeProfile<0, 2, [SDTCisSameAs<0, 1>, SDTCisVT<0, i32>]>;
+def SDT_XtensaMOVSP               : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 
 //===----------------------------------------------------------------------===//
 // Node definitions
