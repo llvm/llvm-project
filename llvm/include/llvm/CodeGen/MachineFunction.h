@@ -501,7 +501,7 @@ public:
     SmallVector<ArgRegPair, 1> ArgRegPairs;
 
     /// Callee type id.
-    ConstantInt *TypeId = nullptr;
+    ConstantInt *CalleeTypeId = nullptr;
 
     CallSiteInfo() = default;
 
@@ -528,7 +528,7 @@ public:
       // Compute numeric type id from generalized type id string
       uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
       IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
-      TypeId = ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
+      CalleeTypeId = ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
     }
   };
 
