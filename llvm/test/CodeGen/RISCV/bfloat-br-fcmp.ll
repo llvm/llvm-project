@@ -11,22 +11,12 @@ declare bfloat @dummy(bfloat)
 define void @br_fcmp_false(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: br_fcmp_false:
 ; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    li a0, 1
-; RV32IZFBFMIN-NEXT:    bnez a0, .LBB0_2
-; RV32IZFBFMIN-NEXT:  # %bb.1: # %if.then
-; RV32IZFBFMIN-NEXT:    ret
-; RV32IZFBFMIN-NEXT:  .LBB0_2: # %if.else
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFBFMIN-NEXT:    call abort
 ;
 ; RV64IZFBFMIN-LABEL: br_fcmp_false:
 ; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    li a0, 1
-; RV64IZFBFMIN-NEXT:    bnez a0, .LBB0_2
-; RV64IZFBFMIN-NEXT:  # %bb.1: # %if.then
-; RV64IZFBFMIN-NEXT:    ret
-; RV64IZFBFMIN-NEXT:  .LBB0_2: # %if.else
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IZFBFMIN-NEXT:    call abort
@@ -583,22 +573,12 @@ if.then:
 define void @br_fcmp_true(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-LABEL: br_fcmp_true:
 ; RV32IZFBFMIN:       # %bb.0:
-; RV32IZFBFMIN-NEXT:    li a0, 1
-; RV32IZFBFMIN-NEXT:    bnez a0, .LBB16_2
-; RV32IZFBFMIN-NEXT:  # %bb.1: # %if.else
-; RV32IZFBFMIN-NEXT:    ret
-; RV32IZFBFMIN-NEXT:  .LBB16_2: # %if.then
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV32IZFBFMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZFBFMIN-NEXT:    call abort
 ;
 ; RV64IZFBFMIN-LABEL: br_fcmp_true:
 ; RV64IZFBFMIN:       # %bb.0:
-; RV64IZFBFMIN-NEXT:    li a0, 1
-; RV64IZFBFMIN-NEXT:    bnez a0, .LBB16_2
-; RV64IZFBFMIN-NEXT:  # %bb.1: # %if.else
-; RV64IZFBFMIN-NEXT:    ret
-; RV64IZFBFMIN-NEXT:  .LBB16_2: # %if.then
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, -16
 ; RV64IZFBFMIN-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IZFBFMIN-NEXT:    call abort
