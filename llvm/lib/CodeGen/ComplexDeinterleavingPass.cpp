@@ -1748,6 +1748,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
       // however with no uses the node will be unreachable by the replacement
       // process. That along with the usage outside the graph should prevent the
       // replacement process from kicking off at all for this graph.
+      // TODO Add support for reducing to a single vector value
       if (ReductionInfo[Real].second->getType()->isVectorTy())
         continue;
 
