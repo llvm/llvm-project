@@ -873,8 +873,20 @@ namespace CompoundLiterals {
     return m;
   }
   static_assert(get3() == 3, "");
+
+  constexpr int *f(int *a=(int[]){1,2,3}) { return a; } // both-note {{temporary created here}}
+  constinit int *a1 = f(); // both-error {{variable does not have a constant initializer}} \
+                              both-note {{required by 'constinit' specifier here}} \
+                              both-note {{pointer to subobject of temporary is not a constant expression}}
+  static_assert(f()[0] == 1); // Ok
 #endif
-};
+
+  constexpr int f2(int *x =(int[]){1,2,3}) {
+    return x[0];
+  }
+  constexpr int g = f2(); // Should evaluate to 1?
+  static_assert(g == 1, "");
+}
 
 namespace TypeTraits {
   static_assert(__is_trivial(int), "");
