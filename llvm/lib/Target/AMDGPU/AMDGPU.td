@@ -1244,12 +1244,6 @@ def FeatureGWS : SubtargetFeature<"gws",
   "Has Global Wave Sync"
 >;
 
-def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
-  "DynamicVGPRBlockSize32",
-  "true",
-  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
->;
-
 def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
@@ -1275,6 +1269,12 @@ def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
   "true",
   "Enable dynamic VGPR mode"
+>;
+
+def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32",
+  "DynamicVGPRBlockSize32",
+  "true",
+  "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
 >;
 
 // Dummy feature used to disable assembler instructions.

@@ -543,6 +543,42 @@ Do not attempt to create a std::string from a null pointer
    }
  }
 
+.. _cplusplus-PureVirtualCall:
+
+cplusplus.PureVirtualCall (C++)
+"""""""""""""""""""""""""""""""
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+This checker reports situations where this restricted polymorphism causes a
+call to a pure virtual method, which is undefined behavior. (See also the
+related checker :ref:`optin-cplusplus-VirtualCall` which reports situations
+where the restricted polymorphism affects a call and the called method is not
+pure virtual – but may be still surprising for the programmer.)
+
+.. code-block:: cpp
+
+ struct A {
+   virtual int getKind() = 0;
+
+   A() {
+     // warn: This calls the pure virtual method A::getKind().
+     log << "Constructing " << getKind();
+   }
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can call the pure virtual method A::getKind() when this is
+     // called from the destructor.
+     callSomeFunction(getKind())
+   }
+ };
+
 .. _deadcode-checkers:
 
 deadcode
@@ -833,24 +869,40 @@ This checker has several options which can be set from command line (e.g.
 
 optin.cplusplus.VirtualCall (C++)
 """""""""""""""""""""""""""""""""
-Check virtual function calls during construction or destruction.
+
+When `virtual methods are called during construction and destruction
+<https://en.cppreference.com/w/cpp/language/virtual#During_construction_and_destruction>`__
+the polymorphism is restricted to the class that's being constructed or
+destructed because the more derived contexts are either not yet initialized or
+already destructed.
+
+Although this behavior is well-defined, it can surprise the programmer and
+cause unintended behavior, so this checker reports calls that appear to be
+virtual calls but can be affected by this restricted polymorphism.
+
+Note that situations where this restricted polymorphism causes a call to a pure
+virtual method (which is definitely invalid, triggers undefined behavior) are
+**reported by another checker:** :ref:`cplusplus-PureVirtualCall` and **this
+checker does not report them**.
 
 .. code-block:: cpp
 
- class A {
- public:
-   A() {
-     f(); // warn
-   }
-   virtual void f();
- };
+ struct A {
+   virtual int getKind();
 
- class A {
- public:
-   ~A() {
-     this->f(); // warn
+   A() {
+     // warn: This calls A::getKind() even if we are constructing an instance
+     // of a different class that is derived from A.
+     log << "Constructing " << getKind();
    }
-   virtual void f();
+   virtual ~A() {
+     releaseResources();
+   }
+   void releaseResources() {
+     // warn: This can be called within ~A() and calls A::getKind() even if
+     // we are destructing a class that is derived from A.
+     callSomeFunction(getKind())
+   }
  };
 
 .. _optin-mpi-MPI-Checker:
