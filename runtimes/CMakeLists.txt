@@ -223,6 +223,13 @@ endif()
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
 
+if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  # Set LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF as AIX doesn't support it
+  message(WARNING
+  "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON is not supported on AIX. LLVM_ENABLE_PER_TARGET_RUNTIME_DIR is set to OFF.")
+  set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL "" FORCE)
+endif()
+
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 
