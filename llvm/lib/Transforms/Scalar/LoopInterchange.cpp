@@ -1224,7 +1224,7 @@ bool LoopInterchangeProfitability::isProfitable(
     RuleOrder[2] = RuleTy::PerInstrOrderCost;
   }
 
-  std::optional<bool> shouldInterchange;
+  std::optional<bool> ShouldInterchange;
   for (RuleTy RT : RuleOrder) {
     switch (RT) {
     case RuleTy::PerLoopCacheAnalysis:
