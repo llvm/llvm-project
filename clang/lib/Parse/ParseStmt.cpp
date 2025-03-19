@@ -126,18 +126,19 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
-  // Attributes that are left should all go on the statement, so concatenate the
-  // two lists.
-  ParsedAttributes Attrs(AttrFactory);
-  takeAndConcatenateAttrs(CXX11Attrs, GNUOrMSAttrs, Attrs);
+  CXX11Attrs.takeAllFrom(GNUOrMSAttrs);
+  if (!CXX11Attrs.Range.getBegin().isValid())
+    CXX11Attrs.Range.setBegin(GNUOrMSAttrs.Range.getBegin());
+  if (GNUOrMSAttrs.Range.getEnd().isValid())
+    CXX11Attrs.Range.setEnd(GNUOrMSAttrs.Range.getEnd());
 
-  assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
+  assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
 
-  if (Attrs.empty() || Res.isInvalid())
+  if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
 
-  return Actions.ActOnAttributedStmt(Attrs, Res.get());
+  return Actions.ActOnAttributedStmt(CXX11Attrs, Res.get());
 }
 
 namespace {
@@ -1057,7 +1058,11 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr);
+  StmtResult R;
+  StackHandler.runWithSufficientStackSpace(Tok.getLocation(), [&, this]() {
+    R = ParseCompoundStatementBody(isStmtExpr);
+  });
+  return R;
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1222,7 +1227,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   while (Tok.is(tok::kw___label__)) {
     SourceLocation LabelLoc = ConsumeToken();
 
-    SmallVector<Decl *, 8> DeclsInGroup;
+    SmallVector<Decl *, 4> DeclsInGroup;
     while (true) {
       if (Tok.isNot(tok::identifier)) {
         Diag(Tok, diag::err_expected) << tok::identifier;
