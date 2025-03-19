@@ -2070,12 +2070,11 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
     if (OpTy->isTargetExtTy())
       OpTyVal = getNormalizedPoisonValue(OpTy);
     Value *NewOp = Op;
-    if (OpTy->isTargetExtTy())
+    if (OpTy->isTargetExtTy() || isa<ConstantPointerNull>(Op))
       NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
                               {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-    Type *OpElemTy = nullptr;
-    if (!IsConstComposite && isPointerTy(OpTy) &&
-        (OpElemTy = GR->findDeducedElementType(Op)) != nullptr &&
+    Type *OpElemTy = GR->findDeducedElementType(Op);
+    if (!IsConstComposite && isPointerTy(OpTy) && OpElemTy != nullptr &&
         OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
       GR->buildAssignPtr(B, IntegerType::getInt8Ty(I->getContext()), NewOp);
       SmallVector<Type *, 2> Types = {OpTy, OpTy};

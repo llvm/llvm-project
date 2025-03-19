@@ -616,8 +616,10 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
                                              SPIRVType *SpvType) {
   const Type *Ty = getTypeForSPIRVType(SpvType);
   unsigned AddressSpace = typeToAddressSpace(Ty);
-  const Constant *CP = ConstantPointerNull::get(
-      PointerType::get(Ty->getContext(), AddressSpace));
+  Type *ElemTy = ::getPointeeType(Ty);
+  assert(ElemTy);
+  const Constant *CP = ConstantTargetNone::get(
+      dyn_cast<TargetExtType>(getTypedPointerWrapper(ElemTy, AddressSpace)));
   Register Res = find(CP, CurMF);
   if (Res.isValid())
     return Res;
