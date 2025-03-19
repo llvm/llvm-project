@@ -54,7 +54,7 @@
 
 ; RUN: llvm-lto2 run hybrid.o -save-temps -pass-remarks=. \
 ; RUN:   -thinlto-threads=1 \
-; RUN:   -o hybrid \
+; RUN:   -o hybrid-tmp \
 ; RUN:   --whole-program-visibility-enabled-in-lto=true \
 ; RUN:   --validate-all-vtables-have-type-infos=true \
 ; RUN:   --all-vtables-have-type-infos=true \
@@ -75,7 +75,7 @@
 
 ; RUN: llvm-lto2 run hybrid.o -save-temps -pass-remarks=. \
 ; RUN:   -thinlto-threads=1 \
-; RUN:   -o hybrid \
+; RUN:   -o hybrid-tmp \
 ; RUN:   --whole-program-visibility-enabled-in-lto=true \
 ; RUN:   --validate-all-vtables-have-type-infos=true \
 ; RUN:   --all-vtables-have-type-infos=true \
@@ -94,11 +94,42 @@
 ; RUN:   2>&1 | FileCheck --allow-empty %s --implicit-check-not='single-impl: devirtualized a call to'
 
 
-; In regular LTO, global resolutions (as expected) show symbols are visible
-; outside summary (when they come from regular LTO module without summaries).
-; In the setting of this test case (equivalent of `-Wl,--lto-whole-program-visibility -Wl,--lto-validate-all-vtables-have-type-infos` in lld),
-; devirtualization will be suppressed even if the compatible class is not
-; referenced from shared libraries. So regular LTO test coverage is not meaningful.
+; Repeat the above tests for WPD in regular LTO.
+; RUN: opt  -module-summary -o regular.o %s
+
+; RUN: llvm-lto2 run regular.o -save-temps -pass-remarks=. \
+; RUN:   -thinlto-threads=1 \
+; RUN:   -o regular-temp \
+; RUN:   --whole-program-visibility-enabled-in-lto=true \
+; RUN:   --validate-all-vtables-have-type-infos=true \
+; RUN:   --all-vtables-have-type-infos=true \
+; RUN:   -r=regular.o,__cxa_pure_virtual, \
+; RUN:   -r=regular.o,_ZN8DerivedNC2Ev,x \
+; RUN:   -r=regular.o,_ZN4Base8dispatchEv,px \
+; RUN:   -r=regular.o,_ZN7DerivedC2Ev, \
+; RUN:   -r=regular.o,_ZN8DerivedN5printEv,px \
+; RUN:   -r=regular.o,_ZTS8DerivedN,p \
+; RUN:   -r=regular.o,_ZTI7Derived,p \
+; RUN:   -r=regular.o,_ZTV8DerivedN,p \
+; RUN:   -r=regular.o,_ZTI8DerivedN,p \
+; RUN:   2>&1 | FileCheck --allow-empty %s --check-prefix=REMARK
+
+; RUN: llvm-lto2 run regular.o -save-temps -pass-remarks=. \
+; RUN:   -thinlto-threads=1 \
+; RUN:   -o regular-temp \
+; RUN:   --whole-program-visibility-enabled-in-lto=true \
+; RUN:   --validate-all-vtables-have-type-infos=true \
+; RUN:   --all-vtables-have-type-infos=true \
+; RUN:   -r=regular.o,__cxa_pure_virtual, \
+; RUN:   -r=regular.o,_ZN8DerivedNC2Ev,x \
+; RUN:   -r=regular.o,_ZN4Base8dispatchEv,px \
+; RUN:   -r=regular.o,_ZN7DerivedC2Ev, \
+; RUN:   -r=regular.o,_ZN8DerivedN5printEv,px \
+; RUN:   -r=regular.o,_ZTS8DerivedN,p \
+; RUN:   -r=regular.o,_ZTI7Derived, \
+; RUN:   -r=regular.o,_ZTV8DerivedN,p \
+; RUN:   -r=regular.o,_ZTI8DerivedN,p \
+; RUN:   2>&1 | FileCheck --allow-empty %s --implicit-check-not='single-impl: devirtualized a call to'
 
 ; REMARK: single-impl: devirtualized a call to _ZN8DerivedN5printEv
 
