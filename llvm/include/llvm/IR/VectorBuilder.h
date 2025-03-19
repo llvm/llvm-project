@@ -88,7 +88,10 @@ public:
     return *this;
   }
 
-  FastMathFlags &getFastMathFlags() const { return Builder.getFastMathFlags(); }
+  /// Get the flags to be applied to created floating point ops.
+  const FastMathFlags &getFastMathFlags() const {
+    return Builder.getFastMathFlags();
+  }
 
   // TODO: setStaticVL(ElementCount) for scalable types.
 
