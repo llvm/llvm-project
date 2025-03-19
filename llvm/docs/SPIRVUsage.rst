@@ -255,7 +255,7 @@ using target extension types and are represented as follows:
      OpTypeQueue        ``spirv.Queue``         (none)
      OpTypePipe         ``spirv.Pipe``          access qualifier
      OpTypePipeStorage  ``spirv.PipeStorage``   (none)
-     NA                 ``spirv.VulkanBuffer``  ElementType, StorageClass, IsWriteable, IsROV
+     NA                 ``spirv.VulkanBuffer``  ElementType, StorageClass, IsWriteable
      ================== ======================= ===========================================================================================
 
 All integer arguments take the same value as they do in their `corresponding

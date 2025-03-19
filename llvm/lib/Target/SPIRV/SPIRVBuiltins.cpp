@@ -3046,9 +3046,9 @@ static SPIRVType *getVulkanBufferType(const TargetExtType *ExtensionType,
                                       SPIRVGlobalRegistry *GR) {
   assert(ExtensionType->getNumTypeParameters() == 1 &&
          "Vulkan buffers have exactly one type for the type of the buffer.");
-  assert(ExtensionType->getNumIntParameters() == 3 &&
-         "Vulkan buffer have 3 integer parameters: storage class, is writable, "
-         "and is rov");
+  assert(ExtensionType->getNumIntParameters() == 2 &&
+         "Vulkan buffer have 2 integer parameters: storage class and is "
+         "writable.");
 
   auto *T = StructType::create(ExtensionType->getTypeParameter(0));
   auto *BlockType = GR->getOrCreateSPIRVType(
