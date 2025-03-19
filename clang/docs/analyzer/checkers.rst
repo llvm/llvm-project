@@ -563,7 +563,7 @@ pure virtual – but may be still surprising for the programmer.)
 .. code-block:: cpp
 
  struct A {
-   virtual void getKind() = 0;
+   virtual int getKind() = 0;
 
    A() {
      // warn: This calls the pure virtual method A::getKind().
@@ -888,7 +888,7 @@ checker does not report them**.
 .. code-block:: cpp
 
  struct A {
-   virtual void getKind();
+   virtual int getKind();
 
    A() {
      // warn: This calls A::getKind() even if we are constructing an instance
