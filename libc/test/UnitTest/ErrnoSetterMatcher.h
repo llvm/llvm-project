@@ -104,10 +104,10 @@ public:
         auto expected_str = try_get_errno_name(errno_cmp.expected);
         auto actual_str = try_get_errno_name(actual_errno);
         tlog << "Expected errno to be " << errno_cmp.str() << " "
-             << (expected_str ? *expected_str : "<unknown>")
-             << "(" << errno_cmp.expected << ") but got "
-             << (actual_str? *actual_str : "<unknown>")
-             << "(" << actual_errno << ").\n";
+             << (expected_str ? *expected_str : "<unknown>") << "("
+             << errno_cmp.expected << ") but got "
+             << (actual_str ? *actual_str : "<unknown>") << "(" << actual_errno
+             << ").\n";
       }
     }
   }
