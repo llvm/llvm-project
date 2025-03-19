@@ -559,11 +559,8 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
 /// Read the bytes for the section headers from the ELF object file data.
 static DataExtractor GetSectionHeadersFromELFData(
   const elf::ELFHeader &header, const DataExtractor &object_data) {
-  DataExtractor sh_data;
-  const elf_off sh_offset = header.e_shoff;
-  const size_t sh_size = header.GetSectionHeaderByteSize();
-  sh_data.SetData(object_data, sh_offset, sh_size);
-  return sh_data;
+  return DataExtractor(object_data, header.e_shoff,
+                       header.GetSectionHeaderByteSize());;
 }
 
 /// Read the section data bytes for the section from the ELF object file data.
@@ -1511,8 +1508,17 @@ size_t ObjectFileELF::GetSectionHeaderInfo(const elf::ELFHeader &header,
   // SHT_NULL sections if we have more than 1. The first entry in the section
   // headers should always be a SHT_NULL section, but none of the others should
   // be.
-  if (section_headers.size() > 1 && section_headers[1].sh_type == SHT_NULL)
-    section_headers.erase(section_headers.begin() + 1);
+  if (section_headers.size() > 1 && section_headers[1].sh_type == SHT_NULL) {
+    uint64_t null_count = std::count_if(section_headers.begin(),
+                                    section_headers.end(),
+                                    [](const ELFSectionHeaderInfo &sh){
+                                      return sh.sh_type == SHT_NULL;
+                                    });
+    if (null_count == section_headers.size()) {
+      // Keep only 1 SHT_NULL section if they were all SHT_NULL types.
+      section_headers.erase(section_headers.begin() + 1);
+    }
+  }
 
   const unsigned strtab_idx = header.e_shstrndx;
   if (strtab_idx && strtab_idx < section_headers.size()) {
@@ -3861,11 +3867,10 @@ DataExtractor ObjectFileELF::GetSectionData(const elf::ELFSectionHeader &sh) {
     // We have a ELF file in process memory, read the program header data from
     // the process.
     if (ProcessSP process_sp = m_process_wp.lock()) {
-      const addr_t data_addr = m_memory_addr + sh.sh_offset;
-      if (DataBufferSP data_sp = ReadMemory(process_sp, data_addr, sh.sh_size)) {
-        data = DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
-        if (data.GetByteSize() == sh.sh_size)
-          return data;
+      const addr_t addr = m_memory_addr + sh.sh_offset;
+      if (DataBufferSP data_sp = ReadMemory(process_sp, addr, sh.sh_size)) {
+        if (data_sp->GetByteSize() == sh.sh_size)
+          return DataExtractor(data_sp, GetByteOrder(), GetAddressByteSize());
       }
     }
   }

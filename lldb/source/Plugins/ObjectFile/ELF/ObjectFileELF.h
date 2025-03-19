@@ -303,7 +303,7 @@ private:
   /// \return True if the section has a size and all bytes can be read,
   ///         False otherwise.
   using ReadSectionDataCallback =
-  std::function<bool(const elf::ELFSectionHeader &sh,
+  llvm::function_ref<bool(const elf::ELFSectionHeader &sh,
                      lldb_private::DataExtractor &data)>;
 
   /// Parses the elf section headers and returns the uuid, debug link name,
