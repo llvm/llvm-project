@@ -624,7 +624,7 @@ def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
 }
 
 // Sets EXEC to all lanes and returns the previous EXEC.
-def SI_SETUP_WHOLE_WAVE_FUNC : SPseudoInstSI <
+def SI_WHOLE_WAVE_FUNC_SETUP : SPseudoInstSI <
   (outs SReg_1:$dst), (ins), [(set i1:$dst, (AMDGPUwhole_wave_setup))]> {
   let Defs = [EXEC];
   let Uses = [EXEC];

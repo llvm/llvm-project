@@ -978,7 +978,7 @@ void SIFrameLowering::emitCSRSpillStores(
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
-    // SI_SETUP_WHOLE_WAVE_FUNCTION has outlived its purpose, so we can remove
+    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose, so we can remove
     // it now. If we have already saved some WWM CSR registers, then the EXEC is
     // already -1 and we don't need to do anything else. Otherwise, set EXEC to
     // -1 here.
