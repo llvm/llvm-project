@@ -139,7 +139,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     IDF.setLiveInBlocks(LiveInBlocks);
     IDF.calculate(IDFBlocks);
 
-    // Important: reserve sufficient buckets to prevent map growth. [1]
+    // Reserve sufficient buckets to prevent map growth. [1]
     BBInfos.init(LiveInBlocks.size() + DefBlocks.size());
 
     for (auto [BB, V] : R.Defines)
@@ -156,7 +156,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
     // IsLiveOut indicates whether we are computing live-out values (true) or
     // live-in values (false).
-    std::function<Value *(BasicBlock *, bool)> computeValue =
+    std::function<Value *(BasicBlock *, bool)> ComputeValue =
         [&](BasicBlock *BB, bool IsLiveOut) -> Value * {
       auto &BBInfo = BBInfos[BB];
 
@@ -167,11 +167,11 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
         return BBInfo.LiveInValue;
 
       Value *V = DT->isReachableFromEntry(BB) && !PredCache.get(BB).empty()
-                     ? computeValue(DT->getNode(BB)->getIDom()->getBlock(),
+                     ? ComputeValue(DT->getNode(BB)->getIDom()->getBlock(),
                                     /*IsLiveOut=*/true)
                      : UndefValue::get(R.Ty);
 
-      // The call to computeValue can insert new entries into the map:
+      // The call to ComputeValue can insert new entries into the map:
       // assume BBInfos shouldn't grow due to [1] above and BBInfo reference is
       // valid.
       assert(&BBInfo == &BBInfos[BB] && "Map shouldn't grow!");
@@ -183,7 +183,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     for (auto *BB : IDFBlocks) {
       auto *PHI = cast<PHINode>(&BB->front());
       for (BasicBlock *Pred : PredCache.get(BB))
-        PHI->addIncoming(computeValue(Pred, /*IsLiveOut=*/true), Pred);
+        PHI->addIncoming(ComputeValue(Pred, /*IsLiveOut=*/true), Pred);
     }
 
     // Rewrite actual uses with the inserted definitions.
@@ -194,7 +194,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
       auto *User = cast<Instruction>(U->getUser());
       BasicBlock *BB = getUserBB(U);
-      Value *V = computeValue(BB, /*IsLiveOut=*/BB != User->getParent());
+      Value *V = ComputeValue(BB, /*IsLiveOut=*/BB != User->getParent());
       Value *OldVal = U->get();
       assert(OldVal && "Invalid use!");
       // Notify that users of the existing value that it is being replaced.
