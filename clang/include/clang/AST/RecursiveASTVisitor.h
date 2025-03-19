@@ -1004,7 +1004,8 @@ DEF_TRAVERSE_TYPE(RValueReferenceType,
                   { TRY_TO(TraverseType(T->getPointeeType())); })
 
 DEF_TRAVERSE_TYPE(MemberPointerType, {
-  TRY_TO(TraverseType(QualType(T->getClass(), 0)));
+  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+  TRY_TO(TraverseDecl(T->getMostRecentCXXRecordDecl()));
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 
@@ -1269,10 +1270,10 @@ DEF_TRAVERSE_TYPELOC(RValueReferenceType,
 // We traverse this in the type case as well, but how is it not reached through
 // the pointee type?
 DEF_TRAVERSE_TYPELOC(MemberPointerType, {
-  if (auto *TSI = TL.getClassTInfo())
-    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  if (NestedNameSpecifierLoc QL = TL.getQualifierLoc())
+    TRY_TO(TraverseNestedNameSpecifierLoc(QL));
   else
-    TRY_TO(TraverseType(QualType(TL.getTypePtr()->getClass(), 0)));
+    TRY_TO(TraverseNestedNameSpecifier(TL.getTypePtr()->getQualifier()));
   TRY_TO(TraverseTypeLoc(TL.getPointeeLoc()));
 })
 
