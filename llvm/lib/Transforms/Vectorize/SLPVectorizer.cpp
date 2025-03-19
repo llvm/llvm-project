@@ -6454,10 +6454,6 @@ void BoUpSLP::reorderTopToBottom() {
             if (TE->UserTreeIndex &&
                 isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
               continue;
-            assert((!TE->UserTreeIndex ||
-                    !isa<ShuffleVectorInst>(
-                        TE->UserTreeIndex.UserTE->getMainOp())) &&
-                   "Does not know how to reorder.");
           }
           // Update ordering of the operands with the smaller VF than the given
           // one.
