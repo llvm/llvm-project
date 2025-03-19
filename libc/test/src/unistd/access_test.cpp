@@ -22,8 +22,8 @@ using LlvmLibcAccessTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 TEST_F(LlvmLibcAccessTest, CreateAndTest) {
   // The test strategy is to repeatedly create a file in different modes and
   // test that it is accessable in those modes but not in others.
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "access.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
