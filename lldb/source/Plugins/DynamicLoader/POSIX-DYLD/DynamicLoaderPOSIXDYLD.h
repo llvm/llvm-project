@@ -182,7 +182,7 @@ private:
   /// to access `m_loaded_modules` safely.
   std::map<lldb::ModuleWP, lldb::addr_t, std::owner_less<lldb::ModuleWP>>
       m_loaded_modules;
-  std::shared_mutex m_loaded_modules_rw_mutex;
+  llvm::sys::RWMutex m_loaded_modules_rw_mutex;
 
   void SetLoadedModule(const lldb::ModuleSP &module_sp,
                        lldb::addr_t link_map_addr);

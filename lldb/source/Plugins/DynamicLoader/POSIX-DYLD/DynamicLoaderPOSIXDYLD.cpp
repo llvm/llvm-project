@@ -188,18 +188,18 @@ Status DynamicLoaderPOSIXDYLD::CanLoadImage() { return Status(); }
 
 void DynamicLoaderPOSIXDYLD::SetLoadedModule(const ModuleSP &module_sp,
                                              addr_t link_map_addr) {
-  std::unique_lock<std::shared_mutex> lock(m_loaded_modules_rw_mutex);
+  llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
   m_loaded_modules[module_sp] = link_map_addr;
 }
 
 void DynamicLoaderPOSIXDYLD::UnloadModule(const ModuleSP &module_sp) {
-  std::unique_lock<std::shared_mutex> lock(m_loaded_modules_rw_mutex);
+  llvm::sys::ScopedWriter lock(m_loaded_modules_rw_mutex);
   m_loaded_modules.erase(module_sp);
 }
 
 std::optional<lldb::addr_t>
 DynamicLoaderPOSIXDYLD::GetLoadedModuleLinkAddr(const ModuleSP &module_sp) {
-  std::shared_lock<std::shared_mutex> lock(m_loaded_modules_rw_mutex);
+  llvm::sys::ScopedReader lock(m_loaded_modules_rw_mutex);
   auto it = m_loaded_modules.find(module_sp);
   if (it != m_loaded_modules.end())
     return it->second;
@@ -447,6 +447,7 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
       m_initial_modules_added = true;
     }
 
+    // Synchronize reading and writing of `m_interpreter_module`.
     std::mutex interpreter_module_mutex;
     // We should be able to take SOEntry as reference since the data
     // exists for the duration of this call in `m_rendezvous`.
@@ -489,6 +490,12 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
             }
           }
 
+          // Note: in a multi-threaded environment, these module lists may be
+          // appended to out-of-order. This is fine, since there's no
+          // expectation for `loaded_modules` or `new_modules` to be in any
+          // particular order, and appending to each module list is thread-safe.
+          // Also, `new_modules` is only used for the `ModulesDidLoad` call at
+          // the end of this function.
           loaded_modules.AppendIfNeeded(module_sp);
           new_modules.Append(module_sp);
         };
