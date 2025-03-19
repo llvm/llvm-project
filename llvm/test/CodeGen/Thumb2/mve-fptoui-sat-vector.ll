@@ -3201,8 +3201,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_unsigned_v8f16_v8i16(<8 x half> %f) {
 define arm_aapcs_vfpcc <8 x i19> @test_unsigned_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-LABEL: test_unsigned_v8f16_v8i19:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r9, r11, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r9, r11, lr}
+; CHECK-NEXT:    .save {r4, r5, r7, r9, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r7, r9, r11, lr}
 ; CHECK-NEXT:    vldr s4, .LCPI46_0
 ; CHECK-NEXT:    vcvtb.f32.f16 s14, s1
 ; CHECK-NEXT:    vldr s6, .LCPI46_1
@@ -3241,8 +3241,8 @@ define arm_aapcs_vfpcc <8 x i19> @test_unsigned_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    orr.w r1, r1, r2, lsl #6
 ; CHECK-NEXT:    lsrl r2, r5, #26
 ; CHECK-NEXT:    orr.w r1, r1, r4, lsl #25
@@ -3265,20 +3265,20 @@ define arm_aapcs_vfpcc <8 x i19> @test_unsigned_v8f16_v8i19(<8 x half> %f) {
 ; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
 ; CHECK-NEXT:    vminnm.f32 s0, s0, s6
 ; CHECK-NEXT:    vcvt.u32.f32 s0, s0
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    mov r6, r2
-; CHECK-NEXT:    lsrl r6, r9, #14
-; CHECK-NEXT:    orr.w r3, r6, r4
-; CHECK-NEXT:    strh r3, [r0, #16]
+; CHECK-NEXT:    vmov r3, s0
+; CHECK-NEXT:    mov r2, r3
+; CHECK-NEXT:    lsrl r2, r9, #14
+; CHECK-NEXT:    orrs r2, r4
+; CHECK-NEXT:    strh r2, [r0, #16]
 ; CHECK-NEXT:    str.w r12, [r0, #8]
-; CHECK-NEXT:    lsrs r3, r3, #16
-; CHECK-NEXT:    strb r3, [r0, #18]
-; CHECK-NEXT:    orr.w r3, r5, r11
-; CHECK-NEXT:    orrs r3, r7
-; CHECK-NEXT:    orrs r1, r3
-; CHECK-NEXT:    orr.w r1, r1, r2, lsl #18
+; CHECK-NEXT:    lsrs r2, r2, #16
+; CHECK-NEXT:    strb r2, [r0, #18]
+; CHECK-NEXT:    orr.w r2, r5, r11
+; CHECK-NEXT:    orrs r2, r7
+; CHECK-NEXT:    orrs r1, r2
+; CHECK-NEXT:    orr.w r1, r1, r3, lsl #18
 ; CHECK-NEXT:    str r1, [r0, #12]
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r9, r11, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r7, r9, r11, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI46_0:
