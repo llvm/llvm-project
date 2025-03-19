@@ -47,8 +47,8 @@ public:
   virtual void emitDirectiveOptionNoPIC();
   virtual void emitDirectiveOptionRVC();
   virtual void emitDirectiveOptionNoRVC();
-  virtual void emitDirectiveOptionAutoCompress();
-  virtual void emitDirectiveOptionNoAutoCompress();
+  virtual void emitDirectiveOptionExact();
+  virtual void emitDirectiveOptionNoExact();
   virtual void emitDirectiveOptionRelax();
   virtual void emitDirectiveOptionNoRelax();
   virtual void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args);
@@ -86,8 +86,8 @@ public:
   void emitDirectiveOptionNoPIC() override;
   void emitDirectiveOptionRVC() override;
   void emitDirectiveOptionNoRVC() override;
-  void emitDirectiveOptionAutoCompress() override;
-  void emitDirectiveOptionNoAutoCompress() override;
+  void emitDirectiveOptionExact() override;
+  void emitDirectiveOptionNoExact() override;
   void emitDirectiveOptionRelax() override;
   void emitDirectiveOptionNoRelax() override;
   void emitDirectiveOptionArch(ArrayRef<RISCVOptionArchArg> Args) override;

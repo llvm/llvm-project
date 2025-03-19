@@ -3173,14 +3173,34 @@ bool RISCVAsmParser::parseDirectiveOption() {
     return false;
   }
 
+  if (Option == "exact") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionExact();
+    setFeatureBits(RISCV::FeatureExactAssembly,
+                   "exact-asm");
+    clearFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
+  if (Option == "noexact") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionNoExact();
+    clearFeatureBits(RISCV::FeatureExactAssembly,
+                     "exact-asm");
+    setFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
   if (Option == "rvc") {
     if (Parser.parseEOL())
       return true;
 
     getTargetStreamer().emitDirectiveOptionRVC();
     setFeatureBits(RISCV::FeatureStdExtC, "c");
-    clearFeatureBits(RISCV::FeatureDisableAsmCompression,
-                     "disable-asm-compression");
     return false;
   }
 
@@ -3191,28 +3211,6 @@ bool RISCVAsmParser::parseDirectiveOption() {
     getTargetStreamer().emitDirectiveOptionNoRVC();
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
-    setFeatureBits(RISCV::FeatureDisableAsmCompression,
-                   "disable-asm-compression");
-    return false;
-  }
-
-  if (Option == "autocompress") {
-    if (Parser.parseEOL())
-      return true;
-
-    getTargetStreamer().emitDirectiveOptionAutoCompress();
-    clearFeatureBits(RISCV::FeatureDisableAsmCompression,
-                     "disable-asm-compression");
-    return false;
-  }
-
-  if (Option == "noautocompress") {
-    if (Parser.parseEOL())
-      return true;
-
-    getTargetStreamer().emitDirectiveOptionNoAutoCompress();
-    setFeatureBits(RISCV::FeatureDisableAsmCompression,
-                   "disable-asm-compression");
     return false;
   }
 
@@ -3254,8 +3252,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
   // Unknown option.
   Warning(Parser.getTok().getLoc(), "unknown option, expected 'push', 'pop', "
-                                    "'rvc', 'norvc', 'arch', 'relax' or "
-                                    "'norelax'");
+                                    "'rvc', 'norvc', 'arch', 'relax', 'norelax', "
+                                    "'exact' or 'noexact'");
   Parser.eatToEndOfStatement();
   return false;
 }
@@ -3466,11 +3464,12 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
   bool Res = false;
-  if (!getSTI().hasFeature(RISCV::FeatureDisableAsmCompression))
-    Res = RISCVRVC::compress(CInst, Inst, getSTI());
+  const MCSubtargetInfo &STI = getSTI();
+  if (!STI.hasFeature(RISCV::FeatureExactAssembly))
+    Res = RISCVRVC::compress(CInst, Inst, STI);
   if (Res)
     ++RISCVNumInstrsCompressed;
-  S.emitInstruction((Res ? CInst : Inst), getSTI());
+  S.emitInstruction((Res ? CInst : Inst), STI);
 }
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,

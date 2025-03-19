@@ -344,6 +344,10 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
 // Given a compressed control flow instruction this function returns
 // the expanded instruction.
 unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
+  // Disable relaxation if FeatureExactAssembly
+  if (STI.hasFeature(RISCV::FeatureExactAssembly))
+    return Op;
+
   switch (Op) {
   default:
     return Op;
@@ -371,6 +375,12 @@ unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
 
 bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
+  // This function has access to two STIs, the member of the AsmBackend, and the
+  // one passed as an argument. The latter is more specific, so we query it for
+  // specific features.
+  if (STI.hasFeature(RISCV::FeatureExactAssembly))
+    return false;
+
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 

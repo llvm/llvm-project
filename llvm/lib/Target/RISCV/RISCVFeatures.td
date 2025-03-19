@@ -1470,9 +1470,9 @@ def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
                        "Enable Linker relaxation.">;
 
-def FeatureDisableAsmCompression
-    : SubtargetFeature<"disable-asm-compression", "EnableAsmCompression", "false",
-                       "Disable Automatic Assembly Compression.">;
+def FeatureExactAssembly
+    : SubtargetFeature<"exact-asm", "EnableExactAssembly", "true",
+                       "Enable Exact Assembly (Disables Compression and Relaxation)">;
 
 foreach i = {1-31} in
   def FeatureReserveX#i :

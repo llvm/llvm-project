@@ -21,11 +21,13 @@
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST %s
 
 
-# `.option (no)autocompress` enables and disables instruction compression in the
-# assembler, without changing the current architecture.
-#
-# The default is as if `.option autocompress` has been specified, that is, the
-# assembler compresses by default.
+## `.option exact` disables a variety of assembler behaviour:
+## - automatic compression
+## - branch relaxation (of short branches to longer equivalent sequences)
+## - linker relaxation (emitting R_RISCV_RELAX)
+## `.option noexact` enables these behaviours again. It is also the default.
+
+## This test only checks the automatic compression part of this behaviour.
 
 # CHECK-BYTES: 4108
 # CHECK-INST: c.lw a0, 0(a0)
@@ -39,8 +41,8 @@ lw a0, 0(a0)
 # CHECK: # encoding: [0x08,0x41]
 c.lw a0, 0(a0)
 
-# CHECK: .option noautocompress
-.option noautocompress
+# CHECK: .option exact
+.option exact
 
 # CHECK-BYTES: 00052503
 # CHECK-INST: lw a0, 0(a0)
@@ -54,8 +56,8 @@ lw a0, 0(a0)
 # CHECK: # encoding: [0x08,0x41]
 c.lw a0, 0(a0)
 
-# CHECK: .option autocompress
-.option autocompress
+# CHECK: .option noexact
+.option noexact
 
 # CHECK-BYTES: 4108
 # CHECK-INST: c.lw a0, 0(a0)
