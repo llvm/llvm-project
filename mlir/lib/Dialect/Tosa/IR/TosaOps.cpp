@@ -216,22 +216,6 @@ void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
   }
 }
 
-// Create a pad-const const tensor with value of `val` of required data-type
-Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
-                                       Value src, int32_t val) {
-  const auto srcType = getElementTypeOrSelf(src);
-  const auto srcElemType = getElementTypeOrSelf(src);
-  const auto padConstType = mlir::RankedTensorType::get({1}, srcType);
-  const auto padConstEType = mlir::RankedTensorType::get({1}, srcElemType);
-  const auto padConstAttr{
-      llvm::isa<FloatType>(srcElemType)
-          ? DenseElementsAttr::get(padConstEType,
-                                   builder.getFloatAttr(srcElemType, val))
-          : DenseElementsAttr::get(padConstEType,
-                                   builder.getIntegerAttr(srcElemType, val))};
-  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
-}
-
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -242,16 +226,15 @@ std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
   return lhs / rhs;
 }
 
-//===----------------------------------------------------------------------===//
-// Tosa utilities.
-//===----------------------------------------------------------------------===//
+Type getStorageElementTypeOrSelf(Type type) {
+  auto srcType = getElementTypeOrSelf(type);
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
+    srcType = quantType.getStorageType();
+  return srcType;
+}
 
-static Type getStorageElementTypeOrSelf(Type type) {
-  auto elementType = getElementTypeOrSelf(type);
-  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(elementType))
-    elementType = quantType.getStorageType();
-
-  return elementType;
+Type getStorageElementTypeOrSelf(Value value) {
+  return getStorageElementTypeOrSelf(value.getType());
 }
 
 static LogicalResult verifyRescaleValueAndZpTypes(Operation *op, Value val,
@@ -271,6 +254,22 @@ static LogicalResult verifyRescaleValueAndZpTypes(Operation *op, Value val,
            << " vs. " << eZpType;
   }
   return success();
+}
+
+// Create a pad-const const tensor with value of `val` of required data-type
+Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
+                                       Value src, int32_t val) {
+  const auto srcType = getElementTypeOrSelf(src);
+  const auto srcElemType = getStorageElementTypeOrSelf(src);
+  const auto padConstType = mlir::RankedTensorType::get({1}, srcType);
+  const auto padConstEType = mlir::RankedTensorType::get({1}, srcElemType);
+  const auto padConstAttr{
+      llvm::isa<FloatType>(srcElemType)
+          ? DenseElementsAttr::get(padConstEType,
+                                   builder.getFloatAttr(srcElemType, val))
+          : DenseElementsAttr::get(padConstEType,
+                                   builder.getIntegerAttr(srcElemType, val))};
+  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -504,7 +503,95 @@ LogicalResult tosa::ArgMaxOp::verify() {
   return success();
 }
 
+template <typename T>
+static LogicalResult verifyPoolingOp(T op) {
+  const llvm::ArrayRef<int64_t> kernel = op.getKernel();
+  if (llvm::any_of(kernel, [](int64_t s) { return s < 1; }))
+    return op.emitOpError("expect all kernel values to be >= 1, got ")
+           << kernel;
+
+  const llvm::ArrayRef<int64_t> strides = op.getStride();
+  if (llvm::any_of(strides, [](int64_t s) { return s < 1; }))
+    return op.emitOpError("expect all stride values to be >= 1, got ")
+           << strides;
+
+  const llvm::ArrayRef<int64_t> padding = op.getPad();
+  if (llvm::any_of(padding, [](int64_t p) { return p < 0; }))
+    return op.emitOpError("expect all padding values to be >= 0, got ")
+           << padding;
+
+  // Padding must be less than kernel size to avoid a divide-by-zero
+  const int64_t kernelX = kernel[1];
+  const int64_t padLeft = padding[2];
+  const int64_t padRight = padding[3];
+  if (padRight >= kernelX || padLeft >= kernelX)
+    return op.emitOpError("expected left/right padding to be less than the "
+                          "width of the kernel, got pad_left=")
+           << padLeft << ", pad_right=" << padRight << ", kernel_x=" << kernelX;
+
+  const int64_t kernelY = kernel[0];
+  const int64_t padTop = padding[0];
+  const int64_t padBottom = padding[1];
+  if (padTop >= kernelY || padBottom >= kernelY)
+    return op.emitOpError("expected top/bottom padding to be less than the "
+                          "height of the kernel, got pad_top=")
+           << padTop << ", pad_bottom=" << padBottom
+           << ", kernel_y=" << kernelY;
+
+  const auto inputType =
+      llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
+  const auto outputType =
+      llvm::dyn_cast<RankedTensorType>(op.getResult().getType());
+  if (!inputType || !outputType)
+    return success();
+
+  const auto verifyOutputSize =
+      [&op](const int64_t inputSize, const int64_t outputSize,
+            const int64_t kernelSize, const int64_t strideSize,
+            const int64_t padBefore, const int64_t padAfter,
+            const llvm::StringRef dimName, const llvm::StringRef dimAxis,
+            const llvm::StringRef padBeforeName,
+            const llvm::StringRef padAfterName) -> LogicalResult {
+    if (ShapedType::isDynamic(inputSize))
+      return success();
+
+    const std::optional<int64_t> calculatedOutSizeMinusOne =
+        idivCheck(inputSize + padBefore + padAfter - kernelSize, strideSize);
+    if (!calculatedOutSizeMinusOne.has_value())
+      return op.emitOpError("expected input_")
+             << dimName << " + pad_" << padBeforeName << " + pad_"
+             << padAfterName << " - kernel_" << dimAxis
+             << " to be wholly divisible by stride_" << dimAxis << ", got ("
+             << inputSize << " + " << padBefore << " + " << padAfter << " - "
+             << kernelSize << ") / " << strideSize;
+
+    const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
+    if (!ShapedType::isDynamic(outputSize) && calculatedOutSize != outputSize)
+      return op.emitOpError("calculated output ")
+             << dimName << " did not match expected: "
+             << "calculated=" << calculatedOutSize
+             << ", expected=" << outputSize;
+
+    return success();
+  };
+
+  if (failed(verifyOutputSize(inputType.getDimSize(1), outputType.getDimSize(1),
+                              kernel[0], strides[0], padding[0], padding[1],
+                              "height", "y", "top", "bottom")))
+    return failure();
+
+  if (failed(verifyOutputSize(inputType.getDimSize(2), outputType.getDimSize(2),
+                              kernel[1], strides[1], padding[2], padding[3],
+                              "width", "x", "left", "right")))
+    return failure();
+
+  return success();
+}
+
 LogicalResult tosa::AvgPool2dOp::verify() {
+  if (failed(verifyPoolingOp(*this)))
+    return failure();
+
   const Type inputETy = getStorageElementTypeOrSelf(getInput().getType());
   const Type resultETy = getStorageElementTypeOrSelf(getOutput().getType());
   const Type inputZpETy = getStorageElementTypeOrSelf(getInputZp().getType());
@@ -1267,8 +1354,13 @@ LogicalResult tosa::PadOp::verify() {
     }
   }
 
-  RankedTensorType inputType = getInput1().getType();
-  RankedTensorType outputType = getOutput().getType();
+  RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(getInput1().getType());
+  RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
+  if (!inputType || !outputType)
+    return success();
+
   auto paddingRank = cast<tosa::shapeType>(getPadding().getType()).getRank();
 
   if (inputType.getRank() != outputType.getRank())
@@ -2650,8 +2742,14 @@ LogicalResult MaxPool2dOp::inferReturnTypeComponents(
 }
 
 LogicalResult MaxPool2dOp::verify() {
-  return verifySameElementTypes(*this, /* intype = */ getInput().getType(),
-                                /* outType = */ getOutput().getType());
+  if (failed(verifySameElementTypes(*this, /* intype = */ getInput().getType(),
+                                    /* outType = */ getOutput().getType())))
+    return failure();
+
+  if (failed(verifyPoolingOp(*this)))
+    return failure();
+
+  return success();
 }
 
 LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(

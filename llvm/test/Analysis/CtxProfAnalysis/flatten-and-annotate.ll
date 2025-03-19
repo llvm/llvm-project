@@ -61,6 +61,7 @@
 ;--- profile.yaml
 Contexts:
   - Guid: 4909520559318251808
+    TotalRootEntryCount: 100
     Counters: [100, 40]
     Callsites: -
                 - Guid: 11872291593386833696

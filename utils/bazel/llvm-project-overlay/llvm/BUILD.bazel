@@ -1208,7 +1208,6 @@ cc_library(
     ]),
     deps = [
         ":BinaryFormat",
-        ":CodeGen",
         ":Core",
         ":Object",
         ":ProfileData",

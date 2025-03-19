@@ -1852,7 +1852,7 @@ define amdgpu_kernel void @extract_undef_offset_sgpr(ptr addrspace(1) %out, ptr 
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %ld = load volatile <4 x i32>, ptr addrspace(1) %in
-  %value = extractelement <4 x i32> %ld, i32 undef
+  %value = extractelement <4 x i32> %ld, i32 poison
   store i32 %value, ptr addrspace(1) %out
   ret void
 }
@@ -1880,7 +1880,7 @@ define amdgpu_kernel void @insert_undef_offset_sgpr_vector_src(ptr addrspace(1) 
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %ld = load <4 x i32>, ptr addrspace(1) %in
-  %value = insertelement <4 x i32> %ld, i32 5, i32 undef
+  %value = insertelement <4 x i32> %ld, i32 5, i32 poison
   store <4 x i32> %value, ptr addrspace(1) %out
   ret void
 }
@@ -5679,7 +5679,7 @@ entry:
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 %live.out.reg, ptr addrspace(1) undef
+  store volatile i32 %live.out.reg, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -6616,7 +6616,7 @@ entry:
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 %live.out.val, ptr addrspace(1) undef
+  store volatile i32 %live.out.val, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -7450,20 +7450,20 @@ bb:
   br i1 %tmp, label %bb1, label %bb4
 
 bb1:
-  %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
-  %tmp3 = extractelement <4 x float> %tmp2, i32 undef
+  %tmp2 = load volatile <4 x float>, ptr addrspace(1) poison
+  %tmp3 = extractelement <4 x float> %tmp2, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp2) ; Prevent block optimize out
   br label %bb7
 
 bb4:
-  %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
-  %tmp6 = extractelement <4 x float> %tmp5, i32 undef
+  %tmp5 = load volatile <4 x float>, ptr addrspace(1) poison
+  %tmp6 = extractelement <4 x float> %tmp5, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp5) ; Prevent block optimize out
   br label %bb7
 
 bb7:
   %tmp8 = phi float [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
-  store volatile float %tmp8, ptr addrspace(1) undef
+  store volatile float %tmp8, ptr addrspace(1) poison
   ret void
 }
 
@@ -7698,20 +7698,20 @@ bb:
   br i1 %tmp, label %bb1, label %bb4
 
 bb1:
-  %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
-  %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 undef
+  %tmp2 = load volatile <4 x float>, ptr addrspace(1) poison
+  %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp3) ; Prevent block optimize out
   br label %bb7
 
 bb4:
-  %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
-  %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 undef
+  %tmp5 = load volatile <4 x float>, ptr addrspace(1) poison
+  %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp6) ; Prevent block optimize out
   br label %bb7
 
 bb7:
   %tmp8 = phi <4 x float> [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
-  store volatile <4 x float> %tmp8, ptr addrspace(1) undef
+  store volatile <4 x float> %tmp8, ptr addrspace(1) poison
   ret void
 }
 
@@ -7894,8 +7894,8 @@ bb:
   %tmp6 = extractelement <9 x i32> %tmp5, i32 1
   %tmp7 = bitcast <9 x float> %tmp4 to <9 x i32>
   %tmp8 = extractelement <9 x i32> %tmp7, i32 5
-  store volatile i32 %tmp6, ptr addrspace(3) undef, align 4
-  store volatile i32 %tmp8, ptr addrspace(3) undef, align 4
+  store volatile i32 %tmp6, ptr addrspace(3) poison, align 4
+  store volatile i32 %tmp8, ptr addrspace(3) poison, align 4
   ret void
 }
 
@@ -9458,8 +9458,8 @@ bb2:
   br i1 %tmp3, label %bb4, label %bb8
 
 bb4:
-  %vgpr = load volatile i32, ptr addrspace(1) undef
-  %tmp5 = insertelement <16 x i32> undef, i32 undef, i32 %vgpr
+  %vgpr = load volatile i32, ptr addrspace(1) poison
+  %tmp5 = insertelement <16 x i32> poison, i32 poison, i32 %vgpr
   %tmp6 = insertelement <16 x i32> %tmp5, i32 %arg1, i32 %vgpr
   %tmp7 = extractelement <16 x i32> %tmp6, i32 0
   br label %bb2
@@ -9478,61 +9478,42 @@ define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace
 ; GENERIC-NEXT:    s_mov_b32 s0, s2
 ; GENERIC-NEXT:    s_mov_b32 s1, s2
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
-; GENERIC-NEXT:    v_readfirstlane_b32 s4, v2
-; GENERIC-NEXT:    s_or_b32 s4, s4, 1
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 3
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_or_b32_e32 v2, 1, v2
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v8, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 2
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v7, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 1
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v6, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 0
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v5, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 7
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v12, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 6
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v11, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 5
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v10, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 4
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v9, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 11
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v13, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 10
-; GENERIC-NEXT:    buffer_store_dwordx4 v[9:12], v[0:1], s[0:3], 0 addr64 offset:16
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    s_waitcnt expcnt(0)
-; GENERIC-NEXT:    v_cndmask_b32_e32 v12, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 9
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v11, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 8
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v10, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 15
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 11, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v16, 0, v4, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 10, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v15, 0, v4, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v14, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 14
-; GENERIC-NEXT:    buffer_store_dwordx4 v[10:13], v[0:1], s[0:3], 0 addr64 offset:32
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    s_waitcnt expcnt(0)
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v2
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v13, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 13
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v12, 0, v4, vcc
-; GENERIC-NEXT:    s_cmp_eq_u32 s4, 12
-; GENERIC-NEXT:    s_cselect_b64 vcc, -1, 0
-; GENERIC-NEXT:    v_cndmask_b32_e32 v11, 0, v4, vcc
-; GENERIC-NEXT:    buffer_store_dwordx4 v[11:14], v[0:1], s[0:3], 0 addr64 offset:48
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v20, 0, v4, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 14, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v19, 0, v4, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v18, 0, v4, vcc
+; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v2
+; GENERIC-NEXT:    v_cndmask_b32_e32 v17, 0, v4, vcc
+; GENERIC-NEXT:    buffer_store_dwordx4 v[17:20], v[0:1], s[0:3], 0 addr64 offset:48
+; GENERIC-NEXT:    buffer_store_dwordx4 v[13:16], v[0:1], s[0:3], 0 addr64 offset:32
+; GENERIC-NEXT:    buffer_store_dwordx4 v[9:12], v[0:1], s[0:3], 0 addr64 offset:16
 ; GENERIC-NEXT:    buffer_store_dwordx4 v[5:8], v[0:1], s[0:3], 0 addr64
 ; GENERIC-NEXT:    s_endpgm
 ;

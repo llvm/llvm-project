@@ -51,12 +51,14 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
 
 namespace llvm {
+
+// Forward decl from llvm/CodeGen/MachineInstr.h
+class MachineInstr;
 
 /// Construct a specially modified post-order traversal of cycles.
 ///
