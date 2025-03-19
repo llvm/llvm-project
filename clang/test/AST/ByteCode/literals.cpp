@@ -849,13 +849,11 @@ namespace CompoundLiterals {
   }
   static_assert(get5() == 5, "");
 
-  constexpr int get6(int f = (int[]){1,2,6}[2]) { // ref-note {{subexpression not valid in a constant expression}} \
-                                                  // ref-note {{declared here}}
+  constexpr int get6(int f = (int[]){1,2,6}[2]) {
     return f;
   }
   static_assert(get6(6) == 6, "");
-  // FIXME: Who's right here?
-  static_assert(get6() == 6, ""); // ref-error {{not an integral constant expression}}
+  static_assert(get6() == 6, "");
 
   constexpr int x = (int){3};
   static_assert(x == 3, "");
