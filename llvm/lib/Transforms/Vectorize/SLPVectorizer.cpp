@@ -1250,8 +1250,8 @@ static bool isCopyableOp(ArrayRef<Value *> VL, Value *Main, Value *Alt) {
       any_of(VL, IsaPred<PoisonValue, PHINode>))
     return false;
 
-  Instruction *MainOp = cast<Instruction>(Main);
-  Instruction *AltOp = cast<Instruction>(Alt);
+  auto *MainOp = cast<Instruction>(Main);
+  auto *AltOp = cast<Instruction>(Alt);
 
   if (isa<BinaryOperator>(MainOp) && !isa<BinaryOperator>(AltOp) &&
       isValidForAlternation(MainOp->getOpcode()) &&
