@@ -237,8 +237,8 @@ protected:
   }
 
 private:
-  ios_base::openmode __mode_; // exposition only
-  std::span<_CharT> __buf_;   // exposition only
+  ios_base::openmode __mode_;
+  std::span<_CharT> __buf_;
 };
 
 template <class _CharT, class _Traits>
@@ -316,7 +316,7 @@ public:
   }
 
 private:
-  basic_spanbuf<_CharT, _Traits> __sb_; // exposition only
+  basic_spanbuf<_CharT, _Traits> __sb_;
 };
 
 template <class _CharT, class _Traits>
@@ -379,7 +379,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
 
 private:
-  basic_spanbuf<_CharT, _Traits> __sb_; // exposition only
+  basic_spanbuf<_CharT, _Traits> __sb_;
 };
 
 template <class _CharT, class _Traits>
@@ -440,7 +440,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void span(std::span<_CharT> __s) noexcept { rdbuf()->span(__s); }
 
 private:
-  basic_spanbuf<_CharT, _Traits> __sb_; // exposition only
+  basic_spanbuf<_CharT, _Traits> __sb_;
 };
 
 template <class _CharT, class _Traits>
