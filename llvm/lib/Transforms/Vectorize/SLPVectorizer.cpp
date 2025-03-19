@@ -795,7 +795,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 }
 
 /// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(Instruction *E) {
+static std::optional<unsigned> getExtractIndex(const Instruction *E) {
   unsigned Opcode = E->getOpcode();
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
@@ -3787,16 +3787,17 @@ private:
               doesNotNeedToSchedule(VL)) &&
              "Bundle and VL out of sync");
       if (!Bundle.getBundle().empty()) {
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
         auto *BundleMember = Bundle.getBundle().begin();
+        SmallPtrSet<Value *, 4> Processed;
         for (Value *V : VL) {
-          if (doesNotNeedToBeScheduled(V))
-            continue;
-          if (BundleMember == Bundle.getBundle().end())
+          if (doesNotNeedToBeScheduled(V) || !Processed.insert(V).second)
             continue;
           ++BundleMember;
         }
         assert(BundleMember == Bundle.getBundle().end() &&
                "Bundle and VL out of sync");
+#endif
         Bundle.setTreeEntry(Last);
       }
     } else {
@@ -3948,7 +3949,7 @@ private:
   /// is invariant in the calling loop.
   bool isAliased(const MemoryLocation &Loc1, Instruction *Inst1,
                  Instruction *Inst2) {
-    assert(Loc1.Ptr && isSimple(Inst1) && "Expected simple first instrucgion.");
+    assert(Loc1.Ptr && isSimple(Inst1) && "Expected simple first instruction.");
     if (!isSimple(Inst2))
       return true;
     // First check if the result is already in the cache.
@@ -4014,6 +4015,10 @@ private:
   /// List of hashes of vector of loads, which are known to be non vectorizable.
   DenseSet<size_t> ListOfKnonwnNonVectorizableLoads;
 
+  /// Represents a scheduling entity, either ScheduleData or ScheduleBundle.
+  /// ScheduleData used to gather dependecies for a single instructions, while
+  /// ScheduleBundle represents a batch of instructions, going to be groupped
+  /// together.
   class ScheduleEntity {
     friend class ScheduleBundle;
     friend class ScheduleData;
@@ -4027,7 +4032,7 @@ private:
     /// Used for getting a "good" final ordering of instructions.
     int SchedulingPriority = 0;
     /// The kind of the ScheduleEntity.
-    Kind K = Kind::ScheduleData;
+    const Kind K = Kind::ScheduleData;
 
   public:
     ScheduleEntity() = delete;
@@ -4242,6 +4247,7 @@ private:
                     [](const ScheduleData *SD) { return SD->isScheduled(); });
     }
 
+    /// Returns the number of unscheduled dependencies in the bundle.
     int unscheduledDepsInBundle() const {
       assert(*this && "bundle must not be empty");
       int Sum = 0;
@@ -4284,6 +4290,7 @@ private:
 
     operator bool() const { return IsValid; }
 
+#ifndef NDEBUG
     void dump(raw_ostream &OS) const {
       if (!*this) {
         OS << "[]";
@@ -4299,6 +4306,7 @@ private:
       dump(dbgs());
       dbgs() << '\n';
     }
+#endif // NDEBUG
   };
 
 #ifndef NDEBUG
@@ -4974,7 +4982,9 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
     if (!Entries.front().front()->ReuseShuffleIndices.empty() &&
         TE.getVectorFactor() == 2 && Mask.size() == 2 &&
         any_of(enumerate(Entries.front().front()->ReuseShuffleIndices),
-               [](const auto &P) { return P.value() % 2 != P.index() % 2; }))
+               [](const auto &P) {
+                 return P.value() % 2 != static_cast<int>(P.index()) % 2;
+               }))
       return std::nullopt;
 
     // Perfect match in the graph, will reuse the previously vectorized
@@ -9062,7 +9072,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           TTI.getArithmeticInstrCost(Opcode1, Op2VecTy, Kind);
       InstructionCost NewCost =
           NewVecOpsCost + InsertCost +
-          (VectorizableTree.front()->hasState() &&
+          (!VectorizableTree.empty() && VectorizableTree.front()->hasState() &&
                    VectorizableTree.front()->getOpcode() == Instruction::Store
                ? NewShuffleCost
                : 0);
@@ -14273,11 +14283,18 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   auto CheckParentNodes = [&](const TreeEntry *User1, const TreeEntry *User2,
                               unsigned EdgeIdx) {
     const TreeEntry *Ptr1 = User1;
+    const TreeEntry *Ptr2 = User2;
+    SmallDenseMap<const TreeEntry *, unsigned> PtrToIdx;
+    while (Ptr2) {
+      PtrToIdx.try_emplace(Ptr2, EdgeIdx);
+      EdgeIdx = Ptr2->UserTreeIndex.EdgeIdx;
+      Ptr2 = Ptr2->UserTreeIndex.UserTE;
+    }
     while (Ptr1) {
       unsigned Idx = Ptr1->UserTreeIndex.EdgeIdx;
       Ptr1 = Ptr1->UserTreeIndex.UserTE;
-      if (Ptr1 == User2)
-        return Idx < EdgeIdx;
+      if (auto It = PtrToIdx.find(Ptr1); It != PtrToIdx.end())
+        return Idx < It->second;
     }
     return false;
   };
@@ -18668,20 +18685,20 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
       ProcessNode(SD);
     }
     if (InsertInReadyList && SD->isReady()) {
-      if (!Bundles.empty()) {
-        for (ScheduleBundle *Bundle : Bundles) {
-          assert(isInSchedulingRegion(*Bundle) &&
-                 "ScheduleData not in scheduling region");
-          if (Bundle->isReady()) {
-            ReadyInsts.insert(Bundle);
-            LLVM_DEBUG(dbgs()
-                       << "SLP:     gets ready on update: " << *Bundle << "\n");
-          }
-        }
+      if (Bundles.empty()) {
+        ReadyInsts.insert(SD);
+        LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *SD << "\n");
         continue;
       }
-      ReadyInsts.insert(SD);
-      LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *SD << "\n");
+      for (ScheduleBundle *Bundle : Bundles) {
+        assert(isInSchedulingRegion(*Bundle) &&
+               "ScheduleData not in scheduling region");
+        if (Bundle->isReady()) {
+          ReadyInsts.insert(Bundle);
+          LLVM_DEBUG(dbgs()
+                     << "SLP:     gets ready on update: " << *Bundle << "\n");
+        }
+      }
     }
   }
 }
@@ -18787,10 +18804,11 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
     ArrayRef<ScheduleBundle *> Bundles = BS->getScheduleBundles(I);
-    if (!Bundles.empty()) {
-      for (ScheduleBundle *Bundle : Bundles)
-        assert(Bundle->isScheduled() && "must be scheduled at this point");
-    }
+    assert(all_of(Bundles,
+                  [](const ScheduleBundle *Bundle) {
+                    return Bundle->isScheduled();
+                  }) &&
+           "must be scheduled at this point");
   }
 #endif
 
@@ -22920,8 +22938,38 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-          if (S && !S.isAltShuffle())
+          if (S && !S.isAltShuffle()) {
+            const auto *E1 = dyn_cast<ExtractElementInst>(I1);
+            const auto *E2 = dyn_cast<ExtractElementInst>(I2);
+            if (!E1 || !E2)
+              continue;
+
+            // Sort on ExtractElementInsts primarily by vector operands. Prefer
+            // program order of the vector operands.
+            const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
+            const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+            if (V1 != V2) {
+              if (!V1 || !V2)
+                continue;
+              if (V1->getParent() != V2->getParent())
+                continue;
+              return V1->comesBefore(V2);
+            }
+            // If we have the same vector operand, try to sort by constant
+            // index.
+            std::optional<unsigned> Id1 = getExtractIndex(E1);
+            std::optional<unsigned> Id2 = getExtractIndex(E2);
+            // Bring constants to the top
+            if (Id1 && !Id2)
+              return true;
+            if (!Id1 && Id2)
+              return false;
+            // First elements come first.
+            if (Id1 && Id2)
+              return *Id1 < *Id2;
+
             continue;
+          }
           return I1->getOpcode() < I2->getOpcode();
         }
         if (I1)

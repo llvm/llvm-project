@@ -1616,12 +1616,12 @@ Currently, only the following parameter attributes are defined:
 
 ``alignstack(<n>)``
     This indicates the alignment that should be considered by the backend when
-    assigning this parameter to a stack slot during calling convention
-    lowering. The enforcement of the specified alignment is target-dependent,
-    as target-specific calling convention rules may override this value. This
-    attribute serves the purpose of carrying language specific alignment
-    information that is not mapped to base types in the backend (for example,
-    over-alignment specification through language attributes).
+    assigning this parameter or return value to a stack slot during calling
+    convention lowering. The enforcement of the specified alignment is
+    target-dependent, as target-specific calling convention rules may override
+    this value. This attribute serves the purpose of carrying language specific
+    alignment information that is not mapped to base types in the backend (for
+    example, over-alignment specification through language attributes).
 
 ``allocalign``
     The function parameter marked with this attribute is the alignment in bytes of the
@@ -13045,9 +13045,9 @@ This instruction requires several arguments:
    -  Caller and callee both have the calling convention ``fastcc`` or ``tailcc``.
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
-   -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is 
+   -  Option ``-tailcallopt`` is enabled, ``llvm::GuaranteedTailCallOpt`` is
       ``true``, or the calling convention is ``tailcc``.
-   -  `Platform-specific constraints are met. 
+   -  `Platform-specific constraints are met.
       <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
@@ -15640,8 +15640,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use
-``llvm.experimental.memset.pattern`` on any integer bit width and for
-different address spaces. Not all targets support all bit widths however.
+``llvm.experimental.memset.pattern`` on any sized type and for different
+address spaces.
 
 ::
 

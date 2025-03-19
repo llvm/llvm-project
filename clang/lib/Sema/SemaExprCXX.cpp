@@ -5066,6 +5066,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsInterfaceClass:
     return true;
 
+  // We diagnose incomplete class types later.
+  case UTT_StructuredBindingSize:
+    return true;
+
   // C++14 [meta.unary.prop]:
   //   If T is a non-union class type, T shall be a complete type.
   case UTT_IsEmpty:
@@ -5813,6 +5817,34 @@ static ExprResult CheckConvertibilityForTypeTraits(
   return Result;
 }
 
+static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
+                                      SourceLocation KWLoc,
+                                      ArrayRef<TypeSourceInfo *> Args,
+                                      SourceLocation RParenLoc,
+                                      bool IsDependent) {
+  if (IsDependent)
+    return APValue();
+
+  switch (Kind) {
+  case TypeTrait::UTT_StructuredBindingSize: {
+    QualType T = Args[0]->getType();
+    SourceRange ArgRange = Args[0]->getTypeLoc().getSourceRange();
+    std::optional<unsigned> Size =
+        S.GetDecompositionElementCount(T, ArgRange.getBegin());
+    if (!Size) {
+      S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
+      return APValue();
+    }
+    llvm::APSInt V =
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
+    return APValue{V};
+    break;
+  }
+  default:
+    llvm_unreachable("Not a SizeT type trait");
+  }
+}
+
 static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
                                      SourceLocation KWLoc,
                                      ArrayRef<TypeSourceInfo *> Args,
@@ -6014,9 +6046,12 @@ bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
 
 enum class TypeTraitReturnType {
   Bool,
+  SizeT,
 };
 
 static TypeTraitReturnType GetReturnType(TypeTrait Kind) {
+  if (Kind == TypeTrait::UTT_StructuredBindingSize)
+    return TypeTraitReturnType::SizeT;
   return TypeTraitReturnType::Bool;
 }
 
@@ -6046,6 +6081,12 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                            Dependent);
     return TypeTraitExpr::Create(Context, Context.getLogicalOperationType(),
                                  KWLoc, Kind, Args, RParenLoc, Result);
+  }
+  case TypeTraitReturnType::SizeT: {
+    APValue Result =
+        EvaluateSizeTTypeTrait(*this, Kind, KWLoc, Args, RParenLoc, Dependent);
+    return TypeTraitExpr::Create(Context, Context.getSizeType(), KWLoc, Kind,
+                                 Args, RParenLoc, Result);
   }
   }
   llvm_unreachable("unhandled type trait return type");

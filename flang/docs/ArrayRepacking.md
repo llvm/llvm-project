@@ -400,7 +400,24 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 
 ### Runtime
 
-[TBD] define the runtime APIs.
+The goal of packing a non-contiguous array into a contiguous temporary is to allow data cache efficient accesses to the elements of the array. With this in mind, the copy of elements of derived types may be done without following the regular Fortran assign semantics for the allocatable components that may imply memory allocations and the data copies for those components. Making just a shallow copy of the original array can therefore be faster than the corresponding deep copy using Fortran `Assign` runtime.
+
+The following API is proposed in flang-rt:
+
+```C++
+void RTDECL(ShallowCopyDirect)(
+    const Descriptor &result,
+    const Descriptor &source,
+    const char *sourceFile = nullptr,
+    int line = 0);
+```
+
+It copies values from `source` array into the pre-allocated `result` array. The semantics is different from the `Assign` runtime for derived types, because it does not perform the recursive assign actions for the components of derived types. For example, ALLOCATABLE component descriptors are copied without creating a new allocation and copying the data (essentially, they are treated as POINTER components).
+
+The arrays must be conforming, i.e. they must have:
+  * Same rank.
+  * Same extents.
+  * Same size and type of elements (including the type parameters).
 
 ### Optimization passes
 
