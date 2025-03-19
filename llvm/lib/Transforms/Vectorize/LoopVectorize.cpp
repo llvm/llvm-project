@@ -4908,8 +4908,8 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
   // recipe that is the key.
   using IntervalMap = SmallDenseMap<VPRecipeBase *, unsigned, 16>;
 
-  // Maps recipe to its index.
-  SmallVector<VPRecipeBase *, 64> IdxToRecipe;
+  // Maps indices to recipes.
+  SmallVector<VPRecipeBase *, 64> Idx2Recipe;
   // Marks the end of each interval.
   IntervalMap EndPoint;
   // Saves the list of recipe indices that are used in the loop.
@@ -4926,7 +4926,7 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
     if (!VPBB->getParent())
       break;
     for (VPRecipeBase &R : *VPBB) {
-      IdxToRecipe.push_back(&R);
+      Idx2Recipe.push_back(&R);
 
       // Save the end location of each USE.
       for (VPValue *U : R.operands()) {
@@ -4947,7 +4947,7 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         }
 
         // Overwrite previous end points.
-        EndPoint[DefR] = IdxToRecipe.size();
+        EndPoint[DefR] = Idx2Recipe.size();
         Ends.insert(DefR);
       }
     }
@@ -4956,7 +4956,7 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
       // exiting block, where their increment will get materialized eventually.
       for (auto &R : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
         if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-          EndPoint[&R] = IdxToRecipe.size();
+          EndPoint[&R] = Idx2Recipe.size();
           Ends.insert(&R);
         }
       }
@@ -4988,8 +4988,8 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
-  for (unsigned int Idx = 0, Sz = IdxToRecipe.size(); Idx < Sz; ++Idx) {
-    VPRecipeBase *R = IdxToRecipe[Idx];
+  for (unsigned int Idx = 0, Sz = Idx2Recipe.size(); Idx < Sz; ++Idx) {
+    VPRecipeBase *R = Idx2Recipe[Idx];
 
     //  Remove all of the recipes that end at this location.
     RecipeList &List = TransposeEnds[Idx];
@@ -5405,7 +5405,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
   // We also search for instructions that are defined outside the loop, but are
   // used inside the loop. We need this number separately from the max-interval
   // usage number because when we unroll, loop-invariant values do not take
-  // more register.
+  // more registers.
   LoopBlocksDFS DFS(TheLoop);
   DFS.perform(LI);
 
