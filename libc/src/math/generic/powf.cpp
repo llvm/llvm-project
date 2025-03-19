@@ -165,11 +165,11 @@ alignas(16) constexpr DoubleDouble LOG2_R_DD[128] = {
 };
 #else
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 constexpr uint64_t ERR = 64;
 #else
 constexpr uint64_t ERR = 128;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 // We choose the precision of the high part to be 53 - 24 - 8, so that when
 //   y * (e_x + LOG2_R_DD[i].hi) is exact.
@@ -851,11 +851,11 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   //   log2(m_x) = log2( (1 + dx) / r )
   //             = log2(1 + dx) - log2(r).
   double dx;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   dx = static_cast<double>(fputil::multiply_add(m_x, R[idx_x], -1.0f)); // Exact
 #else
   dx = fputil::multiply_add(static_cast<double>(m_x), RD[idx_x], -1.0); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   // Degree-5 polynomial approximation:
   //   dx * P(dx) ~ log2(1 + dx)

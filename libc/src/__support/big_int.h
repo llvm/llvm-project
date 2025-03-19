@@ -284,8 +284,8 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
     if (i < 0)
       return 0;
     if (i >= int(N))
-      return is_neg ? -1 : 0;
-    return array[i];
+      return is_neg ? cpp::numeric_limits<word>::max() : 0;
+    return array[static_cast<unsigned>(i)];
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
@@ -296,7 +296,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   for (size_t index = 0; index < N; ++index) {
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
-    word &dst = out[at(index)];
+    word &dst = out[static_cast<unsigned>(at(index))];
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == LEFT)
@@ -696,7 +696,8 @@ public:
     }
     BigInt quotient;
     WordType x_word = static_cast<WordType>(x);
-    constexpr size_t LOG2_WORD_SIZE = cpp::bit_width(WORD_SIZE) - 1;
+    constexpr size_t LOG2_WORD_SIZE =
+        static_cast<size_t>(cpp::bit_width(WORD_SIZE) - 1);
     constexpr size_t HALF_WORD_SIZE = WORD_SIZE >> 1;
     constexpr WordType HALF_MASK = ((WordType(1) << HALF_WORD_SIZE) - 1);
     // lower = smallest multiple of WORD_SIZE that is >= e.
@@ -865,7 +866,7 @@ public:
   LIBC_INLINE constexpr BigInt operator~() const {
     BigInt result;
     for (size_t i = 0; i < WORD_COUNT; ++i)
-      result[i] = ~val[i];
+      result[i] = static_cast<WordType>(~val[i]);
     return result;
   }
 
@@ -966,7 +967,7 @@ private:
 
   LIBC_INLINE constexpr void bitwise_not() {
     for (auto &part : val)
-      part = ~part;
+      part = static_cast<WordType>(~part);
   }
 
   LIBC_INLINE constexpr void negate() {
@@ -1008,12 +1009,12 @@ private:
       BigInt subtractor = divider;
       int cur_bit = multiword::countl_zero(subtractor.val) -
                     multiword::countl_zero(remainder.val);
-      subtractor <<= cur_bit;
+      subtractor <<= static_cast<size_t>(cur_bit);
       for (; cur_bit >= 0 && remainder > 0; --cur_bit, subtractor >>= 1) {
         if (remainder < subtractor)
           continue;
         remainder -= subtractor;
-        quotient.set_bit(cur_bit);
+        quotient.set_bit(static_cast<size_t>(cur_bit));
       }
     }
     return Division{quotient, remainder};
@@ -1275,26 +1276,28 @@ rotr(T value, int rotate);
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotl(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotr<T>(value, -rotate);
-  return (value << rotate) | (value >> (N - rotate));
+  return (value << static_cast<size_t>(rotate)) |
+         (value >> (N - static_cast<size_t>(rotate)));
 }
 
 // Specialization of cpp::rotr ('bit.h') for BigInt.
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
 rotr(T value, int rotate) {
-  constexpr unsigned N = cpp::numeric_limits<T>::digits;
+  constexpr int N = cpp::numeric_limits<T>::digits;
   rotate = rotate % N;
   if (!rotate)
     return value;
   if (rotate < 0)
     return cpp::rotl<T>(value, -rotate);
-  return (value >> rotate) | (value << (N - rotate));
+  return (value >> static_cast<size_t>(rotate)) |
+         (value << (N - static_cast<size_t>(rotate)));
 }
 
 } // namespace cpp
@@ -1311,7 +1314,7 @@ mask_trailing_ones() {
   T out; // zero initialized
   for (size_t i = 0; i <= QUOTIENT; ++i)
     out[i] = i < QUOTIENT
-                 ? -1
+                 ? cpp::numeric_limits<typename T::word_type>::max()
                  : mask_trailing_ones<typename T::word_type, REMAINDER>();
   return out;
 }
@@ -1327,7 +1330,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
   T out; // zero initialized
   for (size_t i = QUOTIENT; i < T::WORD_COUNT; ++i)
     out[i] = i > QUOTIENT
-                 ? -1
+                 ? cpp::numeric_limits<typename T::word_type>::max()
                  : mask_leading_ones<typename T::word_type, REMAINDER>();
   return out;
 }

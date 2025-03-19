@@ -1881,11 +1881,23 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
+  auto getElemType = [](const Pointer &P) -> QualType {
+    const Descriptor *Desc = P.getFieldDesc();
+    QualType T = Desc->getType();
+    if (T->isPointerType())
+      return T->getAs<PointerType>()->getPointeeType();
+    if (Desc->isArray())
+      return Desc->getElemQualType();
+    return T;
+  };
+
   const ASTContext &ASTCtx = S.getASTContext();
+  QualType ElemTypeA = getElemType(PtrA);
+  QualType ElemTypeB = getElemType(PtrB);
   // FIXME: This is an arbitrary limitation the current constant interpreter
   // had. We could remove this.
-  if (!IsWide && (!isOneByteCharacterType(PtrA.getType()) ||
-                  !isOneByteCharacterType(PtrB.getType()))) {
+  if (!IsWide && (!isOneByteCharacterType(ElemTypeA) ||
+                  !isOneByteCharacterType(ElemTypeB))) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcmp_unsupported)
         << ASTCtx.BuiltinInfo.getQuotedName(ID) << PtrA.getType()
@@ -1898,7 +1910,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   // Now, read both pointers to a buffer and compare those.
   BitcastBuffer BufferA(
-      Bits(ASTCtx.getTypeSize(PtrA.getFieldDesc()->getType())));
+      Bits(ASTCtx.getTypeSize(ElemTypeA) * PtrA.getNumElems()));
   readPointerToBuffer(S.getContext(), PtrA, BufferA, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
@@ -1906,7 +1918,7 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     swapBytes(BufferA.Data.get(), BufferA.byteSize().getQuantity());
 
   BitcastBuffer BufferB(
-      Bits(ASTCtx.getTypeSize(PtrB.getFieldDesc()->getType())));
+      Bits(ASTCtx.getTypeSize(ElemTypeB) * PtrB.getNumElems()));
   readPointerToBuffer(S.getContext(), PtrB, BufferB, false);
   // FIXME: The swapping here is UNDOING something we do when reading the
   // data into the buffer.
@@ -2033,8 +2045,10 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
       (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
 
   size_t Index = Ptr.getIndex();
+  size_t Step = 0;
   for (;;) {
-    const Pointer &ElemPtr = Index > 0 ? Ptr.atIndex(Index) : Ptr;
+    const Pointer &ElemPtr =
+        (Index + Step) > 0 ? Ptr.atIndex(Index + Step) : Ptr;
 
     if (!CheckLoad(S, OpPC, ElemPtr))
       return false;
@@ -2048,8 +2062,8 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     if (StopAtZero && V == 0)
       break;
 
-    ++Index;
-    if (MaxLength && Index == MaxLength->getZExtValue())
+    ++Step;
+    if (MaxLength && Step == MaxLength->getZExtValue())
       break;
   }
 
@@ -2059,6 +2073,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
+  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+    return false;
+
   const InterpFrame *Frame = S.Current;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);

@@ -1352,6 +1352,21 @@ namespace Memcmp {
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 7) == -1);
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 6) == -1);
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 5) == 0);
+
+#if __cplusplus >= 202002L
+  constexpr bool f() {
+    char *c = new char[12];
+    c[0] = 'b';
+
+    char n = 'a';
+    bool b = __builtin_memcmp(c, &n, 1) == 0;
+
+    delete[] c;
+    return !b;
+  }
+  static_assert(f());
+#endif
+
 }
 
 namespace Memchr {
@@ -1444,6 +1459,11 @@ namespace Memchr {
   constexpr bool b = !memchr("hello", 'h', 3); // both-error {{constant expression}} \
                                                // both-note {{non-constexpr function 'memchr' cannot be used in a constant expression}}
 
+  constexpr bool f() {
+    const char *c = "abcdef";
+    return __builtin_char_memchr(c + 1, 'f', 1) == nullptr;
+  }
+  static_assert(f());
 }
 
 namespace Strchr {

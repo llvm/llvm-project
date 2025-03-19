@@ -174,6 +174,25 @@ The default hostname being used `localhost`.
 }
 ```
 
+### Launching via `vscode://` URIs
+
+Debugging sessions can also be starting using special URIs.
+
+The `vscode://llvm-vs-code-extensions.lldb-dap/start?config={launch-config}`
+URI accepts a [URL-encoded](https://en.wikipedia.org/wiki/Percent-encoding)
+JSON launch config. The most frequently used arguments (`request`, `program`,
+`args`, `cwd`, `pid`, ...) can also specified directly, e.g.
+`vscode://llvm-vs-code-extensions.lldb-dap/start?request=attach&pid=1234`, or
+`vscode://llvm-vs-code-extensions.lldb-dap/start?program=ls&args=-a&args=/etc`.
+
+This is useful for integration with custom scripts to start debugging
+sessions. The URI might be printed to the terminal, potentially using
+[OSC-8 hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda),
+or passed to `code --open-url` or `xdg-open`, although mileage may vary depending
+on your specific debugging setup. E.g., `code --open-url` will not work when using a
+SSH remote session. Furthermore, placeholders such as `${workspaceFolder}` are not
+supported within launch URLs.
+
 ### Configuration Settings Reference
 
 For both launch and attach configurations, lldb-dap accepts the following `lldb-dap`
@@ -328,4 +347,4 @@ The source code is part of the [LLVM repository](https://github.com/llvm/llvm-pr
 We use Github's [issue tracker](https://github.com/llvm/llvm-project/issues?q=label%3Alldb-dap) and patches can be submitted via [pull requests](https://github.com/llvm/llvm-project/pulls?q=label%3Alldb-dap).
 Furthermore, there is a [LLDB category](https://discourse.llvm.org/c/subprojects/lldb/8) on the LLVM discourse forum.
 
-For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)"
+For instructions on how to get started with development on lldb-dap, see the "[Contributing to lldb-dap](https://lldb.llvm.org/resources/lldbdap.html)" guide.

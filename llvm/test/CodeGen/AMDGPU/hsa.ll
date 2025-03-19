@@ -116,7 +116,7 @@ entry:
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 define amdgpu_kernel void @simple_no_kernargs() #0 {
 entry:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   ret void
 }
 

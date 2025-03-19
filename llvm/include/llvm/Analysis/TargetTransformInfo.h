@@ -1622,7 +1622,7 @@ public:
   /// ResTy vecreduce.opcode(ext(Ty A)).
   InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      FastMathFlags FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
@@ -1770,6 +1770,10 @@ public:
   /// loop vectorizer's cost-model assigns an equal cost to the fixed and
   /// scalable version of the vectorized loop.
   bool preferFixedOverScalableIfEqualCost() const;
+
+  /// \returns True if target prefers SLP vectorizer with altermate opcode
+  /// vectorization, false - otherwise.
+  bool preferAlternateOpcodeVectorization() const;
 
   /// \returns True if the target prefers reductions in loop.
   bool preferInLoopReduction(unsigned Opcode, Type *Ty) const;
@@ -2263,7 +2267,7 @@ public:
                          TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-      FastMathFlags FMF,
+      std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
   virtual InstructionCost getMulAccReductionCost(
       bool IsUnsigned, Type *ResTy, VectorType *Ty,
@@ -2325,6 +2329,7 @@ public:
   virtual bool preferInLoopReduction(unsigned Opcode, Type *Ty) const = 0;
   virtual bool preferPredicatedReductionSelect(unsigned Opcode,
                                                Type *Ty) const = 0;
+  virtual bool preferAlternateOpcodeVectorization() const = 0;
   virtual bool preferEpilogueVectorization() const = 0;
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
@@ -3018,7 +3023,7 @@ public:
   }
   InstructionCost
   getExtendedReductionCost(unsigned Opcode, bool IsUnsigned, Type *ResTy,
-                           VectorType *Ty, FastMathFlags FMF,
+                           VectorType *Ty, std::optional<FastMathFlags> FMF,
                            TTI::TargetCostKind CostKind) override {
     return Impl.getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                          CostKind);
@@ -3134,6 +3139,9 @@ public:
   }
   bool preferInLoopReduction(unsigned Opcode, Type *Ty) const override {
     return Impl.preferInLoopReduction(Opcode, Ty);
+  }
+  bool preferAlternateOpcodeVectorization() const override {
+    return Impl.preferAlternateOpcodeVectorization();
   }
   bool preferPredicatedReductionSelect(unsigned Opcode,
                                        Type *Ty) const override {

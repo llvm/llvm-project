@@ -22,6 +22,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/Passes.h"
 
 struct CIRToLLVMPipelineOptions
@@ -38,6 +39,10 @@ int main(int argc, char **argv) {
       [](mlir::OpPassManager &pm, const CIRToLLVMPipelineOptions &options) {
         cir::direct::populateCIRToLLVMPasses(pm);
       });
+
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCIRFlattenCFGPass();
+  });
 
   mlir::registerTransformsPasses();
 

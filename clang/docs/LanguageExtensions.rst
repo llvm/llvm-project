@@ -786,6 +786,7 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_bitreverse(T x)        return the integer represented after reversing the bits of x           integer types
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
+ T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -1604,53 +1605,55 @@ More information could be found `here <https://clang.llvm.org/docs/Modules.html>
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-============================================ ================================ ============= =============
-Feature                                      Feature Test Macro               Introduced In Backported To
-============================================ ================================ ============= =============
-variadic templates                           __cpp_variadic_templates         C++11         C++03
-Alias templates                              __cpp_alias_templates            C++11         C++03
-Non-static data member initializers          __cpp_nsdmi                      C++11         C++03
-Range-based ``for`` loop                     __cpp_range_based_for            C++11         C++03
-RValue references                            __cpp_rvalue_references          C++11         C++03
-Attributes                                   __cpp_attributes                 C++11         C++03
-Lambdas                                      __cpp_lambdas                    C++11         C++03
-Generalized lambda captures                  __cpp_init_captures              C++14         C++03
-Generic lambda expressions                   __cpp_generic_lambdas            C++14         C++03
-variable templates                           __cpp_variable_templates         C++14         C++03
-Binary literals                              __cpp_binary_literals            C++14         C++03
-Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
-Static assert with no message                __cpp_static_assert >= 201411L   C++17         C++11
-Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
-``if constexpr``                             __cpp_if_constexpr               C++17         C++11
-fold expressions                             __cpp_fold_expressions           C++17         C++03
-Lambda capture of \*this by value            __cpp_capture_star_this          C++17         C++03
-Attributes on enums                          __cpp_enumerator_attributes      C++17         C++03
-Guaranteed copy elision                      __cpp_guaranteed_copy_elision    C++17         C++03
-Hexadecimal floating literals                __cpp_hex_float                  C++17         C++03
-``inline`` variables                         __cpp_inline_variables           C++17         C++03
-Attributes on namespaces                     __cpp_namespace_attributes       C++17         C++11
-Structured bindings                          __cpp_structured_bindings        C++17         C++03
-template template arguments                  __cpp_template_template_args     C++17         C++03
-Familiar template syntax for generic lambdas __cpp_generic_lambdas            C++20         C++03
-``static operator[]``                        __cpp_multidimensional_subscript C++20         C++03
-Designated initializers                      __cpp_designated_initializers    C++20         C++03
-Conditional ``explicit``                     __cpp_conditional_explicit       C++20         C++03
-``using enum``                               __cpp_using_enum                 C++20         C++03
-``if consteval``                             __cpp_if_consteval               C++23         C++20
-``static operator()``                        __cpp_static_call_operator       C++23         C++03
-Attributes on Lambda-Expressions                                              C++23         C++11
-Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
-Packs in Structured Bindings                 __cpp_structured_bindings        C++26         C++03
-Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
-Pack Indexing                                __cpp_pack_indexing              C++26         C++03
-``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
-Variadic Friends                             __cpp_variadic_friend            C++26         C++03
--------------------------------------------- -------------------------------- ------------- -------------
-Designated initializers (N494)                                                C99           C89
-Array & element qualification (N2607)                                         C23           C89
-Attributes (N2335)                                                            C23           C89
-``#embed`` (N3017)                                                            C23           C89, C++
-============================================ ================================ ============= =============
+============================================= ================================ ============= =============
+Feature                                       Feature Test Macro               Introduced In Backported To
+============================================= ================================ ============= =============
+variadic templates                            __cpp_variadic_templates         C++11         C++03
+Alias templates                               __cpp_alias_templates            C++11         C++03
+Non-static data member initializers           __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop                      __cpp_range_based_for            C++11         C++03
+RValue references                             __cpp_rvalue_references          C++11         C++03
+Attributes                                    __cpp_attributes                 C++11         C++03
+Lambdas                                       __cpp_lambdas                    C++11         C++03
+Generalized lambda captures                   __cpp_init_captures              C++14         C++03
+Generic lambda expressions                    __cpp_generic_lambdas            C++14         C++03
+variable templates                            __cpp_variable_templates         C++14         C++03
+Binary literals                               __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                             __cpp_constexpr                  C++14         C++11
+Static assert with no message                 __cpp_static_assert >= 201411L   C++17         C++11
+Pack expansion in generalized lambda-capture  __cpp_init_captures              C++17         C++03
+``if constexpr``                              __cpp_if_constexpr               C++17         C++11
+fold expressions                              __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value             __cpp_capture_star_this          C++17         C++03
+Attributes on enums                           __cpp_enumerator_attributes      C++17         C++03
+Guaranteed copy elision                       __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals                 __cpp_hex_float                  C++17         C++03
+``inline`` variables                          __cpp_inline_variables           C++17         C++03
+Attributes on namespaces                      __cpp_namespace_attributes       C++17         C++11
+Structured bindings                           __cpp_structured_bindings        C++17         C++03
+template template arguments                   __cpp_template_template_args     C++17         C++03
+Familiar template syntax for generic lambdas  __cpp_generic_lambdas            C++20         C++03
+``static operator[]``                         __cpp_multidimensional_subscript C++20         C++03
+Designated initializers                       __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``                      __cpp_conditional_explicit       C++20         C++03
+``using enum``                                __cpp_using_enum                 C++20         C++03
+``if consteval``                              __cpp_if_consteval               C++23         C++20
+``static operator()``                         __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                               C++23         C++11
+Attributes on Structured Bindings             __cpp_structured_bindings        C++26         C++03
+Packs in Structured Bindings                  __cpp_structured_bindings        C++26         C++03
+Structured binding declaration as a condition __cpp_structured_bindings        C++26         C++98
+Static assert with user-generated message     __cpp_static_assert >= 202306L   C++26         C++11
+Pack Indexing                                 __cpp_pack_indexing              C++26         C++03
+``= delete ("should have a reason");``        __cpp_deleted_function           C++26         C++03
+Variadic Friends                              __cpp_variadic_friend            C++26         C++03
+--------------------------------------------- -------------------------------- ------------- -------------
+Designated initializers (N494)                                                 C99           C89
+Array & element qualification (N2607)                                          C23           C89
+Attributes (N2335)                                                             C23           C89
+``#embed`` (N3017)                                                             C23           C89, C++
+Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
+============================================= ================================ ============= =============
 
 Builtin type aliases
 ====================
@@ -1909,6 +1912,40 @@ A simplistic usage example as might be seen in standard C++ headers follows:
   // Emulate type trait for compatibility with other compilers.
   #endif
 
+
+.. _builtin_structured_binding_size-doc:
+
+__builtin_structured_binding_size (C++)
+---------------------------------------
+
+The ``__builtin_structured_binding_size(T)`` type trait returns
+the *structured binding size* ([dcl.struct.bind]) of type ``T``
+
+This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = declval<T&>();``.
+If the argument cannot be decomposed, ``__builtin_structured_binding_size(T)``
+is not a valid expression (``__builtin_structured_binding_size`` is SFINAE-friendly).
+
+builtin arrays, builtin SIMD vectors,
+builtin complex types, *tuple-like* types, and decomposable class types
+are decomposable types.
+
+A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
+even if there is no valid ``std::tuple_element`` specialization or suitable
+``get`` function for that type.
+
+.. code-block:: c++
+
+  template<std::size_t Idx, typename T>
+  requires (Idx < __builtin_structured_binding_size(T))
+  decltype(auto) constexpr get_binding(T&& obj) {
+      auto && [...p] = std::forward<T>(obj);
+      return p...[Idx];
+  }
+  struct S { int a = 0, b = 42; };
+  static_assert(__builtin_structured_binding_size(S) == 2);
+  static_assert(get_binding<1>(S{}) == 42);
+
+
 Blocks
 ======
 
@@ -1956,6 +1993,32 @@ references can be used instead of numeric references.
     err:
       return -1;
   }
+
+
+Constexpr strings in GNU ASM statememts
+=======================================
+
+In C++11 mode (and greater), Clang supports specifying the template,
+constraints, and clobber strings with a parenthesized constant expression
+producing an object with the following member functions
+
+.. code-block:: c++
+
+  constexpr const char* data() const;
+  constexpr size_t size() const;
+
+such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
+This mechanism follow the same rules as ``static_assert`` messages in
+C++26, see ``[dcl.pre]/p12``.
+
+Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
+
+.. code-block:: c++
+
+   int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+   }
+
 
 Objective-C Features
 ====================
@@ -4279,6 +4342,17 @@ ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
+``__builtin_va_list`` object.
+
+* ``void __builtin_c23_va_start(__builtin_va_list list, ...)``
+
+A builtin function for the target-specific ``va_start`` function-like macro,
+available only in C23 and later. The builtin accepts zero or one argument for
+the ellipsis (``...``). If such an argument is provided, it should be the name
+of the parameter preceeding the ellipsis, which is used for compatibility with
+C versions before C23. It is an error to provide two or more variadic arguments.
+This function initializes the given ``__builtin_va_list`` object. It is
+undefined behavior to call this function on an already initialized
 ``__builtin_va_list`` object.
 
 * ``void __builtin_va_end(__builtin_va_list list)``
