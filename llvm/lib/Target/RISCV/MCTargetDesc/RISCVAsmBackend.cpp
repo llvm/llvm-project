@@ -373,8 +373,6 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, Asm), false);
 }
 
-
-
 bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
   // This function has access to two STIs, the member of the AsmBackend, and the
