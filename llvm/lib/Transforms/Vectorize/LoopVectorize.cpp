@@ -4601,8 +4601,32 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
-      VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
+      // Add on other costs that are modelled in VPlan, but not in the legacy
+      // cost model.
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
+                            CM, CM.CostKind);
+      if (VPRegionBlock *VectorRegion = P->getVectorLoopRegion()) {
+        for (VPBlockBase *Block :
+             vp_depth_first_shallow(VectorRegion->getEntry())) {
+          if (!isa<VPBasicBlock>(Block))
+            continue;
+          for (VPRecipeBase &R : *cast<VPBasicBlock>(Block)) {
+            if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+              switch (VPI->getOpcode()) {
+              case VPInstruction::ActiveLaneMask:
+              case VPInstruction::ExplicitVectorLength:
+                C += VPI->cost(VF, CostCtx);
+                break;
+              default:
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
       unsigned Width =
           getEstimatedRuntimeVF(Candidate.Width, CM.getVScaleForTuning());
       LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << VF
@@ -5609,31 +5633,6 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
 
     Cost += BlockCost;
   }
-
-#ifndef NDEBUG
-  // TODO: We're effectively having to duplicate the code from
-  // VPInstruction::computeCost, which is ugly. This isn't meant to be a fully
-  // accurate representation of the cost of tail-folding - it exists purely to
-  // stop asserts firing when the legacy cost doesn't match the VPlan cost.
-  if (!VF.isScalar() && foldTailByMasking()) {
-    TailFoldingStyle Style = getTailFoldingStyle();
-    LLVMContext &Context = TheLoop->getHeader()->getContext();
-    Type *I1Ty = IntegerType::getInt1Ty(Context);
-    Type *IndTy = Legal->getWidestInductionType();
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    if (Style == TailFoldingStyle::DataWithEVL) {
-      Type *I32Ty = IntegerType::getInt32Ty(Context);
-      IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
-                                    I32Ty, {IndTy, I32Ty, I1Ty});
-      Cost += TTI.getIntrinsicInstrCost(Attrs, CostKind);
-    } else if (useActiveLaneMask(Style)) {
-      VectorType *RetTy = VectorType::get(I1Ty, VF);
-      IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                    {IndTy, IndTy});
-      Cost += TTI.getIntrinsicInstrCost(Attrs, CostKind);
-    }
-  }
-#endif
 
   return Cost;
 }

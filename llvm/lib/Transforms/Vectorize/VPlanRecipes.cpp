@@ -802,11 +802,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
   case VPInstruction::ActiveLaneMask: {
-    Type *Arg0Ty = Ctx.Types.inferScalarType(getOperand(0));
-    Type *Arg1Ty = Ctx.Types.inferScalarType(getOperand(1));
+    Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
     Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
     IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                  {Arg0Ty, Arg1Ty});
+                                  {ArgTy, ArgTy});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
   case VPInstruction::ExplicitVectorLength: {
