@@ -113,10 +113,9 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
   VectorType extResType = VectorType::get(2, rewriter.getF32Type());
   if (!inVecType) {
-    Value asFloats =
-        rewriter.create<amdgpu::ExtPackedFp8Op>(loc, extResType, in, 0);
-    Value resFloat = rewriter.create<vector::ExtractOp>(loc, asFloats, 0);
-    Value result = castF32To(outElemType, resFloat, loc, rewriter);
+    Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
+        loc, rewriter.getF32Type(), in, 0);
+    Value result = castF32To(outElemType, asFloat, loc, rewriter);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -154,15 +153,17 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
     Value inSlice = rewriter.create<vector::ExtractStridedSliceOp>(
         loc, in, i, elemsThisOp, 1);
     for (int64_t j = 0; j < elemsThisOp; j += 2) {
-      Value asFloats = rewriter.create<amdgpu::ExtPackedFp8Op>(loc, extResType,
-                                                               inSlice, j / 2);
-      Type desType = VectorType::get(2, outElemType);
-      Value asType = castF32To(desType, asFloats, loc, rewriter);
-      if (i + j + 1 < numElements)
+      if (i + j + 1 < numElements) { // Convert two 8-bit elements
+        Value asFloats = rewriter.create<amdgpu::ExtPackedFp8Op>(
+            loc, extResType, inSlice, j / 2);
+        Type desType = VectorType::get(2, outElemType);
+        Value asType = castF32To(desType, asFloats, loc, rewriter);
         result = rewriter.create<vector::InsertStridedSliceOp>(
             loc, asType, result, i + j, 1);
-      else {
-        asType = rewriter.create<vector::ExtractOp>(loc, asType, 0);
+      } else { // Convert a 8-bit element
+        Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
+            loc, rewriter.getF32Type(), inSlice, j / 2 * 2);
+        Value asType = castF32To(outElemType, asFloat, loc, rewriter);
         result = rewriter.create<vector::InsertOp>(loc, asType, result, i + j);
       }
     }

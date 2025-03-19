@@ -85,12 +85,13 @@ def AMDGPU_ExtPackedFp8Op :
     AMDGPU_Op<"ext_packed_fp8", [Pure]>,
     Arguments<(ins AnyTypeOf<[F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN,
         VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN]>]>:$source,
-      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<1>]>:$wordIndex)>,
-    Results<(outs FixedVectorOfLengthAndType<[2], [F32]>:$res)> {
-  let summary = "Extend a vector of packed fp8 values to two floats";
+      ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$index)>,
+    Results<(outs AnyTypeOf<[F32, FixedVectorOfLengthAndType<[2], [F32]>]>:$res)> {
+  let summary = "Extend a fp8 value to a float or a vector of packed fp8 values to two floats";
 
   let description = [{
-    Extend the two 8-bit floats in `source[wordrIndex]` to two 32-bit floats and return them.
+    Extend one or two 8-bit floats in `source[index]` to a 32-bit float or
+    two floats and return them.
 
     This rather unusual signature arises from the fact that AMD GPUs cannot
     easily work with sub 32-bit quantities, so the compiler intrinsics for
@@ -102,7 +103,7 @@ def AMDGPU_ExtPackedFp8Op :
     undefined values as needed.
   }];
   let assemblyFormat = [{
-    attr-dict $source `[` $wordIndex `]` `:` type($source) `to` type($res)
+    attr-dict $source `[` $index `]` `:` type($source) `to` type($res)
   }];
 }
 
