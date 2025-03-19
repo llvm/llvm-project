@@ -81,7 +81,6 @@ public:
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
-  unsigned getRelaxedOpcode(unsigned Op) const;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;

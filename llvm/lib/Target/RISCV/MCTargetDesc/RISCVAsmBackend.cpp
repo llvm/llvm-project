@@ -8,6 +8,7 @@
 
 #include "RISCVAsmBackend.h"
 #include "RISCVMCExpr.h"
+#include "RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
@@ -171,8 +172,39 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
   }
 }
 
+// Given a compressed control flow instruction this function returns
+// the expanded instruction.
+static unsigned getRelaxedOpcode(unsigned Op) {
+  switch (Op) {
+  default:
+    return Op;
+  case RISCV::C_BEQZ:
+    return RISCV::BEQ;
+  case RISCV::C_BNEZ:
+    return RISCV::BNE;
+  case RISCV::C_J:
+  case RISCV::C_JAL: // fall through.
+    return RISCV::JAL;
+  case RISCV::BEQ:
+    return RISCV::PseudoLongBEQ;
+  case RISCV::BNE:
+    return RISCV::PseudoLongBNE;
+  case RISCV::BLT:
+    return RISCV::PseudoLongBLT;
+  case RISCV::BGE:
+    return RISCV::PseudoLongBGE;
+  case RISCV::BLTU:
+    return RISCV::PseudoLongBLTU;
+  case RISCV::BGEU:
+    return RISCV::PseudoLongBGEU;
+  }
+}
+
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
                                        const MCSubtargetInfo &STI) const {
+  if (STI.hasFeature(RISCV::FeatureExactAssembly))
+    return;
+
   MCInst Res;
   switch (Inst.getOpcode()) {
   default:
@@ -341,37 +373,7 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, Asm), false);
 }
 
-// Given a compressed control flow instruction this function returns
-// the expanded instruction.
-unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
-  // Disable relaxation if FeatureExactAssembly
-  if (STI.hasFeature(RISCV::FeatureExactAssembly))
-    return Op;
 
-  switch (Op) {
-  default:
-    return Op;
-  case RISCV::C_BEQZ:
-    return RISCV::BEQ;
-  case RISCV::C_BNEZ:
-    return RISCV::BNE;
-  case RISCV::C_J:
-  case RISCV::C_JAL: // fall through.
-    return RISCV::JAL;
-  case RISCV::BEQ:
-    return RISCV::PseudoLongBEQ;
-  case RISCV::BNE:
-    return RISCV::PseudoLongBNE;
-  case RISCV::BLT:
-    return RISCV::PseudoLongBLT;
-  case RISCV::BGE:
-    return RISCV::PseudoLongBGE;
-  case RISCV::BLTU:
-    return RISCV::PseudoLongBLTU;
-  case RISCV::BGEU:
-    return RISCV::PseudoLongBGEU;
-  }
-}
 
 bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
