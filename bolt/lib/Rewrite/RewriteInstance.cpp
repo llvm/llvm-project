@@ -2452,7 +2452,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
           }
         } else {
           BC->errs() << "BOLT-ERROR: referenced address at 0x"
-                     << ReferencedAddress
+                     << Twine::utohexstr(ReferencedAddress)
                      << " is in constant island of function " << *Func << "\n";
           exit(1);
         }
