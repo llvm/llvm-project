@@ -13,7 +13,6 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
-#include <optional>
 #include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
@@ -77,7 +76,7 @@ struct GPUProfGlobals {
   SmallVector<__llvm_profile_data> Data;
   SmallVector<uint8_t> NamesData;
   Triple TargetTriple;
-  std::optional<uint64_t> Version;
+  uint64_t Version = INSTR_PROF_RAW_VERSION;
 
   void dump() const;
   Error write() const;
