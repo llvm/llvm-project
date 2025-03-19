@@ -434,6 +434,8 @@ enum NodeType : unsigned {
   /// CLAMP value between 0.0 and 1.0. NaN clamped to 0, following clamp output
   /// modifier behavior with dx10_enable.
   CLAMP,
+  
+  SUPR,
 
   // This is SETCC with the full mask result which is used for a compare with a
   // result bit per item in the wavefront.

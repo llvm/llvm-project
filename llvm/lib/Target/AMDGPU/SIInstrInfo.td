@@ -58,6 +58,7 @@ def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.G
 //===----------------------------------------------------------------------===//
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
+def AMDGPUsupr : SDNode<"AMDGPUISD::SUPR", SDTFPUnaryOp>;
 
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
@@ -1216,6 +1217,8 @@ def omod0 : DefaultOperand<omod, 0>;
 // before a mandatory operand.
 def Clamp : NamedBitOperand<"clamp">;
 def Clamp0 : DefaultOperand<Clamp, 0>;
+def SUPR : NamedBitOperand<"supr">;
+def SUPR0 : DefaultOperand<SUPR, 0>;
 def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : CustomOperand<i32, 1>;
@@ -2824,6 +2827,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit HasOpSel = IsPacked;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
+  field bit HasSUPR = 0;
 
   field bit HasModifiers = !or(isModifierType<Src0VT>.ret,
                                isModifierType<Src1VT>.ret,
