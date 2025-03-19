@@ -878,21 +878,17 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
             }
           },
           [&](const parser::OpenMPStandaloneConstruct &c) {
-            if (const auto &simpleConstruct =
-                    std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
-                        &c.u)) {
-              const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(
-                  simpleConstruct->t)};
-              if (dir.v == llvm::omp::Directive::OMPD_ordered) {
-                const auto &clauses{
-                    std::get<parser::OmpClauseList>(simpleConstruct->t)};
-                for (const auto &clause : clauses.v) {
-                  if (std::get_if<parser::OmpClause::Simd>(&clause.u)) {
+            if (auto *ssc{std::get_if<parser::OpenMPSimpleStandaloneConstruct>(
+                    &c.u)}) {
+              llvm::omp::Directive dirId{ssc->v.DirId()};
+              if (dirId == llvm::omp::Directive::OMPD_ordered) {
+                for (const parser::OmpClause &x : ssc->v.Clauses().v) {
+                  if (x.Id() == llvm::omp::Clause::OMPC_simd) {
                     eligibleSIMD = true;
                     break;
                   }
                 }
-              } else if (dir.v == llvm::omp::Directive::OMPD_scan) {
+              } else if (dirId == llvm::omp::Directive::OMPD_scan) {
                 eligibleSIMD = true;
               }
             }
@@ -944,15 +940,15 @@ void OmpStructureChecker::CheckTargetNest(const parser::OpenMPConstruct &c) {
             common::visit(
                 common::visitors{
                     [&](const parser::OpenMPSimpleStandaloneConstruct &c) {
-                      const auto &dir{
-                          std::get<parser::OmpSimpleStandaloneDirective>(c.t)};
-                      if (dir.v == llvm::omp::Directive::OMPD_target_update ||
-                          dir.v ==
-                              llvm::omp::Directive::OMPD_target_enter_data ||
-                          dir.v ==
-                              llvm::omp::Directive::OMPD_target_exit_data) {
+                      switch (llvm::omp::Directive dirId{c.v.DirId()}) {
+                      case llvm::omp::Directive::OMPD_target_update:
+                      case llvm::omp::Directive::OMPD_target_enter_data:
+                      case llvm::omp::Directive::OMPD_target_exit_data:
                         eligibleTarget = false;
-                        ineligibleTargetDir = dir.v;
+                        ineligibleTargetDir = dirId;
+                        break;
+                      default:
+                        break;
                       }
                     },
                     [&](const auto &c) {},
@@ -1978,7 +1974,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
 
 void OmpStructureChecker::CheckScan(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  if (std::get<parser::OmpClauseList>(x.t).v.size() != 1) {
+  if (x.v.Clauses().v.size() != 1) {
     context_.Say(x.source,
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected"_err_en_US);
   }
@@ -2183,7 +2179,7 @@ void OmpStructureChecker::CheckDependenceType(
 
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  const auto &dir{std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &dir{std::get<parser::OmpDirectiveName>(x.v.t)};
   PushContextAndClauseSets(dir.source, dir.v);
   switch (dir.v) {
   case llvm::omp::Directive::OMPD_barrier:
@@ -3538,13 +3534,18 @@ void OmpStructureChecker::CheckReductionModifier(
     return;
   }
   const DirectiveContext &dirCtx{GetContext()};
-  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop) {
+  if (dirCtx.directive == llvm::omp::Directive::OMPD_loop ||
+      dirCtx.directive == llvm::omp::Directive::OMPD_taskloop) {
     // [5.2:257:33-34]
     // If a reduction-modifier is specified in a reduction clause that
     // appears on the directive, then the reduction modifier must be
     // default.
+    // [5.2:268:16]
+    // The reduction-modifier must be default.
     context_.Say(GetContext().clauseSource,
-        "REDUCTION modifier on LOOP directive must be DEFAULT"_err_en_US);
+        "REDUCTION modifier on %s directive must be DEFAULT"_err_en_US,
+        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
+    return;
   }
   if (modifier.v == ReductionModifier::Value::Task) {
     // "Task" is only allowed on worksharing or "parallel" directive.
@@ -4425,8 +4426,30 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_lastprivate);
 
-  OmpVerifyModifiers(
-      x.v, llvm::omp::OMPC_lastprivate, GetContext().clauseSource, context_);
+  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_lastprivate,
+          GetContext().clauseSource, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    using LastprivateModifier = parser::OmpLastprivateModifier;
+    if (auto *modifier{OmpGetUniqueModifier<LastprivateModifier>(modifiers)}) {
+      CheckLastprivateModifier(*modifier);
+    }
+  }
+}
+
+// Add any restrictions related to Modifiers/Directives with
+// Lastprivate clause here:
+void OmpStructureChecker::CheckLastprivateModifier(
+    const parser::OmpLastprivateModifier &modifier) {
+  using LastprivateModifier = parser::OmpLastprivateModifier;
+  const DirectiveContext &dirCtx{GetContext()};
+  if (modifier.v == LastprivateModifier::Value::Conditional &&
+      dirCtx.directive == llvm::omp::Directive::OMPD_taskloop) {
+    // [5.2:268:17]
+    // The conditional lastprivate-modifier must not be specified.
+    context_.Say(GetContext().clauseSource,
+        "'CONDITIONAL' modifier on lastprivate clause with TASKLOOP "
+        "directive is not allowed"_err_en_US);
+  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
@@ -4942,7 +4965,7 @@ void OmpStructureChecker::CheckTraitSetSelector(
 void OmpStructureChecker::CheckTraitScore(const parser::OmpTraitScore &score) {
   // [6.0:322:23]
   // A score-expression must be a non-negative constant integer expression.
-  if (auto value{GetIntValue(score)}; !value || value <= 0) {
+  if (auto value{GetIntValue(score)}; !value || value < 0) {
     context_.Say(score.source,
         "SCORE expression must be a non-negative constant integer expression"_err_en_US);
   }

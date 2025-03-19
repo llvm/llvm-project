@@ -11366,12 +11366,12 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
            II = BB->rbegin(), IE = BB->rend(); II != IE; ++II) {
       if (!II->isCall()) continue;
 
-      DenseMap<unsigned, bool> DefRegs;
+      DenseSet<unsigned> DefRegs;
       for (MachineInstr::mop_iterator
              OI = II->operands_begin(), OE = II->operands_end();
            OI != OE; ++OI) {
         if (!OI->isReg()) continue;
-        DefRegs[OI->getReg()] = true;
+        DefRegs.insert(OI->getReg());
       }
 
       MachineInstrBuilder MIB(*MF, &*II);
@@ -11386,7 +11386,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
           continue;
         if (!Subtarget->isThumb() && !ARM::GPRRegClass.contains(Reg))
           continue;
-        if (!DefRegs[Reg])
+        if (!DefRegs.contains(Reg))
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
 

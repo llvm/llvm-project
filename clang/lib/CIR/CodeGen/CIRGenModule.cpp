@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Verifier.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -486,6 +487,13 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
 mlir::Type CIRGenModule::convertType(QualType type) {
   return genTypes.convertType(type);
+}
+
+bool CIRGenModule::verifyModule() const {
+  // Verify the module after we have finished constructing it, this will
+  // check the structural properties of the IR and invoke any specific
+  // verifiers we have on the CIR operations.
+  return mlir::verify(theModule).succeeded();
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,

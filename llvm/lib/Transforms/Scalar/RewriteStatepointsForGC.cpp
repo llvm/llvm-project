@@ -1138,13 +1138,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
     Value *BDV = findBaseOrBDV(Input, Cache, KnownBases);
     Value *Base = nullptr;
-    if (!States.count(BDV)) {
+    if (auto It = States.find(BDV); It == States.end()) {
       assert(areBothVectorOrScalar(BDV, Input));
       Base = BDV;
     } else {
       // Either conflict or base.
-      assert(States.count(BDV));
-      Base = States[BDV].getBaseValue();
+      Base = It->second.getBaseValue();
     }
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts

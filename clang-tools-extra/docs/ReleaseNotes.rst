@@ -97,8 +97,17 @@ Improvements to clang-tidy
   Note: this may lead to false negatives; downstream users may need to adjust
   their checks to preserve existing behavior.
 
+- Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
+  argument to treat warnings as errors.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-capturing-this-in-member-variable
+  <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
+
+  Finds lambda captures that capture the ``this`` pointer and store it as class
+  members without handle the copy and move constructors and the assignments.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
@@ -159,7 +168,8 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
-  ``constexpr`` and ``static`` values on member initialization.
+  ``constexpr`` and ``static``` values on member initialization and by detecting
+  explicit casting of built-in types within member list initialization.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 

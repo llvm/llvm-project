@@ -232,6 +232,7 @@ struct Config {
   ReportPolicy zCetReport = ReportPolicy::None;
   ReportPolicy zPauthReport = ReportPolicy::None;
   ReportPolicy zGcsReport = ReportPolicy::None;
+  ReportPolicy zGcsReportDynamic = ReportPolicy::None;
   ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;

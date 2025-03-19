@@ -22,6 +22,22 @@ namespace direct {
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
+class CIRToLLVMCastOpLowering : public mlir::OpConversionPattern<cir::CastOp> {
+  mlir::DataLayout const &dataLayout;
+
+  mlir::Type convertTy(mlir::Type ty) const;
+
+public:
+  CIRToLLVMCastOpLowering(const mlir::TypeConverter &typeConverter,
+                          mlir::MLIRContext *context,
+                          mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CastOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMReturnOpLowering
     : public mlir::OpConversionPattern<cir::ReturnOp> {
 public:
@@ -134,6 +150,16 @@ private:
 
   void setupRegionInitializedLLVMGlobalOp(
       cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+};
+
+class CIRToLLVMUnaryOpLowering
+    : public mlir::OpConversionPattern<cir::UnaryOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnaryOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
 };
 
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {

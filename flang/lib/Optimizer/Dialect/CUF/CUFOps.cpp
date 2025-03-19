@@ -315,7 +315,7 @@ void cuf::SharedMemoryOp::build(
       bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
   build(builder, result, wrapAllocaResultType(inType),
         mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
-        mlir::IntegerAttr{});
+        /*offset=*/mlir::Value{});
   result.addAttributes(attributes);
 }
 

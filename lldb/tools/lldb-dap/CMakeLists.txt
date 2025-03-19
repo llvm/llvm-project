@@ -23,6 +23,7 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  DAPLog.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
@@ -32,7 +33,6 @@ add_lldb_tool(lldb-dap
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
-  Protocol.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
@@ -74,6 +74,10 @@ add_lldb_tool(lldb-dap
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
+  
+  Protocol/ProtocolBase.cpp
+  Protocol/ProtocolTypes.cpp
+  Protocol/ProtocolRequests.cpp
 
   LINK_LIBS
     liblldb
