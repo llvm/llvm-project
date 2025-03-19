@@ -340,18 +340,13 @@ _Complex float mulbf(float a, _Complex float b) {
 // PRMTD-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // PRMTD-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
-// PRMTD-NEXT:    [[EXT:%.*]] = fpext float [[A_REAL]] to double
-// PRMTD-NEXT:    [[EXT1:%.*]] = fpext float [[A_IMAG]] to double
 // PRMTD-NEXT:    [[TMP0:%.*]] = load float, ptr [[B_ADDR]], align 4
-// PRMTD-NEXT:    [[EXT2:%.*]] = fpext float [[TMP0]] to double
-// PRMTD-NEXT:    [[TMP1:%.*]] = fdiv double [[EXT]], [[EXT2]]
-// PRMTD-NEXT:    [[TMP2:%.*]] = fdiv double [[EXT1]], [[EXT2]]
-// PRMTD-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP1]] to float
-// PRMTD-NEXT:    [[UNPROMOTION3:%.*]] = fptrunc double [[TMP2]] to float
+// PRMTD-NEXT:    [[TMP1:%.*]] = fdiv float [[A_REAL]], [[TMP0]]
+// PRMTD-NEXT:    [[TMP2:%.*]] = fdiv float [[A_IMAG]], [[TMP0]]
 // PRMTD-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
-// PRMTD-NEXT:    store float [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 4
-// PRMTD-NEXT:    store float [[UNPROMOTION3]], ptr [[RETVAL_IMAGP]], align 4
+// PRMTD-NEXT:    store float [[TMP1]], ptr [[RETVAL_REALP]], align 4
+// PRMTD-NEXT:    store float [[TMP2]], ptr [[RETVAL_IMAGP]], align 4
 // PRMTD-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[RETVAL]], align 4
 // PRMTD-NEXT:    ret <2 x float> [[TMP3]]
 //
@@ -367,18 +362,13 @@ _Complex float mulbf(float a, _Complex float b) {
 // PRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // PRMTD_STRICT-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[A_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[A_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
 // PRMTD_STRICT-NEXT:    [[TMP0:%.*]] = load float, ptr [[B_ADDR]], align 4
-// PRMTD_STRICT-NEXT:    [[EXT2:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[TMP0]], metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[EXT]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[EXT1]], double [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP1]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION3:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[TMP1:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[A_REAL]], float [[TMP0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[A_IMAG]], float [[TMP0]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
 // PRMTD_STRICT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
-// PRMTD_STRICT-NEXT:    store float [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 4
-// PRMTD_STRICT-NEXT:    store float [[UNPROMOTION3]], ptr [[RETVAL_IMAGP]], align 4
+// PRMTD_STRICT-NEXT:    store float [[TMP1]], ptr [[RETVAL_REALP]], align 4
+// PRMTD_STRICT-NEXT:    store float [[TMP2]], ptr [[RETVAL_IMAGP]], align 4
 // PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[RETVAL]], align 4
 // PRMTD_STRICT-NEXT:    ret <2 x float> [[TMP3]]
 //
@@ -539,18 +529,13 @@ void divassignf(_Complex float *a, float b) {
 // PRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
 // PRMTD-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
-// PRMTD-NEXT:    [[EXT:%.*]] = fpext double [[A_REAL]] to x86_fp80
-// PRMTD-NEXT:    [[EXT1:%.*]] = fpext double [[A_IMAG]] to x86_fp80
 // PRMTD-NEXT:    [[TMP2:%.*]] = load double, ptr [[B_ADDR]], align 8
-// PRMTD-NEXT:    [[EXT2:%.*]] = fpext double [[TMP2]] to x86_fp80
-// PRMTD-NEXT:    [[TMP3:%.*]] = fdiv x86_fp80 [[EXT]], [[EXT2]]
-// PRMTD-NEXT:    [[TMP4:%.*]] = fdiv x86_fp80 [[EXT1]], [[EXT2]]
-// PRMTD-NEXT:    [[UNPROMOTION:%.*]] = fptrunc x86_fp80 [[TMP3]] to double
-// PRMTD-NEXT:    [[UNPROMOTION3:%.*]] = fptrunc x86_fp80 [[TMP4]] to double
+// PRMTD-NEXT:    [[TMP3:%.*]] = fdiv double [[A_REAL]], [[TMP2]]
+// PRMTD-NEXT:    [[TMP4:%.*]] = fdiv double [[A_IMAG]], [[TMP2]]
 // PRMTD-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
-// PRMTD-NEXT:    store double [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 8
-// PRMTD-NEXT:    store double [[UNPROMOTION3]], ptr [[RETVAL_IMAGP]], align 8
+// PRMTD-NEXT:    store double [[TMP3]], ptr [[RETVAL_REALP]], align 8
+// PRMTD-NEXT:    store double [[TMP4]], ptr [[RETVAL_IMAGP]], align 8
 // PRMTD-NEXT:    [[TMP5:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // PRMTD-NEXT:    ret { double, double } [[TMP5]]
 //
@@ -569,18 +554,13 @@ void divassignf(_Complex float *a, float b) {
 // PRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
 // PRMTD_STRICT-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD_STRICT-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
-// PRMTD_STRICT-NEXT:    [[EXT:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[A_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[EXT1:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[A_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
 // PRMTD_STRICT-NEXT:    [[TMP2:%.*]] = load double, ptr [[B_ADDR]], align 8
-// PRMTD_STRICT-NEXT:    [[EXT2:%.*]] = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double [[TMP2]], metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[EXT]], x86_fp80 [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 [[EXT1]], x86_fp80 [[EXT2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION:%.*]] = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 [[TMP3]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
-// PRMTD_STRICT-NEXT:    [[UNPROMOTION3:%.*]] = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 [[TMP4]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[TMP3:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A_REAL]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
+// PRMTD_STRICT-NEXT:    [[TMP4:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A_IMAG]], double [[TMP2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR3]]
 // PRMTD_STRICT-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD_STRICT-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
-// PRMTD_STRICT-NEXT:    store double [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 8
-// PRMTD_STRICT-NEXT:    store double [[UNPROMOTION3]], ptr [[RETVAL_IMAGP]], align 8
+// PRMTD_STRICT-NEXT:    store double [[TMP3]], ptr [[RETVAL_REALP]], align 8
+// PRMTD_STRICT-NEXT:    store double [[TMP4]], ptr [[RETVAL_IMAGP]], align 8
 // PRMTD_STRICT-NEXT:    [[TMP5:%.*]] = load { double, double }, ptr [[RETVAL]], align 8
 // PRMTD_STRICT-NEXT:    ret { double, double } [[TMP5]]
 //
