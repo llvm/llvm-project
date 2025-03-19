@@ -31,6 +31,20 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
+    if (auto intType = dyn_cast<cir::IntType>(type)) {
+      // We only provide alias for standard integer types (i.e. integer types
+      // whose width is a power of 2 and at least 8).
+      unsigned width = intType.getWidth();
+      if (width < 8 || !llvm::isPowerOf2_32(width))
+        return AliasResult::NoAlias;
+      os << intType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
+    if (auto voidType = dyn_cast<cir::VoidType>(type)) {
+      os << voidType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
+
     return AliasResult::NoAlias;
   }
 
