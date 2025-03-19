@@ -202,7 +202,11 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+#if SANITIZER_MUSL
+INTERCEPTOR(int, ioctl, int filedes, int request, ...) {
+#else
 INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+#endif
   __rtsan_notify_intercepted_call("ioctl");
 
   // See fcntl for discussion on why we use intptr_t

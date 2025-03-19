@@ -338,7 +338,7 @@ _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
   if (__specs.__std_.__type_ != __format_spec::__type::__hexadecimal_upper_case) [[likely]]
     return __formatter::__write(__first, __last, __ctx.out(), __specs);
 
-  return __formatter::__write_transformed(__first, __last, __ctx.out(), __specs, std::__hex_to_upper);
+  return __formatter::__write_transformed(__first, __last, __ctx.out(), __specs, __formatter::__hex_to_upper);
 }
 
 template <unsigned_integral _Tp, class _CharT, class _FormatContext>

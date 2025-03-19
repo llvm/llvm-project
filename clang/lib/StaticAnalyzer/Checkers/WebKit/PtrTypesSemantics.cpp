@@ -424,6 +424,14 @@ bool isPtrConversion(const FunctionDecl *F) {
   return false;
 }
 
+bool isTrivialBuiltinFunction(const FunctionDecl *F) {
+  if (!F || !F->getDeclName().isIdentifier())
+    return false;
+  auto Name = F->getName();
+  return Name.starts_with("__builtin") || Name == "__libcpp_verbose_abort" ||
+         Name.starts_with("os_log") || Name.starts_with("_os_log");
+}
+
 bool isSingleton(const FunctionDecl *F) {
   assert(F);
   // FIXME: check # of params == 1
@@ -601,8 +609,7 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || Name.find("__builtin") == 0 ||
-        Name == "__libcpp_verbose_abort")
+        Name == "bitwise_cast" || isTrivialBuiltinFunction(Callee))
       return true;
 
     return IsFunctionTrivial(Callee);

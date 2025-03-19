@@ -113,6 +113,9 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryFence(N))
       return;
     break;
+  case NVPTXISD::UNPACK_VECTOR:
+    tryUNPACK_VECTOR(N);
+    return;
   case ISD::EXTRACT_VECTOR_ELT:
     if (tryEXTRACT_VECTOR_ELEMENT(N))
       return;
@@ -442,6 +445,17 @@ bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
       NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
       N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
   ReplaceNode(N, SetP);
+  return true;
+}
+
+bool NVPTXDAGToDAGISel::tryUNPACK_VECTOR(SDNode *N) {
+  SDValue Vector = N->getOperand(0);
+  MVT EltVT = N->getSimpleValueType(0);
+
+  MachineSDNode *N2 =
+      CurDAG->getMachineNode(NVPTX::I64toV2I32, SDLoc(N), EltVT, EltVT, Vector);
+
+  ReplaceNode(N, N2);
   return true;
 }
 

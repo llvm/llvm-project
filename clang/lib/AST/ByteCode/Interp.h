@@ -137,6 +137,9 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
                        const Pointer &Ptr);
 
+bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                 AccessKinds AK);
+
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
@@ -2366,12 +2369,14 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
     } else if (!S.getLangOpts().CPlusPlus26) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-          << 3 << "'void *'" << S.Current->getRange(OpPC);
+          << diag::ConstexprInvalidCastKind::CastFrom << "'void *'"
+          << S.Current->getRange(OpPC);
     }
   } else {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
   }
 
   return true;
@@ -2736,7 +2741,8 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
   if (Desc)
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-        << 2 << S.getLangOpts().CPlusPlus;
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus;
 
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
@@ -3104,6 +3110,11 @@ bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
                const Type *TypeInfoType);
 bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType);
 bool DiagTypeid(InterpState &S, CodePtr OpPC);
+
+inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  return CheckActive(S, OpPC, Ptr, AK_Destroy);
+}
 
 //===----------------------------------------------------------------------===//
 // Read opcode arguments

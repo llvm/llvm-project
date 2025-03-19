@@ -6,28 +6,10 @@
 // RUN:                    -analyzer-checker=debug.ExprInspection \
 // RUN:                    -std=c++11 -verify=pure -std=c++11 %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,optin.cplusplus.VirtualCall \
-// RUN:                    -analyzer-config \
-// RUN:                        optin.cplusplus.VirtualCall:PureOnly=true \
-// RUN:                    -analyzer-checker=debug.ExprInspection \
-// RUN:                    -std=c++11 -verify=none %s
-
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.PureVirtualCall \
 // RUN:                    -analyzer-checker=optin.cplusplus.VirtualCall \
 // RUN:                    -analyzer-checker=debug.ExprInspection \
 // RUN:                    -std=c++11 -verify=pure,impure -std=c++11 %s
-
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.PureVirtualCall \
-// RUN:                    -analyzer-checker=optin.cplusplus.VirtualCall \
-// RUN:                    -analyzer-config \
-// RUN:                        optin.cplusplus.VirtualCall:PureOnly=true \
-// RUN:                    -analyzer-checker=debug.ExprInspection \
-// RUN:                    -std=c++11 -verify=pure %s
-
-
-// We expect no diagnostics when all checks are disabled.
-// none-no-diagnostics
-
 
 #include "virtualcall.h"
 
