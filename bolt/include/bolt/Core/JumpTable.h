@@ -40,6 +40,7 @@ class BinaryFunction;
 /// a different label at a different offset in this jump table.
 class JumpTable : public BinaryData {
   friend class BinaryContext;
+  friend class JumpTableInfoReader;
 
   JumpTable() = delete;
   JumpTable(const JumpTable &) = delete;
@@ -115,6 +116,16 @@ public:
 
   /// BinaryFunction this jump tables belongs to.
   SmallVector<BinaryFunction *, 1> Parents;
+
+  ///
+  /// AArch64-specific fields
+  ///
+
+  /// Entries are offsets relative to an arbitrary function location.
+  uint64_t BaseAddress{0};
+
+  /// Address of the instruction referencing the jump table (MemLocInstr).
+  uint64_t MemLocInstrAddress{0};
 
 private:
   /// Constructor should only be called by a BinaryContext.

@@ -3227,6 +3227,8 @@ void RewriteInstance::initializeMetadataManager() {
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
+
+  MetadataManager.registerRewriter(createJumpTableInfoReader(*BC));
 }
 
 void RewriteInstance::processSectionMetadata() {

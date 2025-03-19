@@ -27,6 +27,8 @@ std::unique_ptr<MetadataRewriter> createPseudoProbeRewriter(BinaryContext &);
 
 std::unique_ptr<MetadataRewriter> createSDTRewriter(BinaryContext &);
 
+std::unique_ptr<MetadataRewriter> createJumpTableInfoReader(BinaryContext &);
+
 } // namespace bolt
 } // namespace llvm
 

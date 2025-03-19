@@ -625,6 +625,15 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     case JumpTable::JTT_X86_64_ABS:
       Value = *getPointerAtAddress(EntryAddress);
       break;
+    case JumpTable::JTT_AARCH64_REL1:
+    case JumpTable::JTT_AARCH64_REL2:
+    case JumpTable::JTT_AARCH64_REL4:
+      unsigned ShiftAmt = Type == JumpTable::JTT_AARCH64_REL4 ? 0 : 2;
+      assert(JT &&
+             "jump table must be non-null for AArch64 in analyzeJumpTable");
+      Value = JT->BaseAddress +
+              (*getUnsignedValueAtAddress(EntryAddress, EntrySize) << ShiftAmt);
+      break;
     }
 
     // __builtin_unreachable() case.
@@ -704,7 +713,10 @@ void BinaryContext::populateJumpTables() {
 
     uint64_t NextJTAddress = 0;
     auto NextJTI = std::next(JTI);
-    if (NextJTI != JTE)
+    if (isAArch64()) {
+      NextJTAddress = JT->getAddress() + JT->getSize();
+      JT->Entries.clear();
+    } else if (NextJTI != JTE)
       NextJTAddress = NextJTI->second->getAddress();
 
     const bool Success = analyzeJumpTable(
