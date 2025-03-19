@@ -56,6 +56,7 @@
     __cpp_lib_complex_udls                                  201309L [C++14]
     __cpp_lib_concepts                                      202002L [C++20]
     __cpp_lib_constexpr_algorithms                          201806L [C++20]
+                                                            202306L [C++26]
     __cpp_lib_constexpr_bitset                              202207L [C++23]
     __cpp_lib_constexpr_charconv                            202207L [C++23]
     __cpp_lib_constexpr_cmath                               202202L [C++23]
@@ -6565,8 +6566,8 @@
 # ifndef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should be defined in c++26"
 # endif
-# if __cpp_lib_constexpr_algorithms != 201806L
-#   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++26"
+# if __cpp_lib_constexpr_algorithms != 202306L
+#   error "__cpp_lib_constexpr_algorithms should have the value 202306L in c++26"
 # endif
 
 # ifndef __cpp_lib_constexpr_bitset
