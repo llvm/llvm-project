@@ -1048,8 +1048,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
-  DAG.addMutation(createIGroupLPDAGMutation(
-      AMDGPU::SchedulingPhase::PreRAReentry, nullptr));
+  DAG.addMutation(
+      createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PreRAReentry, {}));
 
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
@@ -1192,7 +1192,7 @@ bool GCNSchedStage::initGCNRegion() {
     DAG.addMutation(createIGroupLPDAGMutation(
         IsInitialStage ? AMDGPU::SchedulingPhase::Initial
                        : AMDGPU::SchedulingPhase::PreRAReentry,
-        &SavedMutations));
+        std::move(SavedMutations)));
   }
 
   return true;
@@ -2064,7 +2064,7 @@ void GCNPostScheduleDAGMILive::schedule() {
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
     addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA,
-                                          &SavedMutations));
+                                          std::move(SavedMutations)));
   }
 
   ScheduleDAGMI::schedule();

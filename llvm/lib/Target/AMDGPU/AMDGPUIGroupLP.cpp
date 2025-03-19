@@ -2348,7 +2348,7 @@ private:
 
   ScheduleDAGMI *DAG;
 
-  std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations;
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
 
   // Organize lists of SchedGroups by their SyncID. SchedGroups /
   // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
@@ -2394,8 +2394,10 @@ public:
   IGroupLPDAGMutation() = default;
   IGroupLPDAGMutation(
       AMDGPU::SchedulingPhase Phase,
-      std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations)
-      : SavedMutations(SavedMutations), Phase(Phase) {}
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &CachedMutations)
+      : Phase(Phase) {
+    SavedMutations = std::move(CachedMutations);
+  }
 };
 
 unsigned SchedGroup::NumSchedGroups = 0;
@@ -2613,11 +2615,8 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     return;
   }
 
-  if (!SavedMutations)
-    return;
-
   // We did not apply a mutation, fall back to SavedMutations
-  for (auto &m : *SavedMutations)
+  for (auto &m : SavedMutations)
     m->apply(DAG);
 }
 
@@ -2717,7 +2716,7 @@ namespace llvm {
 /// for a given region.
 std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation(
     AMDGPU::SchedulingPhase Phase,
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> *SavedMutations) {
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations) {
   return std::make_unique<IGroupLPDAGMutation>(Phase, SavedMutations);
 }
 
