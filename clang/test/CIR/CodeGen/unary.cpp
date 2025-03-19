@@ -16,6 +16,7 @@ unsigned up0() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(plus, %[[INPUT]])
 
 // LLVM: define i32 @up0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -36,6 +37,7 @@ unsigned um0() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(minus, %[[INPUT]])
 
 // LLVM: define i32 @um0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -58,6 +60,7 @@ unsigned un0() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(not, %[[INPUT]])
 
 // LLVM: define i32 @un0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -85,6 +88,7 @@ int inc0() {
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @inc0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -112,6 +116,7 @@ int dec0() {
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @dec0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -139,6 +144,7 @@ int inc1() {
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @inc1()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -166,6 +172,7 @@ int dec1() {
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @dec1()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -196,6 +203,7 @@ int inc2() {
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load %[[B]]
 
 // LLVM: define i32 @inc2()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[B:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -226,6 +234,7 @@ float fpPlus() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(plus, %[[INPUT]])
 
 // LLVM: define float @fpPlus()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -246,6 +255,7 @@ float fpMinus() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(minus, %[[INPUT]])
 
 // LLVM: define float @fpMinus()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -270,6 +280,7 @@ float fpPreInc() {
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
 
 // LLVM: define float @fpPreInc()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -294,6 +305,7 @@ float fpPreDec() {
 // CHECK:   %[[DECREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
 
 // LLVM: define float @fpPreDec()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -318,6 +330,7 @@ float fpPostInc() {
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
 
 // LLVM: define float @fpPostInc()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -342,6 +355,7 @@ float fpPostDec() {
 // CHECK:   %[[DECREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
 
 // LLVM: define float @fpPostDec()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -372,6 +386,7 @@ float fpPostInc2() {
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load %[[B]]
 
 // LLVM: define float @fpPostInc2()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[B:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4

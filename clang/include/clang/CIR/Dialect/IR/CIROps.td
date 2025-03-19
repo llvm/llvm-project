@@ -833,6 +833,22 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
+  let summary = "invoke immediate undefined behavior";
+  let description = [{
+    If the program control flow reaches a `cir.unreachable` operation, the
+    program exhibits undefined behavior immediately. This operation is useful
+    in cases where the unreachability of a program point needs to be explicitly
+    marked.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // TrapOp
 //===----------------------------------------------------------------------===//
 
