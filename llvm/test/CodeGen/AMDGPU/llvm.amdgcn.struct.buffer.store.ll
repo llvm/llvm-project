@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefixes=GFX68,VERDE %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=GFX68,GFX8 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs | FileCheck -check-prefixes=GFX12 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefixes=GFX13 %s
 
 define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
@@ -21,6 +22,15 @@ define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], v12, s[0:3], 0 idxen glc
 ; GFX11-NEXT:    buffer_store_b128 v[8:11], v12, s[0:3], 0 idxen slc
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v12, 0
+; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v12, s[0:3], null idxen
+; GFX12-NEXT:    buffer_store_b128 v[4:7], v12, s[0:3], null idxen th:TH_STORE_NT
+; GFX12-NEXT:    buffer_store_b128 v[8:11], v12, s[0:3], null idxen th:TH_STORE_HT
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: buffer_store:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -50,6 +60,12 @@ define amdgpu_ps void @buffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], 0 idxen offset:42
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: buffer_store_immoffs:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen offset:42
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: buffer_store_immoffs:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_mov_b32_e32 v4, 0
@@ -70,6 +86,11 @@ define amdgpu_ps void @buffer_store_idx(<4 x i32> inreg, <4 x float>, i32) {
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_idx:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: buffer_store_idx:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -97,6 +118,12 @@ define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float>, i32) {
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], 0 idxen offen
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: buffer_store_ofs:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, 0
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], null idxen offen
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: buffer_store_ofs:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, 0
@@ -117,6 +144,11 @@ define amdgpu_ps void @buffer_store_both(<4 x i32> inreg, <4 x float>, i32, i32)
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], 0 idxen offen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_both:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v[4:5], s[0:3], null idxen offen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: buffer_store_both:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -139,6 +171,12 @@ define amdgpu_ps void @buffer_store_both_reversed(<4 x i32> inreg, <4 x float>, 
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v[5:6], s[0:3], 0 idxen offen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_both_reversed:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_mov_b32 v7, v4
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v[6:7], s[0:3], null idxen offen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: buffer_store_both_reversed:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -177,6 +215,15 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float>, i32, i32,
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], v6, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: buffer_store_wait:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen
+; GFX12-NEXT:    s_wait_xcnt 0x0
+; GFX12-NEXT:    buffer_load_b128 v[0:3], v5, s[0:3], null idxen
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v6, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: buffer_store_wait:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    s_clause 0x1
@@ -203,6 +250,11 @@ define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data, i32 %
 ; GFX11-NEXT:    buffer_store_b32 v0, v1, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: buffer_store_x1:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: buffer_store_x1:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
@@ -222,6 +274,11 @@ define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data,
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_x2:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: buffer_store_x2:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -249,6 +306,15 @@ define amdgpu_ps void @buffer_store_int(<4 x i32> inreg, <4 x i32>, <2 x i32>, i
 ; GFX11-NEXT:    buffer_store_b64 v[4:5], v7, s[0:3], 0 idxen glc
 ; GFX11-NEXT:    buffer_store_b32 v6, v7, s[0:3], 0 idxen slc
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_int:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_mov_b32_e32 v7, 0
+; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    buffer_store_b128 v[0:3], v7, s[0:3], null idxen
+; GFX12-NEXT:    buffer_store_b64 v[4:5], v7, s[0:3], null idxen th:TH_STORE_NT
+; GFX12-NEXT:    buffer_store_b32 v6, v7, s[0:3], null idxen th:TH_STORE_HT
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: buffer_store_int:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -278,6 +344,12 @@ define amdgpu_ps void @struct_buffer_store_byte(<4 x i32> inreg %rsrc, float %v1
 ; GFX11-NEXT:    buffer_store_b8 v0, v1, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: struct_buffer_store_byte:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX12-NEXT:    buffer_store_b8 v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: struct_buffer_store_byte:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -302,6 +374,12 @@ define amdgpu_ps void @struct_buffer_store_f16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-NEXT:    buffer_store_b16 v0, v1, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: struct_buffer_store_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX12-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: struct_buffer_store_f16:
 ; GFX13:       ; %bb.0:
@@ -332,6 +410,11 @@ define amdgpu_ps void @struct_buffer_store_v2f16(<4 x i32> inreg %rsrc, <2 x hal
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    buffer_store_b32 v0, v1, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: struct_buffer_store_v2f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: struct_buffer_store_v2f16:
 ; GFX13:       ; %bb.0:
@@ -365,6 +448,11 @@ define amdgpu_ps void @struct_buffer_store_v4f16(<4 x i32> inreg %rsrc, <4 x hal
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: struct_buffer_store_v4f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: struct_buffer_store_v4f16:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
@@ -385,6 +473,12 @@ define amdgpu_ps void @struct_buffer_store_i16(<4 x i32> inreg %rsrc, float %v1,
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-NEXT:    buffer_store_b16 v0, v1, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: struct_buffer_store_i16:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX12-NEXT:    buffer_store_b16 v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: struct_buffer_store_i16:
 ; GFX13:       ; %bb.0: ; %main_body
@@ -417,6 +511,11 @@ define amdgpu_ps void @struct_buffer_store_vif16(<4 x i32> inreg %rsrc, <2 x i16
 ; GFX11-NEXT:    buffer_store_b32 v0, v1, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
 ;
+; GFX12-LABEL: struct_buffer_store_vif16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
+;
 ; GFX13-LABEL: struct_buffer_store_vif16:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    buffer_store_b32 v0, v1, s[0:3], null idxen
@@ -446,6 +545,11 @@ define amdgpu_ps void @struct_buffer_store_v4i16(<4 x i32> inreg %rsrc, <4 x i16
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: struct_buffer_store_v4i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    buffer_store_b64 v[0:1], v2, s[0:3], null idxen
+; GFX12-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: struct_buffer_store_v4i16:
 ; GFX13:       ; %bb.0:

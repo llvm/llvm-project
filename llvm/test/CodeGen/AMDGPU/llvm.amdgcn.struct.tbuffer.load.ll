@@ -248,13 +248,6 @@ define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(<4 x i32> inreg, i32 %voffs) 
 ; GFX11-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], 0 format:78 idxen offen offset:52
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
-;
-; GFX12-LABEL: tbuffer_load_ofs_imm:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    tbuffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null format:78 idxen offen offset:52
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
 main_body:
     %ofs = add i32 %voffs, 52
     %vdata   = call <4 x i32> @llvm.amdgcn.struct.tbuffer.load.v4i32(<4 x i32> %0, i32 0, i32 %ofs, i32 0, i32 78, i32 0)
