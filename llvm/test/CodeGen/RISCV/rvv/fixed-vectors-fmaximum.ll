@@ -367,12 +367,10 @@ define <4 x half> @vfmax_v2f16_vv_nnan_insert_subvector(<2 x half> %a, <2 x half
 ; ZVFH-NEXT:    vfadd.vv v8, v8, v8
 ; ZVFH-NEXT:    vfadd.vv v9, v9, v9
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vslideup.vi v8, v9, 2
-; ZVFH-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFH-NEXT:    vmerge.vvm v9, v8, v10, v0
 ; ZVFH-NEXT:    vmfeq.vv v0, v10, v10
+; ZVFH-NEXT:    vslideup.vi v8, v9, 2
 ; ZVFH-NEXT:    vmerge.vvm v8, v10, v8, v0
-; ZVFH-NEXT:    vfmax.vv v8, v8, v9
+; ZVFH-NEXT:    vfmax.vv v8, v8, v10
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfmax_v2f16_vv_nnan_insert_subvector:
