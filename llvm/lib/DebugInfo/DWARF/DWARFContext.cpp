@@ -1739,15 +1739,15 @@ DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
 
   DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
-    CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
-    Result.StartFileName, Result.StartLine, Result.StartAddress);
-if (Spec.FLIKind != FileLineInfoKind::None) {
-  if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
-    LineTable->getFileLineInfoForAddress(
-        {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
-        CU->getCompilationDir(), Spec.FLIKind, Result);
+      CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
+      Result.StartFileName, Result.StartLine, Result.StartAddress);
+  if (Spec.FLIKind != FileLineInfoKind::None) {
+    if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
+      LineTable->getFileLineInfoForAddress(
+          {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+          CU->getCompilationDir(), Spec.FLIKind, Result);
+    }
   }
-}
 
   return Result;
 }
