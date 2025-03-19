@@ -403,10 +403,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
           ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
       assert(!IsWritable && "Writable buffers require a corresponding counter "
                             "variable. Not implemented yet.");
-      bool IsRov = ResAttrs.IsROV;
       return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
                                       {RuntimeArrayType},
-                                      {StorageClass, IsWritable, IsRov});
+                                      {StorageClass, IsWritable});
     }
 
     // convert element type
