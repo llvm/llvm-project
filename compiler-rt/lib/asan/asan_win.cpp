@@ -43,6 +43,7 @@ uptr __asan_get_shadow_memory_dynamic_address() {
   __asan_init();
   return __asan_shadow_memory_dynamic_address;
 }
+
 }  // extern "C"
 
 // ---------------------- Windows-specific interceptors ---------------- {{{
@@ -278,6 +279,9 @@ uptr FindDynamicShadowStart() {
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd,
                           GetMmapGranularity());
 }
+
+// Not used
+void TryReExecWithoutASLR() {}
 
 void AsanCheckDynamicRTPrereqs() {}
 
