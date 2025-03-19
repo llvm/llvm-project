@@ -202,6 +202,7 @@
 // CHECK-NOT: __riscv_zvfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zvfbfwma {{.*$}}
 // CHECK-NOT: __riscv_zvkgs {{.*$}}
+// CHECK-NOT: __riscv_zvqdotq {{.*$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ia -E -dM %s \
@@ -1760,6 +1761,14 @@
 // RUN:   -march=rv64i_zve32x_zvkgs0p7 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVKGS-EXT %s
 // CHECK-ZVKGS-EXT: __riscv_zvkgs 7000{{$}}
+
+// RUN: %clang --target=riscv32 -menable-experimental-extensions \
+// RUN:   -march=rv32i_zve32x_zvqdotq0p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVqdotq-EXT %s
+// RUN: %clang --target=riscv64 -menable-experimental-extensions \
+// RUN:   -march=rv64i_zve32x_zvqdotq0p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZVqdotq-EXT %s
+// CHECK-ZVqdotq-EXT: __riscv_zvqdotq 0{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \

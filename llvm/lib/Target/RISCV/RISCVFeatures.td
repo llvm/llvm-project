@@ -820,6 +820,16 @@ def FeatureStdExtZvksc
 def FeatureStdExtZvksg
     : RISCVExtension<1, 0, "shorthand for 'Zvks' and 'Zvkg'",
                      [FeatureStdExtZvks, FeatureStdExtZvkg]>;
+
+// Vector quad widening dot product
+
+def FeatureStdExtZvqdotq
+    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
+                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
