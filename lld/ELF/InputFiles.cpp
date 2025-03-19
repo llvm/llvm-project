@@ -863,16 +863,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           }
         }
         sections[i] = &InputSection::discarded;
-      // Producing a static binary with MTE globals is not currently supported,
-      // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
-      // metadata, and we don't want them to end up in the output file for
-      // static executables.
-      if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
-          !canHaveMemtagGlobals(ctx))
-        sections[i] = &InputSection::discarded;
+        // Producing a static binary with MTE globals is not currently
+        // supported, remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as
+        // they're unused metadata, and we don't want them to end up in the
+        // output file for static executables.
+        if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
+            !canHaveMemtagGlobals(ctx))
+          sections[i] = &InputSection::discarded;
       }
-    }
-    break;
+    } break;
   }
 
   // Read a symbol table.
