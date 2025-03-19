@@ -29,7 +29,8 @@ namespace lldb_private::dil {
 std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
                               uint32_t loc, uint16_t err_len) {
   DiagnosticDetail::SourceLocation sloc = {
-      FileSpec{}, /*line=*/1, loc + 1, err_len, false, /*in_user_input=*/true};
+      FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
+      err_len,    false,      /*in_user_input=*/true};
   std::string arrow_str = "^";
   std::string rendered_msg =
       llvm::formatv("<user expression 0>:1:{0}: {1}\n    1 | {2}\n     | ^",
