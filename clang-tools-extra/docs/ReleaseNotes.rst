@@ -188,6 +188,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` to avoid processing system
+  macros (unless the `SystemHeaders` option is enabled).
+
 Removed checks
 ^^^^^^^^^^^^^^
 
