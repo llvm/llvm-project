@@ -395,7 +395,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
 
   auto TRI = getRegisterInfo();
   StringSet<> ReservedRegNames;
-  ReservedRegNames.insert(ReservedRegsForRA.begin(), ReservedRegsForRA.end());
+  ReservedRegNames.insert_range(ReservedRegsForRA);
   for (unsigned i = 0; i < 29; ++i) {
     if (ReservedRegNames.count(TRI->getName(AArch64::X0 + i)))
       ReserveXRegisterForRA.set(i);

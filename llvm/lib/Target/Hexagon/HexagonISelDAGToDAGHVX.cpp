@@ -195,9 +195,9 @@ bool Coloring::color() {
     Q.insert(N);
     for (unsigned I = 0; I != Q.size(); ++I) {
       NodeSet &Ns = Edges[Q[I]];
-      Q.insert(Ns.begin(), Ns.end());
+      Q.insert_range(Ns);
     }
-    FirstQ.insert(Q.begin(), Q.end());
+    FirstQ.insert_range(Q);
   };
   for (Node N : Needed)
     Enqueue(N);

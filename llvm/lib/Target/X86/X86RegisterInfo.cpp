@@ -1214,7 +1214,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   };
 
   SmallSet<MCPhysReg, 4> CopyHints;
-  CopyHints.insert(Hints.begin(), Hints.end());
+  CopyHints.insert_range(Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))

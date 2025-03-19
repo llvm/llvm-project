@@ -1042,7 +1042,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   // Delete all instructions. On the first pass, new dummy loads may have been
   // added so we need to collect them too.
   DenseSet<Instruction *> InstsToDelete(WorkList.begin(), WorkList.end());
-  InstsToDelete.insert(DeferredLoads.begin(), DeferredLoads.end());
+  InstsToDelete.insert_range(DeferredLoads);
   for (Instruction *I : InstsToDelete) {
     assert(I->use_empty());
     I->eraseFromParent();

@@ -942,7 +942,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         else
           dbgs() << "\n  does not fall through\n";
       }
-      Targets.insert(BTs.begin(), BTs.end());
+      Targets.insert_range(BTs);
     }
     ++It;
   } while (FallsThrough && It != End);

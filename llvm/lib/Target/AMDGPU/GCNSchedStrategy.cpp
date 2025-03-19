@@ -1795,7 +1795,7 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   // Collect only regions that has a rematerializable def as a live-in.
   SmallSet<unsigned, 16> ImpactedRegions;
   for (const auto &It : RematDefToLiveInRegions)
-    ImpactedRegions.insert(It.second.begin(), It.second.end());
+    ImpactedRegions.insert_range(It.second);
 
   // Make copies of register pressure and live-ins cache that will be updated
   // as we rematerialize.

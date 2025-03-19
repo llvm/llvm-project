@@ -284,7 +284,7 @@ public:
               return false;
             return Token.value() == CT.value();
           });
-          RegionBlocks.insert(N.begin(), N.end());
+          RegionBlocks.insert_range(N);
         }
       }
 
