@@ -2779,6 +2779,39 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
 
+  if (I->isBitwiseLogicOp()) {
+    if (!I->getType()->isVectorTy()) {
+      if (ST->hasStdExtZbb() || ST->hasStdExtZbkb()) {
+        for (auto &Op : I->operands()) {
+          // (and/or/xor X, (not Y)) -> (andn/orn/xnor X, Y)
+          if (match(Op.get(), m_Not(m_Value()))) {
+            Ops.push_back(&Op);
+            return true;
+          }
+        }
+      }
+    } else if (I->getOpcode() == Instruction::And && ST->hasStdExtZvkb()) {
+      for (auto &Op : I->operands()) {
+        // (and X, (not Y)) -> (vandn.vv X, Y)
+        if (match(Op.get(), m_Not(m_Value()))) {
+          Ops.push_back(&Op);
+          return true;
+        }
+        // (and X, (splat (not Y))) -> (vandn.vx X, Y)
+        if (match(Op.get(), m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()),
+                                                  m_ZeroInt()),
+                                      m_Value(), m_ZeroMask()))) {
+          Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+          Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+          Ops.push_back(&Not);
+          Ops.push_back(&InsertElt);
+          Ops.push_back(&Op);
+          return true;
+        }
+      }
+    }
+  }
+
   if (!I->getType()->isVectorTy() || !ST->hasVInstructions())
     return false;
 
