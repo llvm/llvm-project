@@ -9582,7 +9582,7 @@ OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
   // If the inode ID could not be determined, create a hash value
   // the current file name and use that as an ID.
   if (EC)
-    FileID = hash_value(FileIDInfo);
+    FileID = hash_value(std::get<0>(FileIDInfo));
   else
     FileID = ID.getFile();
 
