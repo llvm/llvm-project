@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_STRINGSET_H
 #define LLVM_ADT_STRINGSET_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace llvm {
@@ -43,6 +44,10 @@ public:
   void insert(InputIt begin, InputIt end) {
     for (auto it = begin; it != end; ++it)
       insert(*it);
+  }
+
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
   }
 
   template <typename ValueTy>

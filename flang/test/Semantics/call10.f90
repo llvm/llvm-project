@@ -36,6 +36,8 @@ module m
     end subroutine
   end interface
 
+  real :: moduleVar = 1.
+
  contains
 
   subroutine impure(x)
@@ -117,6 +119,8 @@ module m
     !ERROR: A pure subprogram may not initialize a variable
       real :: v6 = 0.
     end block
+    associate (x => moduleVar) ! ok
+    end associate
   end subroutine
   pure subroutine s06 ! C1589
     !ERROR: A pure subprogram may not have a variable with the VOLATILE attribute

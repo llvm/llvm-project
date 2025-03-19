@@ -176,6 +176,13 @@ def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
                                           "'Zicfiss' (Shadow stack)">;
 def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
 
+def FeatureStdExtZilsd
+    : RISCVExtension<1, 0,
+                     "Load/Store Pair Instructions">;
+def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZilsd),
+                                          "'Zilsd' (Load/Store pair instructions)">;
+
 // Multiply Extensions
 
 def FeatureStdExtZmmul
@@ -400,6 +407,14 @@ def FeatureStdExtZcf
     : RISCVExtension<1, 0,
                      "Compressed Single-Precision Floating-Point Instructions",
                      [FeatureStdExtF, FeatureStdExtZca]>;
+
+def FeatureStdExtZclsd
+    : RISCVExtension<1, 0,
+                     "Compressed Load/Store Pair Instructions",
+                     [FeatureStdExtZilsd,FeatureStdExtZca]>;     
+def HasStdExtZclsd : Predicate<"Subtarget->hasStdExtZclsd()">,
+                    AssemblerPredicate<(all_of FeatureStdExtZclsd),
+                        "'Zclsd' (Compressed Load/Store pair instructions)">;
 
 def FeatureStdExtZcmp
     : RISCVExtension<1, 0,

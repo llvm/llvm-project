@@ -5583,7 +5583,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::memmove:
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
+    break;
   case Intrinsic::experimental_memset_pattern: {
+    const auto Memset = cast<MemSetPatternInst>(&Call);
+    Check(Memset->getValue()->getType()->isSized(),
+          "unsized types cannot be used as memset patterns", Call);
     break;
   }
   case Intrinsic::memcpy_element_unordered_atomic:

@@ -8,13 +8,20 @@ void empty() { }
 
 void voidret() { return; }
 // CHECK: cir.func @voidret() {
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
 // CHECK:   cir.return
 // CHECK: }
 
 int intfunc() { return 42; }
 // CHECK: cir.func @intfunc() -> !cir.int<s, 32> {
-// CHECK:   %0 = cir.const #cir.int<42> : !cir.int<s, 32>
-// CHECK:   cir.return %0 : !cir.int<s, 32>
+// CHECK:   %0 = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   %1 = cir.const #cir.int<42> : !cir.int<s, 32>
+// CHECK:   cir.store %1, %0 : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
+// CHECK:   cir.return %2 : !cir.int<s, 32>
 // CHECK: }
 
 int scopes() {
@@ -25,10 +32,15 @@ int scopes() {
   }
 }
 // CHECK: cir.func @scopes() -> !cir.int<s, 32> {
+// CHECK:   %0 = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.scope {
 // CHECK:     cir.scope {
-// CHECK:       %0 = cir.const #cir.int<99> : !cir.int<s, 32>
-// CHECK:       cir.return %0 : !cir.int<s, 32>
+// CHECK:       %1 = cir.const #cir.int<99> : !cir.int<s, 32>
+// CHECK:       cir.store %1, %0 : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
+// CHECK:       cir.br ^bb1
+// CHECK:     ^bb1:
+// CHECK:       %2 = cir.load %0 : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
+// CHECK:       cir.return %2 : !cir.int<s, 32>
 // CHECK:     }
 // CHECK:   }
 // CHECK:   cir.trap
@@ -36,36 +48,66 @@ int scopes() {
 
 long longfunc() { return 42l; }
 // CHECK: cir.func @longfunc() -> !cir.int<s, 64>
-// CHECK:   %0 = cir.const #cir.int<42> : !cir.int<s, 64>
-// CHECK:   cir.return %0 : !cir.int<s, 64>
+// CHECK:   %0 = cir.alloca !cir.int<s, 64>, !cir.ptr<!cir.int<s, 64>>, ["__retval"] {alignment = 8 : i64}
+// CHECK:   %1 = cir.const #cir.int<42> : !cir.int<s, 64>
+// CHECK:   cir.store %1, %0 : !cir.int<s, 64>, !cir.ptr<!cir.int<s, 64>>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.int<s, 64>>, !cir.int<s, 64>
+// CHECK:   cir.return %2 : !cir.int<s, 64>
 // CHECK: }
 
 unsigned unsignedfunc() { return 42u; }
 // CHECK: cir.func @unsignedfunc() -> !cir.int<u, 32>
-// CHECK:   %0 = cir.const #cir.int<42> : !cir.int<u, 32>
-// CHECK:   cir.return %0 : !cir.int<u, 32>
+// CHECK:   %0 = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   %1 = cir.const #cir.int<42> : !cir.int<u, 32>
+// CHECK:   cir.store %1, %0 : !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.int<u, 32>>, !cir.int<u, 32>
+// CHECK:   cir.return %2 : !cir.int<u, 32>
 // CHECK: }
 
 unsigned long long ullfunc() { return 42ull; }
 // CHECK: cir.func @ullfunc() -> !cir.int<u, 64>
-// CHECK:   %0 = cir.const #cir.int<42> : !cir.int<u, 64>
-// CHECK:   cir.return %0 : !cir.int<u, 64>
+// CHECK:   %0 = cir.alloca !cir.int<u, 64>, !cir.ptr<!cir.int<u, 64>>, ["__retval"] {alignment = 8 : i64}
+// CHECK:   %1 = cir.const #cir.int<42> : !cir.int<u, 64>
+// CHECK:   cir.store %1, %0 : !cir.int<u, 64>, !cir.ptr<!cir.int<u, 64>>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.int<u, 64>>, !cir.int<u, 64>
+// CHECK:   cir.return %2 : !cir.int<u, 64>
 // CHECK: }
 
 bool boolfunc() { return true; }
 // CHECK: cir.func @boolfunc() -> !cir.bool {
-// CHECK:   %0 = cir.const #true
-// CHECK:   cir.return %0 : !cir.bool
+// CHECK:   %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"] {alignment = 1 : i64}
+// CHECK:   %1 = cir.const #true
+// CHECK:   cir.store %1, %0 : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK:   cir.return %2 : !cir.bool
 // CHECK: }
 
 float floatfunc() { return 42.42f; }
 // CHECK: cir.func @floatfunc() -> !cir.float {
-// CHECK:   %0 = cir.const #cir.fp<4.242
-// CHECK:   cir.return %0 : !cir.float
+// CHECK:   %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   %1 = cir.const #cir.fp<4.242
+// CHECK:   cir.store %1, %0 : !cir.float, !cir.ptr<!cir.float>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
+// CHECK:   cir.return %2 : !cir.float
 // CHECK: }
 
 double doublefunc() { return 42.42; }
 // CHECK: cir.func @doublefunc() -> !cir.double {
-// CHECK:   %0 = cir.const #cir.fp<4.242
-// CHECK:   cir.return %0 : !cir.double
+// CHECK:   %0 = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["__retval"] {alignment = 8 : i64}
+// CHECK:   %1 = cir.const #cir.fp<4.242
+// CHECK:   cir.store %1, %0 : !cir.double, !cir.ptr<!cir.double>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.double>, !cir.double
+// CHECK:   cir.return %2 : !cir.double
 // CHECK: }

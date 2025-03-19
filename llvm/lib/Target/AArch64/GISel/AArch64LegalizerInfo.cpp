@@ -326,12 +326,23 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .maxScalarEltSameAsIf(always, 1, 0);
 
   getActionDefinitionsBuilder(G_CTLZ)
-      .legalForCartesianProduct(
-          {s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
-      .scalarize(1)
+      .legalFor({{s32, s32},
+                 {s64, s64},
+                 {v8s8, v8s8},
+                 {v16s8, v16s8},
+                 {v4s16, v4s16},
+                 {v8s16, v8s16},
+                 {v2s32, v2s32},
+                 {v4s32, v4s32}})
       .widenScalarToNextPow2(1, /*Min=*/32)
       .clampScalar(1, s32, s64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .moreElementsToNextPow2(0)
+      .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
+
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
   getActionDefinitionsBuilder(G_CTTZ)

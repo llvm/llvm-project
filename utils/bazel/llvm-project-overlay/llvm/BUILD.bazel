@@ -5116,6 +5116,11 @@ llvm_driver_cc_binary(
     deps = [":llvm-ml-lib"],
 )
 
+binary_alias(
+    name = "llvm-ml64",
+    binary = ":llvm-ml",
+)
+
 cc_binary(
     name = "llvm-modextract",
     srcs = glob([

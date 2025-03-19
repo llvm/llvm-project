@@ -1009,6 +1009,17 @@ static void deallocateIntentOut(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static bool needsRepack(Fortran::lower::AbstractConverter &converter,
+                        const Fortran::semantics::Symbol &sym) {
+  if (!converter.getLoweringOptions().getRepackArrays() ||
+      !converter.isRegisteredDummySymbol(sym) ||
+      !Fortran::semantics::IsAssumedShape(sym) ||
+      Fortran::evaluate::IsSimplyContiguous(sym, converter.getFoldingContext()))
+    return false;
+
+  return true;
+}
+
 /// Instantiate a local variable. Precondition: Each variable will be visited
 /// such that if its properties depend on other variables, the variables upon
 /// which its properties depend will already have been visited.
@@ -1077,6 +1088,17 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                  loc, sym);
       });
     }
+  } else if (var.hasSymbol() && needsRepack(converter, var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    auto *sym = &var.getSymbol();
+    std::optional<fir::FortranVariableOpInterface> varDef =
+        symMap.lookupVariableDefinition(*sym);
+    assert(varDef && "cannot find defining operation for an array that needs "
+                     "to be repacked");
+    converter.getFctCtx().attachCleanup([builder, loc, varDef, sym]() {
+      Fortran::lower::genUnpackArray(*builder, loc, *varDef, *sym);
+    });
   }
 }
 
@@ -1914,10 +1936,13 @@ void Fortran::lower::genDeclareSymbol(
                                                         sym.GetUltimate());
     auto name = converter.mangleName(sym);
     mlir::Value dummyScope;
-    if (converter.isRegisteredDummySymbol(sym))
+    fir::ExtendedValue base = exv;
+    if (converter.isRegisteredDummySymbol(sym)) {
+      base = genPackArray(converter, sym, exv);
       dummyScope = converter.dummyArgsScopeValue();
+    }
     hlfir::EntityWithAttributes declare = hlfir::genDeclare(
-        loc, builder, exv, name, attributes, dummyScope, dataAttr);
+        loc, builder, base, name, attributes, dummyScope, dataAttr);
     symMap.addVariableDefinition(sym, declare.getIfVariableInterface(), force);
     return;
   }
@@ -2561,4 +2586,76 @@ mlir::Type Fortran::lower::getCrayPointeeBoxType(mlir::Type fortranType) {
     baseType = fir::SequenceType::get(shape, seqType.getEleTy());
   }
   return fir::BoxType::get(fir::PointerType::get(baseType));
+}
+
+fir::ExtendedValue
+Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
+                             const Fortran::semantics::Symbol &sym,
+                             fir::ExtendedValue exv) {
+  if (!needsRepack(converter, sym))
+    return exv;
+
+  auto &opts = converter.getLoweringOptions();
+  llvm::SmallVector<mlir::Value> lenParams;
+  exv.match(
+      [&](const fir::CharArrayBoxValue &box) {
+        lenParams.emplace_back(box.getLen());
+      },
+      [&](const fir::BoxValue &box) {
+        lenParams.append(box.getExplicitParameters().begin(),
+                         box.getExplicitParameters().end());
+      },
+      [](const auto &) {
+        llvm_unreachable("unexpected lowering for assumed-shape dummy");
+      });
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = genLocation(converter, sym);
+  bool stackAlloc = opts.getStackArrays();
+  // 1D arrays must always use 'whole' mode.
+  bool isInnermostMode = !opts.getRepackArraysWhole() && sym.Rank() > 1;
+  // Avoid copy-in for 'intent(out)' variables.
+  bool noCopy = Fortran::semantics::IsIntentOut(sym);
+  auto boxType = mlir::cast<fir::BaseBoxType>(fir::getBase(exv).getType());
+  mlir::Type elementType = boxType.unwrapInnerType();
+  llvm::SmallVector<mlir::Value> elidedLenParams =
+      fir::factory::elideLengthsAlreadyInType(elementType, lenParams);
+  auto packOp = builder.create<fir::PackArrayOp>(
+      loc, fir::getBase(exv), stackAlloc, isInnermostMode, noCopy,
+      /*max_size=*/mlir::IntegerAttr{},
+      /*max_element_size=*/mlir::IntegerAttr{},
+      /*min_stride=*/mlir::IntegerAttr{}, fir::PackArrayHeuristics::None,
+      elidedLenParams);
+
+  mlir::Value newBase = packOp.getResult();
+  return exv.match(
+      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+        return box.clone(newBase);
+      },
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
+        return box.clone(newBase);
+      },
+      [](const auto &) -> fir::ExtendedValue {
+        llvm_unreachable("unexpected lowering for assumed-shape dummy");
+      });
+}
+
+void Fortran::lower::genUnpackArray(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    fir::FortranVariableOpInterface def,
+                                    const Fortran::semantics::Symbol &sym) {
+  // Subtle: rely on the fact that the memref of the defining
+  // hlfir.declare is a result of fir.pack_array.
+  // Alternatively, we can track the pack operation for a symbol
+  // via SymMap.
+  auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(def.getOperation());
+  assert(declareOp &&
+         "cannot find hlfir.declare for an array that needs to be repacked");
+  auto packOp = declareOp.getMemref().getDefiningOp<fir::PackArrayOp>();
+  assert(packOp && "cannot find fir.pack_array");
+  mlir::Value temp = packOp.getResult();
+  mlir::Value original = packOp.getArray();
+  bool stackAlloc = packOp.getStack();
+  // Avoid copy-out for 'intent(in)' variables.
+  bool noCopy = Fortran::semantics::IsIntentIn(sym);
+  builder.create<fir::UnpackArrayOp>(loc, temp, original, stackAlloc, noCopy);
 }

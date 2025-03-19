@@ -225,7 +225,6 @@ void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
   }
   assert(!cir::MissingFeatures::emitNullabilityCheck());
   emitStoreThroughLValue(RValue::get(value), lvalue, true);
-  return;
 }
 
 void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
