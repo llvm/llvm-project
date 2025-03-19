@@ -77,23 +77,31 @@ struct MissingFeatures {
   static bool opUnaryPromotionType() { return false; }
 
   // Misc
-  static bool scalarConversionOpts() { return false; }
+  static bool cxxABI() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
   static bool lowerModeOptLevel() { return false; }
   static bool opTBAA() { return false; }
+  static bool opCmp() { return false; }
   static bool objCLifetime() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
 
-  static bool unsizedTypes() { return false; }
+  static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
+  static bool addHeapAllocSiteMetadata() { return false; }
+  static bool targetCodeGenInfoGetNullPointer() { return false; }
   static bool CGFPOptionsRAII() { return false; }
 
   // Missing types
+  static bool dataMemberType() { return false; }
+  static bool matrixType() { return false; }
+  static bool methodType() { return false; }
+  static bool scalableVectors() { return false; }
+  static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
 };
 
