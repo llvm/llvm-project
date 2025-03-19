@@ -24,6 +24,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/FormatterSection.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -1559,10 +1560,30 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
+  telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(
+      &m_debugger);
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
   if (executable_sp) {
+    lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+    if (ProcessSP proc = GetProcessSP())
+      pid = proc->GetID();
+
+    helper.DispatchNow([&](telemetry::ExecutableModuleInfo *info) {
+      info->exec_mod = executable_sp;
+      info->uuid = executable_sp->GetUUID();
+      info->pid = pid;
+      info->triple = executable_sp->GetArchitecture().GetTriple().getTriple();
+      info->is_start_entry = true;
+    });
+
+    helper.DispatchOnExit([&](telemetry::ExecutableModuleInfo *info) {
+      info->exec_mod = executable_sp;
+      info->uuid = executable_sp->GetUUID();
+      info->pid = pid;
+    });
+
     ElapsedTime elapsed(m_stats.GetCreateTime());
     LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
