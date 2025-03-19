@@ -3,8 +3,6 @@
 
 declare void @g()
 
-; TODO: Merging scalars into vectors is unprofitable because we have no
-; vector CSRs which creates additional spills around the call.
 define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
