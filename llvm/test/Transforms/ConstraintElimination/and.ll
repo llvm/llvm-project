@@ -611,10 +611,8 @@ define void @test_decompose_bitwise_and(i4 %x, i4 %y) {
 ; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[F_1:%.*]] = icmp slt i4 [[X]], 0
-; CHECK-NEXT:    [[F_2:%.*]] = icmp slt i4 [[Y]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_1]])
-; CHECK-NEXT:    call void @use(i1 [[F_2]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -642,8 +640,7 @@ define i1 @test_decompose_bitwise_and2(i4 %x, i4 %y) {
 ; CHECK-NEXT:    [[AND_NOT:%.*]] = icmp sgt i4 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[AND_NOT]], label [[END:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[X]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -669,14 +666,10 @@ define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z, i4 %w) {
 ; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[F_4:%.*]] = icmp slt i4 [[X]], 0
-; CHECK-NEXT:    [[F_5:%.*]] = icmp slt i4 [[Y]], 0
-; CHECK-NEXT:    [[F_6:%.*]] = icmp slt i4 [[Z]], 0
-; CHECK-NEXT:    [[F_7:%.*]] = icmp slt i4 [[W]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
-; CHECK-NEXT:    call void @use(i1 [[F_5]])
-; CHECK-NEXT:    call void @use(i1 [[F_6]])
-; CHECK-NEXT:    call void @use(i1 [[F_7]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -711,12 +704,9 @@ define void @test_decompose_nested_bitwise_and2(i4 %x, i4 %y, i4 %z) {
 ; CHECK-NEXT:    [[AND_2_NOT:%.*]] = icmp sgt i4 [[TMP1]], -1
 ; CHECK-NEXT:    br i1 [[AND_2_NOT]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[X]], 0
-; CHECK-NEXT:    call void @use(i1 [[CMP]])
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp slt i4 [[Y]], 0
-; CHECK-NEXT:    call void @use(i1 [[CMP_2]])
-; CHECK-NEXT:    [[CMP_3:%.*]] = icmp slt i4 [[Z]], 0
-; CHECK-NEXT:    call void @use(i1 [[CMP_3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       f:
 ; CHECK-NEXT:    ret void

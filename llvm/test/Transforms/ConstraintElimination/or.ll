@@ -818,10 +818,8 @@ define void @test_decompose_bitwise_or(i4 %x, i4 %y) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_3:%.*]] = icmp sge i4 [[X]], 0
-; CHECK-NEXT:    [[F_4:%.*]] = icmp sge i4 [[Y]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_3]])
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -849,8 +847,7 @@ define i1 @test_decompose_bitwise_or2(i4 %x, i4 %y) {
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       end:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i4 [[X]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %0 = or i4 %x, %y
@@ -876,14 +873,10 @@ define void @test_decompose_nested_bitwise_or(i4 %x, i4 %y, i4 %z, i4 %w) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
-; CHECK-NEXT:    [[F_4:%.*]] = icmp sge i4 [[X]], 0
-; CHECK-NEXT:    [[F_5:%.*]] = icmp sge i4 [[Y]], 0
-; CHECK-NEXT:    [[F_6:%.*]] = icmp sge i4 [[Z]], 0
-; CHECK-NEXT:    [[F_7:%.*]] = icmp sge i4 [[W]], 0
-; CHECK-NEXT:    call void @use(i1 [[F_4]])
-; CHECK-NEXT:    call void @use(i1 [[F_5]])
-; CHECK-NEXT:    call void @use(i1 [[F_6]])
-; CHECK-NEXT:    call void @use(i1 [[F_7]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -918,12 +911,9 @@ define void @test_decompose_nested_bitwise_or2(i4 %x, i4 %y, i4 %z) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret void
 ; CHECK:       f:
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp sgt i4 [[X]], -1
-; CHECK-NEXT:    call void @use(i1 [[CMP_1]])
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp sgt i4 [[Y]], -1
-; CHECK-NEXT:    call void @use(i1 [[CMP_2]])
-; CHECK-NEXT:    [[CMP_3:%.*]] = icmp sgt i4 [[Z]], -1
-; CHECK-NEXT:    call void @use(i1 [[CMP_3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
