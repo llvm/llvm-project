@@ -1145,4 +1145,33 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
   return variable;
 }
 
+llvm::StringMap<bool> DAP::GetCapabilities() {
+  llvm::StringMap<bool> capabilities;
+
+  // Supported capabilities.
+  capabilities["supportTerminateDebuggee"] = true;
+  capabilities["supportsDataBreakpoints"] = true;
+  capabilities["supportsDelayedStackTraceLoading"] = true;
+  capabilities["supportsEvaluateForHovers"] = true;
+  capabilities["supportsExceptionOptions"] = true;
+  capabilities["supportsLogPoints"] = true;
+  capabilities["supportsProgressReporting"] = true;
+  capabilities["supportsSteppingGranularity"] = true;
+  capabilities["supportsValueFormattingOptions"] = true;
+
+  // Unsupported capabilities.
+  capabilities["supportsGotoTargetsRequest"] = false;
+  capabilities["supportsLoadedSourcesRequest"] = false;
+  capabilities["supportsRestartFrame"] = false;
+  capabilities["supportsStepBack"] = false;
+
+  // Capabilities associated with specific requests.
+  for (auto &kv : request_handlers) {
+    for (auto &request_kv : kv.second->GetCapabilities())
+      capabilities[request_kv.getKey()] = request_kv.getValue();
+  }
+
+  return capabilities;
+}
+
 } // namespace lldb_dap
