@@ -336,10 +336,28 @@ void setupContext(ContextRoot *Root, GUID Guid, uint32_t NumCounters,
   AllContextRoots.PushBack(Root);
 }
 
+ContextRoot *FunctionData::getOrAllocateContextRoot() {
+  auto *Root = CtxRoot;
+  if (Root)
+    return Root;
+  __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> L(&Mutex);
+  Root = CtxRoot;
+  if (!Root) {
+    Root = new (__sanitizer::InternalAlloc(sizeof(ContextRoot))) ContextRoot();
+    CtxRoot = Root;
+  }
+
+  assert(Root);
+  return Root;
+}
+
 ContextNode *__llvm_ctx_profile_start_context(
-    ContextRoot *Root, GUID Guid, uint32_t Counters,
+    FunctionData *FData, GUID Guid, uint32_t Counters,
     uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   IsUnderContext = true;
+
+  auto *Root = FData->getOrAllocateContextRoot();
+
   __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
                                 __sanitizer::memory_order_relaxed);
 
@@ -356,12 +374,13 @@ ContextNode *__llvm_ctx_profile_start_context(
   return TheScratchContext;
 }
 
-void __llvm_ctx_profile_release_context(ContextRoot *Root)
+void __llvm_ctx_profile_release_context(FunctionData *FData)
     SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   IsUnderContext = false;
   if (__llvm_ctx_profile_current_context_root) {
     __llvm_ctx_profile_current_context_root = nullptr;
-    Root->Taken.Unlock();
+    assert(FData->CtxRoot);
+    FData->CtxRoot->Taken.Unlock();
   }
 }
 

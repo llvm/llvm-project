@@ -73,6 +73,9 @@ public:
     return &fn.getRegion().front();
   }
 
+  /// Sanitizers enabled for this function.
+  clang::SanitizerSet sanOpts;
+
   mlir::Type convertTypeForMem(QualType T);
 
   mlir::Type convertType(clang::QualType T);
@@ -105,6 +108,8 @@ private:
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment);
+
+  mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
 private:
   // Track current variable initialization (if there's one)

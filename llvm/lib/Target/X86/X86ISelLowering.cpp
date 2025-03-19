@@ -21019,7 +21019,8 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
     return SDValue();
 
   unsigned MinSignBits = NumSrcEltBits - NumPackedSignBits;
-  if (Flags.hasNoSignedWrap() || MinSignBits < NumSignBits) {
+  if ((Flags.hasNoSignedWrap() && DstSVT != MVT::i32) ||
+      MinSignBits < NumSignBits) {
     PackOpcode = X86ISD::PACKSS;
     return In;
   }
@@ -44725,6 +44726,25 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
+      return false;
+    case Intrinsic::x86_avx512_vpermi2var_d_128:
+    case Intrinsic::x86_avx512_vpermi2var_d_256:
+    case Intrinsic::x86_avx512_vpermi2var_d_512:
+    case Intrinsic::x86_avx512_vpermi2var_hi_128:
+    case Intrinsic::x86_avx512_vpermi2var_hi_256:
+    case Intrinsic::x86_avx512_vpermi2var_hi_512:
+    case Intrinsic::x86_avx512_vpermi2var_pd_128:
+    case Intrinsic::x86_avx512_vpermi2var_pd_256:
+    case Intrinsic::x86_avx512_vpermi2var_pd_512:
+    case Intrinsic::x86_avx512_vpermi2var_ps_128:
+    case Intrinsic::x86_avx512_vpermi2var_ps_256:
+    case Intrinsic::x86_avx512_vpermi2var_ps_512:
+    case Intrinsic::x86_avx512_vpermi2var_q_128:
+    case Intrinsic::x86_avx512_vpermi2var_q_256:
+    case Intrinsic::x86_avx512_vpermi2var_q_512:
+    case Intrinsic::x86_avx512_vpermi2var_qi_128:
+    case Intrinsic::x86_avx512_vpermi2var_qi_256:
+    case Intrinsic::x86_avx512_vpermi2var_qi_512:
       return false;
     }
   }

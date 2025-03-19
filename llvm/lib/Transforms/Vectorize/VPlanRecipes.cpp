@@ -148,7 +148,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
   case VPScalarCastSC:
-  case VPReverseVectorPointerSC:
+  case VPVectorEndPointerSC:
     return false;
   case VPInstructionSC:
     return mayWriteToMemory();
@@ -2145,7 +2145,7 @@ static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
              : Builder.getInt32Ty();
 }
 
-void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
+void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
@@ -2171,11 +2171,11 @@ void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
-                                         VPSlotTracker &SlotTracker) const {
+void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = reverse-vector-pointer";
+  O << " = vector-end-pointer";
   printFlags(O);
   printOperands(O, SlotTracker);
 }
