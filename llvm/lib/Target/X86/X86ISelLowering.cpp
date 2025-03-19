@@ -51898,11 +51898,15 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
           (B.getOpcode() == ISD::CopyFromReg)) {
         unsigned NumBits = B.getScalarValueSizeInBits();
         unsigned NewShift = NumBits - ShiftValue;
-        SDValue NewSHL = DAG.getNode(
-            ISD::SHL, dl, VT, A, DAG.getShiftAmountConstant(NewShift, VT, dl));
-        SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
-                                DAG.getShiftAmountConstant(NewShift, VT, dl));
-        return R;
+        if (ShiftValue > 4 && ShiftValue != 8 && ShiftValue != 16 &&
+            ShiftValue != 32 && ShiftValue != 64) {
+          SDValue NewSHL =
+              DAG.getNode(ISD::SHL, dl, VT, A,
+                          DAG.getShiftAmountConstant(NewShift, VT, dl));
+          SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
+                                  DAG.getShiftAmountConstant(NewShift, VT, dl));
+          return R;
+        }
       }
       if (MaskConst.isMask(ShiftValue) &&
           (A.getOpcode() == ISD::TRUNCATE &&
