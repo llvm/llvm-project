@@ -5,12 +5,14 @@ LLVM Security Group Transparency Reports
 This page lists the yearly LLVM Security Response group transparency reports.
 
 The LLVM Security Response group started out as the LLVM security group, previous
-year's transparency reports keep the original year.
+year's transparency reports keep the original name.
 
-Initially the Chromium issue tracker was used to record issues. This component
-has been archived and is read-only. A llvm-project issue with the SecurityArchive
-label has been created with a further backup PDF copy in a llvm-project
-repository.
+Initially the Chromium issue tracker was used to record issues. This
+component has been archived and is read-only. A GitHub
+llvm/llvm-project issue has been created for each issue in the
+Chromium issue tracker. All of these issues contain an attached PDF
+with the content of the Chromium issue, and have the SecurityArchive
+label.
 
 2021
 ----
