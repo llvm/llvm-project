@@ -54,9 +54,16 @@ struct end_args_t {
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
-int load(int argc, const char **argv, const char **evnp, void *image,
-         size_t size, const LaunchParameters &params,
-         bool print_resource_usage);
+#ifdef AMDHSA_SUPPORT
+int load_amdhsa(int argc, const char **argv, const char **evnp, void *image,
+                size_t size, const LaunchParameters &params,
+                bool print_resource_usage);
+#endif
+#ifdef NVPTX_SUPPORT
+int load_nvptx(int argc, const char **argv, const char **evnp, void *image,
+               size_t size, const LaunchParameters &params,
+               bool print_resource_usage);
+#endif
 
 /// Return \p V aligned "upwards" according to \p Align.
 template <typename V, typename A> inline V align_up(V val, A align) {
