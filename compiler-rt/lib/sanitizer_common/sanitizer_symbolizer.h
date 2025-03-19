@@ -136,6 +136,9 @@ class Symbolizer final {
   /// (if it wasn't already initialized).
   static Symbolizer *GetOrInit();
   static void LateInitialize();
+#if SANITIZER_WINDOWS
+  static void UpdateSymbolizerTools();
+#endif
   // Returns a list of symbolized frames for a given address (containing
   // all inlined functions, if necessary).
   SymbolizedStack *SymbolizePC(uptr address);

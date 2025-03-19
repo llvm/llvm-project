@@ -247,7 +247,8 @@ void InitializeFlags() {
         // See GH issue 'https://github.com/llvm/llvm-project/issues/117925' for
         // details.
         SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
-      });
+        Symbolizer::UpdateSymbolizerTools();
+    });
 
 #  if CAN_SANITIZE_UB
   AddRegisterWeakFunctionCallback(
