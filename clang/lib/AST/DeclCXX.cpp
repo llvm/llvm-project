@@ -2535,7 +2535,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
 
   bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
   if (IsTypeAware && isVariadic())
-      return false;
+    return false;
 
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   Pre-type aware allocators:

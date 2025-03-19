@@ -16349,7 +16349,7 @@ Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
 
   unsigned NumParams = FnDecl->getNumParams();
   constexpr unsigned RequiredParameterCount =
-    FunctionDecl::RequiredTypeAwareDeleteParameterCount;
+      FunctionDecl::RequiredTypeAwareDeleteParameterCount;
   // A usual deallocation function has no placement parameters
   if (NumParams != RequiredParameterCount)
     return nullptr;
@@ -16435,8 +16435,9 @@ static inline bool CheckOperatorNewDeleteTypes(
   };
 
   unsigned FirstNonTypeParam = 0;
-  bool IsPotentiallyTypeAware = FnDecl->getNumParams() > 0 &&
-    FnDecl->getParamDecl(0)->getType()->isTypeIdentitySpecialization();
+  bool IsPotentiallyTypeAware =
+      FnDecl->getNumParams() > 0 &&
+      FnDecl->getParamDecl(0)->getType()->isTypeIdentitySpecialization();
   unsigned MinimumMandatoryArgumentCount = 1;
   unsigned SizeParameterIndex = 0;
   if (IsPotentiallyTypeAware) {
@@ -16449,10 +16450,12 @@ static inline bool CheckOperatorNewDeleteTypes(
 
     if (OperatorKind == AllocationOperatorKind::New) {
       SizeParameterIndex = 1;
-      MinimumMandatoryArgumentCount = FunctionDecl::RequiredTypeAwareNewParameterCount;
+      MinimumMandatoryArgumentCount =
+          FunctionDecl::RequiredTypeAwareNewParameterCount;
     } else {
       SizeParameterIndex = 2;
-      MinimumMandatoryArgumentCount = FunctionDecl::RequiredTypeAwareDeleteParameterCount;
+      MinimumMandatoryArgumentCount =
+          FunctionDecl::RequiredTypeAwareDeleteParameterCount;
     }
     FirstNonTypeParam = 1;
   }
@@ -16466,8 +16469,8 @@ static inline bool CheckOperatorNewDeleteTypes(
   if (FnDecl->getNumParams() < MinimumMandatoryArgumentCount)
     return SemaRef.Diag(FnDecl->getLocation(),
                         diag::err_operator_new_delete_too_few_parameters)
-           << IsPotentiallyTypeAware << IsDestroyingDelete << FnDecl->getDeclName()
-           << MinimumMandatoryArgumentCount;
+           << IsPotentiallyTypeAware << IsDestroyingDelete
+           << FnDecl->getDeclName() << MinimumMandatoryArgumentCount;
 
   auto *FnType = FnDecl->getType()->castAs<FunctionType>();
   QualType CanResultType = NormalizeType(FnType->getReturnType());
@@ -16496,8 +16499,8 @@ static inline bool CheckOperatorNewDeleteTypes(
                        auto FallbackType) -> bool {
     if (ExpectedType.isNull()) {
       return SemaRef.Diag(FnDecl->getLocation(), InvalidParamTypeDiag)
-             << IsPotentiallyTypeAware << IsDestroyingDelete << FnDecl->getDeclName()
-             << ParamIdx << FallbackType;
+             << IsPotentiallyTypeAware << IsDestroyingDelete
+             << FnDecl->getDeclName() << ParamIdx << FallbackType;
     }
     CanQualType CanExpectedTy =
         NormalizeType(SemaRef.Context.getCanonicalType(ExpectedType));
@@ -16509,8 +16512,8 @@ static inline bool CheckOperatorNewDeleteTypes(
                               ? DependentParamTypeDiag
                               : InvalidParamTypeDiag;
     return SemaRef.Diag(FnDecl->getLocation(), Diagnostic)
-           << IsPotentiallyTypeAware << IsDestroyingDelete << FnDecl->getDeclName()
-           << ParamIdx << ExpectedType << FallbackType;
+           << IsPotentiallyTypeAware << IsDestroyingDelete
+           << FnDecl->getDeclName() << ParamIdx << ExpectedType << FallbackType;
   };
 
   // Check that the first parameter type is what we expect.
@@ -16581,7 +16584,7 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   auto ConstructDestroyingDeleteAddressType = [&]() {
     assert(MD);
     return SemaRef.Context.getCanonicalType(SemaRef.Context.getPointerType(
-      SemaRef.Context.getRecordType(MD->getParent())));
+        SemaRef.Context.getRecordType(MD->getParent())));
   };
 
   // C++ P0722:
@@ -16598,7 +16601,8 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   // so as a QoL we actually check for this explicitly
   bool IsTypeAwareClassMethod = MD && MD->isTypeAwareOperatorNewOrDelete();
   if (IsTypeAwareClassMethod && MD->getNumParams() > 1) {
-    QualType AddressParamType = SemaRef.Context.getCanonicalType(MD->getParamDecl(1)->getType());
+    QualType AddressParamType =
+        SemaRef.Context.getCanonicalType(MD->getParamDecl(1)->getType());
     if (AddressParamType != SemaRef.Context.VoidPtrTy &&
         AddressParamType == ConstructDestroyingDeleteAddressType()) {
       // The address parameter type implies an author trying to construct a
@@ -16610,7 +16614,9 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
       // the core problem.
       for (auto Param : MD->parameters()) {
         if (Param->getType()->isDestroyingDeleteT()) {
-          SemaRef.Diag(MD->getLocation(), diag::err_type_aware_destroying_operator_delete) << Param->getLocation();
+          SemaRef.Diag(MD->getLocation(),
+                       diag::err_type_aware_destroying_operator_delete)
+              << Param->getLocation();
           return true;
         }
       }
@@ -16627,7 +16633,9 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
           diag::err_operator_delete_param_type, &MinimumNonDefaultArgs))
     return true;
 
-  assert(MinimumNonDefaultArgs > 0 && MinimumNonDefaultArgs <= FunctionDecl::RequiredTypeAwareDeleteParameterCount);
+  assert(MinimumNonDefaultArgs > 0 &&
+         MinimumNonDefaultArgs <=
+             FunctionDecl::RequiredTypeAwareDeleteParameterCount);
   // C++ P0722:
   //   A destroying operator delete shall be a usual deallocation function.
   if (MD && !MD->getParent()->isDependentContext() &&
@@ -16646,6 +16654,7 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
              << FnDecl->getDeclName() << ParamDecl->getDefaultArgRange();
     }
   }
+
   return false;
 }
 

@@ -3400,9 +3400,12 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
 
   if (isTypeAwareOperatorNewOrDelete()) {
     bool IsDelete = getDeclName().isOperatorDelete();
-    unsigned RequiredParameterCount = IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount : FunctionDecl::RequiredTypeAwareNewParameterCount;
+    unsigned RequiredParameterCount =
+        IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount
+                 : FunctionDecl::RequiredTypeAwareNewParameterCount;
     if (AlignmentParam)
-      *AlignmentParam = /* type identity */ 1  + /* address */ IsDelete + /* size */ 1;
+      *AlignmentParam =
+          /* type identity */ 1 + /* address */ IsDelete + /* size */ 1;
     if (RequiredParameterCount == getNumParams())
       return true;
     if (getNumParams() > RequiredParameterCount + 1)
@@ -3411,7 +3414,7 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
       return false;
 
     if (IsNothrow)
-        *IsNothrow = true;
+      *IsNothrow = true;
     return true;
   }
 

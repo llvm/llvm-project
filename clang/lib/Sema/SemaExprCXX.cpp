@@ -1755,7 +1755,8 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
 
   if (S.getLangOpts().TypeAwareAllocators &&
       FD->isTypeAwareOperatorNewOrDelete())
-    return FunctionDecl::RequiredTypeAwareDeleteParameterCount == FD->getNumParams();
+    return FunctionDecl::RequiredTypeAwareDeleteParameterCount ==
+           FD->getNumParams();
 
   unsigned UsualParams = 1;
   if (S.getLangOpts().SizedDeallocation && UsualParams < FD->getNumParams() &&

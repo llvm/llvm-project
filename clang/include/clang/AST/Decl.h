@@ -2564,11 +2564,12 @@ public:
 
   /// Count of mandatory parameters for type aware operator new
   static constexpr unsigned RequiredTypeAwareNewParameterCount =
-    /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
+      /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
 
   /// Count of mandatory parameters for type aware operator delete
   static constexpr unsigned RequiredTypeAwareDeleteParameterCount =
-    /* type-identity */ 1 + /* address */ 1 + /* size */ 1 + /* alignment */ 1;
+      /* type-identity */ 1 + /* address */ 1 + /* size */ 1 +
+      /* alignment */ 1;
 
   /// Determine whether this is a type aware operator new or delete.
   bool isTypeAwareOperatorNewOrDelete() const;
