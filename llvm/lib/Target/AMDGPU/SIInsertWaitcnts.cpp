@@ -2007,14 +2007,13 @@ static bool isCacheInvOrWBInst(MachineInstr &Inst) {
 // blocks if necessary.
 bool SIInsertWaitcnts::isNextENDPGM(MachineBasicBlock::instr_iterator It,
                                     MachineBasicBlock *Block) const {
-  auto E = Block->instr_end();
+  auto BlockEnd = Block->getParent()->end();
+  auto BlockIter = Block->getIterator();
 
   while (true) {
-    if (It == E) {
-      if (auto FallThrough = Block->getFallThrough(false)) {
-        Block = FallThrough;
-        It = Block->instr_begin();
-        E = Block->instr_end();
+    if (It.isEnd()) {
+      if (++BlockIter != BlockEnd) {
+        It = BlockIter->instr_begin();
         continue;
       }
 
@@ -2027,7 +2026,7 @@ bool SIInsertWaitcnts::isNextENDPGM(MachineBasicBlock::instr_iterator It,
     It++;
   }
 
-  assert(It != E);
+  assert(!It.isEnd());
 
   return It->getOpcode() == AMDGPU::S_ENDPGM;
 }
