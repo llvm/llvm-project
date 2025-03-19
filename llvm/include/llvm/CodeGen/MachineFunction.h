@@ -26,11 +26,14 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <bitset>
@@ -499,6 +502,34 @@ public:
 
     /// Callee type id.
     ConstantInt *CalleeTypeId = nullptr;
+
+    CallSiteInfo() = default;
+
+    /// Extracts the numeric type id from the CallBase's type operand bundle,
+    /// and sets TypeId. This is used as type id for the indirect call in the
+    /// call graph section.
+    CallSiteInfo(const CallBase &CB) {
+      // Call graph section needs numeric type id only for indirect calls.
+      if (!CB.isIndirectCall())
+        return;
+
+      std::optional<OperandBundleUse> CalleeTypeOB =
+          CB.getOperandBundle(LLVMContext::OB_callee_type);
+      // Return if the operand bundle for call graph section cannot be found.
+      if (!CalleeTypeOB)
+        return;
+
+      // Get generalized type id string
+      Value *CalleeTypeOBVal = CalleeTypeOB->Inputs.front().get();
+      Metadata *TypeIdMD =
+          cast<MetadataAsValue>(CalleeTypeOBVal)->getMetadata();
+      MDString *TypeIdStr = cast<MDString>(TypeIdMD);
+
+      // Compute numeric type id from generalized type id string
+      uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+      IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+      CalleeTypeId = ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false);
+    }
   };
 
   struct CalledGlobalInfo {
