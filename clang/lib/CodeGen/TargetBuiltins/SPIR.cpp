@@ -58,6 +58,22 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/I->getType(), Intrinsic::spv_reflect,
         ArrayRef<Value *>{I, N}, nullptr, "spv.reflect");
   }
+  case SPIRV::BI__builtin_spirv_smoothstep: {
+    Value *Min = EmitScalarExpr(E->getArg(0));
+    Value *Max = EmitScalarExpr(E->getArg(1));
+    Value *X = EmitScalarExpr(E->getArg(2));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           E->getArg(1)->getType()->hasFloatingRepresentation() &&
+           E->getArg(2)->getType()->hasFloatingRepresentation() &&
+           "SmoothStep operands must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           E->getArg(1)->getType()->isVectorType() &&
+           E->getArg(2)->getType()->isVectorType() &&
+           "SmoothStep operands must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/Min->getType(), Intrinsic::spv_smoothstep,
+        ArrayRef<Value *>{Min, Max, X}, nullptr, "spv.smoothstep");
+  }
   }
   return nullptr;
 }
