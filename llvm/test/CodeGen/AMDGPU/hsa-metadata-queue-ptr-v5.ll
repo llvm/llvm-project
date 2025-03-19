@@ -61,6 +61,26 @@ define amdgpu_kernel void @trap_requires_queue_ptr() {
 }
 
 ; CHECK: - .args:
+
+; PRE-GFX9:		hidden_queue_ptr
+; GFX9-NOT:		hidden_queue_ptr
+; CHECK-LABEL:		.name:           debugtrap_requires_queue_ptr
+define amdgpu_kernel void @debugtrap_requires_queue_ptr() {
+  call void @llvm.debugtrap()
+  unreachable
+}
+
+; CHECK: - .args:
+
+; PRE-GFX9:		hidden_queue_ptr
+; GFX9-NOT:		hidden_queue_ptr
+; CHECK-LABEL:		.name:           ubsantrap_requires_queue_ptr
+define amdgpu_kernel void @ubsantrap_requires_queue_ptr() {
+  call void @llvm.ubsantrap(i8 0)
+  unreachable
+}
+
+; CHECK: - .args:
 ; CHECK:		hidden_queue_ptr
 ; CHECK-LABEL:		.name:           amdgcn_queue_ptr_requires_queue_ptr
 define amdgpu_kernel void @amdgcn_queue_ptr_requires_queue_ptr(ptr addrspace(1) %ptr)  {
@@ -84,6 +104,7 @@ declare i1 @llvm.amdgcn.is.shared(ptr)
 declare i1 @llvm.amdgcn.is.private(ptr)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()
+declare void @llvm.ubsantrap(i8 immarg)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
