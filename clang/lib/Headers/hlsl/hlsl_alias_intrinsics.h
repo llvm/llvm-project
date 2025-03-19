@@ -35,26 +35,6 @@ namespace hlsl {
 #define _HLSL_16BIT_AVAILABILITY_STAGE(environment, version, stage)
 #endif
 
-#define GEN_VEC_SCALAR_OVERLOADS(FUNC_NAME, BASE_TYPE, AVAIL)                  \
-  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##2, AVAIL)                \
-  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##3, AVAIL)                \
-  GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, BASE_TYPE##4, AVAIL)
-
-#define GEN_BOTH_OVERLOADS(FUNC_NAME, BASE_TYPE, VECTOR_TYPE, AVAIL)           \
-  IF_TRUE_##AVAIL(                                                             \
-      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_TYPE        \
-  FUNC_NAME(VECTOR_TYPE p0, BASE_TYPE p1) {                                    \
-    return __builtin_elementwise_##FUNC_NAME(p0, (VECTOR_TYPE)p1);             \
-  }                                                                            \
-  IF_TRUE_##AVAIL(                                                             \
-      _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)) constexpr VECTOR_TYPE        \
-  FUNC_NAME(BASE_TYPE p0, VECTOR_TYPE p1) {                                    \
-    return __builtin_elementwise_##FUNC_NAME((VECTOR_TYPE)p0, p1);             \
-  }
-
-#define IF_TRUE_0(EXPR)
-#define IF_TRUE_1(EXPR) EXPR
-
 //===----------------------------------------------------------------------===//
 // abs builtins
 //===----------------------------------------------------------------------===//
@@ -1563,7 +1543,6 @@ half3 max(half3, half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 half4 max(half4, half4);
-GEN_VEC_SCALAR_OVERLOADS(max, half, 1)
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
@@ -1578,7 +1557,6 @@ int16_t3 max(int16_t3, int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int16_t4 max(int16_t4, int16_t4);
-GEN_VEC_SCALAR_OVERLOADS(max, int16_t, 1)
 
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
@@ -1592,7 +1570,6 @@ uint16_t3 max(uint16_t3, uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint16_t4 max(uint16_t4, uint16_t4);
-GEN_VEC_SCALAR_OVERLOADS(max, uint16_t, 1)
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
@@ -1603,7 +1580,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int3 max(int3, int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int4 max(int4, int4);
-GEN_VEC_SCALAR_OVERLOADS(max, int, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint max(uint, uint);
@@ -1613,7 +1589,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint3 max(uint3, uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint4 max(uint4, uint4);
-GEN_VEC_SCALAR_OVERLOADS(max, uint, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t max(int64_t, int64_t);
@@ -1623,7 +1598,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t3 max(int64_t3, int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 int64_t4 max(int64_t4, int64_t4);
-GEN_VEC_SCALAR_OVERLOADS(max, int64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t max(uint64_t, uint64_t);
@@ -1633,7 +1607,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t3 max(uint64_t3, uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 uint64_t4 max(uint64_t4, uint64_t4);
-GEN_VEC_SCALAR_OVERLOADS(max, uint64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float max(float, float);
@@ -1643,7 +1616,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float3 max(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 float4 max(float4, float4);
-GEN_VEC_SCALAR_OVERLOADS(max, float, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double max(double, double);
@@ -1653,7 +1625,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double3 max(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_max)
 double4 max(double4, double4);
-GEN_VEC_SCALAR_OVERLOADS(max, double, 0)
 
 //===----------------------------------------------------------------------===//
 // min builtins
@@ -1676,7 +1647,6 @@ half3 min(half3, half3);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 half4 min(half4, half4);
-GEN_VEC_SCALAR_OVERLOADS(min, half, 1)
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.2)
@@ -1691,7 +1661,6 @@ int16_t3 min(int16_t3, int16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int16_t4 min(int16_t4, int16_t4);
-GEN_VEC_SCALAR_OVERLOADS(min, int16_t, 1)
 
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
@@ -1705,7 +1674,6 @@ uint16_t3 min(uint16_t3, uint16_t3);
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint16_t4 min(uint16_t4, uint16_t4);
-GEN_VEC_SCALAR_OVERLOADS(min, uint16_t, 1)
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
@@ -1716,7 +1684,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int3 min(int3, int3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int4 min(int4, int4);
-GEN_VEC_SCALAR_OVERLOADS(min, int, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint min(uint, uint);
@@ -1726,7 +1693,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint3 min(uint3, uint3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint4 min(uint4, uint4);
-GEN_VEC_SCALAR_OVERLOADS(min, uint, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float min(float, float);
@@ -1736,7 +1702,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float3 min(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 float4 min(float4, float4);
-GEN_VEC_SCALAR_OVERLOADS(min, float, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t min(int64_t, int64_t);
@@ -1746,7 +1711,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t3 min(int64_t3, int64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 int64_t4 min(int64_t4, int64_t4);
-GEN_VEC_SCALAR_OVERLOADS(min, int64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t min(uint64_t, uint64_t);
@@ -1756,7 +1720,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t3 min(uint64_t3, uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 uint64_t4 min(uint64_t4, uint64_t4);
-GEN_VEC_SCALAR_OVERLOADS(min, uint64_t, 0)
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double min(double, double);
@@ -1766,7 +1729,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double3 min(double3, double3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_min)
 double4 min(double4, double4);
-GEN_VEC_SCALAR_OVERLOADS(min, double, 0)
 
 //===----------------------------------------------------------------------===//
 // normalize builtins
