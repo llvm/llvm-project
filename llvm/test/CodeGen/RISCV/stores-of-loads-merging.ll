@@ -134,6 +134,100 @@ define void @i8_i16(ptr %p, ptr %q) {
   ret void
 }
 
+; We could reorder the first call and the load here to enable
+; merging, but don't currently do so.
+define void @i8_i16_resched_readnone_ld(ptr %p, ptr %q) {
+; CHECK-LABEL: i8_i16_resched_readnone_ld:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    .cfi_offset s1, -24
+; CHECK-NEXT:    .cfi_offset s2, -32
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    lbu s2, 0(a0)
+; CHECK-NEXT:    mv s1, a1
+; CHECK-NEXT:    call g
+; CHECK-NEXT:    lbu s0, 1(s0)
+; CHECK-NEXT:    call g
+; CHECK-NEXT:    sb s2, 0(s1)
+; CHECK-NEXT:    sb s0, 1(s1)
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    .cfi_restore s2
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %p0 = getelementptr i8, ptr %p, i64 0
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %x0 = load i8, ptr %p0, align 2
+  call void @g() readnone
+  %x1 = load i8, ptr %p1
+  call void @g()
+  %q0 = getelementptr i8, ptr %q, i64 0
+  %q1 = getelementptr i8, ptr %q, i64 1
+  store i8 %x0, ptr %q0, align 2
+  store i8 %x1, ptr %q1
+  ret void
+}
+
+; We could reorder the second call and the store here to
+; enable merging, but don't currently do so.
+define void @i8_i16_resched_readnone_st(ptr %p, ptr %q) {
+; CHECK-LABEL: i8_i16_resched_readnone_st:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -32
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -8
+; CHECK-NEXT:    .cfi_offset s0, -16
+; CHECK-NEXT:    .cfi_offset s1, -24
+; CHECK-NEXT:    .cfi_offset s2, -32
+; CHECK-NEXT:    lbu s1, 0(a0)
+; CHECK-NEXT:    lbu s2, 1(a0)
+; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    call g
+; CHECK-NEXT:    sb s1, 0(s0)
+; CHECK-NEXT:    call g
+; CHECK-NEXT:    sb s2, 1(s0)
+; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore s1
+; CHECK-NEXT:    .cfi_restore s2
+; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %p0 = getelementptr i8, ptr %p, i64 0
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %x0 = load i8, ptr %p0, align 2
+  %x1 = load i8, ptr %p1
+  call void @g()
+  %q0 = getelementptr i8, ptr %q, i64 0
+  store i8 %x0, ptr %q0, align 2
+  call void @g() readnone
+  %q1 = getelementptr i8, ptr %q, i64 1
+  store i8 %x1, ptr %q1
+  ret void
+}
+
+
 ; Merging vectors is profitable, it reduces pressure within a single
 ; register class.
 define void @v2i8_v4i8(ptr %p, ptr %q) {

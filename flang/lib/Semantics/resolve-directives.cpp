@@ -356,6 +356,7 @@ public:
     return true;
   }
   void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
+
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -1652,8 +1653,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
-  const auto &standaloneDir{
-      std::get<parser::OmpSimpleStandaloneDirective>(x.t)};
+  const auto &standaloneDir{std::get<parser::OmpDirectiveName>(x.v.t)};
   switch (standaloneDir.v) {
   case llvm::omp::Directive::OMPD_barrier:
   case llvm::omp::Directive::OMPD_ordered:
