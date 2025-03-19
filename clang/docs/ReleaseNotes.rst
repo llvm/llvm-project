@@ -277,6 +277,7 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
+- Some operator function templates that could never produce a valid specialization are now diagnosed at definition time.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -340,6 +341,13 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
+- Invalid operator function signatures generated from templates during
+  overload resolution are now eliminated from the candidate set without making
+  the program ill-formed. (#GH49197)
+- Binary operator function templates with a single parameter are no longer
+  rejected when that parameter is a pack.
+- Fixed operator functions without a class or enumeration parameter not being
+  rejected when an explicit object parameter is present.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

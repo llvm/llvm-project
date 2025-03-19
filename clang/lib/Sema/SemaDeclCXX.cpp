@@ -27,6 +27,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/AttributeCommonInfo.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
@@ -47,6 +48,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
@@ -16473,6 +16475,94 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
   return false;
 }
 
+bool Sema::CheckOverloadedOperatorParams(FunctionDecl *FnDecl) {
+  assert(FnDecl && FnDecl->isOverloadedOperator() &&
+         "Expected an overloaded operator declaration");
+
+  auto Op = FnDecl->getOverloadedOperator();
+  bool IsImplicitObjectMemFn = isa<CXXMethodDecl>(FnDecl) &&
+                               !FnDecl->hasCXXExplicitFunctionObjectParameter();
+  auto Params = FnDecl->parameters();
+  auto NumParams = Params.size() + IsImplicitObjectMemFn;
+
+  // C++2c [over.oper.general] p10:
+  //   Operator functions cannot have more or fewer parameters than the
+  //   number required for the corresponding operator, as described in the
+  //   rest of [over.oper].
+  static constexpr llvm::Bitset<NUM_OVERLOADED_OPERATORS> UnaryOps{
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+  Unary ? OO_##Name : OO_None,
+#include "clang/Basic/OperatorKinds.def"
+  };
+  static constexpr llvm::Bitset<NUM_OVERLOADED_OPERATORS> BinaryOps{
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+  Binary ? OO_##Name : OO_None,
+#include "clang/Basic/OperatorKinds.def"
+  };
+
+  if (Op == OO_Subscript) {
+    if (NumParams != 2) {
+      // 0 = no parameters, 2 = more than one parameter
+      int ErrorKind = NumParams == 1 ? 0 : 2;
+      Diag(FnDecl->getLocation(), LangOpts.CPlusPlus23
+                                      ? diag::ext_subscript_overload
+                                      : diag::error_subscript_overload)
+          << FnDecl->getDeclName() << ErrorKind;
+      if (!LangOpts.CPlusPlus23)
+        return true;
+    }
+  } else if (Op != OO_Call) {
+    bool NumParamsIsValid = false;
+    if (NumParams == 1)
+      NumParamsIsValid = UnaryOps[Op] || (!IsImplicitObjectMemFn &&
+                                          Params[0]->isParameterPack());
+    else if (NumParams == 2)
+      NumParamsIsValid = BinaryOps[Op];
+
+    if (!NumParamsIsValid) {
+      // 0 = unary, 1 = binary, 2 = unary or binary
+      int ErrorKind = (BinaryOps[Op] << 1 | UnaryOps[Op]) - 1;
+      return Diag(FnDecl->getLocation(), diag::err_operator_overload_must_be)
+             << FnDecl->getDeclName() << NumParams << ErrorKind;
+    }
+  }
+
+  // The second parameter of operator++ and operator--, if present,
+  // must be of type 'int' (C++2c [over.inc] p1).
+  if ((Op == OO_PlusPlus || Op == OO_MinusMinus) && NumParams == 2) {
+    ParmVarDecl *SecondParam = Params[!IsImplicitObjectMemFn];
+    QualType Type = SecondParam->getType();
+    if (!(Type->isSpecificBuiltinType(BuiltinType::Int) ||
+          Type->isDependentType()))
+      return Diag(SecondParam->getLocation(),
+                  diag::err_operator_overload_post_incdec_must_be_int)
+             << Type << (Op == OO_MinusMinus);
+
+    // Ignore the 'int' parameter for subsequent checks.
+    Params = Params.drop_back();
+  }
+
+  // C++2c [over.oper.general] p7:
+  //   An operator function shall have at least one function parameter
+  //   or implicit object parameter whose type is a class, a reference
+  //   to a class, an enumeration, or a reference to an enumeration.
+  bool HasClassOrEnumParam =
+      IsImplicitObjectMemFn || llvm::any_of(Params, [](ParmVarDecl *Param) {
+        QualType Type =
+            Param->getType().getNonPackExpansionType().getNonReferenceType();
+        return Type->isDependentType()
+                   ? !(Type->isPointerType() || Type->isMemberPointerType() ||
+                       Type->isFunctionType() || Type->isArrayType())
+                   : Type->isRecordType() || Type->isEnumeralType();
+      });
+  if (!HasClassOrEnumParam)
+    return Diag(FnDecl->getLocation(),
+                diag::err_operator_overload_needs_class_or_enum)
+           << FnDecl->getDeclName();
+
+  return false;
+}
+
 bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   assert(FnDecl && FnDecl->isOverloadedOperator() &&
          "Expected an overloaded operator declaration");
@@ -16491,40 +16581,19 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   if (Op == OO_New || Op == OO_Array_New)
     return CheckOperatorNewDeclaration(*this, FnDecl);
 
-  // C++ [over.oper]p7:
-  //   An operator function shall either be a member function or
-  //   be a non-member function and have at least one parameter
-  //   whose type is a class, a reference to a class, an enumeration,
-  //   or a reference to an enumeration.
-  // Note: Before C++23, a member function could not be static. The only member
-  //       function allowed to be static is the call operator function.
-  if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl)) {
-    if (MethodDecl->isStatic()) {
-      if (Op == OO_Call || Op == OO_Subscript)
-        Diag(FnDecl->getLocation(),
-             (LangOpts.CPlusPlus23
-                  ? diag::warn_cxx20_compat_operator_overload_static
-                  : diag::ext_operator_overload_static))
-            << FnDecl;
-      else
-        return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)
-               << FnDecl;
-    }
-  } else {
-    bool ClassOrEnumParam = false;
-    for (auto *Param : FnDecl->parameters()) {
-      QualType ParamType = Param->getType().getNonReferenceType();
-      if (ParamType->isDependentType() || ParamType->isRecordType() ||
-          ParamType->isEnumeralType()) {
-        ClassOrEnumParam = true;
-        break;
-      }
-    }
-
-    if (!ClassOrEnumParam)
-      return Diag(FnDecl->getLocation(),
-                  diag::err_operator_overload_needs_class_or_enum)
-        << FnDecl->getDeclName();
+  // Only function call and subscript operators are allowed to be
+  // static member functions, and only since C++23.
+  if (auto *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl);
+      MethodDecl && MethodDecl->isStatic()) {
+    if (Op == OO_Call || Op == OO_Subscript)
+      Diag(FnDecl->getLocation(),
+           (LangOpts.CPlusPlus23
+                ? diag::warn_cxx20_compat_operator_overload_static
+                : diag::ext_operator_overload_static))
+          << FnDecl;
+    else
+      return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)
+             << FnDecl;
   }
 
   // C++ [over.oper]p8:
@@ -16557,52 +16626,6 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
     }
   }
 
-  static const bool OperatorUses[NUM_OVERLOADED_OPERATORS][3] = {
-    { false, false, false }
-#define OVERLOADED_OPERATOR(Name,Spelling,Token,Unary,Binary,MemberOnly) \
-    , { Unary, Binary, MemberOnly }
-#include "clang/Basic/OperatorKinds.def"
-  };
-
-  bool CanBeUnaryOperator = OperatorUses[Op][0];
-  bool CanBeBinaryOperator = OperatorUses[Op][1];
-  bool MustBeMemberOperator = OperatorUses[Op][2];
-
-  // C++ [over.oper]p8:
-  //   [...] Operator functions cannot have more or fewer parameters
-  //   than the number required for the corresponding operator, as
-  //   described in the rest of this subclause.
-  unsigned NumParams = FnDecl->getNumParams() +
-                       (isa<CXXMethodDecl>(FnDecl) &&
-                                !FnDecl->hasCXXExplicitFunctionObjectParameter()
-                            ? 1
-                            : 0);
-  if (Op != OO_Call && Op != OO_Subscript &&
-      ((NumParams == 1 && !CanBeUnaryOperator) ||
-       (NumParams == 2 && !CanBeBinaryOperator) || (NumParams < 1) ||
-       (NumParams > 2))) {
-    // We have the wrong number of parameters.
-    unsigned ErrorKind;
-    if (CanBeUnaryOperator && CanBeBinaryOperator) {
-      ErrorKind = 2;  // 2 -> unary or binary.
-    } else if (CanBeUnaryOperator) {
-      ErrorKind = 0;  // 0 -> unary
-    } else {
-      assert(CanBeBinaryOperator &&
-             "All non-call overloaded operators are unary or binary!");
-      ErrorKind = 1;  // 1 -> binary
-    }
-    return Diag(FnDecl->getLocation(), diag::err_operator_overload_must_be)
-      << FnDecl->getDeclName() << NumParams << ErrorKind;
-  }
-
-  if (Op == OO_Subscript && NumParams != 2) {
-    Diag(FnDecl->getLocation(), LangOpts.CPlusPlus23
-                                    ? diag::ext_subscript_overload
-                                    : diag::error_subscript_overload)
-        << FnDecl->getDeclName() << (NumParams == 1 ? 0 : 2);
-  }
-
   // Overloaded operators other than operator() and operator[] cannot be
   // variadic.
   if (Op != OO_Call &&
@@ -16612,32 +16635,20 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   }
 
   // Some operators must be member functions.
-  if (MustBeMemberOperator && !isa<CXXMethodDecl>(FnDecl)) {
+  static constexpr llvm::Bitset<NUM_OVERLOADED_OPERATORS> MemberOnlyOps{
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+  MemberOnly ? OO_##Name : OO_None,
+#include "clang/Basic/OperatorKinds.def"
+  };
+
+  if (MemberOnlyOps[Op] && !isa<CXXMethodDecl>(FnDecl))
     return Diag(FnDecl->getLocation(),
                 diag::err_operator_overload_must_be_member)
-      << FnDecl->getDeclName();
-  }
+           << FnDecl->getDeclName();
 
-  // C++ [over.inc]p1:
-  //   The user-defined function called operator++ implements the
-  //   prefix and postfix ++ operator. If this function is a member
-  //   function with no parameters, or a non-member function with one
-  //   parameter of class or enumeration type, it defines the prefix
-  //   increment operator ++ for objects of that type. If the function
-  //   is a member function with one parameter (which shall be of type
-  //   int) or a non-member function with two parameters (the second
-  //   of which shall be of type int), it defines the postfix
-  //   increment operator ++ for objects of that type.
-  if ((Op == OO_PlusPlus || Op == OO_MinusMinus) && NumParams == 2) {
-    ParmVarDecl *LastParam = FnDecl->getParamDecl(FnDecl->getNumParams() - 1);
-    QualType ParamType = LastParam->getType();
-
-    if (!ParamType->isSpecificBuiltinType(BuiltinType::Int) &&
-        !ParamType->isDependentType())
-      return Diag(LastParam->getLocation(),
-                  diag::err_operator_overload_post_incdec_must_be_int)
-        << LastParam->getType() << (Op == OO_MinusMinus);
-  }
+  if (!FnDecl->isFunctionTemplateSpecialization() &&
+      CheckOverloadedOperatorParams(FnDecl))
+    return true;
 
   return false;
 }

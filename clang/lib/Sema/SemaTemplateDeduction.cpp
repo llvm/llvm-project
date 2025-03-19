@@ -34,6 +34,7 @@
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -4118,6 +4119,28 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
                                          Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
+  }
+
+  // If the template is an operator function template, check that the
+  // resulting specialization is a valid operator function.
+  switch (Specialization->getOverloadedOperator()) {
+  case OO_None:
+  case OO_New:
+  case OO_Array_New:
+  case OO_Delete:
+  case OO_Array_Delete:
+    break;
+
+  default:
+    // SFINAE does not apply at this point in the instantiation process.
+    // Push a new CodeSynthesisContext to briefly re-enable it here.
+    InstantiatingTemplate Inst(
+        *this, Info.getLocation(), FunctionTemplate, DeducedArgs,
+        CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
+    if (Inst.isInvalid())
+      return TemplateDeductionResult::InstantiationDepth;
+    if (CheckOverloadedOperatorParams(Specialization))
+      return TemplateDeductionResult::SubstitutionFailure;
   }
 
   // We skipped the instantiation of the explicit-specifier during the

@@ -5878,6 +5878,14 @@ public:
   // C++ Overloaded Operators [C++ 13.5]
   //
 
+  /// CheckOverloadedOperatorParams - Check whether the parameter-type-list
+  /// of an overloaded operator is valid (has the correct number of
+  /// parameters for the operator, at least one parameter is of a class or
+  /// enumeration type, and, for the postfix increment/decrement operators,
+  /// the last parameter is of type int). If so, returns false; otherwise,
+  /// emits appropriate diagnostics and returns true.
+  bool CheckOverloadedOperatorParams(FunctionDecl *FnDecl);
+
   /// CheckOverloadedOperatorDeclaration - Check whether the declaration
   /// of this overloaded operator is well-formed. If so, returns false;
   /// otherwise, emits appropriate diagnostics and returns true.

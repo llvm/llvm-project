@@ -496,22 +496,16 @@ namespace PR14995 {
   };
 
   E<char> e; // expected-note {{in instantiation of template class 'PR14995::E<char>' requested here}}
-  
+
   struct F {
     template<typename... T>
     int operator++ (T...) {}
+    // expected-note@-1 {{candidate template ignored: substitution failure [with T = <int, int>]: overloaded 'operator++' must be a unary or binary operator (has 3 parameters)}}
+    // expected-note@-2 {{candidate template ignored: substitution failure [with T = <char>]: parameter of overloaded post-increment operator must have type 'int' (not 'char')}}
   };
 
-  int k1 = F().operator++(0, 0);
-  int k2 = F().operator++('0');
-  // expected-error@-5 {{overloaded 'operator++' must be a unary or binary operator}}
-  // expected-note@-3 {{in instantiation of function template specialization 'PR14995::F::operator++<int, int>' requested here}}
-  // expected-error@-4 {{no matching member function for call to 'operator++'}}
-  // expected-note@-8 {{candidate template ignored: substitution failure}}
-  // expected-error@-9 {{parameter of overloaded post-increment operator must have type 'int' (not 'char')}}
-  // expected-note@-6 {{in instantiation of function template specialization 'PR14995::F::operator++<char>' requested here}}
-  // expected-error@-7 {{no matching member function for call to 'operator++'}}
-  // expected-note@-12 {{candidate template ignored: substitution failure}}
+  int k1 = F().operator++(0, 0); // expected-error {{no matching member function for call to 'operator++'}}
+  int k2 = F().operator++('0'); // expected-error {{no matching member function for call to 'operator++'}}
 } // namespace PR14995
 
 namespace ConversionVersusTemplateOrdering {
@@ -688,7 +682,7 @@ namespace GH88329 {
 
 template <auto T> struct A {};
 template <auto T> A<*T> operator *() { return {}; }
-// expected-error@-1 {{overloaded 'operator*' must have at least one parameter of class or enumeration type}}
+// expected-error@-1 {{overloaded 'operator*' must be a unary or binary operator}}
 }
 
 namespace GH92275 {
@@ -702,4 +696,15 @@ auto operator *(constant<x>)
 
 }
 
+#endif
+
+#if __cpp_explicit_this_parameter >= 202110
+namespace ExplicitThisOperator {
+
+struct Bad {
+    void operator+(this int);      // cxx23-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+    void operator+(this int, int); // cxx23-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+};
+
+}
 #endif
