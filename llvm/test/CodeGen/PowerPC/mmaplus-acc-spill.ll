@@ -37,7 +37,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    ld r30, 272(r1)
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp60, vsp62, 0
 ; CHECK-NEXT:    xvf16ger2pp wacc0, v2, v4
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-NEXT:    stxvp vsp36, 64(r1)
 ; CHECK-NEXT:    stxvp vsp34, 32(r1)
 ; CHECK-NEXT:    bl foo@notoc
@@ -45,7 +45,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    lxvp vsp36, 32(r1)
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-NEXT:    xvf16ger2pp wacc0, v28, v30
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r30)
 ; CHECK-NEXT:    stxv v5, 32(r30)
 ; CHECK-NEXT:    stxv v2, 16(r30)
@@ -84,7 +84,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    ld r30, 368(r1)
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp60, vsp62, 0
 ; CHECK-BE-NEXT:    xvf16ger2pp wacc0, v2, v4
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc0, 0
 ; CHECK-BE-NEXT:    stxvp vsp36, 112(r1)
 ; CHECK-BE-NEXT:    stxvp vsp34, 144(r1)
 ; CHECK-BE-NEXT:    bl foo
@@ -93,7 +93,7 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    lxvp vsp36, 144(r1)
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
 ; CHECK-BE-NEXT:    xvf16ger2pp wacc0, v28, v30
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r30)
 ; CHECK-BE-NEXT:    stxv v4, 32(r30)
 ; CHECK-BE-NEXT:    stxv v3, 16(r30)
