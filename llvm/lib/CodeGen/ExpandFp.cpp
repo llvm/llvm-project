@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -35,6 +36,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <optional>
 
 #define DEBUG_TYPE "expand-fp"
 
@@ -95,7 +97,7 @@ public:
   /// must match the type for which the class instance has been
   /// created. The code will be generated at the insertion point of \p
   /// B and the insertion point will be reset at exit.
-  Value *buildFRem(Value *X, Value *Y, SimplifyQuery &SQ) const;
+  Value *buildFRem(Value *X, Value *Y, std::optional<SimplifyQuery> &SQ) const;
 
 private:
   FRemExpander(IRBuilder<> &B, Type *FremTy, short Bits, unsigned long Signbit,
@@ -252,7 +254,8 @@ private:
   /// Return a value that is NaN if one of the corner cases concerning
   /// the inputs \p X and \p Y is detected, and \p Ret otherwise.
   Value *handleInputCornerCases(Value *Ret, Value *X,
-                                Value *Y, SimplifyQuery &SQ) const {
+                                Value *Y, std::optional<SimplifyQuery> &SQ,
+				bool NoInfs) const {
     // Build:
     //   ret = y == 0.0f ? QNAN_ComputeFpTy : ret;
     //   bool c = !BUILTIN_ISNAN_ComputeFpTy(y) &&
@@ -262,9 +265,10 @@ private:
     Ret = B.CreateSelect(B.CreateFCmpOEQ(Y, ConstantFP::get(FremTy, 0.0)), Nan,
                          Ret);
     FPClassTest NotNan = FPClassTest::fcInf | FPClassTest::fcFinite;
-    Value *YNotNan =
-        isKnownNeverNaN(Y, 0, SQ) ? B.getTrue() : B.createIsFPClass(Y, NotNan);
-    Value *XFinite = isKnownNeverInfinity(X, 0, SQ)
+    Value *YNotNan = SQ && isKnownNeverNaN(Y, 0, *SQ)
+                         ? B.getTrue()
+                         : B.createIsFPClass(Y, NotNan);
+    Value *XFinite = NoInfs || (SQ && isKnownNeverInfinity(X, 0, *SQ))
                          ? B.getTrue()
                          : B.createIsFPClass(X, FPClassTest::fcFinite);
     Value *C = B.CreateLogicalAnd(YNotNan, XFinite);
@@ -274,7 +278,8 @@ private:
   }
 };
 
-  Value *FRemExpander::buildFRem(Value *X, Value *Y, SimplifyQuery &SQ) const {
+Value *FRemExpander::buildFRem(Value *X, Value *Y,
+                               std::optional<SimplifyQuery> &SQ) const {
   assert(X->getType() == FremTy && Y->getType() == FremTy);
 
   FastMathFlags FMF = B.getFastMathFlags();
@@ -300,7 +305,7 @@ private:
   // We would return NaN in all corner cases handled here.
   // Hence, if NaNs are excluded, keep the result as it is.
   if (!FMF.noNaNs())
-    Ret = handleInputCornerCases(Ret, X, Y, SQ);
+    Ret = handleInputCornerCases(Ret, X, Y, SQ, FMF.noInfs());
 
   Function *Fun = B.GetInsertBlock()->getParent();
   auto *ThenBB = BasicBlock::Create(B.getContext(), "frem.compute", Fun);
@@ -358,7 +363,7 @@ static bool shouldSkipExpandFRem(BinaryOperator &I) {
          isConstOrConstSelectOp(I.getOperand(1));
 }
 
-static bool expandFRem(BinaryOperator &I, SimplifyQuery &SQ) {
+static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
   if (shouldSkipExpandFRem(I)) {
     LLVM_DEBUG(
@@ -999,7 +1004,8 @@ static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
   return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
 }
 
-static bool runImpl(Function &F, const TargetLowering &TLI) {
+static bool runImpl(Function &F, const TargetLowering &TLI,
+                    AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Replace;
   SmallVector<Instruction *, 4> ReplaceVector;
   bool Modified = false;
@@ -1071,7 +1077,16 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
   while (!Replace.empty()) {
     Instruction *I = Replace.pop_back_val();
     if (I->getOpcode() == Instruction::FRem) {
-      auto SQ = SimplifyQuery{I->getModule()->getDataLayout(), I};
+      auto SQ = [&]() -> std::optional<SimplifyQuery> {
+        if (AC) {
+          auto Res = std::make_optional<SimplifyQuery>(
+              I->getModule()->getDataLayout(), I);
+          Res->AC = AC;
+          return Res;
+        }
+        return {};
+      }();
+
       expandFRem(cast<BinaryOperator>(*I), SQ);
     } else if (I->getOpcode() == Instruction::FPToUI ||
                I->getOpcode() == Instruction::FPToSI) {
@@ -1086,21 +1101,30 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
 
 namespace {
 class ExpandFpLegacyPass : public FunctionPass {
+    CodeGenOptLevel OptLevel;
 public:
   static char ID;
 
-  ExpandFpLegacyPass() : FunctionPass(ID) {
+  ExpandFpLegacyPass(CodeGenOptLevel OptLevel)
+      : FunctionPass(ID), OptLevel(OptLevel) {
     initializeExpandFpLegacyPassPass(*PassRegistry::getPassRegistry());
   }
+
+  ExpandFpLegacyPass() : ExpandFpLegacyPass(CodeGenOptLevel::None) {};
 
   bool runOnFunction(Function &F) override {
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
-    return runImpl(F, *TLI);
+    AssumptionCache *AC = nullptr;
+    if (OptLevel != CodeGenOptLevel::None)
+      AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    return runImpl(F, *TLI, AC);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
+    if (OptLevel != CodeGenOptLevel::None)
+      AU.addRequired<AssumptionCacheTracker>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
@@ -1109,8 +1133,12 @@ public:
 
 PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
-  return runImpl(F, *STI->getTargetLowering()) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  auto &TLI = *STI->getTargetLowering();
+  AssumptionCache *AC = nullptr;
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    AC = &FAM.getResult<AssumptionAnalysis>(F);
+  return runImpl(F, TLI, AC) ? PreservedAnalyses::none()
+                             : PreservedAnalyses::all();
 }
 
 char ExpandFpLegacyPass::ID = 0;
@@ -1118,4 +1146,6 @@ INITIALIZE_PASS_BEGIN(ExpandFpLegacyPass, "expand-fp",
                       "Expand certain fp instructions", false, false)
 INITIALIZE_PASS_END(ExpandFpLegacyPass, "expand-fp", "Expand fp", false, false)
 
-FunctionPass *llvm::createExpandFpPass() { return new ExpandFpLegacyPass(); }
+FunctionPass *llvm::createExpandFpPass(CodeGenOptLevel OptLevel) {
+  return new ExpandFpLegacyPass(OptLevel);
+}
