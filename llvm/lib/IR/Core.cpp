@@ -2658,6 +2658,10 @@ void LLVMSetParamAlignment(LLVMValueRef Arg, unsigned align) {
   A->addAttr(Attribute::getWithAlignment(A->getContext(), Align(align)));
 }
 
+LLVMTypeRef LLVMGetFunctionType(LLVMValueRef Fn) {
+  return wrap(unwrap<Function>(Fn)->getFunctionType());
+}
+
 /*--.. Operations on ifuncs ................................................--*/
 
 LLVMValueRef LLVMAddGlobalIFunc(LLVMModuleRef M,

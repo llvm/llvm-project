@@ -3017,6 +3017,13 @@ LLVMValueRef LLVMGetFirstParam(LLVMValueRef Fn);
 LLVMValueRef LLVMGetLastParam(LLVMValueRef Fn);
 
 /**
+ * Obtain function type.
+ *
+ * @see llvm::Function::getFunctionType()
+ */
+LLVMTypeRef LLVMGetFunctionType(LLVMValueRef Fn);
+
+/**
  * Obtain the next parameter to a function.
  *
  * This takes an LLVMValueRef obtained from LLVMGetFirstParam() (which is
