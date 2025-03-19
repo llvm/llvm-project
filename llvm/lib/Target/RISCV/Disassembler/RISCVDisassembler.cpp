@@ -323,6 +323,39 @@ static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeTRRegisterClass(MCInst &Inst, uint32_t RegNo,
+                                          uint64_t Address,
+                                          const MCDisassembler *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 15 || RegNo % 2)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeTRM4RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  if (RegNo > 15 || RegNo % 4)
+    return MCDisassembler::Fail;
+
+  MCRegister Reg = RISCV::T0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -707,6 +740,7 @@ static constexpr DecoderListEntry DecoderList32[]{
      "XVentanaCondOps"},
     {DecoderTableXTHead32, XTHeadGroup, "T-Head extensions"},
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
+    {DecoderTableXSfmm32, {RISCV::FeatureVendorXSfmmbase}, "SiFive XSfmm"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
     {DecoderTableXmipslsp32, {RISCV::FeatureVendorXMIPSLSP}, "MIPS mips.lsp"},

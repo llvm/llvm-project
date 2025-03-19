@@ -152,6 +152,8 @@ Changes to the RISC-V Backend
   handlers.
 * When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
   now be used to materialize immediates.
+* Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
+  Extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
