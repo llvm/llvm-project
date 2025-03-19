@@ -6793,19 +6793,42 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
 unsigned X86InstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
     const TargetRegisterInfo *TRI) const {
-  if (OpNum != 0 || !hasPartialRegUpdate(MI.getOpcode(), Subtarget))
+
+  // With the NDD/ZU features, ISel may generate NDD/ZU ops which
+  // appear to perform partial writes. We detect these based on flags
+  // and register class.
+  bool HasNDDPartialWrite = false;
+  if (OpNum == 0 && (Subtarget.hasNDD() || Subtarget.hasZU()) &&
+      X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    Register Reg = MI.getOperand(0).getReg();
+    if (Reg.isVirtual()) {
+      auto &MRI = MI.getParent()->getParent()->getRegInfo();
+      if (auto *TRC = MRI.getRegClassOrNull(Reg))
+        HasNDDPartialWrite = (TRC->getID() == X86::GR16RegClassID ||
+                              TRC->getID() == X86::GR8RegClassID);
+    } else
+      HasNDDPartialWrite =
+          X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg);
+  }
+
+  if (OpNum != 0 ||
+      !(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
     return 0;
 
-  // If MI is marked as reading Reg, the partial register update is wanted.
+  // For non-NDD ops, if MI is marked as reading Reg, the partial register
+  // update is wanted, hence we return 0.
+  // For NDD ops, if MI is marked as reading Reg, then it is possible to
+  // compress to a legacy form in CompressEVEX, which would create an
+  // unwanted partial update, so we return the clearance.
   const MachineOperand &MO = MI.getOperand(0);
   Register Reg = MO.getReg();
-  if (Reg.isVirtual()) {
-    if (MO.readsReg() || MI.readsVirtualRegister(Reg))
-      return 0;
-  } else {
-    if (MI.readsRegister(Reg, TRI))
-      return 0;
-  }
+  bool ReadsReg = false;
+  if (Reg.isVirtual())
+    ReadsReg = (MO.readsReg() || MI.readsVirtualRegister(Reg));
+  else
+    ReadsReg = MI.readsRegister(Reg, TRI);
+  if (ReadsReg != HasNDDPartialWrite)
+    return 0;
 
   // If any instructions in the clearance range are reading Reg, insert a
   // dependency breaking instruction, which is inexpensive and is likely to
@@ -7229,6 +7252,18 @@ void X86InstrInfo::breakPartialRegDependency(
         .addReg(Reg, RegState::Undef)
         .addReg(Reg, RegState::Undef);
     MI.addRegisterKilled(Reg, TRI, true);
+  } else if ((X86::GR16RegClass.contains(Reg) ||
+              X86::GR8RegClass.contains(Reg)) &&
+             X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+    // This case is only expected for NDD ops which appear to be partial
+    // writes, but are not due to the zeroing of the upper part. Here
+    // we add an implicit def of the superegister, which prevents
+    // CompressEVEX from converting this to a legacy form.
+    Register SuperReg =
+        getX86SubSuperRegister(Reg, Subtarget.is64Bit() ? 64 : 32);
+    MachineInstrBuilder BuildMI(*MI.getParent()->getParent(), &MI);
+    if (!MI.definesRegister(SuperReg, /*TRI=*/nullptr))
+      BuildMI.addReg(SuperReg, RegState::ImplicitDefine);
   }
 }
 
