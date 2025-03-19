@@ -433,6 +433,8 @@ class PeepholeOptimizer : private MachineFunction::Delegate {
   MachineDominatorTree *DT = nullptr; // Machine dominator tree
   MachineLoopInfo *MLI = nullptr;
 
+  bool NeedToInvalidateMLI = false;
+
 public:
   PeepholeOptimizer(MachineDominatorTree *DT, MachineLoopInfo *MLI)
       : DT(DT), MLI(MLI) {}
@@ -444,6 +446,7 @@ public:
   /// Sequence of instructions that formulate recurrence cycle.
   using RecurrenceCycle = SmallVector<RecurrenceInstr, 4>;
 
+  bool needToInvalidateMLI() const { return NeedToInvalidateMLI; }
 private:
   bool optimizeCmpInstr(MachineInstr &MI);
   bool optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
@@ -568,8 +571,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    if (Aggressive)
+    if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    }
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -1654,7 +1659,13 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
   if (!Changed)
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  if (!Impl.needToInvalidateMLI()) {
+    PA.preserve<MachineLoopAnalysis>();
+    PA.preserveSet<CFGAnalyses>();
+  }
+  return PA;
 }
 
 bool PeepholeOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -1783,6 +1794,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isConditionalBranch() && optimizeCondBranch(*MI)) {
+        NeedToInvalidateMLI = true;
         // optimizeCondBranch might have converted a conditional branch to
         // an unconditional branch. If there is a branch instruction after it,
         // delete it.
@@ -1790,10 +1802,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         if (NewBr->isUnconditionalBranch()) {
           if (MII != MBB.end()) {
             MachineInstr *Dead = &*MII;
-            ++MII;
             MachineBasicBlock *DeadDest = TII->getBranchDestBlock(*Dead);
-            if (DT && TII->getBranchDestBlock(*NewBr) != DeadDest)
+            if (DT && TII->getBranchDestBlock(*NewBr) != DeadDest) {
               DT->deleteEdge(&MBB, DeadDest);
+              MLI->calculate(*DT);
+              NeedToInvalidateMLI = false;
+            }
+            ++MII;
             Dead->eraseFromParent();
           }
         }

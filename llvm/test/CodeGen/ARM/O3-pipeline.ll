@@ -104,6 +104,7 @@
 ; CHECK-NEXT:      Peephole Optimizations
 ; CHECK-NEXT:      Remove dead machine instructions
 ; CHECK-NEXT:      MachineDominator Tree Construction
+; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Slot index numbering
 ; CHECK-NEXT:      Live Interval Analysis
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
