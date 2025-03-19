@@ -16,7 +16,6 @@
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
 #include <clc/shared/clc_max.h>
-#include <math/clc_remainder.h>
 
 _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
                                           __private int *quo) {

@@ -164,7 +164,6 @@ math/clc_pown.cl
 math/pown.cl
 math/clc_powr.cl
 math/powr.cl
-math/clc_remainder.cl
 math/remainder.cl
 math/clc_remquo.cl
 math/remquo.cl

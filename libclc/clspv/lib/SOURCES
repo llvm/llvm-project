@@ -21,7 +21,6 @@ subnormal_config.cl
 ../../generic/lib/math/clc_pow.cl
 ../../generic/lib/math/clc_pown.cl
 ../../generic/lib/math/clc_powr.cl
-../../generic/lib/math/clc_remainder.cl
 ../../generic/lib/math/clc_remquo.cl
 ../../generic/lib/math/clc_rootn.cl
 ../../generic/lib/math/clc_tan.cl
