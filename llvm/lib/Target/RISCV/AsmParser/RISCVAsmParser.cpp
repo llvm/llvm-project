@@ -3178,8 +3178,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
       return true;
 
     getTargetStreamer().emitDirectiveOptionExact();
-    setFeatureBits(RISCV::FeatureExactAssembly,
-                   "exact-asm");
+    setFeatureBits(RISCV::FeatureExactAssembly, "exact-asm");
     clearFeatureBits(RISCV::FeatureRelax, "relax");
     return false;
   }
@@ -3189,8 +3188,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
       return true;
 
     getTargetStreamer().emitDirectiveOptionNoExact();
-    clearFeatureBits(RISCV::FeatureExactAssembly,
-                     "exact-asm");
+    clearFeatureBits(RISCV::FeatureExactAssembly, "exact-asm");
     setFeatureBits(RISCV::FeatureRelax, "relax");
     return false;
   }
@@ -3251,9 +3249,10 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   // Unknown option.
-  Warning(Parser.getTok().getLoc(), "unknown option, expected 'push', 'pop', "
-                                    "'rvc', 'norvc', 'arch', 'relax', 'norelax', "
-                                    "'exact' or 'noexact'");
+  Warning(Parser.getTok().getLoc(),
+          "unknown option, expected 'push', 'pop', "
+          "'rvc', 'norvc', 'arch', 'relax', 'norelax', "
+          "'exact' or 'noexact'");
   Parser.eatToEndOfStatement();
   return false;
 }
