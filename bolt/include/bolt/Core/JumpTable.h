@@ -40,6 +40,7 @@ class BinaryFunction;
 /// a different label at a different offset in this jump table.
 class JumpTable : public BinaryData {
   friend class BinaryContext;
+  friend class JumpTableInfoReader;
 
   JumpTable() = delete;
   JumpTable(const JumpTable &) = delete;
@@ -47,9 +48,33 @@ class JumpTable : public BinaryData {
 
 public:
   enum JumpTableType : char {
-    JTT_NORMAL,
-    JTT_PIC,
+    JTT_X86_64_FIRST = 0,
+    JTT_X86_64_ABS = JTT_X86_64_FIRST,
+    JTT_X86_64_PIC4,
+    JTT_X86_64_LAST = JTT_X86_64_PIC4,
+    JTT_AARCH64_FIRST,
+    JTT_AARCH64_REL1 = JTT_AARCH64_FIRST,
+    JTT_AARCH64_REL2,
+    JTT_AARCH64_REL4,
+    JTT_AARCH64_LAST = JTT_AARCH64_REL4
   };
+
+  static StringRef getTypeStr(JumpTableType Type) {
+    switch (Type) {
+    case JTT_X86_64_ABS:
+      return "X86_64_ABS";
+    case JTT_X86_64_PIC4:
+      return "X86_64_PIC4";
+    case JTT_AARCH64_REL1:
+      return "AARCH64_REL1";
+    case JTT_AARCH64_REL2:
+      return "AARCH64_REL2";
+    case JTT_AARCH64_REL4:
+      return "AARCH64_REL4";
+    }
+  }
+
+  const StringRef getTypeStr() { return getTypeStr(Type); }
 
   /// Branch statistics for jump table entries.
   struct JumpInfo {
@@ -91,6 +116,16 @@ public:
 
   /// BinaryFunction this jump tables belongs to.
   SmallVector<BinaryFunction *, 1> Parents;
+
+  ///
+  /// AArch64-specific fields
+  ///
+
+  /// Entries are offsets relative to an arbitrary function location.
+  uint64_t BaseAddress{0};
+
+  /// Address of the instruction referencing the jump table (MemLocInstr).
+  uint64_t MemLocInstrAddress{0};
 
 private:
   /// Constructor should only be called by a BinaryContext.

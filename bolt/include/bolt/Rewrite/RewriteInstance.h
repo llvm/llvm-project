@@ -181,6 +181,9 @@ private:
   /// Process metadata in sections before functions are discovered.
   void processSectionMetadata();
 
+  /// Process metadata in special sections before functions are disassembled.
+  void processMetadataPreDisasm();
+
   /// Process metadata in special sections before CFG is built for functions.
   void processMetadataPreCFG();
 
