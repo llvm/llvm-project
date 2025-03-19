@@ -4392,13 +4392,15 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   DenseMap<VPRecipeBase *, unsigned> Numbering;
   unsigned I = 0;
   for (auto &Pair : InvalidCosts)
-    if (!Numbering.count(Pair.first))
-      Numbering[Pair.first] = I++;
+    if (Numbering.try_emplace(Pair.first, I).second)
+      ++I;
 
   // Sort the list, first on recipe(number) then on VF.
   sort(InvalidCosts, [&Numbering](RecipeVFPair &A, RecipeVFPair &B) {
-    if (Numbering[A.first] != Numbering[B.first])
-      return Numbering[A.first] < Numbering[B.first];
+    unsigned NA = Numbering[A.first];
+    unsigned NB = Numbering[B.first];
+    if (NA != NB)
+      return NA < NB;
     return ElementCount::isKnownLT(A.second, B.second);
   });
 
