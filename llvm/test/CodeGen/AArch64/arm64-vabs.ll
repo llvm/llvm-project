@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck -check-prefixes=CHECK,CHECK-SD %s
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for uabd_i64
+
 define <8 x i16> @sabdl8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sabdl8h:
 ; CHECK:       // %bb.0:
