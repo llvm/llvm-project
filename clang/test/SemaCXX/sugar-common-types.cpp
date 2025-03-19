@@ -146,3 +146,13 @@ namespace GH67603 {
   }
   template void h<int>();
 } // namespace GH67603
+
+namespace PR97005 {
+  bool a;
+  constexpr const unsigned char c[] = { 5 };
+  constexpr const unsigned char d[1] = { 0 };
+  auto b = (a ? d : c);
+  constexpr const unsigned char c1[][1] = {{ 5 }};
+  constexpr const unsigned char d1[1][1] = {{ 0 }};
+  auto b1 = (a ? d1 : c1);
+} // namespace PR97005

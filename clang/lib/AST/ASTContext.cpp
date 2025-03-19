@@ -14168,18 +14168,39 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
   llvm_unreachable("Unhandled Type Class");
 }
 
+/// Returns element type of the array, probably multidimensional, specified by
+/// the given ArrayType.
+/// \returns Canonical type of the array element.
+static QualType getNonArrayElementType(const ArrayType* ATy) {
+  QualType ElTy = ATy->getElementType().getCanonicalType();
+  while (auto *SubArr = dyn_cast<ArrayType>(ElTy.getTypePtr()))
+    ElTy = SubArr->getElementType();
+  return ElTy;
+}
+
+/// Given a qualified type, returns an equivalent type, which has cv-qualifiers
+/// only at array element type.
+static SplitQualType normalizeArrayQualifiers(const SplitQualType &T) {
+  if (const auto *ATy = dyn_cast<ArrayType>(T.Ty)) {
+    // C++ 9.3.3.4p3: Any type of the form "cv-qualifier-seq array of N U" is
+    // adjusted to "array of N cv-qualifier-seq U".
+    // C23 6.7.3p10: If the specification of an array type includes any type
+    // qualifiers, both the array and the element type are so-qualified.
+    //
+    // If cv-qualifier is present in both array and element type, remove the
+    // redundant qualifiers from the array.
+    QualType ElTy = getNonArrayElementType(ATy);
+    unsigned Quals =
+        ElTy.getCVRQualifiers() & (Qualifiers::Const | Qualifiers::Volatile);
+    return SplitQualType(ATy, Qualifiers::fromCVRMask(Quals));
+  }
+  return T;
+}
+
 static auto unwrapSugar(SplitQualType &T, Qualifiers &QTotal) {
   SmallVector<SplitQualType, 8> R;
   while (true) {
-    if (const auto *ATy = dyn_cast<ArrayType>(T.Ty)) {
-      // C++ 9.3.3.4p3: Any type of the form "cv-qualifier-seq array of N U" is
-      // adjusted to "array of N cv-qualifier-seq U".
-      // C23 6.7.3p10: If the specification of an array type includes any type
-      // qualifiers, both the array and the element type are so-qualified.
-      //
-      // To simplify comparison remove the redundant qualifiers from the array.
-      T.Quals.removeCVRQualifiers(Qualifiers::Const | Qualifiers::Volatile);
-    }
+    T = normalizeArrayQualifiers(T);
     QTotal.addConsistentQualifiers(T.Quals);
     QualType NT = T.Ty->getLocallyUnqualifiedSingleStepDesugaredType();
     if (NT == QualType(T.Ty, 0))
