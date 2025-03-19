@@ -86,9 +86,8 @@ static void replaceFunctionCalls(Function *OldF, Function *NewF) {
     // Create the new function call.
     CallBase *NewCI;
     if (auto *II = dyn_cast<InvokeInst>(CI)) {
-      NewCI = InvokeInst::Create(NewF, cast<InvokeInst>(II)->getNormalDest(),
-                                 cast<InvokeInst>(II)->getUnwindDest(), Args,
-                                 OperandBundles, CI->getName());
+      NewCI = InvokeInst::Create(NewF, II->getNormalDest(), II->getUnwindDest(),
+                                 Args, OperandBundles, CI->getName());
     } else {
       assert(isa<CallInst>(CI));
       NewCI = CallInst::Create(NewF, Args, OperandBundles, CI->getName());
