@@ -126,11 +126,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
-  CXX11Attrs.takeAllFrom(GNUOrMSAttrs);
-  if (!CXX11Attrs.Range.getBegin().isValid())
-    CXX11Attrs.Range.setBegin(GNUOrMSAttrs.Range.getBegin());
-  if (GNUOrMSAttrs.Range.getEnd().isValid())
-    CXX11Attrs.Range.setEnd(GNUOrMSAttrs.Range.getEnd());
+  takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
 
   assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
@@ -208,11 +204,10 @@ Retry:
       // Both C++11 and GNU attributes preceding the label appertain to the
       // label, so put them in a single list to pass on to
       // ParseLabeledStatement().
-      ParsedAttributes Attrs(AttrFactory);
-      takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
+      takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUAttrs));
 
       // identifier ':' statement
-      return ParseLabeledStatement(Attrs, StmtCtx);
+      return ParseLabeledStatement(CXX11Attrs, StmtCtx);
     }
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
@@ -303,9 +298,7 @@ Retry:
 
   case tok::kw_template: {
     SourceLocation DeclEnd;
-    ParsedAttributes Attrs(AttrFactory);
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
-                                             Attrs,
                                              getAccessSpecifierIfPresent());
     return StmtError();
   }

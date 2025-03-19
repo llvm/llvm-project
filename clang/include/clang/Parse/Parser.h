@@ -3844,6 +3844,8 @@ private:
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  clang::Parser::DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS);
   DeclGroupPtrTy ParseDeclarationAfterTemplate(
       DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,
