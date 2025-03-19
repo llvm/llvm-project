@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION __clc_remainder
-#define __CLC_BODY <clc/math/binary_decl_tt.inc>
-#include <clc/math/gentype.inc>
-#undef __CLC_FUNCTION
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(__CLC_GENTYPE x,
+                                                    __CLC_GENTYPE y) {
+  return __CLC_CONVERT_GENTYPE(
+      __CLC_FUNCTION(__CLC_CONVERT_FLOATN(x), __CLC_CONVERT_FLOATN(y)));
+}
