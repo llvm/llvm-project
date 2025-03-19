@@ -8241,8 +8241,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  // Note that IsWin64 part is required to prevent odd miscompilations on arm64 windows
-  // platforms. For more info refer to GH#126780 PR comments.
+  // Note that IsWin64 part is required to prevent odd miscompilations on arm64
+  // windows platforms. For more info refer to GH#126780 PR comments.
   if (isVarArg &&
       (DAG.getMachineFunction().getFrameInfo().hasVAStart() || IsWin64)) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
