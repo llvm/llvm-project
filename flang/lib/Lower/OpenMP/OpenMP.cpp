@@ -1751,6 +1751,23 @@ static void genTaskgroupClauses(lower::AbstractConverter &converter,
                                         llvm::omp::Directive::OMPD_taskgroup);
 }
 
+static void genTaskloopClauses(lower::AbstractConverter &converter,
+                               semantics::SemanticsContext &semaCtx,
+                               lower::StatementContext &stmtCtx,
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::TaskloopOperands &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processGrainsize(stmtCtx, clauseOps);
+  cp.processNumTasks(stmtCtx, clauseOps);
+
+  cp.processTODO<clause::Allocate, clause::Collapse, clause::Default,
+                 clause::Final, clause::Firstprivate, clause::If,
+                 clause::InReduction, clause::Lastprivate, clause::Mergeable,
+                 clause::Nogroup, clause::Priority, clause::Private,
+                 clause::Shared, clause::Reduction, clause::Untied>(
+      loc, llvm::omp::Directive::OMPD_taskloop);
+}
+
 static void genTaskwaitClauses(lower::AbstractConverter &converter,
                                semantics::SemanticsContext &semaCtx,
                                const List<Clause> &clauses, mlir::Location loc,
@@ -2689,7 +2706,27 @@ static void genStandaloneTaskloop(lower::AbstractConverter &converter,
                                   mlir::Location loc,
                                   const ConstructQueue &queue,
                                   ConstructQueue::const_iterator item) {
-  TODO(loc, "Taskloop construct");
+  mlir::omp::TaskloopOperands taskloopClauseOps;
+  lower::StatementContext stmtCtx;
+  genTaskloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                     taskloopClauseOps);
+
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           /*shouldCollectPreDeterminedSymbols=*/true,
+                           /*useDelayedPrivatization=*/false, symTable);
+  dsp.processStep1();
+  mlir::omp::LoopNestOperands loopNestClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
+                     loopNestClauseOps, iv);
+  EntryBlockArgs taskloopArgs;
+
+  auto taskLoopOp = genWrapperOp<mlir::omp::TaskloopOp>(
+      converter, loc, taskloopClauseOps, taskloopArgs);
+
+  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
+                loopNestClauseOps, iv, {{taskLoopOp, taskloopArgs}},
+                llvm::omp::Directive::OMPD_taskloop, dsp);
 }
 
 //===----------------------------------------------------------------------===//
