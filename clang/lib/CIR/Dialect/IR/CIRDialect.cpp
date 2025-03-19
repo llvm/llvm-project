@@ -19,6 +19,7 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
 using namespace cir;
@@ -148,6 +149,41 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
     odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
   }
   odsState.addTypes(addr);
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionOp
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------
+// BranchOpTerminatorInterface Methods
+//===----------------------------------
+
+void cir::ConditionOp::getSuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  // TODO(cir): The condition value may be folded to a constant, narrowing
+  // down its list of possible successors.
+
+  // Parent is a loop: condition may branch to the body or to the parent op.
+  if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
+    regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
+    regions.emplace_back(loopOp->getResults());
+  }
+
+  assert(!cir::MissingFeatures::awaitOp());
+}
+
+MutableOperandRange
+cir::ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  // No values are yielded to the successor region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
+LogicalResult cir::ConditionOp::verify() {
+  assert(!cir::MissingFeatures::awaitOp());
+  if (!isa<LoopOpInterface>(getOperation()->getParentOp()))
+    return emitOpError("condition must be within a conditional region");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -440,12 +476,24 @@ void cir::ScopeOp::build(
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
   builder.createBlock(scopeRegion);
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
 
   mlir::Type yieldTy;
   scopeBuilder(builder, yieldTy, result.location);
 
   if (yieldTy)
     result.addTypes(TypeRange{yieldTy});
+}
+
+void cir::ScopeOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
+  assert(scopeBuilder && "the builder callback for 'then' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+  Region *scopeRegion = result.addRegion();
+  builder.createBlock(scopeRegion);
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+  scopeBuilder(builder, result.location);
 }
 
 LogicalResult cir::ScopeOp::verify() {
@@ -472,6 +520,36 @@ mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
 
 Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
+}
+
+//===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrCondOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDestOperandsTrueMutable()
+                                      : getDestOperandsFalseMutable());
+}
+
+Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (IntegerAttr condAttr = dyn_cast_if_present<IntegerAttr>(operands.front()))
+    return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+void cir::ForOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+}
+
+llvm::SmallVector<Region *> cir::ForOp::getLoopRegions() {
+  return {&getBody()};
 }
 
 //===----------------------------------------------------------------------===//
