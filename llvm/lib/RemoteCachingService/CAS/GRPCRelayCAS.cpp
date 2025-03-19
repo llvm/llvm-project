@@ -118,7 +118,11 @@ public:
   std::optional<ObjectRef> getReference(const CASID &ID) const final;
   Expected<bool> isMaterialized(ObjectRef Ref) const final;
   Expected<std::optional<ObjectHandle>> loadIfExists(ObjectRef Ref) final;
-  Error validate(const CASID &ID) final {
+  Error validateObject(const CASID &ID) final {
+    // Not supported yet. Always return success.
+    return Error::success();
+  }
+  Error validate(bool CheckHash) const final {
     // Not supported yet. Always return success.
     return Error::success();
   }
