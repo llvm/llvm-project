@@ -269,8 +269,6 @@ static int run(int argc, char **argv) {
         Res.VisibleToRegularObj = true;
       else if (C == 'r')
         Res.LinkerRedefined = true;
-      else if (C == 'd')
-        Res.ExportDynamic = true;
       else {
         llvm::errs() << "invalid character " << C << " in resolution: " << R
                      << '\n';

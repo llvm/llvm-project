@@ -1315,7 +1315,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   auto IsVisibleToRegularObj = [&](StringRef name) {
     auto It = GlobalResolutions->find(name);
     return (It == GlobalResolutions->end() ||
-            It->second.VisibleOutsideSummary || It->second.ExportDynamic);
+            It->second.VisibleOutsideSummary || !It->second.Prevailing);
   };
 
   // If allowed, upgrade public vcall visibility metadata to linkage unit
@@ -1906,7 +1906,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     auto IsVisibleToRegularObj = [&](StringRef name) {
       auto It = GlobalResolutions->find(name);
       return (It == GlobalResolutions->end() ||
-              It->second.VisibleOutsideSummary || It->second.ExportDynamic);
+              It->second.VisibleOutsideSummary || !It->second.Prevailing);
     };
 
     getVisibleToRegularObjVtableGUIDs(ThinLTO.CombinedIndex,

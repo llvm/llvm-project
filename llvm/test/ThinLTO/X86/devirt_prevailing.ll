@@ -1,17 +1,39 @@
 ; RUN: rm -rf %t && mkdir %t && cd %t
 
-; Tests that devirtualization is suppressed on a class when its compatible
-; class could be referenced from dynamic linker that is not visible to the
-; linker.
+; Tests that devirtualization is suppressed on a class when the LTO unit doesn't
+; have the prevailing definition of the class.
 
 ; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt -thinlto-bc -o summary.o %s
 
 ; Index based WPD
-; For `_ZTI7Derived`, the 'llvm-lto2' resolution arguments specifies  `VisibleOutsideSummary` as false
-; and `ExportDynamic` as false. The callsite inside @_ZN4Base8dispatchEv
-; got devirtualized.
+; The callsite inside @_ZN4Base8dispatchEv gets devirtualized when symbol
+; resolution shows there is a prevailing definition of `_ZTI7Derived` in the
+; LTO unit.
 ; RUN: llvm-lto2 run summary.o -save-temps -pass-remarks=. \
+; RUN:   -thinlto-threads=1 \
+; RUN:   -o tmp \
+; RUN:   --whole-program-visibility-enabled-in-lto=true \
+; RUN:   --validate-all-vtables-have-type-infos=true \
+; RUN:   --all-vtables-have-type-infos=true \
+; RUN:   -r=summary.o,__cxa_pure_virtual, \
+; RUN:   -r=summary.o,_ZN8DerivedNC2Ev,x \
+; RUN:   -r=summary.o,_ZN4Base8dispatchEv,px \
+; RUN:   -r=summary.o,_ZN7DerivedC2Ev, \
+; RUN:   -r=summary.o,_ZN8DerivedN5printEv,px \
+; RUN:   -r=summary.o,_ZTV8DerivedN,p \
+; RUN:   -r=summary.o,_ZTI8DerivedN,p \
+; RUN:   -r=summary.o,_ZTS8DerivedN,p \
+; RUN:   -r=summary.o,_ZTI7Derived,p \
+; RUN:   2>&1 | FileCheck --allow-empty %s --check-prefix=REMARK
+
+
+; Index based WPD
+; The callsite inside @_ZN4Base8dispatchEv remains indirect and not de-virtualized
+; when symbol resolution shows there isn't a prevailing definition of
+; `_ZTI7Derived` in the LTO unit.
+; RUN: llvm-lto2  run summary.o -save-temps -pass-remarks=. \
+; RUN:   -thinlto-threads=1 \
 ; RUN:   -o tmp \
 ; RUN:   --whole-program-visibility-enabled-in-lto=true \
 ; RUN:   --validate-all-vtables-have-type-infos=true \
@@ -25,33 +47,13 @@
 ; RUN:   -r=summary.o,_ZTI8DerivedN,p \
 ; RUN:   -r=summary.o,_ZTS8DerivedN,p \
 ; RUN:   -r=summary.o,_ZTI7Derived, \
-; RUN:   2>&1 | FileCheck --allow-empty %s --check-prefix=REMARK
-
-
-; Index based WPD
-; For `_ZTI7Derived`, the 'llvm-lto2' resolution arguments specifies  `VisibleOutsideSummary` as false
-; and `ExportDynamic` as true. The callsite inside @_ZN4Base8dispatchEv won't
-; get devirtualized.
-; RUN: llvm-lto2  run summary.o -save-temps -pass-remarks=. \
-; RUN:   -o tmp \
-; RUN:   --whole-program-visibility-enabled-in-lto=true \
-; RUN:   --validate-all-vtables-have-type-infos=true \
-; RUN:   --all-vtables-have-type-infos=true \
-; RUN:   -r=summary.o,__cxa_pure_virtual, \
-; RUN:   -r=summary.o,_ZN8DerivedNC2Ev,x \
-; RUN:   -r=summary.o,_ZN4Base8dispatchEv,px \
-; RUN:   -r=summary.o,_ZN7DerivedC2Ev, \
-; RUN:   -r=summary.o,_ZN8DerivedN5printEv,px \
-; RUN:   -r=summary.o,_ZTV8DerivedN,p \
-; RUN:   -r=summary.o,_ZTI8DerivedN,p \
-; RUN:   -r=summary.o,_ZTS8DerivedN,p \
-; RUN:   -r=summary.o,_ZTI7Derived,d \
 ; RUN:   2>&1 | FileCheck %s --allow-empty --implicit-check-not='single-impl: devirtualized a call to'
 
-
-; Hybrid LTO WPD
+; Repeat the above tests for WPD in hybrid LTO.
 ; RUN: opt  --thinlto-bc --thinlto-split-lto-unit -o hybrid.o %s
+
 ; RUN: llvm-lto2 run hybrid.o -save-temps -pass-remarks=. \
+; RUN:   -thinlto-threads=1 \
 ; RUN:   -o hybrid \
 ; RUN:   --whole-program-visibility-enabled-in-lto=true \
 ; RUN:   --validate-all-vtables-have-type-infos=true \
@@ -61,17 +63,18 @@
 ; RUN:   -r=hybrid.o,_ZN4Base8dispatchEv,px \
 ; RUN:   -r=hybrid.o,_ZN7DerivedC2Ev, \
 ; RUN:   -r=hybrid.o,_ZN8DerivedN5printEv,px \
-; RUN:   -r=hybrid.o,_ZTV8DerivedN,p \
-; RUN:   -r=hybrid.o,_ZTI8DerivedN,p \
+; RUN:   -r=hybrid.o,_ZTV8DerivedN, \
+; RUN:   -r=hybrid.o,_ZTI8DerivedN, \
 ; RUN:   -r=hybrid.o,_ZTS8DerivedN,p \
-; RUN:   -r=hybrid.o,_ZTI7Derived, \
-; RUN:   -r=hybrid.o,_ZN8DerivedN5printEv,px \
+; RUN:   -r=hybrid.o,_ZTI7Derived,p \
+; RUN:   -r=hybrid.o,_ZN8DerivedN5printEv, \
 ; RUN:   -r=hybrid.o,_ZTV8DerivedN,p \
 ; RUN:   -r=hybrid.o,_ZTI8DerivedN,p \
 ; RUN:   2>&1 | FileCheck --allow-empty %s --check-prefix=REMARK
 
-; Hybrid LTO WPD
+
 ; RUN: llvm-lto2 run hybrid.o -save-temps -pass-remarks=. \
+; RUN:   -thinlto-threads=1 \
 ; RUN:   -o hybrid \
 ; RUN:   --whole-program-visibility-enabled-in-lto=true \
 ; RUN:   --validate-all-vtables-have-type-infos=true \
@@ -81,11 +84,11 @@
 ; RUN:   -r=hybrid.o,_ZN4Base8dispatchEv,px \
 ; RUN:   -r=hybrid.o,_ZN7DerivedC2Ev, \
 ; RUN:   -r=hybrid.o,_ZN8DerivedN5printEv,px \
-; RUN:   -r=hybrid.o,_ZTV8DerivedN,p \
-; RUN:   -r=hybrid.o,_ZTI8DerivedN,p \
+; RUN:   -r=hybrid.o,_ZTV8DerivedN, \
+; RUN:   -r=hybrid.o,_ZTI8DerivedN, \
 ; RUN:   -r=hybrid.o,_ZTS8DerivedN,p \
-; RUN:   -r=hybrid.o,_ZTI7Derived,d \
-; RUN:   -r=hybrid.o,_ZN8DerivedN5printEv,px \
+; RUN:   -r=hybrid.o,_ZTI7Derived, \
+; RUN:   -r=hybrid.o,_ZN8DerivedN5printEv, \
 ; RUN:   -r=hybrid.o,_ZTV8DerivedN,p \
 ; RUN:   -r=hybrid.o,_ZTI8DerivedN,p \
 ; RUN:   2>&1 | FileCheck --allow-empty %s --implicit-check-not='single-impl: devirtualized a call to'
