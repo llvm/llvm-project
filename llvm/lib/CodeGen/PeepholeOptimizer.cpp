@@ -568,7 +568,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    if (Aggressive)
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -1645,7 +1646,8 @@ PreservedAnalyses
 PeepholeOptimizerPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  auto *DT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  auto *DT =
+      Aggressive ? &MFAM.getResult<MachineDominatorTreeAnalysis>(MF) : nullptr;
   auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
   PeepholeOptimizer Impl(DT, MLI);
   bool Changed = Impl.run(MF);
@@ -1658,7 +1660,9 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
 bool PeepholeOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-  auto *DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  auto *DT = Aggressive
+                 ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
+                 : nullptr;
   auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   PeepholeOptimizer Impl(DT, MLI);
   return Impl.run(MF);
@@ -1788,7 +1792,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             MachineInstr *Dead = &*MII;
             ++MII;
             MachineBasicBlock *DeadDest = TII->getBranchDestBlock(*Dead);
-            if (TII->getBranchDestBlock(*NewBr)!= DeadDest)
+            if (DT && TII->getBranchDestBlock(*NewBr) != DeadDest)
               DT->deleteEdge(&MBB, DeadDest);
             Dead->eraseFromParent();
           }
