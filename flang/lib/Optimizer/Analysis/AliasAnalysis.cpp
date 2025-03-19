@@ -548,6 +548,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // the array operand.
           v = op.getArray();
           defOp = v.getDefiningOp();
+          approximateSource = true;
         })
         .Case<fir::BoxAddrOp>([&](auto op) {
           v = op->getOperand(0);
