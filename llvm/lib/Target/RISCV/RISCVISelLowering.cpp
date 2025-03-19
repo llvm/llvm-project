@@ -5545,12 +5545,25 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
             })) {
           // Narrow each source and concatenate them.
           // FIXME: For small LMUL it is better to concatenate first.
-          MVT HalfVT = VT.getHalfNumVectorElementsVT();
+          MVT EltVT = VT.getVectorElementType();
+          auto EltCnt = VT.getVectorElementCount();
+          MVT SubVT =
+              MVT::getVectorVT(EltVT, EltCnt.divideCoefficientBy(Factor));
+
           SDValue Lo =
-              getDeinterleaveShiftAndTrunc(DL, HalfVT, V1, Factor, Index, DAG);
+              getDeinterleaveShiftAndTrunc(DL, SubVT, V1, Factor, Index, DAG);
           SDValue Hi =
-              getDeinterleaveShiftAndTrunc(DL, HalfVT, V2, Factor, Index, DAG);
-          return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+              getDeinterleaveShiftAndTrunc(DL, SubVT, V2, Factor, Index, DAG);
+
+          MVT NewVT = SubVT.getDoubleNumVectorElementsVT();
+          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Lo, Hi);
+          for (unsigned F = Factor; F > 2; F >>= 1) {
+            SDValue Undef = DAG.getUNDEF(NewVT);
+            NewVT = NewVT.getDoubleNumVectorElementsVT();
+            Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Concat, Undef);
+          }
+
+          return Concat;
         }
       }
     }
