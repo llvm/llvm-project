@@ -743,15 +743,33 @@ same as all source operands)
 The _TRUNC version truncates the larger operand types to fit the
 destination vector elt type.
 
+.. code-block:: none
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR %0:_(i32), %1:_(i32), %2:_(i32), %3:_(i32)
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR_TRUNC %0:_(i64), %1:_(i64), %2:_(i64), %3:_(i64)
+
+
 G_INSERT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^
 
 Insert an element into a vector
 
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_INSERT_VECTOR_ELT %vec:_(<16 x i32>), %elt:_(i32), %idx:_(s64)
+
+
+
 G_EXTRACT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^^
 
 Extract an element from a vector
+
+.. code-block:: none
+
+  %elt:_(i32) = G_EXTRACT_VECTOR_ELT %vec:_(<16 x i32>), %idx:_(s64)
+
 
 G_SHUFFLE_VECTOR
 ^^^^^^^^^^^^^^^^
