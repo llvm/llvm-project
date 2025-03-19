@@ -12540,7 +12540,12 @@ public:
   }
 
   bool VisitTypeTraitExpr(const TypeTraitExpr *E) {
-    return Success(E->getValue(), E);
+    if (E->isStoredAsBoolean())
+      return Success(E->getBoolValue(), E);
+    if (E->getAPValue().isAbsent())
+      return false;
+    assert(E->getAPValue().isInt() && "APValue type not supported");
+    return Success(E->getAPValue().getInt(), E);
   }
 
   bool VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {

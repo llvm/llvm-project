@@ -1475,6 +1475,48 @@ static DeclAccessPair findDecomposableBaseClass(Sema &S, SourceLocation Loc,
   return DeclAccessPair::make(const_cast<CXXRecordDecl*>(ClassWithFields), AS);
 }
 
+static bool CheckMemberDecompositionFields(Sema &S, SourceLocation Loc,
+                                           const CXXRecordDecl *OrigRD,
+                                           QualType DecompType,
+                                           DeclAccessPair BasePair) {
+  const auto *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
+  if (!RD)
+    return true;
+
+  for (auto *FD : RD->fields()) {
+    if (FD->isUnnamedBitField())
+      continue;
+
+    // All the non-static data members are required to be nameable, so they
+    // must all have names.
+    if (!FD->getDeclName()) {
+      if (RD->isLambda()) {
+        S.Diag(Loc, diag::err_decomp_decl_lambda);
+        S.Diag(RD->getLocation(), diag::note_lambda_decl);
+        return true;
+      }
+
+      if (FD->isAnonymousStructOrUnion()) {
+        S.Diag(Loc, diag::err_decomp_decl_anon_union_member)
+            << DecompType << FD->getType()->isUnionType();
+        S.Diag(FD->getLocation(), diag::note_declared_at);
+        return true;
+      }
+
+      // FIXME: Are there any other ways we could have an anonymous member?
+    }
+    // The field must be accessible in the context of the structured binding.
+    // We already checked that the base class is accessible.
+    // FIXME: Add 'const' to AccessedEntity's classes so we can remove the
+    // const_cast here.
+    S.CheckStructuredBindingMemberAccess(
+        Loc, const_cast<CXXRecordDecl *>(OrigRD),
+        DeclAccessPair::make(FD, CXXRecordDecl::MergeAccess(
+                                     BasePair.getAccess(), FD->getAccess())));
+  }
+  return false;
+}
+
 static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
                                      ValueDecl *Src, QualType DecompType,
                                      const CXXRecordDecl *OrigRD) {
@@ -1485,7 +1527,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
   CXXCastPath BasePath;
   DeclAccessPair BasePair =
       findDecomposableBaseClass(S, Src->getLocation(), OrigRD, BasePath);
-  const CXXRecordDecl *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
+  const auto *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
   if (!RD)
     return true;
   QualType BaseType = S.Context.getQualifiedType(S.Context.getRecordType(RD),
@@ -1503,42 +1545,19 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
   auto FlatBindings = DD->flat_bindings();
   assert(llvm::range_size(FlatBindings) == NumFields);
   auto FlatBindingsItr = FlatBindings.begin();
+
+  if (CheckMemberDecompositionFields(S, Src->getLocation(), OrigRD, DecompType,
+                                     BasePair))
+    return true;
+
   for (auto *FD : RD->fields()) {
     if (FD->isUnnamedBitField())
       continue;
-
-    // All the non-static data members are required to be nameable, so they
-    // must all have names.
-    if (!FD->getDeclName()) {
-      if (RD->isLambda()) {
-        S.Diag(Src->getLocation(), diag::err_decomp_decl_lambda);
-        S.Diag(RD->getLocation(), diag::note_lambda_decl);
-        return true;
-      }
-
-      if (FD->isAnonymousStructOrUnion()) {
-        S.Diag(Src->getLocation(), diag::err_decomp_decl_anon_union_member)
-          << DecompType << FD->getType()->isUnionType();
-        S.Diag(FD->getLocation(), diag::note_declared_at);
-        return true;
-      }
-
-      // FIXME: Are there any other ways we could have an anonymous member?
-    }
 
     // We have a real field to bind.
     assert(FlatBindingsItr != FlatBindings.end());
     BindingDecl *B = *(FlatBindingsItr++);
     SourceLocation Loc = B->getLocation();
-
-    // The field must be accessible in the context of the structured binding.
-    // We already checked that the base class is accessible.
-    // FIXME: Add 'const' to AccessedEntity's classes so we can remove the
-    // const_cast here.
-    S.CheckStructuredBindingMemberAccess(
-        Loc, const_cast<CXXRecordDecl *>(OrigRD),
-        DeclAccessPair::make(FD, CXXRecordDecl::MergeAccess(
-                                     BasePair.getAccess(), FD->getAccess())));
 
     // Initialize the binding to Src.FD.
     ExprResult E = S.BuildDeclRefExpr(Src, DecompType, VK_LValue, Loc);
@@ -1640,6 +1659,56 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   //   E or of the same unambiguous public base class of E, ...
   if (checkMemberDecomposition(*this, Bindings, DD, DecompType, RD))
     DD->setInvalidDecl();
+}
+
+std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
+                                                           SourceLocation Loc) {
+  const ASTContext &Ctx = getASTContext();
+  assert(!T->isDependentType());
+
+  Qualifiers Quals;
+  QualType Unqual = Context.getUnqualifiedArrayType(T, Quals);
+  Quals.removeCVRQualifiers();
+  T = Context.getQualifiedType(Unqual, Quals);
+
+  if (auto *CAT = Ctx.getAsConstantArrayType(T))
+    return CAT->getSize().getZExtValue();
+  if (auto *VT = T->getAs<VectorType>())
+    return VT->getNumElements();
+  if (T->getAs<ComplexType>())
+    return 2;
+
+  llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
+  switch (isTupleLike(*this, Loc, T, TupleSize)) {
+  case IsTupleLike::Error:
+    return {};
+  case IsTupleLike::TupleLike:
+    return TupleSize.getExtValue();
+  case IsTupleLike::NotTupleLike:
+    break;
+  }
+
+  const CXXRecordDecl *OrigRD = T->getAsCXXRecordDecl();
+  if (!OrigRD || OrigRD->isUnion())
+    return std::nullopt;
+
+  if (RequireCompleteType(Loc, T, diag::err_incomplete_type))
+    return std::nullopt;
+
+  CXXCastPath BasePath;
+  DeclAccessPair BasePair =
+      findDecomposableBaseClass(*this, Loc, OrigRD, BasePath);
+  const auto *RD = cast_or_null<CXXRecordDecl>(BasePair.getDecl());
+  if (!RD)
+    return std::nullopt;
+
+  unsigned NumFields = llvm::count_if(
+      RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitField(); });
+
+  if (CheckMemberDecompositionFields(*this, Loc, OrigRD, T, BasePair))
+    return true;
+
+  return NumFields;
 }
 
 void Sema::MergeVarDeclExceptionSpecs(VarDecl *New, VarDecl *Old) {
