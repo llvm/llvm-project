@@ -36,11 +36,11 @@ func.func @ext_short_vec(%v: vector<2xf8E4M3FN>) -> f32 {
 // CHECK-LABEL: func @ext_full_vec(
 // CHECK: [[V:%.+]] = builtin.unrealized_conversion_cast %{{.+}} : vector<4xf8E4M3FN> to vector<4xi8>
 // CHECK: [[CAST:%.+]] = llvm.bitcast [[V]] : vector<4xi8> to i32
-// CHECK: [[C3:%.+]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK: [[C3:%.+]] = llvm.mlir.constant(3 : i32) : i32
 // CHECK: [[EXT:%.+]] = rocdl.cvt.f32.fp8 [[CAST]]{{\[}}[[C3]]] : f32
 // CHECK: return [[EXT]] : f32
 func.func @ext_full_vec(%v: vector<4xf8E4M3FN>) -> f32 {
-  %ret = amdgpu.ext_packed_fp8 %v[2] : vector<4xf8E4M3FN> to f32
+  %ret = amdgpu.ext_packed_fp8 %v[3] : vector<4xf8E4M3FN> to f32
   func.return %ret : f32
 }
 
