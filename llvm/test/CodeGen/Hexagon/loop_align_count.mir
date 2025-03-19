@@ -1,131 +1,267 @@
-# RUN: llc -mtriple=hexagon -O3 -run-pass hexagon-loop-align -o - %s\
-# RUN: -debug-only=hexagon-loop-align -verify-machineinstrs 2>&1 | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -O2 -mattr=+hvxv73,hvx-length64b \
+# RUN: -start-before=hexagon-loop-align -debug-only=hexagon-loop-align 2>&1 \
+# RUN: %s -o - | FileCheck %s
+# Validate that there are 4 bundles in the loop.
 # REQUIRES: asserts
 
-# Test that we only count til endloop instruction and we align this
-# loop to 32.
 # CHECK: Loop Align Pass:
-# CHECK: Instruction Count : 16
-# CHECK: bb.5 (align 32)
----
-name: fred
-tracksRegLiveness: true
+# CHECK: Bundle Count : 4
+# CHECK: .p2align{{.*}}5
 
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon"
+
+  ; Function Attrs: nounwind
+  define void @ham(ptr noalias nocapture readonly %arg, i32 %arg1, i32 %arg2, i32 %arg3, ptr noalias nocapture %arg4, i32 %arg5) #0 {
+  bb:
+    %ashr = ashr i32 %arg3, 2
+    %ashr6 = ashr i32 %arg3, 1
+    %add = add nsw i32 %ashr6, %ashr
+    %icmp = icmp sgt i32 %arg2, 0
+    br i1 %icmp, label %bb7, label %bb61
+
+  bb7:                                              ; preds = %bb
+    %sdiv = sdiv i32 %arg1, 64
+    br label %bb9
+
+  bb9:                                              ; preds = %bb57, %bb7
+    %phi = phi i32 [ 0, %bb7 ], [ %add58, %bb57 ]
+    %0 = icmp sgt i32 %arg1, 63
+    %ashr10 = ashr exact i32 %phi, 1
+    %mul = mul nsw i32 %ashr10, %arg3
+    br i1 %0, label %bb11, label %bb57
+
+  bb11:                                             ; preds = %bb9
+    %add12 = add nsw i32 %phi, 1
+    %mul13 = mul nsw i32 %add12, %arg5
+    %mul14 = mul nsw i32 %phi, %arg5
+    %add15 = add i32 %add, %mul
+    %add16 = add i32 %mul, %ashr
+    %add17 = add i32 %mul, %ashr6
+    %cgep = getelementptr inbounds i8, ptr %arg4, i32 %mul13
+    %cgep1 = getelementptr inbounds i8, ptr %arg4, i32 %mul14
+    %cgep2 = getelementptr inbounds i16, ptr %arg, i32 %add15
+    %cgep3 = getelementptr inbounds i16, ptr %arg, i32 %add16
+    %cgep4 = getelementptr inbounds i16, ptr %arg, i32 %add17
+    %cgep5 = getelementptr inbounds i16, ptr %arg, i32 %mul
+    br label %bb28
+
+  bb28:                                             ; preds = %bb28, %bb11
+    %phi29 = phi i32 [ 0, %bb11 ], [ %add54, %bb28 ]
+    %phi30 = phi ptr [ %cgep5, %bb11 ], [ %cgep6, %bb28 ]
+    %phi31 = phi ptr [ %cgep4, %bb11 ], [ %cgep7, %bb28 ]
+    %phi32 = phi ptr [ %cgep3, %bb11 ], [ %cgep8, %bb28 ]
+    %phi33 = phi ptr [ %cgep2, %bb11 ], [ %cgep9, %bb28 ]
+    %phi34 = phi ptr [ %cgep, %bb11 ], [ %cgep11, %bb28 ]
+    %phi35 = phi ptr [ %cgep1, %bb11 ], [ %cgep10, %bb28 ]
+    %load = load <16 x i32>, ptr %phi30, align 64
+    %load38 = load <16 x i32>, ptr %phi31, align 64
+    %load40 = load <16 x i32>, ptr %phi32, align 64
+    %load42 = load <16 x i32>, ptr %phi33, align 64
+    %call = tail call <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32> %load, <16 x i32> %load38)
+    %call43 = tail call <16 x i32> @llvm.hexagon.V6.vsubh(<16 x i32> %load, <16 x i32> %load38)
+    %call44 = tail call <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32> %load40, <16 x i32> %load42)
+    %call45 = tail call <16 x i32> @llvm.hexagon.V6.vsubh(<16 x i32> %load40, <16 x i32> %load42)
+    %call46 = tail call <16 x i32> @llvm.hexagon.V6.vavgh(<16 x i32> %call, <16 x i32> %call44)
+    %call47 = tail call <16 x i32> @llvm.hexagon.V6.vnavgh(<16 x i32> %call, <16 x i32> %call44)
+    %call48 = tail call <16 x i32> @llvm.hexagon.V6.vavgh(<16 x i32> %call43, <16 x i32> %call45)
+    %call49 = tail call <16 x i32> @llvm.hexagon.V6.vnavgh(<16 x i32> %call43, <16 x i32> %call45)
+    %call50 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> %call47, <16 x i32> %call46)
+    %call51 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> %call49, <16 x i32> %call48)
+    store <16 x i32> %call50, ptr %phi35, align 64
+    store <16 x i32> %call51, ptr %phi34, align 64
+    %add54 = add nsw i32 %phi29, 1
+    %icmp55 = icmp slt i32 %add54, %sdiv
+    %cgep6 = getelementptr inbounds <16 x i32>, ptr %phi30, i32 1
+    %cgep7 = getelementptr inbounds <16 x i32>, ptr %phi31, i32 1
+    %cgep8 = getelementptr inbounds <16 x i32>, ptr %phi32, i32 1
+    %cgep9 = getelementptr inbounds <16 x i32>, ptr %phi33, i32 1
+    %cgep10 = getelementptr inbounds <16 x i32>, ptr %phi35, i32 1
+    %cgep11 = getelementptr inbounds <16 x i32>, ptr %phi34, i32 1
+    br i1 %icmp55, label %bb28, label %bb57
+
+  bb57:                                             ; preds = %bb28, %bb9
+    %add58 = add nsw i32 %phi, 2
+    %icmp59 = icmp slt i32 %add58, %arg2
+    br i1 %icmp59, label %bb9, label %bb61
+
+  bb61:                                             ; preds = %bb57, %bb
+    ret void
+  }
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <16 x i32> @llvm.hexagon.V6.vaddh(<16 x i32>, <16 x i32>) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <16 x i32> @llvm.hexagon.V6.vsubh(<16 x i32>, <16 x i32>) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <16 x i32> @llvm.hexagon.V6.vavgh(<16 x i32>, <16 x i32>) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <16 x i32> @llvm.hexagon.V6.vnavgh(<16 x i32>, <16 x i32>) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+  declare <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32>, <16 x i32>) #1
+
+  attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv73" "target-features"="+hvxv73,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="hexagonv73" "target-features"="+hvxv73,+hvx-length64b" }
+
+...
+---
+name:            ham
+alignment:       16
+tracksRegLiveness: true
 body:             |
-  bb.0:
-    successors: %bb.1(0x50000000), %bb.8(0x30000000)
+  bb.0.bb:
+    successors: %bb.1(0x80000000)
     liveins: $r0, $r1, $r2, $r3, $r4, $r5
 
-    renamable $p0 = C2_cmpgti renamable $r2, 0
-    J2_jumpf killed renamable $p0, %bb.8, implicit-def dead $pc
-    J2_jump %bb.1, implicit-def dead $pc
+    BUNDLE implicit-def dead $p0, implicit-def $pc, implicit $r2, implicit killed $r31 {
+      renamable $p0 = C2_cmpgti renamable $r2, 0
+      PS_jmpretfnew internal killed $p0, killed $r31, implicit-def $pc, implicit-def $pc
+    }
 
-  bb.1:
+  bb.1.bb7:
     successors: %bb.2(0x80000000)
     liveins: $r0, $r1, $r2, $r3, $r4, $r5
 
-    renamable $r7 = A2_addi killed renamable $r2, 1
-    renamable $r8 = S2_asr_i_r renamable $r1, 31
-    renamable $p0 = C2_cmpgti renamable $r1, 63
-    renamable $r2 = S2_asr_i_r renamable $r3, 2
-    renamable $r6 = S2_asr_i_r renamable $r3, 1
-    renamable $r9 = S2_lsr_i_r killed renamable $r7, 1
-    renamable $r1 = S2_lsr_i_r_acc killed renamable $r1, killed renamable $r8, 26
-    renamable $r7 = A2_tfrsi 0
-    renamable $r1 = S2_asr_i_r killed renamable $r1, 6
-    J2_loop1r %bb.2, killed renamable $r9, implicit-def $lc1, implicit-def $sa1
-    renamable $r8 = nsw A2_add renamable $r6, renamable $r2
+    BUNDLE implicit-def $r8, implicit-def $r7, implicit-def $p0, implicit-def $r2, implicit $r1, implicit killed $r2, implicit $r3 {
+      renamable $r8 = S2_asr_i_r renamable $r1, 31
+      renamable $r7 = A2_addi killed renamable $r2, 1
+      renamable $p0 = C2_cmpgti renamable $r1, 63
+      renamable $r2 = S2_asr_i_r renamable $r3, 2
+    }
+    BUNDLE implicit-def $r1, implicit-def $r6, implicit $r1, implicit killed $r8, implicit $r3 {
+      renamable $r1 = S2_lsr_i_r_acc renamable $r1, killed renamable $r8, 26
+      renamable $r6 = S2_asr_i_r renamable $r3, 1
+    }
+    BUNDLE implicit-def $r9, implicit-def $r7, implicit-def $r1, implicit-def $r8, implicit killed $r7, implicit $r1, implicit $r6, implicit $r2 {
+      renamable $r9 = S2_lsr_i_r killed renamable $r7, 1
+      renamable $r7 = A2_tfrsi 0
+      renamable $r1 = S2_asr_i_r renamable $r1, 6
+      renamable $r8 = nsw A2_add renamable $r6, renamable $r2
+    }
+    BUNDLE implicit-def $lc1, implicit-def $sa1, implicit-def $pc, implicit killed $r9 {
+      J2_loop1r %bb.2, killed renamable $r9, implicit-def $lc1, implicit-def $sa1
+      J2_jump %bb.2, implicit-def $pc
+    }
 
-  bb.2:
-    successors: %bb.3(0x40000000), %bb.7(0x40000000)
-    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
-
-    J2_jumpf renamable $p0, %bb.7, implicit-def dead $pc
-    J2_jump %bb.3, implicit-def dead $pc
-
-  bb.3:
-    successors: %bb.4(0x80000000)
-    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
-
-    renamable $r13 = exact S2_asr_i_r renamable $r7, 1
-    renamable $r12 = COPY renamable $r4
-    renamable $r9 = COPY renamable $r4
-    renamable $r14 = nsw A2_addi renamable $r7, 1
-    renamable $r15 = nsw M2_mpyi killed renamable $r13, renamable $r3
-    renamable $r9 = M2_maci killed renamable $r9, killed renamable $r14, renamable $r5
-    renamable $r13 = A2_add renamable $r8, renamable $r15
-    renamable $r28 = A2_add renamable $r15, renamable $r2
-    renamable $r10 = A2_add renamable $r15, renamable $r6
-    renamable $r12 = M2_maci killed renamable $r12, renamable $r7, renamable $r5
-    renamable $r13 = S2_addasl_rrri renamable $r0, killed renamable $r13, 1
-    renamable $r14 = S2_addasl_rrri renamable $r0, killed renamable $r15, 1
-    renamable $r15 = S2_addasl_rrri renamable $r0, killed renamable $r28, 1
-    renamable $r28 = S2_addasl_rrri renamable $r0, killed renamable $r10, 1
-
-  bb.4:
-    successors: %bb.5(0x40000000), %bb.6(0x40000000)
-    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $r13, $r14, $r15, $r28
-
-    renamable $v0, renamable $r14 = V6_vL32b_pi killed renamable $r14, 64
-    renamable $p1 = C2_cmpgtui renamable $r1, 1
-    renamable $r10 = A2_addi renamable $r1, -1
-    renamable $v2, renamable $r28 = V6_vL32b_pi killed renamable $r28, 64
-    renamable $v1 = V6_vaddh renamable $v0, renamable $v2
-    renamable $v3, renamable $r15 = V6_vL32b_pi killed renamable $r15, 64
-    renamable $v0 = V6_vsubh killed renamable $v0, killed renamable $v2
-    J2_loop0r %bb.5, killed renamable $r10, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
-    renamable $v4, renamable $r13 = V6_vL32b_pi killed renamable $r13, 64
-    renamable $v2 = V6_vaddh renamable $v3, renamable $v4
-    J2_jumpf killed renamable $p1, %bb.6, implicit-def $pc
-    J2_jump %bb.5, implicit-def $pc
-
-  bb.5:
-    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
-    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $r13, $r14, $r15, $r28, $v0, $v1, $v2, $v3, $v4
-
-    renamable $v3 = V6_vsubh killed renamable $v3, killed renamable $v4
-    renamable $v4, renamable $r14 = V6_vL32b_pi killed renamable $r14, 64
-    renamable $v5 = V6_vnavgh renamable $v1, renamable $v2
-    renamable $v1 = V6_vavgh killed renamable $v1, killed renamable $v2
-    renamable $v2, renamable $r28 = V6_vL32b_pi killed renamable $r28, 64
-    renamable $v1 = V6_vsathub killed renamable $v5, killed renamable $v1
-    renamable $v5 = V6_vnavgh renamable $v0, renamable $v3
-    renamable $v6 = V6_vavgh killed renamable $v0, killed renamable $v3
-    renamable $r12 = V6_vS32b_pi killed renamable $r12, 64, killed renamable $v1
-    renamable $v1 = V6_vaddh renamable $v4, renamable $v2
-    renamable $v3, renamable $r15 = V6_vL32b_pi killed renamable $r15, 64
-    renamable $v0 = V6_vsubh killed renamable $v4, killed renamable $v2
-    renamable $v4, renamable $r13 = V6_vL32b_pi killed renamable $r13, 64
-    renamable $v2 = V6_vaddh renamable $v3, renamable $v4
-    renamable $v5 = V6_vsathub killed renamable $v5, killed renamable $v6
-    renamable $r9 = V6_vS32b_pi killed renamable $r9, 64, killed renamable $v5
-    ENDLOOP0 %bb.5, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
-    J2_jump %bb.6, implicit-def $pc
-
-  bb.6:
-    successors: %bb.7(0x80000000)
+  bb.5 (align 16):
+    successors: %bb.6(0x80000000)
     liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $v0, $v1, $v2, $v3, $v4
 
-    renamable $v3 = V6_vsubh killed renamable $v3, killed renamable $v4
-    renamable $v4 = V6_vavgh renamable $v1, renamable $v2
-    renamable $v1 = V6_vnavgh killed renamable $v1, killed renamable $v2
-    renamable $v2 = V6_vavgh renamable $v0, renamable $v3
-    renamable $v0 = V6_vnavgh killed renamable $v0, killed renamable $v3
-    renamable $v1 = V6_vsathub killed renamable $v1, killed renamable $v4
-    dead renamable $r12 = V6_vS32b_pi killed renamable $r12, 64, killed renamable $v1
-    renamable $v0 = V6_vsathub killed renamable $v0, killed renamable $v2
-    dead renamable $r9 = V6_vS32b_pi killed renamable $r9, 64, killed renamable $v0
-    J2_jump %bb.7, implicit-def $pc
+    BUNDLE implicit-def $v3, implicit-def $v28, implicit-def $v29, implicit $v3, implicit killed $v4, implicit killed $v1, implicit killed $v2 {
+      renamable $v3 = V6_vsubh renamable $v3, killed renamable $v4
+      $v28 = V6_vavgh renamable $v1, renamable $v2
+      $v29 = V6_vnavgh killed renamable $v1, killed renamable $v2
+    }
+    BUNDLE implicit-def dead $v1, implicit-def dead $r12, implicit-def $v30, implicit-def $v31, implicit killed $v29, implicit killed $v28, implicit killed $r12, implicit killed $v0, implicit killed $v3 {
+      renamable $v1 = V6_vsathub killed $v29, killed $v28
+      dead renamable $r12 = V6_vS32b_new_pi killed renamable $r12, 64, internal killed renamable $v1 :: (store unknown-size into %ir.phi35, align 64)
+      $v30 = V6_vavgh renamable $v0, renamable $v3
+      $v31 = V6_vnavgh killed renamable $v0, killed renamable $v3
+    }
+    BUNDLE implicit-def dead $v0, implicit-def dead $r9, implicit killed $v31, implicit killed $v30, implicit killed $r9 {
+      renamable $v0 = V6_vsathub killed $v31, killed $v30
+      dead renamable $r9 = V6_vS32b_new_pi killed renamable $r9, 64, internal killed renamable $v0 :: (store unknown-size into %ir.phi34, align 64)
+    }
 
-  bb.7:
-    successors: %bb.2(0x7c000000), %bb.8(0x04000000)
+  bb.6.bb57:
+    successors: %bb.2(0x7c000000), %bb.7(0x04000000)
     liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
 
-    renamable $r7 = nsw A2_addi killed renamable $r7, 2
-    ENDLOOP1 %bb.2, implicit-def $pc, implicit-def $lc1, implicit $sa1, implicit $lc1
-    J2_jump %bb.8, implicit-def dead $pc
+    BUNDLE implicit-def $r7, implicit-def $pc, implicit-def $lc1, implicit $r7, implicit killed $sa1, implicit killed $lc1 {
+      renamable $r7 = nsw A2_addi renamable $r7, 2
+      ENDLOOP1 %bb.2, implicit-def $pc, implicit-def $lc1, implicit killed $sa1, implicit killed $lc1
+    }
+    J2_jump %bb.7, implicit-def $pc
 
-  bb.8:
-    PS_jmpret $r31, implicit-def dead $pc
+  bb.2.bb9 (machine-block-address-taken):
+    successors: %bb.3(0x40000000), %bb.6(0x40000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
+
+    J2_jumpf $p0, %bb.6, implicit-def $pc
+
+  bb.3.bb11:
+    successors: %bb.4(0x40000000), %bb.5(0x40000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8
+
+    BUNDLE implicit-def $r13, implicit-def $r9, implicit-def $r14, implicit-def $r12, implicit $r7, implicit $r4 {
+      renamable $r13 = exact S2_asr_i_r renamable $r7, 1
+      $r9 = A2_tfr $r4
+      renamable $r14 = nsw A2_addi renamable $r7, 1
+      $r12 = A2_tfr $r4
+    }
+    BUNDLE implicit-def $r15, implicit-def $r9, implicit-def $p1, implicit killed $r13, implicit $r3, implicit $r9, implicit killed $r14, implicit $r5, implicit $r1 {
+      renamable $r15 = nsw M2_mpyi killed renamable $r13, renamable $r3
+      renamable $r9 = M2_maci renamable $r9, killed renamable $r14, renamable $r5
+      renamable $p1 = C2_cmpgtui renamable $r1, 1
+    }
+    BUNDLE implicit-def $r28, implicit-def $r10, implicit-def $r13, implicit-def $r14, implicit killed $r15, implicit $r2, implicit $r6, implicit $r8, implicit $r0 {
+      renamable $r28 = A2_add renamable $r15, renamable $r2
+      renamable $r10 = A2_add renamable $r15, renamable $r6
+      renamable $r13 = A2_add renamable $r8, renamable $r15
+      renamable $r14 = S2_addasl_rrri renamable $r0, killed renamable $r15, 1
+    }
+    BUNDLE implicit-def $r15, implicit-def $r28, implicit-def $r10, implicit $r0, implicit killed $r28, implicit killed $r10, implicit $r1 {
+      renamable $r15 = S2_addasl_rrri renamable $r0, killed renamable $r28, 1
+      renamable $r28 = S2_addasl_rrri renamable $r0, killed renamable $r10, 1
+      renamable $r10 = A2_addi renamable $r1, -1
+    }
+    BUNDLE implicit-def $r13, implicit-def $v0, implicit-def $r14, implicit-def $r12, implicit $r0, implicit $r13, implicit $r14, implicit $r12, implicit $r7, implicit $r5 {
+      renamable $r13 = S2_addasl_rrri renamable $r0, renamable $r13, 1
+      renamable $v0, renamable $r14 = V6_vL32b_pi renamable $r14, 64 :: (load (s512) from %ir.phi30)
+      renamable $r12 = M2_maci renamable $r12, renamable $r7, renamable $r5
+    }
+    BUNDLE implicit-def $v2, implicit-def $r28, implicit-def $v1, implicit-def $lc0, implicit-def $sa0, implicit-def $usr, implicit-def $usr_ovf, implicit $r28, implicit $v0, implicit killed $r10 {
+      renamable $v2, renamable $r28 = V6_vL32b_cur_pi renamable $r28, 64 :: (load (s512) from %ir.phi31)
+      renamable $v1 = V6_vaddh renamable $v0, internal renamable $v2
+      J2_loop0r %bb.4, killed renamable $r10, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    }
+    BUNDLE implicit-def $v3, implicit-def $r15, implicit-def $v0, implicit $r15, implicit $v0, implicit killed $v2 {
+      renamable $v3, renamable $r15 = V6_vL32b_pi renamable $r15, 64 :: (load (s512) from %ir.phi32)
+      renamable $v0 = V6_vsubh renamable $v0, killed renamable $v2
+    }
+    BUNDLE implicit-def $v4, implicit-def $r13, implicit-def $v2, implicit-def $pc, implicit $r13, implicit $v3, implicit killed $p1 {
+      renamable $v4, renamable $r13 = V6_vL32b_cur_pi renamable $r13, 64 :: (load (s512) from %ir.phi33)
+      renamable $v2 = V6_vaddh renamable $v3, internal renamable $v4
+      J2_jumpf killed $p1, %bb.5, implicit-def $pc
+    }
+
+  bb.4.bb28 (align 16):
+    successors: %bb.4(0x7c000000), %bb.5(0x04000000)
+    liveins: $p0, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r12, $r13, $r14, $r15, $r28, $v0, $v1, $v2, $v3, $v4
+
+    BUNDLE implicit-def $v3, implicit-def $v5, implicit-def $v1, implicit-def $v4, implicit-def $r14, implicit $v3, implicit killed $v4, implicit $v1, implicit killed $v2, implicit $r14 {
+      renamable $v3 = V6_vsubh renamable $v3, killed renamable $v4
+      renamable $v5 = V6_vnavgh renamable $v1, renamable $v2
+      renamable $v1 = V6_vavgh renamable $v1, killed renamable $v2
+      renamable $v4, renamable $r14 = V6_vL32b_pi renamable $r14, 64 :: (load (s512) from %ir.phi30 + 64)
+    }
+    BUNDLE implicit-def dead $v1, implicit-def $r12, implicit-def $v2, implicit-def $r28, implicit-def $v5, implicit killed $v5, implicit $v1, implicit $r12, implicit $r28, implicit $v0, implicit $v3 {
+      renamable $v1 = V6_vsathub killed renamable $v5, renamable $v1
+      renamable $r12 = V6_vS32b_new_pi renamable $r12, 64, internal killed renamable $v1 :: (store (s512) into %ir.phi35)
+      renamable $v2, renamable $r28 = V6_vL32b_pi renamable $r28, 64 :: (load (s512) from %ir.phi31 + 64)
+      renamable $v5 = V6_vnavgh renamable $v0, renamable $v3
+    }
+    BUNDLE implicit-def $v6, implicit-def $v3, implicit-def $r15, implicit-def $v1, implicit-def $v0, implicit killed $v0, implicit killed $v3, implicit $r15, implicit killed $v4, implicit killed $v2 {
+      renamable $v6 = V6_vavgh killed renamable $v0, killed renamable $v3
+      renamable $v3, renamable $r15 = V6_vL32b_pi renamable $r15, 64 :: (load (s512) from %ir.phi32 + 64)
+      renamable $v1 = V6_vaddh renamable $v4, renamable $v2
+      renamable $v0 = V6_vsubh killed renamable $v4, killed renamable $v2
+    }
+    BUNDLE implicit-def $v4, implicit-def $r13, implicit-def dead $v5, implicit-def $r9, implicit-def $v2, implicit-def $pc, implicit-def $lc0, implicit $r13, implicit $v5, implicit killed $v6, implicit $r9, implicit $v3, implicit killed $sa0, implicit killed $lc0 {
+      renamable $v4, renamable $r13 = V6_vL32b_cur_pi renamable $r13, 64 :: (load (s512) from %ir.phi33 + 64)
+      renamable $v5 = V6_vsathub renamable $v5, killed renamable $v6
+      renamable $r9 = V6_vS32b_new_pi renamable $r9, 64, internal killed renamable $v5 :: (store (s512) into %ir.phi34)
+      renamable $v2 = V6_vaddh renamable $v3, internal renamable $v4
+      ENDLOOP0 %bb.4, implicit-def $pc, implicit-def $lc0, implicit killed $sa0, implicit killed $lc0
+    }
+    J2_jump %bb.5, implicit-def $pc
+
+  bb.7.bb61:
+    PS_jmpret killed $r31, implicit-def dead $pc
 
 ...

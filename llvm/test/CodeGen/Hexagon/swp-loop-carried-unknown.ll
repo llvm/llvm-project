@@ -1,15 +1,18 @@
-; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s -pipeliner-experimental-cg=true -pipeliner-force-ii=3 -stop-after=pipeliner -debug-only=pipeliner 2>&1 | FileCheck %s
+
+; REQUIRES: asserts
 
 ; Test that the pipeliner schedules a store before the load in which there is a
 ; loop carried dependence. Previously, the loop carried dependence wasn't added
 ; and the load from iteration n was scheduled prior to the store from iteration
 ; n-1.
 
-; CHECK: loop0(.LBB0_[[LOOP:.]],
-; CHECK: .LBB0_[[LOOP]]:
-; CHECK: memh({{.*}}) =
-; CHECK: = memuh({{.*}})
-; CHECK: endloop0
+; CHECK: SU([[LOAD:[0-9]+]]):{{.*}}L2_loadruh_io
+; CHECK: SU([[STORE:[0-9]+]]):{{.*}}S4_storeirh_io
+; CHECK: Loop Carried Edges:
+; CHECK:  Loop carried edges from SU([[STORE]])
+; CHECK-NEXT:    Order
+; CHECK-NEXT:      SU([[LOAD]])
 
 %s.0 = type { i16, i16 }
 
