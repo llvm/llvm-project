@@ -1340,7 +1340,7 @@ def ConvertVectorToArmSMEPass : Pass<"convert-vector-to-arm-sme"> {
 def ConvertVectorToAMDGPUPass : Pass<"convert-vector-to-amdgpu"> {
   let summary = "Lower the operations from the vector dialect into the AMDGPU "
                 "dialect";
-  let dependentDialects = ["amdgpu::AMDGPUDialect", "vector::VectorDialect"];
+  let dependentDialects = ["vector::VectorDialect"];
 } 
 
 //===----------------------------------------------------------------------===//

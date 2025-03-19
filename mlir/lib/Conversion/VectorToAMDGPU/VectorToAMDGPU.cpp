@@ -97,6 +97,8 @@ static LogicalResult transferPreconditions(
   return success();
 }
 
+namespace {
+
 struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -130,13 +132,15 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
   }
 };
 
+} // namespace
+
 void mlir::populateVectorToAMDGPUConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering>(patterns.getContext());
 }
 
 struct ConvertVectorToAMDGPUPass final
-    : public impl::ConvertVectorToAMDGPUPassBase<ConvertVectorToAMDGPUPass> {
+    : impl::ConvertVectorToAMDGPUPassBase<ConvertVectorToAMDGPUPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorToAMDGPUConversionPatterns(patterns);
