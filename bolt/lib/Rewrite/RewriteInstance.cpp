@@ -694,7 +694,7 @@ Error RewriteInstance::run() {
 
   selectFunctionsToProcess();
 
-  readDebugInfo();
+  processMetadataPreDisasm();
 
   disassembleFunctions();
 
@@ -3235,6 +3235,14 @@ void RewriteInstance::processSectionMetadata() {
   initializeMetadataManager();
 
   MetadataManager.runSectionInitializers();
+}
+
+void RewriteInstance::processMetadataPreDisasm() {
+  NamedRegionTimer T("processmetadata-predisasm", "process metadata pre-disasm",
+                     TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
+  MetadataManager.runInitializersPreDisasm();
+
+  readDebugInfo();
 }
 
 void RewriteInstance::processMetadataPreCFG() {
