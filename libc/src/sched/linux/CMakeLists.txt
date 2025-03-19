@@ -143,6 +143,9 @@ add_entrypoint_object(
   HDRS
     ../sched_setcpuzero.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
 )
@@ -154,6 +157,9 @@ add_entrypoint_object(
   HDRS
     ../sched_setcpuset.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.hdr.sched_macros
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
@@ -166,6 +172,9 @@ add_entrypoint_object(
   HDRS
     ../sched_getcpuisset.h
   DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.hdr.sched_macros
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
