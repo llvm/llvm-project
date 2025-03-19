@@ -81,6 +81,23 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_splitdouble)
 void asuint(double4, out uint4, out uint4);
 
 //===----------------------------------------------------------------------===//
+// asuint16 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint16_t asuint16(T Val)
+/// \brief Interprets the bit pattern of x as an 16-bit unsigned integer.
+/// \param Val The input value.
+#ifdef __HLSL_ENABLE_16BIT
+template <typename T, int N> constexpr vector<uint16_t, N> asuint16(vector<T, N> V) {
+  return __detail::bit_cast<uint16_t, T, N>(V);
+}
+
+template <typename T> constexpr uint16_t asuint16(T F) {
+  return __detail::bit_cast<uint16_t, T>(F);
+}
+#endif
+
+//===----------------------------------------------------------------------===//
 // distance builtins
 //===----------------------------------------------------------------------===//
 
