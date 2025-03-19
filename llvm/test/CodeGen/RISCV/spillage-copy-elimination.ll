@@ -151,28 +151,18 @@ define fastcc ptr @zot(ptr %arg, i32 %arg1, ptr %arg2, ptr %arg3, i32 %arg4, ptr
 ; CHECK-NEXT:  # %bb.21: # %bb24
 ; CHECK-NEXT:    # in Loop: Header=BB0_20 Depth=1
 ; CHECK-NEXT:    mv s4, s2
-; CHECK-NEXT:    mv s2, s6
-; CHECK-NEXT:    mv s6, s5
-; CHECK-NEXT:    mv s5, s11
-; CHECK-NEXT:    mv s11, s10
+; CHECK-NEXT:    mv s2, s10
 ; CHECK-NEXT:    ori s10, a0, 1
 ; CHECK-NEXT:    mv a0, s7
 ; CHECK-NEXT:    mv s9, s3
-; CHECK-NEXT:    mv s3, s8
-; CHECK-NEXT:    mv s8, s0
-; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    mv s3, a1
 ; CHECK-NEXT:    call ham
-; CHECK-NEXT:    mv a1, s0
-; CHECK-NEXT:    mv s0, s8
-; CHECK-NEXT:    mv s8, s3
+; CHECK-NEXT:    mv a1, s3
 ; CHECK-NEXT:    mv s3, s9
 ; CHECK-NEXT:    sext.w s10, s10
 ; CHECK-NEXT:    slli s10, s10, 3
 ; CHECK-NEXT:    sd zero, 0(s10)
-; CHECK-NEXT:    mv s10, s11
-; CHECK-NEXT:    mv s11, s5
-; CHECK-NEXT:    mv s5, s6
-; CHECK-NEXT:    mv s6, s2
+; CHECK-NEXT:    mv s10, s2
 ; CHECK-NEXT:    mv s2, s4
 ; CHECK-NEXT:    ld s4, 48(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    j .LBB0_19
