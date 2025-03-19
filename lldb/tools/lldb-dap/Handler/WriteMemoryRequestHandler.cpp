@@ -117,7 +117,7 @@ void WriteMemoryRequestHandler::operator()(
 
   std::string output = llvm::encodeBase64(data64);
 
-  // write the memory
+  // Write the memory
   if (!output.empty()) {
     lldb::SBProcess process = dap.target.GetProcess();
     bytes_written =
