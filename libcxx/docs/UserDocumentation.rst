@@ -142,9 +142,13 @@ enable or disable extended libc++ behavior.
   to internal dependencies. The common practice is to have the standard headers
   internally include other standard headers, but this generally results in
   increased compilation overhead. This configuration option attempts to mitigate
-  this problem by avoiding such unnecessary inclusions. In addition, compiling
-  a codebase with this macro may improve maintainability by identifying
+  this problem by avoiding such unnecessary inclusions. Compiling
+  a codebase with this macro may improve portability by identifying
   missing standard header inclusions.
+
+  However, be aware that enabling this macro may lead to breakages
+  when updating to a newer version of the library, since transitive includes
+  that your code was previously relying on may have been removed.
 
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
