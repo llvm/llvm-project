@@ -1717,12 +1717,11 @@ public:
   /// Create a sequence of instructions to compare contents of a register
   /// \p RegNo to immediate \Imm and jump to \p Target if they are different.
   virtual InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
-                                          const MCSymbol *Target,
-                                          MCContext *Ctx) const {
+                                           const MCSymbol *Target,
+                                           MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return {};
   }
-
 
   /// Creates inline memcpy instruction. If \p ReturnEnd is true, then return
   /// (dest + n) instead of dest.

@@ -113,10 +113,11 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
   std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
 
-  InstructionListType Instrs = BC->MIB->createCmpJE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
   BB->addInstructions(Instrs.begin(), Instrs.end());
   BB->addSuccessor(BB.get());
-  
+
   auto II = BB->begin();
   ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
   ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
@@ -126,7 +127,7 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
   II++;
   ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
   ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::EQ);
-  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II,1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
   ASSERT_EQ(Label, BB->getLabel());
 }
 
@@ -135,11 +136,12 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
     GTEST_SKIP();
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
   std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
-  
-  InstructionListType Instrs = BC->MIB->createCmpJNE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
+
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(AArch64::X0, 2, BB->getLabel(), BC->Ctx.get());
   BB->addInstructions(Instrs.begin(), Instrs.end());
   BB->addSuccessor(BB.get());
-  
+
   auto II = BB->begin();
   ASSERT_EQ(II->getOpcode(), AArch64::SUBSXri);
   ASSERT_EQ(II->getOperand(0).getReg(), AArch64::XZR);
@@ -149,7 +151,7 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
   II++;
   ASSERT_EQ(II->getOpcode(), AArch64::Bcc);
   ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::NE);
-  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II,1);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
   ASSERT_EQ(Label, BB->getLabel());
 }
 
@@ -195,7 +197,8 @@ TEST_P(MCPlusBuilderTester, X86_CmpJE) {
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
   std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
 
-  InstructionListType Instrs = BC->MIB->createCmpJE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  InstructionListType Instrs =
+      BC->MIB->createCmpJE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
   BB->addInstructions(Instrs.begin(), Instrs.end());
   BB->addSuccessor(BB.get());
 
@@ -205,7 +208,7 @@ TEST_P(MCPlusBuilderTester, X86_CmpJE) {
   ASSERT_EQ(II->getOperand(1).getImm(), 2);
   II++;
   ASSERT_EQ(II->getOpcode(), X86::JCC_1);
-  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II,0);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
   ASSERT_EQ(Label, BB->getLabel());
   ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_E);
 }
@@ -216,7 +219,8 @@ TEST_P(MCPlusBuilderTester, X86_CmpJNE) {
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
   std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
 
-  InstructionListType Instrs = BC->MIB->createCmpJNE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
+  InstructionListType Instrs =
+      BC->MIB->createCmpJNE(X86::EAX, 2, BB->getLabel(), BC->Ctx.get());
   BB->addInstructions(Instrs.begin(), Instrs.end());
   BB->addSuccessor(BB.get());
 
@@ -226,7 +230,7 @@ TEST_P(MCPlusBuilderTester, X86_CmpJNE) {
   ASSERT_EQ(II->getOperand(1).getImm(), 2);
   II++;
   ASSERT_EQ(II->getOpcode(), X86::JCC_1);
-  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II,0);
+  const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 0);
   ASSERT_EQ(Label, BB->getLabel());
   ASSERT_EQ(II->getOperand(1).getImm(), X86::COND_NE);
 }

@@ -2437,12 +2437,10 @@ public:
   }
 
   InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
-                                  const MCSymbol *Target,
-                                  MCContext *Ctx) const override {
+                                   const MCSymbol *Target,
+                                   MCContext *Ctx) const override {
     InstructionListType Code;
-    Code.emplace_back(MCInstBuilder(X86::CMP64ri8)
-                          .addReg(RegNo)
-                          .addImm(Imm));
+    Code.emplace_back(MCInstBuilder(X86::CMP64ri8).addReg(RegNo).addImm(Imm));
     Code.emplace_back(MCInstBuilder(X86::JCC_1)
                           .addExpr(MCSymbolRefExpr::create(
                               Target, MCSymbolRefExpr::VK_None, *Ctx))
