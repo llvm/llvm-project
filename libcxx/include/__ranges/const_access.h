@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <input_range _Rp>
 _LIBCPP_HIDE_FROM_ABI constexpr auto& __possibly_const_range(_Rp& __rng) noexcept {
-  if constexpr (constant_range<const _Rp> && !constant_range<_Rp>) {
+  if constexpr (input_range<const _Rp>) {
     return const_cast<const _Rp&>(__rng);
   } else {
     return __rng;
