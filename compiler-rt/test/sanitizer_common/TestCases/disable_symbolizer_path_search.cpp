@@ -1,10 +1,9 @@
 // REQUIRES: disable_symbolizer_path_search
 
 // RUN: %clangxx %s -o %t
-// RUN: echo $ASAN_SYMBOLIZER_PATH
-// RUN: export ASAN_SYMBOLIZER_PATH= TSAN_SYMBOLIZER_PATH= MSAN_SYMBOLIZER_PATH= UBSAN_SYMBOLIZER_PATH= 
-// RUN: echo $ASAN_SYMBOLIZER_PATH
-// RUN: %env_tool_opts=verbosity=3 -u ASAN_SYMBOLIZER_PATH -u TSAN_SYMBOLIZER_PATH -u MSAN_SYMBOLIZER_PATH -u UBSAN_SYMBOLIZER_PATH %run %t 2>&1 | FileCheck %s
+// RUN: echo "Before unset: $ASAN_SYMBOLIZER_PATH"
+// RUN: env -u ASAN_SYMBOLIZER_PATH -u TSAN_SYMBOLIZER_PATH -u MSAN_SYMBOLIZER_PATH -u UBSAN_SYMBOLIZER_PATH %env ASAN_OPTIONS=verbosity=3 %run %t 2>&1 | FileCheck %s
+// RUN: echo "After unset: $ASAN_SYMBOLIZER_PATH"
 
 // CHECK: Symbolizer path search is disabled in the runtime build configuration
 
