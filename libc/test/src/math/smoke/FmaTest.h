@@ -90,12 +90,6 @@ public:
     // Test overflow.
     OutType z = out.max_normal;
     InType in_z = LIBC_NAMESPACE::fputil::cast<InType>(out.max_normal);
-#if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-    // Rounding modes other than the default might not be usable with float16.
-    if constexpr (LIBC_NAMESPACE::cpp::is_same_v<OutType, float16>)
-      EXPECT_FP_EQ(OutType(0.75) * z, func(InType(1.75), in_z, -in_z));
-    else
-#endif
       EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z,
                                 func(InType(1.75), in_z, -in_z));
 
