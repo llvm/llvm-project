@@ -8022,7 +8022,6 @@ void OMPClauseWriter::VisitOMPReductionClause(OMPReductionClause *C) {
   }
   auto PrivateFlags = C->private_var_reduction_flags();
   Record.push_back(std::distance(PrivateFlags.begin(), PrivateFlags.end()));
-  // Record.push_back(PrivateFlags.size());
   for (bool Flag : PrivateFlags)
     Record.push_back(Flag);
 }

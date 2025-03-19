@@ -18955,8 +18955,9 @@ static bool actOnOMPReductionKindClause(
       OpenMPDirectiveKind CurrDir = Stack->getCurrentDirective();
       OpenMPDirectiveKind ParentDir = Stack->getParentDirective();
       // Check if the construct is orphaned (has no enclosing OpenMP context)
-      IsOrphaned = (ParentDir == OMPD_unknown);
-      IsPrivate =
+      IsOrphaned = ParentDir == OMPD_unknown;
+      // OpenMP 6.0: Private DSA check
+      IsPrivate = (S.getLangOpts().OpenMP > 52) &&
           ((isOpenMPPrivate(DVar.CKind) && DVar.CKind != OMPC_reduction &&
             isOpenMPWorksharingDirective(CurrDir) &&
             !isOpenMPParallelDirective(CurrDir) &&
@@ -18964,9 +18965,6 @@ static bool actOnOMPReductionKindClause(
             !isOpenMPSimdDirective(ParentDir)) ||
            (IsOrphaned && DVar.CKind == OMPC_unknown) ||
            RD.OrigSharingModifier != OMPC_ORIGINAL_SHARING_shared);
-      // Disable private handling for OpenMP versions <= 5.2
-      if (S.getLangOpts().OpenMP <= 52)
-        IsPrivate = false;
 
       // OpenMP [2.14.3.6, Restrictions, p.1]
       //  A list item that appears in a reduction clause of a worksharing
