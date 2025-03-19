@@ -2543,6 +2543,7 @@ void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr);
  * type of a global value which is always a pointer type.
  *
  * @see llvm::GlobalValue::getValueType()
+ * @see llvm::Function::getFunctionType()
  */
 LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global);
 
@@ -3015,13 +3016,6 @@ LLVMValueRef LLVMGetFirstParam(LLVMValueRef Fn);
  * @see llvm::Function::arg_end()
  */
 LLVMValueRef LLVMGetLastParam(LLVMValueRef Fn);
-
-/**
- * Obtain function type.
- *
- * @see llvm::Function::getFunctionType()
- */
-LLVMTypeRef LLVMGetFunctionType(LLVMValueRef Fn);
 
 /**
  * Obtain the next parameter to a function.
