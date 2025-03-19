@@ -158,7 +158,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
 
 void CIRGenFunction::LexicalScope::cleanup() {
   CIRGenBuilderTy &builder = cgf.builder;
-  LexicalScope *localScope = cgf.currLexScope;
+  LexicalScope *localScope = cgf.curLexScope;
 
   if (returnBlock != nullptr) {
     // Write out the return block, which loads the value from `__retval` and
@@ -168,16 +168,16 @@ void CIRGenFunction::LexicalScope::cleanup() {
     (void)emitReturn(*returnLoc);
   }
 
-  mlir::Block *currBlock = builder.getBlock();
-  if (isGlobalInit() && !currBlock)
+  mlir::Block *curBlock = builder.getBlock();
+  if (isGlobalInit() && !curBlock)
     return;
-  if (currBlock->mightHaveTerminator() && currBlock->getTerminator())
+  if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
     return;
 
   // Get rid of any empty block at the end of the scope.
   bool entryBlock = builder.getInsertionBlock()->isEntryBlock();
-  if (!entryBlock && currBlock->empty()) {
-    currBlock->erase();
+  if (!entryBlock && curBlock->empty()) {
+    curBlock->erase();
     if (returnBlock != nullptr && returnBlock->getUses().empty())
       returnBlock->erase();
     return;
@@ -186,7 +186,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
   // Reached the end of the scope.
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToEnd(currBlock);
+    builder.setInsertionPointToEnd(curBlock);
 
     if (localScope->depth == 0) {
       // Reached the end of the function.
@@ -203,7 +203,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
     }
     // Reached the end of a non-function scope.  Some scopes, such as those
     // used with the ?: operator, can return a value.
-    if (!localScope->isTernary() && !currBlock->mightHaveTerminator()) {
+    if (!localScope->isTernary() && !curBlock->mightHaveTerminator()) {
       !retVal ? builder.create<cir::YieldOp>(localScope->endLoc)
               : builder.create<cir::YieldOp>(localScope->endLoc, retVal);
     }
@@ -223,7 +223,7 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   return builder.create<cir::ReturnOp>(loc);
 }
 
-// This is copyied from CodeGenModule::MayDropFunctionReturn.  This is a
+// This is copied from CodeGenModule::MayDropFunctionReturn.  This is a
 // candidate for sharing between CIRGen and CodeGen.
 static bool mayDropFunctionReturn(const ASTContext &astContext,
                                   QualType returnType) {
@@ -239,7 +239,7 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
 
 void CIRGenFunction::LexicalScope::emitImplicitReturn() {
   CIRGenBuilderTy &builder = cgf.getBuilder();
-  LexicalScope *localScope = cgf.currLexScope;
+  LexicalScope *localScope = cgf.curLexScope;
 
   const auto *fd = cast<clang::FunctionDecl>(cgf.curGD.getDecl());
 

@@ -274,7 +274,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     }
   }
 
-  auto *retBlock = currLexScope->getOrCreateRetBlock(*this, loc);
+  auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
   builder.create<cir::BrOp>(loc, retBlock);
   builder.createBlock(builder.getBlock()->getParent());
 

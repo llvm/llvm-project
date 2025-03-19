@@ -378,11 +378,11 @@ public:
     unsigned depth = 0;
 
     LexicalScope(CIRGenFunction &cgf, mlir::Location loc, mlir::Block *eb)
-        : cgf(cgf), entryBlock(eb), parentScope(cgf.currLexScope),
-          beginLoc(loc), endLoc(loc) {
+        : cgf(cgf), entryBlock(eb), parentScope(cgf.curLexScope), beginLoc(loc),
+          endLoc(loc) {
 
       assert(entryBlock && "LexicalScope requires an entry block");
-      cgf.currLexScope = this;
+      cgf.curLexScope = this;
       if (parentScope)
         ++depth;
 
@@ -396,7 +396,7 @@ public:
     void setRetVal(mlir::Value v) { retVal = v; }
 
     void cleanup();
-    void restore() { cgf.currLexScope = parentScope; }
+    void restore() { cgf.curLexScope = parentScope; }
 
     ~LexicalScope() {
       assert(!cir::MissingFeatures::generateDebugInfo());
@@ -465,7 +465,7 @@ public:
     mlir::Block *getEntryBlock() { return entryBlock; }
   };
 
-  LexicalScope *currLexScope = nullptr;
+  LexicalScope *curLexScope = nullptr;
 
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name = "tmp");
