@@ -17,6 +17,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -54,9 +55,10 @@ IdentifierInfo *Parser::getSEHExceptKeyword() {
 
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
     : PP(pp), PreferredType(pp.isCodeCompletionEnabled()), Actions(actions),
-      Diags(PP.getDiagnostics()), GreaterThanIsOperator(true),
-      ColonIsSacred(false), InMessageExpression(false),
-      TemplateParameterDepth(0), ParsingInObjCContainer(false) {
+      Diags(PP.getDiagnostics()), StackHandler(Diags),
+      GreaterThanIsOperator(true), ColonIsSacred(false),
+      InMessageExpression(false), TemplateParameterDepth(0),
+      ParsingInObjCContainer(false) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
   Tok.setKind(tok::eof);

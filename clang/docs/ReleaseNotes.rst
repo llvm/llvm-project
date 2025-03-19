@@ -130,8 +130,10 @@ C2y Feature Support
   that ``_Generic`` selection associations may now have ``void`` type, but it
   also removes UB with code like ``(void)(void)1;``.
 - Implemented `WG14 N3411 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3411.pdf>`_
-  which allows a source file to not end with a newline character. This is still
-  reported as a conforming extension in earlier language modes.
+  which allows a source file to not end with a newline character. Note,
+  ``-pedantic`` will no longer diagnose this in either C or C++ modes. This
+  feature was adopted as applying to obsolete versions of C in WG14 and as a
+  defect report in WG21 (CWG787).
 - Implemented `WG14 N3353 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3353.htm>_`
   which adds the new ``0o`` and ``0O`` ocal literal prefixes and deprecates
   octal literals other than ``0`` which do not start with the new prefix. This
@@ -171,6 +173,8 @@ Modified Compiler Flags
 - The ARM AArch32 ``-mtp`` option accepts and defaults to ``auto``, a value of ``auto`` uses the best available method of providing the frame pointer supported by the hardware. This matches
   the behavior of ``-mtp`` in gcc. This changes the default behavior for ARM targets that provide the ``TPIDRURO`` register as this will be used instead of a call to the ``__aeabi_read_tp``.
   Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
+
+- The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
 
 Removed Compiler Flags
 -------------------------
@@ -267,7 +271,7 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
-- The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers 
+- The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers
   except for the case where the operand is an unsigned integer
   and throws warning if they are compared with unsigned integers (##18878).
 - The ``-Wunnecessary-virtual-specifier`` warning has been added to warn about
@@ -277,6 +281,8 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
+
+- Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
 
 Improvements to Clang's time-trace
 ----------------------------------
