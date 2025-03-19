@@ -140,7 +140,9 @@ protected:
   SmallVector<AuthEntryInfo, 0> authEntries;
 
   // To track GOT entries for symbols that may have been ICFed
-  llvm::DenseMap<std::pair<SectionBase*, uint64_t>, uint32_t> gotEntries;
+  // Key is {section pointer, offset of symbol within that section}.
+  // Value is {GotIndex, whether canonical section has been encountered}
+  llvm::DenseMap<std::pair<SectionBase*, uint64_t>, std::pair<uint32_t, bool>> gotEntries;
 };
 
 // .note.GNU-stack section.

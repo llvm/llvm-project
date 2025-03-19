@@ -674,10 +674,15 @@ void GotSection::addEntry(const Symbol &sym) {
     // We add only a single GOT entry for all such symbols.
     auto [it, inserted] = gotEntries.insert(
       std::make_pair(std::make_pair(d->section, d->value),
-      numEntries));
+      std::make_pair(numEntries, d->folded)));
     if (!inserted) {
-      ctx.symAux.back().gotIdx = it->getSecond();
-      return;
+      bool prevFolded = it->getSecond().second;
+      if (!d->folded)
+        it->getSecond().second = d->folded;
+      if (d->folded || prevFolded) {
+        ctx.symAux.back().gotIdx = it->getSecond().first;
+        return;
+      }
     }
   }
 
