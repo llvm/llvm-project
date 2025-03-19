@@ -1,9 +1,9 @@
 # Test MIR printer and parser to NOT have `typeId` field in callSites.
-# `typeId` is used for propogating call site type identifiers for
+# `typeId` is used for propagating call site type identifiers for
 # indirect targets only. This test does not contain any indirect targets.
 
 # RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
-# CHECK-NOT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+# CHECK-NOT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
 # CHECK: name: _Z3barii
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
@@ -13,29 +13,9 @@
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
 
 --- |  
-  define dso_local noundef i32 @_Z4fizzii(i32 noundef %x, i32 noundef %y) !type !0 !type !0 {
-  entry:
-    %x.addr = alloca i32, align 4
-    %y.addr = alloca i32, align 4
-    store i32 %x, ptr %x.addr, align 4
-    store i32 %y, ptr %y.addr, align 4
-    %x_val = load i32, ptr %x.addr, align 4
-    %y_val = load i32, ptr %y.addr, align 4
-    %add = add nsw i32 %x_val, %y_val
-    ret i32 %add
-  }
+  declare !type !0 noundef i32 @_Z4fizzii(i32 noundef %x, i32 noundef %y)
   
-  define dso_local noundef i32 @_Z4buzzii(i32 noundef %x, i32 noundef %y) !type !0 !type !0 {
-  entry:
-    %x.addr = alloca i32, align 4
-    %y.addr = alloca i32, align 4
-    store i32 %x, ptr %x.addr, align 4
-    store i32 %y, ptr %y.addr, align 4
-    %x_val = load i32, ptr %x.addr, align 4
-    %y_val = load i32, ptr %y.addr, align 4
-    %mul = mul nsw i32 %x_val, %y_val
-    ret i32 %mul
-  }
+  declare !type !0 noundef i32 @_Z4buzzii(i32 noundef %x, i32 noundef %y)
   
   define dso_local noundef i32 @_Z3barii(i32 noundef %x, i32 noundef %y) !type !0 !type !0 {
   entry:
