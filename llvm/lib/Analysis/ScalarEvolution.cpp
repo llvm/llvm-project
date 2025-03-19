@@ -10635,10 +10635,11 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   if (ControlsOnlyExit && AddRec->hasNoSelfWrap() &&
       loopHasNoAbnormalExits(AddRec->getLoop())) {
 
-    // If the stride is zero, the loop must be infinite.  In C++, most loops
-    // are finite by assumption, in which case the step being zero implies
-    // UB must execute if the loop is entered.
-    if (!loopIsFiniteByAssumption(L) && !isKnownNonZero(StepWLG))
+    // If the stride is zero and the start is non-zero, the loop must be
+    // infinite. In C++, most loops are finite by assumption, in which case the
+    // step being zero implies UB must execute if the loop is entered.
+    if (!(loopIsFiniteByAssumption(L) && isKnownNonZero(Start)) &&
+        !isKnownNonZero(StepWLG))
       return getCouldNotCompute();
 
     const SCEV *Exact =
@@ -11632,8 +11633,9 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   // non-strict comparison is known from ranges and non-equality is known from
   // dominating predicates. If we are proving strict comparison, we always try
   // to prove non-equality and non-strict comparison separately.
-  auto NonStrictPredicate = ICmpInst::getNonStrictPredicate(Pred);
-  const bool ProvingStrictComparison = (Pred != NonStrictPredicate);
+  CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
+  const bool ProvingStrictComparison =
+      (Pred != static_cast<CmpInst::Predicate>(NonStrictPredicate));
   bool ProvedNonStrictComparison = false;
   bool ProvedNonEquality = false;
 
@@ -12401,6 +12403,12 @@ bool ScalarEvolution::isImpliedViaMerge(CmpPredicate Pred, const SCEV *LHS,
       // iteration of a loop.
       if (!properlyDominates(L, LBB))
         return false;
+      // Addrecs are considered to properly dominate their loop, so are missed
+      // by the previous check. Discard any values that have computable
+      // evolution in this loop.
+      if (auto *Loop = LI.getLoopFor(LBB))
+        if (hasComputableLoopEvolution(L, Loop))
+          return false;
       if (!ProvedEasily(L, RHS))
         return false;
     }

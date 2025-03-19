@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -23,6 +22,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 
 static mlir::FunctionType

@@ -38,8 +38,9 @@ public:
   ArmUnwindInfo *GetArmUnwindInfo();
   SymbolFile *GetSymbolFile();
 
-  lldb::FuncUnwindersSP GetFuncUnwindersContainingAddress(const Address &addr,
-                                                          SymbolContext &sc);
+  lldb::FuncUnwindersSP
+  GetFuncUnwindersContainingAddress(const Address &addr,
+                                    const SymbolContext &sc);
 
   bool GetAllowAssemblyEmulationUnwindPlans();
 

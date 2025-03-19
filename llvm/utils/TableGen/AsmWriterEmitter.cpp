@@ -967,12 +967,11 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
 
             // There might be an additional predicate on the MCOperand
-            unsigned Entry = MCOpPredicateMap[Rec];
+            unsigned &Entry = MCOpPredicateMap[Rec];
             if (!Entry) {
               if (!Rec->isValueUnset("MCOperandPredicate")) {
                 MCOpPredicates.push_back(Rec);
                 Entry = MCOpPredicates.size();
-                MCOpPredicateMap[Rec] = Entry;
               } else
                 break; // No conditions on this operand at all
             }

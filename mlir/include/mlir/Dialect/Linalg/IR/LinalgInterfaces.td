@@ -710,7 +710,10 @@ def LinalgStructuredInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return true if the user has supplied an explicit indexing maps for this op.
+        Returns true if the user has supplied explicit indexing maps that are
+        different from default indexing maps for this op. Returns `false` otherwise.
+        Note, if the user define maps that are identical to the default maps,
+        this method returns `false`.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"hasUserDefinedMaps",
@@ -859,11 +862,6 @@ def LinalgStructuredInterface
     /// operands. This is done by applying `getShapesToLoopsMap` to
     /// `createFlatListOfOperandDims`.
     SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
-
-    /// Compute the static loop sizes necessary to vectorize the computation.
-    /// This is done by applying `getShapesToLoopsMap` to
-    /// `createFlatListOfOperandStaticDims`.
-    SmallVector<int64_t, 4> computeStaticLoopSizes();
 
     /// Returns the value that expresses the shape of the output in terms of
     /// shape of the input operands where possible

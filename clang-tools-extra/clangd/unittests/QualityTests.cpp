@@ -108,7 +108,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   using flags::FLAGS_FOO;
 
-  int ::header_main() {}
+  int ::header_main() { return 0; }
   int main();
 
   [[deprecated]]

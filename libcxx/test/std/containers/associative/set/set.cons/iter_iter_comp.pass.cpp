@@ -20,30 +20,18 @@
 #include "test_iterators.h"
 #include "../../../test_compare.h"
 
-int main(int, char**)
-{
-    typedef int V;
-    V ar[] =
-    {
-        1,
-        1,
-        1,
-        2,
-        2,
-        2,
-        3,
-        3,
-        3
-    };
-    typedef test_less<V> C;
-    std::set<V, C> m(cpp17_input_iterator<const V*>(ar),
-                     cpp17_input_iterator<const V*>(ar+sizeof(ar)/sizeof(ar[0])), C(5));
-    assert(m.value_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::distance(m.begin(), m.end()) == 3);
-    assert(*m.begin() == 1);
-    assert(*std::next(m.begin()) == 2);
-    assert(*std::next(m.begin(), 2) == 3);
+int main(int, char**) {
+  typedef int V;
+  V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
+  typedef test_less<V> C;
+  std::set<V, C> m(
+      cpp17_input_iterator<const V*>(ar), cpp17_input_iterator<const V*>(ar + sizeof(ar) / sizeof(ar[0])), C(5));
+  assert(m.value_comp() == C(5));
+  assert(m.size() == 3);
+  assert(std::distance(m.begin(), m.end()) == 3);
+  assert(*m.begin() == 1);
+  assert(*std::next(m.begin()) == 2);
+  assert(*std::next(m.begin(), 2) == 3);
 
   return 0;
 }

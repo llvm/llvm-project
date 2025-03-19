@@ -159,7 +159,13 @@ std::optional<Object> getBaseObject(const Object &object,
       return Object{SymbolAndDesignatorExtractor::symbol_addr(comp->symbol()),
                     ea.Designate(evaluate::DataRef{
                         SymbolAndDesignatorExtractor::AsRvalueRef(*comp)})};
-    } else if (base.UnwrapSymbolRef()) {
+    } else if (auto *symRef = base.UnwrapSymbolRef()) {
+      // This is the base symbol of the array reference, which is the same
+      // as the symbol in the input object,
+      // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
+      // Here we have the Symbol(A), which is what we started with.
+      (void)symRef;
+      assert(&**symRef == object.sym());
       return std::nullopt;
     }
   } else {
@@ -202,6 +208,7 @@ MAKE_EMPTY_CLASS(Mergeable, Mergeable);
 MAKE_EMPTY_CLASS(Nogroup, Nogroup);
 MAKE_EMPTY_CLASS(NoOpenmp, NoOpenmp);
 MAKE_EMPTY_CLASS(NoOpenmpRoutines, NoOpenmpRoutines);
+MAKE_EMPTY_CLASS(NoOpenmpConstructs, NoOpenmpConstructs);
 MAKE_EMPTY_CLASS(NoParallelism, NoParallelism);
 MAKE_EMPTY_CLASS(Notinbranch, Notinbranch);
 MAKE_EMPTY_CLASS(Nowait, Nowait);
@@ -216,6 +223,7 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
 MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
+MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);
@@ -862,7 +870,10 @@ Init make(const parser::OmpClause::Init &inp,
   llvm_unreachable("Empty: init");
 }
 
-// Initializer: missing-in-parser
+Initializer make(const parser::OmpClause::Initializer &inp,
+                 semantics::SemanticsContext &semaCtx) {
+  llvm_unreachable("Empty: initializer");
+}
 
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {
@@ -1035,6 +1046,7 @@ Nontemporal make(const parser::OmpClause::Nontemporal &inp,
 
 // NoOpenmp: empty
 // NoOpenmpRoutines: empty
+// NoOpenmpConstructs: empty
 // NoParallelism: empty
 // Notinbranch: empty
 

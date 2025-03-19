@@ -155,6 +155,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
   case OMPC_message:
@@ -259,6 +260,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
   case OMPC_atomic_default_mem_order:
+  case OMPC_self_maps:
   case OMPC_at:
   case OMPC_severity:
   case OMPC_message:
@@ -1941,6 +1943,10 @@ void OMPClausePrinter::VisitOMPAtomicDefaultMemOrderClause(
      << ")";
 }
 
+void OMPClausePrinter::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
+  OS << "self_maps";
+}
+
 void OMPClausePrinter::VisitOMPAtClause(OMPAtClause *Node) {
   OS << "at(" << getOpenMPSimpleClauseTypeName(OMPC_at, Node->getAtKind())
      << ")";
@@ -2071,6 +2077,11 @@ void OMPClausePrinter::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
 void OMPClausePrinter::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {
   OS << "no_openmp_routines";
+}
+
+void OMPClausePrinter::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {
+  OS << "no_openmp_constructs";
 }
 
 void OMPClausePrinter::VisitOMPNoParallelismClause(OMPNoParallelismClause *) {

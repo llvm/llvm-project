@@ -48,14 +48,10 @@ private:
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
   ~AMDGPUMCExpr();
 
-  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
-                          const MCFixup *Fixup) const;
-  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
-                            const MCFixup *Fixup) const;
-  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
-                       const MCFixup *Fixup) const;
-  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
-                         const MCFixup *Fixup) const;
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -95,12 +91,11 @@ public:
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   bool isSymbolUsedInExpression(const MCSymbol *Sym) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

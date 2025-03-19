@@ -644,6 +644,48 @@ DIGenericSubrange::BoundType DIGenericSubrange::getStride() const {
   return BoundType();
 }
 
+DISubrangeType::DISubrangeType(LLVMContext &C, StorageType Storage,
+                               unsigned Line, uint64_t SizeInBits,
+                               uint32_t AlignInBits, DIFlags Flags,
+                               ArrayRef<Metadata *> Ops)
+    : DIType(C, DISubrangeTypeKind, Storage, dwarf::DW_TAG_subrange_type, Line,
+             SizeInBits, AlignInBits, 0, 0, Flags, Ops) {}
+
+DISubrangeType *DISubrangeType::getImpl(
+    LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,
+    Metadata *Scope, uint64_t SizeInBits, uint32_t AlignInBits, DIFlags Flags,
+    Metadata *BaseType, Metadata *LowerBound, Metadata *UpperBound,
+    Metadata *Stride, Metadata *Bias, StorageType Storage, bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DISubrangeType, (Name, File, Line, Scope, SizeInBits,
+                                         AlignInBits, Flags, BaseType,
+                                         LowerBound, UpperBound, Stride, Bias));
+  Metadata *Ops[] = {File,       Scope,      Name,   BaseType,
+                     LowerBound, UpperBound, Stride, Bias};
+  DEFINE_GETIMPL_STORE(DISubrangeType, (Line, SizeInBits, AlignInBits, Flags),
+                       Ops);
+}
+
+DISubrangeType::BoundType
+DISubrangeType::convertRawToBound(Metadata *IN) const {
+  if (!IN)
+    return BoundType();
+
+  assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
+         isa<DIExpression>(IN));
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *MD = dyn_cast<DIVariable>(IN))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(IN))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
 DIEnumerator::DIEnumerator(LLVMContext &C, StorageType Storage,
                            const APInt &Value, bool IsUnsigned,
                            ArrayRef<Metadata *> Ops)

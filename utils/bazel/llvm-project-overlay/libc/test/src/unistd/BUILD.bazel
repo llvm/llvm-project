@@ -248,6 +248,9 @@ libc_test(
         "//libc:close",
         "//libc:unlink",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 # libc_test(
@@ -260,7 +263,6 @@ libc_test(
 #         "//libc:unlinkat",
 #     ],
 # )
-
 
 libc_test(
     name = "getppid_test",

@@ -44,6 +44,7 @@ enum LanguageID : uint16_t {
   OCL_DSE = 0x400,           // builtin requires OpenCL device side enqueue.
   ALL_OCL_LANGUAGES = 0x800, // builtin for OCL languages.
   HLSL_LANG = 0x1000,        // builtin requires HLSL.
+  C23_LANG = 0x2000,         // builtin requires C23 or later.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
@@ -408,7 +409,8 @@ public:
 
   unsigned getRequiredVectorWidth(unsigned ID) const;
 
-  /// Return true if builtin ID belongs to AuxTarget.
+  /// Return true if the builtin ID belongs exclusively to the AuxTarget,
+  /// and false if it belongs to both primary and aux target, or neither.
   bool isAuxBuiltinID(unsigned ID) const {
     return ID >= (Builtin::FirstTSBuiltin + NumTargetBuiltins);
   }
@@ -458,14 +460,8 @@ bool evaluateRequiredTargetFeatures(
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
-  /// This names the __make_integer_seq BuiltinTemplateDecl.
-  BTK__make_integer_seq,
-
-  /// This names the __type_pack_element BuiltinTemplateDecl.
-  BTK__type_pack_element,
-
-  /// This names the __builtin_common_type BuiltinTemplateDecl.
-  BTK__builtin_common_type,
+#define BuiltinTemplate(BTName) BTK##BTName,
+#include "clang/Basic/BuiltinTemplates.inc"
 };
 
 } // end namespace clang

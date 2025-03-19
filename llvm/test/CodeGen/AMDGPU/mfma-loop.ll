@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908,GFX908_A %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,GFX908_A,GFX940_A %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX940,GFX940_A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,GFX908_A,GFX942_A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX942,GFX942_A %s
 
 ; GCN-LABEL: {{^}}test_mfma_loop_zeroinit:
 
@@ -11,7 +11,7 @@
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -51,7 +51,7 @@ exit:
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -78,14 +78,13 @@ exit:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_loop_non_splat:
-
-; GCN-COUNT-31:    v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GCN:             v_accvgpr_write_b32 a{{[0-9]+}}, 1.0{{$}}
+; GCN-COUNT-31:    v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -213,13 +212,13 @@ exit:
 
 ; FIXME: Constant is now in VGPR instead of SGPR.
 
-; GFX940_A: v_mov_b32_e32 v{{[0-9]+}}, 0x4{{[0-9a-f]+}}
-; GFX940_A-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX942_A: v_mov_b32_e32 v{{[0-9]+}}, 0x4{{[0-9a-f]+}}
+; GFX942_A-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -252,7 +251,7 @@ exit:
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -265,7 +264,7 @@ define amdgpu_kernel void @test_mfma_loop_vgpr_init(ptr addrspace(1) %arg) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %init = bitcast i32 %tid to float
-  %tmp0 = insertelement <32 x float> undef, float %init, i32 0
+  %tmp0 = insertelement <32 x float> poison, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
   %tmp2 = insertelement <32 x float> %tmp1, float %init, i32 2
   %tmp3 = insertelement <32 x float> %tmp2, float %init, i32 3
@@ -317,12 +316,12 @@ exit:
 
 ; GFX908:          v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
 ; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX940_A-COUNT-32:        v_accvgpr_write_b32 [[LEAD:a[0-9]+]], s{{[0-9]+}}
+; GFX942_A-COUNT-32:        v_accvgpr_write_b32 [[LEAD:a[0-9]+]], s{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -333,7 +332,7 @@ exit:
 
 define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float %init) #0 {
 entry:
-  %tmp0 = insertelement <32 x float> undef, float %init, i32 0
+  %tmp0 = insertelement <32 x float> poison, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
   %tmp2 = insertelement <32 x float> %tmp1, float %init, i32 2
   %tmp3 = insertelement <32 x float> %tmp2, float %init, i32 3
@@ -385,8 +384,9 @@ exit:
 
 ; GCN-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v0
 ; GFX908-DAG:   v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
-; GFX940_A-DAG: s_load_dword [[TMP:s[0-9]+]],
-; GCN-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
+; GFX942_A-DAG: s_load_dword [[TMP:s[0-9]+]],
+
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
@@ -420,11 +420,12 @@ exit:
 
 ; GFX90A-DAG:      v_accvgpr_write_b32 [[LEAD:a[0-9]+]], 0
 ; GFX90A-COUNT-28: v_accvgpr_write_b32 a{{[0-9]+}}, 0
+; GFX90A-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -462,13 +463,13 @@ exit:
 ; GFX90A-NOT:      v_accvgpr
 ; GFX90A:          v_mfma_f32_32x32x1f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
 ; GFX90A-NOT:      v_accvgpr
-; GFX940:          v_mfma_f32_32x32x1_2b_f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
+; GFX942:          v_mfma_f32_32x32x1_2b_f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
 ; GCN-NOT:         v_accvgpr
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -503,17 +504,17 @@ exit:
 ; GFX90A-NOT:      v_accvgpr
 ; GFX90A:          v_mfma_f32_32x32x1f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
 ; GFX90A-NOT:      v_accvgpr
-; GFX940:          v_mfma_f32_32x32x1_2b_f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
+; GFX942:          v_mfma_f32_32x32x1_2b_f32 a[{{[0-9:]+}}], v{{[0-9]+}}, v{{[0-9]+}}, 0{{$}}
 
 ; Check that we are using only one tmp VGPR.
 
 ; GFX908:             v_accvgpr_read_b32 [[TMP:v[0-9]+]], a{{[0-9]+}}
-; GFX940_A-COUNT-31:  v_accvgpr_mov_b32 a{{[0-9]+}}, a{{[0-9]+}}
+; GFX942_A-COUNT-31:  v_accvgpr_mov_b32 a{{[0-9]+}}, a{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[LOOP]]
 
@@ -526,7 +527,7 @@ define amdgpu_kernel void @test_mfma_loop_agpr_init(ptr addrspace(1) %arg) #0 {
 entry:
   %mai.0 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> zeroinitializer, i32 0, i32 0, i32 0)
   %init = extractelement <32 x float> %mai.0, i32 0
-  %tmp0 = insertelement <32 x float> undef, float %init, i32 0
+  %tmp0 = insertelement <32 x float> poison, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
   %tmp2 = insertelement <32 x float> %tmp1, float %init, i32 2
   %tmp3 = insertelement <32 x float> %tmp2, float %init, i32 3
@@ -587,7 +588,7 @@ exit:
 ; GCN: [[INNER_LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
 ; GFX908_A: v_mfma_f32_32x32x1f32
-; GFX940:   v_mfma_f32_32x32x1_2b_f32
+; GFX942:   v_mfma_f32_32x32x1_2b_f32
 ; GCN-NOT:  v_accvgpr
 ; GCN:      s_cbranch_scc1 [[INNER_LOOP]]
 ; GCN-NOT:  v_accvgpr

@@ -2,6 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-library %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: [[float:%[0-9]+]] = OpTypeFloat 32
+; CHECK-DAG: [[v2float:%[0-9]+]] = OpTypeVector [[float]] 2
 ; CHECK-DAG: [[v4float:%[0-9]+]] = OpTypeVector [[float]] 4
 ; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[int]] 0
@@ -10,10 +11,11 @@
 ; CHECK-DAG: [[twenty_three:%[0-9]+]] = OpConstant [[int]] 23
 ; CHECK-DAG: [[ImageType:%[0-9]+]] = OpTypeImage [[float]] Buffer 2 0 0 2 Rgba32f 
 ; CHECK-DAG: [[ImagePtr:%[0-9]+]] = OpTypePointer UniformConstant [[ImageType]]
-; CHECK: [[Var:%[0-9]+]] = OpVariable [[ImagePtr]] UniformConstant
+; CHECK-DAG: [[Var:%[0-9]+]] = OpVariable [[ImagePtr]] UniformConstant
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
-define void @main() local_unnamed_addr #0 {
+; CHECK: OpFunction
+define void @main_scalar() local_unnamed_addr #0 {
 entry:
 ; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
   %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
@@ -47,6 +49,86 @@ bb_both:
 ; CHECK: OpImageWrite [[H]] [[twenty]] [[V]]
   %5 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 20)
   store float %4, ptr %5, align 4
+  ret void
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; CHECK: OpFunction
+define void @main_vector2() local_unnamed_addr #0 {
+entry:
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+
+; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[one]]
+; CHECK: [[E0:%[0-9]+]] = OpCompositeExtract [[float]] [[R]] 0
+; CHECK: [[E1:%[0-9]+]] = OpCompositeExtract [[float]] [[R]] 1
+; CHECK: [[V:%[0-9]+]] = OpCompositeConstruct [[v2float]] [[E0]] [[E1]]
+  %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 1)
+  %1 = load <2 x float>, ptr %0, align 4
+; CHECK: OpBranch [[bb_store:%[0-9]+]]
+  br label %bb_store
+
+; CHECK: [[bb_store]] = OpLabel
+bb_store:
+
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+; CHECK: OpImageWrite [[H]] [[zero]] [[V]]
+  %2 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 0)
+  store <2 x float> %1, ptr %2, align 4
+; CHECK: OpBranch [[bb_both:%[0-9]+]]
+  br label %bb_both
+
+; CHECK: [[bb_both]] = OpLabel
+bb_both:
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[twenty_three]]
+; CHECK: [[E0:%[0-9]+]] = OpCompositeExtract [[float]] [[R]] 0
+; CHECK: [[E1:%[0-9]+]] = OpCompositeExtract [[float]] [[R]] 1
+; CHECK: [[V:%[0-9]+]] = OpCompositeConstruct [[v2float]] [[E0]] [[E1]]
+  %3 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 23)
+  %4 = load <2 x float>, ptr %3, align 4
+
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+; CHECK: OpImageWrite [[H]] [[twenty]] [[V]]
+  %5 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 20)
+  store <2 x float> %4, ptr %5, align 4
+  ret void
+}
+
+; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
+; CHECK: OpFunction
+define void @main_vector4() local_unnamed_addr #0 {
+entry:
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+  %s_h.i = tail call target("spirv.Image", float, 5, 2, 0, 0, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0t(i32 3, i32 5, i32 1, i32 0, i1 false)
+
+; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[one]]
+  %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 1)
+  %1 = load <4 x float>, ptr %0, align 4
+; CHECK: OpBranch [[bb_store:%[0-9]+]]
+  br label %bb_store
+
+; CHECK: [[bb_store]] = OpLabel
+bb_store:
+
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+; CHECK: OpImageWrite [[H]] [[zero]] [[R]]
+  %2 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 0)
+  store <4 x float> %1, ptr %2, align 4
+; CHECK: OpBranch [[bb_both:%[0-9]+]]
+  br label %bb_both
+
+; CHECK: [[bb_both]] = OpLabel
+bb_both:
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+; CHECK: [[R:%[0-9]+]] = OpImageRead [[v4float]] [[H]] [[twenty_three]]
+  %3 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 23)
+  %4 = load <4 x float>, ptr %3, align 4
+
+; CHECK: [[H:%[0-9]+]] = OpLoad [[ImageType]] [[Var]]
+; CHECK: OpImageWrite [[H]] [[twenty]] [[R]]
+  %5 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", float, 5, 2, 0, 0, 2, 1) %s_h.i, i32 20)
+  store <4 x float> %4, ptr %5, align 4
   ret void
 }
 

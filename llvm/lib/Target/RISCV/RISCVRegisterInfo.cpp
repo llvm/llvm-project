@@ -286,7 +286,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
   // instruction.  This saves 1 instruction over the full lui/addi+add fallback
   // path.  We avoid anything which can be done with a single lui as it might
   // be compressible.  Note that the sh1add case is fully covered by the 2x addi
-  // case just above and is thus ommitted.
+  // case just above and is thus omitted.
   if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
     unsigned Opc = 0;
     if (isShiftedInt<12, 3>(Val)) {
@@ -808,6 +808,11 @@ RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
                  !DisableCostPerUse
              ? 1
              : 0;
+}
+
+float RISCVRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return getRegClassWeight(RC).RegWeight;
 }
 
 // Add two address hints to improve chances of being able to use a compressed

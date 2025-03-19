@@ -10,6 +10,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_dl_phdr_info
+  HDRS
+    struct_dl_phdr_info.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_dl_phdr_info
+)
+
+add_proxy_header_library(
   ldiv_t
   HDRS
     ldiv_t.h
@@ -248,15 +256,6 @@ add_proxy_header_library(
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.locale_t
     libc.include.locale
-)
-
-add_proxy_header_library(
-  sighandler_t
-  HDRS
-    sighandler_t.h
-  FULL_BUILD_DEPENDS
-    libc.include.llvm-libc-types.__sighandler_t
-    libc.include.signal
 )
 
 add_proxy_header_library(

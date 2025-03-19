@@ -23,7 +23,7 @@
 # GCN-GCNTRACKER: S_ENDPGM
 
 # When using the GCN Trackers, the scheduler is able to acieve desired occupancy without running high-RP-reschedule stage. However, the RP is still high,
-# and RA is unable to allocate without spills. By running the high-RP-reschedule schedule we would have furhter decreased RP, which provides increased 
+# and RA is unable to allocate without spills. By running the high-RP-reschedule schedule we would have furhter decreased RP, which provides increased
 # flexibility for RA.
 
 ---
@@ -72,7 +72,7 @@ body:             |
     %33:vgpr_32 = V_CVT_U32_F32_e64 0, %32, 0, 0, implicit $mode, implicit $exec
     undef %34.sub0:sgpr_256 = S_MOV_B32 0
     %35:sreg_32 = S_SUB_I32 0, %29, implicit-def dead $scc
-    %36:sreg_32 = V_READFIRSTLANE_B32 %33, implicit $exec
+    %36:sreg_32_xm0 = V_READFIRSTLANE_B32 %33, implicit $exec
     %37:sreg_32 = S_MUL_I32 %35, %36
     %38:sreg_32 = S_MUL_HI_U32 %36, %37
     %39:sreg_32 = S_ADD_I32 %36, %38, implicit-def dead $scc
@@ -99,7 +99,7 @@ body:             |
     %58:vgpr_32 = V_MUL_F32_e64 0, 1333788670, 0, %57, 0, 0, implicit $mode, implicit $exec
     %59:vgpr_32 = V_CVT_U32_F32_e64 0, %58, 0, 0, implicit $mode, implicit $exec
     %60:sreg_32 = S_SUB_I32 0, %55, implicit-def dead $scc
-    %61:sreg_32 = V_READFIRSTLANE_B32 %59, implicit $exec
+    %61:sreg_32_xm0 = V_READFIRSTLANE_B32 %59, implicit $exec
     %62:sreg_32 = S_MUL_I32 %60, %61
     %63:sreg_32 = S_MUL_HI_U32 %61, %62
     %64:sreg_32 = S_ADD_I32 %61, %63, implicit-def dead $scc
@@ -127,7 +127,7 @@ body:             |
     %84:vgpr_32 = V_MUL_F32_e64 0, 1333788670, 0, %83, 0, 0, implicit $mode, implicit $exec
     %85:vgpr_32 = V_CVT_U32_F32_e64 0, %84, 0, 0, implicit $mode, implicit $exec
     %86:sreg_32 = S_SUB_I32 0, %81, implicit-def dead $scc
-    %87:sreg_32 = V_READFIRSTLANE_B32 %85, implicit $exec
+    %87:sreg_32_xm0 = V_READFIRSTLANE_B32 %85, implicit $exec
     %88:sreg_32 = S_MUL_I32 %86, %87
     %89:sreg_32 = S_MUL_HI_U32 %87, %88
     %90:sreg_32 = S_ADD_I32 %87, %89, implicit-def dead $scc
@@ -175,7 +175,7 @@ body:             |
     %127:vgpr_32 = V_MUL_F32_e64 0, 1333788670, 0, %126, 0, 0, implicit $mode, implicit $exec
     %128:vgpr_32 = V_CVT_U32_F32_e64 0, %127, 0, 0, implicit $mode, implicit $exec
     %129:sreg_32 = S_SUB_I32 0, %124, implicit-def dead $scc
-    %130:sreg_32 = V_READFIRSTLANE_B32 %128, implicit $exec
+    %130:sreg_32_xm0 = V_READFIRSTLANE_B32 %128, implicit $exec
     %131:sreg_32 = S_MUL_I32 %129, %130
     %132:sreg_32 = S_MUL_HI_U32 %130, %131
     %133:sreg_32 = S_ADD_I32 %130, %132, implicit-def dead $scc

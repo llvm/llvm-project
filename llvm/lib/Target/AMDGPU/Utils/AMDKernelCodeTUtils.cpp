@@ -452,7 +452,7 @@ bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
     return true;
   }
   auto Parser = getParserTable()[Idx];
-  return Parser ? Parser(*this, MCParser, Err) : false;
+  return Parser && Parser(*this, MCParser, Err);
 }
 
 void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx,

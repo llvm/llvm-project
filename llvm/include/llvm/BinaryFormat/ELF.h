@@ -814,7 +814,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
   EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
   EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40   = 0x040,
   EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
   EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
   EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
@@ -825,7 +825,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
@@ -1299,8 +1299,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -1798,6 +1801,7 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
   GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+  GNU_PROPERTY_RISCV_FEATURE_1_AND = 0xc0000000,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
   GNU_PROPERTY_X86_FEATURE_2_NEEDED = GNU_PROPERTY_X86_UINT32_OR_LO + 1,
@@ -1860,6 +1864,13 @@ enum : unsigned {
   GNU_PROPERTY_X86_ISA_1_V2 = 1 << 1,
   GNU_PROPERTY_X86_ISA_1_V3 = 1 << 2,
   GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
+};
+
+// RISC-V processor feature bits.
+enum : unsigned {
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED = 1 << 0,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS = 1 << 1,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG = 1 << 2,
 };
 
 // FreeBSD note types.

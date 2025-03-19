@@ -5032,7 +5032,6 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
-  case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
   case UTT_IsRvalueReference:
   case UTT_IsMemberFunctionPointer:
@@ -5065,6 +5064,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
 
   // This type trait always returns false, checking the type is moot.
   case UTT_IsInterfaceClass:
+    return true;
+
+  // We diagnose incomplete class types later.
+  case UTT_StructuredBindingSize:
     return true;
 
   // C++14 [meta.unary.prop]:
@@ -5679,8 +5682,6 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T.isTriviallyRelocatableType(C);
   case UTT_IsBitwiseCloneable:
     return T.isBitwiseCloneableType(C);
-  case UTT_IsReferenceable:
-    return T.isReferenceable();
   case UTT_CanPassInRegs:
     if (CXXRecordDecl *RD = T->getAsCXXRecordDecl(); RD && !T.hasQualifiers())
       return RD->canPassInRegisters();
@@ -5814,6 +5815,34 @@ static ExprResult CheckConvertibilityForTypeTraits(
     return ExprError();
 
   return Result;
+}
+
+static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
+                                      SourceLocation KWLoc,
+                                      ArrayRef<TypeSourceInfo *> Args,
+                                      SourceLocation RParenLoc,
+                                      bool IsDependent) {
+  if (IsDependent)
+    return APValue();
+
+  switch (Kind) {
+  case TypeTrait::UTT_StructuredBindingSize: {
+    QualType T = Args[0]->getType();
+    SourceRange ArgRange = Args[0]->getTypeLoc().getSourceRange();
+    std::optional<unsigned> Size =
+        S.GetDecompositionElementCount(T, ArgRange.getBegin());
+    if (!Size) {
+      S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
+      return APValue();
+    }
+    llvm::APSInt V =
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
+    return APValue{V};
+    break;
+  }
+  default:
+    llvm_unreachable("Not a SizeT type trait");
+  }
 }
 
 static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
@@ -6017,9 +6046,12 @@ bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
 
 enum class TypeTraitReturnType {
   Bool,
+  SizeT,
 };
 
 static TypeTraitReturnType GetReturnType(TypeTrait Kind) {
+  if (Kind == TypeTrait::UTT_StructuredBindingSize)
+    return TypeTraitReturnType::SizeT;
   return TypeTraitReturnType::Bool;
 }
 
@@ -6049,6 +6081,12 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                            Dependent);
     return TypeTraitExpr::Create(Context, Context.getLogicalOperationType(),
                                  KWLoc, Kind, Args, RParenLoc, Result);
+  }
+  case TypeTraitReturnType::SizeT: {
+    APValue Result =
+        EvaluateSizeTTypeTrait(*this, Kind, KWLoc, Args, RParenLoc, Dependent);
+    return TypeTraitExpr::Create(Context, Context.getSizeType(), KWLoc, Kind,
+                                 Args, RParenLoc, Result);
   }
   }
   llvm_unreachable("unhandled type trait return type");

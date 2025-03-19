@@ -28,15 +28,17 @@ using namespace ompx;
 ///{
 
 /// External symbol to access dynamic shared memory.
-[[gnu::aligned(allocator::ALIGNMENT)]] extern unsigned char
-    [[clang::address_space(3)]] DynamicSharedBuffer[];
+[[gnu::aligned(
+    allocator::ALIGNMENT)]] extern Local<unsigned char> DynamicSharedBuffer[];
 
 /// The kernel environment passed to the init method by the compiler.
-static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
+[[clang::loader_uninitialized]] static Local<KernelEnvironmentTy *>
+    KernelEnvironmentPtr;
 
 /// The kernel launch environment passed as argument to the kernel by the
 /// runtime.
-static KernelLaunchEnvironmentTy *SHARED(KernelLaunchEnvironmentPtr);
+[[clang::loader_uninitialized]] static Local<KernelLaunchEnvironmentTy *>
+    KernelLaunchEnvironmentPtr;
 
 ///}
 
@@ -87,8 +89,8 @@ private:
   /// Compute the size of the storage space reserved for a thread.
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
-    return utils::alignDown((state::SharedScratchpadSize / NumLanesInBlock),
-                            allocator::ALIGNMENT);
+    return __builtin_align_down(state::SharedScratchpadSize / NumLanesInBlock,
+                                allocator::ALIGNMENT);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -108,7 +110,8 @@ static_assert(state::SharedScratchpadSize / mapping::MaxThreadsPerTeam <= 256,
               "Shared scratchpad of this size not supported yet.");
 
 /// The allocation of a single shared memory scratchpad.
-static SharedMemorySmartStackTy SHARED(SharedMemorySmartStack);
+[[clang::loader_uninitialized]] static Local<SharedMemorySmartStackTy>
+    SharedMemorySmartStack;
 
 void SharedMemorySmartStackTy::init(bool IsSPMD) {
   Usage[mapping::getThreadIdInBlock()] = 0;
@@ -118,7 +121,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
   /// FIXME: The stack shouldn't require worst-case padding. Alignment needs to
   /// be passed in as an argument and the stack rewritten to support it.
-  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = __builtin_align_up(Bytes, allocator::ALIGNMENT);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -146,7 +149,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
-  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = __builtin_align_up(Bytes, allocator::ALIGNMENT);
   if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
@@ -220,8 +223,10 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
 
-state::TeamStateTy SHARED(ompx::state::TeamState);
-state::ThreadStateTy **SHARED(ompx::state::ThreadStates);
+[[clang::loader_uninitialized]] Local<state::TeamStateTy>
+    ompx::state::TeamState;
+[[clang::loader_uninitialized]] Local<state::ThreadStateTy **>
+    ompx::state::ThreadStates;
 
 namespace {
 
@@ -449,10 +454,10 @@ void *llvm_omp_get_dynamic_shared() { return __kmpc_get_dynamic_shared(); }
 /// NUM_SHARED_VARIABLES_IN_SHARED_MEM we will malloc space for communication.
 constexpr uint64_t NUM_SHARED_VARIABLES_IN_SHARED_MEM = 64;
 
-[[clang::loader_uninitialized]] static void *[[clang::address_space(
-    3)]] SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
-[[clang::loader_uninitialized]] static void **[[clang::address_space(
-    3)]] SharedMemVariableSharingSpacePtr;
+[[clang::loader_uninitialized]] static Local<void *>
+    SharedMemVariableSharingSpace[NUM_SHARED_VARIABLES_IN_SHARED_MEM];
+[[clang::loader_uninitialized]] static Local<void **>
+    SharedMemVariableSharingSpacePtr;
 
 void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   if (nArgs <= NUM_SHARED_VARIABLES_IN_SHARED_MEM) {

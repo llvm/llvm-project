@@ -39,8 +39,8 @@ MCInst LoongArchInstrInfo::getNop() const {
 
 void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     const DebugLoc &DL, MCRegister DstReg,
-                                     MCRegister SrcReg, bool KillSrc,
+                                     const DebugLoc &DL, Register DstReg,
+                                     Register SrcReg, bool KillSrc,
                                      bool RenamableDest,
                                      bool RenamableSrc) const {
   if (LoongArch::GPRRegClass.contains(DstReg, SrcReg)) {

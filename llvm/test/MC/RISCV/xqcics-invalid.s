@@ -4,7 +4,8 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcics < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-EXT %s
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selecteqi 9, 15, x4, x3
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -17,7 +18,8 @@ qc.selecteqi x9, 16, x4, x3
 qc.selecteqi x9, 15, x4, x3
 
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selectieq 8, x4, x3, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -30,7 +32,8 @@ qc.selectieq x8, x4, x3, 17
 qc.selectieq x8, x4, x3, 12
 
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectieqi 9, 11, x3, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -46,7 +49,8 @@ qc.selectieqi x9, 11, x3, 18
 qc.selectieqi x9, 11, x3, 12
 
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectiieq 9, x3, 11, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -62,7 +66,8 @@ qc.selectiieq x9, x3, 11, 17
 qc.selectiieq x9, x3, 11, 12
 
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectiine 8, x3, 10, 11
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -78,7 +83,8 @@ qc.selectiine x8, x3, 12, 18
 qc.selectiine x8, x3, 10, 11
 
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selectine 8, x3, x4, 11
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -91,7 +97,8 @@ qc.selectine x8, x3, x4, 16
 qc.selectine x8, x3, x4, 11
 
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectinei 8, 11, x3, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -107,7 +114,8 @@ qc.selectinei x8, 11, x3, 18
 qc.selectinei x8, 11, x3, 12
 
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selectnei 8, 11, x3, x5
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction

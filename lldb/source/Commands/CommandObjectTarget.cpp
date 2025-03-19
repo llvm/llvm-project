@@ -57,6 +57,7 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
 #include "clang/Frontend/CompilerInstance.h"
@@ -803,7 +804,9 @@ public:
 protected:
   void DumpGlobalVariableList(const ExecutionContext &exe_ctx,
                               const SymbolContext &sc,
-                              const VariableList &variable_list, Stream &s) {
+                              const VariableList &variable_list,
+                              CommandReturnObject &result) {
+    Stream &s = result.GetOutputStream();
     if (variable_list.Empty())
       return;
     if (sc.module_sp) {
@@ -824,15 +827,16 @@ protected:
       ValueObjectSP valobj_sp(ValueObjectVariable::Create(
           exe_ctx.GetBestExecutionContextScope(), var_sp));
 
-      if (valobj_sp)
+      if (valobj_sp) {
+        result.GetValueObjectList().Append(valobj_sp);
         DumpValueObject(s, var_sp, valobj_sp, var_sp->GetName().GetCString());
+      }
     }
   }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
     const size_t argc = args.GetArgumentCount();
-    Stream &s = result.GetOutputStream();
 
     if (argc > 0) {
       for (const Args::ArgEntry &arg : args) {
@@ -874,7 +878,7 @@ protected:
                     m_exe_ctx.GetBestExecutionContextScope(), var_sp);
 
               if (valobj_sp)
-                DumpValueObject(s, var_sp, valobj_sp,
+                DumpValueObject(result.GetOutputStream(), var_sp, valobj_sp,
                                 use_var_name ? var_sp->GetName().GetCString()
                                              : arg.c_str());
             }
@@ -903,7 +907,8 @@ protected:
             if (comp_unit_varlist_sp) {
               size_t count = comp_unit_varlist_sp->GetSize();
               if (count > 0) {
-                DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp, s);
+                DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp,
+                                       result);
                 success = true;
               }
             }
@@ -964,7 +969,8 @@ protected:
             VariableListSP comp_unit_varlist_sp(
                 sc.comp_unit->GetVariableList(can_create));
             if (comp_unit_varlist_sp)
-              DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp, s);
+              DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp,
+                                     result);
           } else if (sc.module_sp) {
             // Get all global variables for this module
             lldb_private::RegularExpression all_globals_regex(
@@ -972,7 +978,7 @@ protected:
             VariableList variable_list;
             sc.module_sp->FindGlobalVariables(all_globals_regex, UINT32_MAX,
                                               variable_list);
-            DumpGlobalVariableList(m_exe_ctx, sc, variable_list, s);
+            DumpGlobalVariableList(m_exe_ctx, sc, variable_list, result);
           }
         }
       }
@@ -3474,6 +3480,17 @@ public:
         m_type = eLookupTypeFunctionOrSymbol;
         break;
 
+      case 'c':
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, false, &success);
+        if (success) {
+          m_cached = value;
+        } else {
+          return Status::FromErrorStringWithFormatv(
+              "invalid boolean value '%s' passed for -c option", option_arg);
+        }
+        break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -3485,6 +3502,7 @@ public:
       m_type = eLookupTypeInvalid;
       m_str.clear();
       m_addr = LLDB_INVALID_ADDRESS;
+      m_cached = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -3497,6 +3515,7 @@ public:
                                      // parsing options
     std::string m_str; // Holds name lookup
     lldb::addr_t m_addr = LLDB_INVALID_ADDRESS; // Holds the address to lookup
+    bool m_cached = true;
   };
 
   CommandObjectTargetModulesShowUnwind(CommandInterpreter &interpreter)
@@ -3583,9 +3602,12 @@ protected:
       if (abi)
         start_addr = abi->FixCodeAddress(start_addr);
 
-      FuncUnwindersSP func_unwinders_sp(
-          sc.module_sp->GetUnwindTable()
-              .GetUncachedFuncUnwindersContainingAddress(start_addr, sc));
+      UnwindTable &uw_table = sc.module_sp->GetUnwindTable();
+      FuncUnwindersSP func_unwinders_sp =
+          m_options.m_cached
+              ? uw_table.GetFuncUnwindersContainingAddress(start_addr, sc)
+              : uw_table.GetUncachedFuncUnwindersContainingAddress(start_addr,
+                                                                   sc);
       if (!func_unwinders_sp)
         continue;
 
@@ -3741,20 +3763,18 @@ protected:
 
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
-        UnwindPlan arch_default(lldb::eRegisterKindGeneric);
-        if (abi_sp->CreateDefaultUnwindPlan(arch_default)) {
+        if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
-          arch_default.Dump(result.GetOutputStream(), thread.get(),
-                            LLDB_INVALID_ADDRESS);
+          plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                        LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
 
-        UnwindPlan arch_entry(lldb::eRegisterKindGeneric);
-        if (abi_sp->CreateFunctionEntryUnwindPlan(arch_entry)) {
+        if (UnwindPlanSP plan_sp = abi_sp->CreateFunctionEntryUnwindPlan()) {
           result.GetOutputStream().Printf(
               "Arch default at entry point UnwindPlan:\n");
-          arch_entry.Dump(result.GetOutputStream(), thread.get(),
-                          LLDB_INVALID_ADDRESS);
+          plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                        LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
       }
@@ -4902,11 +4922,13 @@ Filter Options:
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-    if (output_sp && interactive) {
-      output_sp->PutCString(
-          "Enter your stop hook command(s).  Type 'DONE' to end.\n");
-      output_sp->Flush();
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(
+            "Enter your stop hook command(s).  Type 'DONE' to end.\n");
+      }
     }
   }
 
@@ -4914,12 +4936,12 @@ protected:
                               std::string &line) override {
     if (m_stop_hook_sp) {
       if (line.empty()) {
-        StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
-        if (error_sp) {
-          error_sp->Printf("error: stop hook #%" PRIu64
-                           " aborted, no commands.\n",
-                           m_stop_hook_sp->GetID());
-          error_sp->Flush();
+        if (lldb::LockableStreamFileSP error_sp =
+                io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: stop hook #%" PRIu64
+                               " aborted, no commands.\n",
+                               m_stop_hook_sp->GetID());
         }
         GetTarget().UndoCreateStopHook(m_stop_hook_sp->GetID());
       } else {
@@ -4928,11 +4950,11 @@ protected:
             static_cast<Target::StopHookCommandLine *>(m_stop_hook_sp.get());
 
         hook_ptr->SetActionFromString(line);
-        StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
-        if (output_sp) {
-          output_sp->Printf("Stop hook #%" PRIu64 " added.\n",
-                            m_stop_hook_sp->GetID());
-          output_sp->Flush();
+        if (lldb::LockableStreamFileSP output_sp =
+                io_handler.GetOutputStreamFileSP()) {
+          LockedStreamFile locked_stream = output_sp->Lock();
+          locked_stream.Printf("Stop hook #%" PRIu64 " added.\n",
+                               m_stop_hook_sp->GetID());
         }
       }
       m_stop_hook_sp.reset();
