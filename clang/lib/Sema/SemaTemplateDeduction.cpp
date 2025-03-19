@@ -4123,6 +4123,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
 
   // If the template is an operator function template, check that the
   // resulting specialization is a valid operator function.
+  // Invalid specializations are eliminated from the candidate set,
+  // per C++2c [temp.over] p1.2.
   switch (Specialization->getOverloadedOperator()) {
   case OO_None:
   case OO_New:

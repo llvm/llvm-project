@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wno-anonymous-pack-parens %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
 namespace ParamTypes {
 
@@ -91,22 +91,22 @@ void operator/(Bad, int, auto);    // expected-error {{overloaded 'operator/' mu
 void operator/(Bad, int, auto...); // expected-error {{overloaded 'operator/' must be a binary operator (has 3 parameters)}}
 
 class C;
-int operator+(auto*);         // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator-(auto[]);        // expected-error {{overloaded 'operator-' must have at least one parameter of class or enumeration type}}
-int operator+(auto());        // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto C::*);     // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto*&);        // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto (&)[]);    // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto (&)());    // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto C::*&);    // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto*...);      // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator-(auto... _[]);   // expected-error {{overloaded 'operator-' must have at least one parameter of class or enumeration type}}
-int operator+(auto...());     // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto C::*...);  // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto*&...);     // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto (&...)[]); // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto (&...)()); // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
-int operator+(auto C::*&...); // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto*);          // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator-(auto[]);         // expected-error {{overloaded 'operator-' must have at least one parameter of class or enumeration type}}
+int operator+(auto());         // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto C::*);      // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto*&);         // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto (&)[]);     // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto (&)());     // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto C::*&);     // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto*...);       // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator-(auto... _[]);    // expected-error {{overloaded 'operator-' must have at least one parameter of class or enumeration type}}
+int operator+(auto...());      // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto C::*...);   // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto*&...);      // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto (&..._)[]); // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto (&..._)()); // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
+int operator+(auto C::*&...);  // expected-error {{overloaded 'operator+' must have at least one parameter of class or enumeration type}}
 
 int operator++(auto);
 int operator++(auto...);
