@@ -62,6 +62,11 @@ bool RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurKind Kind) {
   return (Kind != RecurKind::None) && !isIntegerRecurrenceKind(Kind);
 }
 
+bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurKind Kind) {
+  return (Kind != RecurKind::None) && !isMinMaxRecurrenceKind(Kind) &&
+         !isAnyOfRecurrenceKind(Kind);
+}
+
 /// Determines if Phi may have been type-promoted. If Phi has a single user
 /// that ANDs the Phi with a type mask, return the user. RT is updated to
 /// account for the narrower bit width represented by the mask, and the AND
@@ -1166,7 +1171,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
 SmallVector<Instruction *, 4>
 RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   SmallVector<Instruction *, 4> ReductionOperations;
-  unsigned RedOp = getOpcode();
+  assert(Kind != RecurKind::None && "Unexpected recurrence kind");
+  bool IsNonArithmetic = !isArithmeticRecurrenceKind(Kind);
 
   // Search down from the Phi to the LoopExitInstr, looking for instructions
   // with a single user of the correct type for the reduction.
@@ -1184,7 +1190,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
   // more expensive than out-of-loop reductions, and need to be costed more
   // carefully.
   unsigned ExpectedUses = 1;
-  if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp)
+  if (IsNonArithmetic)
     ExpectedUses = 2;
 
   auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
@@ -1192,7 +1198,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
       Instruction *UI = cast<Instruction>(User);
       if (isa<PHINode>(UI))
         continue;
-      if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp) {
+      if (IsNonArithmetic) {
         // We are expecting a icmp/select pair, which we go to the next select
         // instruction if we can. We already know that Cur has 2 uses.
         if (isa<SelectInst>(UI))
@@ -1204,7 +1210,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     return nullptr;
   };
   auto isCorrectOpcode = [&](Instruction *Cur) {
-    if (RedOp == Instruction::ICmp || RedOp == Instruction::FCmp) {
+    if (IsNonArithmetic) {
       Value *LHS, *RHS;
       return SelectPatternResult::isMinOrMax(
           matchSelectPattern(Cur, LHS, RHS).Flavor);
@@ -1213,7 +1219,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     if (isFMulAddIntrinsic(Cur))
       return true;
 
-    return Cur->getOpcode() == RedOp;
+    return Cur->getOpcode() == getOpcode();
   };
 
   // Attempt to look through Phis which are part of the reduction chain
