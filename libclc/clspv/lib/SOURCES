@@ -17,7 +17,6 @@ subnormal_config.cl
 ../../generic/lib/math/atanpi.cl
 ../../generic/lib/math/cbrt.cl
 ../../generic/lib/math/clc_exp10.cl
-../../generic/lib/math/clc_fmod.cl
 ../../generic/lib/math/clc_pow.cl
 ../../generic/lib/math/clc_pown.cl
 ../../generic/lib/math/clc_powr.cl
