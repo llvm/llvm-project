@@ -275,19 +275,45 @@ set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
   find_program(CCACHE_PROGRAM ccache)
   if(CCACHE_PROGRAM)
+    # ccache --version example output: "ccache version 4.9.1\n(..)"
+    execute_process(COMMAND ${CCACHE_PROGRAM} --version OUTPUT_VARIABLE CCACHE_VERSION_STR)
+    # Strip the prefix before the version number, taking some extra characters
+    string(SUBSTRING "${CCACHE_VERSION_STR}" 15 10 CCACHE_VERSION_STR)
+    string(FIND "${CCACHE_VERSION_STR}" "\n" CCACHE_VERSION_ENDPOS)
+    # Extract the actual version number
+    string(SUBSTRING "${CCACHE_VERSION_STR}" 0 "${CCACHE_VERSION_ENDPOS}" CCACHE_VERSION)
+
     set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
     set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-    set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
-        CACHE STRING "Parameters to pass through to ccache")
 
-    set(launcher_params ${LLVM_CCACHE_PARAMS})
-    if (CCACHE_MAXSIZE)
-      set(launcher_params "max_size=${CCACHE_MAXSIZE};${launcher_params}")
-    endif ()
-    if (CCACHE_DIR)
-      set(launcher_params "cache_dir=${CCACHE_DIR};${launcher_params}")
-    endif ()
-    set(launcher "${CCACHE_PROGRAM};${launcher_params}")
+    # ccache only supports passing options on the command line from version 4.8.0
+    # use a workaround with ad-hoc environment variables for older versions
+    if (CCACHE_VERSION VERSION_LESS "4.8.0")
+      set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes;CCACHE_HASHDIR=yes;CCACHE_SLOPPINESS=pch_defines,time_macros"
+          CACHE STRING "Parameters to pass through to ccache")
+
+      set(launcher_params ${LLVM_CCACHE_PARAMS})
+      if (CCACHE_MAXSIZE)
+        set(launcher_params "CCACHE_MAXSIZE=${CCACHE_MAXSIZE};${launcher_params}")
+      endif()
+      if (CCACHE_DIR)
+        set(launcher_params "CCACHE_DIR=${CCACHE_DIR};${launcher_params}")
+      endif()
+      set(launcher "${launcher_params};${CCACHE_PROGRAM}")
+    else()
+      set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true;sloppiness=pch_defines,time_macros"
+          CACHE STRING "Parameters to pass through to ccache")
+
+      set(launcher_params ${LLVM_CCACHE_PARAMS})
+      if (CCACHE_MAXSIZE)
+        set(launcher_params "max_size=${CCACHE_MAXSIZE};${launcher_params}")
+      endif()
+      if (CCACHE_DIR)
+        set(launcher_params "cache_dir=${CCACHE_DIR};${launcher_params}")
+      endif()
+      set(launcher "${CCACHE_PROGRAM};${launcher_params}")
+    endif()
+
     set(CMAKE_C_COMPILER_LAUNCHER ${launcher})
     set(CMAKE_CXX_COMPILER_LAUNCHER ${launcher})
   else()
