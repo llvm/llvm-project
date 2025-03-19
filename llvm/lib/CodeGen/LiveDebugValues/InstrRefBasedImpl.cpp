@@ -99,7 +99,6 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -270,12 +269,12 @@ public:
   TransferTracker(const TargetInstrInfo *TII, MLocTracker *MTracker,
                   MachineFunction &MF, const DebugVariableMap &DVMap,
                   const TargetRegisterInfo &TRI,
-                  const BitVector &CalleeSavedRegs, const TargetPassConfig &TPC)
+                  const BitVector &CalleeSavedRegs,
+                  bool ShouldEmitDebugEntryValues)
       : TII(TII), MTracker(MTracker), MF(MF), DVMap(DVMap), TRI(TRI),
         CalleeSavedRegs(CalleeSavedRegs) {
     TLI = MF.getSubtarget().getTargetLowering();
-    auto &TM = TPC.getTM<TargetMachine>();
-    ShouldEmitDebugEntryValues = TM.Options.ShouldEmitDebugEntryValues();
+    this->ShouldEmitDebugEntryValues = ShouldEmitDebugEntryValues;
   }
 
   bool isCalleeSaved(LocIdx L) const {
@@ -3547,9 +3546,9 @@ bool InstrRefBasedLDV::depthFirstVLocAndEmit(
     const ScopeToVarsT &ScopeToVars, ScopeToAssignBlocksT &ScopeToAssignBlocks,
     LiveInsT &Output, FuncValueTable &MOutLocs, FuncValueTable &MInLocs,
     SmallVectorImpl<VLocTracker> &AllTheVLocs, MachineFunction &MF,
-    const TargetPassConfig &TPC) {
-  TTracker =
-      new TransferTracker(TII, MTracker, MF, DVMap, *TRI, CalleeSavedRegs, TPC);
+    bool ShouldEmitDebugEntryValues) {
+  TTracker = new TransferTracker(TII, MTracker, MF, DVMap, *TRI,
+                                 CalleeSavedRegs, ShouldEmitDebugEntryValues);
   unsigned NumLocs = MTracker->getNumLocs();
   VTracker = nullptr;
 
@@ -3692,7 +3691,7 @@ bool InstrRefBasedLDV::emitTransfers() {
 /// extend ranges across basic blocks.
 bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
                                     MachineDominatorTree *DomTree,
-                                    TargetPassConfig *TPC,
+                                    bool ShouldEmitDebugEntryValues,
                                     unsigned InputBBLimit,
                                     unsigned InputDbgValLimit) {
   // No subprogram means this function contains no debuginfo.
@@ -3700,7 +3699,6 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
     return false;
 
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");
-  this->TPC = TPC;
 
   this->DomTree = DomTree;
   TRI = MF.getSubtarget().getRegisterInfo();
@@ -3841,7 +3839,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
     // the "else" block of this condition.
     Changed = depthFirstVLocAndEmit(
         MaxNumBlocks, ScopeToDILocation, ScopeToVars, ScopeToAssignBlocks,
-        SavedLiveIns, MOutLocs, MInLocs, vlocs, MF, *TPC);
+        SavedLiveIns, MOutLocs, MInLocs, vlocs, MF, ShouldEmitDebugEntryValues);
   }
 
   delete MTracker;

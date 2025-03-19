@@ -178,9 +178,10 @@ MODULE_PASS_WITH_PARAMS(
     "global-merge", "GlobalMergePass",
     [TM = TM](GlobalMergeOptions Opts) { return GlobalMergePass(TM, Opts); },
     parseGlobalMergeOptions,
-    "group-by-use;ignore-single-use;max-offset=N;merge-const;merge-external;"
-    "no-group-by-use;no-ignore-single-use;no-merge-const;no-merge-external;"
-    "size-only")
+    "group-by-use;ignore-single-use;max-offset=N;merge-const;"
+    "merge-const-aggressive;merge-external;no-group-by-use;"
+    "no-ignore-single-use;no-merge-const;no-merge-const-aggressive;"
+    "no-merge-external;size-only")
 MODULE_PASS_WITH_PARAMS(
     "embed-bitcode", "EmbedBitcodePass",
     [](EmbedBitcodeOptions Opts) { return EmbedBitcodePass(Opts); },
