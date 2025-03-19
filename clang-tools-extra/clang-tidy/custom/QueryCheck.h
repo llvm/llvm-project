@@ -18,10 +18,8 @@
 
 namespace clang::tidy::custom {
 
-/// FIXME: Write a short description.
-///
-/// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/custom/query.html
+/// Implement of Clang-Query based check.
+/// Not directly visible to users.
 class QueryCheck : public ClangTidyCheck {
 public:
   QueryCheck(llvm::StringRef Name, const ClangTidyOptions::CustomCheckValue &V,

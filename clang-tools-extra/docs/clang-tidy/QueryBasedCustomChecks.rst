@@ -8,9 +8,9 @@ Introduction
 This page provides examples of how to add query based custom checks for
 :program:`clang-tidy`.
 
-Custom checks are based on clang-query syntax. Every custom checks will be
-registered in `custom` module to avoid name conflict. They can be enabled or
-disabled by the checks option like the builtin checks.
+Custom checks are based on :program:`clang-query` syntax. Every custom checks
+will be registered in `custom` module to avoid name conflict. They can be
+enabled or disabled by the checks option like the built-in checks.
 
 Custom checks support inheritance from parent configurations like other
 configuration items.

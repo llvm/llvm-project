@@ -91,12 +91,12 @@ void QueryCheck::check(const MatchFinder::MatchResult &Result) {
       diag(Node.getSourceRange().getBegin(), Message, Level);
     }
   };
-  for (auto &[Name, Node] : Result.Nodes.getMap())
+  for (const auto &[Name, Node] : Result.Nodes.getMap())
     Emit(Diags, Name, Node, DiagnosticIDs::Error);
-  for (auto &[Name, Node] : Result.Nodes.getMap())
+  for (const auto &[Name, Node] : Result.Nodes.getMap())
     Emit(Diags, Name, Node, DiagnosticIDs::Warning);
   // place Note last, otherwise it will not be emitted
-  for (auto &[Name, Node] : Result.Nodes.getMap())
+  for (const auto &[Name, Node] : Result.Nodes.getMap())
     Emit(Diags, Name, Node, DiagnosticIDs::Note);
 }
 } // namespace clang::tidy::custom
