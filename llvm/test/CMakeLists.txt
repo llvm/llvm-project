@@ -110,6 +110,7 @@ set(LLVM_TEST_DEPENDS
           llvm-mca
           llvm-ml
           llvm-modextract
+          llvm-module-splitter
           llvm-mt
           llvm-nm
           llvm-objcopy
