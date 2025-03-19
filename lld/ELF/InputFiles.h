@@ -200,7 +200,7 @@ public:
   }
   MutableArrayRef<Symbol *> getMutableGlobalSymbols() {
     return llvm::MutableArrayRef(symbols.get() + firstGlobal,
-                                     numSymbols - firstGlobal);
+                                 numSymbols - firstGlobal);
   }
 
   template <typename ELFT> typename ELFT::ShdrRange getELFShdrs() const {
@@ -270,7 +270,6 @@ public:
                                  const Elf_Shdr &sec);
 
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
-
 
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;

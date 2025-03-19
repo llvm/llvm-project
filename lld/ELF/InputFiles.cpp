@@ -872,10 +872,10 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           !canHaveMemtagGlobals(ctx))
         sections[i] = &InputSection::discarded;
     } break;
-  }
+    }
 
-  // Read a symbol table.
-  initializeSymbols(obj);
+    // Read a symbol table.
+    initializeSymbols(obj);
   }
 }
 
