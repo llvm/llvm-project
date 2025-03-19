@@ -664,7 +664,10 @@ uint32_t Function::GetPrologueByteSize() {
 
         AddressRange entry_range;
         m_block.GetRangeContainingAddress(m_address, entry_range);
-        const addr_t range_start_file_addr = m_address.GetFileAddress();
+
+        // Deliberately not starting at entry_range.GetBaseAddress() because the
+        // function entry point need not be the first address in the range.
+        const addr_t func_start_file_addr = m_address.GetFileAddress();
         const addr_t range_end_file_addr =
             entry_range.GetBaseAddress().GetFileAddress() +
             entry_range.GetByteSize();
@@ -694,11 +697,11 @@ uint32_t Function::GetPrologueByteSize() {
           }
         }
 
-        // Verify that this prologue end file address in the function's address
-        // range just to be sure
-        if (range_start_file_addr < prologue_end_file_addr &&
+        // Verify that this prologue end file address inside the function just
+        // to be sure
+        if (func_start_file_addr < prologue_end_file_addr &&
             prologue_end_file_addr < range_end_file_addr) {
-          m_prologue_byte_size = prologue_end_file_addr - range_start_file_addr;
+          m_prologue_byte_size = prologue_end_file_addr - func_start_file_addr;
         }
 
         if (prologue_end_file_addr < line_zero_end_file_addr &&
