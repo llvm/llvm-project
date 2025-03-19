@@ -97,6 +97,12 @@ static cl::opt<bool>
                                 "specified with -thinlto-emit-indexes or "
                                 "-thinlto-distributed-indexes"));
 
+static cl::opt<bool> DTLTO("dtlto", cl::desc("Perform DTLTO"));
+
+static cl::opt<std::string>
+    DTLTODistributor("dtlto-distributor",
+                     cl::desc("Specify the distributor for DTLTO"));
+
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
 // Use -thinlto-threads=all to use hardware_concurrency() instead, which means
@@ -332,6 +338,10 @@ static int run(int argc, char **argv) {
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
+  if (ThinLTODistributedIndexes && DTLTO)
+    llvm::errs() << "-thinlto-distributed-indexes cannot be specfied together "
+                    "with -dtlto\n";
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -341,7 +351,13 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else
+  else if (DTLTO) {
+
+    Backend = createOutOfProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(Threads),
+        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
+        DTLTODistributor, SaveTemps);
+  } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
@@ -444,7 +460,7 @@ static int run(int argc, char **argv) {
     Cache = check(localCache("ThinLTO", "Thin", CacheDir, AddBuffer),
                   "failed to create cache");
 
-  check(Lto.run(AddStream, Cache), "LTO::run failed");
+  check(Lto.run(AddStream, Cache, AddBuffer), "LTO::run failed");
   return static_cast<int>(HasErrors);
 }
 

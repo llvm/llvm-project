@@ -21,6 +21,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -1741,6 +1742,38 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
+// For DTLTO, bitcode member names must be a valid path to a bitcode file on
+// disk. For thin archives, adjust `memberPath` to the full file path of the
+// archive member. Returns true if an adjustment was made; false otherwise.
+// Non-thin archives are not yet supported.
+static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
+                                               std::string &memberPath) {
+  assert(!archivePath.empty());
+  assert(!ctx.arg.dtltoDistributor.empty());
+
+  // Check if the archive file is a thin archive by reading its header.
+  auto memBufferOrError =
+      MemoryBuffer::getFileSlice(archivePath, sizeof(ThinArchiveMagic) - 1, 0);
+  if (std::error_code ec = memBufferOrError.getError()) {
+    ErrAlways(ctx) << "cannot open " << archivePath << ": " << ec.message();
+    return false;
+  }
+  MemoryBufferRef memBufRef = *memBufferOrError.get();
+  if (!memBufRef.getBuffer().starts_with(ThinArchiveMagic))
+    return false;
+
+  SmallString<64> archiveMemberPath;
+  if (path::is_relative(memberPath)) {
+    archiveMemberPath = path::parent_path(archivePath);
+    path::append(archiveMemberPath, memberPath);
+  } else
+    archiveMemberPath = memberPath;
+
+  path::remove_dots(archiveMemberPath, /*remove_dot_dot=*/true);
+  memberPath = archiveMemberPath.str();
+  return true;
+}
+
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
@@ -1750,7 +1783,6 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   std::string path = mb.getBufferIdentifier().str();
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
-
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
   // causes a collision which result in only one of the objects being taken
@@ -1758,10 +1790,13 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name = archiveName.empty()
-                       ? ss.save(path)
-                       : ss.save(archiveName + "(" + path::filename(path) +
-                                 " at " + utostr(offsetInArchive) + ")");
+  StringRef name =
+      (archiveName.empty() ||
+       (!ctx.arg.dtltoDistributor.empty() &&
+        dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)))
+          ? ss.save(path)
+          : ss.save(archiveName + "(" + path::filename(path) + " at " +
+                    utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);
