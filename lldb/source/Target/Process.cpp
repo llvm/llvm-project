@@ -1069,27 +1069,31 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
   telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
-  // Find the executable-module's UUID, if available.
-  UUID module_uuid;
-  TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
-  if (target_sp) {
-    helper.SetDebugger(&target_sp->GetDebugger());
-    if (ModuleSP mod = target_sp->GetExecutableModule())
-      module_uuid = mod->GetUUID();
+  // Only dispatch telemetry for a non-success case to reduce
+  // chances of slowing down the code.
+  // FIXME: Remove this conditional monitoring as it means we lose the ability
+  // to monitor exit-operations' time for the average case.
+  if (status != 0) {
+    UUID module_uuid;
+    TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
+    if (target_sp) {
+      helper.SetDebugger(&target_sp->GetDebugger());
+      if (ModuleSP mod = target_sp->GetExecutableModule())
+        module_uuid = mod->GetUUID();
+    }
+
+    helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
+      info->module_uuid = module_uuid;
+      info->pid = m_pid;
+      info->is_start_entry = true;
+      info->exit_desc = {status, exit_string.str()};
+    });
+
+    helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
+      info->module_uuid = module_uuid;
+      info->pid = m_pid;
+    });
   }
-
-  helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
-    info->module_uuid = module_uuid;
-    info->pid = m_pid;
-    info->is_start_entry = true;
-    info->exit_desc = {status, exit_string.str()};
-  });
-
-  helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
-    info->module_uuid = module_uuid;
-    info->pid = m_pid;
-  });
-
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
            GetPluginName(), status, exit_string);
