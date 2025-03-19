@@ -960,6 +960,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
+    # link.h entrypoints
+    libc.src.link.dl_iterate_phdr
+
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
