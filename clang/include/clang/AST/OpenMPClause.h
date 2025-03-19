@@ -3772,7 +3772,7 @@ class OMPReductionClause final
   void setPrivateVariableReductionFlags(ArrayRef<bool> Flags) {
     assert(Flags.size() == varlist_size() &&
            "Number of private flags does not match vars");
-    llvm::copy(Flags,getTrailingObjects<bool>());
+    llvm::copy(Flags, getTrailingObjects<bool>());
   }
 
   /// Get the list of help private variable reduction flags

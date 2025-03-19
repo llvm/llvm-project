@@ -18957,7 +18957,8 @@ static bool actOnOMPReductionKindClause(
       // Check if the construct is orphaned (has no enclosing OpenMP context)
       IsOrphaned = ParentDir == OMPD_unknown;
       // OpenMP 6.0: Private DSA check
-      IsPrivate = (S.getLangOpts().OpenMP > 52) &&
+      IsPrivate =
+          (S.getLangOpts().OpenMP > 52) &&
           ((isOpenMPPrivate(DVar.CKind) && DVar.CKind != OMPC_reduction &&
             isOpenMPWorksharingDirective(CurrDir) &&
             !isOpenMPParallelDirective(CurrDir) &&
