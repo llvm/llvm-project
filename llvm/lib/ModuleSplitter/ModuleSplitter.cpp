@@ -41,8 +41,8 @@ Expected<bool> LLVMModuleAndContext::create(
         CreateModule) {
   assert(!Module && "already have a module");
   auto ModuleOr = CreateModule(*Ctx);
-  if (Error Err = ModuleOr.takeError())
-    return Err;
+  if (!ModuleOr)
+    return ModuleOr.takeError();
 
   Module = std::move(*ModuleOr);
   return true;
@@ -216,12 +216,15 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
   // TODO: Not sure how to make lazy loading metadata work.
   LLVMModuleAndContext Result;
   {
-    (void)Result.create(
+    auto CreateOr = Result.create(
         [&](llvm::LLVMContext &Ctx) -> Expected<std::unique_ptr<Module>> {
           return llvm::cantFail(
               llvm::getLazyBitcodeModule(Buf, Ctx,
                                          /*ShouldLazyLoadMetadata=*/false));
         });
+    if (!CreateOr)
+      LLVMModuleAndContext();
+
     Result->setModuleInlineAsm("");
   }
 
@@ -292,6 +295,7 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
   return Result;
 }
 
+namespace llvm {
 /// support for splitting an LLVM module into multiple parts using exported
 /// functions as anchors, and pull in all dependency on the call stack into one
 /// module.
@@ -300,6 +304,7 @@ void splitPerAnchored(LLVMModuleAndContext Module, LLVMSplitProcessFn ProcessFn,
   LLVMModuleSplitterImpl Impl(std::move(Module));
   Impl.split(ProcessFn, Anchors);
 }
+} // namespace llvm
 
 void LLVMModuleSplitterImpl::split(
     LLVMSplitProcessFn ProcessFn,
@@ -527,6 +532,7 @@ private:
 };
 } // namespace
 
+namespace llvm {
 /// support for splitting an LLVM module into multiple parts with each part
 /// contains only one function (with exception for coroutine related functions.)
 void splitPerFunction(
@@ -536,6 +542,7 @@ void splitPerFunction(
   LLVMModulePerFunctionSplitterImpl Impl(std::move(Module));
   Impl.split(ProcessFn, SymbolLinkageTypes, NumFunctionBase);
 }
+} // namespace llvm
 
 /// Split the LLVM module into multiple modules using the provided process
 /// function.

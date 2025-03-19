@@ -5328,7 +5328,6 @@ cc_binary(
         "tools/llvm-module-splitter/*.cpp",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":Core",
         ":IRReader",

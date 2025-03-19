@@ -55,16 +55,15 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   LLVMModuleAndContext M;
-  return 0;
   Expected<bool> Err =
       M.create([&](LLVMContext &Ctx) -> Expected<std::unique_ptr<Module>> {
-        if (std::unique_ptr<Module> m = readModule(Ctx, InputFilename))
-          return m;
+        if (std::unique_ptr<Module> M = readModule(Ctx, InputFilename))
+          return M;
         return make_error<StringError>("could not load LLVM file",
                                        inconvertibleErrorCode());
       });
 
-  if (Err) {
+  if (!Err) {
     llvm::errs() << toString(Err.takeError()) << "\n";
     return -1;
   }
@@ -119,8 +118,9 @@ int main(int argc, char **argv) {
       };
 
   llvm::StringMap<llvm::GlobalValue::LinkageTypes> SymbolLinkageTypes;
+
   if (PerFunctionSplit)
-    splitPerFunction(std::move(M), OutputLambda);
+    splitPerFunction(std::move(M), OutputLambda, SymbolLinkageTypes, 0);
   else {
     SmallVector<llvm::Function> Anchors;
     splitPerAnchored(std::move(M), OutputLambda, Anchors);

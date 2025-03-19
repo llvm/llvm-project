@@ -69,8 +69,10 @@ void splitPerAnchored(LLVMModuleAndContext Module, LLVMSplitProcessFn ProcessFn,
 
 /// Support for splitting an LLVM module into multiple parts with each part
 /// contains only one function.
-void splitPerFunction(LLVMModuleAndContext Module,
-                      LLVMSplitProcessFn ProcessFn);
+void splitPerFunction(
+    LLVMModuleAndContext Module, LLVMSplitProcessFn ProcessFn,
+    llvm::StringMap<llvm::GlobalValue::LinkageTypes> &SymbolLinkageTypes,
+    unsigned NumFunctionBase);
 
 } // namespace llvm
 
