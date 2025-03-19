@@ -114,8 +114,12 @@ void ReExecWithoutASLR() {
   // this function as a last resort (when the memory mapping is incompatible
   // and ASan would fail anyway).
   int old_personality = personality(0xffffffff);
-  bool aslr_on =
-      (old_personality != -1) && ((old_personality & ADDR_NO_RANDOMIZE) == 0);
+  if (old_personality == -1) {
+    VReport(1, "WARNING: unable to run personality check.\n");
+    return;
+  }
+
+  bool aslr_on = ((old_personality & ADDR_NO_RANDOMIZE) == 0);
 
   if (aslr_on) {
     // Disable ASLR if the memory layout was incompatible.
