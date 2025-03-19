@@ -125,7 +125,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-matcher-emitter"
 
-cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
+static cl::OptionCategory AsmMatcherEmitterCat("Options for -gen-asm-matcher");
 
 static cl::opt<std::string>
     MatchPrefix("match-prefix", cl::init(""),
@@ -1299,7 +1299,7 @@ void AsmMatcherInfo::buildRegisterClasses(
 
     if (!ContainingSet.empty()) {
       RegisterSets.insert(ContainingSet);
-      RegisterMap.insert(std::pair(CGR.TheDef, ContainingSet));
+      RegisterMap.try_emplace(CGR.TheDef, ContainingSet);
     }
   }
 
@@ -1320,7 +1320,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->DiagnosticType = "";
     CI->IsOptional = false;
     CI->DefaultMethod = ""; // unused
-    RegisterSetClasses.insert(std::pair(RS, CI));
+    RegisterSetClasses.try_emplace(RS, CI);
     ++Index;
   }
 
@@ -1362,7 +1362,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
       CI->DiagnosticType = RC.getName();
 
-    RegisterClassClasses.insert(std::pair(Def, CI));
+    RegisterClassClasses.try_emplace(Def, CI);
   }
 
   // Populate the map for individual registers.
@@ -2333,9 +2333,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     OS << "  // " << InstructionConversionKinds[Row] << "\n";
     OS << "  { ";
     for (unsigned i = 0, e = ConversionTable[Row].size(); i != e; i += 2) {
-      OS << OperandConversionKinds[ConversionTable[Row][i]] << ", ";
-      if (OperandConversionKinds[ConversionTable[Row][i]] !=
-          CachedHashString("CVT_Tied")) {
+      const auto &OCK = OperandConversionKinds[ConversionTable[Row][i]];
+      OS << OCK << ", ";
+      if (OCK != CachedHashString("CVT_Tied")) {
         OS << (unsigned)(ConversionTable[Row][i + 1]) << ", ";
         continue;
       }
@@ -2466,7 +2466,8 @@ static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
 }
 
 /// emitValidateOperandClass - Emit the function to validate an operand class.
-static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
+static void emitValidateOperandClass(const CodeGenTarget &Target,
+                                     AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "static unsigned validateOperandClass(MCParsedAsmOperand &GOp, "
      << "MatchClassKind Kind) {\n";
   OS << "  " << Info.Target.getName() << "Operand &Operand = ("
@@ -2491,7 +2492,6 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
     if (!CI.isUserClass())
       continue;
 
-    OS << "  // '" << CI.ClassName << "' class\n";
     OS << "  case " << CI.Name << ": {\n";
     OS << "    DiagnosticPredicate DP(Operand." << CI.PredicateMethod
        << "());\n";
@@ -2504,20 +2504,27 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info, raw_ostream &OS) {
       OS << "    break;\n";
     } else
       OS << "    break;\n";
-    OS << "    }\n";
+    OS << "  }\n";
   }
   OS << "  } // end switch (Kind)\n\n";
 
   // Check for register operands, including sub-classes.
+  const auto &Regs = Target.getRegBank().getRegisters();
+  StringRef Namespace = Regs.front().TheDef->getValueAsString("Namespace");
+  SmallVector<StringRef> Table(1 + Regs.size(), "InvalidMatchClass");
+  for (const auto &RC : Info.RegisterClasses) {
+    const auto &Reg = Target.getRegBank().getReg(RC.first);
+    Table[Reg->EnumValue] = RC.second->Name;
+  }
   OS << "  if (Operand.isReg()) {\n";
-  OS << "    MatchClassKind OpKind;\n";
-  OS << "    switch (Operand.getReg().id()) {\n";
-  OS << "    default: OpKind = InvalidMatchClass; break;\n";
-  for (const auto &RC : Info.RegisterClasses)
-    OS << "    case " << RC.first->getValueAsString("Namespace")
-       << "::" << RC.first->getName() << ": OpKind = " << RC.second->Name
-       << "; break;\n";
-  OS << "    }\n";
+  OS << "    static constexpr uint16_t Table[" << Namespace
+     << "::NUM_TARGET_REGS] = {\n";
+  for (auto &MatchClassName : Table)
+    OS << "      " << MatchClassName << ",\n";
+  OS << "    };\n\n";
+  OS << "    MCRegister Reg = Operand.getReg();\n";
+  OS << "    MatchClassKind OpKind = Reg.isPhysical() ? "
+        "(MatchClassKind)Table[Reg.id()] : InvalidMatchClass;\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
      << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
      << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";
@@ -2541,53 +2548,58 @@ static void emitIsSubclass(CodeGenTarget &Target,
   OS << "  if (A == B)\n";
   OS << "    return true;\n\n";
 
-  bool EmittedSwitch = false;
+  // TODO: Use something like SequenceToOffsetTable to allow sequences to
+  // overlap in this table.
+  SmallVector<bool> SuperClassData;
+
+  OS << "  [[maybe_unused]] static constexpr struct {\n";
+  OS << "    uint32_t Offset;\n";
+  OS << "    uint16_t Start;\n";
+  OS << "    uint16_t Length;\n";
+  OS << "  } Table[] = {\n";
+  OS << "    {0, 0, 0},\n"; // InvalidMatchClass
+  OS << "    {0, 0, 0},\n"; // OptionalMatchClass
   for (const auto &A : Infos) {
-    std::vector<StringRef> SuperClasses;
-    if (A.IsOptional)
-      SuperClasses.push_back("OptionalMatchClass");
-    for (const auto &B : Infos) {
-      if (&A != &B && A.isSubsetOf(B))
-        SuperClasses.push_back(B.Name);
-    }
+    SmallVector<bool> SuperClasses;
+    SuperClasses.push_back(false);        // InvalidMatchClass
+    SuperClasses.push_back(A.IsOptional); // OptionalMatchClass
+    for (const auto &B : Infos)
+      SuperClasses.push_back(&A != &B && A.isSubsetOf(B));
 
-    if (SuperClasses.empty())
-      continue;
+    // Trim leading and trailing zeros.
+    auto End = find_if(reverse(SuperClasses), [](bool B) { return B; }).base();
+    auto Start =
+        std::find_if(SuperClasses.begin(), End, [](bool B) { return B; });
 
-    // If this is the first SuperClass, emit the switch header.
-    if (!EmittedSwitch) {
-      OS << "  switch (A) {\n";
-      OS << "  default:\n";
-      OS << "    return false;\n";
-      EmittedSwitch = true;
-    }
+    unsigned Offset = SuperClassData.size();
+    SuperClassData.append(Start, End);
 
-    OS << "\n  case " << A.Name << ":\n";
-
-    if (SuperClasses.size() == 1) {
-      OS << "    return B == " << SuperClasses.back() << ";\n";
-      continue;
-    }
-
-    if (!SuperClasses.empty()) {
-      OS << "    switch (B) {\n";
-      OS << "    default: return false;\n";
-      for (StringRef SC : SuperClasses)
-        OS << "    case " << SC << ": return true;\n";
-      OS << "    }\n";
-    } else {
-      // No case statement to emit
-      OS << "    return false;\n";
-    }
+    OS << "    {" << Offset << ", " << (Start - SuperClasses.begin()) << ", "
+       << (End - Start) << "},\n";
   }
+  OS << "  };\n\n";
 
-  // If there were case statements emitted into the string stream write the
-  // default.
-  if (EmittedSwitch)
-    OS << "  }\n";
-  else
+  if (SuperClassData.empty()) {
     OS << "  return false;\n";
+  } else {
+    // Dump the boolean data packed into bytes.
+    SuperClassData.append(-SuperClassData.size() % 8, false);
+    OS << "  static constexpr uint8_t Data[] = {\n";
+    for (unsigned I = 0, E = SuperClassData.size(); I < E; I += 8) {
+      unsigned Byte = 0;
+      for (unsigned J = 0; J < 8; ++J)
+        Byte |= (unsigned)SuperClassData[I + J] << J;
+      OS << formatv("    {:X2},\n", Byte);
+    }
+    OS << "  };\n\n";
 
+    OS << "  auto &Entry = Table[A];\n";
+    OS << "  unsigned Idx = B - Entry.Start;\n";
+    OS << "  if (Idx >= Entry.Length)\n";
+    OS << "    return false;\n";
+    OS << "  Idx += Entry.Offset;\n";
+    OS << "  return (Data[Idx / 8] >> (Idx % 8)) & 1;\n";
+  }
   OS << "}\n\n";
 }
 
@@ -2811,7 +2823,7 @@ emitMnemonicAliasVariant(raw_ostream &OS, const AsmMatcherInfo &Info,
 
     MatchCode += "return;";
 
-    Cases.push_back(std::pair(AliasEntry.first, MatchCode));
+    Cases.emplace_back(AliasEntry.first, MatchCode);
   }
   StringMatcher("Mnemonic", Cases, OS).Emit(Indent);
 }
@@ -3413,7 +3425,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   emitIsSubclass(Target, Info.Classes, OS);
 
   // Emit the routine to validate an operand against a match class.
-  emitValidateOperandClass(Info, OS);
+  emitValidateOperandClass(Target, Info, OS);
 
   emitMatchClassKindNames(Info.Classes, OS);
 

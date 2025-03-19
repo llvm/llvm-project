@@ -22,22 +22,26 @@ def CIR_Dialect : Dialect {
   let summary = "A high-level dialect for analyzing and optimizing Clang "
                 "supported languages";
 
-  let cppNamespace = "::mlir::cir";
+  let cppNamespace = "::cir";
 
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
 
   let extraClassDeclaration = [{
+    static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+
     void registerAttributes();
     void registerTypes();
 
-    Type parseType(DialectAsmParser &parser) const override;
-    void printType(Type type, DialectAsmPrinter &printer) const override;
+    mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
+    void printType(mlir::Type type,
+                   mlir::DialectAsmPrinter &printer) const override;
 
-    Attribute parseAttribute(DialectAsmParser &parser,
-                             Type type) const override;
+    mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
+                                   mlir::Type type) const override;
 
-    void printAttribute(Attribute attr, DialectAsmPrinter &os) const override;
+    void printAttribute(mlir::Attribute attr,
+                        mlir::DialectAsmPrinter &os) const override;
   }];
 }
 

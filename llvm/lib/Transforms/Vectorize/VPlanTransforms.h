@@ -14,7 +14,9 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
+#include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
@@ -27,7 +29,44 @@ class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
 
+extern cl::opt<bool> VerifyEachVPlan;
+
 struct VPlanTransforms {
+  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
+  /// arguments to the transform. Returns the boolean returned by the transform.
+  template <typename... ArgsTy>
+  static bool runPass(bool (*Transform)(VPlan &, ArgsTy...), VPlan &Plan,
+                      typename std::remove_reference<ArgsTy>::type &...Args) {
+    bool Res = Transform(Plan, Args...);
+    if (VerifyEachVPlan)
+      verifyVPlanIsValid(Plan);
+    return Res;
+  }
+  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
+  /// arguments to the transform.
+  template <typename... ArgsTy>
+  static void runPass(void (*Fn)(VPlan &, ArgsTy...), VPlan &Plan,
+                      typename std::remove_reference<ArgsTy>::type &...Args) {
+    Fn(Plan, Args...);
+    if (VerifyEachVPlan)
+      verifyVPlanIsValid(Plan);
+  }
+
+  /// Introduce the top-level VPRegionBlock for the main loop in \p Plan. Coming
+  /// into this function, \p Plan's top-level loop is modeled using a plain CFG.
+  /// This transform wraps the plain CFG of the top-level loop within a
+  /// VPRegionBlock and creates a VPValue expression for the original trip
+  /// count. It will also introduce a dedicated VPBasicBlock for the vector
+  /// pre-header as well a VPBasicBlock as exit block of the region
+  /// (middle.block). If a check is needed to guard executing the scalar
+  /// epilogue loop, it will be added to the middle block, together with
+  /// VPBasicBlocks for the scalar preheader and exit blocks. \p InductionTy is
+  /// the type of the canonical induction and used for related values, like the
+  /// trip count expression.
+  static void introduceTopLevelVectorLoopRegion(
+      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void
@@ -100,7 +139,8 @@ struct VPlanTransforms {
   /// TODO: Replace BlockNeedsPredication callback with retrieving info from
   ///       VPlan directly.
   static void dropPoisonGeneratingRecipes(
-      VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
+      VPlan &Plan,
+      const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
   /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
@@ -119,10 +159,38 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed);
+      VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
+
+  /// Update \p Plan to account for the uncountable early exit block in \p
+  /// UncountableExitingBlock by
+  ///  * updating the condition exiting the vector loop to include the early
+  ///    exit conditions
+  ///  * splitting the original middle block to branch to the early exit block
+  ///    if taken.
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
+                                         BasicBlock *UncountableExitingBlock,
+                                         VPRecipeBuilder &RecipeBuilder);
+
+  /// Lower abstract recipes to concrete ones, that can be codegen'd.
+  static void convertToConcreteRecipes(VPlan &Plan);
+
+  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
+  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
+  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+
+  /// If there's a single exit block, optimize its phi recipes that use exiting
+  /// IV values by feeding them precomputed end values instead, possibly taken
+  /// one step backwards.
+  static void
+  optimizeInductionExitUsers(VPlan &Plan,
+                             DenseMap<VPValue *, VPValue *> &EndValues);
+
+  /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
+  static void materializeBroadcasts(VPlan &Plan);
 };
 
 } // namespace llvm

@@ -48,11 +48,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -1732,8 +1730,9 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
   return Result;
 }
 
-DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                               DILineInfoSpecifier Spec) {
+std::optional<DILineInfo>
+DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                    DILineInfoSpecifier Spec) {
   DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
@@ -1753,7 +1752,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForDataAddress(Address.Address);

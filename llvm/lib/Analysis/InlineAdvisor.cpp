@@ -199,13 +199,12 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 
 AnalysisKey InlineAdvisorAnalysis::Key;
 AnalysisKey PluginInlineAdvisorAnalysis::Key;
-bool PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
 
 bool InlineAdvisorAnalysis::Result::tryCreate(
     InlineParams Params, InliningAdvisorMode Mode,
     const ReplayInlinerSettings &ReplaySettings, InlineContext IC) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  if (PluginInlineAdvisorAnalysis::HasBeenRegistered) {
+  if (MAM.isPassRegistered<PluginInlineAdvisorAnalysis>()) {
     auto &DA = MAM.getResult<PluginInlineAdvisorAnalysis>(M);
     Advisor.reset(DA.Factory(M, FAM, Params, IC));
     return !!Advisor;
@@ -339,7 +338,7 @@ static raw_ostream &operator<<(raw_ostream &R, const ore::NV &Arg) {
 }
 
 template <class RemarkT>
-RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
+decltype(auto) operator<<(RemarkT &&R, const InlineCost &IC) {
   using namespace ore;
   if (IC.isAlways()) {
     R << "(cost=always)";
@@ -351,7 +350,7 @@ RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
   }
   if (const char *Reason = IC.getReason())
     R << ": " << ore::NV("Reason", Reason);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 } // namespace llvm
 

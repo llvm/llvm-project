@@ -10,6 +10,7 @@
 
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
+#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -23,7 +24,10 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/PassRegistry.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -539,12 +543,8 @@ class SPIRVStructurizer : public FunctionPass {
       BasicBlock *RHSTarget =
           BI->isConditional() ? BI->getSuccessor(1) : nullptr;
 
-      Value *LHS = TargetToValue.count(LHSTarget) != 0
-                       ? TargetToValue.at(LHSTarget)
-                       : nullptr;
-      Value *RHS = TargetToValue.count(RHSTarget) != 0
-                       ? TargetToValue.at(RHSTarget)
-                       : nullptr;
+      Value *LHS = TargetToValue.lookup(LHSTarget);
+      Value *RHS = TargetToValue.lookup(RHSTarget);
 
       if (LHS == nullptr || RHS == nullptr)
         return LHS == nullptr ? RHS : LHS;
@@ -644,8 +644,7 @@ class SPIRVStructurizer : public FunctionPass {
       Builder.SetInsertPoint(Header->getTerminator());
 
       auto MergeAddress = BlockAddress::get(BB.getParent(), &BB);
-      SmallVector<Value *, 1> Args = {MergeAddress};
-      Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+      createOpSelectMerge(&Builder, MergeAddress);
 
       Modified = true;
     }
@@ -680,7 +679,7 @@ class SPIRVStructurizer : public FunctionPass {
               });
 
     for (Instruction *I : MergeInstructions) {
-      I->moveBefore(InsertionPoint);
+      I->moveBefore(InsertionPoint->getIterator());
       InsertionPoint = I;
     }
 
@@ -767,10 +766,9 @@ class SPIRVStructurizer : public FunctionPass {
       BasicBlock *Merge = Candidates[0];
 
       auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
-      SmallVector<Value *, 1> Args = {MergeAddress};
       IRBuilder<> Builder(&BB);
       Builder.SetInsertPoint(BB.getTerminator());
-      Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+      createOpSelectMerge(&Builder, MergeAddress);
     }
 
     return Modified;
@@ -1103,8 +1101,7 @@ class SPIRVStructurizer : public FunctionPass {
         Builder.SetInsertPoint(Header->getTerminator());
 
         auto MergeAddress = BlockAddress::get(Merge->getParent(), Merge);
-        SmallVector<Value *, 1> Args = {MergeAddress};
-        Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+        createOpSelectMerge(&Builder, MergeAddress);
         continue;
       }
 
@@ -1118,8 +1115,7 @@ class SPIRVStructurizer : public FunctionPass {
       Builder.SetInsertPoint(Header->getTerminator());
 
       auto MergeAddress = BlockAddress::get(NewMerge->getParent(), NewMerge);
-      SmallVector<Value *, 1> Args = {MergeAddress};
-      Builder.CreateIntrinsic(Intrinsic::spv_selection_merge, {}, {Args});
+      createOpSelectMerge(&Builder, MergeAddress);
     }
 
     return Modified;
@@ -1206,21 +1202,55 @@ public:
     AU.addPreserved<SPIRVConvergenceRegionAnalysisWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
+
+  void createOpSelectMerge(IRBuilder<> *Builder, BlockAddress *MergeAddress) {
+    Instruction *BBTerminatorInst = Builder->GetInsertBlock()->getTerminator();
+
+    MDNode *MDNode = BBTerminatorInst->getMetadata("hlsl.controlflow.hint");
+
+    ConstantInt *BranchHint = llvm::ConstantInt::get(Builder->getInt32Ty(), 0);
+
+    if (MDNode) {
+      assert(MDNode->getNumOperands() == 2 &&
+             "invalid metadata hlsl.controlflow.hint");
+      BranchHint = mdconst::extract<ConstantInt>(MDNode->getOperand(1));
+
+      assert(BranchHint && "invalid metadata value for hlsl.controlflow.hint");
+    }
+
+    llvm::SmallVector<llvm::Value *, 2> Args = {MergeAddress, BranchHint};
+
+    Builder->CreateIntrinsic(Intrinsic::spv_selection_merge,
+                             {MergeAddress->getType()}, {Args});
+  }
 };
 } // namespace llvm
 
 char SPIRVStructurizer::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "structurizer", "structurize SPIRV",
-                      false, false)
+INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
+                      "structurize SPIRV", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SPIRVConvergenceRegionAnalysisWrapperPass)
 
-INITIALIZE_PASS_END(SPIRVStructurizer, "structurize", "structurize SPIRV",
-                    false, false)
+INITIALIZE_PASS_END(SPIRVStructurizer, "spirv-structurizer",
+                    "structurize SPIRV", false, false)
 
 FunctionPass *llvm::createSPIRVStructurizerPass() {
   return new SPIRVStructurizer();
+}
+
+PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
+                                                FunctionAnalysisManager &AF) {
+
+  auto FPM = legacy::FunctionPassManager(F.getParent());
+  FPM.add(createSPIRVStructurizerPass());
+
+  if (!FPM.run(F))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

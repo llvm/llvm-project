@@ -22,6 +22,7 @@
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
 #include <pwd.h>
+#include <string>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <unistd.h>
@@ -1053,84 +1054,82 @@ rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
 void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s called",
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
-  {
-    // Put the packet data into the buffer in a thread safe fashion
-    PThreadMutex::Locker locker(m_mutex);
 
-    std::string data;
-    // See if we have any left over data from a previous call to this
-    // function?
-    if (!m_rx_partial_data.empty()) {
-      // We do, so lets start with that data
-      data.swap(m_rx_partial_data);
-    }
-    // Append the new incoming data
-    data += new_data;
+  // Put the packet data into the buffer in a thread safe fashion
+  PThreadMutex::Locker locker(m_mutex);
 
-    // Parse up the packets into gdb remote packets
-    size_t idx = 0;
-    const size_t data_size = data.size();
+  std::string data;
+  // See if we have any left over data from a previous call to this
+  // function?
+  if (!m_rx_partial_data.empty()) {
+    // We do, so lets start with that data
+    data.swap(m_rx_partial_data);
+  }
+  // Append the new incoming data
+  data += new_data;
 
-    while (idx < data_size) {
-      // end_idx must be one past the last valid packet byte. Start
-      // it off with an invalid value that is the same as the current
-      // index.
-      size_t end_idx = idx;
+  // Parse up the packets into gdb remote packets
+  size_t idx = 0;
+  const size_t data_size = data.size();
 
-      switch (data[idx]) {
-      case '+':            // Look for ack
-      case '-':            // Look for cancel
-      case '\x03':         // ^C to halt target
-        end_idx = idx + 1; // The command is one byte long...
-        break;
+  while (idx < data_size) {
+    // end_idx must be one past the last valid packet byte. Start
+    // it off with an invalid value that is the same as the current
+    // index.
+    size_t end_idx = idx;
 
-      case '$':
-        // Look for a standard gdb packet?
-        end_idx = data.find('#', idx + 1);
-        if (end_idx == std::string::npos || end_idx + 3 > data_size) {
-          end_idx = std::string::npos;
-        } else {
-          // Add two for the checksum bytes and 1 to point to the
-          // byte just past the end of this packet
-          end_idx += 3;
-        }
-        break;
+    switch (data[idx]) {
+    case '+':            // Look for ack
+    case '-':            // Look for cancel
+    case '\x03':         // ^C to halt target
+      end_idx = idx + 1; // The command is one byte long...
+      break;
 
-      default:
-        break;
-      }
-
-      if (end_idx == std::string::npos) {
-        // Not all data may be here for the packet yet, save it for
-        // next time through this function.
-        m_rx_partial_data += data.substr(idx);
-        // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
-        // later[%u, npos):
-        // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-        // __FUNCTION__, idx, m_rx_partial_data.c_str());
-        idx = end_idx;
-      } else if (idx < end_idx) {
-        m_packets_recvd++;
-        // Hack to get rid of initial '+' ACK???
-        if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
-          // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
-          // ACK away....[%u, npos):
-          // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-          // __FUNCTION__, idx);
-        } else {
-          // We have a valid packet...
-          m_rx_packets.push_back(data.substr(idx, end_idx - idx));
-          DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
-                           m_rx_packets.back().c_str());
-        }
-        idx = end_idx;
+    case '$':
+      // Look for a standard gdb packet?
+      end_idx = data.find('#', idx + 1);
+      if (end_idx == std::string::npos || end_idx + 3 > data_size) {
+        end_idx = std::string::npos;
       } else {
-        DNBLogThreadedIf(LOG_RNB_MAX,
-                         "%8d RNBRemote::%s tossing junk byte at %c",
-                         (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-                         __FUNCTION__, data[idx]);
-        idx = idx + 1;
+        // Add two for the checksum bytes and 1 to point to the
+        // byte just past the end of this packet
+        end_idx += 3;
       }
+      break;
+
+    default:
+      break;
+    }
+
+    if (end_idx == std::string::npos) {
+      // Not all data may be here for the packet yet, save it for
+      // next time through this function.
+      m_rx_partial_data += data.substr(idx);
+      // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
+      // later[%u, npos):
+      // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+      // __FUNCTION__, idx, m_rx_partial_data.c_str());
+      idx = end_idx;
+    } else if (idx < end_idx) {
+      m_packets_recvd++;
+      // Hack to get rid of initial '+' ACK???
+      if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
+        // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
+        // ACK away....[%u, npos):
+        // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+        // __FUNCTION__, idx);
+      } else {
+        // We have a valid packet...
+        m_rx_packets.push_back(data.substr(idx, end_idx - idx));
+        DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
+                         m_rx_packets.back().c_str());
+      }
+      idx = end_idx;
+    } else {
+      DNBLogThreadedIf(LOG_RNB_MAX, "%8d RNBRemote::%s tossing junk byte at %c",
+                       (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+                       __FUNCTION__, data[idx]);
+      idx = idx + 1;
     }
   }
 
@@ -2567,42 +2566,50 @@ rnb_err_t RNBRemote::HandlePacket_QSetProcessEvent(const char *p) {
   return SendPacket("OK");
 }
 
-void register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
+// If a fail_value is provided, a correct-length reply is always provided,
+// even if the register cannot be read right now on this thread.
+bool register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
                                        nub_thread_t tid,
                                        const register_map_entry_t *reg,
-                                       const DNBRegisterValue *reg_value_ptr) {
+                                       const DNBRegisterValue *reg_value_ptr,
+                                       std::optional<uint8_t> fail_value) {
   if (reg != NULL) {
-    DNBRegisterValue reg_value;
+    std::unique_ptr<DNBRegisterValue> reg_value =
+        std::make_unique<DNBRegisterValue>();
     if (reg_value_ptr == NULL) {
       if (DNBThreadGetRegisterValueByID(pid, tid, reg->nub_info.set,
-                                        reg->nub_info.reg, &reg_value))
-        reg_value_ptr = &reg_value;
+                                        reg->nub_info.reg, reg_value.get()))
+        reg_value_ptr = reg_value.get();
     }
 
     if (reg_value_ptr) {
       append_hex_value(ostrm, reg_value_ptr->value.v_uint8, reg->nub_info.size,
                        false);
-    } else {
-      // If we fail to read a register value, check if it has a default
-      // fail value. If it does, return this instead in case some of
-      // the registers are not available on the current system.
-      if (reg->nub_info.size > 0) {
-        std::vector<uint8_t> zeros(reg->nub_info.size, '\0');
-        append_hex_value(ostrm, zeros.data(), zeros.size(), false);
-      }
+      return true;
     }
+    if (!fail_value || reg->nub_info.size == 0)
+      return false;
+
+    // Pad out the reply to the correct size to maintain correct offsets,
+    // even if we could not read the register value.
+    std::vector<uint8_t> fail_result(reg->nub_info.size, *fail_value);
+    append_hex_value(ostrm, fail_result.data(), fail_result.size(), false);
+    return true;
   }
+  return false;
 }
 
 void debugserver_regnum_with_fixed_width_hex_register_value(
     std::ostream &ostrm, nub_process_t pid, nub_thread_t tid,
-    const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr) {
+    const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr,
+    std::optional<uint8_t> fail_value) {
   // Output the register number as 'NN:VVVVVVVV;' where NN is a 2 bytes HEX
   // gdb register number, and VVVVVVVV is the correct number of hex bytes
   // as ASCII for the register value.
   if (reg != NULL) {
     ostrm << RAWHEX8(reg->debugserver_regnum) << ':';
-    register_value_in_hex_fixed_width(ostrm, pid, tid, reg, reg_value_ptr);
+    register_value_in_hex_fixed_width(ostrm, pid, tid, reg, reg_value_ptr,
+                                      fail_value);
     ostrm << ';';
   }
 }
@@ -2651,15 +2658,16 @@ typedef std::map<nub_addr_t, StackMemory> StackMemoryMap;
 static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
                             StackMemoryMap &stack_mmap,
                             uint32_t backtrace_limit = 256) {
-  DNBRegisterValue reg_value;
+  std::unique_ptr<DNBRegisterValue> reg_value =
+      std::make_unique<DNBRegisterValue>();
   if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
-                                    GENERIC_REGNUM_FP, &reg_value)) {
+                                    GENERIC_REGNUM_FP, reg_value.get())) {
     uint32_t frame_count = 0;
     uint64_t fp = 0;
-    if (reg_value.info.size == 4)
-      fp = reg_value.value.uint32;
+    if (reg_value->info.size == 4)
+      fp = reg_value->value.uint32;
     else
-      fp = reg_value.value.uint64;
+      fp = reg_value->value.uint64;
     while (fp != 0) {
       // Make sure we never recurse more than 256 times so we don't recurse too
       // far or
@@ -2667,7 +2675,7 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
       if (++frame_count > backtrace_limit)
         break;
 
-      const nub_size_t read_size = reg_value.info.size * 2;
+      const nub_size_t read_size = reg_value->info.size * 2;
       StackMemory stack_memory;
       stack_memory.length = read_size;
       if (DNBProcessMemoryRead(pid, fp, read_size, stack_memory.bytes) !=
@@ -2679,7 +2687,7 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
       // Put the entry into the cache
       stack_mmap[fp] = stack_memory;
       // Dereference the frame pointer to get to the previous frame pointer
-      if (reg_value.info.size == 4)
+      if (reg_value->info.size == 4)
         fp = ((uint32_t *)stack_memory.bytes)[0];
       else
         fp = ((uint64_t *)stack_memory.bytes)[0];
@@ -2842,31 +2850,35 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
     if (g_num_reg_entries == 0)
       InitializeRegisters();
 
-    if (g_reg_entries != NULL) {
-      auto interesting_regset = [](int regset) -> bool {
-#if defined(__arm64__) || defined(__aarch64__)
-        // GPRs and exception registers, helpful for debugging
-        // from packet logs.
-        return regset == 1 || regset == 3;
-#else
-        return regset == 1;
-#endif
-      };
+    nub_size_t num_reg_sets = 0;
+    const DNBRegisterSetInfo *reg_sets = DNBGetRegisterSetInfo(&num_reg_sets);
 
-      DNBRegisterValue reg_value;
-      for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
-        // Expedite all registers in the first register set that aren't
-        // contained in other registers
-        if (interesting_regset(g_reg_entries[reg].nub_info.set) &&
-            g_reg_entries[reg].nub_info.value_regs == NULL) {
-          if (!DNBThreadGetRegisterValueByID(
-                  pid, tid, g_reg_entries[reg].nub_info.set,
-                  g_reg_entries[reg].nub_info.reg, &reg_value))
-            continue;
+    std::unique_ptr<DNBRegisterValue> reg_value =
+        std::make_unique<DNBRegisterValue>();
+    for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+      int regset = g_reg_entries[reg].nub_info.set;
+      bool include_reg = false;
+      // Expedite interesting register sets, all registers not
+      // contained in other registers
+      if (g_reg_entries[reg].nub_info.value_regs == nullptr &&
+          (strcmp("General Purpose Registers", reg_sets[regset].name) == 0 ||
+           strcmp("Exception State Registers", reg_sets[regset].name) == 0))
+        include_reg = true;
+      // Include the SME state registers
+      if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+          strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+          strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+        include_reg = true;
 
-          debugserver_regnum_with_fixed_width_hex_register_value(
-              ostrm, pid, tid, &g_reg_entries[reg], &reg_value);
-        }
+      if (include_reg) {
+        if (!DNBThreadGetRegisterValueByID(pid, tid, regset,
+                                           g_reg_entries[reg].nub_info.reg,
+                                           reg_value.get()))
+          continue;
+
+        debugserver_regnum_with_fixed_width_hex_register_value(
+            ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
+            std::nullopt);
       }
     }
 
@@ -3326,14 +3338,19 @@ rnb_err_t RNBRemote::HandlePacket_G(const char *p) {
   if (g_num_reg_entries == 0)
     InitializeRegisters();
 
-  StdStringExtractor packet(p);
-  packet.SetFilePos(1); // Skip the 'G'
+  p += 1; // Skip the 'G'
 
   nub_process_t pid = m_ctx.ProcessID();
   nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p);
   if (tid == INVALID_NUB_THREAD)
     return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
                                   "No thread specified in p packet");
+  // Skip the thread specification in `G;thread:3488ea;[..data...]`
+  const char *last_semi = strrchr(p, ';');
+  if (last_semi)
+    p = last_semi + 1;
+
+  StdStringExtractor packet(p);
 
   // Get the register context size first by calling with NULL buffer
   nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
@@ -4212,7 +4229,9 @@ rnb_err_t RNBRemote::HandlePacket_p(const char *p) {
       append_hex_value(ostrm, zeros.data(), zeros.size(), false);
     }
   } else {
-    register_value_in_hex_fixed_width(ostrm, pid, tid, reg_entry, NULL);
+    if (!register_value_in_hex_fixed_width(ostrm, pid, tid, reg_entry, NULL,
+                                           std::nullopt))
+      return SendErrorPacket("E97");
   }
   return SendPacket(ostrm.str());
 }
@@ -4266,9 +4285,10 @@ rnb_err_t RNBRemote::HandlePacket_P(const char *p) {
     return SendErrorPacket("E48");
   }
 
-  DNBRegisterValue reg_value;
-  reg_value.info = reg_entry->nub_info;
-  packet.GetHexBytes(reg_value.value.v_sint8, reg_entry->nub_info.size, 0xcc);
+  std::unique_ptr<DNBRegisterValue> reg_value =
+      std::make_unique<DNBRegisterValue>();
+  reg_value->info = reg_entry->nub_info;
+  packet.GetHexBytes(reg_value->value.v_sint8, reg_entry->nub_info.size, 0xcc);
 
   nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p);
   if (tid == INVALID_NUB_THREAD)
@@ -4276,7 +4296,8 @@ rnb_err_t RNBRemote::HandlePacket_P(const char *p) {
                                   "No thread specified in p packet");
 
   if (!DNBThreadSetRegisterValueByID(pid, tid, reg_entry->nub_info.set,
-                                     reg_entry->nub_info.reg, &reg_value)) {
+                                     reg_entry->nub_info.reg,
+                                     reg_value.get())) {
     return SendErrorPacket("E32");
   }
   return SendPacket("OK");
@@ -5561,7 +5582,8 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           }
         }
 
-        DNBRegisterValue reg_value;
+        std::unique_ptr<DNBRegisterValue> reg_value =
+            std::make_unique<DNBRegisterValue>();
 
         if (g_reg_entries != NULL) {
           JSONGenerator::DictionarySP registers_dict_sp(
@@ -5574,14 +5596,14 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
                 g_reg_entries[reg].nub_info.value_regs == NULL) {
               if (!DNBThreadGetRegisterValueByID(
                       pid, tid, g_reg_entries[reg].nub_info.set,
-                      g_reg_entries[reg].nub_info.reg, &reg_value))
+                      g_reg_entries[reg].nub_info.reg, reg_value.get()))
                 continue;
 
               std::ostringstream reg_num;
               reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
               // Encode native byte ordered bytes as hex ascii
               registers_dict_sp->AddBytesAsHexASCIIString(
-                  reg_num.str(), reg_value.value.v_uint8,
+                  reg_num.str(), reg_value->value.v_uint8,
                   g_reg_entries[reg].nub_info.size);
             }
           }
@@ -6345,6 +6367,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
       rep << "ostype:bridgeos;";
 #elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
       rep << "ostype:macosx;";
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+      rep << "ostype:xros;";
 #else
       rep << "ostype:ios;";
 #endif
@@ -6398,6 +6422,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         rep << "ostype:watchos;";
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
         rep << "ostype:bridgeos;";
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+        rep << "ostype:xros;";
 #else
         rep << "ostype:ios;";
 #endif

@@ -48,10 +48,8 @@ PathMappingList::PathMappingList(const PathMappingList &rhs)
 
 const PathMappingList &PathMappingList::operator=(const PathMappingList &rhs) {
   if (this != &rhs) {
-    std::scoped_lock<std::mutex, std::mutex> callback_locks(
-        m_callback_mutex, rhs.m_callback_mutex);
-    std::scoped_lock<std::mutex, std::mutex> pairs_locks(m_pairs_mutex,
-                                                         rhs.m_pairs_mutex);
+    std::scoped_lock<std::mutex, std::mutex, std::mutex> locks(
+        m_callback_mutex, m_pairs_mutex, rhs.m_pairs_mutex);
     m_pairs = rhs.m_pairs;
     m_callback = nullptr;
     m_callback_baton = nullptr;
@@ -62,23 +60,29 @@ const PathMappingList &PathMappingList::operator=(const PathMappingList &rhs) {
 
 PathMappingList::~PathMappingList() = default;
 
-void PathMappingList::AppendImpl(llvm::StringRef path,
-                                 llvm::StringRef replacement) {
+void PathMappingList::AppendNoLock(llvm::StringRef path,
+                                   llvm::StringRef replacement) {
   ++m_mod_id;
   m_pairs.emplace_back(pair(NormalizePath(path), NormalizePath(replacement)));
 }
 
 void PathMappingList::Notify(bool notify) const {
-  std::lock_guard<std::mutex> lock(m_callback_mutex);
-  if (notify && m_callback)
-    m_callback(*this, m_callback_baton);
+  ChangedCallback callback = nullptr;
+  void *baton = nullptr;
+  {
+    std::lock_guard<std::mutex> lock(m_callback_mutex);
+    callback = m_callback;
+    baton = m_callback_baton;
+  }
+  if (notify && callback)
+    callback(*this, baton);
 }
 
 void PathMappingList::Append(llvm::StringRef path, llvm::StringRef replacement,
                              bool notify) {
   {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);
-    AppendImpl(path, replacement);
+    AppendNoLock(path, replacement);
   }
   Notify(notify);
 }
@@ -108,7 +112,7 @@ bool PathMappingList::AppendUnique(llvm::StringRef path,
           pair.second.GetStringRef() == normalized_replacement)
         return false;
     }
-    AppendImpl(path, replacement);
+    AppendNoLock(path, replacement);
   }
   Notify(notify);
   return true;
@@ -290,7 +294,7 @@ bool PathMappingList::Replace(llvm::StringRef path, llvm::StringRef new_path,
                               bool notify) {
   {
     std::lock_guard<std::mutex> lock(m_pairs_mutex);
-    uint32_t idx = FindIndexForPath(path);
+    uint32_t idx = FindIndexForPathNoLock(path);
     if (idx >= m_pairs.size())
       return false;
     ++m_mod_id;
@@ -353,9 +357,9 @@ bool PathMappingList::GetPathsAtIndex(uint32_t idx, ConstString &path,
   return false;
 }
 
-uint32_t PathMappingList::FindIndexForPath(llvm::StringRef orig_path) const {
+uint32_t
+PathMappingList::FindIndexForPathNoLock(llvm::StringRef orig_path) const {
   const ConstString path = ConstString(NormalizePath(orig_path));
-  std::lock_guard<std::mutex> lock(m_pairs_mutex);
   const_iterator pos;
   const_iterator begin = m_pairs.begin();
   const_iterator end = m_pairs.end();

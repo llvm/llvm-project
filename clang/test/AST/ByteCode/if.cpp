@@ -54,7 +54,7 @@ namespace InitDecl {
 constexpr char g(char const (&x)[2]) {
     return 'x';
   if (auto [a, b] = x) // both-error {{an array type is not allowed here}} \
-                       // both-warning {{ISO C++17 does not permit structured binding declaration in a condition}}
+                       // both-warning {{structured binding declaration in a condition is a C++2c extenstion}}
     ;
 }
 static_assert(g("x") == 'x');
@@ -75,4 +75,31 @@ namespace IfScope {
     return b;
   }
   static_assert(foo() == 13, "");
+}
+
+namespace IfScope2 {
+  struct __bit_iterator {
+    unsigned __ctz_;
+  };
+  constexpr void __fill_n_bool(__bit_iterator) {}
+
+  constexpr void fill_n(__bit_iterator __first) {
+    if (false)
+      __fill_n_bool(__first);
+    else
+      __fill_n_bool(__first);
+  }
+
+  struct bitset{
+    constexpr void reset() {
+      auto m = __bit_iterator(8);
+      fill_n(m);
+    }
+  };
+  consteval bool foo() {
+    bitset v;
+    v.reset();
+    return true;
+  }
+  static_assert(foo());
 }

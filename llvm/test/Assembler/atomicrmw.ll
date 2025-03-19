@@ -4,7 +4,7 @@
 
 ; CHECK: @f
 ; CHECK: atomicrmw
-define void @f() {
+define void @f(i1 %arg) {
   entry:
     br label %def
 
@@ -14,5 +14,5 @@ define void @f() {
 
   def:
     %y = add i32 undef, undef
-    br i1 undef, label %use, label %use
+    br i1 %arg, label %use, label %use
 }

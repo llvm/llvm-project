@@ -38,6 +38,13 @@ constexpr Init round_trip(const Init &init) {
   return bit_cast<Init>(bit_cast<Intermediate>(init));
 }
 
+
+namespace Discarding {
+  struct S { int a; };
+  constexpr int f = (__builtin_bit_cast(int, 2), 0);
+  constexpr int f2 = (__builtin_bit_cast(S, 2), 0);
+}
+
 namespace std {
 enum byte : unsigned char {};
 } // namespace std
@@ -74,7 +81,20 @@ constexpr bool operator==(const struct bits<N, T, P>& lhs, const struct bits<N, 
 #ifdef __SIZEOF_INT128__
 static_assert(check_round_trip<__int128_t>((__int128_t)34));
 static_assert(check_round_trip<__int128_t>((__int128_t)-34));
+
+constexpr unsigned char OneBit[] = {
+  0x1, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+};
+constexpr __int128_t One = 1;
+constexpr __int128_t Expected = One << 120;
+static_assert(__builtin_bit_cast(__int128_t, OneBit) == (LITTLE_END ? 1 : Expected));
+
 #endif
+
+static_assert(check_round_trip<double>(17.0));
 
 
 namespace simple {
@@ -108,13 +128,15 @@ namespace simple {
   static_assert(check_round_trip<unsigned>((int)0x12345678));
   static_assert(check_round_trip<unsigned>((int)0x87654321));
   static_assert(check_round_trip<unsigned>((int)0x0C05FEFE));
-  // static_assert(round_trip<float>((int)0x0C05FEFE));
+  static_assert(round_trip<float>((int)0x0C05FEFE));
 
+  static_assert(__builtin_bit_cast(intptr_t, nullptr) == 0); // both-error {{not an integral constant expression}} \
+                                                             // both-note {{indeterminate value can only initialize an object}}
 
-  /// This works in GCC and in the bytecode interpreter, but the current interpreter
-  /// diagnoses it.
-  static_assert(__builtin_bit_cast(intptr_t, nullptr) == 0); // ref-error {{not an integral constant expression}} \
-                                                             // ref-note {{indeterminate value can only initialize an object}}
+  constexpr int test_from_nullptr_pass = (__builtin_bit_cast(unsigned char[sizeof(nullptr)], nullptr), 0);
+  constexpr unsigned char NPData[sizeof(nullptr)] = {1,2,3,4};
+  constexpr nullptr_t NP = __builtin_bit_cast(nullptr_t, NPData);
+  static_assert(NP == nullptr);
 }
 
 namespace Fail {
@@ -123,6 +145,28 @@ namespace Fail {
                          // both-note {{declared here}}
   constexpr int b = __builtin_bit_cast(int, a); // both-error {{must be initialized by a constant expression}} \
                                                 // both-note {{initializer of 'a' is not a constant expression}}
+}
+
+namespace ToPtr {
+  struct S {
+    const int *p = nullptr;
+  };
+  struct P {
+    const int *p; // both-note {{invalid type 'const int *' is a member of 'ToPtr::P'}}
+  };
+  constexpr P p = __builtin_bit_cast(P, S{}); // both-error {{must be initialized by a constant expression}} \
+                                              // both-note {{bit_cast to a pointer type is not allowed in a constant expression}}
+}
+
+namespace Invalid {
+  struct S {
+    int a;
+  };
+  constexpr S s = S{1/0}; // both-error {{must be initialized by a constant expression}} \
+                          // both-note {{division by zero}} \
+                          // both-note {{declared here}}
+  constexpr S s2 = __builtin_bit_cast(S, s); // both-error {{must be initialized by a constant expression}} \
+                                             // both-note {{initializer of 's' is not a constant expression}}
 }
 
 namespace NullPtr {
@@ -142,72 +186,6 @@ namespace bitint {
                                                                                            // ref-note {{declared here}}
   static_assert(IB == ~0u, ""); // ref-error {{not an integral constant expression}} \
                                 // ref-note {{initializer of 'IB' is not a constant expression}}
-}
-
-namespace BitFields {
-  struct BitFields {
-    unsigned a : 2;
-    unsigned b : 30;
-  };
-
-  constexpr unsigned A = __builtin_bit_cast(unsigned, BitFields{3, 16}); // ref-error {{must be initialized by a constant expression}} \
-                                                                         // ref-note {{not yet supported}} \
-                                                                         // ref-note {{declared here}}
-  static_assert(A == (LITTLE_END ? 67 : 3221225488)); // ref-error {{not an integral constant expression}} \
-                                                      // ref-note {{initializer of 'A'}}
-
-
-  void bitfield_indeterminate() {
-    struct BF { unsigned char z : 2; };
-    enum byte : unsigned char {};
-
-    constexpr BF bf = {0x3};
-    /// Requires bitcasts to composite types.
-    // static_assert(bit_cast<bits<2>>(bf).bits == bf.z);
-    // static_assert(bit_cast<unsigned char>(bf));
-
-#if 0
-    // static_assert(__builtin_bit_cast(byte, bf));
-
-    struct M {
-      // expected-note@+1 {{subobject declared here}}
-      unsigned char mem[sizeof(BF)];
-    };
-    // expected-error@+2 {{initialized by a constant expression}}
-    // expected-note@+1 {{not initialized}}
-    constexpr M m = bit_cast<M>(bf);
-
-    constexpr auto f = []() constexpr {
-      // bits<24, unsigned int, LITTLE_END ? 0 : 8> B = {0xc0ffee};
-      constexpr struct { unsigned short b1; unsigned char b0;  } B = {0xc0ff, 0xee};
-      return bit_cast<bytes<4>>(B);
-    };
-
-    static_assert(f()[0] + f()[1] + f()[2] == 0xc0 + 0xff + 0xee);
-    {
-      // expected-error@+2 {{initialized by a constant expression}}
-      // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
-      constexpr auto _bad = f()[3];
-    }
-
-    struct B {
-      unsigned short s0 : 8;
-      unsigned short s1 : 8;
-      std::byte b0 : 4;
-      std::byte b1 : 4;
-      std::byte b2 : 4;
-    };
-    constexpr auto g = [f]() constexpr {
-      return bit_cast<B>(f());
-    };
-    static_assert(g().s0 + g().s1 + g().b0 + g().b1 == 0xc0 + 0xff + 0xe + 0xe);
-    {
-      // expected-error@+2 {{initialized by a constant expression}}
-      // expected-note@+1 {{read of uninitialized object is not allowed in a constant expression}}
-      constexpr auto _bad = g().b2;
-    }
-#endif
-  }
 }
 
 namespace Classes {
@@ -274,7 +252,7 @@ struct int_splicer {
 
 constexpr int_splicer splice(0x0C05FEFE, 0xCAFEBABE);
 
-#if 0
+#if 1
 static_assert(bit_cast<unsigned long long>(splice) == (LITTLE_END
                                                            ? 0xCAFEBABE0C05FEFE
                                                            : 0x0C05FEFECAFEBABE));
@@ -284,10 +262,25 @@ static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
                                                                   ? 0x0C05FEFE
                                                                   : 0xCAFEBABE));
 
-static_assert(round_trip<unsigned long long>(splice));
-static_assert(round_trip<long long>(splice));
+static_assert(check_round_trip<unsigned long long>(splice));
+static_assert(check_round_trip<long long>(splice));
 #endif
 
+
+namespace Overread {
+  /// This used to crash becaus we were reading all elements of the
+  /// source array even though we should only be reading 1.
+  constexpr int a[] = {2,3, 4, 5};
+  constexpr int b = __builtin_bit_cast(int, *(a + 1));
+  static_assert(b == 3);
+
+  struct S {
+    int a;
+  };
+  constexpr S ss[] = {{1},{2}};
+  constexpr int c = __builtin_bit_cast(int, *(ss + 1));
+  static_assert(c == 2);
+}
 
 
 /// ---------------------------------------------------------------------------
@@ -327,13 +320,12 @@ void test_record() {
                                                              ? 0xCAFEBABE0C05FEFE
                                                              : 0x0C05FEFECAFEBABE));
 
-  /// FIXME: Bit casts to composite types.
-  // static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
-                                                                    // ? 0x0C05FEFE
-                                                                    // : 0xCAFEBABE));
+  static_assert(bit_cast<int_splicer>(0xCAFEBABE0C05FEFE).x == (LITTLE_END
+                                                                    ? 0x0C05FEFE
+                                                                    : 0xCAFEBABE));
 
-  // static_assert(check_round_trip<unsigned long long>(splice));
-  // static_assert(check_round_trip<long long>(splice));
+  static_assert(check_round_trip<unsigned long long>(splice));
+  static_assert(check_round_trip<long long>(splice));
 
   struct base2 {
   };
@@ -355,13 +347,13 @@ void test_record() {
              z == other.z && doublez == other.doublez;
     }
   };
-  // constexpr bases b = {{1, 2}, {}, {3}, 4};
-  // constexpr tuple4 t4 = bit_cast<tuple4>(b);
-  // static_assert(t4 == tuple4{1, 2, 3, 4});
-  // static_assert(round_trip<tuple4>(b));
+  constexpr bases b = {{1, 2}, {}, {3}, 4};
+  constexpr tuple4 t4 = bit_cast<tuple4>(b);
+  static_assert(t4 == tuple4{1, 2, 3, 4});
+  static_assert(check_round_trip<tuple4>(b));
 
-  // constexpr auto b2 = bit_cast<bases>(t4);
-  // static_assert(t4 == b2);
+  constexpr auto b2 = bit_cast<bases>(t4);
+  static_assert(t4 == b2);
 }
 
 void test_partially_initialized() {
@@ -398,30 +390,27 @@ void bad_types() {
   };
   static_assert(__builtin_bit_cast(int, X{0}) == 0); // both-error {{not an integral constant expression}} \
                                                      // both-note {{bit_cast from a union type is not allowed in a constant expression}}
-#if 0
 
   struct G {
     int g;
   };
-  // expected-error@+2 {{constexpr variable 'g' must be initialized by a constant expression}}
-  // expected-note@+1 {{bit_cast from a union type is not allowed in a constant expression}}
+  // both-error@+2 {{constexpr variable 'g' must be initialized by a constant expression}}
+  // both-note@+1 {{bit_cast from a union type is not allowed in a constant expression}}
   constexpr G g = __builtin_bit_cast(G, X{0});
-  // expected-error@+2 {{constexpr variable 'x' must be initialized by a constant expression}}
-  // expected-note@+1 {{bit_cast to a union type is not allowed in a constant expression}}
+  // both-error@+2 {{constexpr variable 'x' must be initialized by a constant expression}}
+  // both-note@+1 {{bit_cast to a union type is not allowed in a constant expression}}
   constexpr X x = __builtin_bit_cast(X, G{0});
-#endif
+
   struct has_pointer {
-    int *ptr; // both-note {{invalid type 'int *' is a member of 'has_pointer'}}
+    int *ptr; // both-note 2{{invalid type 'int *' is a member of 'has_pointer'}}
   };
 
   constexpr intptr_t ptr = __builtin_bit_cast(intptr_t, has_pointer{0}); // both-error {{constexpr variable 'ptr' must be initialized by a constant expression}} \
                                                                          // both-note {{bit_cast from a pointer type is not allowed in a constant expression}}
 
-#if 0
-  // expected-error@+2 {{constexpr variable 'hptr' must be initialized by a constant expression}}
-  // expected-note@+1 {{bit_cast to a pointer type is not allowed in a constant expression}}
-  constexpr has_pointer hptr =  __builtin_bit_cast(has_pointer, 0ul);
-#endif
+  // both-error@+2 {{constexpr variable 'hptr' must be initialized by a constant expression}}
+  // both-note@+1 {{bit_cast to a pointer type is not allowed in a constant expression}}
+  constexpr has_pointer hptr =  __builtin_bit_cast(has_pointer, (intptr_t)0);
 }
 
 void test_array_fill() {
@@ -454,3 +443,75 @@ struct ref_mem {
 // both-error@+2 {{constexpr variable 'run_ref_mem' must be initialized by a constant expression}}
 // both-note@+1 {{bit_cast from a type with a reference member is not allowed in a constant expression}}
 constexpr intptr_t run_ref_mem = __builtin_bit_cast(intptr_t, ref_mem{global_int});
+
+namespace test_vector {
+
+typedef unsigned uint2 __attribute__((vector_size(2 * sizeof(unsigned))));
+typedef char byte8 __attribute__((vector_size(sizeof(unsigned long long))));
+
+constexpr uint2 test_vector = { 0x0C05FEFE, 0xCAFEBABE };
+
+static_assert(bit_cast<unsigned long long>(test_vector) == (LITTLE_END
+                                                                ? 0xCAFEBABE0C05FEFE
+                                                                : 0x0C05FEFECAFEBABE), "");
+static_assert(check_round_trip<uint2>(0xCAFEBABE0C05FEFEULL), "");
+static_assert(check_round_trip<byte8>(0xCAFEBABE0C05FEFEULL), "");
+
+#if 0
+// expected-error@+2 {{constexpr variable 'bad_bool9_to_short' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}
+constexpr unsigned short bad_bool9_to_short = __builtin_bit_cast(unsigned short, bool9{1,1,0,1,0,1,0,1,0});
+// expected-error@+2 {{constexpr variable 'bad_short_to_bool9' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}
+constexpr bool9 bad_short_to_bool9 = __builtin_bit_cast(bool9, static_cast<unsigned short>(0));
+// expected-error@+2 {{constexpr variable 'bad_int_to_bool17' must be initialized by a constant expression}}
+// expected-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(17)))' (vector of 17 'bool' values) is not allowed in a constant expression; element size 1 * element count 17 is not a multiple of the byte size 8}}
+constexpr bool17 bad_int_to_bool17 = __builtin_bit_cast(bool17, 0x0001CAFEU);
+#endif
+}
+
+namespace test_complex {
+  constexpr _Complex unsigned test_int_complex = { 0x0C05FEFE, 0xCAFEBABE };
+  static_assert(round_trip<_Complex unsigned>(0xCAFEBABE0C05FEFEULL), "");
+  static_assert(bit_cast<unsigned long long>(test_int_complex) == (LITTLE_END
+                                                                   ? 0xCAFEBABE0C05FEFE
+                                                                   : 0x0C05FEFECAFEBABE), "");
+  static_assert(sizeof(double) == 2 * sizeof(float));
+  struct TwoFloats { float A; float B; };
+  constexpr _Complex float test_float_complex = {1.0f, 2.0f};
+  constexpr TwoFloats TF = __builtin_bit_cast(TwoFloats, test_float_complex);
+  static_assert(TF.A == 1.0f && TF.B == 2.0f);
+
+  constexpr double D = __builtin_bit_cast(double, test_float_complex);
+  constexpr int M = __builtin_bit_cast(int, test_int_complex); // both-error {{size of '__builtin_bit_cast' source type 'const _Complex unsigned int' does not match destination type 'int' (8 vs 4 bytes)}}
+}
+
+
+namespace OversizedBitField {
+#if defined(_WIN32)
+  /// This is an error (not just a warning) on Windows and the field ends up with a size of 1 instead of 4.
+#else
+  typedef unsigned __INT16_TYPE__ uint16_t;
+  typedef unsigned __INT32_TYPE__ uint32_t;
+  struct S {
+    uint16_t a : 20; // both-warning {{exceeds the width of its type}}
+  };
+
+  static_assert(sizeof(S) == 4);
+  static_assert(__builtin_bit_cast(S, (uint32_t)32).a == (LITTLE_END ? 32 : 0)); // ref-error {{not an integral constant expression}} \
+                                                                                 // ref-note {{constexpr bit_cast involving bit-field is not yet supported}}
+#endif
+}
+
+typedef bool bool9 __attribute__((ext_vector_type(9)));
+// both-error@+2 {{constexpr variable 'bad_bool9_to_short' must be initialized by a constant expression}}
+// both-note@+1 {{bit_cast involving type 'bool __attribute__((ext_vector_type(9)))' (vector of 9 'bool' values) is not allowed in a constant expression; element size 1 * element count 9 is not a multiple of the byte size 8}}
+constexpr unsigned short bad_bool9_to_short = __builtin_bit_cast(unsigned short, bool9{1,1,0,1,0,1,0,1,0});
+
+// both-warning@+2 {{returning reference to local temporary object}}
+// both-note@+1 {{temporary created here}}
+constexpr const intptr_t &returns_local() { return 0L; }
+
+// both-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
+// both-note@+1 {{read of temporary whose lifetime has ended}}
+constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());

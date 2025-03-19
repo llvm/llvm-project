@@ -15,9 +15,9 @@
 #include <iterator>
 #include "test_macros.h"
 
-using iterator = std::span<int>::iterator;
+using iterator         = std::span<int>::iterator;
 using reverse_iterator = std::span<int>::reverse_iterator;
-using value_type = int;
+using value_type       = int;
 
 #if TEST_STD_VER >= 23
 using const_iterator         = std::span<int>::const_iterator;

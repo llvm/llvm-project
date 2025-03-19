@@ -15,7 +15,6 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm-c/Disassembler.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -25,8 +24,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <memory>
 
 using namespace llvm;
@@ -747,7 +744,10 @@ static DecodeStatus DecodeMoveImmInstruction(MCInst &Inst, uint32_t insn,
       Inst.getOpcode() == AArch64::MOVKXi)
     Inst.addOperand(Inst.getOperand(0));
 
-  Inst.addOperand(MCOperand::createImm(imm));
+  if (!Decoder->tryAddingSymbolicOperand(Inst, imm, Addr, /*IsBranch*/ false, 0,
+                                         0, 4))
+    Inst.addOperand(MCOperand::createImm(imm));
+
   Inst.addOperand(MCOperand::createImm(shift));
   return Success;
 }

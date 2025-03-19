@@ -127,13 +127,13 @@ def delete_module_cache(path):
 
 
 if is_configured("llvm_use_sanitizer"):
+    config.environment["MallocNanoZone"] = "0"
     if "Address" in config.llvm_use_sanitizer:
         config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
         if "Darwin" in config.host_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
             )
-            config.environment["MallocNanoZone"] = "0"
 
     if "Thread" in config.llvm_use_sanitizer:
         config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
@@ -179,6 +179,9 @@ if lldb_use_simulator:
     elif lldb_use_simulator == "tvos":
         lit_config.note("Running API tests on tvOS simulator")
         config.available_features.add("lldb-simulator-tvos")
+    elif lldb_use_simulator == "qemu-user":
+        lit_config.note("Running API tests on qemu-user simulator")
+        config.available_features.add("lldb-simulator-qemu-user")
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
@@ -285,6 +288,9 @@ elif "lldb-simulator-tvos" in config.available_features:
         "tvos-simulator",
     ]
 
+if "lldb-simulator-qemu-user" in config.available_features:
+    dotest_cmd += ["--platform-name", "qemu-user"]
+
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
@@ -334,3 +340,9 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
+
+# Transfer some environment variables into the tests on Windows build host.
+if platform.system() == "Windows":
+    for v in ["SystemDrive"]:
+        if v in os.environ:
+            config.environment[v] = os.environ[v]

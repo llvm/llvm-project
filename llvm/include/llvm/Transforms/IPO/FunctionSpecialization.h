@@ -155,7 +155,7 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   Function *F;
   const DataLayout &DL;
   TargetTransformInfo &TTI;
-  SCCPSolver &Solver;
+  const SCCPSolver &Solver;
 
   ConstMap KnownConstants;
   // Basic blocks known to be unreachable after constant propagation.
@@ -176,7 +176,7 @@ public:
                   SCCPSolver &Solver)
       : GetBFI(GetBFI), F(F), DL(DL), TTI(TTI), Solver(Solver) {}
 
-  bool isBlockExecutable(BasicBlock *BB) {
+  bool isBlockExecutable(BasicBlock *BB) const {
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
@@ -189,8 +189,9 @@ public:
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
 
-  static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
-                                    DenseSet<BasicBlock *> &DeadBlocks);
+  Constant *findConstantFor(Value *V) const;
+
+  bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ) const;
 
   Cost getCodeSizeSavingsForUser(Instruction *User, Value *Use = nullptr,
                                  Constant *C = nullptr);

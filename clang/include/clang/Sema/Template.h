@@ -365,7 +365,7 @@ enum class TemplateSubstitutionKind : char {
   class LocalInstantiationScope {
   public:
     /// A set of declarations.
-    using DeclArgumentPack = SmallVector<VarDecl *, 4>;
+    using DeclArgumentPack = SmallVector<ValueDecl *, 4>;
 
   private:
     /// Reference to the semantic analysis that is performing
@@ -486,10 +486,10 @@ enum class TemplateSubstitutionKind : char {
         const Decl *D = I->first;
         llvm::PointerUnion<Decl *, DeclArgumentPack *> &Stored =
           newScope->LocalDecls[D];
-        if (I->second.is<Decl *>()) {
-          Stored = I->second.get<Decl *>();
+        if (auto *D2 = dyn_cast<Decl *>(I->second)) {
+          Stored = D2;
         } else {
-          DeclArgumentPack *OldPack = I->second.get<DeclArgumentPack *>();
+          DeclArgumentPack *OldPack = cast<DeclArgumentPack *>(I->second);
           DeclArgumentPack *NewPack = new DeclArgumentPack(*OldPack);
           Stored = NewPack;
           newScope->ArgumentPacks.push_back(NewPack);
@@ -627,7 +627,10 @@ enum class TemplateSubstitutionKind : char {
 #define EMPTY(DERIVED, BASE)
 #define LIFETIMEEXTENDEDTEMPORARY(DERIVED, BASE)
 
-    // Decls which use special-case instantiation code.
+// Decls which never appear inside a template.
+#define OUTLINEDFUNCTION(DERIVED, BASE)
+
+// Decls which use special-case instantiation code.
 #define BLOCK(DERIVED, BASE)
 #define CAPTURED(DERIVED, BASE)
 #define IMPLICITPARAM(DERIVED, BASE)

@@ -226,6 +226,12 @@ def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
   let mnemonic = "attr_with_optional_unsigned";
 }
 
+def TestAttrWithOptionalEnum : Test_Attr<"TestAttrWithOptionalEnum"> {
+  let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_enum";
+}
+
 def TestAttrUgly : Test_Attr<"TestAttrUgly"> {
   let parameters = (ins "::mlir::Attribute":$attr);
 
@@ -387,6 +393,16 @@ def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   // Choose a silly separator token so we know it's hitting this code path
   // and not another.
   let assemblyFormat = "`<` $file `*` $line `>`";
+}
+
+// Test OpAsmAttrInterface.
+def TestOpAsmAttrInterfaceAttr : Test_Attr<"TestOpAsmAttrInterface",
+    [DeclareAttrInterfaceMethods<OpAsmAttrInterface, ["getAlias"]>]> {
+  let mnemonic = "op_asm_attr_interface";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` struct(params) `>`
+  }];
 }
 
 #endif // TEST_ATTRDEFS

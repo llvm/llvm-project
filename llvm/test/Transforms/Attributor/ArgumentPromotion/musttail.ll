@@ -10,7 +10,7 @@
 define internal i32 @test(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (ptr nocapture nofree readonly [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
@@ -29,14 +29,14 @@ define internal i32 @test(ptr %p) {
 define i32 @caller(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (ptr nocapture nofree readonly [[P:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[V:%.*]] = musttail call i32 @test(ptr nocapture nofree readonly [[P]]) #[[ATTR4:[0-9]+]]
+; TUNIT-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    [[V:%.*]] = musttail call i32 @test(ptr nofree readonly captures(none) [[P]]) #[[ATTR4:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[V]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
-; CGSCC-SAME: (ptr nocapture nofree readonly [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[V:%.*]] = musttail call i32 @test(ptr nocapture nofree readonly [[P]]) #[[ATTR5:[0-9]+]]
+; CGSCC-SAME: (ptr nofree readonly captures(none) [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-NEXT:    [[V:%.*]] = musttail call i32 @test(ptr nofree readonly captures(none) [[P]]) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
   %v = musttail call i32 @test(ptr %p)
@@ -48,12 +48,12 @@ define i32 @caller(ptr %p) {
 define i32 @foo(ptr %p, i32 %v) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
-; TUNIT-SAME: (ptr nocapture nofree readnone [[P:%.*]], i32 [[V:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree readnone captures(none) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]], i32 [[V:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree readnone captures(none) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    ret i32 0
 ;
   ret i32 0
@@ -62,7 +62,7 @@ define i32 @foo(ptr %p, i32 %v) {
 define internal i32 @test2(ptr %p, i32 %p2) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test2
-; CGSCC-SAME: (ptr nocapture nofree readonly [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (ptr nofree readonly captures(none) [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; CGSCC-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
@@ -83,13 +83,13 @@ define internal i32 @test2(ptr %p, i32 %p2) {
 define i32 @caller2(ptr %g) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller2
-; TUNIT-SAME: (ptr nocapture nofree readnone [[G:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr nofree readnone captures(none) [[G:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2
-; CGSCC-SAME: (ptr nocapture nofree readonly align 4 [[G:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2(ptr nocapture nofree readonly [[G]], i32 noundef 0) #[[ATTR5]]
+; CGSCC-SAME: (ptr nofree readonly align 4 captures(none) [[G:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2(ptr nofree readonly captures(none) [[G]], i32 noundef 0) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
   %v = call i32 @test2(ptr %g, i32 0)
@@ -103,13 +103,13 @@ define i32 @caller2(ptr %g) {
 define i32 @bar(ptr %p, i32 %v) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@bar
-; TUNIT-SAME: (ptr nocapture nofree nonnull writeonly dereferenceable(4) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR2:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree nonnull writeonly captures(none) dereferenceable(4) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
-; CGSCC-SAME: (ptr nocapture nofree nonnull writeonly dereferenceable(4) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR3:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree nonnull writeonly captures(none) dereferenceable(4) [[P:%.*]], i32 [[V:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; CGSCC-NEXT:    ret i32 0
 ;
@@ -121,7 +121,7 @@ define i32 @bar(ptr %p, i32 %v) {
 define internal i32 @test2b(ptr %p, i32 %p2) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test2b
-; TUNIT-SAME: (ptr nocapture nofree readonly [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR3:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree readonly captures(none) [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR3:[0-9]+]] {
 ; TUNIT-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; TUNIT-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
 ; TUNIT-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
@@ -132,7 +132,7 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test2b
-; CGSCC-SAME: (ptr nocapture nofree readonly [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree readonly captures(none) [[P:%.*]], i32 [[P2:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CGSCC-NEXT:    [[A_GEP:%.*]] = getelementptr [[T:%.*]], ptr [[P]], i64 0, i32 3
 ; CGSCC-NEXT:    [[B_GEP:%.*]] = getelementptr [[T]], ptr [[P]], i64 0, i32 2
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
@@ -153,14 +153,14 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 define i32 @caller2b(ptr %g) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@caller2b
-; TUNIT-SAME: (ptr nocapture nofree readonly [[G:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    [[V:%.*]] = call i32 @test2b(ptr nocapture nofree readonly [[G]], i32 undef) #[[ATTR6:[0-9]+]]
+; TUNIT-SAME: (ptr nofree readonly captures(none) [[G:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[V:%.*]] = call i32 @test2b(ptr nofree readonly captures(none) [[G]], i32 undef) #[[ATTR6:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2b
-; CGSCC-SAME: (ptr nocapture nofree readonly align 4 [[G:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nocapture nofree readonly [[G]], i32 noundef 0) #[[ATTR8:[0-9]+]]
+; CGSCC-SAME: (ptr nofree readonly align 4 captures(none) [[G:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nofree readonly captures(none) [[G]], i32 noundef 0) #[[ATTR8:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
   %v = call i32 @test2b(ptr %g, i32 0)

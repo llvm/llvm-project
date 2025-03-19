@@ -21,7 +21,6 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/STLForwardCompat.h"
 
 using namespace clang;
@@ -1519,8 +1518,8 @@ void Sema::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
   } else if (FunctionDecl *FN = dyn_cast<FunctionDecl>(D)) {
     DC = FN;
   } else if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
-    if (isa<DeclContext>(TD->getTemplatedDecl()))
-      DC = cast<DeclContext>(TD->getTemplatedDecl());
+    if (auto *D = dyn_cast_if_present<DeclContext>(TD->getTemplatedDecl()))
+      DC = D;
   } else if (auto *RD = dyn_cast<RequiresExprBodyDecl>(D)) {
     DC = RD;
   }

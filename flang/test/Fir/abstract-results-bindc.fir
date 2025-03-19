@@ -54,7 +54,6 @@ func.func @test_return_cptr(%x: !fir.ref<!cptr>) {
 // CHECK-LABEL:   func.func @test_return_cptr(
 // CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.call @return_cptr() : () -> !fir.ref<none>
-// CHECK:           %[[VAL_2:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-// CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+// CHECK:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_0]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<none>) -> i64
 // CHECK:           fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i64>

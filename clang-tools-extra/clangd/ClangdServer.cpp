@@ -215,7 +215,9 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
-      DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex
+                     ? new FileIndex(Opts.EnableOutgoingCalls)
+                     : nullptr),
       ModulesManager(Opts.ModulesManager),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
@@ -256,6 +258,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         Callbacks->onBackgroundIndexProgress(S);
     };
     BGOpts.ContextProvider = Opts.ContextProvider;
+    BGOpts.SupportContainedRefs = Opts.EnableOutgoingCalls;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
@@ -457,18 +460,24 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
     CodeCompleteResult Result = clangd::codeComplete(
         File, Pos, IP->Preamble, ParseInput, CodeCompleteOpts,
         SpecFuzzyFind ? &*SpecFuzzyFind : nullptr);
+    // We don't want `codeComplete` to wait for the async call if it doesn't use
+    // the result (e.g. non-index completion, speculation fails), so that `CB`
+    // is called as soon as results are available.
     {
       clang::clangd::trace::Span Tracer("Completion results callback");
       CB(std::move(Result));
     }
-    if (SpecFuzzyFind && SpecFuzzyFind->NewReq) {
+    if (!SpecFuzzyFind)
+      return;
+    if (SpecFuzzyFind->NewReq) {
       std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
       CachedCompletionFuzzyFindRequestByFile[File] = *SpecFuzzyFind->NewReq;
     }
-    // SpecFuzzyFind is only destroyed after speculative fuzzy find finishes.
-    // We don't want `codeComplete` to wait for the async call if it doesn't use
-    // the result (e.g. non-index completion, speculation fails), so that `CB`
-    // is called as soon as results are available.
+    // Explicitly block until async task completes, this is fine as we've
+    // already provided reply to the client and running as a preamble task
+    // (i.e. won't block other preamble tasks).
+    if (SpecFuzzyFind->Result.valid())
+      SpecFuzzyFind->Result.wait();
   };
 
   // We use a potentially-stale preamble because latency is critical here.
@@ -910,6 +919,15 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
     CB(clangd::inlayHints(InpAST->AST, std::move(RestrictRange)));
   };
   WorkScheduler->runWithAST("InlayHints", File, std::move(Action), Transient);
+}
+
+void ClangdServer::outgoingCalls(
+    const CallHierarchyItem &Item,
+    Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
+  WorkScheduler->run("Outgoing Calls", "",
+                     [CB = std::move(CB), Item, this]() mutable {
+                       CB(clangd::outgoingCalls(Item, Index));
+                     });
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

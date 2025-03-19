@@ -9,11 +9,7 @@ define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s11, s17
-; GFX7-NEXT:    s_mov_b32 s10, s16
-; GFX7-NEXT:    s_mov_b32 s9, s7
-; GFX7-NEXT:    s_mov_b32 s8, s6
-; GFX7-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; GFX7-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -21,33 +17,21 @@ define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX8-LABEL: raw_ptr_buffer_load_bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_mov_b32 s11, s17
-; GFX8-NEXT:    s_mov_b32 s10, s16
-; GFX8-NEXT:    s_mov_b32 s9, s7
-; GFX8-NEXT:    s_mov_b32 s8, s6
-; GFX8-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; GFX8-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: raw_ptr_buffer_load_bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s11, s17
-; GFX9-NEXT:    s_mov_b32 s10, s16
-; GFX9-NEXT:    s_mov_b32 s9, s7
-; GFX9-NEXT:    s_mov_b32 s8, s6
-; GFX9-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; GFX9-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: raw_ptr_buffer_load_bf16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s11, s17
-; GFX10-NEXT:    s_mov_b32 s10, s16
-; GFX10-NEXT:    s_mov_b32 s9, s7
-; GFX10-NEXT:    s_mov_b32 s8, s6
-; GFX10-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; GFX10-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -65,11 +49,7 @@ define <2 x bfloat> @raw_ptr_buffer_load_v2bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_v2bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s11, s17
-; GFX7-NEXT:    s_mov_b32 s10, s16
-; GFX7-NEXT:    s_mov_b32 s9, s7
-; GFX7-NEXT:    s_mov_b32 s8, s6
-; GFX7-NEXT:    buffer_load_dword v1, off, s[8:11], 0
+; GFX7-NEXT:    buffer_load_dword v1, off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
@@ -78,33 +58,21 @@ define <2 x bfloat> @raw_ptr_buffer_load_v2bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX8-LABEL: raw_ptr_buffer_load_v2bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_mov_b32 s11, s17
-; GFX8-NEXT:    s_mov_b32 s10, s16
-; GFX8-NEXT:    s_mov_b32 s9, s7
-; GFX8-NEXT:    s_mov_b32 s8, s6
-; GFX8-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX8-NEXT:    buffer_load_dword v0, off, s[16:19], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: raw_ptr_buffer_load_v2bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s11, s17
-; GFX9-NEXT:    s_mov_b32 s10, s16
-; GFX9-NEXT:    s_mov_b32 s9, s7
-; GFX9-NEXT:    s_mov_b32 s8, s6
-; GFX9-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX9-NEXT:    buffer_load_dword v0, off, s[16:19], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: raw_ptr_buffer_load_v2bf16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s11, s17
-; GFX10-NEXT:    s_mov_b32 s10, s16
-; GFX10-NEXT:    s_mov_b32 s9, s7
-; GFX10-NEXT:    s_mov_b32 s8, s6
-; GFX10-NEXT:    buffer_load_dword v0, off, s[8:11], 0
+; GFX10-NEXT:    buffer_load_dword v0, off, s[16:19], 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -122,11 +90,7 @@ define <4 x bfloat> @raw_ptr_buffer_load_v4bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_v4bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s11, s17
-; GFX7-NEXT:    s_mov_b32 s10, s16
-; GFX7-NEXT:    s_mov_b32 s9, s7
-; GFX7-NEXT:    s_mov_b32 s8, s6
-; GFX7-NEXT:    buffer_load_dwordx2 v[2:3], off, s[8:11], 0
+; GFX7-NEXT:    buffer_load_dwordx2 v[2:3], off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
@@ -137,33 +101,21 @@ define <4 x bfloat> @raw_ptr_buffer_load_v4bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX8-LABEL: raw_ptr_buffer_load_v4bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_mov_b32 s11, s17
-; GFX8-NEXT:    s_mov_b32 s10, s16
-; GFX8-NEXT:    s_mov_b32 s9, s7
-; GFX8-NEXT:    s_mov_b32 s8, s6
-; GFX8-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
+; GFX8-NEXT:    buffer_load_dwordx2 v[0:1], off, s[16:19], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: raw_ptr_buffer_load_v4bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s11, s17
-; GFX9-NEXT:    s_mov_b32 s10, s16
-; GFX9-NEXT:    s_mov_b32 s9, s7
-; GFX9-NEXT:    s_mov_b32 s8, s6
-; GFX9-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
+; GFX9-NEXT:    buffer_load_dwordx2 v[0:1], off, s[16:19], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: raw_ptr_buffer_load_v4bf16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s11, s17
-; GFX10-NEXT:    s_mov_b32 s10, s16
-; GFX10-NEXT:    s_mov_b32 s9, s7
-; GFX10-NEXT:    s_mov_b32 s8, s6
-; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], off, s[8:11], 0
+; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], off, s[16:19], 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -187,11 +139,7 @@ define <8 x bfloat> @raw_ptr_buffer_load_v8bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_v8bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_mov_b32 s11, s17
-; GFX7-NEXT:    s_mov_b32 s10, s16
-; GFX7-NEXT:    s_mov_b32 s9, s7
-; GFX7-NEXT:    s_mov_b32 s8, s6
-; GFX7-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0
+; GFX7-NEXT:    buffer_load_dwordx4 v[4:7], off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v4
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v4
@@ -206,33 +154,21 @@ define <8 x bfloat> @raw_ptr_buffer_load_v8bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX8-LABEL: raw_ptr_buffer_load_v8bf16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_mov_b32 s11, s17
-; GFX8-NEXT:    s_mov_b32 s10, s16
-; GFX8-NEXT:    s_mov_b32 s9, s7
-; GFX8-NEXT:    s_mov_b32 s8, s6
-; GFX8-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; GFX8-NEXT:    buffer_load_dwordx4 v[0:3], off, s[16:19], 0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: raw_ptr_buffer_load_v8bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s11, s17
-; GFX9-NEXT:    s_mov_b32 s10, s16
-; GFX9-NEXT:    s_mov_b32 s9, s7
-; GFX9-NEXT:    s_mov_b32 s8, s6
-; GFX9-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; GFX9-NEXT:    buffer_load_dwordx4 v[0:3], off, s[16:19], 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: raw_ptr_buffer_load_v8bf16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s11, s17
-; GFX10-NEXT:    s_mov_b32 s10, s16
-; GFX10-NEXT:    s_mov_b32 s9, s7
-; GFX10-NEXT:    s_mov_b32 s8, s6
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[16:19], 0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;

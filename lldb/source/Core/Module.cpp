@@ -919,9 +919,8 @@ void Module::FindFunctions(const RegularExpression &regex,
               const SymbolContext &sc = sc_list[i];
               if (sc.block)
                 continue;
-              file_addr_to_index[sc.function->GetAddressRange()
-                                     .GetBaseAddress()
-                                     .GetFileAddress()] = i;
+              file_addr_to_index[sc.function->GetAddress().GetFileAddress()] =
+                  i;
             }
 
             FileAddrToIndexMap::const_iterator end = file_addr_to_index.end();
@@ -1023,8 +1022,8 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 }
 
-Symtab *Module::GetSymtab() {
-  if (SymbolFile *symbols = GetSymbolFile())
+Symtab *Module::GetSymtab(bool can_create) {
+  if (SymbolFile *symbols = GetSymbolFile(can_create))
     return symbols->GetSymtab();
   return nullptr;
 }
@@ -1607,6 +1606,14 @@ bool Module::MergeArchitecture(const ArchSpec &arch_spec) {
   // SetArchitecture() is a no-op if m_arch is already valid.
   m_arch = ArchSpec();
   return SetArchitecture(merged_arch);
+}
+
+void Module::ResetStatistics() {
+  m_symtab_parse_time.reset();
+  m_symtab_index_time.reset();
+  SymbolFile *sym_file = GetSymbolFile();
+  if (sym_file)
+    sym_file->ResetStatistics();
 }
 
 llvm::VersionTuple Module::GetVersion() {

@@ -17,9 +17,19 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+
+// We use float-float implementation to reduce size.
+#include "src/math/generic/atan2f_float.h"
+
+#else
+
 namespace LIBC_NAMESPACE_DECL {
 
 namespace {
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // Look up tables for accurate pass:
 
@@ -121,7 +131,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
     num_r = num_d;
     den_r = den_d;
   }
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   q.lo = fputil::multiply_add(q.hi, -den_r, num_r) / den_r;
 #else
   // Compute `(num_r - q.hi * den_r) / den_r` accurately without FMA
@@ -130,7 +140,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
   double t1 = fputil::multiply_add(q_hi_dd.hi, -den_r, num_r); // Exact
   double t2 = fputil::multiply_add(q_hi_dd.lo, -den_r, t1);
   q.lo = t2 / den_r;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   // Taylor polynomial, evaluating using Horner's scheme:
   //   P = x - x^3/3 + x^5/5 -x^7/7 + x^9/9 - x^11/11 + x^13/13 - x^15/15
@@ -162,6 +172,8 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
 
   return static_cast<float>(cpp::bit_cast<double>(rr_bits));
 }
+
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 } // anonymous namespace
 
@@ -283,14 +295,24 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   fputil::DoubleDouble const_term = CONST_ADJ[x_sign][y_sign][recip];
   double q_d = num_d / den_d;
 
-  double k_d = fputil::nearest_integer(q_d * 0x1.0p4f);
+  double k_d = fputil::nearest_integer(q_d * 0x1.0p4);
   int idx = static_cast<int>(k_d);
+  double r;
+
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+  double p = atan_eval_no_table(num_d, den_d, k_d * 0x1.0p-4);
+  r = final_sign * (p + (const_term.hi + ATAN_K_OVER_16[idx]));
+#else
   q_d = fputil::multiply_add(k_d, -0x1.0p-4, q_d);
 
   double p = atan_eval(q_d, idx);
-  double r = final_sign *
-             fputil::multiply_add(q_d, p, const_term.hi + ATAN_COEFFS[idx][0]);
+  r = final_sign *
+      fputil::multiply_add(q_d, p, const_term.hi + ATAN_COEFFS[idx][0]);
+#endif // LIBC_MATH_HAS_SMALL_TABLES
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return static_cast<float>(r);
+#else
   constexpr uint32_t LOWER_ERR = 4;
   // Mask sticky bits in double precision before rounding to single precision.
   constexpr uint32_t MASK =
@@ -306,6 +328,9 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
 
   return atan2f_double_double(num_d, den_d, q_d, idx, k_d, final_sign,
                               const_term);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif

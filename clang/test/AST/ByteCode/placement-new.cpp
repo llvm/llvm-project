@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -fexperimental-new-constant-interpreter -verify=expected,both %s -DBYTECODE
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify=ref,both %s
 
 namespace std {
@@ -338,3 +338,41 @@ namespace PR48606 {
   }
   static_assert(f());
 }
+
+/// This used to crash because of an assertion in the implementation
+/// of the This instruction.
+namespace ExplicitThisOnArrayElement {
+  struct S {
+    int a = 12;
+    constexpr S(int a) {
+      this->a = a;
+    }
+  };
+
+  template <class _Tp, class... _Args>
+  constexpr void construct_at(_Tp *__location, _Args &&...__args) {
+    new (__location) _Tp(__args...);
+  }
+
+  constexpr bool foo() {
+    auto *M = std::allocator<S>().allocate(13); // both-note {{allocation performed here was not deallocated}}
+    construct_at(M, 12);
+    return true;
+  }
+
+  static_assert(foo()); // both-error {{not an integral constant expression}}
+}
+
+#ifdef BYTECODE
+constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
+                     // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
+                     // expected-note {{in call to}}
+{
+    struct S {
+        int a[1];
+    };
+    S s;
+    ::new (s.a) int[1][2][3][4]();
+    return s.a[0];
+}();
+#endif

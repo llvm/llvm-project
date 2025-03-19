@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STDEXCEPT
-#define _LIBCPP_STDEXCEPT
+#ifndef _LIBCPP___CXX03_STDEXCEPT
+#define _LIBCPP___CXX03_STDEXCEPT
 
 /*
     stdexcept synopsis
@@ -283,4 +283,4 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <__cxx03/iosfwd>
 #endif
 
-#endif // _LIBCPP_STDEXCEPT
+#endif // _LIBCPP___CXX03_STDEXCEPT

@@ -461,8 +461,9 @@ void clang::FormatASTNodeDiagnosticArgument(
     }
     case DiagnosticsEngine::ak_nestednamespec: {
       NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy());
-      NeedQuotes = false;
+      NNS->print(OS, Context.getPrintingPolicy(),
+                 /*ResolveTemplateArguments=*/false,
+                 /*PrintFinalScopeResOp=*/false);
       break;
     }
     case DiagnosticsEngine::ak_declcontext: {
@@ -1899,11 +1900,17 @@ class TemplateDiff {
 
     E = E->IgnoreImpCasts();
 
-    if (isa<IntegerLiteral>(E)) return false;
+    auto CheckIntegerLiteral = [](Expr *E) {
+      if (auto *TemplateExpr = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+        E = TemplateExpr->getReplacement();
+      return isa<IntegerLiteral>(E);
+    };
+
+    if (CheckIntegerLiteral(E)) return false;
 
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
       if (UO->getOpcode() == UO_Minus)
-        if (isa<IntegerLiteral>(UO->getSubExpr()))
+        if (CheckIntegerLiteral(UO->getSubExpr()))
           return false;
 
     if (isa<CXXBoolLiteralExpr>(E))

@@ -21,7 +21,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Operator.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -724,6 +723,24 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
     Op = llvm::AtomicRMWInst::Nand;
     break;
+
+  case AtomicExpr::AO__atomic_test_and_set: {
+    llvm::AtomicRMWInst *RMWI =
+        CGF.emitAtomicRMWInst(llvm::AtomicRMWInst::Xchg, Ptr,
+                              CGF.Builder.getInt8(1), Order, Scope, E);
+    RMWI->setVolatile(E->isVolatile());
+    llvm::Value *Result = CGF.Builder.CreateIsNotNull(RMWI, "tobool");
+    CGF.Builder.CreateStore(Result, Dest);
+    return;
+  }
+
+  case AtomicExpr::AO__atomic_clear: {
+    llvm::StoreInst *Store =
+        CGF.Builder.CreateStore(CGF.Builder.getInt8(0), Ptr);
+    Store->setAtomic(Order, Scope);
+    Store->setVolatile(E->isVolatile());
+    return;
+  }
   }
 
   llvm::Value *LoadVal1 = CGF.Builder.CreateLoad(Val1);
@@ -879,6 +896,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
   case AtomicExpr::AO__hip_atomic_load:
+  case AtomicExpr::AO__atomic_test_and_set:
+  case AtomicExpr::AO__atomic_clear:
     break;
 
   case AtomicExpr::AO__atomic_load:
@@ -1201,6 +1220,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     case AtomicExpr::AO__opencl_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_fetch_max:
     case AtomicExpr::AO__scoped_atomic_max_fetch:
+    case AtomicExpr::AO__atomic_test_and_set:
+    case AtomicExpr::AO__atomic_clear:
       llvm_unreachable("Integral atomic operations always become atomicrmw!");
     }
 
@@ -1240,7 +1261,8 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
                  E->getOp() == AtomicExpr::AO__atomic_store ||
                  E->getOp() == AtomicExpr::AO__atomic_store_n ||
                  E->getOp() == AtomicExpr::AO__scoped_atomic_store ||
-                 E->getOp() == AtomicExpr::AO__scoped_atomic_store_n;
+                 E->getOp() == AtomicExpr::AO__scoped_atomic_store_n ||
+                 E->getOp() == AtomicExpr::AO__atomic_clear;
   bool IsLoad = E->getOp() == AtomicExpr::AO__c11_atomic_load ||
                 E->getOp() == AtomicExpr::AO__opencl_atomic_load ||
                 E->getOp() == AtomicExpr::AO__hip_atomic_load ||

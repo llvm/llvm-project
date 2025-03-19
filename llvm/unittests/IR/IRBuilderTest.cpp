@@ -109,25 +109,23 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V});
+  Result = Builder.CreateFMA(V, V, V);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result =
-      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  Result = Builder.CreateFMA(V, V, V, I);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result =
-      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  Result = Builder.CreateFMA(V, V, V, FastMathFlags::getFast());
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
-  EXPECT_FALSE(II->hasNoNaNs());
+  EXPECT_TRUE(II->hasNoNaNs());
 
   Result = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
   II = cast<IntrinsicInst>(Result);
@@ -307,6 +305,11 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
 
+  V = Builder.CreateFMA(V, V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fma);
+
   VInt = Builder.CreateFPToUI(VDouble, Builder.getInt32Ty());
   ASSERT_TRUE(isa<IntrinsicInst>(VInt));
   II = cast<IntrinsicInst>(VInt);
@@ -393,6 +396,15 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   Call = Builder.CreateConstrainedFPBinOp(
         Intrinsic::experimental_constrained_fadd, V, V, nullptr, "", nullptr,
         RoundingMode::TowardNegative, fp::ebMayTrap);
+  CII = cast<ConstrainedFPIntrinsic>(Call);
+  EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
+  EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());
+  EXPECT_EQ(RoundingMode::TowardNegative, CII->getRoundingMode());
+
+  // Same as previous test for CreateConstrainedFPIntrinsic
+  Call = Builder.CreateConstrainedFPIntrinsic(
+      Intrinsic::experimental_constrained_fadd, {V->getType()}, {V, V}, nullptr,
+      "", nullptr, RoundingMode::TowardNegative, fp::ebMayTrap);
   CII = cast<ConstrainedFPIntrinsic>(Call);
   EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
   EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());
@@ -881,12 +893,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
   auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
     if (M->IsNewDbgInfoFormat) {
-      EXPECT_TRUE(First.is<DbgRecord *>());
+      EXPECT_TRUE(isa<DbgRecord *>(First));
       EXPECT_FALSE(Second->getDbgRecordRange().empty());
-      EXPECT_EQ(GetLastDbgRecord(&*Second), First.get<DbgRecord *>());
+      EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
     } else {
-      EXPECT_TRUE(First.is<Instruction *>());
-      EXPECT_EQ(&*std::prev(Second), First.get<Instruction *>());
+      EXPECT_TRUE(isa<Instruction *>(First));
+      EXPECT_EQ(&*std::prev(Second), cast<Instruction *>(First));
     }
   };
 
@@ -923,12 +935,13 @@ TEST_F(IRBuilderTest, DIBuilder) {
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
-      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I), I->getIterator());
+      ExpectOrder(DIB.insertLabel(Label, LabelLoc, I->getIterator()),
+                  I->getIterator());
 
       // We should be able to insert at the end of the block, even if there's
       // no terminator yet. Note that in RemoveDIs mode this record won't get
       // inserted into the block untill another instruction is added.
-      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB);
+      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
       // Specifically do not insert a terminator, to check this works. `I`
       // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -945,7 +958,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
     { /* dbg.value | DbgVariableRecord::Value */
       ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
-                                              VarLoc, I),
+                                              VarLoc, I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
       DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
@@ -955,7 +968,8 @@ TEST_F(IRBuilderTest, DIBuilder) {
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
     }
     { /* dbg.declare | DbgVariableRecord::Declare */
-      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, I),
+      ExpectOrder(DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc,
+                                    I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
       DbgInstPtr VarYDeclare =

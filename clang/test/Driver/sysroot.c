@@ -4,10 +4,9 @@
 // CHECK-SYSROOTEQ: "-cc1"{{.*}} "-isysroot" "{{[^"]*}}/FOO"
 
 // Apple Darwin uses -isysroot as the syslib root, too.
-// We pass --sysroot="" to defeat any -DDEFAULT_SYSROOT parameter.
 // RUN: touch %t2.o
 // RUN: %clang -target i386-apple-darwin10 \
-// RUN:   -isysroot /FOO --sysroot="" -### %t2.o 2> %t2
+// RUN:   -isysroot /FOO -### %t2.o 2> %t2
 // RUN: FileCheck --check-prefix=CHECK-APPLE-ISYSROOT < %t2 %s
 // CHECK-APPLE-ISYSROOT: "-arch" "i386"{{.*}} "-syslibroot" "{{[^"]*}}/FOO"
 

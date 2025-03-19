@@ -42,9 +42,11 @@ class DILabel;
 class Instruction;
 class MDNode;
 class AAResults;
+class BatchAAResults;
 template <typename T> class ArrayRef;
 class DIExpression;
 class DILocalVariable;
+class LiveRegUnits;
 class MachineBasicBlock;
 class MachineFunction;
 class MachineRegisterInfo;
@@ -555,13 +557,18 @@ public:
   /// will be dropped.
   void dropDebugNumber() { DebugInstrNum = 0; }
 
-  /// Emit an error referring to the source location of this instruction.
-  /// This should only be used for inline assembly that is somehow
-  /// impossible to compile. Other errors should have been handled much
-  /// earlier.
-  ///
-  /// If this method returns, the caller should try to recover from the error.
-  void emitError(StringRef Msg) const;
+  /// For inline asm, get the !srcloc metadata node if we have it, and decode
+  /// the loc cookie from it.
+  const MDNode *getLocCookieMD() const;
+
+  /// Emit an error referring to the source location of this instruction. This
+  /// should only be used for inline assembly that is somehow impossible to
+  /// compile. Other errors should have been handled much earlier.
+  void emitInlineAsmError(const Twine &ErrMsg) const;
+
+  // Emit an error in the LLVMContext referring to the source location of this
+  // instruction, if available.
+  void emitGenericError(const Twine &ErrMsg) const;
 
   /// Returns the target instruction descriptor of this MachineInstr.
   const MCInstrDesc &getDesc() const { return *MCID; }
@@ -952,13 +959,14 @@ public:
     return hasProperty(MCID::Call, Type);
   }
 
-  /// Return true if this is a call instruction that may have an associated
-  /// call site entry in the debug info.
-  bool isCandidateForCallSiteEntry(QueryType Type = IgnoreBundle) const;
+  /// Return true if this is a call instruction that may have an additional
+  /// information associated with it.
+  bool isCandidateForAdditionalCallInfo(QueryType Type = IgnoreBundle) const;
+
   /// Return true if copying, moving, or erasing this instruction requires
-  /// updating Call Site Info (see \ref copyCallSiteInfo, \ref moveCallSiteInfo,
-  /// \ref eraseCallSiteInfo).
-  bool shouldUpdateCallSiteInfo() const;
+  /// updating additional call info (see \ref copyCallInfo, \ref moveCallInfo,
+  /// \ref eraseCallInfo).
+  bool shouldUpdateAdditionalCallInfo() const;
 
   /// Returns true if the specified instruction stops control flow
   /// from executing the instruction immediately following it.  Examples include
@@ -986,8 +994,17 @@ public:
 
   /// Return true if this is an indirect branch, such as a
   /// branch through a register.
-  bool isIndirectBranch(QueryType Type = AnyInBundle) const {
-    return hasProperty(MCID::IndirectBranch, Type);
+  bool isIndirectBranch(QueryType Type = AnyInBundle,
+                        bool IncludeJumpTable = true) const {
+    return hasProperty(MCID::IndirectBranch, Type) &&
+           (IncludeJumpTable || !llvm::any_of(operands(), [](const auto &Op) {
+              return Op.isJTI();
+            }));
+  }
+
+  bool isComputedGoto(QueryType Type = AnyInBundle) const {
+    // Jump tables are not considered computed gotos.
+    return isIndirectBranch(Type, /*IncludeJumpTable=*/false);
   }
 
   /// Return true if this is a branch which may fall
@@ -1737,6 +1754,18 @@ public:
   /// defined registers were dead.
   bool wouldBeTriviallyDead() const;
 
+  /// Check whether an MI is dead. If \p LivePhysRegs is provided, it is assumed
+  /// to be at the position of MI and will be used to check the Liveness of
+  /// physical register defs. If \p LivePhysRegs is not provided, this will
+  /// pessimistically assume any PhysReg def is live.
+  /// For trivially dead instructions (i.e. those without hard to model effects
+  /// / wouldBeTriviallyDead), this checks deadness by analyzing defs of the
+  /// MachineInstr. If the instruction wouldBeTriviallyDead, and  all the defs
+  /// either have dead flags or have no uses, then the instruction is said to be
+  /// dead.
+  bool isDead(const MachineRegisterInfo &MRI,
+              LiveRegUnits *LivePhysRegs = nullptr) const;
+
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
   //
@@ -1747,6 +1776,8 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
+  bool mayAlias(BatchAAResults *AA, const MachineInstr &Other,
+                bool UseTBAA) const;
   bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered

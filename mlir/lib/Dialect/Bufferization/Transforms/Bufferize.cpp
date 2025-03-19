@@ -26,9 +26,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_FINALIZINGBUFFERIZE
-#define GEN_PASS_DEF_BUFFERIZATIONBUFFERIZE
-#define GEN_PASS_DEF_ONESHOTBUFFERIZE
+#define GEN_PASS_DEF_ONESHOTBUFFERIZEPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -38,135 +36,7 @@ namespace bufferization {
 using namespace mlir;
 using namespace mlir::bufferization;
 
-//===----------------------------------------------------------------------===//
-// BufferizeTypeConverter
-//===----------------------------------------------------------------------===//
-
-static Value materializeToTensor(OpBuilder &builder, TensorType type,
-                                 ValueRange inputs, Location loc) {
-  assert(inputs.size() == 1);
-  assert(isa<BaseMemRefType>(inputs[0].getType()));
-  return builder.create<bufferization::ToTensorOp>(loc, type, inputs[0]);
-}
-
-/// Registers conversions into BufferizeTypeConverter
-BufferizeTypeConverter::BufferizeTypeConverter() {
-  // Keep all types unchanged.
-  addConversion([](Type type) { return type; });
-  // Convert RankedTensorType to MemRefType.
-  addConversion([](RankedTensorType type) -> Type {
-    return MemRefType::get(type.getShape(), type.getElementType());
-  });
-  // Convert UnrankedTensorType to UnrankedMemRefType.
-  addConversion([](UnrankedTensorType type) -> Type {
-    return UnrankedMemRefType::get(type.getElementType(), 0);
-  });
-  addArgumentMaterialization(materializeToTensor);
-  addSourceMaterialization(materializeToTensor);
-  addTargetMaterialization([](OpBuilder &builder, BaseMemRefType type,
-                              ValueRange inputs, Location loc) -> Value {
-    assert(inputs.size() == 1 && "expected exactly one input");
-
-    if (auto inputType = dyn_cast<MemRefType>(inputs[0].getType())) {
-      // MemRef to MemRef cast.
-      assert(inputType != type && "expected different types");
-      // Unranked to ranked and ranked to unranked casts must be explicit.
-      auto rankedDestType = dyn_cast<MemRefType>(type);
-      if (!rankedDestType)
-        return nullptr;
-      BufferizationOptions options;
-      options.bufferAlignment = 0;
-      FailureOr<Value> replacement =
-          castOrReallocMemRefValue(builder, inputs[0], rankedDestType, options);
-      if (failed(replacement))
-        return nullptr;
-      return *replacement;
-    }
-
-    if (isa<TensorType>(inputs[0].getType())) {
-      // Tensor to MemRef cast.
-      return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
-    }
-
-    llvm_unreachable("only tensor/memref input types supported");
-  });
-}
-
-void mlir::bufferization::populateBufferizeMaterializationLegality(
-    ConversionTarget &target) {
-  target.addLegalOp<bufferization::ToTensorOp, bufferization::ToMemrefOp>();
-}
-
 namespace {
-// In a finalizing bufferize conversion, we know that all tensors have been
-// converted to memrefs, thus, this op becomes an identity.
-class BufferizeToTensorOp
-    : public OpConversionPattern<bufferization::ToTensorOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(bufferization::ToTensorOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.getMemref());
-    return success();
-  }
-};
-} // namespace
-
-namespace {
-// In a finalizing bufferize conversion, we know that all tensors have been
-// converted to memrefs, thus, this op becomes an identity.
-class BufferizeToMemrefOp
-    : public OpConversionPattern<bufferization::ToMemrefOp> {
-public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(bufferization::ToMemrefOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.getTensor());
-    return success();
-  }
-};
-} // namespace
-
-void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
-    const BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
-  patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
-                                                         patterns.getContext());
-}
-
-namespace {
-struct FinalizingBufferizePass
-    : public bufferization::impl::FinalizingBufferizeBase<
-          FinalizingBufferizePass> {
-  using FinalizingBufferizeBase<
-      FinalizingBufferizePass>::FinalizingBufferizeBase;
-
-  void runOnOperation() override {
-    auto func = getOperation();
-    auto *context = &getContext();
-
-    BufferizeTypeConverter typeConverter;
-    RewritePatternSet patterns(context);
-    ConversionTarget target(*context);
-
-    populateEliminateBufferizeMaterializationsPatterns(typeConverter, patterns);
-
-    // If all result types are legal, and all block arguments are legal (ensured
-    // by func conversion above), then all types in the program are legal.
-    //
-    // We also check that the operand types are legal to avoid creating invalid
-    // IR. For example, this prevents
-    // populateEliminateBufferizeMaterializationsPatterns from updating the
-    // types of the operands to a return op without updating the enclosing
-    // function.
-    target.markUnknownOpDynamicallyLegal(
-        [&](Operation *op) { return typeConverter.isLegal(op); });
-
-    if (failed(applyFullConversion(func, target, std::move(patterns))))
-      signalPassFailure();
-  }
-};
 
 static LayoutMapOption parseLayoutMapOption(const std::string &s) {
   if (s == "fully-dynamic-layout-map")
@@ -193,11 +63,9 @@ parseHeuristicOption(const std::string &s) {
 }
 
 struct OneShotBufferizePass
-    : public bufferization::impl::OneShotBufferizeBase<OneShotBufferizePass> {
-  OneShotBufferizePass() = default;
-
-  explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
-      : options(options) {}
+    : public bufferization::impl::OneShotBufferizePassBase<
+          OneShotBufferizePass> {
+  using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
@@ -217,12 +85,31 @@ struct OneShotBufferizePass
       opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
+
+      if (mustInferMemorySpace && useEncodingForMemorySpace) {
+        emitError(getOperation()->getLoc())
+            << "only one of 'must-infer-memory-space' and "
+               "'use-encoding-for-memory-space' are allowed in "
+            << getArgument();
+        return signalPassFailure();
+      }
+
       if (mustInferMemorySpace) {
         opt.defaultMemorySpaceFn =
             [](TensorType t) -> std::optional<Attribute> {
           return std::nullopt;
         };
       }
+
+      if (useEncodingForMemorySpace) {
+        opt.defaultMemorySpaceFn =
+            [](TensorType t) -> std::optional<Attribute> {
+          if (auto rtt = dyn_cast<RankedTensorType>(t))
+            return rtt.getEncoding();
+          return std::nullopt;
+        };
+      }
+
       opt.printConflicts = printConflicts;
       opt.bufferAlignment = bufferAlignment;
       opt.testAnalysisOnly = testAnalysisOnly;
@@ -255,7 +142,7 @@ struct OneShotBufferizePass
       // Configure op filter.
       OpFilter::Entry::FilterFn filterFn = [&](Operation *op) {
         // Filter may be specified via options.
-        if (this->dialectFilter.hasValue())
+        if (this->dialectFilter.hasValue() && !(*this->dialectFilter).empty())
           return llvm::is_contained(this->dialectFilter,
                                     op->getDialect()->getNamespace());
         // No filter specified: All other ops are allowed.
@@ -321,20 +208,6 @@ private:
   std::optional<OneShotBufferizationOptions> options;
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
-  return std::make_unique<OneShotBufferizePass>();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass(
-    const OneShotBufferizationOptions &options) {
-  return std::make_unique<OneShotBufferizePass>(options);
-}
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::bufferization::createFinalizingBufferizePass() {
-  return std::make_unique<FinalizingBufferizePass>();
-}
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface-based Bufferization
@@ -568,14 +441,15 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
     for (OpOperand &use : bbArg.getUses())
       bbArgUses.push_back(&use);
 
+    Type tensorType = bbArg.getType();
     // Change the bbArg type to memref.
     bbArg.setType(type);
 
     // Replace all uses of the original tensor bbArg.
     rewriter.setInsertionPointToStart(block);
     if (!bbArgUses.empty()) {
-      Value toTensorOp =
-          rewriter.create<bufferization::ToTensorOp>(bbArg.getLoc(), bbArg);
+      Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
+          bbArg.getLoc(), tensorType, bbArg);
       for (OpOperand *use : bbArgUses)
         use->set(toTensorOp);
     }
@@ -619,18 +493,4 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
   }
 
   return success();
-}
-
-BufferizationOptions bufferization::getPartialBufferizationOptions() {
-  BufferizationOptions options;
-  options.allowUnknownOps = true;
-  options.copyBeforeWrite = true;
-  options.enforceAliasingInvariants = false;
-  options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
-                                      const BufferizationOptions &options) {
-    return getMemRefTypeWithStaticIdentityLayout(
-        cast<TensorType>(value.getType()), memorySpace);
-  };
-  options.opFilter.allowDialect<BufferizationDialect>();
-  return options;
 }

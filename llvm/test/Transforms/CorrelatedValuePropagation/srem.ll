@@ -41,10 +41,10 @@ define void @test4(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[REM1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[A]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[REM1]] = urem i32 [[A]], 17
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp ugt i32 [[REM1]], 8
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp samesign ugt i32 [[REM1]], 8
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

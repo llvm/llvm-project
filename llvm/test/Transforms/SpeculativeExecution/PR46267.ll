@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -passes='speculative-execution' | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -S -passes='speculative-execution' | FileCheck %s
 
 %class.B = type { ptr }
 
@@ -27,11 +26,11 @@ end:                                 ; preds = %notnull, %entry
   ret ptr %i6
 }
 
-define void @f(i32 %i) {
+define void @f(i32 %i, i1 %arg) {
 entry:
 ; CHECK-LABEL: @f(
 ; CHECK:  %a2 = add i32 %i, 0
-  br i1 undef, label %land.rhs, label %land.end
+  br i1 %arg, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %entry
 ; CHECK: land.rhs:

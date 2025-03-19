@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_ADJACENT_FIND_H
-#define _LIBCPP___ALGORITHM_RANGES_ADJACENT_FIND_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_ADJACENT_FIND_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_ADJACENT_FIND_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
@@ -80,4 +80,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_ADJACENT_FIND_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_ADJACENT_FIND_H

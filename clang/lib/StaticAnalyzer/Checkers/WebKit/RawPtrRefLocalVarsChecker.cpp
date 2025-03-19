@@ -12,8 +12,9 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -48,17 +49,14 @@ bool isRefcountedStringsHack(const VarDecl *V) {
   return false;
 }
 
-struct GuardianVisitor : public RecursiveASTVisitor<GuardianVisitor> {
-  using Base = RecursiveASTVisitor<GuardianVisitor>;
-
+struct GuardianVisitor : DynamicRecursiveASTVisitor {
   const VarDecl *Guardian{nullptr};
 
-public:
   explicit GuardianVisitor(const VarDecl *Guardian) : Guardian(Guardian) {
     assert(Guardian);
   }
 
-  bool VisitBinaryOperator(const BinaryOperator *BO) {
+  bool VisitBinaryOperator(BinaryOperator *BO) override {
     if (BO->isAssignmentOp()) {
       if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
         if (VarRef->getDecl() == Guardian)
@@ -68,7 +66,7 @@ public:
     return true;
   }
 
-  bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
+  bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
     if (auto *Ctor = CE->getConstructor()) {
       if (Ctor->isMoveConstructor() && CE->getNumArgs() == 1) {
         auto *Arg = CE->getArg(0)->IgnoreParenCasts();
@@ -81,10 +79,10 @@ public:
     return true;
   }
 
-  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
     auto MethodName = safeGetName(MCE->getMethodDecl());
     if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull") {
+        MethodName == "releaseNonNull" || MethodName == "clear") {
       auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
       if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
         if (VarRef->getDecl() == Guardian)
@@ -94,7 +92,7 @@ public:
     return true;
   }
 
-  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) override {
     if (OCE->isAssignmentOp()) {
       assert(OCE->getNumArgs() == 2);
       auto *ThisArg = OCE->getArg(0)->IgnoreParenCasts();
@@ -169,12 +167,18 @@ class RawPtrRefLocalVarsChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
   mutable BugReporter *BR;
+  EnsureFunctionAnalysis EFA;
+
+protected:
+  mutable std::optional<RetainTypeChecker> RTC;
 
 public:
   RawPtrRefLocalVarsChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
+  virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
+  virtual bool isSafePtrType(const QualType) const = 0;
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -184,37 +188,40 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const RawPtrRefLocalVarsChecker *Checker;
       Decl *DeclWithIssue{nullptr};
 
       TrivialFunctionAnalysis TFA;
 
-      using Base = RecursiveASTVisitor<LocalVisitor>;
-
       explicit LocalVisitor(const RawPtrRefLocalVarsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool TraverseDecl(Decl *D) {
+      bool TraverseDecl(Decl *D) override {
         llvm::SaveAndRestore SavedDecl(DeclWithIssue);
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
-        return Base::TraverseDecl(D);
+        return DynamicRecursiveASTVisitor::TraverseDecl(D);
       }
 
-      bool VisitVarDecl(VarDecl *V) {
+      bool VisitTypedefDecl(TypedefDecl *TD) override {
+        if (Checker->RTC)
+          Checker->RTC->visitTypedef(TD);
+        return true;
+      }
+
+      bool VisitVarDecl(VarDecl *V) override {
         auto *Init = V->getInit();
         if (Init && V->isLocalVarDecl())
           Checker->visitVarDecl(V, Init, DeclWithIssue);
         return true;
       }
 
-      bool VisitBinaryOperator(const BinaryOperator *BO) {
+      bool VisitBinaryOperator(BinaryOperator *BO) override {
         if (BO->isAssignmentOp()) {
           if (auto *VarRef = dyn_cast<DeclRefExpr>(BO->getLHS())) {
             if (auto *V = dyn_cast<VarDecl>(VarRef->getDecl()))
@@ -224,38 +231,40 @@ public:
         return true;
       }
 
-      bool TraverseIfStmt(IfStmt *IS) {
+      bool TraverseIfStmt(IfStmt *IS) override {
         if (!TFA.isTrivial(IS))
-          return Base::TraverseIfStmt(IS);
+          return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);
         return true;
       }
 
-      bool TraverseForStmt(ForStmt *FS) {
+      bool TraverseForStmt(ForStmt *FS) override {
         if (!TFA.isTrivial(FS))
-          return Base::TraverseForStmt(FS);
+          return DynamicRecursiveASTVisitor::TraverseForStmt(FS);
         return true;
       }
 
-      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) {
+      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) override {
         if (!TFA.isTrivial(FRS))
-          return Base::TraverseCXXForRangeStmt(FRS);
+          return DynamicRecursiveASTVisitor::TraverseCXXForRangeStmt(FRS);
         return true;
       }
 
-      bool TraverseWhileStmt(WhileStmt *WS) {
+      bool TraverseWhileStmt(WhileStmt *WS) override {
         if (!TFA.isTrivial(WS))
-          return Base::TraverseWhileStmt(WS);
+          return DynamicRecursiveASTVisitor::TraverseWhileStmt(WS);
         return true;
       }
 
-      bool TraverseCompoundStmt(CompoundStmt *CS) {
+      bool TraverseCompoundStmt(CompoundStmt *CS) override {
         if (!TFA.isTrivial(CS))
-          return Base::TraverseCompoundStmt(CS);
+          return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
     };
 
     LocalVisitor visitor(this);
+    if (RTC)
+      RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
@@ -268,8 +277,12 @@ public:
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
+              [&](const clang::CXXRecordDecl *Record) {
+                return isSafePtr(Record);
+              },
+              [&](const clang::QualType Type) { return isSafePtrType(Type); },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
-                if (!InitArgOrigin)
+                if (!InitArgOrigin || IsSafe)
                   return true;
 
                 if (isa<CXXThisExpr>(InitArgOrigin))
@@ -279,6 +292,12 @@ public:
                   return true;
 
                 if (isa<IntegerLiteral>(InitArgOrigin))
+                  return true;
+
+                if (isConstOwnerPtrMemberExpr(InitArgOrigin))
+                  return true;
+
+                if (EFA.isACallToEnsureFn(InitArgOrigin))
                   return true;
 
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
@@ -291,8 +310,7 @@ public:
                           MaybeGuardianArgType->getAsCXXRecordDecl();
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
-                            (isRefCounted(MaybeGuardianArgCXXRecord) ||
-                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
+                            (isSafePtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))
@@ -317,6 +335,8 @@ public:
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
+    if (isa<ImplicitParamDecl>(V))
+      return true;
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
@@ -364,6 +384,12 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncountedPtr(T);
   }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRefCounted(Record) || isCheckedPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRefOrCheckedPtrType(type);
+  }
   const char *ptrKind() const final { return "uncounted"; }
 };
 
@@ -375,7 +401,32 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncheckedPtr(T);
   }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRefCounted(Record) || isCheckedPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRefOrCheckedPtrType(type);
+  }
   const char *ptrKind() const final { return "unchecked"; }
+};
+
+class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
+public:
+  UnretainedLocalVarsChecker()
+      : RawPtrRefLocalVarsChecker("Unretained raw pointer or reference not "
+                                  "provably backed by a RetainPtr") {
+    RTC = RetainTypeChecker();
+  }
+  std::optional<bool> isUnsafePtr(const QualType T) const final {
+    return RTC->isUnretained(T);
+  }
+  bool isSafePtr(const CXXRecordDecl *Record) const final {
+    return isRetainPtr(Record);
+  }
+  bool isSafePtrType(const QualType type) const final {
+    return isRetainPtrType(type);
+  }
+  const char *ptrKind() const final { return "unretained"; }
 };
 
 } // namespace
@@ -393,5 +444,13 @@ void ento::registerUncheckedLocalVarsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncheckedLocalVarsChecker(const CheckerManager &) {
+  return true;
+}
+
+void ento::registerUnretainedLocalVarsChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnretainedLocalVarsChecker>();
+}
+
+bool ento::shouldRegisterUnretainedLocalVarsChecker(const CheckerManager &) {
   return true;
 }

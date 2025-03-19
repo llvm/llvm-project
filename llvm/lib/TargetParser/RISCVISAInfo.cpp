@@ -740,7 +740,15 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZfinx = Exts.count("zfinx") != 0;
   bool HasVector = Exts.count("zve32x") != 0;
   bool HasZvl = MinVLen != 0;
-  bool HasZcmt = Exts.count("zcmt") != 0;
+  bool HasZcmp = Exts.count("zcmp") != 0;
+  bool HasXqccmp = Exts.count("xqccmp") != 0;
+
+  static constexpr StringLiteral XqciExts[] = {
+      {"xqcia"},   {"xqciac"}, {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
+      {"xqcicm"},  {"xqcics"}, {"xqcicsr"}, {"xqciint"}, {"xqcili"},
+      {"xqcilia"}, {"xqcilo"}, {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}};
+  static constexpr StringLiteral ZcdOverlaps[] = {
+      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -751,19 +759,15 @@ Error RISCVISAInfo::checkDependency() {
   if (HasZvl && !HasVector)
     return getExtensionRequiresError("zvl*b", "v' or 'zve*");
 
-  if ((HasZcmt || Exts.count("zcmp")) && HasD && (HasC || Exts.count("zcd")))
-    return getError(Twine("'") + (HasZcmt ? "zcmt" : "zcmp") +
-                    "' extension is incompatible with '" +
-                    (HasC ? "c" : "zcd") +
-                    "' extension when 'd' extension is enabled");
+  if (HasD && (HasC || Exts.count("zcd")))
+    for (auto Ext : ZcdOverlaps)
+      if (Exts.count(Ext.str()))
+        return getError(
+            Twine("'") + Ext + "' extension is incompatible with '" +
+            (HasC ? "c" : "zcd") + "' extension when 'd' extension is enabled");
 
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
-
-  if (!(Exts.count("a") || Exts.count("zaamo")))
-    for (auto Ext : {"zacas", "zabha"})
-      if (Exts.count(Ext))
-        return getExtensionRequiresError(Ext, "a' or 'zaamo");
 
   if (Exts.count("xwchc") != 0) {
     if (XLen != 32)
@@ -775,6 +779,13 @@ Error RISCVISAInfo::checkDependency() {
     if (Exts.count("zcb") != 0)
       return getIncompatibleError("xwchc", "zcb");
   }
+
+  for (auto Ext : XqciExts)
+    if (Exts.count(Ext.str()) && (XLen != 32))
+      return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
+
+  if (HasZcmp && HasXqccmp)
+    return getIncompatibleError("zcmp", "xqccmp");
 
   return Error::success();
 }
@@ -828,10 +839,11 @@ void RISCVISAInfo::updateImplication() {
     std::for_each(Range.first, Range.second,
                   [&](const ImpliedExtsEntry &Implied) {
                     const char *ImpliedExt = Implied.ImpliedExt;
-                    if (Exts.count(ImpliedExt))
+                    auto [It, Inserted] = Exts.try_emplace(ImpliedExt);
+                    if (!Inserted)
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
-                    Exts[ImpliedExt] = *Version;
+                    It->second = *Version;
                     WorkList.push_back(ImpliedExt);
                   });
   }

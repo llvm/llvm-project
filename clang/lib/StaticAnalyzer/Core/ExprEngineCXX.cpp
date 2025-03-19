@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/AttrIterator.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtCXX.h"
@@ -45,7 +46,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
                                     const CallEvent &Call) {
   SVal ThisVal;
   bool AlwaysReturnsLValue;
-  const CXXRecordDecl *ThisRD = nullptr;
+  [[maybe_unused]] const CXXRecordDecl *ThisRD = nullptr;
   if (const CXXConstructorCall *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
     assert(Ctor->getDecl()->isTrivial());
     assert(Ctor->getDecl()->isCopyOrMoveConstructor());
@@ -68,23 +69,21 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   Bldr.takeNodes(Pred);
 
   assert(ThisRD);
-  if (!ThisRD->isEmpty()) {
-    // Load the source value only for non-empty classes.
-    // Otherwise it'd retrieve an UnknownVal
-    // and bind it and RegionStore would think that the actual value
-    // in this region at this offset is unknown.
-    SVal V = Call.getArgSVal(0);
+  SVal V = Call.getArgSVal(0);
+  const Expr *VExpr = Call.getArgExpr(0);
 
-    // If the value being copied is not unknown, load from its location to get
-    // an aggregate rvalue.
-    if (std::optional<Loc> L = V.getAs<Loc>())
-      V = Pred->getState()->getSVal(*L);
-    else
-      assert(V.isUnknownOrUndef());
-    evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
-  } else {
-    Dst.Add(Pred);
-  }
+  // If the value being copied is not unknown, load from its location to get
+  // an aggregate rvalue.
+  if (std::optional<Loc> L = V.getAs<Loc>())
+    V = Pred->getState()->getSVal(*L);
+  else
+    assert(V.isUnknownOrUndef());
+
+  ExplodedNodeSet Tmp;
+  evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
+               /*isLoad=*/true);
+  for (ExplodedNode *N : Tmp)
+    evalBind(Dst, CallExpr, N, ThisVal, V, true);
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {
@@ -1207,4 +1206,21 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   // FIXME: Move all post/pre visits to ::Visit().
   getCheckerManager().runCheckersForPostStmt(Dst, Tmp, LE, *this);
+}
+
+void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  ExplodedNodeSet CheckerPreStmt;
+  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
+
+  ExplodedNodeSet EvalSet;
+  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+
+  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
+    for (ExplodedNode *N : CheckerPreStmt) {
+      Visit(Attr->getAssumption(), N, EvalSet);
+    }
+  }
+
+  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }

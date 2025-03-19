@@ -156,7 +156,7 @@ body:             |
     ; CHECK-LABEL: name: 6-strqui-strqpre-no-merge
     ; CHECK: liveins: $q0, $q1, $x0
     ; CHECK: STRQui renamable $q1, renamable $x0, 1 :: (store (s128))
-    ; CHECK: early-clobber renamable $x0 = STRQpre renamable $q0, renamable $x0, 48, implicit $w0 :: (store (s128))
+    ; CHECK: early-clobber renamable $x0 = STRQpre renamable $q0, renamable $x0, 48, implicit $w0, implicit $w0_hi :: (store (s128))
     ; CHECK: RET undef $lr, implicit $x0
     STRQui killed renamable $q1, renamable $x0, 1 :: (store (s128))
     early-clobber renamable $x0 = STRQpre killed renamable $q0, killed renamable $x0, 48 :: (store (s128))
@@ -235,7 +235,7 @@ body:             |
     liveins: $s0, $s1, $x0, $x1
     ; CHECK-LABEL: name: 9-strspre-strsui-mod-base-reg-no-merge
     ; CHECK: liveins: $s0, $s1, $x0, $x1
-    ; CHECK: dead early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: dead early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0, implicit $w0_hi :: (store (s32))
     ; CHECK: renamable $x0 = LDRXui renamable $x1, 1 :: (load (s64))
     ; CHECK: STRSui renamable $s1, renamable $x0, 1 :: (store (s32))
     ; CHECK: RET undef $lr, implicit $x0
@@ -265,7 +265,7 @@ body:             |
     liveins: $s0, $s1, $x0, $x1
     ; CHECK-LABEL: name: 10-strspre-strsui-used-base-reg-no-merge
     ; CHECK: liveins: $s0, $s1, $x0, $x1
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0, implicit $w0_hi :: (store (s32))
     ; CHECK: STRXui renamable $x1, renamable $x1, 1 :: (store (s32))
     ; CHECK: STRSui renamable $s1, renamable $x0, 1 :: (store (s32))
     ; CHECK: RET undef $lr, implicit $x0
@@ -296,12 +296,12 @@ body:             |
     liveins: $s0, $s1, $x0
     ; CHECK-LABEL: name: 11-strspre-strspre-no-merge
     ; CHECK: liveins: $s0, $s1, $x0
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 16, implicit $w0 :: (store (s32))
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 4, implicit $w0 :: (store (s32))
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 12, implicit $w0 :: (store (s32))
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 4, implicit $w0 :: (store (s32))
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 4, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0, implicit $w0_hi :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 16, implicit $w0, implicit $w0_hi :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 4, implicit $w0, implicit $w0_hi :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 12, implicit $w0, implicit $w0_hi :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 4, implicit $w0, implicit $w0_hi :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 4, implicit $w0, implicit $w0_hi :: (store (s32))
     ; CHECK: RET undef $lr, implicit $x0
     early-clobber renamable $x0 = STRSpre renamable $s0, killed renamable $x0, 12 :: (store (s32))
     early-clobber renamable $x0 = STRSpre renamable $s1, killed renamable $x0, 16 :: (store (s32))
@@ -335,7 +335,7 @@ body:             |
     liveins: $s0, $s1, $x0
     ; CHECK-LABEL: name: 12-strspre-strsui-no-merge
     ; CHECK: liveins: $s0, $s1, $x0
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0, implicit $w0_hi :: (store (s32))
     ; CHECK: STRSui renamable $s1, renamable $x0, 2 :: (store (s32))
     ; CHECK: RET undef $lr, implicit $x0
     early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 12 :: (store (s32))
@@ -390,7 +390,7 @@ body:             |
     liveins: $q0, $q1, $x0
     ; CHECK-LABEL: name: 14-strqpre-sturqi-no-merge
     ; CHECK: liveins: $q0, $q1, $x0
-    ; CHECK: early-clobber renamable $x0 = STRQpre renamable $q0, renamable $x0, 48, implicit $w0 :: (store (s128))
+    ; CHECK: early-clobber renamable $x0 = STRQpre renamable $q0, renamable $x0, 48, implicit $w0, implicit $w0_hi :: (store (s128))
     ; CHECK: STURQi renamable $q1, renamable $x0, 1 :: (store (s128))
     ; CHECK: RET undef $lr, implicit $x0
     early-clobber renamable $x0 = STRQpre killed renamable $q0, killed renamable $x0, 48 :: (store (s128))
@@ -417,7 +417,7 @@ body:             |
     liveins: $s0, $s1, $x0
     ; CHECK-LABEL: name: 15-strspre-strsui-unaligned-no-merge
     ; CHECK: liveins: $s0, $s1, $x0
-    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 251, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 251, implicit $w0, implicit $w0_hi :: (store (s32))
     ; CHECK: STRSui renamable $s1, renamable $x0, 1 :: (store (s32))
     ; CHECK: RET undef $lr, implicit $x0
     early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 251 :: (store (s32))
@@ -443,7 +443,7 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: 16-strxpre-strxui-same-reg-no-merge
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: early-clobber renamable $x0 = STRXpre renamable $x1, renamable $x0, 24, implicit $w0 :: (store (s64))
+    ; CHECK: early-clobber renamable $x0 = STRXpre renamable $x1, renamable $x0, 24, implicit $w0, implicit $w0_hi :: (store (s64))
     ; CHECK: STRXui renamable $x0, renamable $x0, 1 :: (store (s64))
     ; CHECK: RET undef $lr, implicit $x0
     early-clobber renamable $x0 = STRXpre killed renamable $x1, killed renamable $x0, 24 :: (store (s64))
@@ -470,7 +470,7 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: 17-strwpre-strwui-same-reg-no-merge
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: early-clobber renamable $x0 = STRWpre renamable $w1, renamable $x0, 24, implicit $w0, implicit-def $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRWpre renamable $w1, renamable $x0, 24, implicit $w0, implicit $w0_hi, implicit-def $w0 :: (store (s32))
     ; CHECK: STRWui renamable $w0, renamable $x0, 1 :: (store (s32))
     ; CHECK: RET undef $lr, implicit $x0
     early-clobber renamable $x0 = STRWpre killed renamable $w1, killed renamable $x0, 24 :: (store (s32))

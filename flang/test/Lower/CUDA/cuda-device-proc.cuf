@@ -5,6 +5,11 @@
 attributes(global) subroutine devsub()
   implicit none
   integer :: ret
+  real(4) :: af
+  real(8) :: ad
+  integer(4) :: ai
+  integer(8) :: al
+  integer(8) :: time
 
   call syncthreads()
   call syncwarp(1)
@@ -14,23 +19,306 @@ attributes(global) subroutine devsub()
   ret = syncthreads_and(1)
   ret = syncthreads_count(1)
   ret = syncthreads_or(1)
+
+  ai = atomicadd(ai, 1_4)
+  al = atomicadd(al, 1_8)
+  af = atomicadd(af, 1.0_4)
+  ad = atomicadd(ad, 1.0_8)
+  
+  ai = atomicsub(ai, 1_4)
+  al = atomicsub(al, 1_8)
+  af = atomicsub(af, 1.0_4)
+  ad = atomicsub(ad, 1.0_8)
+  
+  ai = atomicmax(ai, 1_4)
+  al = atomicmax(al, 1_8)
+  af = atomicmax(af, 1.0_4)
+  ad = atomicmax(ad, 1.0_8)
+  
+  ai = atomicmin(ai, 1_4)
+  al = atomicmin(al, 1_8)
+  af = atomicmin(af, 1.0_4)
+  ad = atomicmin(ad, 1.0_8)
+  
+  ai = atomicand(ai, 1_4)
+  ai = atomicor(ai, 1_4)
+  ai = atomicinc(ai, 1_4)
+  ai = atomicdec(ai, 1_4)
+
+  time = clock64()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: fir.call @__syncthreads()
-! CHECK: fir.call @__syncwarp(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
-! CHECK: fir.call @__threadfence()
-! CHECK: fir.call @__threadfence_block()
-! CHECK: fir.call @__threadfence_system()
-! CHECK: %{{.*}} = fir.call @__syncthreads_and(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
-! CHECK: %{{.*}} = fir.call @__syncthreads_count(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
-! CHECK: %{{.*}} = fir.call @__syncthreads_or(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> i32
+! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
+! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.membar.sys() fastmath<contract> : () -> ()
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1_i32_0) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1_i32_1) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1_i32_2) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
 
-! CHECK: func.func private @__syncthreads() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__threadfence() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__threadfence_block() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_block", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__threadfence_system() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_system", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__syncthreads_and(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_and", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__syncthreads_count(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_count", fir.proc_attrs = #fir.proc_attrs<bind_c>}
-! CHECK: func.func private @__syncthreads_or(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_or", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw sub  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fsub %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fsub %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw max  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw max  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fmax %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fmax %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw min  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw min  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fmin %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fmin %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
+
+! CHECK: %{{.*}} = llvm.atomicrmw _and  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw _or  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw uinc_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+
+! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
+
+subroutine host1()
+  integer, device :: a(32)
+  integer, device :: ret
+  integer :: i, j
+
+block; use cudadevice
+  !$cuf kernel do(1) <<<*,32>>>
+  do i = 1, 32
+    a(i) = a(i) * 2.0
+    call syncthreads()
+    a(i) = a(i) + a(j) - 34.0
+
+    call syncwarp(1)
+    ret = syncthreads_and(1)
+    ret = syncthreads_count(1)
+    ret = syncthreads_or(1)
+  end do
+end block
+end 
+
+! CHECK-LABEL: func.func @_QPhost1()
+! CHECK: cuf.kernel
+! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
+! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+! CHECK: fir.call @llvm.nvvm.barrier0.or(%c1{{.*}}) fastmath<contract> : (i32) -> i32
+
+attributes(device) subroutine testMatch()
+  integer :: a, ipred, mask, v32
+  integer(8) :: v64
+  real(4) :: r4
+  real(8) :: r8
+  a = match_all_sync(mask, v32, ipred)
+  a = match_all_sync(mask, v64, ipred)
+  a = match_all_sync(mask, r4, ipred)
+  a = match_all_sync(mask, r8, ipred)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestmatch()
+! CHECK: fir.call @llvm.nvvm.match.all.sync.i32p
+! CHECK: fir.call @llvm.nvvm.match.all.sync.i64p
+! CHECK: fir.convert %{{.*}} : (f32) -> i32
+! CHECK: fir.call @llvm.nvvm.match.all.sync.i32p
+! CHECK: fir.convert %{{.*}} : (f64) -> i64
+! CHECK: fir.call @llvm.nvvm.match.all.sync.i64p
+
+attributes(device) subroutine testMatchAny()
+  integer :: a, mask, v32
+  integer(8) :: v64
+  real(4) :: r4
+  real(8) :: r8
+  a = match_any_sync(mask, v32)
+  a = match_any_sync(mask, v64)
+  a = match_any_sync(mask, r4)
+  a = match_any_sync(mask, r8)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestmatchany()
+! CHECK: fir.call @llvm.nvvm.match.any.sync.i32p
+! CHECK: fir.call @llvm.nvvm.match.any.sync.i64p
+! CHECK: fir.convert %{{.*}} : (f32) -> i32
+! CHECK: fir.call @llvm.nvvm.match.any.sync.i32p
+! CHECK: fir.convert %{{.*}} : (f64) -> i64
+! CHECK: fir.call @llvm.nvvm.match.any.sync.i64p
+
+attributes(device) subroutine testAtomic(aa, n)
+  integer :: aa(*)
+  integer, intent(in) :: n
+  integer :: a, istat, j, i
+  real :: r
+  istat = atomicexch(a,0)
+  istat = atomicexch(r, 0.0)
+  istat = atomicxor(a, j)
+  istat = atomiccas(a, i, 14)
+  do i = 1, n
+    istat = atomicxor(aa, i)
+    istat = atomiccas(aa, i, 14)
+    istat = atomicexch(aa, 0)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic
+! CHECK: llvm.atomicrmw xchg %{{.*}}, %c0{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: llvm.atomicrmw xchg %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<i32> to !llvm.ptr
+! CHECK: llvm.cmpxchg %[[ADDR]], %{{.*}}, %c14{{.*}} acq_rel monotonic : !llvm.ptr, i32
+! CHECK: fir.do_loop
+! CHECK: llvm.atomicrmw _xor %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<!fir.array<?xi32>> to !llvm.ptr 
+! CHECK: llvm.cmpxchg %[[ADDR]], %{{.*}}, %c14{{.*}} acq_rel monotonic : !llvm.ptr, i32
+! CHECK: llvm.atomicrmw xchg %{{.*}}, %c0{{.*}} seq_cst : !llvm.ptr, i32
+
+attributes(device) subroutine testAtomic2()
+  integer(8) :: a, i, istat
+  istat = atomiccas(a, i, 14)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic2()
+! CHECK: %[[VAL:.*]] = fir.convert %c14{{.*}} : (i32) -> i64
+! CHECK: %[[ADDR:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<i64> to !llvm.ptr
+! CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %[[VAL]] acq_rel monotonic : !llvm.ptr, i64
+
+attributes(device) subroutine testAtomic3()
+  real :: a, i, istat
+  istat = atomiccas(a, i, 14.0)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic3()
+! CHECK: %[[BCAST1:.*]] = llvm.bitcast %{{.*}} : f32 to i32
+! CHECK: %[[BCAST2:.*]] = llvm.bitcast %{{.*}} : f32 to i32
+! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<f32> to !llvm.ptr
+! CHECK: llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i32
+
+attributes(device) subroutine testAtomic4()
+  real(8) :: a, i, istat
+  istat = atomiccas(a, i, 14.0d0)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestatomic4()
+! CHECK: %[[BCAST1:.*]] = llvm.bitcast %{{.*}} : f64 to i64
+! CHECK: %[[BCAST2:.*]] = llvm.bitcast %{{.*}} : f64 to i64
+! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<f64> to !llvm.ptr
+! CHECK: %[[ATOMIC:.*]] = llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i64
+! CHECK: %[[RES:.*]] = llvm.extractvalue %[[ATOMIC]][1] : !llvm.struct<(i64, i1)> 
+
+attributes(global) subroutine __ldXXi4(b)
+  integer, device :: b(*)
+  integer, device :: x(4)
+  x(1:4) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:4) = __ldlu(b(i:j))
+  x(1:4) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxi4
+! CHECK: fir.call @__ldca_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldcg_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldcs_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldlu_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+! CHECK: fir.call @__ldcv_i4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+
+attributes(global) subroutine __ldXXi8(b)
+  integer(8), device :: b(*)
+  integer(8), device :: x(2)
+  x(1:2) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:2) = __ldlu(b(i:j))
+  x(1:2) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxi8
+! CHECK: fir.call @__ldca_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldcg_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldcs_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldlu_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+! CHECK: fir.call @__ldcv_i8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<?xi64>>) -> ()
+
+attributes(global) subroutine __ldXXr4(b)
+  real, device :: b(*)
+  real, device :: x(4)
+  x(1:4) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:4) = __ldlu(b(i:j))
+  x(1:4) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxr4
+! CHECK: fir.call @__ldca_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldcg_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldcs_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldlu_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @__ldcv_r4x4_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<?xf32>>) -> ()
+
+attributes(global) subroutine __ldXXr2(b)
+  real(2), device :: b(*)
+  real(2), device :: x(2)
+  x(1:2) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:2) = __ldlu(b(i:j))
+  x(1:2) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxr2
+! CHECK: fir.call @__ldca_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldcg_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldcs_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldlu_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+! CHECK: fir.call @__ldcv_r2x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<?xf16>>) -> ()
+
+attributes(global) subroutine __ldXXr8(b)
+  real(8), device :: b(*)
+  real(8), device :: x(2)
+  x(1:2) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:2) = __ldlu(b(i:j))
+  x(1:2) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxr8
+! CHECK: fir.call @__ldca_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldcg_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldcs_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldlu_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+! CHECK: fir.call @__ldcv_r8x2_(%{{.*}}, %{{.*}}) fastmath<contract> : (!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<?xf64>>) -> ()
+
+
+! CHECK-DAG: func.func private @__ldca_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK-DAG: func.func private @__ldcg_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK-DAG: func.func private @__ldcs_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK-DAG: func.func private @__ldlu_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK-DAG: func.func private @__ldcv_i4x4_(!fir.ref<!fir.array<4xi32>>, !fir.ref<!fir.array<4xi32>>)
+! CHECK-DAG: func.func private @__ldca_i8x2_(!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<2xi64>>)
+! CHECK-DAG: func.func private @__ldcg_i8x2_(!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<2xi64>>)
+! CHECK-DAG: func.func private @__ldcs_i8x2_(!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<2xi64>>)
+! CHECK-DAG: func.func private @__ldlu_i8x2_(!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<2xi64>>)
+! CHECK-DAG: func.func private @__ldcv_i8x2_(!fir.ref<!fir.array<2xi64>>, !fir.ref<!fir.array<2xi64>>)
+! CHECK-DAG: func.func private @__ldca_r4x4_(!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK-DAG: func.func private @__ldcg_r4x4_(!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK-DAG: func.func private @__ldcs_r4x4_(!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK-DAG: func.func private @__ldlu_r4x4_(!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK-DAG: func.func private @__ldcv_r4x4_(!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK-DAG: func.func private @__ldca_r2x2_(!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<2xf16>>)
+! CHECK-DAG: func.func private @__ldcg_r2x2_(!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<2xf16>>)
+! CHECK-DAG: func.func private @__ldcs_r2x2_(!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<2xf16>>)
+! CHECK-DAG: func.func private @__ldlu_r2x2_(!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<2xf16>>)
+! CHECK-DAG: func.func private @__ldcv_r2x2_(!fir.ref<!fir.array<2xf16>>, !fir.ref<!fir.array<2xf16>>)
+! CHECK-DAG: func.func private @__ldca_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
+! CHECK-DAG: func.func private @__ldcg_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
+! CHECK-DAG: func.func private @__ldcs_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
+! CHECK-DAG: func.func private @__ldlu_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)
+! CHECK-DAG: func.func private @__ldcv_r8x2_(!fir.ref<!fir.array<2xf64>>, !fir.ref<!fir.array<2xf64>>)

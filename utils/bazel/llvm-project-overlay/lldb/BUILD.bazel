@@ -92,7 +92,7 @@ cc_library(
     ],
     hdrs = ["include/lldb/Version/Version.h"],
     features = ["-layering_check"],  # Version.inc breaks this unintentionally
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = ["//clang:basic"],
 )
 
@@ -208,7 +208,7 @@ cc_library(
         "source/API/**/*.h",
     ]),
     hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":Breakpoint",
         ":Commands",
@@ -254,7 +254,7 @@ cc_library(
     name = "Breakpoint",
     srcs = glob(["source/Breakpoint/**/*.cpp"]),
     hdrs = glob(["include/lldb/Breakpoint/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":Core",
         ":DataFormattersHeaders",
@@ -270,9 +270,13 @@ cc_library(
 
 cc_library(
     name = "DataFormatters",
-    srcs = glob(["source/DataFormatters/**/*.cpp"]),
+    srcs = glob([
+        "source/DataFormatters/**/*.cpp",
+        "source/DataFormatters/**/*.h",
+    ]),
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
+    textual_hdrs = glob(["source/DataFormatters/**/*.def"]),
     deps = [
         ":CoreHeaders",
         ":Headers",
@@ -288,7 +292,7 @@ cc_library(
     name = "Expression",
     srcs = glob(["source/Expression/**/*.cpp"]),
     hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":Core",
         ":Headers",
@@ -310,7 +314,7 @@ cc_library(
     name = "Initialization",
     srcs = glob(["source/Initialization/**/*.cpp"]),
     hdrs = glob(["include/lldb/Initialization/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":Core",
         ":Headers",
@@ -345,33 +349,33 @@ gentbl_cc_library(
 cc_library(
     name = "APIHeaders",
     hdrs = glob(["include/lldb/API/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
 )
 
 cc_library(
     name = "InterpreterHeaders",
     hdrs = glob(["include/lldb/Interpreter/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [":APIHeaders"],
 )
 
 cc_library(
     name = "BreakpointHeaders",
     hdrs = glob(["include/lldb/Breakpoint/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
 )
 
 cc_library(
     name = "ExpressionHeaders",
     hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = ["//llvm:ExecutionEngine"],
 )
 
 cc_library(
     name = "DataFormattersHeaders",
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
 )
 
 cc_library(
@@ -390,6 +394,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//llvm:Support",
+        "//llvm:Telemetry",
     ],
 )
 
@@ -416,7 +421,7 @@ cc_library(
     name = "Commands",
     srcs = glob(["source/Commands/**/*.cpp"]),
     hdrs = glob(["source/Commands/**/*.h"]),
-    strip_include_prefix = "source",
+    includes = ["source"],
     deps = [
         ":Breakpoint",
         ":CommandOptions",
@@ -441,7 +446,7 @@ cc_library(
 cc_library(
     name = "SymbolHeaders",
     hdrs = glob(["include/lldb/Symbol/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
 )
 
 cc_library(
@@ -469,7 +474,7 @@ cc_library(
         "include/lldb/Host/macosx/*.h",
         "include/lldb/Host/posix/*.h",
     ]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [":UtilityHeaders"],
 )
 
@@ -479,7 +484,7 @@ cc_library(
         "source/Host/macosx/cfcpp/*.h",
         "source/Host/macosx/objcxx/*.h",
     ]),
-    strip_include_prefix = "source",
+    includes = ["source"],
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -541,6 +546,7 @@ cc_library(
             "include/lldb/Host/posix/*.h",
         ]),
     }),
+    includes = ["include"],
     # TODO: Move this to Config library when https://github.com/bazelbuild/bazel/issues/21884 is fixed
     linkopts = select({
         "@platforms//os:macos": [
@@ -562,7 +568,6 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    strip_include_prefix = "include",
     deps = [
         ":Headers",
         ":UtilityHeaders",
@@ -611,7 +616,7 @@ cc_library(
         "include/lldb/Core/**/*.h",
         "include/lldb/ValueObject/**/*.h",  # This should be its own library.
     ]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":BreakpointHeaders",
         ":CoreProperties",
@@ -630,15 +635,19 @@ cc_library(
 
 cc_library(
     name = "Core",
-    srcs = glob([
-        "source/Core/**/*.cpp",
-        "source/ValueObject/**/*.cpp",  # This should be its own library.
-    ]),
-    hdrs = glob([
-        "include/lldb/Core/**/*.h",
-        "include/lldb/ValueObject/**/*.h",  # This should be its own library.
-    ]),
-    strip_include_prefix = "include",
+    srcs = glob(
+        [
+            "source/Core/**/*.cpp",
+            "source/ValueObject/**/*.cpp",  # This should be its own library.
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/lldb/Core/**/*.h",
+            "include/lldb/ValueObject/**/*.h",  # This should be its own library.
+        ],
+    ),
+    includes = ["include"],
     deps = [
         ":BreakpointHeaders",
         ":CoreHeaders",
@@ -651,12 +660,15 @@ cc_library(
         ":SymbolHeaders",
         ":TargetHeaders",
         ":Utility",
+        ":Version",
         "//clang:driver",
         "//lldb/source/Plugins:PluginCPlusPlusLanguageHeaders",
         "//lldb/source/Plugins:PluginObjCLanguageHeaders",
         "//llvm:Demangle",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:Telemetry",
+        "//llvm:config",
     ],
 )
 
@@ -687,7 +699,7 @@ cc_library(
 cc_library(
     name = "TargetHeaders",
     hdrs = glob(["include/lldb/Target/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":AppleArm64ExceptionClass",
         ":BreakpointHeaders",
@@ -723,27 +735,27 @@ cc_library(
     hdrs = glob(["include/lldb/lldb-*.h"]) + [
         "include/lldb/Symbol/SaveCoreOptions.h",
     ],
-    strip_include_prefix = "include",
+    includes = ["include"],
 )
 
 cc_library(
     name = "UtilityPrivateHeaders",
     hdrs = glob(["source/Utility/**/*.h"]),
-    strip_include_prefix = "source",
+    includes = ["source"],
     deps = [":Headers"],
 )
 
 cc_library(
     name = "UtilityHeaders",
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
 )
 
 cc_library(
     name = "Utility",
     srcs = glob(["source/Utility/**/*.cpp"]),
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
-    strip_include_prefix = "include",
+    includes = ["include"],
     deps = [
         ":CoreHeaders",
         ":Headers",
@@ -1050,12 +1062,13 @@ gentbl_cc_library(
 cc_binary(
     name = "lldb-dap",
     srcs = glob([
-        "tools/lldb-dap/*.cpp",
-        "tools/lldb-dap/*.h",
+        "tools/lldb-dap/**/*.cpp",
+        "tools/lldb-dap/**/*.h",
     ]),
     additional_linker_inputs = [
         ":lldb-dap-plist",
     ],
+    includes = ["tools/lldb-dap"],
     linkopts = select({
         "@platforms//os:macos": [
             "-Wl,-sectcreate,__TEXT,__info_plist,$(location :lldb-dap-plist)",
@@ -1067,6 +1080,7 @@ cc_binary(
         "//lldb:APIHeaders",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:Utility",
         "//lldb:liblldb.wrapper",
         "//llvm:Option",
         "//llvm:Support",

@@ -23,6 +23,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
 #include "llvm/ADT/StringRef.h"
@@ -43,6 +44,7 @@ public:
 
   /// Code-completion consumer.
   CodeCompleteConsumer *CodeCompleter;
+  HeuristicResolver Resolver;
 
   /// Describes the context in which code completion occurs.
   enum ParserCompletionContext {
@@ -150,6 +152,7 @@ public:
   void CodeCompleteDesignator(const QualType BaseType,
                               llvm::ArrayRef<Expr *> InitExprs,
                               const Designation &D);
+  void CodeCompleteKeywordAfterIf(bool AfterExclaim) const;
   void CodeCompleteAfterIf(Scope *S, bool IsBracedThen);
 
   void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS, bool EnteringContext,

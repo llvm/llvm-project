@@ -493,6 +493,10 @@ If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -package-metadata
+Emit a percent-encoded string to the
+.Cm .note.package
+section. For example, %25 decodes to a single %.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
@@ -529,6 +533,19 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl -randomize-section-padding Ns = Ns Ar seed
+Randomly insert padding between input sections and at the start of each segment using the given seed.
+Padding is inserted into output sections with names matching the following patterns:
+.Cm .bss ,
+.Cm .data ,
+.Cm .data.rel.ro ,
+.Cm .lbss ,
+.Cm .ldata ,
+.Cm .lrodata ,
+.Cm .ltext ,
+.Cm .rodata
+and
+.Cm .text* .
 .It Fl --relax-gp
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
@@ -938,6 +955,11 @@ Let __start_/__stop_ references retain the associated C identifier name sections
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.
+.Pp
+.It Cm nobtcfi
+Create a
+.Dv PT_OPENBSD_NOBTCFI
+segment.
 .Pp
 .It Cm wxneeded
 Create a

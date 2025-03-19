@@ -60,6 +60,10 @@ public:
   /// Tuning option to enable/disable loop unrolling. Its default value is true.
   bool LoopUnrolling;
 
+  /// Tuning option to enable/disable loop interchange. Its default value is
+  /// false.
+  bool LoopInterchange;
+
   /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
   /// is that of the flag: `-forget-scev-loop-unroll`.
   bool ForgetAllSCEVInLoopUnroll;
@@ -465,6 +469,17 @@ public:
     VectorizerStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension
+  /// point
+  ///
+  /// This extension point allows adding optimization passes after the
+  /// vectorizer and other highly target specific optimization passes are
+  /// executed.
+  void registerVectorizerEndEPCallback(
+      const std::function<void(FunctionPassManager &, OptimizationLevel)> &C) {
+    VectorizerEndEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for a default optimizer pipeline extension point.
   ///
   /// This extension point allows adding optimization once at the start of the
@@ -480,7 +495,8 @@ public:
   /// This extension point allows adding optimization right after passes that do
   /// basic simplification of the input IR.
   void registerPipelineEarlySimplificationEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase)> &C) {
     PipelineEarlySimplificationEPCallbacks.push_back(C);
   }
 
@@ -489,7 +505,8 @@ public:
   /// This extension point allows adding optimizations before the function
   /// optimization pipeline.
   void registerOptimizerEarlyEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase Phase)> &C) {
     OptimizerEarlyEPCallbacks.push_back(C);
   }
 
@@ -498,7 +515,8 @@ public:
   /// This extension point allows adding optimizations at the very end of the
   /// function optimization pipeline.
   void registerOptimizerLastEPCallback(
-      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+      const std::function<void(ModulePassManager &, OptimizationLevel,
+                               ThinOrFullLTOPhase)> &C) {
     OptimizerLastEPCallbacks.push_back(C);
   }
 
@@ -628,10 +646,14 @@ public:
                                            OptimizationLevel Level);
   void invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
                                         OptimizationLevel Level);
-  void invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
-                                       OptimizationLevel Level);
-  void invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
+  void invokeVectorizerEndEPCallbacks(FunctionPassManager &FPM,
                                       OptimizationLevel Level);
+  void invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
+                                       OptimizationLevel Level,
+                                       ThinOrFullLTOPhase Phase);
+  void invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
+                                      OptimizationLevel Level,
+                                      ThinOrFullLTOPhase Phase);
   void invokeFullLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
                                                       OptimizationLevel Level);
   void invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
@@ -639,7 +661,8 @@ public:
   void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                       OptimizationLevel Level);
   void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
-                                                    OptimizationLevel Level);
+                                                    OptimizationLevel Level,
+                                                    ThinOrFullLTOPhase Phase);
 
   static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
     if (!Name.consume_front(PassName))
@@ -753,10 +776,16 @@ private:
       CGSCCOptimizerLateEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
+      VectorizerEndEPCallbacks;
   // Module callbacks
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       OptimizerEarlyEPCallbacks;
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       OptimizerLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       FullLinkTimeOptimizationEarlyEPCallbacks;
@@ -764,7 +793,9 @@ private:
       FullLinkTimeOptimizationLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
-  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
+                                 ThinOrFullLTOPhase)>,
+              2>
       PipelineEarlySimplificationEPCallbacks;
 
   SmallVector<std::function<void(ModuleAnalysisManager &)>, 2>

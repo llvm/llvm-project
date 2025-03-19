@@ -25,6 +25,18 @@ define i1 @xor_logic_and_logic_or2(i1 %c, i1 %x, i1 %y) {
   ret i1 %r
 }
 
+define i1 @xor_logic_and_logic_or2_commuted(i1 %c, i1 %x, i1 %y) {
+; CHECK-LABEL: @xor_logic_and_logic_or2_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %o = select i1 %y, i1 true, i1 %c
+  %a = select i1 %c, i1 %x, i1 false
+  %r = xor i1 %o, %a
+  ret i1 %r
+}
+
 define i1 @xor_logic_and_logic_or3(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[C:%.*]]
@@ -52,7 +64,7 @@ define i1 @xor_logic_and_logic_or4(i1 %c, i1 %x, i1 %y) {
 
 define <3 x i1> @xor_logic_and_logic_or_vector1(<3 x i1> %c, <3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or_vector1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i1> [[X:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> [[TMP1]], <3 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
@@ -65,7 +77,7 @@ define <3 x i1> @xor_logic_and_logic_or_vector1(<3 x i1> %c, <3 x i1> %x, <3 x i
 define <3 x i1> @xor_logic_and_logic_or_vector2(<3 x i1> %c, <3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or_vector2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <3 x i1> [[C:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i1> [[X:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i1> [[TMP2]], <3 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
@@ -89,7 +101,7 @@ define <3 x i1> @xor_logic_and_logic_or_vector_poison1(<3 x i1> %c, <3 x i1> %x,
 
 define <3 x i1> @xor_logic_and_logic_or_vector_poison2(<3 x i1> %c, <3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or_vector_poison2(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i1> [[X:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[C:%.*]], <3 x i1> [[TMP1]], <3 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
@@ -125,7 +137,7 @@ define i1 @xor_and_logic_or2(i1 %c, i1 %x, i1 %y) {
 
 define <2 x i1> @xor_and_logic_or_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @xor_and_logic_or_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[TMP1]], <2 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -174,7 +186,7 @@ define i1 @xor_logic_and_or2(i1 %c, i1 %x, i1 %y) {
 
 define <2 x i1> @xor_logic_and_or_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @xor_logic_and_or_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[TMP1]], <2 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -215,7 +227,7 @@ define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) {
 ;; and/or/xor on most backend,  do we really need to do this transform?
 define <4 x i1> @xor_and_or_vector(<4 x i1> %c, <4 x i1> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @xor_and_or_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[X:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[X:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[TMP1]], <4 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;

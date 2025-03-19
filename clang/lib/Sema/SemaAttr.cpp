@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/SemaInternal.h"
 #include <optional>
 using namespace clang;
 
@@ -269,6 +269,51 @@ void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   }
 }
 
+void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
+  auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD);
+  if (!MD || !MD->getParent()->isInStdNamespace())
+    return;
+  auto Annotate = [this](const FunctionDecl *MD) {
+    // Do not infer if any parameter is explicitly annotated.
+    for (ParmVarDecl *PVD : MD->parameters())
+      if (PVD->hasAttr<LifetimeCaptureByAttr>())
+        return;
+    for (ParmVarDecl *PVD : MD->parameters()) {
+      // Methods in standard containers that capture values typically accept
+      // reference-type parameters, e.g., `void push_back(const T& value)`.
+      // We only apply the lifetime_capture_by attribute to parameters of
+      // pointer-like reference types (`const T&`, `T&&`).
+      if (PVD->getType()->isReferenceType() &&
+          sema::isGLSPointerType(PVD->getType().getNonReferenceType())) {
+        int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
+        PVD->addAttr(
+            LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
+      }
+    }
+  };
+
+  if (!MD->getIdentifier()) {
+    static const llvm::StringSet<> MapLikeContainer{
+        "map",
+        "multimap",
+        "unordered_map",
+        "unordered_multimap",
+    };
+    // Infer for the map's operator []:
+    //    std::map<string_view, ...> m;
+    //    m[ReturnString(..)] = ...; // !dangling references in m.
+    if (MD->getOverloadedOperator() == OO_Subscript &&
+        MapLikeContainer.contains(MD->getParent()->getName()))
+      Annotate(MD);
+    return;
+  }
+  static const llvm::StringSet<> CapturingMethods{
+      "insert", "insert_or_assign", "push", "push_front", "push_back"};
+  if (!CapturingMethods.contains(MD->getName()))
+    return;
+  Annotate(MD);
+}
+
 void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
   static const llvm::StringSet<> Nullable{
       "auto_ptr",         "shared_ptr", "unique_ptr",         "exception_ptr",
@@ -492,7 +537,6 @@ bool Sema::ConstantFoldAttrArgs(const AttributeCommonInfo &CI,
         Diag(Note.first, Note.second);
       return false;
     }
-    assert(Eval.Val.hasValue());
     E = ConstantExpr::Create(Context, E, Eval.Val);
   }
 
@@ -1145,6 +1189,11 @@ void Sema::ActOnPragmaAttributePop(SourceLocation PragmaLoc,
 void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   if (PragmaAttributeStack.empty())
     return;
+
+  if (const auto *P = dyn_cast<ParmVarDecl>(D))
+    if (P->getType()->isVoidType())
+      return;
+
   for (auto &Group : PragmaAttributeStack) {
     for (auto &Entry : Group.Entries) {
       ParsedAttr *Attribute = Entry.Attribute;
@@ -1172,10 +1221,11 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   }
 }
 
-void Sema::PrintPragmaAttributeInstantiationPoint() {
+void Sema::PrintPragmaAttributeInstantiationPoint(
+    InstantiationContextDiagFuncRef DiagFunc) {
   assert(PragmaAttributeCurrentTargetDecl && "Expected an active declaration");
-  Diags.Report(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
-               diag::note_pragma_attribute_applied_decl_here);
+  DiagFunc(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
+           PDiag(diag::note_pragma_attribute_applied_decl_here));
 }
 
 void Sema::DiagnosePrecisionLossInComplexDivision() {
@@ -1265,6 +1315,8 @@ void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,
 }
 
 void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
+  if (FD->isDeleted() || FD->isDefaulted())
+    return;
   SmallVector<StringRef> V(MSFunctionNoBuiltins.begin(),
                            MSFunctionNoBuiltins.end());
   if (!MSFunctionNoBuiltins.empty())

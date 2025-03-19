@@ -126,6 +126,19 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
           Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None) &&
          "Should only be expression-level modifiers here");
 
+  switch (SymLoc) {
+  case AArch64MCExpr::VK_DTPREL:
+  case AArch64MCExpr::VK_GOTTPREL:
+  case AArch64MCExpr::VK_TPREL:
+  case AArch64MCExpr::VK_TLSDESC:
+  case AArch64MCExpr::VK_TLSDESC_AUTH:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
   if (IsPCRel) {
     switch (Kind) {
     case FK_Data_1:
@@ -147,6 +160,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       }
       return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_ADR_PREL_LO21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_ADR_PREL_LO21;
+      }
       if (SymLoc != AArch64MCExpr::VK_ABS)
         Ctx.reportError(Fixup.getLoc(),
                         "invalid symbol kind for ADR relocation");
@@ -178,6 +200,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSIE_ADR_GOTTPREL_PAGE21);
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && !IsNC)
         return R_CLS(TLSDESC_ADR_PAGE21);
+      if (SymLoc == AArch64MCExpr::VK_TLSDESC_AUTH && !IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADRP AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_TLSDESC_ADR_PAGE21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_TLSDESC_ADR_PAGE21;
+      }
       Ctx.reportError(Fixup.getLoc(),
                       "invalid symbol kind for ADRP relocation");
       return ELF::R_AARCH64_NONE;
@@ -190,6 +221,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
       if (SymLoc == AArch64MCExpr::VK_GOT)
         return R_CLS(GOT_LD_PREL19);
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 LDR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_LD_PREL19)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_LD_PREL19;
+      }
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);
@@ -249,6 +289,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSLE_ADD_TPREL_LO12);
       if (RefKind == AArch64MCExpr::VK_TLSDESC_LO12)
         return R_CLS(TLSDESC_ADD_LO12);
+      if (RefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADD AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_TLSDESC_ADD_LO12)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_TLSDESC_ADD_LO12;
+      }
       if (RefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 && IsNC) {
         if (IsILP32) {
           Ctx.reportError(Fixup.getLoc(),
@@ -391,6 +440,14 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
                                         "relocation not supported (LP64 eqv: "
                                         "TLSDESC_LD64_LO12)");
+        return ELF::R_AARCH64_NONE;
+      }
+      if (SymLoc == AArch64MCExpr::VK_TLSDESC_AUTH) {
+        if (!IsILP32)
+          return ELF::R_AARCH64_AUTH_TLSDESC_LD64_LO12;
+        Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store AUTH "
+                                        "relocation not supported (LP64 eqv: "
+                                        "AUTH_TLSDESC_LD64_LO12)");
         return ELF::R_AARCH64_NONE;
       }
       Ctx.reportError(Fixup.getLoc(),

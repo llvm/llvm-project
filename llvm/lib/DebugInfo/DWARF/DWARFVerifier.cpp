@@ -53,6 +53,11 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
   auto End = Ranges.end();
   auto Pos = std::lower_bound(Begin, End, R);
 
+  // Check for exact duplicates which is an allowed special case
+  if (Pos != End && *Pos == R) {
+    return std::nullopt;
+  }
+
   if (Pos != End) {
     DWARFAddressRange Range(*Pos);
     if (Pos->merge(R))
@@ -113,8 +118,11 @@ bool DWARFVerifier::DieRangeInfo::intersects(const DieRangeInfo &RHS) const {
   auto I1 = Ranges.begin(), E1 = Ranges.end();
   auto I2 = RHS.Ranges.begin(), E2 = RHS.Ranges.end();
   while (I1 != E1 && I2 != E2) {
-    if (I1->intersects(*I2))
-      return true;
+    if (I1->intersects(*I2)) {
+      // Exact duplicates are allowed
+      if (!(*I1 == *I2))
+        return true;
+    }
     if (I1->LowPC < I2->LowPC)
       ++I1;
     else
@@ -959,21 +967,20 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
       // here because we validate this in the .debug_info verifier.
       continue;
     }
-    auto Iter = StmtListToDie.find(LineTableOffset);
-    if (Iter != StmtListToDie.end()) {
+    auto [Iter, Inserted] = StmtListToDie.try_emplace(LineTableOffset, Die);
+    if (!Inserted) {
       ++NumDebugLineErrors;
+      const auto &OldDie = Iter->second;
       ErrorCategory.Report("Identical DW_AT_stmt_list section offset", [&]() {
         error() << "two compile unit DIEs, "
-                << format("0x%08" PRIx64, Iter->second.getOffset()) << " and "
+                << format("0x%08" PRIx64, OldDie.getOffset()) << " and "
                 << format("0x%08" PRIx64, Die.getOffset())
                 << ", have the same DW_AT_stmt_list section offset:\n";
-        dump(Iter->second);
+        dump(OldDie);
         dump(Die) << '\n';
       });
       // Already verified this line table before, no need to do it again.
-      continue;
     }
-    StmtListToDie[LineTableOffset] = Die;
   }
 }
 
@@ -1934,12 +1941,14 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
     if (none_of(NI.equal_range(Name), [&](const DWARFDebugNames::Entry &E) {
           return E.getDIEUnitOffset() == DieUnitOffset;
         })) {
-      ErrorCategory.Report("Name Index DIE entry missing name", [&]() {
-        error() << formatv(
-            "Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
-            "name {3} missing.\n",
-            NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
-      });
+      ErrorCategory.Report(
+          "Name Index DIE entry missing name",
+          llvm::dwarf::TagString(Die.getTag()), [&]() {
+            error() << formatv(
+                "Name Index @ {0:x}: Entry for DIE @ {1:x} ({2}) with "
+                "name {3} missing.\n",
+                NI.getUnitOffset(), Die.getOffset(), Die.getTag(), Name);
+          });
       ++NumErrors;
     }
   }
@@ -2161,15 +2170,35 @@ bool DWARFVerifier::verifyDebugStrOffsets(
 
 void OutputCategoryAggregator::Report(
     StringRef s, std::function<void(void)> detailCallback) {
-  Aggregation[std::string(s)]++;
+  this->Report(s, "", detailCallback);
+}
+
+void OutputCategoryAggregator::Report(
+    StringRef category, StringRef sub_category,
+    std::function<void(void)> detailCallback) {
+  std::string category_str = std::string(category);
+  AggregationData &Agg = Aggregation[category_str];
+  Agg.OverallCount++;
+  if (!sub_category.empty()) {
+    Agg.DetailedCounts[std::string(sub_category)]++;
+  }
   if (IncludeDetail)
     detailCallback();
 }
 
 void OutputCategoryAggregator::EnumerateResults(
     std::function<void(StringRef, unsigned)> handleCounts) {
-  for (auto &&[name, count] : Aggregation) {
-    handleCounts(name, count);
+  for (const auto &[name, aggData] : Aggregation) {
+    handleCounts(name, aggData.OverallCount);
+  }
+}
+void OutputCategoryAggregator::EnumerateDetailedResultsFor(
+    StringRef category, std::function<void(StringRef, unsigned)> handleCounts) {
+  const auto Agg = Aggregation.find(std::string(category));
+  if (Agg != Aggregation.end()) {
+    for (const auto &[name, aggData] : Agg->second.DetailedCounts) {
+      handleCounts(name, aggData);
+    }
   }
 }
 
@@ -2196,6 +2225,12 @@ void DWARFVerifier::summarize() {
     ErrorCategory.EnumerateResults([&](StringRef Category, unsigned Count) {
       llvm::json::Object Val;
       Val.try_emplace("count", Count);
+      llvm::json::Object Details;
+      ErrorCategory.EnumerateDetailedResultsFor(
+          Category, [&](StringRef SubCategory, unsigned SubCount) {
+            Details.try_emplace(SubCategory, SubCount);
+          });
+      Val.try_emplace("details", std::move(Details));
       Categories.try_emplace(Category, std::move(Val));
       ErrorCount += Count;
     });

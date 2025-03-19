@@ -886,7 +886,9 @@ def IncludeOp : TransformDialectOp<"include",
 
   let arguments = (ins SymbolRefAttr:$target,
                        FailurePropagationMode:$failure_propagation_mode,
-                       Variadic<Transform_AnyHandleOrParamType>:$operands);
+                       Variadic<Transform_AnyHandleOrParamType>:$operands,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
   let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
 
   let assemblyFormat =
@@ -899,7 +901,7 @@ def IncludeOp : TransformDialectOp<"include",
     }
 
     void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      setTargetAttr(callee.get<SymbolRefAttr>());
+      setTargetAttr(cast<SymbolRefAttr>(callee));
     }
 
     ::mlir::Operation::operand_range getArgOperands() {
@@ -1062,36 +1064,37 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "Splits a handle of payload ops into handles with a single op";
+  let summary = "Splits a handle or parameter into multiple values";
   let description = [{
     Splits `handle` into one or multiple handles, as specified by the number
     of results of this operation. `handle` should be mapped to as many payload
-    ops as there are results. Otherwise, this transform will fail produces a
-    silenceable failure by default. Each result handle is mapped to exactly one
-    payload op. The order of the payload ops is preserved, i.e., the i-th
-    payload op is mapped to the i-th result handle.
+    ops, values or parameteres as there are results. Otherwise, this transform
+    will fail producing a silenceable failure by default. Each result handle
+    is mapped to exactly one payload unless specified otherwise by attributes
+    described below. The order of the payloads is preserved,  i.e., the i-th
+    payload is mapped to the i-th result handle.
 
     This operation is useful for ensuring a statically known number of
-    operations are tracked by the source `handle` and to extract them into
+    payloads are tracked by the source `handle` and to extract them into
     individual handles that can be further manipulated in isolation.
 
-    If there are more payload ops than results, the remaining ops are mapped to
+    If there are more payloads than results, the remaining payloads are mapped to
     the result with index `overflow_result`. If no `overflow_result` is
     specified, the transform produces a silenceable failure.
 
     If there are fewer payload ops than results, the transform produces a
     silenceable failure if `fail_on_payload_too_small` is set to "true".
     Otherwise, it succeeds and the remaining result handles are not mapped to
-    any op. It also succeeds if `handle` is empty and
+    anything. It also succeeds if `handle` is empty and
     `pass_through_empty_handle` is set to "true", regardless of
     `fail_on_payload_too_small`.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$handle,
+  let arguments = (ins Transform_AnyHandleOrParamType:$handle,
                        DefaultValuedAttr<BoolAttr, "true">:$pass_through_empty_handle,
                        DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_too_small,
                        OptionalAttr<I64Attr>:$overflow_result);
-  let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let results = (outs Variadic<Transform_AnyHandleOrParamType>:$results);
   let hasVerifier = 1;
 
   let builders = [

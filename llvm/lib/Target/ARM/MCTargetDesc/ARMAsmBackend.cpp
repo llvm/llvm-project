@@ -25,15 +25,12 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSectionELF.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -201,7 +198,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < ARM::NumTargetFixupKinds &&
          "Invalid kind!");
   return (Endian == llvm::endianness::little
               ? InfosLE
@@ -963,8 +960,6 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind();
-  if (FixupKind >= FirstLiteralRelocationKind)
-    return true;
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 
@@ -1398,7 +1393,7 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = Options.FDPIC
-                        ? ELF::ELFOSABI_ARM_FDPIC
+                        ? static_cast<uint8_t>(ELF::ELFOSABI_ARM_FDPIC)
                         : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
     return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
                                 Endian);

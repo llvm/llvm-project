@@ -56,7 +56,7 @@ func.func @_QPmaxval2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+// CHECK:         fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
@@ -175,7 +175,7 @@ func.func @_QPmaxval5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY_BOX]] : (!fir.box<!fir.array<2x2xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK_BOX]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+// CHECK:         fir.call @_FortranAMaxvalDim(%[[RET_ARG]], %[[ARRAY_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 
 // simple one argument maxval for character
 func.func @_QPmaxval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_name = "a"}, %arg1: !fir.boxchar<1> {fir.bindc_name = "s"}) {
@@ -205,7 +205,7 @@ func.func @_QPmaxval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[ARRAY_ARG:.*]] = fir.convert %[[ARRAY]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMaxvalCharacter(%[[RET_ARG]], %[[ARRAY_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32, !fir.box<none>) -> none
+// CHECK:         fir.call @_FortranAMaxvalCharacter(%[[RET_ARG]], %[[ARRAY_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]], %[[MASK_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32, !fir.box<none>) -> ()
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_ELESIZE:.*]] = fir.box_elesize %[[RET]]
@@ -216,3 +216,25 @@ func.func @_QPmaxval6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:         hlfir.destroy %[[ASEXPR]]
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
+
+func.func @_QPmaxval_opt_mask(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "input"}, %arg1: !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask", fir.optional}) -> f32 {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFmaxval_opt_maskEinput"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QFmaxval_opt_maskEmask"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %3 = fir.alloca f32 {bindc_name = "maxval_1", uniq_name = "_QFmaxval_opt_maskEmaxval_1"}
+  %4:2 = hlfir.declare %3 {uniq_name = "_QFmaxval_opt_maskEmaxval_1"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %5 = fir.is_present %2#0 : (!fir.ref<!fir.logical<4>>) -> i1
+  %6 = fir.embox %2#1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+  %7 = fir.absent !fir.box<!fir.logical<4>>
+  %8 = arith.select %5, %6, %7 : !fir.box<!fir.logical<4>>
+  %9 = hlfir.maxval %1#0 mask %8 : (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.logical<4>>) -> f32
+  hlfir.assign %9 to %4#0 : f32, !fir.ref<f32>
+  %10 = fir.load %4#1 : !fir.ref<f32>
+  return %10 : f32
+}
+// CHECK-LABEL:   func.func @_QPmaxval_opt_mask(
+// CHECK:           %[[VAL_10:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK:           %[[VAL_11:.*]] = fir.absent !fir.box<!fir.logical<4>>
+// CHECK:           %[[VAL_12:.*]] = arith.select %{{.*}}, %[[VAL_10]], %[[VAL_11]] : !fir.box<!fir.logical<4>>
+// CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>                                                                  
+// CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAMaxvalReal4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f32

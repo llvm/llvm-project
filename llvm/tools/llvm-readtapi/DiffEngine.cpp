@@ -203,27 +203,6 @@ std::vector<DiffOutput> getSingleIF(InterfaceFile *Interface,
   diffAttribute("Install Name", Output,
                 DiffScalarVal<StringRef, AD_Diff_Scalar_Str>(
                     Order, Interface->getInstallName()));
-  diffAttribute("Current Version", Output,
-                DiffScalarVal<PackedVersion, AD_Diff_Scalar_PackedVersion>(
-                    Order, Interface->getCurrentVersion()));
-  diffAttribute("Compatibility Version", Output,
-                DiffScalarVal<PackedVersion, AD_Diff_Scalar_PackedVersion>(
-                    Order, Interface->getCompatibilityVersion()));
-  diffAttribute("Swift ABI Version", Output,
-                DiffScalarVal<uint8_t, AD_Diff_Scalar_Unsigned>(
-                    Order, Interface->getSwiftABIVersion()));
-  diffAttribute("Two Level Namespace", Output,
-                DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
-                    Order, Interface->isTwoLevelNamespace()));
-  diffAttribute("Application Extension Safe", Output,
-                DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
-                    Order, Interface->isApplicationExtensionSafe()));
-  diffAttribute("Reexported Libraries", Output,
-                Interface->reexportedLibraries(), Order);
-  diffAttribute("Allowable Clients", Output, Interface->allowableClients(),
-                Order);
-  diffAttribute("Parent Umbrellas", Output, Interface->umbrellas(), Order);
-  diffAttribute("Symbols", Output, Interface->symbols(), Order);
   for (const auto &Doc : Interface->documents()) {
     DiffOutput Documents("Inlined Reexported Frameworks/Libraries");
     Documents.Kind = AD_Inline_Doc;
@@ -419,10 +398,11 @@ DiffEngine::findDifferences(const InterfaceFile *IFLHS,
           Docs.Values.push_back(
               std::make_unique<InlineDoc>(std::move(PairDiff)));
       }
-      // If a match is not found, get attributes from single item.
+      // No matching inlined library was found.
       else
-        Docs.Values.push_back(std::make_unique<InlineDoc>(InlineDoc(
-            DocLHS->getInstallName(), getSingleIF(DocLHS.get(), lhs))));
+        Docs.Values.push_back(std::make_unique<InlineDoc>(
+            InlineDoc(DocLHS->getInstallName(), getSingleIF(DocLHS.get(), lhs),
+                      /*IsMissingDoc=*/true)));
       DocsInserted.push_back(DocLHS->getInstallName());
     }
     for (auto DocRHS : IFRHS->documents()) {
@@ -431,8 +411,9 @@ DiffEngine::findDifferences(const InterfaceFile *IFLHS,
             return (GatheredDoc == DocRHS->getInstallName());
           });
       if (!WasGathered)
-        Docs.Values.push_back(std::make_unique<InlineDoc>(InlineDoc(
-            DocRHS->getInstallName(), getSingleIF(DocRHS.get(), rhs))));
+        Docs.Values.push_back(std::make_unique<InlineDoc>(
+            InlineDoc(DocRHS->getInstallName(), getSingleIF(DocRHS.get(), rhs),
+                      /*IsMissingDoc=*/true)));
     }
     if (!Docs.Values.empty())
       Output.push_back(std::move(Docs));
@@ -468,8 +449,10 @@ template <typename T> void sortTargetValues(std::vector<T> &TargValues) {
 
 template <typename T>
 void printVecVal(std::string Indent, const DiffOutput &Attr, raw_ostream &OS) {
-  if (Attr.Values.empty())
+  if (Attr.Values.empty()) {
+    OS << Indent << "'" << Attr.Name << "' differ by order\n";
     return;
+  }
 
   OS << Indent << Attr.Name << "\n";
 
@@ -547,12 +530,23 @@ void DiffEngine::printDifferences(raw_ostream &OS,
     case AD_Inline_Doc:
       if (!Attr.Values.empty()) {
         OS << Indent << Attr.Name << "\n";
-        for (auto &Item : Attr.Values)
-          if (InlineDoc *Doc = dyn_cast<InlineDoc>(Item.get()))
-            if (!Doc->DocValues.empty()) {
+        for (auto &Item : Attr.Values) {
+          if (InlineDoc *Doc = dyn_cast<InlineDoc>(Item.get())) {
+            if (Doc->DocValues.empty())
+              continue;
+            IndentCounter = 2;
+            // When only one input file contains an inlined library, print out
+            // the install name for it. Otherwise print out the different values
+            // by the install name.
+            if (Doc->IsMissingDoc) {
+              printSingleVal<DiffScalarVal<StringRef, AD_Diff_Scalar_Str>>(
+                  std::string(IndentCounter, '\t'), Doc->DocValues.front(), OS);
+            } else {
               OS << Indent << "\t" << Doc->InstallName << "\n";
-              printDifferences(OS, std::move(Doc->DocValues), 2);
+              printDifferences(OS, std::move(Doc->DocValues), IndentCounter);
             }
+          }
+        }
       }
       break;
     }

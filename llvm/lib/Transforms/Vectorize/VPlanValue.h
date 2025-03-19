@@ -33,9 +33,11 @@ namespace llvm {
 class raw_ostream;
 class Value;
 class VPDef;
+struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
+class VPInterleaveRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -44,12 +46,15 @@ class VPRecipeBase;
 class VPValue {
   friend class VPBuilder;
   friend class VPDef;
+  friend struct VPDoubleValueDef;
   friend class VPInstruction;
+  friend class VPInterleaveRecipe;
   friend struct VPlanTransforms;
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
   friend class VPRecipeBase;
+  friend class VPlan;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -64,6 +69,13 @@ protected:
   VPDef *Def;
 
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
+
+  /// Create a live-in VPValue.
+  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  /// Create a VPValue for a \p Def which is a subclass of VPValue.
+  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
+  /// Create a VPValue for a \p Def which defines multiple values.
+  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -84,12 +96,6 @@ public:
     VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
   };
 
-  /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
-  /// Create a VPValue for a \p Def which is a subclass of VPValue.
-  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
-  /// Create a VPValue for a \p Def which defines multiple values.
-  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
   VPValue(const VPValue &) = delete;
   VPValue &operator=(const VPValue &) = delete;
 
@@ -169,12 +175,7 @@ public:
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
-  Value *getLiveInIRValue() {
-    assert(isLiveIn() &&
-           "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
-    return getUnderlyingValue();
-  }
-  const Value *getLiveInIRValue() const {
+  Value *getLiveInIRValue() const {
     assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
@@ -329,11 +330,12 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
+    VPPartialReductionSC,
     VPReplicateSC,
     VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
-    VPReverseVectorPointerSC,
+    VPVectorEndPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
@@ -344,7 +346,6 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
-    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
@@ -359,6 +360,7 @@ public:
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
+    VPScalarPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
@@ -425,41 +427,6 @@ public:
   virtual void print(raw_ostream &O, const Twine &Indent,
                      VPSlotTracker &SlotTracker) const = 0;
 #endif
-};
-
-class VPlan;
-class VPBasicBlock;
-
-/// This class can be used to assign names to VPValues. For VPValues without
-/// underlying value, assign consecutive numbers and use those as names (wrapped
-/// in vp<>). Otherwise, use the name from the underlying value (wrapped in
-/// ir<>), appending a .V version number if there are multiple uses of the same
-/// name. Allows querying names for VPValues for printing, similar to the
-/// ModuleSlotTracker for IR values.
-class VPSlotTracker {
-  /// Keep track of versioned names assigned to VPValues with underlying IR
-  /// values.
-  DenseMap<const VPValue *, std::string> VPValue2Name;
-  /// Keep track of the next number to use to version the base name.
-  StringMap<unsigned> BaseName2Version;
-
-  /// Number to assign to the next VPValue without underlying value.
-  unsigned NextSlot = 0;
-
-  void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
-  void assignNames(const VPBasicBlock *VPBB);
-
-public:
-  VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
-      assignNames(*Plan);
-  }
-
-  /// Returns the name assigned to \p V, if there is one, otherwise try to
-  /// construct one from the underlying value, if there's one; else return
-  /// <badref>.
-  std::string getOrCreateName(const VPValue *V) const;
 };
 
 } // namespace llvm

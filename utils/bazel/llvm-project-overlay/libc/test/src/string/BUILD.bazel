@@ -4,8 +4,7 @@
 
 # Tests for LLVM libc string.h functions.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
-load("//libc/test:libc_test_rules.bzl", "libc_test")
+load("//libc/test:libc_test_rules.bzl", "libc_test", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -23,7 +22,7 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     libc_function_deps = [
-        "//libc:strcpy_sanitized",
+        "//libc:strcpy",
     ],
 )
 
@@ -43,7 +42,7 @@ libc_test(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "strchr_test_helper",
     hdrs = ["StrchrTest.h"],
     deps = ["//libc/test/UnitTest:LibcUnitTest"],
@@ -115,7 +114,7 @@ libc_test(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
@@ -127,7 +126,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "protected_pages",
     hdrs = ["memory_utils/protected_pages.h"],
     deps = [
@@ -185,19 +184,6 @@ libc_test(
 )
 
 libc_test(
-    name = "bcopy_test",
-    srcs = ["bcopy_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcopy",
-    ],
-    deps = [
-        ":memory_check_utils",
-        "//libc:__support_cpp_span",
-        "//libc/test/UnitTest:memory_matcher",
-    ],
-)
-
-libc_test(
     name = "memcmp_test",
     srcs = ["memcmp_test.cpp"],
     libc_function_deps = [
@@ -207,25 +193,4 @@ libc_test(
         ":memory_check_utils",
         "//libc/test/UnitTest:test_logger",
     ],
-)
-
-libc_test(
-    name = "bcmp_test",
-    srcs = ["bcmp_test.cpp"],
-    libc_function_deps = [
-        "//libc:bcmp",
-    ],
-    deps = [
-        ":memory_check_utils",
-        "//libc/test/UnitTest:test_logger",
-    ],
-)
-
-libc_test(
-    name = "bzero_test",
-    srcs = ["bzero_test.cpp"],
-    libc_function_deps = [
-        "//libc:bzero",
-    ],
-    deps = [":memory_check_utils"],
 )

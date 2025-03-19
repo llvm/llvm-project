@@ -18,7 +18,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/Transforms/Utils.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -30,8 +30,8 @@
 #include <limits>
 
 namespace mlir {
-#define GEN_PASS_DEF_GPULAUNCHSINKINDEXCOMPUTATIONS
-#define GEN_PASS_DEF_GPUKERNELOUTLINING
+#define GEN_PASS_DEF_GPULAUNCHSINKINDEXCOMPUTATIONSPASS
+#define GEN_PASS_DEF_GPUKERNELOUTLININGPASS
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -302,7 +302,7 @@ namespace {
 /// Pass that moves ops which are likely an index computation into gpu.launch
 /// body.
 class GpuLaunchSinkIndexComputationsPass
-    : public impl::GpuLaunchSinkIndexComputationsBase<
+    : public impl::GpuLaunchSinkIndexComputationsPassBase<
           GpuLaunchSinkIndexComputationsPass> {
 public:
   void runOnOperation() override {
@@ -329,17 +329,9 @@ public:
 /// a separate pass. The external functions can then be annotated with the
 /// symbol of the cubin accessor function.
 class GpuKernelOutliningPass
-    : public impl::GpuKernelOutliningBase<GpuKernelOutliningPass> {
+    : public impl::GpuKernelOutliningPassBase<GpuKernelOutliningPass> {
 public:
-  GpuKernelOutliningPass(StringRef dlStr) {
-    if (!dlStr.empty() && !dataLayoutStr.hasValue())
-      dataLayoutStr = dlStr.str();
-  }
-
-  GpuKernelOutliningPass(const GpuKernelOutliningPass &other)
-      : GpuKernelOutliningBase(other), dataLayoutSpec(other.dataLayoutSpec) {
-    dataLayoutStr = other.dataLayoutStr.getValue();
-  }
+  using Base::Base;
 
   LogicalResult initialize(MLIRContext *context) override {
     // Initialize the data layout specification from the data layout string.
@@ -364,9 +356,15 @@ public:
       Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
         SetVector<Value> operands;
-        std::string kernelFnName =
-            Twine(op->getParentOfType<SymbolOpInterface>().getName(), "_kernel")
-                .str();
+        std::string kernelFnName;
+        if (op.getKernelFunc()) {
+          kernelFnName = op.getKernelFunc()->getRootReference().str();
+        } else {
+          kernelFnName =
+              Twine(op->getParentOfType<SymbolOpInterface>().getName(),
+                    "_kernel")
+                  .str();
+        }
 
         gpu::GPUFuncOp outlinedFunc =
             outlineKernelFuncImpl(op, kernelFnName, operands);
@@ -374,7 +372,7 @@ public:
         // Create nested module and insert outlinedFunc. The module will
         // originally get the same name as the function, but may be renamed on
         // insertion into the parent module.
-        auto kernelModule = createKernelModule(outlinedFunc, symbolTable);
+        auto kernelModule = createKernelModule(op, outlinedFunc, symbolTable);
         symbolTable.insert(kernelModule, insertPt);
 
         // Potentially changes signature, pulling in constants.
@@ -395,7 +393,8 @@ public:
 
 private:
   /// Returns a gpu.module containing kernelFunc and all callees (recursive).
-  gpu::GPUModuleOp createKernelModule(gpu::GPUFuncOp kernelFunc,
+  gpu::GPUModuleOp createKernelModule(gpu::LaunchOp gpuLaunchOp,
+                                      gpu::GPUFuncOp kernelFunc,
                                       const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
     // a SymbolTable by the caller. SymbolTable needs to be refactored to
@@ -403,8 +402,23 @@ private:
     // and then this needs to use the OpBuilder.
     auto *context = getOperation().getContext();
     OpBuilder builder(context);
-    auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
-                                                         kernelFunc.getName());
+    std::string kernelModuleName;
+    gpu::GPUModuleOp kernelModule;
+    if (gpuLaunchOp.getKernelModule()) {
+      kernelModuleName =
+          gpuLaunchOp.getKernelModule()->getRootReference().str();
+      kernelModule =
+          parentSymbolTable.lookup<gpu::GPUModuleOp>(kernelModuleName);
+    } else {
+      kernelModuleName = kernelFunc.getName();
+    }
+
+    // Check if the module already exists in the symbol table
+    if (!kernelModule) {
+      // If not found, create a new GPU module
+      kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
+                                                      kernelModuleName);
+    }
 
     // If a valid data layout spec was provided, attach it to the kernel module.
     // Otherwise, the default data layout will be used.
@@ -435,21 +449,7 @@ private:
     return kernelModule;
   }
 
-  Option<std::string> dataLayoutStr{
-      *this, "data-layout-str",
-      llvm::cl::desc("String containing the data layout specification to be "
-                     "attached to the GPU kernel module")};
-
   DataLayoutSpecInterface dataLayoutSpec;
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createGpuLauchSinkIndexComputationsPass() {
-  return std::make_unique<GpuLaunchSinkIndexComputationsPass>();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createGpuKernelOutliningPass(StringRef dataLayoutStr) {
-  return std::make_unique<GpuKernelOutliningPass>(dataLayoutStr);
-}

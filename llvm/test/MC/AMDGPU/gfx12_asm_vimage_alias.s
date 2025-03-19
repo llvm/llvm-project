@@ -35,3 +35,12 @@ image_atomic_fmin v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 
 image_atomic_fmax v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
 // GFX12: image_atomic_max_flt v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x40,0x61,0xd0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
+
+bvh_intersect_ray v[4:7], [v9, v10, v[11:13], v[14:16], v[17:19]], s[4:7]
+// GFX12: image_bvh_intersect_ray v[4:7], [v9, v10, v[11:13], v[14:16], v[17:19]], s[4:7] ; encoding: [0x10,0x40,0xc6,0xd3,0x04,0x08,0x00,0x11,0x09,0x0a,0x0b,0x0e]
+
+bvh64_intersect_ray v[4:7], [v[9:10], v11, v[12:14], v[15:17], v[18:20]], s[4:7]
+// GFX12: image_bvh64_intersect_ray v[4:7], [v[9:10], v11, v[12:14], v[15:17], v[18:20]], s[4:7] ; encoding: [0x10,0x80,0xc6,0xd3,0x04,0x08,0x00,0x12,0x09,0x0b,0x0c,0x0f]
+
+bvh_dual_intersect_ray v[0:9], [v[0:1], v[11:12], v[3:5], v[6:8], v[9:10]], s[0:3]
+// GFX12: image_bvh_dual_intersect_ray v[0:9], [v[0:1], v[11:12], v[3:5], v[6:8], v[9:10]], s[0:3] ; encoding: [0x10,0x00,0xe0,0xd3,0x00,0x00,0x00,0x09,0x00,0x0b,0x03,0x06]

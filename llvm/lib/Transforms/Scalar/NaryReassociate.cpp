@@ -402,16 +402,17 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
+  Type *GEPArgType = SE->getEffectiveSCEVType(GEP->getOperand(I)->getType());
+  Type *LHSType = SE->getEffectiveSCEVType(LHS->getType());
+  size_t LHSSize = DL->getTypeSizeInBits(LHSType).getFixedValue();
+  size_t GEPArgSize = DL->getTypeSizeInBits(GEPArgType).getFixedValue();
   if (isKnownNonNegative(LHS, SimplifyQuery(*DL, DT, AC, GEP)) &&
-      DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
-          DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
-              .getFixedValue()) {
+      LHSSize < GEPArgSize) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
     // zext if the source operand is proved non-negative. We should do that
     // consistently so that CandidateExpr more likely appears before. See
     // @reassociate_gep_assume for an example of this canonicalization.
-    IndexExprs[I] =
-        SE->getZeroExtendExpr(IndexExprs[I], GEP->getOperand(I)->getType());
+    IndexExprs[I] = SE->getZeroExtendExpr(IndexExprs[I], GEPArgType);
   }
   const SCEV *CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP),
                                              IndexExprs);

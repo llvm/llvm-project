@@ -76,6 +76,8 @@ FormatTokenLexer::FormatTokenLexer(
     TemplateNames.insert(&IdentTable.get(TemplateName));
   for (const auto &TypeName : Style.TypeNames)
     TypeNames.insert(&IdentTable.get(TypeName));
+  for (const auto &VariableTemplate : Style.VariableTemplates)
+    VariableTemplates.insert(&IdentTable.get(VariableTemplate));
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -562,8 +564,7 @@ bool FormatTokenLexer::tryMergeTokens(ArrayRef<tok::TokenKind> Kinds,
   if (Tokens.size() < Kinds.size())
     return false;
 
-  SmallVectorImpl<FormatToken *>::const_iterator First =
-      Tokens.end() - Kinds.size();
+  const auto *First = Tokens.end() - Kinds.size();
   for (unsigned i = 0; i < Kinds.size(); ++i)
     if (First[i]->isNot(Kinds[i]))
       return false;
@@ -575,7 +576,7 @@ bool FormatTokenLexer::tryMergeTokens(size_t Count, TokenType NewType) {
   if (Tokens.size() < Count)
     return false;
 
-  SmallVectorImpl<FormatToken *>::const_iterator First = Tokens.end() - Count;
+  const auto *First = Tokens.end() - Count;
   unsigned AddLength = 0;
   for (size_t i = 1; i < Count; ++i) {
     // If there is whitespace separating the token and the previous one,
@@ -609,9 +610,9 @@ bool FormatTokenLexer::precedesOperand(FormatToken *Tok) {
                       tok::r_brace, tok::l_square, tok::semi, tok::exclaim,
                       tok::colon, tok::question, tok::tilde) ||
          Tok->isOneOf(tok::kw_return, tok::kw_do, tok::kw_case, tok::kw_throw,
-                      tok::kw_else, tok::kw_new, tok::kw_delete, tok::kw_void,
-                      tok::kw_typeof, Keywords.kw_instanceof, Keywords.kw_in) ||
-         Tok->isBinaryOperator();
+                      tok::kw_else, tok::kw_void, tok::kw_typeof,
+                      Keywords.kw_instanceof, Keywords.kw_in) ||
+         Tok->isPlacementOperator() || Tok->isBinaryOperator();
 }
 
 bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
@@ -1382,6 +1383,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setFinalizedType(TT_TemplateName);
       else if (TypeNames.contains(Identifier))
         FormatTok->setFinalizedType(TT_TypeName);
+      else if (VariableTemplates.contains(Identifier))
+        FormatTok->setFinalizedType(TT_VariableTemplate);
     }
   }
 
@@ -1389,34 +1392,51 @@ FormatToken *FormatTokenLexer::getNextToken() {
 }
 
 bool FormatTokenLexer::readRawTokenVerilogSpecific(Token &Tok) {
+  const char *Start = Lex->getBufferLocation();
+  size_t Len;
+  switch (Start[0]) {
   // In Verilog the quote is not a character literal.
-  //
+  case '\'':
+    Len = 1;
+    break;
   // Make the backtick and double backtick identifiers to match against them
   // more easily.
-  //
-  // In Verilog an escaped identifier starts with backslash and ends with
-  // whitespace. Unless that whitespace is an escaped newline. A backslash can
-  // also begin an escaped newline outside of an escaped identifier. We check
-  // for that outside of the Regex since we can't use negative lookhead
-  // assertions. Simply changing the '*' to '+' breaks stuff as the escaped
-  // identifier may have a length of 0 according to Section A.9.3.
+  case '`':
+    if (Start[1] == '`')
+      Len = 2;
+    else
+      Len = 1;
+    break;
+  // In Verilog an escaped identifier starts with a backslash and ends with
+  // whitespace. Unless that whitespace is an escaped newline.
   // FIXME: If there is an escaped newline in the middle of an escaped
   // identifier, allow for pasting the two lines together, But escaped
   // identifiers usually occur only in generated code anyway.
-  static const llvm::Regex VerilogToken(R"re(^('|``?|\\(\\)re"
-                                        "(\r?\n|\r)|[^[:space:]])*)");
-
-  SmallVector<StringRef, 4> Matches;
-  const char *Start = Lex->getBufferLocation();
-  if (!VerilogToken.match(StringRef(Start, Lex->getBuffer().end() - Start),
-                          &Matches)) {
+  case '\\':
+    // A backslash can also begin an escaped newline outside of an escaped
+    // identifier.
+    if (Start[1] == '\r' || Start[1] == '\n')
+      return false;
+    Len = 1;
+    while (Start[Len] != '\0' && Start[Len] != '\f' && Start[Len] != '\n' &&
+           Start[Len] != '\r' && Start[Len] != '\t' && Start[Len] != '\v' &&
+           Start[Len] != ' ') {
+      // There is a null byte at the end of the buffer, so we don't have to
+      // check whether the next byte is within the buffer.
+      if (Start[Len] == '\\' && Start[Len + 1] == '\r' &&
+          Start[Len + 2] == '\n') {
+        Len += 3;
+      } else if (Start[Len] == '\\' &&
+                 (Start[Len + 1] == '\r' || Start[Len + 1] == '\n')) {
+        Len += 2;
+      } else {
+        Len += 1;
+      }
+    }
+    break;
+  default:
     return false;
   }
-  // There is a null byte at the end of the buffer, so we don't have to check
-  // Start[1] is within the buffer.
-  if (Start[0] == '\\' && (Start[1] == '\r' || Start[1] == '\n'))
-    return false;
-  size_t Len = Matches[0].size();
 
   // The kind has to be an identifier so we can match it against those defined
   // in Keywords. The kind has to be set before the length because the setLength

@@ -19,10 +19,9 @@ int __attribute__((target_clones("sve+dotprod"))) redecl3(void);
 int redecl3(void);
 
 int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void);
-// expected-error@+3 {{'target_clones' attribute does not match previous declaration}}
+// expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
 // expected-note@-2 {{previous declaration is here}}
-// expected-warning@+1 {{version list contains entries that don't impact code generation}}
-int __attribute__((target_clones("dgh+rpres", "ebf16+dpb", "default"))) redecl4(void) { return 1; }
+int __attribute__((target_clones("dit", "bf16+dpb", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}
@@ -69,7 +68,7 @@ empty_target_5(void);
 void __attribute__((target_clones("sve2-bitperm", "sve2-bitperm")))
 dupe_normal(void);
 
-void __attribute__((target_clones("default"), target_clones("memtag3+bti"))) dupe_normal2(void);
+void __attribute__((target_clones("default"), target_clones("memtag+bti"))) dupe_normal2(void);
 
 int mv_after_use(void);
 int useage(void) {

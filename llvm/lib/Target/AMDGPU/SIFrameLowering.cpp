@@ -305,6 +305,7 @@ class PrologEpilogSGPRSpillBuilder {
 
       buildEpilogRestore(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MI, DL,
                          TmpVGPR, FI, FrameReg, DwordOff);
+      MRI.constrainRegClass(SubReg, &AMDGPU::SReg_32_XM0RegClass);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), SubReg)
           .addReg(TmpVGPR, RegState::Kill);
       DwordOff += 4;
@@ -1256,6 +1257,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   Register FramePtrReg = FuncInfo->getFrameOffsetReg();
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
 
+  if (RoundedSize != 0) {
+    if (TRI.hasBasePointer(MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(TRI.getBaseRegister())
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else if (hasFP(MF)) {
+      BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
+          .addReg(FramePtrReg)
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
+  }
+
   Register FramePtrRegScratchCopy;
   Register SGPRForFPSaveRestoreCopy =
       FuncInfo->getScratchSGPRCopyDstReg(FramePtrReg);
@@ -1280,14 +1293,6 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                          FramePtrRegScratchCopy);
   }
 
-  if (RoundedSize != 0 && hasFP(MF)) {
-    auto Add = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_ADD_I32), StackPtrReg)
-        .addReg(StackPtrReg)
-        .addImm(-static_cast<int64_t>(RoundedSize * getScratchScaleFactor(ST)))
-        .setMIFlag(MachineInstr::FrameDestroy);
-    Add->getOperand(3).setIsDead(); // Mark SCC as dead.
-  }
-
   if (FPSaved) {
     // Insert the copy to restore FP.
     Register SrcReg = SGPRForFPSaveRestoreCopy ? SGPRForFPSaveRestoreCopy
@@ -1299,7 +1304,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       MIB.setMIFlag(MachineInstr::FrameDestroy);
   } else {
     // Insert the CSR spill restores with SP as the base register.
-    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits, StackPtrReg,
+    emitCSRSpillRestores(MF, MBB, MBBI, DL, LiveUnits,
+                         FuncInfo->isChainFunction() ? Register() : StackPtrReg,
                          FramePtrRegScratchCopy);
   }
 }
@@ -1437,7 +1443,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // second VGPR emergency frame index.
     if (HaveSGPRToVMemSpill &&
         allocateScavengingFrameIndexesNearIncomingSP(MF)) {
-      RS->addScavengingFrameIndex(MFI.CreateStackObject(4, Align(4), false));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
 }
@@ -1714,11 +1720,12 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
     NumModifiedRegs++;
 
   for (auto &CS : CSI) {
-    if (CS.getReg() == FramePtrReg && SGPRForFPSaveRestoreCopy) {
+    if (CS.getReg() == FramePtrReg.asMCReg() && SGPRForFPSaveRestoreCopy) {
       CS.setDstReg(SGPRForFPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;
-    } else if (CS.getReg() == BasePtrReg && SGPRForBPSaveRestoreCopy) {
+    } else if (CS.getReg() == BasePtrReg.asMCReg() &&
+               SGPRForBPSaveRestoreCopy) {
       CS.setDstReg(SGPRForBPSaveRestoreCopy);
       if (--NumModifiedRegs)
         break;

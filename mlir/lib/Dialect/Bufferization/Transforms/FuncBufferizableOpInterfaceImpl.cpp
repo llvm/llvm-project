@@ -19,6 +19,15 @@
 #include <optional>
 
 namespace mlir {
+/// Return all func.return ops in the given function.
+SmallVector<func::ReturnOp> bufferization::getReturnOps(func::FuncOp funcOp) {
+  SmallVector<func::ReturnOp> result;
+  for (Block &b : funcOp.getBody())
+    if (auto returnOp = dyn_cast<func::ReturnOp>(b.getTerminator()))
+      result.push_back(returnOp);
+  return result;
+}
+
 namespace bufferization {
 namespace func_ext {
 
@@ -39,20 +48,6 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
   assert(createdRead.second && "bbarg access info exists already");
   assert(createdWritten.second && "bbarg access info exists already");
 #endif // NDEBUG
-}
-
-/// Return the unique ReturnOp that terminates `funcOp`.
-/// Return nullptr if there is no such unique ReturnOp.
-static func::ReturnOp getAssumedUniqueReturnOp(FuncOp funcOp) {
-  func::ReturnOp returnOp;
-  for (Block &b : funcOp.getBody()) {
-    if (auto candidateOp = dyn_cast<func::ReturnOp>(b.getTerminator())) {
-      if (returnOp)
-        return nullptr;
-      returnOp = candidateOp;
-    }
-  }
-  return returnOp;
 }
 
 /// Return the index-th bufferized function argument type. This assumes that the
@@ -207,11 +202,18 @@ struct CallOpInterface
     FuncOp funcOp = getCalledFunction(callOp);
     assert(funcOp && "expected CallOp to a FuncOp");
 
-    // The callee was already bufferized, so we can directly take the type from
+    // If the callee was already bufferized, we can directly take the type from
     // its signature.
     FunctionType funcType = funcOp.getFunctionType();
-    return cast<BaseMemRefType>(
-        funcType.getResult(cast<OpResult>(value).getResultNumber()));
+    Type resultType =
+        funcType.getResult(cast<OpResult>(value).getResultNumber());
+    if (auto bufferizedType = dyn_cast<BaseMemRefType>(resultType))
+      return bufferizedType;
+
+    // Otherwise, call the type converter to compute the bufferized type.
+    auto tensorType = cast<TensorType>(resultType);
+    return options.functionArgTypeConverterFn(
+        tensorType, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
   }
 
   /// All function arguments are writable. It is the responsibility of the
@@ -261,6 +263,18 @@ struct CallOpInterface
 
       // Caller / callee type mismatch is handled with castOrReallocMemRefValue.
       auto memRefType = funcType.getInput(opOperand.getOperandNumber());
+      if (!isa<BaseMemRefType>(memRefType)) {
+        // The called function was not bufferized yet. This can happen when
+        // there cycles in the function call graph. Compute the bufferized
+        // result type.
+        FailureOr<BaseMemRefType> maybeMemRefType =
+            bufferization::getBufferType(
+                funcOp.getArgument(opOperand.getOperandNumber()), options);
+        if (failed(maybeMemRefType))
+          return failure();
+        memRefType = *maybeMemRefType;
+      }
+
       // Since we don't yet have a clear layout story, to_memref may
       // conservatively turn tensors into more dynamic memref than necessary.
       // If the memref type of the callee fails, introduce an extra memref.cast
@@ -372,15 +386,6 @@ struct FuncOpInterface
         getBufferType(op, value, options, invocationStack);
   }
 
-  LogicalResult verifyAnalysis(Operation *op,
-                               const AnalysisState &state) const {
-    auto funcOp = cast<func::FuncOp>(op);
-    // TODO: func.func with multiple returns are not supported.
-    if (!getAssumedUniqueReturnOp(funcOp) && !funcOp.isExternal())
-      return op->emitOpError("op without unique func.return is not supported");
-    return success();
-  }
-
   /// Rewrite function bbArgs and return values into buffer form. This function
   /// bufferizes the function signature and the ReturnOp. When the entire
   /// function body has been bufferized, function return types can be switched
@@ -427,40 +432,37 @@ struct FuncOpInterface
       return success();
     }
 
-    // TODO: Support functions with multiple returns.
-    func::ReturnOp returnOp = getAssumedUniqueReturnOp(funcOp);
-    assert(returnOp && "expected func with single return op");
-    assert(returnOp->getNumOperands() == retTypes.size() &&
-           "incorrect number of return values");
-    Location loc = returnOp.getLoc();
-
     // 1. Bufferize every block.
     for (Block &block : funcOp.getBody())
       if (failed(bufferization::bufferizeBlockSignature(&block, rewriter,
                                                         options)))
         return failure();
 
-    // 2. Bufferize all operands of the return op.
-    SmallVector<Value> returnValues;
-    for (auto [returnVal, bufferizedType] :
-         llvm::zip_equal(returnOp->getOperands(), retTypes)) {
-      auto tensorType = dyn_cast<TensorType>(returnVal.getType());
-      rewriter.setInsertionPoint(returnOp);
+    // 2. Bufferize the operands of the all return op.
+    for (func::ReturnOp returnOp : getReturnOps(funcOp)) {
+      assert(returnOp->getNumOperands() == retTypes.size() &&
+             "incorrect number of return values");
+      SmallVector<Value> returnValues;
+      for (auto [returnVal, bufferizedType] :
+           llvm::zip_equal(returnOp->getOperands(), retTypes)) {
+        auto tensorType = dyn_cast<TensorType>(returnVal.getType());
+        rewriter.setInsertionPoint(returnOp);
 
-      // If not a tensor type just forward it.
-      if (!tensorType) {
-        returnValues.push_back(returnVal);
-        continue;
+        // If not a tensor type just forward it.
+        if (!tensorType) {
+          returnValues.push_back(returnVal);
+          continue;
+        }
+
+        // Note: If `inferFunctionResultLayout = true`, casts are later folded
+        // away.
+        Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+            returnOp.getLoc(), bufferizedType, returnVal);
+        returnValues.push_back(toMemrefOp);
       }
 
-      // Note: If `inferFunctionResultLayout = true`, casts are later folded
-      // away.
-      Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
-          loc, bufferizedType, returnVal);
-      returnValues.push_back(toMemrefOp);
+      returnOp.getOperandsMutable().assign(returnValues);
     }
-
-    returnOp.getOperandsMutable().assign(returnValues);
 
     // 3. Set the new function type.
     funcOp.setType(newFuncType);

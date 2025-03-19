@@ -170,6 +170,14 @@ struct Fragment {
     /// - Ancestors: search all parent directories (the default)
     /// - std::nullopt: do not use a compilation database, just default flags.
     std::optional<Located<std::string>> CompilationDatabase;
+
+    /// Controls whether Clangd should use its own built-in system headers (like
+    /// stddef.h), or use the system headers from the query driver. Use the
+    /// option value 'Clangd' (default) to indicate Clangd's headers, and use
+    /// 'QueryDriver' to indicate QueryDriver's headers. `Clangd` is the
+    /// fallback if no query driver is supplied or if the query driver regex
+    /// string fails to match the compiler used in the CDB.
+    std::optional<Located<std::string>> BuiltinHeaders;
   };
   CompileFlagsBlock CompileFlags;
 
@@ -301,6 +309,23 @@ struct Fragment {
     // ::). All nested namespaces are affected as well.
     // Affects availability of the AddUsing tweak.
     std::vector<Located<std::string>> FullyQualifiedNamespaces;
+
+    /// List of regexes for headers that should always be included with a
+    /// ""-style include. By default, and in case of a conflict with
+    /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
+    /// AngledHeaders), system headers use <> and non-system headers use "".
+    /// These can match any suffix of the header file in question.
+    /// Matching is performed against the header text, not its absolute path
+    /// within the project.
+    std::vector<Located<std::string>> QuotedHeaders;
+    /// List of regexes for headers that should always be included with a
+    /// <>-style include. By default, and in case of a conflict with
+    /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
+    /// AngledHeaders), system headers use <> and non-system headers use "".
+    /// These can match any suffix of the header file in question.
+    /// Matching is performed against the header text, not its absolute path
+    /// within the project.
+    std::vector<Located<std::string>> AngledHeaders;
   };
   StyleBlock Style;
 

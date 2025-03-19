@@ -7,43 +7,104 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
-#include "clang/CIR/CIRGenerator.h"
-#include "clang/Frontend/CompilerInstance.h"
-
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/LowerToLLVM.h"
+#include "clang/CodeGen/BackendUtil.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "llvm/IR/Module.h"
 
 using namespace cir;
 using namespace clang;
 
 namespace cir {
 
+static BackendAction
+getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
+  switch (Action) {
+  case CIRGenAction::OutputType::EmitCIR:
+    assert(false &&
+           "Unsupported output type for getBackendActionFromOutputType!");
+    break; // Unreachable, but fall through to report that
+  case CIRGenAction::OutputType::EmitAssembly:
+    return BackendAction::Backend_EmitAssembly;
+  case CIRGenAction::OutputType::EmitBC:
+    return BackendAction::Backend_EmitBC;
+  case CIRGenAction::OutputType::EmitLLVM:
+    return BackendAction::Backend_EmitLL;
+  case CIRGenAction::OutputType::EmitObj:
+    return BackendAction::Backend_EmitObj;
+  }
+  // We should only get here if a non-enum value is passed in or we went through
+  // the assert(false) case above
+  llvm_unreachable("Unsupported output type!");
+}
+
+static std::unique_ptr<llvm::Module>
+lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx) {
+  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx);
+}
+
 class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
 
+  CIRGenAction::OutputType Action;
+
+  CompilerInstance &CI;
+
   std::unique_ptr<raw_pwrite_stream> OutputStream;
 
+  ASTContext *Context{nullptr};
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
 
 public:
-  CIRGenConsumer(CIRGenAction::OutputType Action,
-                 DiagnosticsEngine &DiagnosticsEngine,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                 const HeaderSearchOptions &HeaderSearchOptions,
-                 const CodeGenOptions &CodeGenOptions,
-                 const TargetOptions &TargetOptions,
-                 const LangOptions &LangOptions,
-                 const FrontendOptions &FEOptions,
+  CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
                  std::unique_ptr<raw_pwrite_stream> OS)
-      : OutputStream(std::move(OS)), FS(VFS),
-        Gen(std::make_unique<CIRGenerator>(DiagnosticsEngine, std::move(VFS),
-                                           CodeGenOptions)) {}
+      : Action(Action), CI(CI), OutputStream(std::move(OS)),
+        FS(&CI.getVirtualFileSystem()),
+        Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
+                                           CI.getCodeGenOpts())) {}
+
+  void Initialize(ASTContext &Ctx) override {
+    assert(!Context && "initialized multiple times");
+    Context = &Ctx;
+    Gen->Initialize(Ctx);
+  }
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
     Gen->HandleTopLevelDecl(D);
     return true;
+  }
+
+  void HandleTranslationUnit(ASTContext &C) override {
+    Gen->HandleTranslationUnit(C);
+    mlir::ModuleOp MlirModule = Gen->getModule();
+    switch (Action) {
+    case CIRGenAction::OutputType::EmitCIR:
+      if (OutputStream && MlirModule) {
+        mlir::OpPrintingFlags Flags;
+        Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+        MlirModule->print(*OutputStream, Flags);
+      }
+      break;
+    case CIRGenAction::OutputType::EmitLLVM:
+    case CIRGenAction::OutputType::EmitBC:
+    case CIRGenAction::OutputType::EmitObj:
+    case CIRGenAction::OutputType::EmitAssembly: {
+      llvm::LLVMContext LLVMCtx;
+      std::unique_ptr<llvm::Module> LLVMModule =
+          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx);
+
+      BackendAction BEAction = getBackendActionFromOutputType(Action);
+      emitBackendOutput(
+          CI, CI.getCodeGenOpts(), C.getTargetInfo().getDataLayoutString(),
+          LLVMModule.get(), BEAction, FS, std::move(OutputStream));
+      break;
+    }
+    }
   }
 };
 } // namespace cir
@@ -55,18 +116,53 @@ CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
+static std::unique_ptr<raw_pwrite_stream>
+getOutputStream(CompilerInstance &CI, StringRef InFile,
+                CIRGenAction::OutputType Action) {
+  switch (Action) {
+  case CIRGenAction::OutputType::EmitAssembly:
+    return CI.createDefaultOutputFile(false, InFile, "s");
+  case CIRGenAction::OutputType::EmitCIR:
+    return CI.createDefaultOutputFile(false, InFile, "cir");
+  case CIRGenAction::OutputType::EmitLLVM:
+    return CI.createDefaultOutputFile(false, InFile, "ll");
+  case CIRGenAction::OutputType::EmitBC:
+    return CI.createDefaultOutputFile(true, InFile, "bc");
+  case CIRGenAction::OutputType::EmitObj:
+    return CI.createDefaultOutputFile(true, InFile, "o");
+  }
+  llvm_unreachable("Invalid CIRGenAction::OutputType");
+}
+
 std::unique_ptr<ASTConsumer>
 CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<llvm::raw_pwrite_stream> Out = CI.takeOutputStream();
 
-  auto Result = std::make_unique<cir::CIRGenConsumer>(
-      Action, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
-      CI.getHeaderSearchOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
-      CI.getLangOpts(), CI.getFrontendOpts(), std::move(Out));
+  if (!Out)
+    Out = getOutputStream(CI, InFile, Action);
+
+  auto Result =
+      std::make_unique<cir::CIRGenConsumer>(Action, CI, std::move(Out));
 
   return Result;
 }
 
+void EmitAssemblyAction::anchor() {}
+EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitAssembly, MLIRCtx) {}
+
 void EmitCIRAction::anchor() {}
 EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
     : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
+
+void EmitLLVMAction::anchor() {}
+EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitLLVM, MLIRCtx) {}
+
+void EmitBCAction::anchor() {}
+EmitBCAction::EmitBCAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitBC, MLIRCtx) {}
+
+void EmitObjAction::anchor() {}
+EmitObjAction::EmitObjAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitObj, MLIRCtx) {}

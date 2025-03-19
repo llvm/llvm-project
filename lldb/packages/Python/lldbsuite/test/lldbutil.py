@@ -1158,17 +1158,6 @@ def get_module_names(thread):
     return list(map(GetModuleName, list(range(thread.GetNumFrames()))))
 
 
-def get_stack_frames(thread):
-    """
-    Returns a sequence of stack frames for this thread.
-    """
-
-    def GetStackFrame(i):
-        return thread.GetFrameAtIndex(i)
-
-    return list(map(GetStackFrame, list(range(thread.GetNumFrames()))))
-
-
 def print_stacktrace(thread, string_buffer=False):
     """Prints a simple stack trace of this thread."""
 
@@ -1362,33 +1351,6 @@ def get_args_as_string(frame, showFuncName=True):
         return "%s(%s)" % (name, ", ".join(args))
     else:
         return "(%s)" % (", ".join(args))
-
-
-def print_registers(frame, string_buffer=False):
-    """Prints all the register sets of the frame."""
-
-    output = io.StringIO() if string_buffer else sys.stdout
-
-    print("Register sets for " + str(frame), file=output)
-
-    registerSet = frame.GetRegisters()  # Return type of SBValueList.
-    print(
-        "Frame registers (size of register set = %d):" % registerSet.GetSize(),
-        file=output,
-    )
-    for value in registerSet:
-        # print(value, file=output)
-        print(
-            "%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()),
-            file=output,
-        )
-        for child in value:
-            print(
-                "Name: %s, Value: %s" % (child.GetName(), child.GetValue()), file=output
-            )
-
-    if string_buffer:
-        return output.getvalue()
 
 
 def get_registers(frame, kind):
@@ -1614,21 +1576,6 @@ def set_actions_for_signal(
         return_obj.Succeeded(),
         "Setting signal handling for {0} worked as expected".format(signal_name),
     )
-
-
-class PrintableRegex(object):
-    def __init__(self, text):
-        self.regex = re.compile(text)
-        self.text = text
-
-    def match(self, str):
-        return self.regex.match(str)
-
-    def __str__(self):
-        return "%s" % (self.text)
-
-    def __repr__(self):
-        return "re.compile(%s) -> %s" % (self.text, self.regex)
 
 
 def skip_if_callable(test, mycallable, reason):

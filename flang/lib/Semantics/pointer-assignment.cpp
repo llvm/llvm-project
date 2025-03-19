@@ -76,6 +76,7 @@ private:
       const Procedure * = nullptr,
       const evaluate::SpecificIntrinsic *specific = nullptr);
   bool LhsOkForUnlimitedPoly() const;
+  std::optional<MessageFormattedText> CheckRanks(const TypeAndShape &rhs) const;
   template <typename... A> parser::Message *Say(A &&...);
   template <typename FeatureOrUsageWarning, typename... A>
   parser::Message *Warn(FeatureOrUsageWarning, A &&...);
@@ -153,6 +154,9 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
   } else if (evaluate::IsAssumedRank(lhs)) {
     Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
+  } else if (evaluate::ExtractCoarrayRef(lhs)) { // F'2023 C1027
+    Say("The left-hand side of a pointer assignment must not be coindexed"_err_en_US);
+    return false;
   } else {
     return true;
   }
@@ -176,14 +180,14 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     Say("An array section with a vector subscript may not be a pointer target"_err_en_US);
     return false;
   }
-  if (ExtractCoarrayRef(rhs)) { // C1026
+  if (ExtractCoarrayRef(rhs)) { // F'2023 C1029
     Say("A coindexed object may not be a pointer target"_err_en_US);
     return false;
   }
   if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
     return false;
   }
-  if (IsNullPointer(rhs)) {
+  if (IsNullPointer(&rhs)) {
     return true;
   }
   if (lhs_ && IsProcedure(*lhs_)) {
@@ -278,10 +282,19 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
-    if (!lhsType_->IsCompatibleWith(foldingContext_.messages(), *frTypeAndShape,
-            "pointer", "function result",
-            /*omitShapeConformanceCheck=*/isBoundsRemapping_ || isAssumedRank_,
-            evaluate::CheckConformanceFlags::BothDeferredShape)) {
+    if (frTypeAndShape->type().IsUnlimitedPolymorphic() &&
+        LhsOkForUnlimitedPoly()) {
+      // Special case exception to type checking (F'2023 C1017);
+      // still check rank compatibility.
+      if (auto msg{CheckRanks(*frTypeAndShape)}) {
+        Say(*msg);
+        return false;
+      }
+    } else if (!lhsType_->IsCompatibleWith(foldingContext_.messages(),
+                   *frTypeAndShape, "pointer", "function result",
+                   /*omitShapeConformanceCheck=*/isBoundsRemapping_ ||
+                       isAssumedRank_,
+                   evaluate::CheckConformanceFlags::BothDeferredShape)) {
       return false; // IsCompatibleWith() emitted message
     }
   }
@@ -324,27 +337,17 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
         msg = "Pointer must be VOLATILE when target is a"
               " VOLATILE coarray"_err_en_US;
       }
+    } else if (auto m{CheckRanks(*rhsType)}) {
+      msg = std::move(*m);
     } else if (rhsType->type().IsUnlimitedPolymorphic()) {
       if (!LhsOkForUnlimitedPoly()) {
         msg = "Pointer type must be unlimited polymorphic or non-extensible"
               " derived type when target is unlimited polymorphic"_err_en_US;
       }
-    } else {
-      if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type())) {
-        msg = MessageFormattedText{
-            "Target type %s is not compatible with pointer type %s"_err_en_US,
-            rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
-
-      } else if (!isBoundsRemapping_ &&
-          !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
-        int lhsRank{lhsType_->Rank()};
-        int rhsRank{rhsType->Rank()};
-        if (lhsRank != rhsRank) {
-          msg = MessageFormattedText{
-              "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
-              rhsRank};
-        }
-      }
+    } else if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type())) {
+      msg = MessageFormattedText{
+          "Target type %s is not compatible with pointer type %s"_err_en_US,
+          rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
     }
   }
   if (msg) {
@@ -432,6 +435,21 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
   } else {
     return !IsExtensibleType(&type.GetDerivedTypeSpec());
   }
+}
+
+std::optional<MessageFormattedText> PointerAssignmentChecker::CheckRanks(
+    const TypeAndShape &rhs) const {
+  if (!isBoundsRemapping_ &&
+      !lhsType_->attrs().test(TypeAndShape::Attr::AssumedRank)) {
+    int lhsRank{lhsType_->Rank()};
+    int rhsRank{rhs.Rank()};
+    if (lhsRank != rhsRank) {
+      return MessageFormattedText{
+          "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
+          rhsRank};
+    }
+  }
+  return std::nullopt;
 }
 
 template <typename... A>

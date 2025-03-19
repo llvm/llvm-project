@@ -83,9 +83,8 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
   if (!isPowerOf2_32(Alignment))
     return nullptr;
 
-  auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::get(II.getType(), 0));
-  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
+  return Builder.CreateAlignedLoad(II.getType(), II.getArgOperand(0),
+                                   Align(Alignment));
 }
 
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
@@ -2592,11 +2591,32 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       return;
   }
 
+  // For processors with low overhead branching (LOB), runtime unrolling the
+  // innermost loop is often detrimental to performance. In these cases the loop
+  // remainder gets unrolled into a series of compare-and-jump blocks, which in
+  // deeply nested loops get executed multiple times, negating the benefits of
+  // LOB. This is particularly noticable when the loop trip count of the
+  // innermost loop varies within the outer loop, such as in the case of
+  // triangular matrix decompositions. In these cases we will prefer to not
+  // unroll the innermost loop, with the intention for it to be executed as a
+  // low overhead loop.
+  bool Runtime = true;
+  if (ST->hasLOB()) {
+    if (SE.hasLoopInvariantBackedgeTakenCount(L)) {
+      const auto *BETC = SE.getBackedgeTakenCount(L);
+      auto *Outer = L->getOutermostLoop();
+      if ((L != Outer && Outer != L->getParentLoop()) ||
+          (L != Outer && BETC && !SE.isLoopInvariant(BETC, Outer))) {
+        Runtime = false;
+      }
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
   LLVM_DEBUG(dbgs() << "Default Runtime Unroll Count: " << UnrollCount << "\n");
 
   UP.Partial = true;
-  UP.Runtime = true;
+  UP.Runtime = Runtime;
   UP.UnrollRemainder = true;
   UP.DefaultUnrollRuntimeCount = UnrollCount;
   UP.UnrollAndJam = true;
@@ -2613,8 +2633,7 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
@@ -2627,8 +2646,8 @@ bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
   }
 }
 
-bool ARMTTIImpl::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferPredicatedReductionSelect(unsigned Opcode,
+                                                 Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
   return true;
@@ -2649,7 +2668,7 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
     return 0;
   }
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

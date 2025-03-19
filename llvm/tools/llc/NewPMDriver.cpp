@@ -48,10 +48,10 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
+static cl::opt<RegAllocType, false, RegAllocTypeParser>
     RegAlloc("regalloc-npm",
              cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init("default"));
+             cl::Hidden, cl::init(RegAllocType::Unset));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -93,13 +93,11 @@ int llvm::compileModuleWithNewPM(
     CodeGenFileType FileType) {
 
   if (!PassPipeline.empty() && TargetPassConfig::hasLimitedCodeGenPipeline()) {
-    WithColor::warning(errs(), Arg0)
+    WithColor::error(errs(), Arg0)
         << "--passes cannot be used with "
         << TargetPassConfig::getLimitedCodeGenPipelineReason() << ".\n";
     return 1;
   }
-
-  LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
 
   raw_pwrite_stream *OS = &Out->os();
 
@@ -109,12 +107,12 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
+  MachineModuleInfo MMI(Target.get());
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
-  registerCodeGenCallback(PIC, LLVMTM);
+  registerCodeGenCallback(PIC, *Target);
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -141,7 +139,7 @@ int llvm::compileModuleWithNewPM(
     // selection.
 
     if (!MIR) {
-      WithColor::warning(errs(), Arg0) << "-passes is for .mir file only.\n";
+      WithColor::error(errs(), Arg0) << "-passes is for .mir file only.\n";
       return 1;
     }
 
@@ -158,7 +156,7 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(
+    ExitOnErr(Target->buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 
