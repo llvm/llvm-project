@@ -102,7 +102,7 @@ int main(int, char**) {
     assert(c1 == c3);
   }
 
-  { // Make sure self-merging does nothing.
+  { // LWG3088: Make sure self-merging does nothing.
     int a[] = {1, 2, 3, 4, 5};
     std::forward_list<int> c(std::begin(a), std::end(a));
     c.merge(std::move(c));

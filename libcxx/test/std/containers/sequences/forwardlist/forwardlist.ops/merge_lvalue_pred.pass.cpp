@@ -110,7 +110,7 @@ int main(int, char**) {
   }
 #endif
 
-  { // Make sure self-merging does nothing.
+  { // LWG3088: Make sure self-merging does nothing.
     int a[] = {5, 4, 3, 2, 1};
     std::forward_list<int> c(std::begin(a), std::end(a));
     c.merge(c, std::greater<int>());
