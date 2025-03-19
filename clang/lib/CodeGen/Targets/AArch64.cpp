@@ -763,7 +763,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return false;
 
   bool isPredicate;
-  switch (Ty->getAs<BuiltinType>()->getKind()) {
+  switch (Ty->castAs<BuiltinType>()->getKind()) {
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
     isPredicate = false;                                                       \

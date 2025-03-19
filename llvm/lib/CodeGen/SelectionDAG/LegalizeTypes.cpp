@@ -233,6 +233,10 @@ bool DAGTypeLegalizer::run() {
     assert(N->getNodeId() == ReadyToProcess &&
            "Node should be ready if on worklist!");
 
+    // Preserve fast math flags
+    SDNodeFlags FastMathFlags = N->getFlags() & SDNodeFlags::FastMathFlags;
+    SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
+
     LLVM_DEBUG(dbgs() << "\nLegalizing node: "; N->dump(&DAG));
     if (IgnoreNodeResults(N)) {
       LLVM_DEBUG(dbgs() << "Ignoring node results\n");

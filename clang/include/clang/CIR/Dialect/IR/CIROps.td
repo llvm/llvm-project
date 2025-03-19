@@ -18,6 +18,8 @@ include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
+include "clang/CIR/Interfaces/CIROpInterfaces.td"
+
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -75,6 +77,156 @@ class LLVMLoweringInfo {
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
+
+//===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+// CK_Dependent
+def CK_BitCast : I32EnumAttrCase<"bitcast", 1>;
+// CK_LValueBitCast
+// CK_LValueToRValueBitCast
+// CK_LValueToRValue
+// CK_NoOp
+// CK_BaseToDerived
+// CK_DerivedToBase
+// CK_UncheckedDerivedToBase
+// CK_Dynamic
+// CK_ToUnion
+def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 11>;
+// CK_FunctionToPointerDecay
+// CK_NullToPointer
+// CK_NullToMemberPointer
+// CK_BaseToDerivedMemberPointer
+// CK_DerivedToBaseMemberPointer
+def CK_MemberPointerToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 17>;
+// CK_ReinterpretMemberPointer
+// CK_UserDefinedConversion
+// CK_ConstructorConversion
+def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 21>;
+def CK_PointerToIntegral : I32EnumAttrCase<"ptr_to_int", 22>;
+def CK_PointerToBoolean : I32EnumAttrCase<"ptr_to_bool", 23>;
+// CK_ToVoid
+// CK_MatrixCast
+// CK_VectorSplat
+def CK_IntegralCast : I32EnumAttrCase<"integral", 27>;
+def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 28>;
+def CK_IntegralToFloating : I32EnumAttrCase<"int_to_float", 29>;
+// CK_FloatingToFixedPoint
+// CK_FixedPointToFloating
+// CK_FixedPointCast
+// CK_FixedPointToIntegral
+// CK_IntegralToFixedPoint
+// CK_FixedPointToBoolean
+def CK_FloatingToIntegral : I32EnumAttrCase<"float_to_int", 36>;
+def CK_FloatingToBoolean : I32EnumAttrCase<"float_to_bool", 37>;
+def CK_BooleanToSignedIntegral : I32EnumAttrCase<"bool_to_int", 38>;
+def CK_FloatingCast : I32EnumAttrCase<"floating", 39>;
+// CK_CPointerToObjCPointerCast
+// CK_BlockPointerToObjCPointerCast
+// CK_AnyPointerToBlockPointerCast
+// CK_ObjCObjectLValueCast
+// CK_FloatingRealToComplex
+// CK_FloatingComplexToReal
+// CK_FloatingComplexToBoolean
+def CK_FloatingComplexCast : I32EnumAttrCase<"float_complex", 47>;
+// CK_FloatingComplexToIntegralComplex
+// CK_IntegralRealToComplex
+def CK_IntegralComplexToReal : I32EnumAttrCase<"int_complex_to_real", 50>;
+def CK_IntegralComplexToBoolean : I32EnumAttrCase<"int_complex_to_bool", 51>;
+def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 52>;
+def CK_IntegralComplexToFloatingComplex
+    : I32EnumAttrCase<"int_complex_to_float_complex", 53>;
+// CK_ARCProduceObject
+// CK_ARCConsumeObject
+// CK_ARCReclaimReturnedObject
+// CK_ARCExtendBlockObject
+// CK_AtomicToNonAtomic
+// CK_NonAtomicToAtomic
+// CK_CopyAndAutoreleaseBlockObject
+// CK_BuiltinFnToFnPtr
+// CK_ZeroToOCLOpaqueType
+def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 63>;
+// CK_IntToOCLSampler
+// CK_HLSLVectorTruncation
+// CK_HLSLArrayRValue
+// CK_HLSLElementwiseCast
+// CK_HLSLAggregateSplatCast
+
+// Enums below are specific to CIR and don't have a correspondence to classic
+// codegen:
+def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 1000>;
+
+def CastKind : I32EnumAttr<
+    "CastKind",
+    "cast kind",
+    [CK_BitCast, CK_ArrayToPointerDecay, CK_MemberPointerToBoolean,
+     CK_IntegralToPointer, CK_PointerToIntegral, CK_PointerToBoolean,
+     CK_IntegralCast, CK_IntegralToBoolean, CK_IntegralToFloating,
+     CK_FloatingToIntegral, CK_FloatingToBoolean, CK_BooleanToSignedIntegral,
+     CK_FloatingCast, CK_FloatingComplexCast, CK_IntegralComplexToReal,
+     CK_IntegralComplexToBoolean, CK_IntegralComplexCast,
+     CK_IntegralComplexToFloatingComplex, CK_AddressSpaceConversion,
+     CK_BooleanToFloat]> {
+  let cppNamespace = "::cir";
+}
+
+def CastOp : CIR_Op<"cast",
+             [Pure,
+              DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+  // FIXME: not all conversions are free of side effects.
+  let summary = "Conversion between values of different types";
+  let description = [{
+    Apply C/C++ usual conversions rules between values. Currently supported kinds:
+
+    - `array_to_ptrdecay`
+    - `bitcast`
+    - `integral`
+    - `int_to_bool`
+    - `int_to_float`
+    - `floating`
+    - `float_to_int`
+    - `float_to_bool`
+    - `ptr_to_int`
+    - `ptr_to_bool`
+    - `bool_to_int`
+    - `bool_to_float`
+    - `address_space`
+    - `float_to_complex`
+    - `int_to_complex`
+    - `float_complex_to_real`
+    - `int_complex_to_real`
+    - `float_complex_to_bool`
+    - `int_complex_to_bool`
+    - `float_complex`
+    - `float_complex_to_int_complex`
+    - `int_complex`
+    - `int_complex_to_float_complex`
+
+    This is effectively a subset of the rules from
+    `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some
+    of the conversions aren't implemented in terms of `cir.cast`, `lvalue-to-rvalue`
+    for instance is modeled as a regular `cir.load`.
+
+    ```mlir
+    %4 = cir.cast (int_to_bool, %3 : i32), !cir.bool
+    ...
+    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CastKind:$kind, CIR_AnyType:$src);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $src `:` type($src) `)`
+    `,` type($result) attr-dict
+  }];
+
+  // The input and output types should match the cast kind.
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // ConstantOp
@@ -427,8 +579,149 @@ def ScopeOp : CIR_Op<"scope", [
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+def BrOp : CIR_Op<"br",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = "Unconditional branch";
+  let description = [{
+    The `cir.br` branches unconditionally to a block. Used to represent C/C++
+    goto's and general block branching.
+
+    Note that for source level `goto`'s crossing scope boundaries, those are
+    usually represented with the "symbolic" `cir.goto` operation.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.br ^bb3
+      ^bb3:
+        cir.return
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Block *":$dest,
+              CArg<"mlir::ValueRange", "{}">:$destOperands), [{
+      $_state.addSuccessors(dest);
+      $_state.addOperands(destOperands);
+    }]>
+  ];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let successors = (successor AnySuccessor:$dest);
+  let assemblyFormat = [{
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+def UnaryOpKind_Inc   : I32EnumAttrCase<"Inc",   1, "inc">;
+def UnaryOpKind_Dec   : I32EnumAttrCase<"Dec",   2, "dec">;
+def UnaryOpKind_Plus  : I32EnumAttrCase<"Plus",  3, "plus">;
+def UnaryOpKind_Minus : I32EnumAttrCase<"Minus", 4, "minus">;
+def UnaryOpKind_Not   : I32EnumAttrCase<"Not",   5, "not">;
+
+def UnaryOpKind : I32EnumAttr<
+    "UnaryOpKind",
+    "unary operation kind",
+    [UnaryOpKind_Inc,
+     UnaryOpKind_Dec,
+     UnaryOpKind_Plus,
+     UnaryOpKind_Minus,
+     UnaryOpKind_Not,
+     ]> {
+  let cppNamespace = "::cir";
+}
+
+def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
+  let summary = "Unary operations";
+  let description = [{
+    `cir.unary` performs the unary operation according to
+    the specified opcode kind: [inc, dec, plus, minus, not].
+
+    It requires one input operand and has one result, both types
+    should be the same.
+
+    ```mlir
+    %7 = cir.unary(inc, %1) : i32 -> i32
+    %8 = cir.unary(dec, %2) : i32 -> i32
+    ```
+  }];
+
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind, Arg<CIR_AnyType>:$input);
+
+  let assemblyFormat = [{
+      `(` $kind `,` $input `)` `:` type($input) `,` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+
+// Linkage types. This is currently a replay of llvm/IR/GlobalValue.h, this is
+// currently handy as part of forwarding appropriate linkage types for LLVM
+// lowering, specially useful for C++ support.
+
+// Externally visible function
+def Global_ExternalLinkage :
+  I32EnumAttrCase<"ExternalLinkage", 0, "external">;
+// Available for inspection, not emission.
+def Global_AvailableExternallyLinkage :
+  I32EnumAttrCase<"AvailableExternallyLinkage", 1, "available_externally">;
+// Keep one copy of function when linking (inline)
+def Global_LinkOnceAnyLinkage :
+  I32EnumAttrCase<"LinkOnceAnyLinkage", 2, "linkonce">;
+// Same, but only replaced by something equivalent.
+def Global_LinkOnceODRLinkage :
+  I32EnumAttrCase<"LinkOnceODRLinkage", 3, "linkonce_odr">;
+// Keep one copy of named function when linking (weak)
+def Global_WeakAnyLinkage :
+  I32EnumAttrCase<"WeakAnyLinkage", 4, "weak">;
+// Same, but only replaced by something equivalent.
+def Global_WeakODRLinkage :
+  I32EnumAttrCase<"WeakODRLinkage", 5, "weak_odr">;
+// TODO: should we add something like appending linkage too?
+// Special purpose, only applies to global arrays
+// def Global_AppendingLinkage :
+//   I32EnumAttrCase<"AppendingLinkage", 6, "appending">;
+// Rename collisions when linking (static functions).
+def Global_InternalLinkage :
+  I32EnumAttrCase<"InternalLinkage", 7, "internal">;
+// Like Internal, but omit from symbol table, prefix it with
+// "cir_" to prevent clash with MLIR's symbol "private".
+def Global_PrivateLinkage :
+  I32EnumAttrCase<"PrivateLinkage", 8, "cir_private">;
+// ExternalWeak linkage description.
+def Global_ExternalWeakLinkage :
+  I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">;
+// Tentative definitions.
+def Global_CommonLinkage :
+  I32EnumAttrCase<"CommonLinkage", 10, "common">;
+
+/// An enumeration for the kinds of linkage for global values.
+def GlobalLinkageKind : I32EnumAttr<
+    "GlobalLinkageKind",
+    "Linkage type/kind",
+    [Global_ExternalLinkage, Global_AvailableExternallyLinkage,
+     Global_LinkOnceAnyLinkage, Global_LinkOnceODRLinkage,
+     Global_WeakAnyLinkage, Global_WeakODRLinkage,
+     Global_InternalLinkage, Global_PrivateLinkage,
+     Global_ExternalWeakLinkage, Global_CommonLinkage
+     ]> {
+  let cppNamespace = "::cir";
+}
 
 // TODO(CIR): For starters, cir.global has only name and type.  The other
 // properties of a global variable will be added over time as more of ClangIR
@@ -441,12 +734,19 @@ def GlobalOp : CIR_Op<"global"> {
 
     The backing memory for the variable is allocated statically and is
     described by the type of the variable.
+
+    The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type,
-                       OptionalAttr<AnyAttr>:$initial_value);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$sym_type,
+                       Arg<GlobalLinkageKind, "linkage type">:$linkage,
+                       OptionalAttr<AnyAttr>:$initial_value,
+                       UnitAttr:$dsolocal);
 
   let assemblyFormat = [{
+    $linkage
+    (`dsolocal` $dsolocal^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
     attr-dict
@@ -459,8 +759,12 @@ def GlobalOp : CIR_Op<"global"> {
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-                                 "mlir::Type":$sym_type)>];
+  let builders = [OpBuilder<(ins
+    "llvm::StringRef":$sym_name,
+    "mlir::Type":$sym_type,
+    // CIR defaults to external linkage.
+    CArg<"cir::GlobalLinkageKind",
+    "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
 
   let hasVerifier = 1;
 }

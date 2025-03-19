@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace cir;
@@ -182,6 +183,176 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 }
 
 //===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CastOp::verify() {
+  auto resType = getResult().getType();
+  auto srcType = getSrc().getType();
+
+  switch (getKind()) {
+  case cir::CastKind::int_to_bool: {
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    if (!mlir::isa<cir::IntType>(srcType))
+      return emitOpError() << "requires !cir.int type for source";
+    return success();
+  }
+  case cir::CastKind::ptr_to_bool: {
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    if (!mlir::isa<cir::PointerType>(srcType))
+      return emitOpError() << "requires !cir.ptr type for source";
+    return success();
+  }
+  case cir::CastKind::integral: {
+    if (!mlir::isa<cir::IntType>(resType))
+      return emitOpError() << "requires !cir.int type for result";
+    if (!mlir::isa<cir::IntType>(srcType))
+      return emitOpError() << "requires !cir.int type for source";
+    return success();
+  }
+  case cir::CastKind::bitcast: {
+    // Handle the pointer types first.
+    auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
+    auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
+
+    if (srcPtrTy && resPtrTy) {
+      return success();
+    }
+
+    return success();
+  }
+  case cir::CastKind::floating: {
+    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType) ||
+        !mlir::isa<cir::CIRFPTypeInterface>(resType))
+      return emitOpError() << "requires !cir.float type for source and result";
+    return success();
+  }
+  case cir::CastKind::float_to_int: {
+    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+      return emitOpError() << "requires !cir.float type for source";
+    if (!mlir::dyn_cast<cir::IntType>(resType))
+      return emitOpError() << "requires !cir.int type for result";
+    return success();
+  }
+  case cir::CastKind::int_to_ptr: {
+    if (!mlir::dyn_cast<cir::IntType>(srcType))
+      return emitOpError() << "requires !cir.int type for source";
+    if (!mlir::dyn_cast<cir::PointerType>(resType))
+      return emitOpError() << "requires !cir.ptr type for result";
+    return success();
+  }
+  case cir::CastKind::ptr_to_int: {
+    if (!mlir::dyn_cast<cir::PointerType>(srcType))
+      return emitOpError() << "requires !cir.ptr type for source";
+    if (!mlir::dyn_cast<cir::IntType>(resType))
+      return emitOpError() << "requires !cir.int type for result";
+    return success();
+  }
+  case cir::CastKind::float_to_bool: {
+    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+      return emitOpError() << "requires !cir.float type for source";
+    if (!mlir::isa<cir::BoolType>(resType))
+      return emitOpError() << "requires !cir.bool type for result";
+    return success();
+  }
+  case cir::CastKind::bool_to_int: {
+    if (!mlir::isa<cir::BoolType>(srcType))
+      return emitOpError() << "requires !cir.bool type for source";
+    if (!mlir::isa<cir::IntType>(resType))
+      return emitOpError() << "requires !cir.int type for result";
+    return success();
+  }
+  case cir::CastKind::int_to_float: {
+    if (!mlir::isa<cir::IntType>(srcType))
+      return emitOpError() << "requires !cir.int type for source";
+    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+      return emitOpError() << "requires !cir.float type for result";
+    return success();
+  }
+  case cir::CastKind::bool_to_float: {
+    if (!mlir::isa<cir::BoolType>(srcType))
+      return emitOpError() << "requires !cir.bool type for source";
+    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+      return emitOpError() << "requires !cir.float type for result";
+    return success();
+  }
+  case cir::CastKind::address_space: {
+    auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
+    auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
+    if (!srcPtrTy || !resPtrTy)
+      return emitOpError() << "requires !cir.ptr type for source and result";
+    if (srcPtrTy.getPointee() != resPtrTy.getPointee())
+      return emitOpError() << "requires two types differ in addrspace only";
+    return success();
+  }
+  }
+
+  llvm_unreachable("Unknown CastOp kind?");
+}
+
+static bool isIntOrBoolCast(cir::CastOp op) {
+  auto kind = op.getKind();
+  return kind == cir::CastKind::bool_to_int ||
+         kind == cir::CastKind::int_to_bool || kind == cir::CastKind::integral;
+}
+
+static Value tryFoldCastChain(cir::CastOp op) {
+  cir::CastOp head = op, tail = op;
+
+  while (op) {
+    if (!isIntOrBoolCast(op))
+      break;
+    head = op;
+    op = dyn_cast_or_null<cir::CastOp>(head.getSrc().getDefiningOp());
+  }
+
+  if (head == tail)
+    return {};
+
+  // if bool_to_int -> ...  -> int_to_bool: take the bool
+  // as we had it was before all casts
+  if (head.getKind() == cir::CastKind::bool_to_int &&
+      tail.getKind() == cir::CastKind::int_to_bool)
+    return head.getSrc();
+
+  // if int_to_bool -> ...  -> int_to_bool: take the result
+  // of the first one, as no other casts (and ext casts as well)
+  // don't change the first result
+  if (head.getKind() == cir::CastKind::int_to_bool &&
+      tail.getKind() == cir::CastKind::int_to_bool)
+    return head.getResult();
+
+  return {};
+}
+
+OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
+  if (getSrc().getType() == getResult().getType()) {
+    switch (getKind()) {
+    case cir::CastKind::integral: {
+      // TODO: for sign differences, it's possible in certain conditions to
+      // create a new attribute that's capable of representing the source.
+      llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
+      auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
+      if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
+        return mlir::cast<mlir::Attribute>(foldResults[0]);
+      return {};
+    }
+    case cir::CastKind::bitcast:
+    case cir::CastKind::address_space:
+    case cir::CastKind::float_complex:
+    case cir::CastKind::int_complex: {
+      return getSrc();
+    }
+    default:
+      return {};
+    }
+  }
+  return tryFoldCastChain(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -268,6 +439,19 @@ LogicalResult cir::ScopeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return mlir::SuccessorOperands(getDestOperandsMutable());
+}
+
+Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
+  return getDest();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -297,11 +481,16 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 }
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          llvm::StringRef sym_name, mlir::Type sym_type) {
+                          llvm::StringRef sym_name, mlir::Type sym_type,
+                          cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+
+  cir::GlobalLinkageKindAttr linkageAttr =
+      cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
+  odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -437,6 +626,47 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 // TODO(CIR): The properties of functions that require verification haven't
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+
+//===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::UnaryOp::verify() {
+  switch (getKind()) {
+  case cir::UnaryOpKind::Inc:
+  case cir::UnaryOpKind::Dec:
+  case cir::UnaryOpKind::Plus:
+  case cir::UnaryOpKind::Minus:
+  case cir::UnaryOpKind::Not:
+    // Nothing to verify.
+    return success();
+  }
+
+  llvm_unreachable("Unknown UnaryOp kind?");
+}
+
+static bool isBoolNot(cir::UnaryOp op) {
+  return isa<cir::BoolType>(op.getInput().getType()) &&
+         op.getKind() == cir::UnaryOpKind::Not;
+}
+
+// This folder simplifies the sequential boolean not operations.
+// For instance, the next two unary operations will be eliminated:
+//
+// ```mlir
+// %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+// %2 = cir.unary(not, %1) : !cir.bool, !cir.bool
+// ```
+//
+// and the argument of the first one (%0) will be used instead.
+OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
+  if (isBoolNot(*this))
+    if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
+      if (isBoolNot(previous))
+        return previous.getInput();
+
+  return {};
+}
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions

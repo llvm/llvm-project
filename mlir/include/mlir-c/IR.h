@@ -162,6 +162,15 @@ MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
 MLIR_CAPI_EXPORTED void mlirContextSetThreadPool(MlirContext context,
                                                  MlirLlvmThreadPool threadPool);
 
+/// Gets the number of threads of the thread pool of the context when
+/// multithreading is enabled. Returns 1 if no multithreading.
+MLIR_CAPI_EXPORTED unsigned mlirContextGetNumThreads(MlirContext context);
+
+/// Gets the thread pool of the context when enabled multithreading, otherwise
+/// an assertion is raised.
+MLIR_CAPI_EXPORTED MlirLlvmThreadPool
+mlirContextGetThreadPool(MlirContext context);
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
@@ -261,14 +270,74 @@ MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColRangeGet(
     MlirContext context, MlirStringRef filename, unsigned start_line,
     unsigned start_col, unsigned end_line, unsigned end_col);
 
+/// Getter for filename of FileLineColRange.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLocationFileLineColRangeGetFilename(MlirLocation location);
+
+/// Getter for start_line of FileLineColRange.
+MLIR_CAPI_EXPORTED int
+mlirLocationFileLineColRangeGetStartLine(MlirLocation location);
+
+/// Getter for start_column of FileLineColRange.
+MLIR_CAPI_EXPORTED int
+mlirLocationFileLineColRangeGetStartColumn(MlirLocation location);
+
+/// Getter for end_line of FileLineColRange.
+MLIR_CAPI_EXPORTED int
+mlirLocationFileLineColRangeGetEndLine(MlirLocation location);
+
+/// Getter for end_column of FileLineColRange.
+MLIR_CAPI_EXPORTED int
+mlirLocationFileLineColRangeGetEndColumn(MlirLocation location);
+
+/// TypeID Getter for FileLineColRange.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLocationFileLineColRangeGetTypeID(void);
+
+/// Checks whether the given location is an FileLineColRange.
+MLIR_CAPI_EXPORTED bool mlirLocationIsAFileLineColRange(MlirLocation location);
+
 /// Creates a call site location with a callee and a caller.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationCallSiteGet(MlirLocation callee,
                                                         MlirLocation caller);
+
+/// Getter for callee of CallSite.
+MLIR_CAPI_EXPORTED MlirLocation
+mlirLocationCallSiteGetCallee(MlirLocation location);
+
+/// Getter for caller of CallSite.
+MLIR_CAPI_EXPORTED MlirLocation
+mlirLocationCallSiteGetCaller(MlirLocation location);
+
+/// TypeID Getter for CallSite.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLocationCallSiteGetTypeID(void);
+
+/// Checks whether the given location is an CallSite.
+MLIR_CAPI_EXPORTED bool mlirLocationIsACallSite(MlirLocation location);
 
 /// Creates a fused location with an array of locations and metadata.
 MLIR_CAPI_EXPORTED MlirLocation
 mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
                      MlirLocation const *locations, MlirAttribute metadata);
+
+/// Getter for number of locations fused together.
+MLIR_CAPI_EXPORTED unsigned
+mlirLocationFusedGetNumLocations(MlirLocation location);
+
+/// Getter for locations of Fused. Requires pre-allocated memory of
+/// #fusedLocations X sizeof(MlirLocation).
+MLIR_CAPI_EXPORTED void
+mlirLocationFusedGetLocations(MlirLocation location,
+                              MlirLocation *locationsCPtr);
+
+/// Getter for metadata of Fused.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLocationFusedGetMetadata(MlirLocation location);
+
+/// TypeID Getter for Fused.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLocationFusedGetTypeID(void);
+
+/// Checks whether the given location is an Fused.
+MLIR_CAPI_EXPORTED bool mlirLocationIsAFused(MlirLocation location);
 
 /// Creates a name location owned by the given context. Providing null location
 /// for childLoc is allowed and if childLoc is null location, then the behavior
@@ -276,6 +345,20 @@ mlirLocationFusedGet(MlirContext ctx, intptr_t nLocations,
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationNameGet(MlirContext context,
                                                     MlirStringRef name,
                                                     MlirLocation childLoc);
+
+/// Getter for name of Name.
+MLIR_CAPI_EXPORTED MlirIdentifier
+mlirLocationNameGetName(MlirLocation location);
+
+/// Getter for childLoc of Name.
+MLIR_CAPI_EXPORTED MlirLocation
+mlirLocationNameGetChildLoc(MlirLocation location);
+
+/// TypeID Getter for Name.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLocationNameGetTypeID(void);
+
+/// Checks whether the given location is an Name.
+MLIR_CAPI_EXPORTED bool mlirLocationIsAName(MlirLocation location);
 
 /// Creates a location with unknown position owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
@@ -977,6 +1060,12 @@ MLIR_CAPI_EXPORTED void
 mlirValueReplaceAllUsesExcept(MlirValue of, MlirValue with,
                               intptr_t numExceptions,
                               MlirOperation *exceptions);
+
+/// Gets the location of the value.
+MLIR_CAPI_EXPORTED MlirLocation mlirValueGetLocation(MlirValue v);
+
+/// Gets the context that a value was created with.
+MLIR_CAPI_EXPORTED MlirContext mlirValueGetContext(MlirValue v);
 
 //===----------------------------------------------------------------------===//
 // OpOperand API.

@@ -78,6 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -228,12 +229,14 @@ protected:
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
+  bool HasBVHDualInst = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -609,6 +612,8 @@ public:
     return UnalignedAccessMode;
   }
 
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
+
   bool hasApertureRegs() const {
     return HasApertureRegs;
   }
@@ -961,6 +966,8 @@ public:
   }
 
   bool hasPrefetch() const { return GFX12Insts; }
+
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -1358,6 +1365,8 @@ public:
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+
+  bool hasBVHDualInst() const { return HasBVHDualInst; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
