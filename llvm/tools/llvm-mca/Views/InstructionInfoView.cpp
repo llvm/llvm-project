@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Views/InstructionInfoView.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/WithColor.h"
@@ -87,11 +88,11 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
   }
 
-  std::vector<unsigned> Paddings = {0, 7, 14, 21, 28, 35};
-  std::vector<std::string> Fields = {"#uOps",       "Latency",
-                                     "RThroughput", "MayLoad",
-                                     "MayStore",    "HasSideEffects (U)"};
-  std::vector<std::string> EndFields;
+  SmallVector<unsigned, 16> Paddings = {0, 7, 14, 21, 28, 35};
+  SmallVector<StringRef, 16> Fields = {"#uOps",       "Latency",
+                                       "RThroughput", "MayLoad",
+                                       "MayStore",    "HasSideEffects (U)"};
+  SmallVector<StringRef, 8> EndFields;
   unsigned LastPadding = 35;
   if (PrintFullInfo) {
     Fields.push_back("Bypass Latency");
@@ -124,9 +125,8 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   }
 
   FOS << "\n\nInstruction Info:\n";
-  for (unsigned i = 0, N = Fields.size(); i < N; i++) {
+  for (unsigned i = 0, N = Fields.size(); i < N; i++)
     FOS << "[" << i + 1 << "]: " << Fields[i] << "\n";
-  }
   FOS << "\n";
 
   for (unsigned i = 0, N = Paddings.size(); i < N; i++) {
@@ -239,7 +239,7 @@ void InstructionInfoView::collectData(
       raw_string_ostream TempStream(IIVDEntry.Resources);
       const MCWriteProcResEntry *Index = STI.getWriteProcResBegin(&SCDesc);
       const MCWriteProcResEntry *Last = STI.getWriteProcResEnd(&SCDesc);
-      StringRef Sep = "";
+      ListSeparator LS(",");
       for (; Index != Last; ++Index) {
         if (!Index->ReleaseAtCycle)
           continue;
@@ -250,16 +250,15 @@ void InstructionInfoView::collectData(
           // This is to be able to evaluate throughput.
           // See getReciprocalThroughput in MCSchedule.cpp
           if (Index->AcquireAtCycle > 0)
-            TempStream << Sep
+            TempStream << LS
                        << format("%s[%d,%d]", MCProc->Name,
                                  Index->AcquireAtCycle, Index->ReleaseAtCycle);
           else
-            TempStream << Sep
+            TempStream << LS
                        << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
         } else {
-          TempStream << Sep << MCProc->Name;
+          TempStream << LS << MCProc->Name;
         }
-        Sep = ",";
       }
     }
   }

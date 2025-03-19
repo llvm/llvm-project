@@ -218,10 +218,10 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   `<Resources units>` syntax can be:
   - <Resource Name>: ReleaseAtCycle is 1.
-  - <Resource Name>[<ReleaseAtCycle>]: ReleaseAtCycle greater than 1
+  - <Resource Name>[<ReleaseAtCycle>]: ReleaseAtCycle is greater than 1
   and AcquireAtCycle is 0.
   - <Resource Name>[<AcquireAtCycle>,<ReleaseAtCycle>]: ReleaseAtCycle
-  greater than 1 and AcquireAtCycle greater than 0.
+  is greater than 1 and AcquireAtCycle is greater than 0.
 
 .. option:: -bottleneck-analysis
 
