@@ -6144,11 +6144,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   const auto *FnType = cast<FunctionType>(PointeeType);
 
-  if (auto FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    if (FD->hasAttr<OpenCLKernelAttr>()) {
-      CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
-    }
-  }
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+      FD && FD->hasAttr<OpenCLKernelAttr>())
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.
