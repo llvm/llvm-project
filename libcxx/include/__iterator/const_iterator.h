@@ -74,7 +74,8 @@ template <class _Iter>
 concept __not_a_const_iterator = !__is_specialization_v<_Iter, basic_const_iterator>;
 
 template <indirectly_readable _Iter>
-using __iter_const_rvalue_reference_t = common_reference_t<const iter_value_t<_Iter>&&, iter_rvalue_reference_t<_Iter>>;
+using __iter_const_rvalue_reference_t _LIBCPP_NODEBUG =
+    common_reference_t<const iter_value_t<_Iter>&&, iter_rvalue_reference_t<_Iter>>;
 
 template <class _Iter>
 struct __basic_const_iterator_concept {
