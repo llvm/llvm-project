@@ -97,6 +97,11 @@ static cl::opt<bool>
                                 "specified with -thinlto-emit-indexes or "
                                 "-thinlto-distributed-indexes"));
 
+static cl::opt<std::string> DTLTODistributor(
+    "dtlto-distributor",
+    cl::desc("Distributor to use for ThinLTO backend compilations. Specifying "
+             "this activates DTLTO."));
+
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
 // Use -thinlto-threads=all to use hardware_concurrency() instead, which means
@@ -332,6 +337,10 @@ static int run(int argc, char **argv) {
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
+  if (ThinLTODistributedIndexes && !DTLTODistributor.empty())
+    llvm::errs() << "-thinlto-distributed-indexes cannot be specfied together "
+                    "with -dtlto-distributor\n";
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -341,7 +350,13 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else
+  else if (!DTLTODistributor.empty()) {
+
+    Backend = createOutOfProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(Threads),
+        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
+        DTLTODistributor, SaveTemps);
+  } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
