@@ -9,12 +9,12 @@
 #include "src/math/hypotf16.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/properties/types.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/FPUtil/cast.h"
+#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -83,4 +83,4 @@ LLVM_LIBC_FUNCTION(float16, hypotf16, (float16 x, float16 y)) {
 
   return fputil::cast<float16>(result.get_val());
 }
-}
+} // namespace LIBC_NAMESPACE_DECL
