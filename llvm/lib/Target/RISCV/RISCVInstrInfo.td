@@ -2139,6 +2139,9 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
+// Packed SIMD
+include "RISCVInstrInfoP.td"
+
 // Integer
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
@@ -2149,6 +2152,7 @@ include "RISCVInstrInfoZicfiss.td"
 include "RISCVInstrInfoC.td"
 include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoZcmop.td"
+
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
