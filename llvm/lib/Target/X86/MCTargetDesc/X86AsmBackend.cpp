@@ -176,8 +176,11 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const bool WasForced) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -729,10 +732,24 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
           MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                         uint64_t Value) const {
-  // Relax if the value is too big for a (signed) i8.
-  return !isInt<8>(Value);
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                                 const MCFixup &Fixup,
+                                                 bool Resolved, uint64_t Value,
+                                                 const MCRelaxableFragment *DF,
+                                                 const bool WasForced) const {
+  // If resolved, relax if the value is too big for a (signed) i8.
+  if (Resolved)
+    return !isInt<8>(Value);
+
+  // Otherwise, relax unless there is a @ABS8 specifier.
+  if (Fixup.getKind() == FK_Data_1) {
+    MCValue Target;
+    if (Fixup.getValue()->evaluateAsRelocatable(Target, &Asm) &&
+        Target.getSymA() &&
+        Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8)
+      return false;
+  }
+  return true;
 }
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions
