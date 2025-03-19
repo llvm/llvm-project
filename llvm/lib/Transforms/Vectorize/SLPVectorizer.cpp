@@ -3377,11 +3377,11 @@ private:
     /// (either with vector instruction or with scatter/gather
     /// intrinsics for store/load)?
     enum EntryState {
-      Vectorize,         ///< The node is regularly vectorized.
-      ScatterVectorize,  ///< Masked scatter/gather node.
-      StridedVectorize,  ///< Strided loads (and stores)
+      Vectorize,                   ///< The node is regularly vectorized.
+      ScatterVectorize,            ///< Masked scatter/gather node.
+      StridedVectorize,            ///< Strided loads (and stores)
       MaskedLoadCompressVectorize, ///< Masked load with compress.
-      NeedToGather,      ///< Gather/buildvector node.
+      NeedToGather,                ///< Gather/buildvector node.
       CombinedVectorize, ///< Vectorized node, combined with its user into more
                          ///< complex node like select/cmp to minmax, mul/add to
                          ///< fma, etc. Must be used for the following nodes in
@@ -5489,7 +5489,7 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
     [[maybe_unused]] bool IsMasked;
     [[maybe_unused]] unsigned InterleaveFactor;
     [[maybe_unused]] SmallVector<int> CompressMask;
-    [[maybe_unused]] VectorType *LoadVecTy;;
+    [[maybe_unused]] VectorType *LoadVecTy;
     if (isMaskedLoadCompress(
             VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI,
             [&](Value *V) {
@@ -7902,31 +7902,30 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
               // just exit.
               unsigned ConsecutiveNodesSize = 0;
               if (!LoadEntriesToVectorize.empty() && InterleaveFactor == 0 &&
-                  any_of(
-                      zip(LoadEntriesToVectorize, LoadSetsToVectorize),
-                      [&, Slice = Slice](const auto &P) {
-                        const auto *It = find_if(Slice, [&](Value *V) {
-                          return std::get<1>(P).contains(V);
-                        });
-                        if (It == Slice.end())
-                          return false;
-                        const TreeEntry &TE = *VectorizableTree[std::get<0>(P)];
-                        ArrayRef<Value *> VL = TE.Scalars;
-                        OrdersType Order;
-                        SmallVector<Value *> PointerOps;
-                        LoadsState State =
-                        canVectorizeLoads(VL, VL.front(), Order,
-                                              PointerOps);
-                        if (State == LoadsState::ScatterVectorize||
-                            State == LoadsState::MaskedLoadCompressVectorize)
-                          return false;
-                        ConsecutiveNodesSize += VL.size();
-                        unsigned Start = std::distance(Slice.begin(), It);
-                        unsigned Sz = Slice.size() - Start;
-                        return Sz < VL.size() ||
-                               Slice.slice(std::distance(Slice.begin(), It),
-                                           VL.size()) != VL;
-                      }))
+                  any_of(zip(LoadEntriesToVectorize, LoadSetsToVectorize),
+                         [&, Slice = Slice](const auto &P) {
+                           const auto *It = find_if(Slice, [&](Value *V) {
+                             return std::get<1>(P).contains(V);
+                           });
+                           if (It == Slice.end())
+                             return false;
+                           const TreeEntry &TE =
+                               *VectorizableTree[std::get<0>(P)];
+                           ArrayRef<Value *> VL = TE.Scalars;
+                           OrdersType Order;
+                           SmallVector<Value *> PointerOps;
+                           LoadsState State = canVectorizeLoads(
+                               VL, VL.front(), Order, PointerOps);
+                           if (State == LoadsState::ScatterVectorize ||
+                               State == LoadsState::MaskedLoadCompressVectorize)
+                             return false;
+                           ConsecutiveNodesSize += VL.size();
+                           unsigned Start = std::distance(Slice.begin(), It);
+                           unsigned Sz = Slice.size() - Start;
+                           return Sz < VL.size() ||
+                                  Slice.slice(std::distance(Slice.begin(), It),
+                                              VL.size()) != VL;
+                         }))
                 continue;
               // Try to build long masked gather loads.
               UserMaxVF = bit_ceil(UserMaxVF);
@@ -12664,8 +12663,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         assert(IsVectorized && "Expected to be vectorized");
         Align CommonAlignment;
         if (IsMasked)
-          CommonAlignment = computeCommonAlignment<LoadInst>(
-              UniqueValues.getArrayRef());
+          CommonAlignment =
+              computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         else
           CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
