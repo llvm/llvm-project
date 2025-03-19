@@ -39,7 +39,7 @@ extern void registerCustomChecks(ClangTidyOptions const &Options,
 
 } // namespace custom
 
-// Register the AlteraTidyModule using this statically initialized variable.
+// Register the CustomTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<custom::CustomModule>
     X("custom-module", "Adds custom query lint checks.");
 
