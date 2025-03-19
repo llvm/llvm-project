@@ -195,19 +195,24 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
     elements.resize(arrayBound, filler);
 
     if (filler.getType() != commonElementType)
-      cgm.errorNYI(
-          "array filter type should always be the same as element type");
+      commonElementType = {};
   }
 
-  SmallVector<mlir::Attribute, 4> eles;
-  eles.reserve(elements.size());
+  if (commonElementType) {
+    SmallVector<mlir::Attribute, 4> eles;
+    eles.reserve(elements.size());
 
-  for (const auto &element : elements)
-    eles.push_back(element);
+    for (const auto &element : elements)
+      eles.push_back(element);
 
-  return cir::ConstArrayAttr::get(
-      cir::ArrayType::get(builder.getContext(), commonElementType, arrayBound),
-      mlir::ArrayAttr::get(builder.getContext(), eles));
+    return cir::ConstArrayAttr::get(
+        cir::ArrayType::get(builder.getContext(), commonElementType,
+                            arrayBound),
+        mlir::ArrayAttr::get(builder.getContext(), eles));
+  }
+
+  cgm.errorNYI("array with different type elements");
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -354,9 +359,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       if (i == 0)
         commonElementType = elementTyped.getType();
       else if (elementTyped.getType() != commonElementType) {
-        cgm.errorNYI("ConstExprEmitter::tryEmitPrivate Array without common "
-                     "element type");
-        return {};
+        commonElementType = {};
       }
 
       elements.push_back(elementTyped);

@@ -45,7 +45,8 @@ public:
     return false;
   }
 
-  // Return true if this is the null value
+  // Return true if the value is a null constant such as null pointer, (+0.0)
+  // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {
     if (mlir::isa<cir::ZeroAttr>(attr))
       return true;

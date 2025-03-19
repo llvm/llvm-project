@@ -259,12 +259,12 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::FPAttr fltAttr) {
 
 // ConstArrayAttr visitor
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
-  auto llvmTy = converter->convertType(attr.getType());
-  auto loc = parentOp->getLoc();
+  mlir::Type llvmTy = converter->convertType(attr.getType());
+  mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
   if (auto zeros = attr.getTrailingZerosNum()) {
-    auto arrayTy = attr.getType();
+    mlir::Type arrayTy = attr.getType();
     result = rewriter.create<mlir::LLVM::ZeroOp>(
         loc, converter->convertType(arrayTy));
   } else {
