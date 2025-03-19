@@ -203,6 +203,7 @@ enum HipBinCommand {
 class HipBinBase {
  public:
   HipBinBase();
+  virtual ~HipBinBase() = default;
   // Interface functions
   virtual void constructCompilerPath() = 0;
   virtual void printFull() = 0;
