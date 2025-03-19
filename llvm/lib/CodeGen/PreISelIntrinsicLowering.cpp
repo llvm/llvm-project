@@ -160,10 +160,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     auto *CB = cast<CallBase>(U.getUser());
 
     if (CB->getCalledFunction() != &F) {
-      objcarc::ARCInstKind Kind = objcarc::getAttachedARCFunctionKind(CB);
-      (void)Kind;
-      assert((Kind == objcarc::ARCInstKind::RetainRV ||
-              Kind == objcarc::ARCInstKind::UnsafeClaimRV) &&
+      assert((*objcarc::getAttachedARCFunction(CB) == &F) &&
              "use expected to be the argument of operand bundle "
              "\"clang.arc.attachedcall\"");
       U.set(FCache.getCallee());
@@ -528,6 +525,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::objc_retainAutoreleasedReturnValue:
       Changed |= lowerObjCCall(F, "objc_retainAutoreleasedReturnValue");
+      break;
+    case Intrinsic::objc_claimAutoreleasedReturnValue:
+      Changed |= lowerObjCCall(F, "objc_claimAutoreleasedReturnValue");
       break;
     case Intrinsic::objc_retainBlock:
       Changed |= lowerObjCCall(F, "objc_retainBlock");

@@ -1369,7 +1369,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // Do what the frontend tells us: if the rvmarker module flag is present,
     // emit the marker.  Always emit the call regardless.
     // Tell the pseudo expansion using an additional boolean op.
-    MIB.addImm(true);
+    MIB.addImm(objcarc::attachedCallOpBundleNeedsMarker(Info.CB));
     ++CalleeOpNo;
   } else if (Info.CFIType) {
     MIB->setCFIType(MF, Info.CFIType->getZExtValue());
