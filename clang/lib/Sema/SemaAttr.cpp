@@ -217,7 +217,7 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 }
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
-  if (FD->getNumParams() == 0)
+  if (FD->getNumParams() == 0 || FD->getReturnType()->isVoidType())
     return;
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
