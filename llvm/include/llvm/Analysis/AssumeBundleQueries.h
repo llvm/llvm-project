@@ -99,6 +99,7 @@ void fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result);
 struct RetainedKnowledge {
   Attribute::AttrKind AttrKind = Attribute::None;
   uint64_t ArgValue = 0;
+  Value *IRArgValue = nullptr;
   Value *WasOn = nullptr;
   bool operator==(RetainedKnowledge Other) const {
     return AttrKind == Other.AttrKind && WasOn == Other.WasOn &&
