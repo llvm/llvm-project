@@ -1738,18 +1738,16 @@ DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
     return std::nullopt;
 
   DILineInfo Result;
-  bool HasDebugInfoForAddress = getFunctionNameAndStartLineForAddress(
-      CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
-      Result.StartFileName, Result.StartLine, Result.StartAddress);
-  if (Spec.FLIKind != FileLineInfoKind::None) {
-    if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
-      HasDebugInfoForAddress |= LineTable->getFileLineInfoForAddress(
-          {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
-          CU->getCompilationDir(), Spec.FLIKind, Result);
-    }
+  getFunctionNameAndStartLineForAddress(
+    CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
+    Result.StartFileName, Result.StartLine, Result.StartAddress);
+if (Spec.FLIKind != FileLineInfoKind::None) {
+  if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
+    LineTable->getFileLineInfoForAddress(
+        {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
+        CU->getCompilationDir(), Spec.FLIKind, Result);
   }
-  if (!HasDebugInfoForAddress)
-    return std::nullopt;
+}
 
   return Result;
 }
