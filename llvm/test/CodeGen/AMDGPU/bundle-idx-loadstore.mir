@@ -2240,3 +2240,46 @@ body:             |
     %11:vgpr_32 = V_LSHL_ADD_U32_e64 0, %6, %6, implicit $exec
     V_STORE_IDX %11:vgpr_32, %2, 0, implicit $exec :: (store (s32), addrspace 10)
 ...
+
+---
+name:            enable-dst-operand-class
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+
+  bb.0:
+    ; GCN-LABEL: name: enable-dst-operand-class
+    ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 10, implicit $exec :: (load (s64), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta = V_LSHRREV_B64_e64 2, internal $stg_srca, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s64), addrspace 10)
+    ; GCN-NEXT: }
+    ;
+    ; ALLOC-LABEL: name: enable-dst-operand-class
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 10, implicit $exec :: (load (s64), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta = V_LSHRREV_B64_e64 2, internal $stg_srca, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s64), addrspace 10)
+    ; ALLOC-NEXT: }
+    ;
+    ; LOWERED-LABEL: name: enable-dst-operand-class
+    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: S_SET_VGPR_FRAMES 68
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1 = V_LSHRREV_B64_e64 2, undef $vgpr10_vgpr11, <0x{{[0-9a-f]+}}>, implicit $exec
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %1:vreg_64_align2 = V_LOAD_IDX %0, 10, implicit $exec :: (load (s64), addrspace 10)
+    %2:vreg_64_align2 = V_LSHRREV_B64_e64 2, %1, implicit $exec
+    V_STORE_IDX %2, %0, 0, implicit $exec :: (store (s64), addrspace 10)
+...

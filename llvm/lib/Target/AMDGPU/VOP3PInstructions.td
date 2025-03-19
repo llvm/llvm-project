@@ -669,11 +669,11 @@ def ADst_128  : VOPDstOperand<AReg_128>;
 def ADst_256  : VOPDstOperand<AReg_256>;
 def ADst_512  : VOPDstOperand<AReg_512>;
 def ADst_1024 : VOPDstOperand<AReg_1024>;
-def VDst_64   : VOPDstOperand<VReg_64_STAGING> { let DecoderMethod =   "DecodeVReg_64RegisterClass"; }
-def VDst_128  : VOPDstOperand<VReg_128_STAGING> { let DecoderMethod =  "DecodeVReg_128RegisterClass"; }
-def VDst_256  : VOPDstOperand<VReg_256_STAGING> { let DecoderMethod =  "DecodeVReg_256RegisterClass"; }
-def VDst_512  : VOPDstOperand<VReg_512_STAGING> { let DecoderMethod =  "DecodeVReg_512RegisterClass"; }
-def VDst_1024 : VOPDstOperand<VReg_1024_STAGING> { let DecoderMethod = "DecodeVReg_1024RegisterClass"; }
+def VDst_64   : VOPDstOperand<VReg_64_STAGING>;
+def VDst_128  : VOPDstOperand<VReg_128_STAGING>;
+def VDst_256  : VOPDstOperand<VReg_256_STAGING>;
+def VDst_512  : VOPDstOperand<VReg_512_STAGING>;
+def VDst_1024 : VOPDstOperand<VReg_1024_STAGING>;
 
 def VOPProfileAccRead : VOP3P_Profile<VOP_I32_I32, VOP3_MAI> {
   let Src0RC64 = ARegSrc_32;
