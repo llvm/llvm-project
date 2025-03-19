@@ -114,8 +114,8 @@ define dso_local zeroext i1 @cmp_partially_mergable_select_array(
 ; REG-LABEL: @cmp_partially_mergable_select_array(
 ; REG: "entry+land.rhs":
 ; REG-NEXT:   [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 12
-; REG-NEXT:   [[TMP0:%.*]] = alloca { i8, i8 }
-; REG-NEXT:   store { i8, i8 } { i8 -1, i8 9 }, ptr [[TMP0]], align 1
+; REG-NEXT:   [[TMP0:%.*]] = alloca <{ i8, i8 }>
+; REG-NEXT:   store <{ i8, i8 }> <{ i8 -1, i8 9 }>, ptr [[TMP0]], align 1
 ; REG-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[IDX0]], ptr [[TMP0]], i64 2)
 ; REG-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; REG-NEXT:   br i1 [[CMP0]], label [[ENTRY_5:%.*]], label [[LAND_END:%.*]]
@@ -152,8 +152,8 @@ define dso_local zeroext i1 @cmp_partially_mergable_select_array(
 ; CFG-LABEL: @cmp_partially_mergable_select_array(
 ; CFG:      "entry+land.rhs":
 ; CFG-NEXT:   [[IDX0:%.*]] = getelementptr inbounds nuw i8, ptr [[P:%.*]], i64 12
-; CFG-NEXT:   [[TMP0:%.*]] = alloca { i8, i8 }
-; CFG-NEXT:   store { i8, i8 } { i8 -1, i8 9 }, ptr [[TMP0]], align 1
+; CFG-NEXT:   [[TMP0:%.*]] = alloca <{ i8, i8 }>
+; CFG-NEXT:   store <{ i8, i8 }> <{ i8 -1, i8 9 }>, ptr [[TMP0]], align 1
 ; CFG-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[IDX0]], ptr [[TMP0]], i64 2)
 ; CFG-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CFG-NEXT:   [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1

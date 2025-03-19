@@ -5,15 +5,15 @@
 define dso_local zeroext i1 @is_all_ones_many(ptr nocapture noundef nonnull dereferenceable(24) %p) local_unnamed_addr {
 ; CHECK-LABEL: @is_all_ones_many(
 ; CHECK-NEXT:  "entry+land.lhs.true11":
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca { i8, i8, i8, i8 }
-; CHECK-NEXT:    store { i8, i8, i8, i8 } { i8 -1, i8 -56, i8 -66, i8 1 }, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca <{ i8, i8, i8, i8 }>
+; CHECK-NEXT:    store <{ i8, i8, i8, i8 }> <{ i8 -1, i8 -56, i8 -66, i8 1 }>, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[TMP0]], i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[NEXT_MEMCMP:%.*]], label [[LAND_END:%.*]]
 ; CHECK:  "land.lhs.true16+land.lhs.true21":
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca { i8, i8 }
-; CHECK-NEXT:    store { i8, i8 } { i8 2, i8 7 }, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = alloca <{ i8, i8 }>
+; CHECK-NEXT:    store <{ i8, i8 }> <{ i8 2, i8 7 }>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[TMP2]], ptr [[TMP3]], i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LAST_CMP:%.*]], label [[LAND_END]]

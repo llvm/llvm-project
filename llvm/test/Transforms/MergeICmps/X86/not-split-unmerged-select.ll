@@ -108,8 +108,8 @@ define dso_local noundef zeroext i1 @partial_merge_not_select(ptr noundef nonnul
 ; REG-NEXT:    br i1 [[CMP2]], label [[LAND_LHS_LAND_RHS:%.*]], label [[LAND_END]]
 ; REG:       "land.lhs.true11+land.rhs":
 ; REG-NEXT:    [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
-; REG-NEXT:    [[TMP3:%.*]] = alloca { i8, i8 }
-; REG-NEXT:    store { i8, i8 } { i8 1, i8 9 }, ptr [[TMP3]], align 1
+; REG-NEXT:    [[TMP3:%.*]] = alloca <{ i8, i8 }>
+; REG-NEXT:    store <{ i8, i8 }> <{ i8 1, i8 9 }>, ptr [[TMP3]], align 1
 ; REG-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[IDX3]], ptr [[TMP3]], i64 2)
 ; REG-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; REG-NEXT:    br i1 [[CMP3]], label [[LAND_LHS_16:%.*]], label [[LAND_END]]
@@ -143,8 +143,8 @@ define dso_local noundef zeroext i1 @partial_merge_not_select(ptr noundef nonnul
 ; CFG-NEXT:    br i1 [[SEL1]], label [[LAND_LHS_LAND_RHS:%.*]], label [[LAND_END:%.*]]
 ; CFG:       "land.lhs.true11+land.rhs":
 ; CFG-NEXT:    [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
-; CFG-NEXT:    [[TMP3:%.*]] = alloca { i8, i8 }
-; CFG-NEXT:    store { i8, i8 } { i8 1, i8 9 }, ptr [[TMP3]], align 1
+; CFG-NEXT:    [[TMP3:%.*]] = alloca <{ i8, i8 }>
+; CFG-NEXT:    store <{ i8, i8 }> <{ i8 1, i8 9 }>, ptr [[TMP3]], align 1
 ; CFG-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[IDX3]], ptr [[TMP3]], i64 2)
 ; CFG-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CFG-NEXT:    [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 6

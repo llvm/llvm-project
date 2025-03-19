@@ -14,8 +14,8 @@ define dso_local noundef zeroext i1 @cmp_mixed(ptr noundef nonnull align 4 deref
 ; This is the new BCE to constant comparison block
 ; CHECK:  "entry+land.rhs+land.lhs.true8":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca { i32, i32, i32 }
-; CHECK-NEXT:    store { i32, i32, i32 } { i32 255, i32 200, i32 100 }, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca <{ i32, i32, i32 }>
+; CHECK-NEXT:    store <{ i32, i32, i32 }> <{ i32 255, i32 200, i32 100 }>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[MEMCMP2:%.*]] = call i32 @memcmp(ptr [[TMP0]], ptr [[TMP1]], i64 12)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[MEMCMP2]], 0
 ; CHECK-NEXT:    br label [[LAND_END]]

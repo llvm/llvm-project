@@ -6,8 +6,8 @@ define i1 @merge_single(ptr nocapture noundef readonly dereferenceable(2) %p) {
 ; CHECK-LABEL: @merge_single(
 ; CHECK:       entry:
 ; CHECK-NEXT:   [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:   [[TMP1:%.*]] = alloca [2 x i8], align 1
-; CHECK-NEXT:   store [2 x i8] c"\FF\FF", ptr [[TMP1]], align 1
+; CHECK-NEXT:   [[TMP1:%.*]] = alloca <{ i8, i8 }>, align 1
+; CHECK-NEXT:   store <{ i8, i8 }> <{ i8 -1, i8 -1 }>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P]], ptr [[TMP1]], i64 2)
 ; CHECK-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:   ret i1 [[CMP0]]

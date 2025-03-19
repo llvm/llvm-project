@@ -250,8 +250,8 @@ define dso_local noundef zeroext i1 @unclobbered_select_cmp(
 ; X86-NEXT:    call void (...) @foo() #[[ATTR2]]
 ; X86-NEXT:    call void (...) @bar() #[[ATTR2]]
 ; X86-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 2
-; X86-NEXT:    [[TMP0:%.*]] = alloca { i8, i8, i8 }
-; X86-NEXT:    store { i8, i8, i8 } { i8 100, i8 3, i8 -56 }, ptr [[TMP0]], align 1
+; X86-NEXT:    [[TMP0:%.*]] = alloca <{ i8, i8, i8 }>
+; X86-NEXT:    store <{ i8, i8, i8 }> <{ i8 100, i8 3, i8 -56 }>, ptr [[TMP0]], align 1
 ; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[OFFSET]], ptr [[TMP0]], i64 3)
 ; X86-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; X86-NEXT:    br label [[LAND_END:%.*]]

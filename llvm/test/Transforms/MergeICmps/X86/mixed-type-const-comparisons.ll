@@ -12,8 +12,8 @@ define dso_local zeroext i1 @is_all_ones_struct(
 ; CHECK-NEXT:   [[CMP0:%.*]] = icmp eq i32 [[TMP1]], 200
 ; CHECK-NEXT:   br i1 [[CMP0]], label [[MERGED:%.*]], label [[LAND_END:%.*]]
 ; CHECK:      "land.rhs+land.lhs.true":
-; CHECK-NEXT:   [[TMP2:%.*]] = alloca { i32, i8 }
-; CHECK-NEXT:   store { i32, i8 } { i32 3, i8 100 }, ptr [[TMP2]]
+; CHECK-NEXT:   [[TMP2:%.*]] = alloca <{ i32, i8 }>
+; CHECK-NEXT:   store <{ i32, i8 }> <{ i32 3, i8 100 }>, ptr [[TMP2]]
 ; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P]], ptr [[TMP2]], i64 5)
 ; CHECK-NEXT:   [[CMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:   br label [[LAND_END]]
@@ -49,8 +49,8 @@ land.end:                                         ; preds = %land.rhs, %land.lhs
 define dso_local noundef zeroext i1 @is_all_ones_struct_select_block(
 ; CHECK-LABEL: @is_all_ones_struct_select_block(
 ; CHECK:      "entry+land.rhs":
-; CHECK-NEXT:   [[TMP0:%.*]] = alloca { i32, i8, i8 }
-; CHECK-NEXT:   store { i32, i8, i8 } { i32 200, i8 3, i8 100 }, ptr [[TMP0]]
+; CHECK-NEXT:   [[TMP0:%.*]] = alloca <{ i32, i8, i8 }>
+; CHECK-NEXT:   store <{ i32, i8, i8 }> <{ i32 200, i8 3, i8 100 }>, ptr [[TMP0]]
 ; CHECK-NEXT:   [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[P:%.*]], ptr [[TMP0]], i64 6)
 ; CHECK-NEXT:   [[CMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:   br label [[LAND_END]]
