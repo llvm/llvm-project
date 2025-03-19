@@ -10,6 +10,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_dl_phdr_info
+  HDRS
+    struct_dl_phdr_info.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_dl_phdr_info
+)
+
+add_proxy_header_library(
   ldiv_t
   HDRS
     ldiv_t.h

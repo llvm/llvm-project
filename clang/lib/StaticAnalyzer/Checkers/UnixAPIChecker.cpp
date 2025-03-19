@@ -40,17 +40,28 @@ enum class OpenVariant {
   OpenAt
 };
 
+static std::optional<int> getCreateFlagValue(const ASTContext &Ctx,
+                                             const Preprocessor &PP) {
+  std::optional<int> MacroVal = tryExpandAsInteger("O_CREAT", PP);
+  if (MacroVal.has_value())
+    return MacroVal;
+
+  // If we failed, fall-back to known values.
+  if (Ctx.getTargetInfo().getTriple().getVendor() == llvm::Triple::Apple)
+    return {0x0200};
+  return MacroVal;
+}
+
 namespace {
 
-class UnixAPIMisuseChecker
-    : public Checker<check::PreCall, check::ASTDecl<TranslationUnitDecl>> {
+class UnixAPIMisuseChecker : public Checker<check::PreCall> {
   const BugType BT_open{this, "Improper use of 'open'", categories::UnixAPI};
   const BugType BT_getline{this, "Improper use of getdelim",
                            categories::UnixAPI};
   const BugType BT_pthreadOnce{this, "Improper use of 'pthread_once'",
                                categories::UnixAPI};
   const BugType BT_ArgumentNull{this, "NULL pointer", categories::UnixAPI};
-  mutable std::optional<uint64_t> Val_O_CREAT;
+  const std::optional<int> Val_O_CREAT;
 
   ProgramStateRef
   EnsurePtrNotNull(SVal PtrVal, const Expr *PtrExpr, CheckerContext &C,
@@ -63,6 +74,9 @@ class UnixAPIMisuseChecker
       const Expr *SizePtrExpr, CheckerContext &C, ProgramStateRef State) const;
 
 public:
+  UnixAPIMisuseChecker(const ASTContext &Ctx, const Preprocessor &PP)
+      : Val_O_CREAT(getCreateFlagValue(Ctx, PP)) {}
+
   void checkASTDecl(const TranslationUnitDecl *TU, AnalysisManager &Mgr,
                     BugReporter &BR) const;
 
@@ -132,20 +146,6 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
   }
 
   return PtrNotNull;
-}
-
-void UnixAPIMisuseChecker::checkASTDecl(const TranslationUnitDecl *TU,
-                                        AnalysisManager &Mgr,
-                                        BugReporter &) const {
-  // The definition of O_CREAT is platform specific.
-  // Try to get the macro value from the preprocessor.
-  Val_O_CREAT = tryExpandAsInteger("O_CREAT", Mgr.getPreprocessor());
-  // If we failed, fall-back to known values.
-  if (!Val_O_CREAT) {
-    if (TU->getASTContext().getTargetInfo().getTriple().getVendor() ==
-        llvm::Triple::Apple)
-      Val_O_CREAT = 0x0200;
-  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -262,7 +262,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
     return;
   }
 
-  if (!Val_O_CREAT) {
+  if (!Val_O_CREAT.has_value()) {
     return;
   }
 
@@ -276,7 +276,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   }
   NonLoc oflags = V.castAs<NonLoc>();
   NonLoc ocreateFlag = C.getSValBuilder()
-                           .makeIntVal(*Val_O_CREAT, oflagsEx->getType())
+                           .makeIntVal(Val_O_CREAT.value(), oflagsEx->getType())
                            .castAs<NonLoc>();
   SVal maskedFlagsUC = C.getSValBuilder().evalBinOpNN(state, BO_And,
                                                       oflags, ocreateFlag,
@@ -621,14 +621,17 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
 // Registration.
 //===----------------------------------------------------------------------===//
 
-#define REGISTER_CHECKER(CHECKERNAME)                                          \
-  void ento::register##CHECKERNAME(CheckerManager &mgr) {                      \
-    mgr.registerChecker<CHECKERNAME>();                                        \
-  }                                                                            \
-                                                                               \
-  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {          \
-    return true;                                                               \
-  }
+void ento::registerUnixAPIMisuseChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnixAPIMisuseChecker>(Mgr.getASTContext(),
+                                            Mgr.getPreprocessor());
+}
+bool ento::shouldRegisterUnixAPIMisuseChecker(const CheckerManager &Mgr) {
+  return true;
+}
 
-REGISTER_CHECKER(UnixAPIMisuseChecker)
-REGISTER_CHECKER(UnixAPIPortabilityChecker)
+void ento::registerUnixAPIPortabilityChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnixAPIPortabilityChecker>();
+}
+bool ento::shouldRegisterUnixAPIPortabilityChecker(const CheckerManager &Mgr) {
+  return true;
+}
