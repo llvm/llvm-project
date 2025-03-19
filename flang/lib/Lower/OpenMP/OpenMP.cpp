@@ -763,7 +763,8 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
         commonSyms.insert(common);
       }
       symThreadprivateValue = lower::genCommonBlockMember(
-          converter, currentLocation, *sym, commonThreadprivateValue);
+          converter, currentLocation, sym->GetUltimate(),
+          commonThreadprivateValue);
     } else {
       symThreadprivateValue = genThreadprivateOp(*sym);
     }

@@ -15640,8 +15640,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use
-``llvm.experimental.memset.pattern`` on any integer bit width and for
-different address spaces. Not all targets support all bit widths however.
+``llvm.experimental.memset.pattern`` on any sized type and for different
+address spaces.
 
 ::
 
