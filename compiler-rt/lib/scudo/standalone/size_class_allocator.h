@@ -225,7 +225,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorNoCache {
     // in SizeClassAllocatorLocalCache so that use the same hint when doing
     // a page release.
     ++C->Count;
-    const bool SuggestDraining = C->Count == C->MaxCount;
+    const bool SuggestDraining = C->Count >= C->MaxCount;
     if (SuggestDraining)
       C->Count = 0;
     return SuggestDraining;
@@ -292,7 +292,7 @@ private:
   bool deallocateBatchClassBlock(void *P) {
     PerClass *C = &PerClassArray[BatchClassId];
     // Drain all the blocks.
-    if (C->Count == C->MaxCount) {
+    if (C->Count >= C->MaxCount) {
       Allocator->pushBlocks(this, BatchClassId, BatchClassStorage, C->Count);
       C->Count = 0;
     }

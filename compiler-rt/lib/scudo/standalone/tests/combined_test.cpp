@@ -233,7 +233,7 @@ struct TestNoCacheConfig {
     static const scudo::uptr GroupSizeLog = 18U;
     typedef scudo::uptr CompactPtrT;
 #endif
-    static const bool EnableCache = false;
+    static const bool EnableBlockCache = false;
     static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
     static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
   };

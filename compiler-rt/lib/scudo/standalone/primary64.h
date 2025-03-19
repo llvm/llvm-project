@@ -60,7 +60,7 @@ public:
   typedef TransferBatch<ThisT> TransferBatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
   using SizeClassAllocatorT =
-      typename Conditional<Config::getEnableCache(),
+      typename Conditional<Config::getEnableBlockCache(),
                            SizeClassAllocatorLocalCache<ThisT>,
                            SizeClassAllocatorNoCache<ThisT>>::type;
 

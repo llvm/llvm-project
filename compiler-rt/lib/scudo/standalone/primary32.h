@@ -53,7 +53,7 @@ public:
                 "");
   typedef SizeClassAllocator32<Config> ThisT;
   using SizeClassAllocatorT =
-      typename Conditional<Config::getEnableCache(),
+      typename Conditional<Config::getEnableBlockCache(),
                            SizeClassAllocatorLocalCache<ThisT>,
                            SizeClassAllocatorNoCache<ThisT>>::type;
   typedef TransferBatch<ThisT> TransferBatchT;
