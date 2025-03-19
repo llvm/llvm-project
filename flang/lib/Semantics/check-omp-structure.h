@@ -73,8 +73,6 @@ public:
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
-  void Enter(const parser::OpenMPInteropConstruct &);
-  void Leave(const parser::OpenMPInteropConstruct &);
   void Enter(const parser::OpenMPDeclarativeConstruct &);
   void Leave(const parser::OpenMPDeclarativeConstruct &);
 
