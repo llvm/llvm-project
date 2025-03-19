@@ -36,6 +36,7 @@ template <class EType, size_t Extent, class... Args>
 constexpr bool testSpan(Args&&... args) {
   auto s1  = std::span<EType>(std::forward<Args>(args)...);
   bool ret = true;
+
   ret = ret && testSpanImpl(s1, s1.rbegin());
 #if TEST_STD_VER >= 23
   ret = ret && testSpanImpl(s1, s1.crbegin());
@@ -49,6 +50,7 @@ constexpr bool testSpan(Args&&... args) {
 
   return ret;
 }
+
 struct A {};
 bool operator==(A, A) { return true; }
 
@@ -61,6 +63,7 @@ int main(int, char**) {
   ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<double, 0>());
   ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<A, 0>());
   ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<std::string, 0>());
+
   ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 1>(iArr1, 1));
   ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 2>(iArr1, 2));
   ASSERT_RUNTIME_AND_CONSTEXPR(testSpan<const int, 3>(iArr1, 3));
