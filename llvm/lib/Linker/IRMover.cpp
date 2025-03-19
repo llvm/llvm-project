@@ -1586,11 +1586,11 @@ Error IRLinker::run() {
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
-                SrcM->getTargetTriple() + "' whereas '" +
-                DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
-                "'\n");
+                SrcM->getTargetTriple().str() + "' whereas '" +
+                DstM.getModuleIdentifier() + "' is '" +
+                DstM.getTargetTriple().str() + "'\n");
 
-  DstM.setTargetTriple(SrcTriple.merge(DstTriple));
+  DstM.setTargetTriple(Triple(SrcTriple.merge(DstTriple)));
 
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();

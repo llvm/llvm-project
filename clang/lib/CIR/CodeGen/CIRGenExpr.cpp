@@ -25,9 +25,77 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
+void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
+                                            bool isInit) {
+  if (!dst.isSimple()) {
+    cgm.errorNYI(dst.getPointer().getLoc(),
+                 "emitStoreThroughLValue: non-simple lvalue");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opLoadStoreObjC());
+
+  assert(src.isScalar() && "Can't emit an aggregate store with this method");
+  emitStoreOfScalar(src.getScalarVal(), dst, isInit);
+}
+
+void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
+                                       bool isVolatile, QualType ty,
+                                       bool isInit, bool isNontemporal) {
+  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
+
+  if (ty->getAs<clang::VectorType>()) {
+    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar vector type");
+    return;
+  }
+
+  value = emitToMemory(value, ty);
+
+  assert(!cir::MissingFeatures::opLoadStoreAtomic());
+
+  // Update the alloca with more info on initialization.
+  assert(addr.getPointer() && "expected pointer to exist");
+  auto srcAlloca =
+      dyn_cast_or_null<cir::AllocaOp>(addr.getPointer().getDefiningOp());
+  if (currVarDecl && srcAlloca) {
+    const VarDecl *vd = currVarDecl;
+    assert(vd && "VarDecl expected");
+    if (vd->hasInit())
+      srcAlloca.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+  }
+
+  assert(currSrcLoc && "must pass in source location");
+  builder.createStore(*currSrcLoc, value, addr.getPointer() /*, isVolatile*/);
+
+  if (isNontemporal) {
+    cgm.errorNYI(addr.getPointer().getLoc(), "emitStoreOfScalar nontemporal");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opTBAA());
+}
+
+mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
+  // Bool has a different representation in memory than in registers,
+  // but in ClangIR, it is simply represented as a cir.bool value.
+  // This function is here as a placeholder for possible future changes.
+  return value;
+}
+
+void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
+                                       bool isInit) {
+  if (lvalue.getType()->isConstantMatrixType()) {
+    assert(0 && "NYI: emitStoreOfScalar constant matrix type");
+    return;
+  }
+
+  emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
+                    lvalue.getType(), isInit, /*isNontemporal=*/false);
+}
+
 mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
-  assert(!cir::MissingFeatures::opLoadThreadLocal());
+  assert(!cir::MissingFeatures::opLoadStoreThreadLocal());
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck());
   assert(!cir::MissingFeatures::opLoadBooleanRepresentation());
 
@@ -97,6 +165,82 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   return LValue();
 }
 
+LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
+  UnaryOperatorKind op = e->getOpcode();
+
+  // __extension__ doesn't affect lvalue-ness.
+  if (op == UO_Extension)
+    return emitLValue(e->getSubExpr());
+
+  switch (op) {
+  case UO_Deref: {
+    cgm.errorNYI(e->getSourceRange(), "UnaryOp dereference");
+    return LValue();
+  }
+  case UO_Real:
+  case UO_Imag: {
+    cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
+    return LValue();
+  }
+  case UO_PreInc:
+  case UO_PreDec: {
+    bool isInc = e->isIncrementOp();
+    LValue lv = emitLValue(e->getSubExpr());
+
+    assert(e->isPrefix() && "Prefix operator in unexpected state!");
+
+    if (e->getType()->isAnyComplexType()) {
+      cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
+      return LValue();
+    } else {
+      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
+    }
+
+    return lv;
+  }
+  case UO_Extension:
+    llvm_unreachable("UnaryOperator extension should be handled above!");
+  case UO_Plus:
+  case UO_Minus:
+  case UO_Not:
+  case UO_LNot:
+  case UO_AddrOf:
+  case UO_PostInc:
+  case UO_PostDec:
+  case UO_Coawait:
+    llvm_unreachable("UnaryOperator of non-lvalue kind!");
+  }
+  llvm_unreachable("Unknown unary operator kind!");
+}
+
+/// Emit code to compute the specified expression which
+/// can have any type.  The result is returned as an RValue struct.
+RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
+  switch (CIRGenFunction::getEvaluationKind(e->getType())) {
+  case cir::TEK_Scalar:
+    return RValue::get(emitScalarExpr(e));
+  case cir::TEK_Complex:
+    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
+    return RValue::get(nullptr);
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: aggregate type");
+    return RValue::get(nullptr);
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
+/// Emit code to compute the specified expression, ignoring the result.
+void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
+  if (e->isPRValue()) {
+    assert(!cir::MissingFeatures::aggValueSlot());
+    emitAnyExpr(e);
+    return;
+  }
+
+  // Just emit it as an l-value and drop the result.
+  emitLValue(e);
+}
+
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
                                        mlir::Location loc,
                                        CharUnits alignment) {
@@ -115,9 +259,16 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     builder.restoreInsertionPoint(builder.getBestAllocaInsertPoint(entryBlock));
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
                                 /*var type*/ ty, name, alignIntAttr);
-    assert(!cir::MissingFeatures::opAllocaVarDeclContext());
+    assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
+}
+
+mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
+                                             clang::QualType qt) {
+  mlir::Type t = convertType(qt);
+  CharUnits alignment = getContext().getTypeAlignInChars(qt);
+  return builder.createDummyValue(loc, t, alignment);
 }
 
 /// This creates an alloca and inserts it  at the current insertion point of the

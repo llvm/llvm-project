@@ -23,22 +23,25 @@ class StringRef;
 class VEMCExpr : public MCTargetExpr {
 public:
   enum VariantKind {
-    VK_VE_None,
-    VK_VE_REFLONG,
-    VK_VE_HI32,
-    VK_VE_LO32,
-    VK_VE_PC_HI32,
-    VK_VE_PC_LO32,
-    VK_VE_GOT_HI32,
-    VK_VE_GOT_LO32,
-    VK_VE_GOTOFF_HI32,
-    VK_VE_GOTOFF_LO32,
-    VK_VE_PLT_HI32,
-    VK_VE_PLT_LO32,
-    VK_VE_TLS_GD_HI32,
-    VK_VE_TLS_GD_LO32,
-    VK_VE_TPOFF_HI32,
-    VK_VE_TPOFF_LO32,
+    VK_None,
+
+    // While not strictly necessary, start at a larger number to avoid confusion
+    // with MCSymbolRefExpr::VariantKind.
+    VK_REFLONG = 100,
+    VK_HI32,        // @hi
+    VK_LO32,        // @lo
+    VK_PC_HI32,     // @pc_hi
+    VK_PC_LO32,     // @pc_lo
+    VK_GOT_HI32,    // @got_hi
+    VK_GOT_LO32,    // @got_lo
+    VK_GOTOFF_HI32, // @gotoff_hi
+    VK_GOTOFF_LO32, // @gotoff_lo
+    VK_PLT_HI32,    // @plt_hi
+    VK_PLT_LO32,    // @plt_lo
+    VK_TLS_GD_HI32, // @tls_gd_hi
+    VK_TLS_GD_LO32, // @tls_gd_lo
+    VK_TPOFF_HI32,  // @tpoff_hi
+    VK_TPOFF_LO32,  // @tpoff_lo
   };
 
 private:
@@ -69,8 +72,8 @@ public:
 
   /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
@@ -84,9 +87,12 @@ public:
 
   static VariantKind parseVariantKind(StringRef name);
   static bool printVariantKind(raw_ostream &OS, VariantKind Kind);
-  static void printVariantKindSuffix(raw_ostream &OS, VariantKind Kind);
   static VE::Fixups getFixupKind(VariantKind Kind);
 };
+
+static inline VEMCExpr::VariantKind getVariantKind(const MCSymbolRefExpr *SRE) {
+  return VEMCExpr::VariantKind(SRE->getKind());
+}
 
 } // namespace llvm
 

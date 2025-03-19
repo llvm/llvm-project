@@ -859,6 +859,24 @@ static void emitSincosBuiltin(CodeGenFunction &CGF, const CallExpr *E,
   StoreCos->setMetadata(LLVMContext::MD_noalias, AliasScopeList);
 }
 
+static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                    llvm::Intrinsic::ID IntrinsicID) {
+  llvm::Value *Val = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *IntPartDest = CGF.EmitScalarExpr(E->getArg(1));
+
+  llvm::Value *Call =
+      CGF.Builder.CreateIntrinsic(IntrinsicID, {Val->getType()}, Val);
+
+  llvm::Value *FractionalResult = CGF.Builder.CreateExtractValue(Call, 0);
+  llvm::Value *IntegralResult = CGF.Builder.CreateExtractValue(Call, 1);
+
+  QualType DestPtrType = E->getArg(1)->getType()->getPointeeType();
+  LValue IntegralLV = CGF.MakeNaturalAlignAddrLValue(IntPartDest, DestPtrType);
+  CGF.EmitStoreOfScalar(IntegralResult, IntegralLV);
+
+  return FractionalResult;
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Function *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -3533,6 +3551,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start:
+  case Builtin::BI__builtin_c23_va_start:
   case Builtin::BI__builtin_va_end:
     EmitVAStartEnd(BuiltinID == Builtin::BI__va_start
                        ? EmitScalarExpr(E->getArg(0))
@@ -4120,6 +4139,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frexpf128:
   case Builtin::BI__builtin_frexpf16:
     return RValue::get(emitFrexpBuiltin(*this, E, Intrinsic::frexp));
+  case Builtin::BImodf:
+  case Builtin::BImodff:
+  case Builtin::BImodfl:
+  case Builtin::BI__builtin_modf:
+  case Builtin::BI__builtin_modff:
+  case Builtin::BI__builtin_modfl:
+    if (Builder.getIsFPConstrained())
+      break; // TODO: Emit constrained modf intrinsic once one exists.
+    return RValue::get(emitModfBuiltin(*this, E, Intrinsic::modf));
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:
@@ -4282,6 +4310,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_exp2:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::exp2, "elt.exp2"));
+  case Builtin::BI__builtin_elementwise_exp10:
+    return RValue::get(emitBuiltinWithOneOverloadedType<1>(
+        *this, E, llvm::Intrinsic::exp10, "elt.exp10"));
   case Builtin::BI__builtin_elementwise_log:
     return RValue::get(emitBuiltinWithOneOverloadedType<1>(
         *this, E, llvm::Intrinsic::log, "elt.log"));
@@ -6205,13 +6236,25 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Flags = EmitScalarExpr(E->getArg(1));
     LValue NDRangeL = EmitAggExprToLValue(E->getArg(2));
     llvm::Value *Range = NDRangeL.getAddress().emitRawPointer(*this);
-    llvm::Type *RangeTy = NDRangeL.getAddress().getType();
+
+    // FIXME: Look through the addrspacecast which may exist to the stack
+    // temporary as a hack.
+    //
+    // This is hardcoding the assumed ABI of the target function. This assumes
+    // direct passing for every argument except NDRange, which is assumed to be
+    // byval or byref indirect passed.
+    //
+    // This should be fixed to query a signature from CGOpenCLRuntime, and go
+    // through EmitCallArgs to get the correct target ABI.
+    Range = Range->stripPointerCasts();
+
+    llvm::Type *RangePtrTy = Range->getType();
 
     if (NumArgs == 4) {
       // The most basic form of the call with parameters:
       // queue_t, kernel_enqueue_flags_t, ndrange_t, block(void)
       Name = "__enqueue_kernel_basic";
-      llvm::Type *ArgTys[] = {QueueTy, Int32Ty, RangeTy, GenericVoidPtrTy,
+      llvm::Type *ArgTys[] = {QueueTy, Int32Ty, RangePtrTy, GenericVoidPtrTy,
                               GenericVoidPtrTy};
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
@@ -6286,7 +6329,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    Block,  ConstantInt::get(IntTy, NumArgs - 4),
                                    ElemPtr};
       llvm::Type *const ArgTys[] = {
-          QueueTy,          IntTy, RangeTy,           GenericVoidPtrTy,
+          QueueTy,          IntTy, RangePtrTy,        GenericVoidPtrTy,
           GenericVoidPtrTy, IntTy, ElemPtr->getType()};
 
       llvm::FunctionType *FTy = llvm::FunctionType::get(Int32Ty, ArgTys, false);
@@ -6337,7 +6380,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Builder.CreatePointerCast(Info.BlockArg, GenericVoidPtrTy);
 
       std::vector<llvm::Type *> ArgTys = {
-          QueueTy, Int32Ty, RangeTy,          Int32Ty,
+          QueueTy, Int32Ty, RangePtrTy,       Int32Ty,
           PtrTy,   PtrTy,   GenericVoidPtrTy, GenericVoidPtrTy};
 
       std::vector<llvm::Value *> Args = {Queue,     Flags,         Range,
@@ -19797,6 +19840,14 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
             : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+    if (auto *VTy = E->getType()->getAs<VectorType>()) {
+      if (!OpTrue->getType()->isVectorTy())
+        OpTrue =
+            Builder.CreateVectorSplat(VTy->getNumElements(), OpTrue, "splat");
+      if (!OpFalse->getType()->isVectorTy())
+        OpFalse =
+            Builder.CreateVectorSplat(VTy->getNumElements(), OpFalse, "splat");
+    }
 
     Value *SelectVal =
         Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");

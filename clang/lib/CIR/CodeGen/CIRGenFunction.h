@@ -26,6 +26,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 
 #include "llvm/ADT/ScopedHashTable.h"
@@ -72,6 +73,9 @@ public:
     return &fn.getRegion().front();
   }
 
+  /// Sanitizers enabled for this function.
+  clang::SanitizerSet sanOpts;
+
   mlir::Type convertTypeForMem(QualType T);
 
   mlir::Type convertType(clang::QualType T);
@@ -105,6 +109,29 @@ public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment);
 
+  mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
+
+private:
+  // Track current variable initialization (if there's one)
+  const clang::VarDecl *currVarDecl = nullptr;
+  class VarDeclContext {
+    CIRGenFunction &p;
+    const clang::VarDecl *oldVal = nullptr;
+
+  public:
+    VarDeclContext(CIRGenFunction &p, const VarDecl *value) : p(p) {
+      if (p.currVarDecl)
+        oldVal = p.currVarDecl;
+      p.currVarDecl = value;
+    }
+
+    /// Can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { p.currVarDecl = oldVal; }
+    ~VarDeclContext() { restore(); }
+  };
+
+public:
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
   std::optional<mlir::Location> currSrcLoc;
@@ -132,6 +159,12 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// Emit code to compute the specified expression which can have any type. The
+  /// result is returned as an RValue struct. If this is an aggregate
+  /// expression, the aggloc/agglocvolatile arguments indicate where the result
+  /// should be returned.
+  RValue emitAnyExpr(const clang::Expr *e);
+
   void finishFunction(SourceLocation endLoc);
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
@@ -147,6 +180,10 @@ public:
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
+
+  /// Emit code to compute the specified expression,
+  /// ignoring the result.
+  void emitIgnoredExpr(const clang::Expr *e);
 
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
 
@@ -170,16 +207,98 @@ public:
 
   void emitDecl(const clang::Decl &d);
 
+  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
+                      LValue lvalue, bool capturedByInit = false);
+
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+  LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
+
+  /// Determine whether the given initializer is trivial in the sense
+  /// that it requires no code to be generated.
+  bool isTrivialInitializer(const Expr *init);
+
+  /// Emit an expression as an initializer for an object (variable, field, etc.)
+  /// at the given location.  The expression is not necessarily the normal
+  /// initializer for the object, and the address is not necessarily
+  /// its normal location.
+  ///
+  /// \param init the initializing expression
+  /// \param d the object to act as if we're initializing
+  /// \param lvalue the lvalue to initialize
+  /// \param capturedByInit true if \p d is a __block variable whose address is
+  /// potentially changed by the initializer
+  void emitExprAsInit(const clang::Expr *init, const clang::ValueDecl *d,
+                      LValue lvalue, bool capturedByInit = false);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
   /// objects, globals depending on target.
   void emitAutoVarDecl(const clang::VarDecl &d);
 
-  void emitAutoVarAlloca(const clang::VarDecl &d);
-  void emitAutoVarInit(const clang::VarDecl &d);
-  void emitAutoVarCleanups(const clang::VarDecl &d);
+  struct AutoVarEmission {
+    const clang::VarDecl *Variable;
+    /// The address of the alloca for languages with explicit address space
+    /// (e.g. OpenCL) or alloca casted to generic pointer for address space
+    /// agnostic languages (e.g. C++). Invalid if the variable was emitted
+    /// as a global constant.
+    Address Addr;
+
+    /// True if the variable is of aggregate type and has a constant
+    /// initializer.
+    bool IsConstantAggregate = false;
+
+    /// True if the variable is a __block variable that is captured by an
+    /// escaping block.
+    bool IsEscapingByRef = false;
+
+    mlir::Value NRVOFlag{};
+
+    struct Invalid {};
+    AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}
+
+    AutoVarEmission(const clang::VarDecl &variable)
+        : Variable(&variable), Addr(Address::invalid()) {}
+
+    static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
+
+    bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
+
+    /// Returns the raw, allocated address, which is not necessarily
+    /// the address of the object itself. It is casted to default
+    /// address space for address space agnostic languages.
+    Address getAllocatedAddress() const { return Addr; }
+
+    /// Returns the address of the object within this declaration.
+    /// Note that this does not chase the forwarding pointer for
+    /// __block decls.
+    Address getObjectAddress(CIRGenFunction &CGF) const {
+      if (!IsEscapingByRef)
+        return Addr;
+
+      assert(!cir::MissingFeatures::opAllocaEscapeByReference());
+      return Address::invalid();
+    }
+  };
+
+  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
+  void emitAutoVarInit(const AutoVarEmission &emission);
+  void emitAutoVarCleanups(const AutoVarEmission &emission);
+
+  void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
+                         clang::QualType ty, bool isInit = false,
+                         bool isNontemporal = false);
+  void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
+
+  /// Given a value and its clang type, returns the value casted to its memory
+  /// representation.
+  /// Note: CIR defers most of the special casting to the final lowering passes
+  /// to conserve the high level information.
+  mlir::Value emitToMemory(mlir::Value Value, clang::QualType Ty);
+
+  /// Store the specified rvalue into the specified
+  /// lvalue, where both are guaranteed to the have the same type, and that type
+  /// is 'Ty'.
+  void emitStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
 
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.
@@ -191,6 +310,9 @@ public:
     LocalDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
+
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                      bool isInc, bool isPre);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);

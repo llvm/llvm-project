@@ -40,7 +40,7 @@ protected:
 
   Module *createEmptyModule(StringRef Name = StringRef()) {
     Module * M = new Module(Name, Context);
-    M->setTargetTriple(Triple::normalize(BuilderTriple));
+    M->setTargetTriple(Triple(Triple::normalize(BuilderTriple)));
     return M;
   }
 
