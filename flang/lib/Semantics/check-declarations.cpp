@@ -359,7 +359,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       // are not pertinent to the characteristics of the procedure.
       // Restrictions on entities in pure procedure interfaces don't need
       // enforcement.
-    } else if (!FindCommonBlockContaining(symbol) && IsSaved(symbol)) {
+    } else if (symbol.has<AssocEntityDetails>() ||
+        FindCommonBlockContaining(symbol)) {
+      // can look like they have SAVE but are fine in PURE
+    } else if (IsSaved(symbol)) {
       if (IsInitialized(symbol)) {
         messages_.Say(
             "A pure subprogram may not initialize a variable"_err_en_US);
