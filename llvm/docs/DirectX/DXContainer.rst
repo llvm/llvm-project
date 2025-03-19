@@ -406,7 +406,7 @@ The RTS0 part comprises three data structures: ``RootSignatureHeader``,
 in the following sections. All ``RootParameters`` will be serialized following 
 the order they were defined in the metadata representation.
 
-The table bellow sumarizes the data being serialized as well as it's size. The 
+The table below summarizes the data being serialized as well as it's size. The 
 details of it part will be discussed in further details on the next sections 
 of this document.
 
@@ -417,7 +417,7 @@ Root Signature Header    24                                          1
 Root Parameter Headers   12                                          Many              
 Root Parameter           ================================ ===        Many
                          Root Constants                   12                                      
-                         Root Descriptor Version 1.0      08                                      
+                         Root Descriptor Version 1.0      8                                      
                          Root Descriptor Version 1.1      12                                      
                          Descriptors Tables Version 1.0   20                                     
                          Descriptors Tables Version 1.1   24                                      
@@ -499,8 +499,6 @@ space as 2 32-bit values.
 
 In version 1.1, the root descriptor is 12 bytes. It matches the 1.0 descriptor
 but adds a 32-bit access flag.
-
-Version 1.0 doesn't contain the flags available in version 1.1.
 
 .. code-block:: c
 
