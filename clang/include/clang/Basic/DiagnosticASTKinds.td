@@ -11,7 +11,7 @@ let Component = "AST" in {
 // Constant expression diagnostics. These (and their users) belong in Sema.
 def note_expr_divide_by_zero : Note<"division by zero">;
 def note_constexpr_invalid_cast : Note<
-  "%enum_select<CastKind>{%Reinterpret{reinterpret_cast}|%Dynamic{dynamic_cast}|"
+  "%enum_select<ConstexprInvalidCastKind>{%Reinterpret{reinterpret_cast}|%Dynamic{dynamic_cast}|"
   "%ThisCastOrReinterpret{%select{this conversion|cast that performs the conversions "
   "of a reinterpret_cast}1}|%CastFrom{cast from %1}}0"
   " is not allowed in a constant expression"
