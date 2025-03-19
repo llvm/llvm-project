@@ -167,7 +167,6 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << "\n");
           ICmp->replaceAllUsesWith(NotOp);
           ICmp->eraseFromParent();
-          II.eraseFromParent();
           Changed = true;
         }
         // (icmp ne %ballot, 0)  -->  %ballot_arg
@@ -176,11 +175,13 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
                             << *Src << "\n");
           ICmp->replaceAllUsesWith(Src);
           ICmp->eraseFromParent();
-          II.eraseFromParent();
           Changed = true;
         }
       }
     }
+    // Erase the intrinsic if it has no remaining uses.
+    if (II.use_empty())
+      II.eraseFromParent();
     return Changed;
   }
   }
