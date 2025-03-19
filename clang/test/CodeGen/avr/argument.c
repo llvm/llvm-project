@@ -114,3 +114,13 @@ struct s15 fooa(char a, char b) {
   x.arr[1] = b;
   return x;
 }
+
+struct s8_t {
+  char a;
+};
+
+// AVR-NOT:  {{.*}} signext
+// TINY-NOT: {{.*}} signext
+char foob(struct s8_t a) {
+  return a.a + 1;
+}
