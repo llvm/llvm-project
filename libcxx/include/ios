@@ -250,6 +250,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 typedef ptrdiff_t streamsize;
 
+struct _LIBCPP_HIDE_FROM_ABI __uninitialized_ios{};
+
 class _LIBCPP_EXPORTED_FROM_ABI ios_base {
 public:
   class _LIBCPP_EXPORTED_FROM_ABI failure;
@@ -369,6 +371,8 @@ protected:
     // test/libcxx/input.output/iostreams.base/ios.base/ios.base.cons/dtor.uninitialized.pass.cpp
     // for the details.
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr ios_base(__uninitialized_ios) {} 
 
   void init(void* __sb);
   _LIBCPP_HIDE_FROM_ABI void* rdbuf() const { return __rdbuf_; }
@@ -618,6 +622,9 @@ protected:
     // purposefully does no initialization
     // since the destructor does nothing this does not have ios_base issues.
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr basic_ios(__uninitialized_ios uninit): ios_base{uninit} {} 
+
   _LIBCPP_HIDE_FROM_ABI void init(basic_streambuf<char_type, traits_type>* __sb);
 
   _LIBCPP_HIDE_FROM_ABI void move(basic_ios& __rhs);
