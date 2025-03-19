@@ -24,8 +24,8 @@ test_simple:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_simple | FileCheck %s --check-prefix=SIMPLE
 
-# SIMPLE:      live symbol: test_simple
-# SIMPLE-NEXT: >>> referenced by: _start (entry point)
+# SIMPLE:      live symbol: {{.*}}.o:(test_simple)
+# SIMPLE-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # SIMPLE-NOT:  >>>
 
 ## Live only by being a member of .test_simple
@@ -35,10 +35,10 @@ test_incidental:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_incidental | FileCheck %s --check-prefix=INCIDENTAL
 
-# INCIDENTAL:      live symbol: test_incidental
+# INCIDENTAL:      live symbol: {{.*}}.o:(test_incidental)
 # INCIDENTAL-NEXT: >>> in live section: {{.*}}.o:(.test_simple)
-# INCIDENTAL-NEXT: >>> contained live symbol: test_simple
-# INCIDENTAL-NEXT: >>> referenced by: _start (entry point)
+# INCIDENTAL-NEXT: >>> contained live symbol: {{.*}}.o:(test_simple)
+# INCIDENTAL-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # INCIDENTAL-NOT:  >>>
 
 ## Reached from a reference in section .test_simple directly, since test_simple is an unsized symbol.
@@ -49,10 +49,10 @@ test_from_unsized:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_from_unsized | FileCheck %s --check-prefix=FROM-UNSIZED
 
-# FROM-UNSIZED:      live symbol: test_from_unsized
+# FROM-UNSIZED:      live symbol: {{.*}}.o:(test_from_unsized)
 # FROM-UNSIZED-NEXT: >>> referenced by: {{.*}}.o:(.test_simple)
-# FROM-UNSIZED-NEXT: >>> contained live symbol: test_simple
-# FROM-UNSIZED-NEXT: >>> referenced by: _start (entry point)
+# FROM-UNSIZED-NEXT: >>> contained live symbol: {{.*}}.o:(test_simple)
+# FROM-UNSIZED-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # FROM-UNSIZED-NOT:  >>>
 
 ## Symbols in dead sections are dead and not reported.
@@ -67,7 +67,7 @@ test_dead:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_undef -u test_undef | FileCheck %s --check-prefix=UNDEFINED
 
-# UNDEFINED:     live symbol: test_undef (no section)
+# UNDEFINED:     live symbol: <internal>:(test_undef) (no section)
 # UNDEFINED-NOT: >>>
 
 ## Defined symbols without input section parents are live.
@@ -76,7 +76,7 @@ test_absolute = 1234
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_absolute | FileCheck %s --check-prefix=ABSOLUTE
 
-# ABSOLUTE:     live symbol: test_absolute (no section)
+# ABSOLUTE:     live symbol: {{.*}}.o:(test_absolute) (no section)
 # ABSOLUTE-NOT: >>>
 
 ## Retained sections are intrinsically live, and they make contained symbols live.
@@ -87,7 +87,7 @@ test_retained:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_retained | FileCheck %s --check-prefix=RETAINED
 
-# RETAINED:      live symbol: test_retained
+# RETAINED:      live symbol: {{.*}}.o:(test_retained)
 # RETAINED-NEXT: >>> in live section: {{.*}}:(.test_retained) (retained)
 # RETAINED-NOT:  >>>
 
@@ -102,9 +102,9 @@ test_section_offset:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_section_offset | FileCheck %s --check-prefix=SECTION-OFFSET
 
-# SECTION-OFFSET:      live symbol: test_section_offset
+# SECTION-OFFSET:      live symbol: {{.*}}.o:(test_section_offset)
 # SECTION-OFFSET-NEXT: >>> in live section: {{.*}}:(.test_section_offset)
-# SECTION-OFFSET-NEXT: >>> referenced by: _start (entry point)
+# SECTION-OFFSET-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # SECTION-OFFSET-NOT:  >>>
 
 ## Relocs that reference offsets from sections (e.g., from anonymous symbols) are considered to point to the enclosing symbol if one exists.
@@ -119,8 +119,8 @@ test_section_offset_within_symbol:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_section_offset_within_symbol | FileCheck %s --check-prefix=SECTION-OFFSET-WITHIN-SYMBOL
 
-# SECTION-OFFSET-WITHIN-SYMBOL:      live symbol: test_section_offset_within_symbol
-# SECTION-OFFSET-WITHIN-SYMBOL-NEXT: >>> referenced by: _start (entry point)
+# SECTION-OFFSET-WITHIN-SYMBOL:      live symbol: {{.*}}.o:(test_section_offset_within_symbol)
+# SECTION-OFFSET-WITHIN-SYMBOL-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # SECTION-OFFSET-WITHIN-SYMBOL-NOT:  >>>
 
 ## Local symbols can be queried just like global symbols.
@@ -132,16 +132,16 @@ test_local:
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections --why-live=test_local | FileCheck %s --check-prefix=LOCAL
 
-# LOCAL:      live symbol: {{.*}}:(test_local)
-# LOCAL-NEXT: >>> referenced by: _start (entry point)
+# LOCAL:      live symbol: {{.*}}.o:(test_local)
+# LOCAL-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # LOCAL-NOT:  >>>
 
 ## Shared symbols
 
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections %t.so --why-live=test_shared | FileCheck %s --check-prefix=SHARED
 
-# SHARED:      live symbol: test_shared
-# SHARED-NEXT: >>> referenced by: _start (entry point)
+# SHARED:      live symbol: {{.*}}.so:(test_shared)
+# SHARED-NEXT: >>> referenced by: {{.*}}.o:(_start) (entry point)
 # SHARED-NOT:  >>>
 
 ## Globs match multiple cases. Multiple --why-live flags union.
@@ -149,5 +149,5 @@ test_local:
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections %t.so --why-live=test_s* | FileCheck %s --check-prefix=MULTIPLE
 # RUN: ld.lld %t.o %t.so -o /dev/null --gc-sections %t.so --why-live=test_simple --why-live=test_shared | FileCheck %s --check-prefix=MULTIPLE
 
-# MULTIPLE-DAG: live symbol: test_simple
-# MULTIPLE-DAG: live symbol: test_shared
+# MULTIPLE-DAG: live symbol: {{.*}}.o:(test_simple)
+# MULTIPLE-DAG: live symbol: {{.*}}.so:(test_shared)
