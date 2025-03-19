@@ -7214,7 +7214,7 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Register Offsets = MI.getOperand(9).getReg();
   Register TDescr = MI.getOperand(10).getReg();
 
-  if (!ST.hasBVHDualInst()) {
+  if (!ST.hasBVHDualAndBVH8Insts()) {
     DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
                                         "intrinsic not supported on subtarget",
                                         MI.getDebugLoc());

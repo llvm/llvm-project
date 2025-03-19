@@ -9458,7 +9458,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     assert(NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f32);
 
-    if (!Subtarget->hasBVHDualInst()) {
+    if (!Subtarget->hasBVHDualAndBVH8Insts()) {
       emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
       return SDValue();
     }
