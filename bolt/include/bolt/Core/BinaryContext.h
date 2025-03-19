@@ -435,7 +435,18 @@ public:
 
   /// Return size of an entry for the given jump table \p Type.
   uint64_t getJumpTableEntrySize(JumpTable::JumpTableType Type) const {
-    return Type == JumpTable::JTT_PIC ? 4 : AsmInfo->getCodePointerSize();
+    switch (Type) {
+    case JumpTable::JTT_X86_64_PIC4:
+      return 4;
+    case JumpTable::JTT_X86_64_ABS:
+      return AsmInfo->getCodePointerSize();
+    case JumpTable::JTT_AARCH64_REL1:
+      return 1;
+    case JumpTable::JTT_AARCH64_REL2:
+      return 2;
+    case JumpTable::JTT_AARCH64_REL4:
+      return 4;
+    }
   }
 
   /// Return JumpTable containing a given \p Address.
@@ -573,14 +584,13 @@ public:
   /// If \p NextJTAddress is different from zero, it is used as an upper
   /// bound for jump table memory layout.
   ///
-  /// Optionally, populate \p Address from jump table entries. The entries
-  /// could be partially populated if the jump table detection fails.
+  /// If \p JT is set, populate it with jump table entries. The entries could be
+  /// partially populated if the jump table detection fails.
   bool analyzeJumpTable(const uint64_t Address,
                         const JumpTable::JumpTableType Type,
                         const BinaryFunction &BF,
                         const uint64_t NextJTAddress = 0,
-                        JumpTable::AddressesType *EntriesAsAddress = nullptr,
-                        bool *HasEntryInFragment = nullptr) const;
+                        JumpTable *JT = nullptr) const;
 
   /// After jump table locations are established, this function will populate
   /// their EntriesAsAddress based on memory contents.
