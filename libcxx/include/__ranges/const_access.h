@@ -53,7 +53,7 @@ namespace __cbegin {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
   template <class _Rng>
-  using _UType = decltype(ranges::begin(ranges::__possibly_const_range(std::declval<_Rng&>())));
+  using _UType _LIBCPP_NODEBUG = decltype(ranges::begin(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
@@ -100,7 +100,7 @@ namespace __cend {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
   template <class _Rng>
-  using _UType = decltype(ranges::end(ranges::__possibly_const_range(std::declval<_Rng&>())));
+  using _UType _LIBCPP_NODEBUG = decltype(ranges::end(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
@@ -147,7 +147,7 @@ namespace __crbegin {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
   template <class _Rng>
-  using _UType = decltype(ranges::rbegin(ranges::__possibly_const_range(std::declval<_Rng&>())));
+  using _UType _LIBCPP_NODEBUG = decltype(ranges::rbegin(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
@@ -186,7 +186,7 @@ namespace __crend {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
   template <class _Rng>
-  using _UType = decltype(ranges::rend(ranges::__possibly_const_range(std::declval<_Rng&>())));
+  using _UType _LIBCPP_NODEBUG = decltype(ranges::rend(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(

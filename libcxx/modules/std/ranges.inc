@@ -265,14 +265,15 @@ export namespace std {
       using std::ranges::views::reverse;
     } // namespace views
 
+#if _LIBCPP_STD_VER >= 23
     // [range.as.const], as const view
-#if 0
     using std::ranges::as_const_view;
 
     namespace views {
       using std::ranges::views::as_const;
     } // namespace views
-#endif
+#endif // _LIBCPP_STD_VER >= 23
+
     // [range.elements], elements view
     using std::ranges::elements_view;
 

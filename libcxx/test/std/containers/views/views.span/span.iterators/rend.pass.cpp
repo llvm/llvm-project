@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 template <class Span, class Iter>
-constexpr bool testSpanImpl(Span s, Iter rlast) {
+constexpr void testSpanImpl(Span s, Iter rlast) {
   if (s.empty()) {
     assert(rlast == s.rbegin());
   } else {

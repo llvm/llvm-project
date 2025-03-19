@@ -46,7 +46,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <indirectly_readable _Iter>
-using iter_const_reference_t = common_reference_t<const iter_value_t<_Iter>&&, iter_reference_t<_Iter>>;
+using iter_const_reference_t _LIBCPP_NODEBUG = common_reference_t<const iter_value_t<_Iter>&&, iter_reference_t<_Iter>>;
 
 template <class _Iter>
 concept __constant_iterator = input_iterator<_Iter> && same_as<iter_const_reference_t<_Iter>, iter_reference_t<_Iter>>;
@@ -60,12 +60,12 @@ using const_iterator = conditional_t<__constant_iterator<_Iter>, _Iter, basic_co
 // This doesn't use `conditional_t` to avoid instantiating const_iterator<_Sent> when _Sent is not an input_iterator.
 template <class _Sent>
 struct __const_sentinel_impl {
-  using type = _Sent;
+  using type _LIBCPP_NODEBUG = _Sent;
 };
 template <class _Sent>
   requires input_iterator<_Sent>
 struct __const_sentinel_impl<_Sent> {
-  using type = const_iterator<_Sent>;
+  using type _LIBCPP_NODEBUG = const_iterator<_Sent>;
 };
 template <semiregular _Sent>
 using const_sentinel = __const_sentinel_impl<_Sent>::type;
@@ -104,8 +104,8 @@ template <input_iterator _Iter>
 class _LIBCPP_TEMPLATE_VIS basic_const_iterator : public __basic_const_iterator_category<_Iter> {
   _Iter __current_ = _Iter();
 
-  using __reference        = iter_const_reference_t<_Iter>;
-  using __rvalue_reference = __iter_const_rvalue_reference_t<_Iter>;
+  using __reference _LIBCPP_NODEBUG        = iter_const_reference_t<_Iter>;
+  using __rvalue_reference _LIBCPP_NODEBUG = __iter_const_rvalue_reference_t<_Iter>;
 
 public:
   using value_type      = iter_value_t<_Iter>;
@@ -322,17 +322,17 @@ public:
 template <class _Type1, common_with<_Type1> _Type2>
   requires input_iterator<common_type_t<_Type1, _Type2>>
 struct common_type<basic_const_iterator<_Type1>, _Type2> {
-  using type = basic_const_iterator<common_type_t<_Type1, _Type2>>;
+  using type _LIBCPP_NODEBUG = basic_const_iterator<common_type_t<_Type1, _Type2>>;
 };
 template <class _Type1, common_with<_Type1> _Type2>
   requires input_iterator<common_type_t<_Type1, _Type2>>
 struct common_type<_Type2, basic_const_iterator<_Type1>> {
-  using type = basic_const_iterator<common_type_t<_Type1, _Type2>>;
+  using type _LIBCPP_NODEBUG = basic_const_iterator<common_type_t<_Type1, _Type2>>;
 };
 template <class _Type1, common_with<_Type1> _Type2>
   requires input_iterator<common_type_t<_Type1, _Type2>>
 struct common_type<basic_const_iterator<_Type1>, basic_const_iterator<_Type2>> {
-  using type = basic_const_iterator<common_type_t<_Type1, _Type2>>;
+  using type _LIBCPP_NODEBUG = basic_const_iterator<common_type_t<_Type1, _Type2>>;
 };
 
 template <input_iterator _Iter>
