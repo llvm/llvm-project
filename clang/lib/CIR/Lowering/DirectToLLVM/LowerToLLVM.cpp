@@ -1115,6 +1115,8 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
   mlir::PassManager pm(mlirCtx);
   populateCIRToLLVMPasses(pm);
 
+  (void)mlir::applyPassManagerCLOptions(pm);
+
   if (mlir::failed(pm.run(mlirModule))) {
     // FIXME: Handle any errors where they occurs and return a nullptr here.
     report_fatal_error(

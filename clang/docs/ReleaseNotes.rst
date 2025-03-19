@@ -491,6 +491,11 @@ Crash and bug fixes
 Improvements
 ^^^^^^^^^^^^
 
+- The checker option ``optin.cplusplus.VirtualCall:PureOnly`` was removed,
+  because it had been deprecated since 2019 and it is completely useless (it
+  was kept only for compatibility with pre-2019 versions, setting it to true is
+  equivalent to completely disabling the checker).
+
 Moved checkers
 ^^^^^^^^^^^^^^
 
