@@ -130,8 +130,10 @@ C2y Feature Support
   that ``_Generic`` selection associations may now have ``void`` type, but it
   also removes UB with code like ``(void)(void)1;``.
 - Implemented `WG14 N3411 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3411.pdf>`_
-  which allows a source file to not end with a newline character. This is still
-  reported as a conforming extension in earlier language modes.
+  which allows a source file to not end with a newline character. Note,
+  ``-pedantic`` will no longer diagnose this in either C or C++ modes. This
+  feature was adopted as applying to obsolete versions of C in WG14 and as a
+  defect report in WG21 (CWG787).
 - Implemented `WG14 N3353 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3353.htm>_`
   which adds the new ``0o`` and ``0O`` ocal literal prefixes and deprecates
   octal literals other than ``0`` which do not start with the new prefix. This
@@ -278,6 +280,8 @@ Improvements to Clang's diagnostics
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
+- Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -340,6 +344,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
+- Clang was previously coalescing volatile writes to members of volatile base class subobjects.
+  The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
