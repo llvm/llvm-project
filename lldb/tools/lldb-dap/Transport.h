@@ -19,6 +19,7 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <chrono>
 #include <optional>
 
 namespace lldb_dap {

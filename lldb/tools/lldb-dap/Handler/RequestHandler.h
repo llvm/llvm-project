@@ -428,7 +428,10 @@ class CancelRequestHandler
                             protocol::CancelResponseBody> {
 public:
   using RequestHandler::RequestHandler;
-  static llvm::StringLiteral getCommand() { return "cancel"; }
+  static llvm::StringLiteral GetCommand() { return "cancel"; }
+  llvm::StringMap<bool> GetCapabilities() const override {
+    return {{"supportsCancelRequest", true}};
+  }
   llvm::Expected<protocol::CancelResponseBody>
   Run(const protocol::CancelArguments &args) const override;
 };
