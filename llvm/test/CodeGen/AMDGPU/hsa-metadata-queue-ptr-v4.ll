@@ -1,24 +1,33 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -passes=amdgpu-attributor -o %t.gfx7.bc %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -passes=amdgpu-attributor -o %t.gfx8.bc %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor -o %t.gfx9.bc %s
-; xUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj < %t.gfx7.bc | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,PRE-GFX9  %s
-; xUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -filetype=obj < %t.gfx8.bc | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,PRE-GFX9  %s
-; xUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %t.gfx9.bc | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX9  %s
-; xUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %t.gfx7.bc | FileCheck --check-prefixes=CHECK,PRE-GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %t.gfx7.bc | FileCheck --check-prefixes=CHECK,PRE-GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %t.gfx8.bc | FileCheck --check-prefixes=CHECK,PRE-GFX9 %s
-; xUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.gfx9.bc | FileCheck --check-prefixes=CHECK,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.gfx9.bc | FileCheck --check-prefixes=CHECK,GFX9 %s
+
+; CHECK: addrspacecast_requires_queue_ptr
+; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
+; CHECK: is_shared_requires_queue_ptr
+; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
+; CHECK: is_private_requires_queue_ptr
+; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
+; CHECK: trap_requires_queue_ptr
+; PRE-GFX9: .amdhsa_user_sgpr_queue_ptr 1
+; GFX9: .amdhsa_user_sgpr_queue_ptr 0
+
+; CHECK: amdgcn_queue_ptr_requires_queue_ptr
+; CHECK: .amdhsa_user_sgpr_queue_ptr 1
 
 
-; On gfx8, the queue ptr is required for this addrspacecast on cov4
+; On gfx8, the queue ptr is required for this addrspacecast.
 ; CHECK: - .args:
-
-; PRE-GFX9: .value_kind:     hidden_private_base
-; PRE-GFX9: .value_kind:     hidden_shared_base
-
-; GFX9-NOT: hidden_queue_ptr
-; GFX9-NOT: hidden_private_base
-; GFX9-NOT: hidden_shared_base
-
+; CHECK-NOT:		hidden_queue_ptr
 ; CHECK-LABEL:		.name:           addrspacecast_requires_queue_ptr
 define amdgpu_kernel void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) {
   %flat.private = addrspacecast ptr addrspace(5) %ptr.private to ptr
@@ -28,9 +37,9 @@ define amdgpu_kernel void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %pt
   ret void
 }
 
+
 ; CHECK: - .args:
-; PRE-GFX9:		hidden_shared_base
-; GFX9-NOT:		hidden_shared_base
+; CHECK-NOT:		hidden_shared_base
 ; CHECK-LABEL:		.name:          is_shared_requires_queue_ptr
 define amdgpu_kernel void @is_shared_requires_queue_ptr(ptr %ptr) {
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
@@ -40,8 +49,9 @@ define amdgpu_kernel void @is_shared_requires_queue_ptr(ptr %ptr) {
 }
 
 ; CHECK: - .args:
-; PRE-GFX9:		hidden_private_base
-; GFX9-NOT:		hidden_private_base
+; CHECK-NOT: hidden_shared_base
+; CHECK-NOT: hidden_private_base
+; CHECK-NOT: hidden_queue_ptr
 ; CHECK-LABEL:		.name:           is_private_requires_queue_ptr
 define amdgpu_kernel void @is_private_requires_queue_ptr(ptr %ptr) {
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
@@ -52,8 +62,9 @@ define amdgpu_kernel void @is_private_requires_queue_ptr(ptr %ptr) {
 
 ; CHECK: - .args:
 
-; PRE-GFX9:		hidden_queue_ptr
-; GFX9-NOT:		hidden_queue_ptr
+; CHECK-NOT: hidden_shared_base
+; CHECK-NOT: hidden_private_base
+; CHECK-NOT: hidden_queue_ptr
 ; CHECK-LABEL:		.name:           trap_requires_queue_ptr
 define amdgpu_kernel void @trap_requires_queue_ptr() {
   call void @llvm.trap()
@@ -61,7 +72,9 @@ define amdgpu_kernel void @trap_requires_queue_ptr() {
 }
 
 ; CHECK: - .args:
-; CHECK:		hidden_queue_ptr
+; CHECK-NOT: hidden_queue_ptr
+; CHECK-NOT: hidden_shared_base
+; CHECK-NOT: hidden_private_base
 ; CHECK-LABEL:		.name:           amdgcn_queue_ptr_requires_queue_ptr
 define amdgpu_kernel void @amdgcn_queue_ptr_requires_queue_ptr(ptr addrspace(1) %ptr)  {
   %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
@@ -75,7 +88,6 @@ define amdgpu_kernel void @amdgcn_queue_ptr_requires_queue_ptr(ptr addrspace(1) 
   ret void
 }
 
-
 declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 declare noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 declare i64 @llvm.amdgcn.dispatch.id()
@@ -86,4 +98,4 @@ declare void @llvm.trap()
 declare void @llvm.debugtrap()
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
