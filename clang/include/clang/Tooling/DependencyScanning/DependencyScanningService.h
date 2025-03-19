@@ -12,6 +12,7 @@
 #include "clang/CAS/CASOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CAS/ActionCache.h"
 
@@ -131,6 +132,8 @@ public:
 
   bool useCASFS() const { return (bool)SharedFS; }
 
+  ModuleCacheMutexes &getModuleCacheMutexes() { return ModuleCacheMutexes; }
+
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
@@ -148,6 +151,8 @@ private:
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;
   /// The global file system cache.
   std::optional<DependencyScanningFilesystemSharedCache> SharedCache;
+  /// The global module cache mutexes.
+  ModuleCacheMutexes ModuleCacheMutexes;
 };
 
 } // end namespace dependencies
