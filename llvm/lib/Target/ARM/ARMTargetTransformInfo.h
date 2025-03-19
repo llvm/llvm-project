@@ -284,7 +284,7 @@ public:
                                              TTI::TargetCostKind CostKind);
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
   InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
                                          VectorType *ValTy,
@@ -300,7 +300,7 @@ public:
   /// getScalingFactorCost - Return the cost of the scaling used in
   /// addressing mode represented by AM.
   /// If the AM is supported, the return value must be >= 0.
-  /// If the AM is not supported, the return value must be negative.
+  /// If the AM is not supported, the return value is an invalid cost.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;

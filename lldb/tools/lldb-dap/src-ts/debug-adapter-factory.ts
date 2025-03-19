@@ -93,6 +93,11 @@ async function getDAPExecutable(
   return undefined;
 }
 
+async function isServerModeSupported(exe: string): Promise<boolean> {
+  const { stdout } = await exec(exe, ['--help']);
+  return /--connection/.test(stdout);
+}
+
 /**
  * This class defines a factory used to find the lldb-dap binary to use
  * depending on the session configuration.
@@ -145,7 +150,7 @@ export class LLDBDapDescriptorFactory
     const dbgArgs = executable?.args ?? [];
 
     const serverMode = config.get<boolean>('serverMode', false);
-    if (serverMode) {
+    if (serverMode && await isServerModeSupported(dapPath)) {
       const { host, port } = await this.startServer(dapPath, dbgArgs, dbgOptions);
       return new vscode.DebugAdapterServer(port, host);
     }

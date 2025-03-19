@@ -69,7 +69,8 @@ void StepInRequestHandler::operator()(const llvm::json::Object &request) const {
   const auto *arguments = request.getObject("arguments");
 
   std::string step_in_target;
-  uint64_t target_id = GetUnsigned(arguments, "targetId", 0);
+  const auto target_id =
+      GetInteger<uint64_t>(arguments, "targetId").value_or(0);
   auto it = dap.step_in_targets.find(target_id);
   if (it != dap.step_in_targets.end())
     step_in_target = it->second;

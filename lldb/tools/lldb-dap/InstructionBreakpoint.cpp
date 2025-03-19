@@ -20,8 +20,9 @@ namespace lldb_dap {
 InstructionBreakpoint::InstructionBreakpoint(DAP &d,
                                              const llvm::json::Object &obj)
     : Breakpoint(d, obj), instructionAddressReference(LLDB_INVALID_ADDRESS),
-      offset(GetSigned(obj, "offset", 0)) {
+      offset(GetInteger<int64_t>(obj, "offset").value_or(0)) {
   GetString(obj, "instructionReference")
+      .value_or("")
       .getAsInteger(0, instructionAddressReference);
   instructionAddressReference += offset;
 }

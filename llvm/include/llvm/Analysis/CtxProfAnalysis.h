@@ -54,6 +54,8 @@ public:
     return Profiles.Contexts;
   }
 
+  const PGOCtxProfile &profiles() const { return Profiles; }
+
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
   }

@@ -21,15 +21,15 @@ const struct ModifierEntry {
   const char *const Spelling;
   AVRMCExpr::VariantKind VariantKind;
 } ModifierNames[] = {
-    {"lo8", AVRMCExpr::VK_AVR_LO8},       {"hi8", AVRMCExpr::VK_AVR_HI8},
-    {"hh8", AVRMCExpr::VK_AVR_HH8}, // synonym with hlo8
-    {"hlo8", AVRMCExpr::VK_AVR_HH8},      {"hhi8", AVRMCExpr::VK_AVR_HHI8},
+    {"lo8", AVRMCExpr::VK_LO8},       {"hi8", AVRMCExpr::VK_HI8},
+    {"hh8", AVRMCExpr::VK_HH8}, // synonym with hlo8
+    {"hlo8", AVRMCExpr::VK_HH8},      {"hhi8", AVRMCExpr::VK_HHI8},
 
-    {"pm", AVRMCExpr::VK_AVR_PM},         {"pm_lo8", AVRMCExpr::VK_AVR_PM_LO8},
-    {"pm_hi8", AVRMCExpr::VK_AVR_PM_HI8}, {"pm_hh8", AVRMCExpr::VK_AVR_PM_HH8},
+    {"pm", AVRMCExpr::VK_PM},         {"pm_lo8", AVRMCExpr::VK_PM_LO8},
+    {"pm_hi8", AVRMCExpr::VK_PM_HI8}, {"pm_hh8", AVRMCExpr::VK_PM_HH8},
 
-    {"lo8_gs", AVRMCExpr::VK_AVR_LO8_GS}, {"hi8_gs", AVRMCExpr::VK_AVR_HI8_GS},
-    {"gs", AVRMCExpr::VK_AVR_GS},
+    {"lo8_gs", AVRMCExpr::VK_LO8_GS}, {"hi8_gs", AVRMCExpr::VK_HI8_GS},
+    {"gs", AVRMCExpr::VK_GS},
 };
 
 } // end of anonymous namespace
@@ -40,7 +40,7 @@ const AVRMCExpr *AVRMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 }
 
 void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  assert(Kind != VK_AVR_None);
+  assert(Kind != VK_AVR_NONE);
   OS << getName() << '(';
   if (isNegated())
     OS << '-' << '(';
@@ -53,8 +53,7 @@ void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {
   MCValue Value;
 
-  bool isRelocatable =
-      getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr);
+  bool isRelocatable = getSubExpr()->evaluateAsRelocatable(Value, nullptr);
 
   if (!isRelocatable)
     return false;
@@ -68,10 +67,9 @@ bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {
 }
 
 bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
-                                          const MCAssembler *Asm,
-                                          const MCFixup *Fixup) const {
+                                          const MCAssembler *Asm) const {
   MCValue Value;
-  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm, Fixup);
+  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm);
 
   if (!isRelocatable)
     return false;
@@ -87,8 +85,8 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
     MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
     if (Modifier != MCSymbolRefExpr::VK_None)
       return false;
-    if (Kind == VK_AVR_PM) {
-      Modifier = MCSymbolRefExpr::VK_AVR_PM;
+    if (Kind == VK_PM) {
+      Modifier = MCSymbolRefExpr::VariantKind(AVRMCExpr::VK_PM);
     }
 
     Sym = MCSymbolRefExpr::create(&Sym->getSymbol(), Modifier, Context);
@@ -103,43 +101,44 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
     Value *= -1;
 
   switch (Kind) {
-  case AVRMCExpr::VK_AVR_LO8:
+  case AVRMCExpr::VK_LO8:
     Value &= 0xff;
     break;
-  case AVRMCExpr::VK_AVR_HI8:
+  case AVRMCExpr::VK_HI8:
     Value &= 0xff00;
     Value >>= 8;
     break;
-  case AVRMCExpr::VK_AVR_HH8:
+  case AVRMCExpr::VK_HH8:
     Value &= 0xff0000;
     Value >>= 16;
     break;
-  case AVRMCExpr::VK_AVR_HHI8:
+  case AVRMCExpr::VK_HHI8:
     Value &= 0xff000000;
     Value >>= 24;
     break;
-  case AVRMCExpr::VK_AVR_PM_LO8:
-  case AVRMCExpr::VK_AVR_LO8_GS:
+  case AVRMCExpr::VK_PM_LO8:
+  case AVRMCExpr::VK_LO8_GS:
     Value >>= 1; // Program memory addresses must always be shifted by one.
     Value &= 0xff;
     break;
-  case AVRMCExpr::VK_AVR_PM_HI8:
-  case AVRMCExpr::VK_AVR_HI8_GS:
+  case AVRMCExpr::VK_PM_HI8:
+  case AVRMCExpr::VK_HI8_GS:
     Value >>= 1; // Program memory addresses must always be shifted by one.
     Value &= 0xff00;
     Value >>= 8;
     break;
-  case AVRMCExpr::VK_AVR_PM_HH8:
+  case AVRMCExpr::VK_PM_HH8:
     Value >>= 1; // Program memory addresses must always be shifted by one.
     Value &= 0xff0000;
     Value >>= 16;
     break;
-  case AVRMCExpr::VK_AVR_PM:
-  case AVRMCExpr::VK_AVR_GS:
+  case AVRMCExpr::VK_PM:
+  case AVRMCExpr::VK_GS:
     Value >>= 1; // Program memory addresses must always be shifted by one.
     break;
 
-  case AVRMCExpr::VK_AVR_None:
+  case AVRMCExpr::VK_AVR_NONE:
+  default:
     llvm_unreachable("Uninitialized expression.");
   }
   return static_cast<uint64_t>(Value) & 0xff;
@@ -149,40 +148,40 @@ AVR::Fixups AVRMCExpr::getFixupKind() const {
   AVR::Fixups Kind = AVR::Fixups::LastTargetFixupKind;
 
   switch (getKind()) {
-  case VK_AVR_LO8:
+  case VK_LO8:
     Kind = isNegated() ? AVR::fixup_lo8_ldi_neg : AVR::fixup_lo8_ldi;
     break;
-  case VK_AVR_HI8:
+  case VK_HI8:
     Kind = isNegated() ? AVR::fixup_hi8_ldi_neg : AVR::fixup_hi8_ldi;
     break;
-  case VK_AVR_HH8:
+  case VK_HH8:
     Kind = isNegated() ? AVR::fixup_hh8_ldi_neg : AVR::fixup_hh8_ldi;
     break;
-  case VK_AVR_HHI8:
+  case VK_HHI8:
     Kind = isNegated() ? AVR::fixup_ms8_ldi_neg : AVR::fixup_ms8_ldi;
     break;
 
-  case VK_AVR_PM_LO8:
+  case VK_PM_LO8:
     Kind = isNegated() ? AVR::fixup_lo8_ldi_pm_neg : AVR::fixup_lo8_ldi_pm;
     break;
-  case VK_AVR_PM_HI8:
+  case VK_PM_HI8:
     Kind = isNegated() ? AVR::fixup_hi8_ldi_pm_neg : AVR::fixup_hi8_ldi_pm;
     break;
-  case VK_AVR_PM_HH8:
+  case VK_PM_HH8:
     Kind = isNegated() ? AVR::fixup_hh8_ldi_pm_neg : AVR::fixup_hh8_ldi_pm;
     break;
-  case VK_AVR_PM:
-  case VK_AVR_GS:
+  case VK_PM:
+  case VK_GS:
     Kind = AVR::fixup_16_pm;
     break;
-  case VK_AVR_LO8_GS:
+  case VK_LO8_GS:
     Kind = AVR::fixup_lo8_ldi_gs;
     break;
-  case VK_AVR_HI8_GS:
+  case VK_HI8_GS:
     Kind = AVR::fixup_hi8_ldi_gs;
     break;
 
-  case VK_AVR_None:
+  default:
     llvm_unreachable("Uninitialized expression");
   }
 
@@ -214,7 +213,7 @@ AVRMCExpr::VariantKind AVRMCExpr::getKindByName(StringRef Name) {
   if (Modifier != std::end(ModifierNames)) {
     return Modifier->VariantKind;
   }
-  return VK_AVR_None;
+  return VK_AVR_NONE;
 }
 
 } // end of namespace llvm

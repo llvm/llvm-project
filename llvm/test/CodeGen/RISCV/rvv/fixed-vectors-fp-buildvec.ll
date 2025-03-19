@@ -46,10 +46,11 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; CHECK-NEXT:    vslideup.vi v12, v10, 2, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vmv.v.i v10, 12
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 12
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; CHECK-NEXT:    ret
   %z = shufflevector <8 x float> %x, <8 x float> %y, <4 x i32> <i32 0, i32 7, i32 8, i32 15>

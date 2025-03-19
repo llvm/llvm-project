@@ -565,9 +565,13 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   // TODO: it is neccessary to set proper SectionIndex here.
   // object::SectionedAddress::UndefSection works for only absolute addresses.
-  if (DILineInfo LineInfo = DICtx.getLineInfoForAddress(
-          {Lookup, object::SectionedAddress::UndefSection}))
+  if (DILineInfo LineInfo =
+          DICtx
+              .getLineInfoForAddress(
+                  {Lookup, object::SectionedAddress::UndefSection})
+              .value_or(DILineInfo())) {
     LineInfo.dump(OS);
+  }
 
   return true;
 }
@@ -661,8 +665,7 @@ createRegInfo(const object::ObjectFile &Obj) {
   TT.setVendor(Triple::UnknownVendor);
   TT.setOS(Triple::UnknownOS);
   std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty())
     return nullptr;
   MCRegInfo.reset(TheTarget->createMCRegInfo(TT.str()));

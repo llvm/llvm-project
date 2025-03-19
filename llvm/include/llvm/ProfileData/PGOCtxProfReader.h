@@ -92,10 +92,13 @@ private:
 
   GlobalValue::GUID GUID = 0;
   SmallVector<uint64_t, 16> Counters;
+  const std::optional<uint64_t> RootEntryCount{};
   CallsiteMapTy Callsites;
 
-  PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters)
-      : GUID(G), Counters(std::move(Counters)) {}
+  PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters,
+                    std::optional<uint64_t> RootEntryCount = std::nullopt)
+      : GUID(G), Counters(std::move(Counters)), RootEntryCount(RootEntryCount) {
+  }
 
   Expected<PGOCtxProfContext &>
   getOrEmplace(uint32_t Index, GlobalValue::GUID G,
@@ -114,6 +117,9 @@ public:
   GlobalValue::GUID guid() const { return GUID; }
   const SmallVectorImpl<uint64_t> &counters() const { return Counters; }
   SmallVectorImpl<uint64_t> &counters() { return Counters; }
+
+  bool isRoot() const { return RootEntryCount.has_value(); }
+  uint64_t getTotalRootEntryCount() const { return RootEntryCount.value(); }
 
   uint64_t getEntrycount() const {
     assert(!Counters.empty() &&
@@ -174,6 +180,7 @@ using CtxProfContextualProfiles =
     std::map<GlobalValue::GUID, PGOCtxProfContext>;
 struct PGOCtxProfile {
   CtxProfContextualProfiles Contexts;
+  CtxProfFlatProfile FlatProfiles;
 
   PGOCtxProfile() = default;
   PGOCtxProfile(const PGOCtxProfile &) = delete;
@@ -186,12 +193,18 @@ class PGOCtxProfileReader final {
   BitstreamCursor Cursor;
   Expected<BitstreamEntry> advance();
   Error readMetadata();
-  Error wrongValue(const Twine &);
-  Error unsupported(const Twine &);
+  Error wrongValue(const Twine &Msg);
+  Error unsupported(const Twine &Msg);
 
   Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
-  readContext(bool ExpectIndex);
-  bool canReadContext();
+  readProfile(PGOCtxProfileBlockIDs Kind);
+
+  bool tryGetNextKnownBlockID(PGOCtxProfileBlockIDs &ID);
+  bool canEnterBlockWithID(PGOCtxProfileBlockIDs ID);
+  Error enterBlockWithID(PGOCtxProfileBlockIDs ID);
+
+  Error loadContexts(CtxProfContextualProfiles &P);
+  Error loadFlatProfiles(CtxProfFlatProfile &P);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)
@@ -201,7 +214,6 @@ public:
   Expected<PGOCtxProfile> loadProfiles();
 };
 
-void convertCtxProfToYaml(raw_ostream &OS,
-                          const PGOCtxProfContext::CallTargetMapTy &);
+void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile);
 } // namespace llvm
 #endif

@@ -93,9 +93,9 @@ void VariablesRequestHandler::operator()(
   llvm::json::Array variables;
   const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
-      GetUnsigned(arguments, "variablesReference", 0);
-  const int64_t start = GetSigned(arguments, "start", 0);
-  const int64_t count = GetSigned(arguments, "count", 0);
+      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
+  const auto start = GetInteger<int64_t>(arguments, "start").value_or(0);
+  const auto count = GetInteger<int64_t>(arguments, "count").value_or(0);
   bool hex = false;
   const auto *format = arguments->getObject("format");
   if (format)

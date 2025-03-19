@@ -41,8 +41,8 @@ define i8 @popcount128(ptr nocapture nonnull readonly %0) {
 ; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    cnt v0.16b, v0.16b
 ; BE-NEXT:    addv b0, v0.16b
-; BE-NEXT:    rev32 v0.16b, v0.16b
-; BE-NEXT:    mov w0, v0.s[3]
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    mov w0, v0.s[1]
 ; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: popcount128:
@@ -138,10 +138,10 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; BE-NEXT:    cnt v1.16b, v1.16b
 ; BE-NEXT:    addv b0, v0.16b
 ; BE-NEXT:    addv b1, v1.16b
-; BE-NEXT:    rev32 v0.16b, v0.16b
-; BE-NEXT:    rev32 v1.16b, v1.16b
-; BE-NEXT:    mov w8, v0.s[3]
-; BE-NEXT:    mov w9, v1.s[3]
+; BE-NEXT:    rev64 v0.4s, v0.4s
+; BE-NEXT:    rev64 v1.4s, v1.4s
+; BE-NEXT:    mov w8, v0.s[1]
+; BE-NEXT:    mov w9, v1.s[1]
 ; BE-NEXT:    add w0, w9, w8
 ; BE-NEXT:    ret
 ;
@@ -227,22 +227,21 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; CHECK:       // %bb.0: // %Entry
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    mov v0.d[1], x1
+; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-NEXT:    addv b0, v0.16b
-; CHECK-NEXT:    mov x1, v0.d[1]
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: popcount1x128:
 ; BE:       // %bb.0: // %Entry
 ; BE-NEXT:    fmov d0, x0
+; BE-NEXT:    mov x0, xzr
 ; BE-NEXT:    mov v0.d[1], x1
 ; BE-NEXT:    rev64 v0.16b, v0.16b
 ; BE-NEXT:    cnt v0.16b, v0.16b
 ; BE-NEXT:    addv b0, v0.16b
-; BE-NEXT:    rev64 v0.16b, v0.16b
-; BE-NEXT:    mov x1, v0.d[1]
-; BE-NEXT:    fmov x0, d0
+; BE-NEXT:    fmov x1, d0
 ; BE-NEXT:    ret
 ;
 ; GISEL-LABEL: popcount1x128:

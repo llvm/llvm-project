@@ -101,7 +101,8 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   // storage due to no_unique_address, so infer the actual size from the total
   // size of the unique_ptr class. If sizeof(unique_ptr) == sizeof(void*) then
   // the deleter is empty and should be hidden.
-  if (tuple_sp->GetByteSize() > ptr_obj->GetByteSize()) {
+  if (llvm::expectedToOptional(tuple_sp->GetByteSize()).value_or(0) >
+      llvm::expectedToOptional(ptr_obj->GetByteSize()).value_or(0)) {
     ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
     if (del_obj)
       m_del_obj = del_obj->Clone(ConstString("deleter")).get();

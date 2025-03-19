@@ -91,6 +91,8 @@ class Parser : public CodeCompletionHandler {
 
   DiagnosticsEngine &Diags;
 
+  StackExhaustionHandler StackHandler;
+
   /// ScopeCache - Cache scopes to reduce malloc traffic.
   enum { ScopeCacheSize = 16 };
   unsigned NumCachedScopes;
@@ -518,7 +520,7 @@ public:
   typedef Sema::FullExprArg FullExprArg;
 
   /// A SmallVector of statements.
-  typedef SmallVector<Stmt *, 32> StmtVector;
+  typedef SmallVector<Stmt *, 24> StmtVector;
 
   // Parsing methods.
 
@@ -3783,8 +3785,9 @@ private:
   OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
                                                 bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
-  /// an ID expression.
-  ExprResult ParseOpenACCBindClauseArgument();
+  /// an identifier.
+  std::variant<std::monostate, StringLiteral *, IdentifierInfo *>
+  ParseOpenACCBindClauseArgument();
 
   /// A type to represent the state of parsing after an attempt to parse an
   /// OpenACC int-expr. This is useful to determine whether an int-expr list can
@@ -3841,6 +3844,8 @@ private:
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  clang::Parser::DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS);
   DeclGroupPtrTy ParseDeclarationAfterTemplate(
       DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,

@@ -6,7 +6,7 @@
     ret void
   }
 
-  attributes #0 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-no-agpr" }
+  attributes #0 = { "amdgpu-waves-per-eu"="8,8" "amdgpu-agpr-alloc"="0" }
 ...
 
 ---

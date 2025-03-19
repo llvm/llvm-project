@@ -175,6 +175,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 float4 acos(float4);
 
 //===----------------------------------------------------------------------===//
+// AddUint64 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T AddUint64(T a, T b)
+/// \brief Implements unsigned 64-bit integer addition using pairs of unsigned
+/// 32-bit integers.
+/// \param x [in] The first unsigned 32-bit integer pair(s)
+/// \param y [in] The second unsigned 32-bit integer pair(s)
+///
+/// This function takes one or two pairs (low, high) of unsigned 32-bit integer
+/// values and returns pairs (low, high) of unsigned 32-bit integer
+/// values representing the result of unsigned 64-bit integer addition.
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_adduint64)
+uint32_t2 AddUint64(uint32_t2, uint32_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_adduint64)
+uint32_t4 AddUint64(uint32_t4, uint32_t4);
+
+//===----------------------------------------------------------------------===//
 // all builtins
 //===----------------------------------------------------------------------===//
 
@@ -1217,40 +1238,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
 
 //===----------------------------------------------------------------------===//
-// fmod builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn T fmod(T x, T y)
-/// \brief Returns the linear interpolation of x to y.
-/// \param x [in] The dividend.
-/// \param y [in] The divisor.
-///
-/// Return the floating-point remainder of the x parameter divided by the y
-/// parameter.
-
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-half fmod(half, half);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-half2 fmod(half2, half2);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-half3 fmod(half3, half3);
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-half4 fmod(half4, half4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-float fmod(float, float);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-float2 fmod(float2, float2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-float3 fmod(float3, float3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_fmod)
-float4 fmod(float4, float4);
-
-//===----------------------------------------------------------------------===//
 // frac builtins
 //===----------------------------------------------------------------------===//
 
@@ -2101,6 +2088,41 @@ T select(bool, T, T);
 template <typename T, int Sz>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
+///                         vector<T,Sz> FalseVals)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVals The vector values are chosen from when conditions are
+/// false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, Sz> select(vector<bool, Sz>, T, vector<T, Sz>);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+///                         T FalseVal)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVals The vector values are chosen from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, T);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+///                         T FalseVal)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, Sz>> select(
+    vector<bool, Sz>, T, T);
 
 //===----------------------------------------------------------------------===//
 // sin builtins
