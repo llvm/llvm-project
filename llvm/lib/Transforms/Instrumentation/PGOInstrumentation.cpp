@@ -55,6 +55,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -337,6 +338,11 @@ static cl::opt<bool> PGOTreatUnknownAsCold(
 cl::opt<bool> PGOInstrumentColdFunctionOnly(
     "pgo-instrument-cold-function-only", cl::init(false), cl::Hidden,
     cl::desc("Enable cold function only instrumentation."));
+
+cl::list<std::string> CtxPGOSkipCallsiteInstrument(
+    "ctx-prof-skip-callsite-instr", cl::Hidden,
+    cl::desc("Do not instrument callsites to functions in this list. Intended "
+             "for testing."));
 
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
@@ -957,6 +963,10 @@ void FunctionInstrumenter::instrument() {
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
 
   if (IsCtxProf) {
+    StringSet<> SkipCSInstr;
+    SkipCSInstr.insert(CtxPGOSkipCallsiteInstrument.begin(),
+                       CtxPGOSkipCallsiteInstrument.end());
+
     auto *CSIntrinsic =
         Intrinsic::getOrInsertDeclaration(&M, Intrinsic::instrprof_callsite);
     // We want to count the instrumentable callsites, then instrument them. This
@@ -972,6 +982,9 @@ void FunctionInstrumenter::instrument() {
         for (auto &Instr : BB)
           if (auto *CS = dyn_cast<CallBase>(&Instr)) {
             if (!InstrProfCallsite::canInstrumentCallsite(*CS))
+              continue;
+            if (CS->getCalledFunction() &&
+                SkipCSInstr.contains(CS->getCalledFunction()->getName()))
               continue;
             Visitor(CS);
           }
