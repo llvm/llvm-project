@@ -752,10 +752,10 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #    include <__iterator/readable_traits.h>
 #    include <__iterator/sortable.h>
 #    include <__iterator/unreachable_sentinel.h>
-#endif
+#  endif
 
-#if _LIBCPP_STD_VER >= 23
-#  include <__iterator/const_iterator.h>
+#  if _LIBCPP_STD_VER >= 23
+#    include <__iterator/const_iterator.h>
 #  endif
 
 #  include <version>

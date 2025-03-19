@@ -56,9 +56,9 @@ struct __fn {
   using _UType = decltype(ranges::begin(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
-  operator()(_Rng&& __rng) noexcept(noexcept(const_iterator<_UType<_Rng>>(
-      ranges::begin(ranges::__possibly_const_range(__rng))))) -> const_iterator<_UType<_Rng>> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
+      noexcept(const_iterator<_UType<_Rng>>(ranges::begin(ranges::__possibly_const_range(__rng)))))
+      -> const_iterator<_UType<_Rng>> {
     return const_iterator<_UType<_Rng>>(ranges::begin(ranges::__possibly_const_range(__rng)));
   }
 #  else  // ^^^ _LIBCPP_STD_VER >= 23 / _LIBCPP_STD_VER < 23 vvv
@@ -103,9 +103,9 @@ struct __fn {
   using _UType = decltype(ranges::end(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
-  operator()(_Rng&& __rng) noexcept(noexcept(const_sentinel<_UType<_Rng>>(
-      ranges::end(ranges::__possibly_const_range(__rng))))) -> const_sentinel<_UType<_Rng>> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
+      noexcept(const_sentinel<_UType<_Rng>>(ranges::end(ranges::__possibly_const_range(__rng)))))
+      -> const_sentinel<_UType<_Rng>> {
     return const_sentinel<_UType<_Rng>>(ranges::end(ranges::__possibly_const_range(__rng)));
   }
 #  else // ^^^ _LIBCPP_STD_VER >= 23 / _LIBCPP_STD_VER < 23 vvv
@@ -119,8 +119,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::end(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::end(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
     return ranges::end(static_cast<const _Tp&&>(__t));
   }
 #  endif
@@ -149,9 +150,9 @@ struct __fn {
   using _UType = decltype(ranges::rbegin(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
-  operator()(_Rng&& __rng) noexcept(noexcept(const_iterator<_UType<_Rng>>(
-      ranges::rbegin(ranges::__possibly_const_range(__rng))))) -> const_iterator<_UType<_Rng>> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
+      noexcept(const_iterator<_UType<_Rng>>(ranges::rbegin(ranges::__possibly_const_range(__rng)))))
+      -> const_iterator<_UType<_Rng>> {
     return const_iterator<_UType<_Rng>>(ranges::rbegin(ranges::__possibly_const_range(__rng)));
   }
 #  else  // ^^^ _LIBCPP_STD_VER >= 23 / _LIBCPP_STD_VER < 23
@@ -188,9 +189,9 @@ struct __fn {
   using _UType = decltype(ranges::rend(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
   template <__const_accessible_range _Rng>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
-  operator()(_Rng&& __rng) noexcept(noexcept(const_sentinel<_UType<_Rng>>(
-      ranges::rend(ranges::__possibly_const_range(__rng))))) -> const_sentinel<_UType<_Rng>> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
+      noexcept(const_sentinel<_UType<_Rng>>(ranges::rend(ranges::__possibly_const_range(__rng)))))
+      -> const_sentinel<_UType<_Rng>> {
     return const_sentinel<_UType<_Rng>>(ranges::rend(ranges::__possibly_const_range(__rng)));
   }
 #  else  // ^^^ _LIBCPP_STD_VER >= 23 / _LIBCPP_STD_VER < 23 vvv
@@ -204,8 +205,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::rend(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::rend(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::rend(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::rend(static_cast<const _Tp&&>(__t))) {
     return ranges::rend(static_cast<const _Tp&&>(__t));
   }
 #  endif // ^^^ _LIBCPP_STD_VER < 23
@@ -246,8 +248,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::data(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::data(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::data(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::data(static_cast<const _Tp&&>(__t))) {
     return ranges::data(static_cast<const _Tp&&>(__t));
   }
 #  endif // ^^^ _LIBCPP_STD_VER < 23

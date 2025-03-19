@@ -163,7 +163,7 @@ template<class R>
 #  include <__fwd/span.h>
 #  include <__iterator/bounded_iter.h>
 #  include <__iterator/concepts.h>
-#include <__iterator/const_iterator.h>
+#  include <__iterator/const_iterator.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/reverse_iterator.h>
 #  include <__iterator/wrap_iter.h>
@@ -179,7 +179,7 @@ template<class R>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_integral.h>
 #  include <__type_traits/is_same.h>
-#include <__type_traits/is_volatile.h>
+#  include <__type_traits/is_volatile.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
@@ -254,10 +254,10 @@ public:
   using iterator = __wrap_iter<pointer>;
 #    endif
   using reverse_iterator = std::reverse_iterator<iterator>;
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   using const_iterator         = std::const_iterator<iterator>;
   using const_reverse_iterator = std::const_iterator<reverse_iterator>;
-#  endif // _LIBCPP_STD_VER >= 23
+#    endif // _LIBCPP_STD_VER >= 23
 
   static constexpr size_type extent = _Extent;
 
@@ -344,8 +344,8 @@ public:
   }
 
   template <size_t _Offset, size_t _Count = dynamic_extent>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  subspan() const noexcept -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto subspan() const noexcept
+      -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
     static_assert(_Offset <= _Extent, "span<T, N>::subspan<Offset, Count>(): Offset out of range");
     static_assert(_Count == dynamic_extent || _Count <= _Extent - _Offset,
                   "span<T, N>::subspan<Offset, Count>(): Offset + Count out of range");
@@ -408,7 +408,7 @@ public:
     return iterator(data() + size());
 #    endif
   }
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cbegin() const noexcept
     requires(!is_volatile_v<_Tp>)
   {
@@ -419,11 +419,11 @@ public:
   {
     return end();
   }
-#  endif // _LIBCPP_STD_VER >= 23
+#    endif // _LIBCPP_STD_VER >= 23
 
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr const_reverse_iterator crbegin() const noexcept
     requires(!is_volatile_v<_Tp>)
   {
@@ -434,7 +434,7 @@ public:
   {
     return rend();
   }
-#  endif // _LIBCPP_STD_VER >= 23
+#    endif // _LIBCPP_STD_VER >= 23
 
   _LIBCPP_HIDE_FROM_ABI span<const byte, _Extent * sizeof(element_type)> __as_bytes() const noexcept {
     return span<const byte, _Extent * sizeof(element_type)>{reinterpret_cast<const byte*>(data()), size_bytes()};
@@ -466,10 +466,10 @@ public:
   using iterator = __wrap_iter<pointer>;
 #    endif
   using reverse_iterator = std::reverse_iterator<iterator>;
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   using const_iterator         = std::const_iterator<iterator>;
   using const_reverse_iterator = std::const_iterator<reverse_iterator>;
-#  endif
+#    endif
 
   static constexpr size_type extent = dynamic_extent;
 
@@ -602,7 +602,7 @@ public:
     return iterator(data() + size());
 #    endif
   }
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cbegin() const noexcept
     requires(!is_volatile_v<_Tp>)
   {
@@ -613,11 +613,11 @@ public:
   {
     return end();
   }
-#  endif
+#    endif
 
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
-#  if _LIBCPP_STD_VER >= 23
+#    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr const_reverse_iterator crbegin() const noexcept
     requires(!is_volatile_v<_Tp>)
   {
@@ -628,7 +628,7 @@ public:
   {
     return rend();
   }
-#  endif
+#    endif
 
   _LIBCPP_HIDE_FROM_ABI span<const byte, dynamic_extent> __as_bytes() const noexcept {
     return {reinterpret_cast<const byte*>(data()), size_bytes()};
