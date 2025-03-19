@@ -36,56 +36,9 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE_ADV(DynamicLoaderPOSIXDYLD, DynamicLoaderPosixDYLD)
 
-namespace {
-
-#define LLDB_PROPERTIES_dynamicloaderposixdyld
-#include "DynamicLoaderPOSIXDYLDProperties.inc"
-
-enum {
-#define LLDB_PROPERTIES_dynamicloaderposixdyld
-#include "DynamicLoaderPOSIXDYLDPropertiesEnum.inc"
-};
-
-class PluginProperties : public Properties {
-public:
-  static llvm::StringRef GetSettingName() {
-    return DynamicLoaderPOSIXDYLD::GetPluginNameStatic();
-  }
-
-  PluginProperties() : Properties() {
-    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_dynamicloaderposixdyld_properties);
-  }
-
-  ~PluginProperties() override = default;
-
-  bool GetParallelModuleLoad() const {
-    const uint32_t idx = ePropertyParallelModuleLoad;
-    return GetPropertyAtIndexAs<bool>(idx, true);
-  }
-};
-
-} // namespace
-
-static PluginProperties &GetGlobalPluginProperties() {
-  static PluginProperties g_settings;
-  return g_settings;
-}
-
 void DynamicLoaderPOSIXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance,
-                                &DebuggerInitialize);
-}
-
-void DynamicLoaderPOSIXDYLD::DebuggerInitialize(Debugger &debugger) {
-  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
-          debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForDynamicLoaderPlugin(
-        debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the POSIX dynamic loader plug-in.", is_global_setting);
-  }
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 void DynamicLoaderPOSIXDYLD::Terminate() {}
@@ -540,10 +493,7 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           new_modules.Append(module_sp);
         };
 
-    // Loading modules in parallel tends to be faster, but is still unstable.
-    // Once it's stable, we can remove this setting and remove the serial
-    // approach.
-    if (GetGlobalPluginProperties().GetParallelModuleLoad()) {
+    if (m_process->GetTarget().GetParallelModuleLoad()) {
       llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
       for (; I != E; ++I)
         task_group.async(load_module_fn, *I);
@@ -763,7 +713,7 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
           so_entry.base_addr);
     }
   };
-  if (GetGlobalPluginProperties().GetParallelModuleLoad()) {
+  if (m_process->GetTarget().GetParallelModuleLoad()) {
     llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
     for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
       task_group.async(load_module_fn, *I);
