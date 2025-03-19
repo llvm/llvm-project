@@ -406,6 +406,27 @@ The RTS0 part comprises three data structures: ``RootSignatureHeader``,
 in the following sections. All ``RootParameters`` will be serialized following 
 the order they were defined in the metadata representation.
 
+The table bellow sumarizes the data being serialized as well as it's size. The 
+details of it part will be discussed in further details on the next sections 
+of this document.
+
+======================== =========================================== =============================
+Part Name                Size In Bytes                                 Maximum number of Instances 
+======================== =========================================== =============================
+Root Signature Header    24                                          1               
+Root Parameter Headers   12                                          Many              
+Root Parameter           ================================ ===        Many
+                         Root Constants                   12                                      
+                         Root Descriptor Version 1.0      08                                      
+                         Root Descriptor Version 1.1      12                                      
+                         Descriptors Tables Version 1.0   20                                     
+                         Descriptors Tables Version 1.1   24                                      
+                         ================================ ===       
+                                             
+Static Samplers          52                                          Many              
+======================== =========================================== =============================
+
+
 Root Signature Header
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -430,9 +451,11 @@ Root Parameters
 Root parameters define how resources are bound to the shader pipeline, each 
 type having different size and fields. 
 
-Each slot of root parameters is preceded by 12 bytes, three 32 bit values, 
-representing the parameter type, a flag encoding the pipeline stages where 
-the data is visible, and an offset calculated from the start of RTS0 section.
+The slot of root parameters is preceded by a variable size section containing 
+the header information for such parameters. Such structure is 12 bytes long, 
+composed of three 32 bit values, representing the parameter type, a flag 
+encoding the pipeline stages where the data is visible, and an offset 
+calculated from the start of RTS0 section.
 
 .. code-block:: c
 
@@ -441,6 +464,10 @@ the data is visible, and an offset calculated from the start of RTS0 section.
      uint32_t ShaderVisibility;
      uint32_t ParameterOffset;
    };
+
+After the header information has been serialized, the actual data for each of the
+root parameters is layout in a single continous blob. The parameters can be fetch 
+from such using the offset information, present in the header.
 
 The following sections will describe each of the root parameters types and their 
 encodings.
