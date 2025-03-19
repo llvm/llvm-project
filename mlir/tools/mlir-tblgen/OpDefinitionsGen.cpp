@@ -3754,15 +3754,6 @@ void OpEmitter::genTypeInterfaceMethods() {
   body << "  " << op.getCppClassName()
        << "::Adaptor adaptor(operands, attributes, properties, regions);\n";
 
-  // TODO: Ideally, we should be doing some sort of verification here. This
-  // is however problemetic due to 2 reasons:
-  //
-  // 1. Adaptor::verify only verifies attributes. It really should verify
-  //    if the number of given attributes is right too.
-  // 2. PDL passes empty properties to inferReturnTypes, which does not verify.
-  //    Without properties, it's not really possible to verify the number of
-  //    operands as we do not know the variadic operand segment sizes.
-
   // Process the type inference graph in topological order, starting from
   // types that are always fully-inferred: operands and results with
   // constructible types. The type inference graph here will always be a
