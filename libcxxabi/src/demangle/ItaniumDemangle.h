@@ -4626,10 +4626,10 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       //   <template-template-param> ::= <template-param>
       //                             ::= <substitution>
       //
-      // If this is followed by some <template-args>, and we're permitted to
-      // parse them, take the second production.
+      // If this is followed by some <template-args>, take the second
+      // production.
 
-      if (look() == 'I' && (!IsSubst || TryToParseTemplateArgs)) {
+      if (look() == 'I') {
         if (!IsSubst)
           Subs.push_back(Result);
         Node *TA = getDerived().parseTemplateArgs();
