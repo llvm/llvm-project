@@ -1486,7 +1486,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     auto IsExtInst = [](const Value *V) -> bool {
       return isa<ZExtInst>(V) || isa<SExtInst>(V);
     };
-    auto IsExtensionFromHalf = [&, IsExtInst](const Value *V) -> bool {
+    auto IsExtensionFromHalf = [](const Value *V) -> bool {
       return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
     };
 
