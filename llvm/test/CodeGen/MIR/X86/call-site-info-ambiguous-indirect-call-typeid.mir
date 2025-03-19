@@ -1,54 +1,20 @@
 # Test MIR printer and parser for type id field in callSites. It is used
-# for propogating call site type identifiers to emit in the call graph section.
+# for propagating call site type identifiers to emit in the call graph section.
 
 # RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
 # CHECK: name: main
 # CHECK: callSites:
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
-# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
+# CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], calleeTypeId:
 # CHECK-NEXT: 1234567890 }
 
 --- |  
-  define dso_local noundef i32 @_Z3addii(i32 noundef %a, i32 noundef %b) !type !0 !type !0 {
-  entry:
-    %a.addr = alloca i32, align 4
-    %b.addr = alloca i32, align 4
-    store i32 %a, ptr %a.addr, align 4
-    store i32 %b, ptr %b.addr, align 4
-    %a_val = load i32, ptr %a.addr, align 4
-    %b_val = load i32, ptr %b.addr, align 4
-    %add = add nsw i32 %a_val, %b_val
-    ret i32 %add
-  }
   
-  define dso_local noundef i32 @_Z8multiplyii(i32 noundef %a, i32 noundef %b) !type !0 !type !0 {
-  entry:
-    %a.addr = alloca i32, align 4
-    %b.addr = alloca i32, align 4
-    store i32 %a, ptr %a.addr, align 4
-    store i32 %b, ptr %b.addr, align 4
-    %a_val = load i32, ptr %a.addr, align 4
-    %b_val = load i32, ptr %b.addr, align 4
-    %mul = mul nsw i32 %a_val, %b_val
-    ret i32 %mul
-  }
+  declare !type !0 noundef i32 @_Z3addii(i32 noundef, i32 noundef)
+
+  declare !type !0 noundef i32 @_Z8multiplyii(i32 noundef, i32 noundef)
   
-  define dso_local noundef ptr @_Z13get_operationb(i1 noundef zeroext %is_addition) !type !1 !type !1 {
-  entry:
-    %is_addition.addr = alloca i8, align 1
-    %storedv = zext i1 %is_addition to i8
-    store i8 %storedv, ptr %is_addition.addr, align 1
-    %is_addition_val = load i8, ptr %is_addition.addr, align 1
-    %loadedv = trunc i8 %is_addition_val to i1
-    br i1 %loadedv, label %cond.end, label %cond.false
-  
-  cond.false:                                       ; preds = %entry
-    br label %cond.end
-  
-  cond.end:                                         ; preds = %cond.false, %entry
-    %cond = phi ptr [ @_Z8multiplyii, %cond.false ], [ @_Z3addii, %entry ]
-    ret ptr %cond
-  }
+  declare !type !1 noundef ptr @_Z13get_operationb(i1 noundef zeroext %is_addition)
   
   define dso_local noundef i32 @main(i32 noundef %argc) !type !2 !type !2 {
   entry:
@@ -82,7 +48,7 @@
 name:            main
 callSites:
   - { bb: 0, offset: 0, fwdArgRegs: [] }
-  - { bb: 0, offset: 2, fwdArgRegs: [], typeId: 
+  - { bb: 0, offset: 2, fwdArgRegs: [], calleeTypeId: 
     1234567890 }
 body:             |
   bb.0.entry:
