@@ -14,7 +14,6 @@
 ; RUN: rm -f %t; opt < %s -disable-output -passes='default<O2>' -time-passes -info-output-file=%t
 ; RUN:   cat %t | FileCheck %s --check-prefix=TIME
 ;
-
 ; TIME: Analysis execution timing report
 ; TIME: Total Execution Time:
 ; TIME: Name
@@ -63,7 +62,6 @@
 ; TIME-PER-PASS-NOT:   LoopSimplifyPass #
 ; TIME-PER-PASS-NOT:   VerifierPass #
 ; TIME: Total{{$}}
-
 
 define i32 @foo() {
   %res = add i32 5, 4
