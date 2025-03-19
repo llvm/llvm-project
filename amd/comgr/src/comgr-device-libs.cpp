@@ -66,7 +66,9 @@ amd_comgr_status_t addObject(DataSet *DataSet, amd_comgr_data_kind_t Kind,
 #include "opencl2.0-c.inc"
 } // namespace
 
-ArrayRef<unsigned char> getDeviceLibrariesIdentifier() { return DEVICE_LIBS_ID; }
+ArrayRef<unsigned char> getDeviceLibrariesIdentifier() {
+  return DEVICE_LIBS_ID;
+}
 
 amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
                                          DataSet *ResultSet) {
