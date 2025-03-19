@@ -2823,7 +2823,7 @@ def int_amdgcn_image_bvh_dual_intersect_ray :
   Intrinsic<[llvm_v10i32_ty, llvm_v3f32_ty, llvm_v3f32_ty],
             [llvm_i64_ty, llvm_float_ty, llvm_i8_ty, llvm_v3f32_ty,
              llvm_v3f32_ty, llvm_v2i32_ty, llvm_v4i32_ty],
-            [IntrReadMem, IntrWillReturn]>;
+            [IntrReadMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // <vdata>, <ray_origin>, <ray_dir>
 //   llvm.amdgcn.image.bvh8.intersect.ray <node_ptr>, <ray_extent>,
