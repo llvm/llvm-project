@@ -744,9 +744,9 @@ Error RISCVISAInfo::checkDependency() {
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},  {"xqciac"},  {"xqcibm"},  {"xqcicli"}, {"xqcicm"},
-      {"xqcics"}, {"xqcicsr"}, {"xqciint"}, {"xqcili"},  {"xqcilia"},
-      {"xqcilo"}, {"xqcilsm"}, {"xqcisls"}};
+      {"xqcia"},   {"xqciac"}, {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
+      {"xqcicm"},  {"xqcics"}, {"xqcicsr"}, {"xqciint"}, {"xqcili"},
+      {"xqcilia"}, {"xqcilo"}, {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
@@ -847,10 +847,11 @@ void RISCVISAInfo::updateImplication() {
     std::for_each(Range.first, Range.second,
                   [&](const ImpliedExtsEntry &Implied) {
                     const char *ImpliedExt = Implied.ImpliedExt;
-                    if (Exts.count(ImpliedExt))
+                    auto [It, Inserted] = Exts.try_emplace(ImpliedExt);
+                    if (!Inserted)
                       return;
                     auto Version = findDefaultVersion(ImpliedExt);
-                    Exts[ImpliedExt] = *Version;
+                    It->second = *Version;
                     WorkList.push_back(ImpliedExt);
                   });
   }

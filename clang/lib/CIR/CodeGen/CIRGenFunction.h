@@ -73,6 +73,9 @@ public:
     return &fn.getRegion().front();
   }
 
+  /// Sanitizers enabled for this function.
+  clang::SanitizerSet sanOpts;
+
   mlir::Type convertTypeForMem(QualType T);
 
   mlir::Type convertType(clang::QualType T);
@@ -105,6 +108,8 @@ private:
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment);
+
+  mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
 private:
   // Track current variable initialization (if there's one)
@@ -206,6 +211,7 @@ public:
                       LValue lvalue, bool capturedByInit = false);
 
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+  LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
@@ -304,6 +310,9 @@ public:
     LocalDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
+
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                      bool isInc, bool isPre);
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
