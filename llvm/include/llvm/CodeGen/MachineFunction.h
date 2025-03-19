@@ -498,7 +498,7 @@ public:
     SmallVector<ArgRegPair, 1> ArgRegPairs;
 
     /// Callee type id.
-    ConstantInt *TypeId = nullptr;
+    ConstantInt *CalleeTypeId = nullptr;
   };
 
   struct CalledGlobalInfo {
