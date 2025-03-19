@@ -2250,10 +2250,8 @@ protected:
                     FastMathFlags FMFs, Instruction *I,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, DebugLoc DL)
-      : VPRecipeWithIRFlags(
-            SC, Operands,
-            isa_and_nonnull<FPMathOperator>(I) ? FMFs : FastMathFlags(), DL),
-        RdxKind(RdxKind), IsOrdered(IsOrdered) {
+      : VPRecipeWithIRFlags(SC, Operands, FMFs, DL), RdxKind(RdxKind),
+        IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
