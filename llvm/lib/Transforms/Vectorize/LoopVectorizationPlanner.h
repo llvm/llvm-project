@@ -494,8 +494,10 @@ protected:
 private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End.
-  VPlanPtr buildVPlan(VFRange &Range);
+  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
+  /// the input range, set the largest included VF to the maximum VF for which
+  /// no plan could be built.
+  VPlanPtr tryToBuildVPlan(VFRange &Range);
 
   /// Build a VPlan using VPRecipes according to the information gather by
   /// Legal. This method is only used for the legacy inner loop vectorizer.
