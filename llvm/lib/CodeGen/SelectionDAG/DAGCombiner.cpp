@@ -12131,8 +12131,8 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
   if (IndexIsScaled)
     return false;
 
-  if (!isNullConstant(BasePtr) && !Index.hasOneUse())
-    return false;
+  //  if (!isNullConstant(BasePtr) && !Index.hasOneUse())
+  //    return false;
 
   EVT VT = BasePtr.getValueType();
 
