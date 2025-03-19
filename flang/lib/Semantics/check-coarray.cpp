@@ -97,11 +97,15 @@ private:
 };
 
 template <typename T>
-static void CheckTeamType(SemanticsContext &context, const T &x) {
+static void CheckTeamType(
+    SemanticsContext &context, const T &x, bool mustBeVariable = false) {
   if (const auto *expr{GetExpr(context, x)}) {
     if (!IsTeamType(evaluate::GetDerivedTypeSpec(expr->GetType()))) {
       context.Say(parser::FindSourceLocation(x), // C1114
           "Team value must be of type TEAM_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else if (mustBeVariable && !IsVariable(*expr)) {
+      context.Say(parser::FindSourceLocation(x),
+          "Team must be a variable in this context"_err_en_US);
     }
   }
 }
@@ -389,7 +393,15 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
 }
 
 void CoarrayChecker::Leave(const parser::FormTeamStmt &x) {
-  CheckTeamType(context_, std::get<parser::TeamVariable>(x.t));
+  CheckTeamType(
+      context_, std::get<parser::TeamVariable>(x.t), /*mustBeVariable=*/true);
+  for (const auto &spec :
+      std::get<std::list<parser::FormTeamStmt::FormTeamSpec>>(x.t)) {
+    if (const auto *statOrErrmsg{std::get_if<parser::StatOrErrmsg>(&spec.u)}) {
+      CheckCoindexedStatOrErrmsg(
+          context_, *statOrErrmsg, "form-team-spec-list");
+    }
+  }
 }
 
 void CoarrayChecker::Enter(const parser::CriticalConstruct &x) {
