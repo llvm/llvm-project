@@ -1915,7 +1915,9 @@ void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
 }
 
 void ArrayConstructorContext::Add(const parser::Expr &expr) {
-  auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer1{
+      exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer2{exprAnalyzer_.AllowWholeAssumedSizeArray(false)};
   Push(exprAnalyzer_.Analyze(expr));
 }
 
