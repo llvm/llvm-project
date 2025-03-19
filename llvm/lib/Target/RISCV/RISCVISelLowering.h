@@ -1073,8 +1073,8 @@ private:
   /// Disables storing and loading vectors by default when there are function
   /// calls between the load and store, since these are more expensive than just
   /// using scalars
-  bool shouldMergeStoreOfLoadsOverCall(EVT VT) const override {
-    return VT.isScalarInteger();
+  bool shouldMergeStoreOfLoadsOverCall(EVT SrcVT, EVT MergedVT) const override {
+    return SrcVT.isScalarInteger() == MergedVT.isScalarInteger();
   }
 
   /// For available scheduling models FDIV + two independent FMULs are much

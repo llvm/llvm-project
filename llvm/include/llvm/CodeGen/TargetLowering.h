@@ -3522,7 +3522,7 @@ public:
 
   /// Returns true if it's profitable to allow merging store of loads when there
   /// are functions calls between the load and the store.
-  virtual bool shouldMergeStoreOfLoadsOverCall(EVT) const { return true; }
+  virtual bool shouldMergeStoreOfLoadsOverCall(EVT, EVT) const { return true; }
 
   //===----------------------------------------------------------------------===//
   //  GlobalISel Hooks

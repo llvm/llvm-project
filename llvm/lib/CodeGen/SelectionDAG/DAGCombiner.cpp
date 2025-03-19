@@ -21647,7 +21647,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     }
 
     // Check if there is a call in the load/store chain.
-    if (!TLI.shouldMergeStoreOfLoadsOverCall(JointMemOpVT) &&
+    if (!TLI.shouldMergeStoreOfLoadsOverCall(MemVT, JointMemOpVT) &&
         hasCallInLdStChain(StoreNodes, LoadNodes, NumElem)) {
       StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
       LoadNodes.erase(LoadNodes.begin(), LoadNodes.begin() + NumElem);
