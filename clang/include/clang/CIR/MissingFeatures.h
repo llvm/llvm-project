@@ -89,6 +89,7 @@ struct MissingFeatures {
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
+  static bool generateDebugInfo() { return false; }
 
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
