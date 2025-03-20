@@ -58,15 +58,16 @@ static void fixI8TruncUseChain(Instruction &I,
     if (Trunc->getDestTy()->isIntegerTy(8)) {
       ReplacedValues[Trunc] = Trunc->getOperand(0);
       ToRemove.push_back(Trunc);
+      return;
     }
   }
-  Value *NewInst = nullptr;
+
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
     if (!I.getType()->isIntegerTy(8))
       return;
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
-    NewInst =
+    Value *NewInst =
         Builder.CreateBinOp(BO->getOpcode(), NewOperands[0], NewOperands[1]);
     if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
       if (OBO->hasNoSignedWrap())
@@ -74,6 +75,9 @@ static void fixI8TruncUseChain(Instruction &I,
       if (OBO->hasNoUnsignedWrap())
         cast<BinaryOperator>(NewInst)->setHasNoUnsignedWrap();
     }
+    ReplacedValues[BO] = NewInst;
+    ToRemove.push_back(BO);
+    return;
   }
 
   if (auto *Cmp = dyn_cast<CmpInst>(&I)) {
@@ -81,13 +85,11 @@ static void fixI8TruncUseChain(Instruction &I,
       return;
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
-    NewInst =
+    Value *NewInst =
         Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0], NewOperands[1]);
     Cmp->replaceAllUsesWith(NewInst);
-  }
-  if (NewInst) {
-    ReplacedValues[&I] = NewInst;
-    ToRemove.push_back(&I);
+    ReplacedValues[Cmp] = NewInst;
+    ToRemove.push_back(Cmp);
     return;
   }
 
