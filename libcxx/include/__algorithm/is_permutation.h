@@ -120,7 +120,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
 template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _ForwardIterator2, class _BinaryPredicate>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
     _ForwardIterator1 __first1, _Sentinel1 __last1, _ForwardIterator2 __first2, _BinaryPredicate&& __pred) {
-  // Shorten sequences as much as possible by lopping of any equal prefix.
+  // Shorten sequences as much as possible by lopping off any equal prefix.
   auto __result = std::mismatch(__first1, __last1, __first2, std::ref(__pred));
   __first1      = __result.first;
   __first2      = __result.second;
@@ -163,7 +163,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
     _Proj1&& __proj1,
     _Proj2&& __proj2,
     /*_ConstTimeDistance=*/false_type) {
-  // Shorten sequences as much as possible by lopping of any equal prefix.
+  // Shorten sequences as much as possible by lopping off any equal prefix.
   while (__first1 != __last1 && __first2 != __last2) {
     if (!std::__invoke(__pred, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
       break;
