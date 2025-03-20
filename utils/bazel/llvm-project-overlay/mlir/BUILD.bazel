@@ -4466,7 +4466,6 @@ cc_library(
         ":TosaToTensor",
         ":UBToLLVM",
         ":UBToSPIRV",
-        ":VectorToAMDGPU",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -12186,27 +12185,6 @@ cc_library(
         ":VectorTransforms",
         ":X86VectorDialect",
         ":X86VectorTransforms",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "VectorToAMDGPU",
-    srcs = glob([
-        "lib/Conversion/VectorToAMDGPU/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/mlir/Conversion/VectorToAMDGPU/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":AMDGPUDialect",
-        ":VectorDialect",
-        ":ConversionPassIncGen",
-        ":IR",
-        ":MemRefDialect",
-        ":Pass",
-        ":TransformUtils",
         "//llvm:Support",
     ],
 )

@@ -1,4 +1,4 @@
-//===- VectorToAMDGPU.cpp - Vector to AMDGPU dialect conversion ---------===//
+//===- TransferReadToLoad.cpp - Lowers masked transfer read to load -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/VectorToAMDGPU/VectorToAMDGPU.h"
+#include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -17,12 +17,13 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOAMDGPUPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
+namespace mlir::amdgpu {
+#define GEN_PASS_DEF_AMDGPUTRANSFERREADTOLOADPASS
+#include "mlir/Dialect/AMDGPU/Transforms/Passes.h.inc"
+} // namespace mlir::amdgpu
 
 using namespace mlir;
+using namespace mlir::amdgpu;
 
 /// This pattern supports lowering of:
 /// `vector.transfer_read` to a combination of `vector.load`, `arith.select` and
@@ -55,8 +56,11 @@ static LogicalResult transferPreconditions(
     return rewriter.notifyMatchFailure(xferOp, "not a memref source");
 
   Attribute addrSpace = memRefType.getMemorySpace();
-  if (!addrSpace || dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
-                        amdgpu::AddressSpace::FatRawBuffer)
+  if (!addrSpace || !dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace))
+    return rewriter.notifyMatchFailure(xferOp, "no address space");
+
+  if (dyn_cast<amdgpu::AddressSpaceAttr>(addrSpace).getValue() !=
+      amdgpu::AddressSpace::FatRawBuffer)
     return rewriter.notifyMatchFailure(xferOp, "not in buffer address space");
 
   // Non-unit strides are handled by VectorToSCF.
@@ -134,16 +138,17 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
 } // namespace
 
-void mlir::populateVectorToAMDGPUConversionPatterns(
+void mlir::amdgpu::populateAmdgpuTransferReadToLoadPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering>(patterns.getContext());
 }
 
-struct ConvertVectorToAMDGPUPass final
-    : impl::ConvertVectorToAMDGPUPassBase<ConvertVectorToAMDGPUPass> {
+struct AmdgpuTransferReadToLoadPass final
+    : amdgpu::impl::AmdgpuTransferReadToLoadPassBase<
+          AmdgpuTransferReadToLoadPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorToAMDGPUConversionPatterns(patterns);
+    populateAmdgpuTransferReadToLoadPatterns(patterns);
     walkAndApplyPatterns(getOperation(), std::move(patterns));
   }
 };
