@@ -114,12 +114,7 @@ public:
 
   // FIXME: This enumeration of checker parts is extremely similar to the
   // ErrorKind enum. It would be nice to unify them to simplify the code.
-  // FIXME: The modeling checker NullabilityBase is a dummy "empty checker
-  // part" that registers this checker class without enabling any of the real
-  // checker parts. As far as I understand no other checker references it, so
-  // it should be removed.
   enum : CheckerPartIdx {
-    NullabilityBase,
     NullPassedToNonnullChecker,
     NullReturnedFromNonnullChecker,
     NullableDereferencedChecker,
@@ -130,10 +125,7 @@ public:
 
   // FIXME: Currently the `Description` fields of these `BugType`s are all
   // identical ("Nullability") -- they should be more descriptive than this.
-  // NOTE: NullabilityBase is a dummy checker part that does nothing, so its
-  // bug type is left empty.
   BugType BugTypes[NumCheckerParts] = {
-      {this, NullabilityBase, "", ""},
       {this, NullPassedToNonnullChecker, "Nullability",
        categories::MemoryError},
       {this, NullReturnedFromNonnullChecker, "Nullability",
@@ -1412,25 +1404,27 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
 }
 
 #define REGISTER_CHECKER(Part, TrackingRequired)                               \
-  void ento::register##Part(CheckerManager &Mgr) {                             \
-    auto *Checker =                                                            \
-        Mgr.registerChecker<NullabilityChecker, NullabilityChecker::Part>();   \
+  void ento::register##Part##Checker(CheckerManager &Mgr) {                    \
+    auto *Checker = Mgr.registerChecker<NullabilityChecker,                    \
+                                        NullabilityChecker::Part##Checker>();  \
     Checker->NeedTracking = Checker->NeedTracking || TrackingRequired;         \
     Checker->NoDiagnoseCallsToSystemHeaders =                                  \
         Checker->NoDiagnoseCallsToSystemHeaders ||                             \
         Mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-            Checker, "NoDiagnoseCallsToSystemHeaders", true);                  \
+            Mgr.getCurrentCheckerName(), "NoDiagnoseCallsToSystemHeaders",     \
+            true);                                                             \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##Part(const CheckerManager &) { return true; }
+  bool ento::shouldRegister##Part##Checker(const CheckerManager &) {           \
+    return true;                                                               \
+  }
 
 // These checker parts are likely to be turned on by default and they don't
 // need the tracking of nullability related information. As an optimization
 // nullability information won't be tracked when the rest are disabled.
-REGISTER_CHECKER(NullabilityBase, false)
-REGISTER_CHECKER(NullPassedToNonnullChecker, false)
-REGISTER_CHECKER(NullReturnedFromNonnullChecker, false)
+REGISTER_CHECKER(NullPassedToNonnull, false)
+REGISTER_CHECKER(NullReturnedFromNonnull, false)
 
-REGISTER_CHECKER(NullableDereferencedChecker, true)
-REGISTER_CHECKER(NullablePassedToNonnullChecker, true)
-REGISTER_CHECKER(NullableReturnedFromNonnullChecker, true)
+REGISTER_CHECKER(NullableDereferenced, true)
+REGISTER_CHECKER(NullablePassedToNonnull, true)
+REGISTER_CHECKER(NullableReturnedFromNonnull, true)
