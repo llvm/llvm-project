@@ -671,8 +671,8 @@ void GotSection::addEntry(const Symbol &sym, bool authEntry) {
   std::optional<uint32_t> finalGotIdx;
   if (d && !d->isPreemptible && ctx.arg.icf != ICFLevel::None) {
     // There may be symbols that have been ICFed in which case d->section
-    // points to their canonical section and d->value is offset in to that section.
-    // We add only a single GOT entry for all such symbols.
+    // points to their canonical section and d->value is offset in to that
+    // section. We add only a single GOT entry for all such symbols.
     auto [it, inserted] = gotEntries.insert(std::make_pair(
         std::make_tuple(d->section, d->value, sym.type), numEntries));
     if (!inserted) {
