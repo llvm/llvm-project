@@ -219,8 +219,8 @@ bool isQualificationConvertiblePointer(QualType From, QualType To,
 
     if (P1->isMemberPointerType())
       return P2->isMemberPointerType() &&
-             P1->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl() ==
-                 P2->getAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
+             P1->getAs<MemberPointerType>()->getClass() ==
+                 P2->getAs<MemberPointerType>()->getClass();
 
     if (P1->isConstantArrayType())
       return P2->isConstantArrayType() &&
