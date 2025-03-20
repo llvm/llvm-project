@@ -856,7 +856,7 @@ private:
 public:
   /// Coerce the register to GPR32 and return the real register for the current
   /// target.
-  unsigned getGPR32Reg() const {
+  MCRegister getGPR32Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_GPR) && "Invalid access!");
     AsmParser.warnIfRegIndexIsAT(RegIdx.Index, StartLoc);
     unsigned ClassID = Mips::GPR32RegClassID;
@@ -865,7 +865,7 @@ public:
 
   /// Coerce the register to GPR32 and return the real register for the current
   /// target.
-  unsigned getGPRMM16Reg() const {
+  MCRegister getGPRMM16Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_GPR) && "Invalid access!");
     unsigned ClassID = Mips::GPR32RegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -873,7 +873,7 @@ public:
 
   /// Coerce the register to GPR64 and return the real register for the current
   /// target.
-  unsigned getGPR64Reg() const {
+  MCRegister getGPR64Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_GPR) && "Invalid access!");
     unsigned ClassID = Mips::GPR64RegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -882,7 +882,7 @@ public:
 private:
   /// Coerce the register to AFGR64 and return the real register for the current
   /// target.
-  unsigned getAFGR64Reg() const {
+  MCRegister getAFGR64Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_FGR) && "Invalid access!");
     if (RegIdx.Index % 2 != 0)
       AsmParser.Warning(StartLoc, "Float register should be even.");
@@ -892,7 +892,7 @@ private:
 
   /// Coerce the register to FGR64 and return the real register for the current
   /// target.
-  unsigned getFGR64Reg() const {
+  MCRegister getFGR64Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_FGR) && "Invalid access!");
     return RegIdx.RegInfo->getRegClass(Mips::FGR64RegClassID)
         .getRegister(RegIdx.Index);
@@ -900,7 +900,7 @@ private:
 
   /// Coerce the register to FGR32 and return the real register for the current
   /// target.
-  unsigned getFGR32Reg() const {
+  MCRegister getFGR32Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_FGR) && "Invalid access!");
     return RegIdx.RegInfo->getRegClass(Mips::FGR32RegClassID)
         .getRegister(RegIdx.Index);
@@ -908,7 +908,7 @@ private:
 
   /// Coerce the register to FCC and return the real register for the current
   /// target.
-  unsigned getFCCReg() const {
+  MCRegister getFCCReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_FCC) && "Invalid access!");
     return RegIdx.RegInfo->getRegClass(Mips::FCCRegClassID)
         .getRegister(RegIdx.Index);
@@ -916,7 +916,7 @@ private:
 
   /// Coerce the register to MSA128 and return the real register for the current
   /// target.
-  unsigned getMSA128Reg() const {
+  MCRegister getMSA128Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_MSA128) && "Invalid access!");
     // It doesn't matter which of the MSA128[BHWD] classes we use. They are all
     // identical
@@ -926,7 +926,7 @@ private:
 
   /// Coerce the register to MSACtrl and return the real register for the
   /// current target.
-  unsigned getMSACtrlReg() const {
+  MCRegister getMSACtrlReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_MSACtrl) && "Invalid access!");
     unsigned ClassID = Mips::MSACtrlRegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -934,7 +934,7 @@ private:
 
   /// Coerce the register to COP0 and return the real register for the
   /// current target.
-  unsigned getCOP0Reg() const {
+  MCRegister getCOP0Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_COP0) && "Invalid access!");
     unsigned ClassID = Mips::COP0RegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -942,7 +942,7 @@ private:
 
   /// Coerce the register to COP2 and return the real register for the
   /// current target.
-  unsigned getCOP2Reg() const {
+  MCRegister getCOP2Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_COP2) && "Invalid access!");
     unsigned ClassID = Mips::COP2RegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -950,7 +950,7 @@ private:
 
   /// Coerce the register to COP3 and return the real register for the
   /// current target.
-  unsigned getCOP3Reg() const {
+  MCRegister getCOP3Reg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_COP3) && "Invalid access!");
     unsigned ClassID = Mips::COP3RegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -958,7 +958,7 @@ private:
 
   /// Coerce the register to ACC64DSP and return the real register for the
   /// current target.
-  unsigned getACC64DSPReg() const {
+  MCRegister getACC64DSPReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_ACC) && "Invalid access!");
     unsigned ClassID = Mips::ACC64DSPRegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -966,7 +966,7 @@ private:
 
   /// Coerce the register to HI32DSP and return the real register for the
   /// current target.
-  unsigned getHI32DSPReg() const {
+  MCRegister getHI32DSPReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_ACC) && "Invalid access!");
     unsigned ClassID = Mips::HI32DSPRegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -974,7 +974,7 @@ private:
 
   /// Coerce the register to LO32DSP and return the real register for the
   /// current target.
-  unsigned getLO32DSPReg() const {
+  MCRegister getLO32DSPReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_ACC) && "Invalid access!");
     unsigned ClassID = Mips::LO32DSPRegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -982,7 +982,7 @@ private:
 
   /// Coerce the register to CCR and return the real register for the
   /// current target.
-  unsigned getCCRReg() const {
+  MCRegister getCCRReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_CCR) && "Invalid access!");
     unsigned ClassID = Mips::CCRRegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
@@ -990,7 +990,7 @@ private:
 
   /// Coerce the register to HWRegs and return the real register for the
   /// current target.
-  unsigned getHWRegsReg() const {
+  MCRegister getHWRegsReg() const {
     assert(isRegIdx() && (RegIdx.Kind & RegKind_HWRegs) && "Invalid access!");
     unsigned ClassID = Mips::HWRegsRegClassID;
     return RegIdx.RegInfo->getRegClass(ClassID).getRegister(RegIdx.Index);
