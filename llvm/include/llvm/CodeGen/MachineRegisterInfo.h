@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterBank.h"
@@ -592,6 +593,9 @@ public:
   /// multiple uses.
   bool hasOneNonDBGUser(Register RegNo) const;
 
+  /// If the register has a single non-Debug instruction using the specified
+  /// register, returns it; otherwise returns nullptr.
+  MachineInstr *getOneNonDBGUser(Register RegNo) const;
 
   /// hasAtMostUses - Return true if the given register has at most \p MaxUsers
   /// non-debug user instructions.
