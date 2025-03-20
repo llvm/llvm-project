@@ -1562,16 +1562,16 @@ void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) const {
 
 Type *findSmallestLegalBits(Instruction *I, int OrigBit, int MaxBitsNeeded,
                             const TargetLowering *TLI, const DataLayout &DL) {
-  if (MaxBitsNeeded >= OrigBit) {
+  if (MaxBitsNeeded >= OrigBit)
     return nullptr;
-  }
+
   Type *NewType = I->getType()->getWithNewBitWidth(MaxBitsNeeded);
   while (OrigBit > MaxBitsNeeded) {
     if (TLI->isOperationLegalOrCustom(
             TLI->InstructionOpcodeToISD(I->getOpcode()),
-            TLI->getValueType(DL, NewType, true))) {
+            TLI->getValueType(DL, NewType, true)))
       return NewType;
-    }
+
     MaxBitsNeeded *= 2;
     NewType = I->getType()->getWithNewBitWidth(MaxBitsNeeded);
   }
@@ -1601,7 +1601,8 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I, const TargetLowering *TLI,
                         .countMaxActiveBits();
     break;
   default:
-    break;
+    llvm_unreachable("Unexpected opcode, only valid for Instruction::Add and "
+                     "Instruction::Mul.");
   }
 
   MaxBitsNeeded = std::max<unsigned>(bit_ceil(MaxBitsNeeded), 8);
@@ -1617,10 +1618,9 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I, const TargetLowering *TLI,
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Opc, NewType, TTI::TCK_RecipThroughput);
   // New cost of narrowing 2 operands (use trunc)
-  NewCost += TTI.getCastInstrCost(Instruction::Trunc, NewType, OldType,
-                                  TTI.getCastContextHint(I),
-                                  TTI::TCK_RecipThroughput) *
-             2;
+  NewCost += 2 * TTI.getCastInstrCost(Instruction::Trunc, NewType, OldType,
+                                      TTI.getCastContextHint(I),
+                                      TTI::TCK_RecipThroughput);
   // New cost of zext narrowed result to original type
   NewCost +=
       TTI.getCastInstrCost(Instruction::ZExt, OldType, NewType,
