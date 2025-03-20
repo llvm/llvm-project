@@ -478,15 +478,15 @@ Root Constants
 
 The root constants are inline 32-bit values that show up in the shader 
 as a constant buffer. It is a 12 bytes long structure, two 32 bit values 
-encoding the register and space the constant is assigned to, and one 32 
-bit value encoding the constant value.
+encoding the register and space the constant is assigned to, and 
+the last 32 bits encode the number of constants being defined in the buffer.
 
 .. code-block:: c
 
   struct RootConstants {
     uint32_t Register;
     uint32_t Space;
-    uint32_t Value;
+    uint32_t NumOfConstants;
   };
 
 Root Descriptor
