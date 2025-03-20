@@ -22,6 +22,10 @@
 
 #include <algorithm>
 
+#ifndef _LIBCPP_VECTORIZE_ALGORITHMS
+#  error It looks like the test needs to be updated since _LIBCPP_VECTORIZE_ALGORITHMS isn't defined anymore
+#endif
+
 #if !_LIBCPP_VECTORIZE_ALGORITHMS
 #  error Algorithms should be vectorized on this platform
 #endif
