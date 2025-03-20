@@ -19,60 +19,68 @@
 #include "test_iterators.h"
 
 int globalArray[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-
+bool already_moved = false;
 
 template <class It, class ItTraits = It >
-class ThrowOnMoveIterator
-{
-    typedef std::iterator_traits<ItTraits> Traits;
-    It it_;
-    support::double_move_tracker tracker_;
-    bool moved = false; 
+class ThrowOnMoveIterator {
+  typedef std::iterator_traits<ItTraits> Traits;
+  It it_;
+  support::double_move_tracker tracker_;
 
-    template <class U, class T> friend class ThrowOnMoveIterator;
+  template <class U, class T>
+  friend class ThrowOnMoveIterator;
+
 public:
-    typedef          std::input_iterator_tag                   iterator_category;
-    typedef typename Traits::value_type                        value_type;
-    typedef typename Traits::difference_type                   difference_type;
-    typedef It                                                 pointer;
-    typedef typename Traits::reference                         reference;
+  typedef std::input_iterator_tag iterator_category;
+  typedef typename Traits::value_type value_type;
+  typedef typename Traits::difference_type difference_type;
+  typedef It pointer;
+  typedef typename Traits::reference reference;
 
-    constexpr ThrowOnMoveIterator() {}
+  constexpr ThrowOnMoveIterator() {}
 
-    constexpr ThrowOnMoveIterator(It it) : it_(it) {}
+  constexpr ThrowOnMoveIterator(It it) : it_(it) {}
 
-    template <class U, class T>
-    constexpr ThrowOnMoveIterator(const ThrowOnMoveIterator<U, T>& u) : it_(u.it_), tracker_(u.tracker_), moved(u.moved) {}
+  template <class U, class T>
+  constexpr ThrowOnMoveIterator(const ThrowOnMoveIterator<U, T>& u) : it_(u.it_), tracker_(u.tracker_) {}
 
-    constexpr ThrowOnMoveIterator(const ThrowOnMoveIterator& other): moved(other.moved){}
+  constexpr ThrowOnMoveIterator(const ThrowOnMoveIterator&) {}
 
-    constexpr ThrowOnMoveIterator(ThrowOnMoveIterator&& other){
+  constexpr ThrowOnMoveIterator(ThrowOnMoveIterator&&) {
+    std::cout << "moved ctor called with: " << already_moved << std::endl;
+    if (!already_moved) {
+      already_moved = true;
       throw std::runtime_error("Move failed in iter");
-      other.moved = true;
-      moved = other.moved;
     }
+  }
 
-    ThrowOnMoveIterator& operator=(ThrowOnMoveIterator&& other) {
-        if (other.moved) {
-            throw std::runtime_error("Move assignment failed in iter");
-        }
-        other.moved = true;
-        moved = other.moved;
-        return *this;
+  ThrowOnMoveIterator& operator=(ThrowOnMoveIterator&&) {
+    if (!already_moved) {
+      already_moved = true;
+      throw std::runtime_error("Move assignment failed in iter");
     }
+    return *this;
+  }
 
-    constexpr reference operator*() const {return *it_;}
+  constexpr reference operator*() const { return *it_; }
 
-    constexpr ThrowOnMoveIterator& operator++() {++it_; return *this;}
-    constexpr ThrowOnMoveIterator operator++(int) {return ThrowOnMoveIterator(it_++);}
+  constexpr ThrowOnMoveIterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr ThrowOnMoveIterator operator++(int) { return ThrowOnMoveIterator(it_++); }
 
-    friend constexpr bool operator==(const ThrowOnMoveIterator& x, const ThrowOnMoveIterator& y) {return x.it_ == y.it_;}
-    friend constexpr bool operator!=(const ThrowOnMoveIterator& x, const ThrowOnMoveIterator& y) {return x.it_ != y.it_;}
+  friend constexpr bool operator==(const ThrowOnMoveIterator& x, const ThrowOnMoveIterator& y) {
+    return x.it_ == y.it_;
+  }
+  friend constexpr bool operator!=(const ThrowOnMoveIterator& x, const ThrowOnMoveIterator& y) {
+    return x.it_ != y.it_;
+  }
 
-    friend constexpr It base(const ThrowOnMoveIterator& i) { return i.it_; }
+  friend constexpr It base(const ThrowOnMoveIterator& i) { return i.it_; }
 
-    template <class T>
-    void operator,(T const &) = delete;
+  template <class T>
+  void operator,(T const&) = delete;
 };
 
 template <class T>
@@ -87,12 +95,12 @@ struct BufferView : std::ranges::view_base {
 using IntBufferView = BufferView<int>;
 
 template <bool Simple>
-struct Common :  IntBufferView {
+struct Common : IntBufferView {
   using IntBufferView::IntBufferView;
-  using Iter = ThrowOnMoveIterator<int*>; 
-  using ConstIter = ThrowOnMoveIterator<const int*>; 
-  using Sent = sentinel_wrapper<Iter>; 
-  using ConstSent = sentinel_wrapper<ConstIter>; 
+  using Iter      = ThrowOnMoveIterator<int*>;
+  using ConstIter = ThrowOnMoveIterator<const int*>;
+  using Sent      = sentinel_wrapper<Iter>;
+  using ConstSent = sentinel_wrapper<ConstIter>;
 
   constexpr Iter begin()
     requires(!Simple)
@@ -108,30 +116,32 @@ struct Common :  IntBufferView {
   constexpr ConstSent end() const { return ConstSent(buffer_ + size_); }
 };
 
-using SimpleCommon = Common<true>;
+using SimpleCommon    = Common<true>;
 using NonSimpleCommon = Common<false>;
 
 int main() {
-
   {
-    int buffer[3] = {1, 2, 3};
+    int buffer[3]  = {1, 2, 3};
     int buffer2[3] = {1, 2, 3};
-    NonSimpleCommon view(buffer); 
-    NonSimpleCommon view2(buffer2); 
+    NonSimpleCommon view(buffer);
+    NonSimpleCommon view2(buffer2);
     std::ranges::concat_view v(view, view2);
     std::ranges::iterator_t<std::ranges::concat_view<decltype(view), decltype(view2)>> it1;
     try {
       it1 = v.begin();
     } catch (...) {
+      std::cout << "hit catch" << std::endl;
+      //ASSERT_SAME_TYPE(std::ranges::iterator_t<const decltype(v)>, int);
+      std::ranges::iterator_t<const decltype(v)> it2(it1);
       TEST_LIBCPP_ASSERT_FAILURE(
           [=] {
-            std::ranges::iterator_t<const decltype(v)> it2(v.begin());
+            std::ranges::iterator_t<const decltype(v)> it2(it1);
             (void)it2;
           }(),
           "valueless by exception");
     }
   }
-/*
+  /*
   {
     //valueless by exception test operator==
     ThrowingRange<int*> throwing{3, 5};

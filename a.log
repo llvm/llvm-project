@@ -1,7 +1,0 @@
--- Testing: 1 tests, 1 workers --
-PASS: llvm-libc++-shared.cfg.in :: libcxx/ranges/range.adaptors/range.concat/iterator.valueless_by_exception.pass.cpp (1 of 1)
-
-Testing Time: 4.15s
-
-Total Discovered Tests: 1
-  Passed: 1 (100.00%)
