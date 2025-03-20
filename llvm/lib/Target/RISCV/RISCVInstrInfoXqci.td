@@ -96,6 +96,21 @@ def simm32 : RISCVOp<XLenVT> {
   }];
 }
 
+// A 32-bit signed immediate where the least significant bit is zero.
+def simm32_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = SImmAsmOperand<32, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsr1";
+  let DecoderMethod = "decodeSImmOperandAndLsl1<32>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedInt<31, 1>(Imm);
+  }];
+  let OperandType = "OPERAND_PCREL";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -413,6 +428,24 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
                       (ins GPRNoX0:$rs1, simm26:$imm), opcodestr,
                       "$rd, $rs1, $imm">;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIRVInst48EJ<bits<2> func2, string opcodestr>
+    : RVInst48<(outs), (ins simm32_lsb0:$imm31),
+               opcodestr, "$imm31", [], InstFormatOther> {
+  bits<31> imm31;
+
+  let Inst{47-32} = imm31{30-15};
+  let Inst{31} = imm31{11};
+  let Inst{30-25} = imm31{9-4};
+  let Inst{24-20} = 0b00000;
+  let Inst{19-17} = imm31{14-12};
+  let Inst{16-15} = func2;
+  let Inst{14-12} = 0b100;
+  let Inst{11-8} = imm31{3-0};
+  let Inst{7} = imm31{10};
+  let Inst{6-0} = 0b0011111;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -676,6 +709,13 @@ let Predicates = [HasVendorXqcilo, IsRV32] in {
   def QC_E_SH    : QCIRVInstESStore<0b110, 0b10, "qc.e.sh">;
   def QC_E_SW    : QCIRVInstESStore<0b110, 0b11, "qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasVendorXqcilb, IsRV32] in {
+  let isCall = 1, Defs = [X1] in
+  def QC_E_JAL   : QCIRVInst48EJ<0b01, "qc.e.jal">;
+  let isBranch = 1, isTerminator = 1, isBarrier = 1 in
+  def QC_E_J     : QCIRVInst48EJ<0b00, "qc.e.j">;
+} // Predicates = [HasVendorXqcilb, IsRV32]
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
