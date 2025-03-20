@@ -5305,19 +5305,16 @@ void OmpStructureChecker::CheckArraySection(
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
         if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
           std::optional<int64_t> strideVal{std::nullopt};
-          if (std::get<2>(triplet->t)) {
-            const auto &strideExpr{std::get<2>(triplet->t)};
-            if (strideExpr) {
-              // OpenMP 6.0 Section 5.2.5: Array Sections
-              // Restrictions: if a stride expression is specified it must be
-              // positive. A stride of 0 doesn't make sense.
-              strideVal = GetIntValue(strideExpr);
-              if (strideVal && *strideVal < 1) {
-                context_.Say(GetContext().clauseSource,
-                    "'%s' in %s clause must have a positive stride"_err_en_US,
-                    name.ToString(),
-                    parser::ToUpperCaseLetters(getClauseName(clause).str()));
-              }
+          if (const auto &strideExpr = std::get<2>(triplet->t)) {
+            // OpenMP 6.0 Section 5.2.5: Array Sections
+            // Restrictions: if a stride expression is specified it must be
+            // positive. A stride of 0 doesn't make sense.
+            strideVal = GetIntValue(strideExpr);
+            if (strideVal && *strideVal < 1) {
+              context_.Say(GetContext().clauseSource,
+                  "'%s' in %s clause must have a positive stride"_err_en_US,
+                  name.ToString(),
+                  parser::ToUpperCaseLetters(getClauseName(clause).str()));
             }
           }
           const auto &lower{std::get<0>(triplet->t)};
