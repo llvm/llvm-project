@@ -27,8 +27,8 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -255,9 +255,9 @@ private:
 
   /// Return a value that is NaN if one of the corner cases concerning
   /// the inputs \p X and \p Y is detected, and \p Ret otherwise.
-  Value *handleInputCornerCases(Value *Ret, Value *X,
-                                Value *Y, std::optional<SimplifyQuery> &SQ,
-				bool NoInfs) const {
+  Value *handleInputCornerCases(Value *Ret, Value *X, Value *Y,
+                                std::optional<SimplifyQuery> &SQ,
+                                bool NoInfs) const {
     // Build:
     //   ret = y == 0.0f ? QNAN_ComputeFpTy : ret;
     //   bool c = !BUILTIN_ISNAN_ComputeFpTy(y) &&
@@ -1075,7 +1075,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
 
 namespace {
 class ExpandFpLegacyPass : public FunctionPass {
-    CodeGenOptLevel OptLevel;
+  CodeGenOptLevel OptLevel;
+
 public:
   static char ID;
 

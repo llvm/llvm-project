@@ -1423,7 +1423,8 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::CONCAT_VECTORS: return LowerCONCAT_VECTORS(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR: return LowerEXTRACT_SUBVECTOR(Op, DAG);
   case ISD::UDIVREM: return LowerUDIVREM(Op, DAG);
-  case ISD::SDIVREM: return LowerSDIVREM(Op, DAG);
+  case ISD::SDIVREM:
+    return LowerSDIVREM(Op, DAG);
   case ISD::FCEIL: return LowerFCEIL(Op, DAG);
   case ISD::FTRUNC: return LowerFTRUNC(Op, DAG);
   case ISD::FRINT: return LowerFRINT(Op, DAG);
