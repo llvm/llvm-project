@@ -778,7 +778,8 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   TheTriple.setArchName(Triple);
 }
 
-std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
+std::vector<ELFPltEntry>
+ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
   std::string Err;
   const auto Triple = makeTriple();
   const auto *T = TargetRegistry::lookupTarget(Triple, Err);
@@ -836,7 +837,7 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
       llvm::append_range(
           PltEntries,
           MIA->findPltEntries(Section.getAddress(),
-                              arrayRefFromStringRef(*PltContents), Triple));
+                              arrayRefFromStringRef(*PltContents), STI));
     }
   }
 

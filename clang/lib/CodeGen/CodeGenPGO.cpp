@@ -1357,6 +1357,9 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
 
     IRLevelVersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
     llvm::Triple TT(M.getTargetTriple());
+    if (TT.isAMDGPU() || TT.isNVPTX())
+      IRLevelVersionVariable->setVisibility(
+          llvm::GlobalValue::ProtectedVisibility);
     if (TT.supportsCOMDAT()) {
       IRLevelVersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
       IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));

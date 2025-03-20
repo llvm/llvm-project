@@ -1239,7 +1239,7 @@ void llvm::ComputeCrossModuleImport(
       else
         ++EI;
     }
-    ELI.second.insert(NewExports.begin(), NewExports.end());
+    ELI.second.insert_range(NewExports);
   }
 
   assert(checkVariableImport(Index, ImportLists, ExportLists));

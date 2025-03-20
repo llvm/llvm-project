@@ -238,8 +238,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *FromMP = SubExpr->getType()->getAs<MemberPointerType>();
     const auto *ToMP = CE->getType()->getAs<MemberPointerType>();
 
-    unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
-                                               QualType(FromMP->getClass(), 0));
+    unsigned DerivedOffset =
+        Ctx.collectBaseOffset(ToMP->getMostRecentCXXRecordDecl(),
+                              FromMP->getMostRecentCXXRecordDecl());
 
     if (!this->delegate(SubExpr))
       return false;
@@ -253,8 +254,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *FromMP = SubExpr->getType()->getAs<MemberPointerType>();
     const auto *ToMP = CE->getType()->getAs<MemberPointerType>();
 
-    unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
-                                               QualType(ToMP->getClass(), 0));
+    unsigned DerivedOffset =
+        Ctx.collectBaseOffset(FromMP->getMostRecentCXXRecordDecl(),
+                              ToMP->getMostRecentCXXRecordDecl());
 
     if (!this->delegate(SubExpr))
       return false;
@@ -2844,9 +2846,13 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   if (DiscardResult)
     return true;
-  if (E->getType()->isBooleanType())
-    return this->emitConstBool(E->getValue(), E);
-  return this->emitConst(E->getValue(), E);
+  if (E->isStoredAsBoolean()) {
+    if (E->getType()->isBooleanType())
+      return this->emitConstBool(E->getBoolValue(), E);
+    return this->emitConst(E->getBoolValue(), E);
+  }
+  PrimType T = classifyPrim(E->getType());
+  return this->visitAPValue(E->getAPValue(), T, E);
 }
 
 template <class Emitter>
@@ -3650,7 +3656,7 @@ bool Compiler<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
   assert(V.isStruct());
   assert(V.getStructNumBases() == 0);
-  if (!this->visitAPValueInitializer(V, E))
+  if (!this->visitAPValueInitializer(V, E, E->getType()))
     return false;
 
   return this->emitFinishInit(E);
@@ -4637,48 +4643,27 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
-                                                const Expr *E) {
-
+                                                const Expr *E, QualType T) {
   if (Val.isStruct()) {
-    const Record *R = this->getRecord(E->getType());
+    const Record *R = this->getRecord(T);
     assert(R);
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
+      QualType FieldType = RF->Decl->getType();
 
-      if (F.isInt() || F.isFloat() || F.isLValue() || F.isMemberPointer()) {
-        PrimType T = classifyPrim(RF->Decl->getType());
-        if (!this->visitAPValue(F, T, E))
+      if (std::optional<PrimType> PT = classify(FieldType)) {
+        if (!this->visitAPValue(F, *PT, E))
           return false;
-        if (!this->emitInitField(T, RF->Offset, E))
-          return false;
-      } else if (F.isArray()) {
-        assert(RF->Desc->isPrimitiveArray());
-        const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
-        PrimType ElemT = classifyPrim(ArrType->getElementType());
-        assert(ArrType);
-
-        if (!this->emitGetPtrField(RF->Offset, E))
-          return false;
-
-        for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
-          if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
-            return false;
-          if (!this->emitInitElem(ElemT, A, E))
-            return false;
-        }
-
-        if (!this->emitPopPtr(E))
-          return false;
-      } else if (F.isStruct() || F.isUnion()) {
-        if (!this->emitGetPtrField(RF->Offset, E))
-          return false;
-        if (!this->visitAPValueInitializer(F, E))
-          return false;
-        if (!this->emitPopPtr(E))
+        if (!this->emitInitField(*PT, RF->Offset, E))
           return false;
       } else {
-        assert(false && "I don't think this should be possible");
+        if (!this->emitGetPtrField(RF->Offset, E))
+          return false;
+        if (!this->visitAPValueInitializer(F, E, FieldType))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
       }
     }
     return true;
@@ -4692,6 +4677,28 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     if (!this->visitAPValue(F, T, E))
       return false;
     return this->emitInitField(T, RF->Offset, E);
+  } else if (Val.isArray()) {
+    const auto *ArrType = T->getAsArrayTypeUnsafe();
+    QualType ElemType = ArrType->getElementType();
+    for (unsigned A = 0, AN = Val.getArraySize(); A != AN; ++A) {
+      const APValue &Elem = Val.getArrayInitializedElt(A);
+      if (std::optional<PrimType> ElemT = classify(ElemType)) {
+        if (!this->visitAPValue(Elem, *ElemT, E))
+          return false;
+        if (!this->emitInitElem(*ElemT, A, E))
+          return false;
+      } else {
+        if (!this->emitConstUint32(A, E))
+          return false;
+        if (!this->emitArrayElemPtrUint32(E))
+          return false;
+        if (!this->visitAPValueInitializer(Elem, E, ElemType))
+          return false;
+        if (!this->emitPopPtr(E))
+          return false;
+      }
+    }
+    return true;
   }
   // TODO: Other types.
 
@@ -6381,7 +6388,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         return this->emitInitGlobal(*T, *Index, E);
       }
-      return this->visitAPValueInitializer(TPOD->getValue(), E);
+      return this->visitAPValueInitializer(TPOD->getValue(), E,
+                                           TPOD->getType());
     }
     return false;
   }
