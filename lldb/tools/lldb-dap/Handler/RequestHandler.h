@@ -143,8 +143,8 @@ class RequestHandler : public BaseRequestHandler {
                 error_message.format = E.getMessage();
                 error_message.showUser = E.getShowUser();
                 error_message.id = E.convertToErrorCode().value();
-                // TODO: We could add url/urlLabel to the error message for more
-                // information for users.
+                error_message.url = E.getURL();
+                error_message.urlLabel = E.getURLLabel();
                 return llvm::Error::success();
               }))
         error_message.format = llvm::toString(std::move(unhandled));
