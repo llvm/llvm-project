@@ -863,8 +863,7 @@ void RISCVISAInfo::updateImplication() {
   }
 
   // Add Zcf if C and F are enabled on RV32.
-  if (XLen == 32 && Exts.count("c") && Exts.count("f") &&
-      !Exts.count("zcf")) {
+  if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf")) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
