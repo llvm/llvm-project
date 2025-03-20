@@ -63,7 +63,11 @@ set(MSAN_UNITTEST_LINK_FLAGS
   # inputs.
 )
 
-append_list_if(COMPILER_RT_HAS_LIBDL -ldl MSAN_UNITTEST_LINK_FLAGS)
+if (LINUX)
+  append_list_if(CMAKE_SYSROOT "--sysroot=${CMAKE_SYSROOT}" MSAN_UNITTEST_LINK_FLAGS)
+endif()
+
+  append_list_if(COMPILER_RT_HAS_LIBDL -ldl MSAN_UNITTEST_LINK_FLAGS)
 
 macro(msan_compile obj_list source arch kind cflags)
   sanitizer_test_compile(
