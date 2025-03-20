@@ -1989,7 +1989,7 @@ void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
 }
 
 // Helper function for CheckHLSLBuiltinFunctionCall
-static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall, unsigned NumArgs) {
+static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
 
@@ -1999,7 +1999,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall, unsigned NumA
   SourceLocation BuiltinLoc = TheCall->getBeginLoc();
 
   bool AllBArgAreVectors = true;
-  for (unsigned i = 1; i < NumArgs; ++i) {
+  for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
     ExprResult B = TheCall->getArg(i);
     QualType ArgTyB = B.get()->getType();
     auto *VecTyB = ArgTyB->getAs<VectorType>();
@@ -2050,10 +2050,6 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall, unsigned NumA
   return false;
 }
 
-static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
-  return CheckVectorElementCallArgs(S, TheCall, TheCall->getNumArgs());
-}
-
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   QualType ArgTy0 = TheCall->getArg(0)->getType();
@@ -2096,23 +2092,16 @@ static bool CheckArgTypeIsCorrect(
   return false;
 }
 
-static bool CheckArgTypesAreCorrect(
-    Sema *S, CallExpr *TheCall, unsigned NumArgs, QualType ExpectedType,
+static bool CheckAllArgTypesAreCorrect(
+    Sema *S, CallExpr *TheCall, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
-  for (unsigned i = 0; i < NumArgs; ++i) {
+  for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
     Expr *Arg = TheCall->getArg(i);
     if (CheckArgTypeIsCorrect(S, Arg, ExpectedType, Check)) {
       return true;
     }
   }
   return false;
-}
-
-static bool CheckAllArgTypesAreCorrect(
-  Sema *S, CallExpr *TheCall, QualType ExpectedType,
-  llvm::function_ref<bool(clang::QualType PassedType)> Check) {
-    return CheckArgTypesAreCorrect(S, TheCall, TheCall->getNumArgs(),           
-                                   ExpectedType, Check);
 }
 
 static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
@@ -2158,17 +2147,15 @@ static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
   return true;
 }
 
-static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall, 
-                                 unsigned NumArgs, QualType ExpectedType) {
+static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
   auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
     if (const auto *VecTy = PassedType->getAs<VectorType>())
       return VecTy->getElementType()->isDoubleType();
     return false;
   };
-  return CheckArgTypesAreCorrect(S, TheCall, NumArgs, 
-                                 ExpectedType, checkDoubleVector);
+  return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.FloatTy,
+                                    checkDoubleVector);
 }
-
 static bool CheckFloatingOrIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasIntegerRepresentation() &&
@@ -2484,8 +2471,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (SemaRef.BuiltinVectorToScalarMath(TheCall))
       return true;
-    if (CheckNoDoubleVectors(&SemaRef, TheCall, 
-                             TheCall->getNumArgs(), SemaRef.Context.FloatTy))
+    if (CheckNoDoubleVectors(&SemaRef, TheCall))
       return true;
     break;
   }
