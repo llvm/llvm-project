@@ -87,7 +87,7 @@ static void traceRegMask(const BinaryContext &BC, StringRef Label,
 // This class represents mapping from a set of arbitrary physical registers to
 // consecutive array indexes.
 class TrackedRegisters {
-  static const uint16_t NoIndex = -1;
+  static constexpr uint16_t NoIndex = -1;
   const std::vector<MCPhysReg> Registers;
   std::vector<uint16_t> RegToIndexMapping;
 
