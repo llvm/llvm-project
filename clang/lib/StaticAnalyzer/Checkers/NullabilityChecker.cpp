@@ -169,15 +169,15 @@ private:
   /// When \p SuppressPath is set to true, no more bugs will be reported on this
   /// path by this checker.
   void reportBugIfInvariantHolds(StringRef Msg, ErrorKind Error,
-                                 CheckerPartIdx Idx, ExplodedNode *N,
+                                 const BugType &BT, ExplodedNode *N,
                                  const MemRegion *Region, CheckerContext &C,
                                  const Stmt *ValueExpr = nullptr,
                                  bool SuppressPath = false) const;
 
-  void reportBug(StringRef Msg, ErrorKind Error, CheckerPartIdx Idx,
+  void reportBug(StringRef Msg, ErrorKind Error, const BugType &BT,
                  ExplodedNode *N, const MemRegion *Region, BugReporter &BR,
                  const Stmt *ValueExpr = nullptr) const {
-    auto R = std::make_unique<PathSensitiveBugReport>(BugTypes[Idx], Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
     if (Region) {
       R->markInteresting(Region);
       R->addVisitor<NullabilityBugVisitor>(Region);
@@ -483,7 +483,7 @@ static bool checkInvariantViolation(ProgramStateRef State, ExplodedNode *N,
 }
 
 void NullabilityChecker::reportBugIfInvariantHolds(
-    StringRef Msg, ErrorKind Error, CheckerPartIdx Idx, ExplodedNode *N,
+    StringRef Msg, ErrorKind Error, const BugType &BT, ExplodedNode *N,
     const MemRegion *Region, CheckerContext &C, const Stmt *ValueExpr,
     bool SuppressPath) const {
   ProgramStateRef OriginalState = N->getState();
@@ -495,7 +495,7 @@ void NullabilityChecker::reportBugIfInvariantHolds(
     N = C.addTransition(OriginalState, N);
   }
 
-  reportBug(Msg, Error, Idx, N, Region, C.getBugReporter(), ValueExpr);
+  reportBug(Msg, Error, BT, N, Region, C.getBugReporter(), ValueExpr);
 }
 
 /// Cleaning up the program state.
@@ -555,14 +555,15 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
     // Do not suppress errors on defensive code paths, because dereferencing
     // a nullable pointer is always an error.
     if (Event.IsDirectDereference)
-      reportBug("Nullable pointer is dereferenced",
-                ErrorKind::NullableDereferenced, NullableDereferencedChecker,
-                Event.SinkNode, Region, BR);
+      reportBug(
+          "Nullable pointer is dereferenced", ErrorKind::NullableDereferenced,
+          BugTypes[NullableDereferencedChecker], Event.SinkNode, Region, BR);
     else {
       reportBug("Nullable pointer is passed to a callee that requires a "
                 "non-null",
-                ErrorKind::NullablePassedToNonnull, NullableDereferencedChecker,
-                Event.SinkNode, Region, BR);
+                ErrorKind::NullablePassedToNonnull,
+                BugTypes[NullableDereferencedChecker], Event.SinkNode, Region,
+                BR);
     }
   }
 }
@@ -730,8 +731,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
     OS << " returned from a " << C.getDeclDescription(D) <<
           " that is expected to return a non-null value";
     reportBugIfInvariantHolds(OS.str(), ErrorKind::NilReturnedToNonnull,
-                              NullReturnedFromNonnullChecker, N, nullptr, C,
-                              RetExpr);
+                              BugTypes[NullReturnedFromNonnullChecker], N,
+                              nullptr, C, RetExpr);
     return;
   }
 
@@ -764,8 +765,8 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
             " that is expected to return a non-null value";
 
       reportBugIfInvariantHolds(OS.str(), ErrorKind::NullableReturnedToNonnull,
-                                NullableReturnedFromNonnullChecker, N, Region,
-                                C);
+                                BugTypes[NullableReturnedFromNonnullChecker], N,
+                                Region, C);
     }
     return;
   }
@@ -831,9 +832,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
       OS << " passed to a callee that requires a non-null " << ParamIdx
          << llvm::getOrdinalSuffix(ParamIdx) << " parameter";
       reportBugIfInvariantHolds(OS.str(), ErrorKind::NilPassedToNonnull,
-                                NullPassedToNonnullChecker, N, nullptr, C,
-                                ArgExpr,
-                                /*SuppressPath=*/false);
+                                BugTypes[NullPassedToNonnullChecker], N,
+                                nullptr, C, ArgExpr, /*SuppressPath=*/false);
       return;
     }
 
@@ -858,8 +858,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         OS << "Nullable pointer is passed to a callee that requires a non-null "
            << ParamIdx << llvm::getOrdinalSuffix(ParamIdx) << " parameter";
         reportBugIfInvariantHolds(OS.str(), ErrorKind::NullablePassedToNonnull,
-                                  NullablePassedToNonnullChecker, N, Region, C,
-                                  ArgExpr, /*SuppressPath=*/true);
+                                  BugTypes[NullablePassedToNonnullChecker], N,
+                                  Region, C, ArgExpr, /*SuppressPath=*/true);
         return;
       }
       if (isPartEnabled(NullableDereferencedChecker) &&
@@ -867,8 +867,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
         ExplodedNode *N = C.addTransition(State);
         reportBugIfInvariantHolds("Nullable pointer is dereferenced",
                                   ErrorKind::NullableDereferenced,
-                                  NullableDereferencedChecker, N, Region, C,
-                                  ArgExpr, /*SuppressPath=*/true);
+                                  BugTypes[NullableDereferencedChecker], N,
+                                  Region, C, ArgExpr, /*SuppressPath=*/true);
         return;
       }
       continue;
@@ -1321,8 +1321,8 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
     OS << (LocType->isObjCObjectPointerType() ? "nil" : "Null");
     OS << " assigned to a pointer which is expected to have non-null value";
     reportBugIfInvariantHolds(OS.str(), ErrorKind::NilAssignedToNonnull,
-                              NullPassedToNonnullChecker, N, nullptr, C,
-                              ValueStmt);
+                              BugTypes[NullPassedToNonnullChecker], N, nullptr,
+                              C, ValueStmt);
     return;
   }
 
@@ -1355,8 +1355,8 @@ void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
       reportBugIfInvariantHolds("Nullable pointer is assigned to a pointer "
                                 "which is expected to have non-null value",
                                 ErrorKind::NullableAssignedToNonnull,
-                                NullablePassedToNonnullChecker, N, ValueRegion,
-                                C);
+                                BugTypes[NullablePassedToNonnullChecker], N,
+                                ValueRegion, C);
     }
     return;
   }
