@@ -35,13 +35,13 @@ void InstructionInfoView::getComment(const MCInst &MCI,
   if (Pos = S.find("\n"); Pos != std::string::npos) {
     InstrStr = S.take_front(Pos);
     // C style comment
-    if (((PosCmt = InstrStr.find("/*")) != std::string::npos) &&
-        ((Pos = InstrStr.find("*/")) != std::string::npos)) {
+    if (((PosCmt = InstrStr.find("/*")) != StringRef::npos) &&
+        ((Pos = InstrStr.find("*/")) != StringRef::npos)) {
       CommentString = InstrStr.substr(PosCmt, Pos);
       return;
     }
     // C++ style comment
-    if ((PosCmt = InstrStr.find("//")) != std::string::npos) {
+    if ((PosCmt = InstrStr.find("//")) != StringRef::npos) {
       CommentString = InstrStr.substr(PosCmt);
       return;
     }
@@ -93,7 +93,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
                                        "RThroughput", "MayLoad",
                                        "MayStore",    "HasSideEffects (U)"};
   SmallVector<StringRef, 8> EndFields;
-  unsigned LastPadding = 35;
+  unsigned LastPadding = Paddings.back();
   if (PrintFullInfo) {
     Fields.push_back("Bypass Latency");
     Paddings.push_back(LastPadding += 7);
