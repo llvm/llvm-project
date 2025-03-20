@@ -4781,9 +4781,9 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   // Check whether the underlying base pointer is a constant null.
   // If so, we do not set inbounds flag for GEP to avoid breaking some old-style
   // offsetof idioms.
-  Expr *UnderlyingBaseExpr = BaseExpr;
+  Expr *UnderlyingBaseExpr = BaseExpr->IgnoreParens();
   while (auto *BaseMemberExpr = dyn_cast<MemberExpr>(UnderlyingBaseExpr))
-    UnderlyingBaseExpr = BaseMemberExpr->getBase();
+    UnderlyingBaseExpr = BaseMemberExpr->getBase()->IgnoreParens();
   bool IsBaseConstantNull = getContext().isSentinelNullExpr(UnderlyingBaseExpr);
   // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a scalar.
   LValue BaseLV;
