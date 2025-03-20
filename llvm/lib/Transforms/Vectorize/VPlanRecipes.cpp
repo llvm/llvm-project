@@ -2312,8 +2312,9 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       NewRed =
           createOrderedReduction(State.Builder, Kind, NewVecOp, PrevInChain);
     else
-      NewRed = State.Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(),
-                                         PrevInChain, NewVecOp);
+      NewRed = State.Builder.CreateBinOp(
+          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind),
+          PrevInChain, NewVecOp);
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else {
@@ -2323,7 +2324,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       NextInChain = createMinMaxOp(State.Builder, Kind, NewRed, PrevInChain);
     else
       NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)getOpcode(), NewRed, PrevInChain);
+          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind), NewRed,
+          PrevInChain);
   }
   State.set(this, NextInChain, /*IsScalar*/ true);
 }
@@ -2359,8 +2361,9 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else
-      NewRed = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), NewRed,
-                                   Prev);
+      NewRed = Builder.CreateBinOp(
+          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind), NewRed,
+          Prev);
   }
   State.set(this, NewRed, /*IsScalar*/ true);
 }
@@ -2370,7 +2373,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   RecurKind RdxKind = getRecurrenceKind();
   Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
-  unsigned Opcode = getOpcode();
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlags();
 
   // TODO: Support any-of and in-loop reductions.
@@ -2405,7 +2408,10 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
   printFlags(O);
-  O << " reduce." << Instruction::getOpcodeName(getOpcode()) << " (";
+  O << " reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
     O << ", ";
@@ -2422,7 +2428,10 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
   printFlags(O);
-  O << " vp.reduce." << Instruction::getOpcodeName(getOpcode()) << " (";
+  O << " vp.reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);

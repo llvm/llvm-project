@@ -2300,10 +2300,6 @@ public:
 
   /// Return the recurrence kind for the in-loop reduction.
   RecurKind getRecurrenceKind() const { return RdxKind; }
-  /// Return the opcode for the recurrence for the in-loop reduction.
-  unsigned getOpcode() const {
-    return RecurrenceDescriptor::getOpcode(RdxKind);
-  }
   /// Return true if the in-loop reduction is ordered.
   bool isOrdered() const { return IsOrdered; };
   /// Return true if the in-loop reduction is conditional.
