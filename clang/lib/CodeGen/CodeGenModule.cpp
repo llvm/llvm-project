@@ -2667,7 +2667,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), /*Qualifier=*/nullptr, Base));
+              MD->getType(), Context.getRecordType(Base).getTypePtr()));
       F->addTypeMetadata(0, Id);
     }
   }
