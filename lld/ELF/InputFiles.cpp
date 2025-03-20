@@ -223,36 +223,37 @@ struct KnownAArch64BuildAttrSubsections {
   } fAndB;
 };
 
-static KnownAArch64BuildAttrSubsections extractBuildAttributesSubsections(
-    Ctx &ctx, const AArch64AttributeParser &attributes, InputSection isec) {
+static KnownAArch64BuildAttrSubsections
+extractBuildAttributesSubsections(Ctx &ctx,
+                                  const AArch64AttributeParser &attributes,
+                                  const InputSection &isec) {
 
   KnownAArch64BuildAttrSubsections subSections;
-  subSections.pauth.tagPlatform = attributes.getAttributeValue(
-      "aeabi_pauthabi", llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM);
-  // Rather do this check explicitly here, so behaviour in case of missing tags
-  // can be change in the future.
-  if (std::nullopt == subSections.pauth.tagPlatform)
-    subSections.pauth.tagPlatform = 0;
-
-  subSections.pauth.tagSchema = attributes.getAttributeValue(
-      "aeabi_pauthabi", llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA);
-  if (std::nullopt == subSections.pauth.tagSchema)
-    subSections.pauth.tagSchema = 0;
-
-  subSections.fAndB.tagBTI = attributes.getAttributeValue(
-      "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_BTI);
-  if (std::nullopt == subSections.fAndB.tagBTI)
-    subSections.fAndB.tagBTI = 0;
-
-  subSections.fAndB.tagPAC = attributes.getAttributeValue(
-      "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_PAC);
-  if (std::nullopt == subSections.fAndB.tagPAC)
-    subSections.fAndB.tagPAC = 0;
-
-  subSections.fAndB.tagGCS = attributes.getAttributeValue(
-      "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_GCS);
-  if (std::nullopt == subSections.fAndB.tagGCS)
-    subSections.fAndB.tagGCS = 0;
+  subSections.pauth.tagPlatform =
+      attributes
+          .getAttributeValue("aeabi_pauthabi",
+                             llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM)
+          .value_or(0);
+  subSections.pauth.tagSchema =
+      attributes
+          .getAttributeValue("aeabi_pauthabi",
+                             llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA)
+          .value_or(0);
+  subSections.fAndB.tagBTI =
+      attributes
+          .getAttributeValue("aeabi_feature_and_bits",
+                             llvm::AArch64BuildAttributes::TAG_FEATURE_BTI)
+          .value_or(0);
+  subSections.fAndB.tagPAC =
+      attributes
+          .getAttributeValue("aeabi_feature_and_bits",
+                             llvm::AArch64BuildAttributes::TAG_FEATURE_PAC)
+          .value_or(0);
+  subSections.fAndB.tagGCS =
+      attributes
+          .getAttributeValue("aeabi_feature_and_bits",
+                             llvm::AArch64BuildAttributes::TAG_FEATURE_GCS)
+          .value_or(0);
 
   return subSections;
 }
