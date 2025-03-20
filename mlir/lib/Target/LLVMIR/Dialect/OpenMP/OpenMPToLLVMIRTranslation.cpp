@@ -30,7 +30,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -543,20 +542,6 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   llvm_unreachable("Unknown ClauseProcBindKind kind");
 }
 
-/// Maps block arguments from \p blockArgIface (which are MLIR values) to the
-/// corresponding LLVM values of \p the interface's operands. This is useful
-/// when an OpenMP region with entry block arguments is converted to LLVM. In
-/// this case the block arguments are (part of) of the OpenMP region's entry
-/// arguments and the operands are (part of) of the operands to the OpenMP op
-/// containing the region.
-static void forwardArgs(LLVM::ModuleTranslation &moduleTranslation,
-                        omp::BlockArgOpenMPOpInterface blockArgIface) {
-  llvm::SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
-  blockArgIface.getBlockArgsPairs(blockArgsPairs);
-  for (auto [var, arg] : blockArgsPairs)
-    moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
-}
-
 /// Helper function to map block arguments defined by ignored loop wrappers to
 /// LLVM values and prevent any uses of those from triggering null pointer
 /// dereferences.
@@ -569,10 +554,17 @@ convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
   // Map block arguments directly to the LLVM value associated to the
   // corresponding operand. This is semantically equivalent to this wrapper not
   // being present.
+  auto forwardArgs =
+      [&moduleTranslation](omp::BlockArgOpenMPOpInterface blockArgIface) {
+        llvm::SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
+        blockArgIface.getBlockArgsPairs(blockArgsPairs);
+        for (auto [var, arg] : blockArgsPairs)
+          moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
+      };
+
   return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
       .Case([&](omp::SimdOp op) {
-        forwardArgs(moduleTranslation,
-                    cast<omp::BlockArgOpenMPOpInterface>(*op));
+        forwardArgs(cast<omp::BlockArgOpenMPOpInterface>(*op));
         op.emitWarning() << "simd information on composite construct discarded";
         return success();
       })
@@ -5811,46 +5803,6 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
               return WalkResult::interrupt();
             return WalkResult::skip();
           }
-
-          // Non-target ops might nest target-related ops, therefore, we
-          // translate them as non-OpenMP scopes. Translating them is needed by
-          // nested target-related ops since they might need LLVM values defined
-          // in their parent non-target ops.
-          if (isa<omp::OpenMPDialect>(oper->getDialect()) &&
-              oper->getParentOfType<LLVM::LLVMFuncOp>() &&
-              !oper->getRegions().empty()) {
-            if (auto blockArgsIface =
-                    dyn_cast<omp::BlockArgOpenMPOpInterface>(oper))
-              forwardArgs(moduleTranslation, blockArgsIface);
-
-            if (auto loopNest = dyn_cast<omp::LoopNestOp>(oper)) {
-              assert(builder.GetInsertBlock() &&
-                     "No insert block is set for the builder");
-              for (auto iv : loopNest.getIVs()) {
-                // Map iv to an undefined value just to keep the IR validity.
-                moduleTranslation.mapValue(
-                    iv, llvm::PoisonValue::get(
-                            moduleTranslation.convertType(iv.getType())));
-              }
-            }
-
-            for (Region &region : oper->getRegions()) {
-              // Regions are fake in the sense that they are not a truthful
-              // translation of the OpenMP construct being converted (e.g. no
-              // OpenMP runtime calls will be generated). We just need this to
-              // prepare the kernel invocation args.
-              auto result = convertOmpOpRegions(
-                  region, oper->getName().getStringRef().str() + ".fake.region",
-                  builder, moduleTranslation);
-              if (failed(handleError(result, *oper)))
-                return WalkResult::interrupt();
-
-              builder.SetInsertPoint(result.get(), result.get()->end());
-            }
-
-            return WalkResult::skip();
-          }
-
           return WalkResult::advance();
         }).wasInterrupted();
   return failure(interrupted);
