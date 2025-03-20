@@ -36,6 +36,13 @@ static void introduceInnerLoopRegions(VPlan &Plan) {
       continue;
     assert(VPDT.dominates(PreheaderVPBB, HeaderVPBB) &&
            "preheader must dominate header");
+    if (LatchVPBB->getSuccessors()[1] != HeaderVPBB) {
+      auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
+      auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
+      Not->insertBefore(Term);
+      Term->setOperand(0, Not);
+    }
+
     VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPBB);
     VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPBB);
     VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
