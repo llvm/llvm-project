@@ -848,31 +848,34 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
               ctx, buildAttributesSubSections, isec);
           mergeAArch64BuildAttributes(ctx, subsections, isec);
           if (!hasGnuProperties) {
-            ObjFile<ELFT> &f = *this;
             auto [pauthSubSection, fAndBSubSection] = subsections;
             if (pauthSubSection) {
               assert(
                   (pauthSubSection->Content.size() == 2) &&
                   "pauthSubSection must contain exactly two build attributes");
               // sanitizePauthSubSection already sorts
-              f.aarch64PauthAbiCoreInfoStorage =
+              (*this).aarch64PauthAbiCoreInfoStorage =
                   std::make_unique<std::array<uint8_t, 16>>();
               uint64_t values[2] = {
                   static_cast<uint64_t>(pauthSubSection->Content[0].IntValue),
                   static_cast<uint64_t>(pauthSubSection->Content[1].IntValue)};
-              std::memcpy(f.aarch64PauthAbiCoreInfoStorage->data(), &values[0],
-                          sizeof(values));
-              f.aarch64PauthAbiCoreInfo = *f.aarch64PauthAbiCoreInfoStorage;
+              std::memcpy((*this).aarch64PauthAbiCoreInfoStorage->data(),
+                          &values[0], sizeof(values));
+              (*this).aarch64PauthAbiCoreInfo =
+                  *(*this).aarch64PauthAbiCoreInfoStorage;
             }
             if (fAndBSubSection) {
               assert((fAndBSubSection->Content.size() == 3) &&
                      "fAndBSubSection must contain exactly three build "
                      "attributes");
               // sanitizeFAndBSubSection already sorts
-              f.andFeatures = 0;
-              f.andFeatures |= (fAndBSubSection->Content[0].IntValue) << 0;
-              f.andFeatures |= (fAndBSubSection->Content[1].IntValue) << 1;
-              f.andFeatures |= (fAndBSubSection->Content[2].IntValue) << 2;
+              (*this).andFeatures = 0;
+              (*this).andFeatures |= (fAndBSubSection->Content[0].IntValue)
+                                     << 0;
+              (*this).andFeatures |= (fAndBSubSection->Content[1].IntValue)
+                                     << 1;
+              (*this).andFeatures |= (fAndBSubSection->Content[2].IntValue)
+                                     << 2;
             }
           }
         }
