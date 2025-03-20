@@ -145,6 +145,7 @@ So it does not seem practical/reasonable to enable the array repacking by defaul
 3. Provide consistent behavior of the temporary arrays with relation to `-fstack-arrays` (that forces all temporary arrays to be allocated on the stack).
 4. Produce correct debug information to substitute the original array with the copy array when accessing values in the debugger.
 5. Document potential correctness issues that array repacking may cause in multithreaded/offload execution.
+6. Document the expected changes of the programs behavior, such as applying `LOC` and `IS_CONTIGUOUS` intrinsic functions to the repacked arrays (one cannot expect the same results as if these intrinsics were applied to the original arrays).
 
 ## Proposed design
 
@@ -345,6 +346,8 @@ It is unsafe to create temporaries of assumed-shape dummy arrays that have `TARG
 The copy creation is also restricted for `ASYNCHRONOUS` and `VOLATILE` arguments. Such dummy arguments might be changed during the execution of their subprogram in an unpredictable manner, so creating a copy for them might be incorrect (Fortran 2023, Note 5 of section 15.5.2.5).
 
 It does not make sense to generate the new operations for `CONTIGUOUS` arguments and for arguments with statically known element size that exceeds the `max-element-size` threshold.
+
+The `fir.pack_array`'s copy-in action cannot be skipped for `INTENT(OUT)` dummy argument of a derived type that requires finalization on entry to the subprogram, as long as the finalization subroutines may access the value of the dummy argument. In this case `fir.pack_array` operation cannot have `no_copy` attribute, so that it creates a contiguous temporary matching the value of the original array, and then the temporary is finalized before execution of the subprogram's body begins.
 
 #### Optional behavior
 
