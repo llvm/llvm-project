@@ -1069,25 +1069,25 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
   telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
-    UUID module_uuid;
-    // Need this check because the pointer may not be valid at this point.
-    if (TargetSP target_sp = m_target_wp.lock()) {
-      helper.SetDebugger(&target_sp->GetDebugger());
-      if (ModuleSP mod = target_sp->GetExecutableModule())
-        module_uuid = mod->GetUUID();
-    }
+  UUID module_uuid;
+  // Need this check because the pointer may not be valid at this point.
+  if (TargetSP target_sp = m_target_wp.lock()) {
+    helper.SetDebugger(&target_sp->GetDebugger());
+    if (ModuleSP mod = target_sp->GetExecutableModule())
+      module_uuid = mod->GetUUID();
+  }
 
-    helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
-      info->module_uuid = module_uuid;
-      info->pid = m_pid;
-      info->is_start_entry = true;
-      info->exit_desc = {status, exit_string.str()};
-    });
+  helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
+    info->module_uuid = module_uuid;
+    info->pid = m_pid;
+    info->is_start_entry = true;
+    info->exit_desc = {status, exit_string.str()};
+  });
 
-    helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
-      info->module_uuid = module_uuid;
-      info->pid = m_pid;
-    });
+  helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
+    info->module_uuid = module_uuid;
+    info->pid = m_pid;
+  });
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
