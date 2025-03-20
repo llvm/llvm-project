@@ -49,6 +49,7 @@ llvm::Expected<CancelResponseBody>
 CancelRequestHandler::Run(const CancelArguments &arguments) const {
   // Cancel support is built into the DAP::Loop handler for detecting
   // cancellations of pending or inflight requests.
+  dap.ClearCancelRequest(arguments);
   return CancelResponseBody();
 }
 
