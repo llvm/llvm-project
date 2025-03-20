@@ -1072,6 +1072,13 @@ Register PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
+/// Sink down CodeGen-only, cheap instructions to allow further
+/// optimizations which are only applied intra-block.
+bool PPCInstrInfo::shouldBreakCriticalEdgeToSink(MachineInstr &MI) const {
+  // These can turn into immediates, see PPCRegisterInfo::lowerCRBitRestore.
+  return MI.getOpcode() == PPC::CRSET || MI.getOpcode() == PPC::CRUNSET;
+}
+
 // For opcodes with the ReMaterializable flag set, this function is called to
 // verify the instruction is really rematable.
 bool PPCInstrInfo::isReallyTriviallyReMaterializable(
