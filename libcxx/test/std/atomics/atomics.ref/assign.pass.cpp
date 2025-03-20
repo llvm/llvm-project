@@ -23,29 +23,50 @@
 template <typename T>
 struct TestAssign {
   void operator()() const {
-    {
-      T x(T(1));
-      std::atomic_ref<T> const a(x);
+    using Unqualified = std::remove_cv_t<T>;
+    static_assert(std::is_assignable_v<std::atomic_ref<T>, Unqualified> == !std::is_const_v<T>);
 
-      std::same_as<T> decltype(auto) y = (a = T(2));
-      assert(y == T(2));
-      assert(x == T(2));
+    if constexpr (!std::is_const_v<T>) {
+      {
+        T x(Unqualified(1));
+        std::atomic_ref<T> const a(x);
 
-      ASSERT_NOEXCEPT(a = T(0));
-      static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, T>);
+        std::same_as<Unqualified> decltype(auto) y = (a = Unqualified(2));
+        assert(y == Unqualified(2));
+        assert(const_cast<Unqualified const&>(x) == Unqualified(2));
 
-      static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
-    }
+        ASSERT_NOEXCEPT(a = Unqualified(0));
+        static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, Unqualified>);
+        static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
+      }
 
-    {
-      auto assign = [](std::atomic_ref<T> const& y, T, T new_val) { y = new_val; };
-      auto load   = [](std::atomic_ref<T> const& y) { return y.load(); };
-      test_seq_cst<T>(assign, load);
+      {
+        auto assign = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+          y = const_cast<Unqualified const&>(new_val);
+        };
+        auto load = [](std::atomic_ref<T> const& y) { return y.load(); };
+        test_seq_cst<T>(assign, load);
+      }
     }
   }
 };
 
+template <template <class...> class F>
+struct CallWithCVQualifiers {
+  template <class T>
+  struct apply {
+    void operator()() const {
+      F<T>()();
+      F<T const>()();
+      if constexpr (std::atomic_ref<T>::is_always_lock_free) {
+        F<T volatile>()();
+        F<T const volatile>()();
+      }
+    }
+  };
+};
+
 int main(int, char**) {
-  TestEachAtomicType<TestAssign>()();
+  TestEachAtomicType<CallWithCVQualifiers<TestAssign>::apply>()();
   return 0;
 }

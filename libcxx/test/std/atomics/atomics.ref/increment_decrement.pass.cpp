@@ -124,6 +124,8 @@ int main(int, char**) {
   TestEachFloatingPointType<TestDoesNotHaveIncrementDecrement>()();
 
   TestEachPointerType<TestIncrementDecrement>()();
+  TestDoesNotHaveIncrementDecrement<void*>()();
+  TestDoesNotHaveIncrementDecrement<void const*>()();
 
   TestDoesNotHaveIncrementDecrement<bool>()();
   TestDoesNotHaveIncrementDecrement<UserAtomicType>()();

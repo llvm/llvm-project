@@ -45,12 +45,12 @@ template <class T, class StoreOp, class LoadOp>
 void test_seq_cst(StoreOp store_op, LoadOp load_op) {
 #ifndef TEST_HAS_NO_THREADS
   for (int i = 0; i < 100; ++i) {
-    T old_value(make_value<T>(0));
-    T new_value(make_value<T>(1));
+    T old_value(make_value<std::remove_cv_t<T>>(0));
+    T new_value(make_value<std::remove_cv_t<T>>(1));
 
-    T copy_x = old_value;
+    T copy_x = const_cast<std::remove_cv_t<T> const&>(old_value);
     std::atomic_ref<T> const x(copy_x);
-    T copy_y = old_value;
+    T copy_y = const_cast<std::remove_cv_t<T> const&>(old_value);
     std::atomic_ref<T> const y(copy_y);
 
     std::atomic_bool x_updated_first(false);
@@ -61,19 +61,19 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     auto t2 = support::make_test_thread([&] { store_op(y, old_value, new_value); });
 
     auto t3 = support::make_test_thread([&] {
-      while (!equals(load_op(x), new_value)) {
+      while (!equals(load_op(x), const_cast<std::remove_cv_t<T> const&>(new_value))) {
         std::this_thread::yield();
       }
-      if (!equals(load_op(y), new_value)) {
+      if (!equals(load_op(y), const_cast<std::remove_cv_t<T> const&>(new_value))) {
         x_updated_first.store(true, std::memory_order_relaxed);
       }
     });
 
     auto t4 = support::make_test_thread([&] {
-      while (!equals(load_op(y), new_value)) {
+      while (!equals(load_op(y), const_cast<std::remove_cv_t<T> const&>(new_value))) {
         std::this_thread::yield();
       }
-      if (!equals(load_op(x), new_value)) {
+      if (!equals(load_op(x), const_cast<std::remove_cv_t<T> const&>(new_value))) {
         y_updated_first.store(true, std::memory_order_relaxed);
       }
     });
@@ -98,10 +98,10 @@ template <class T, class StoreOp, class LoadOp>
 void test_acquire_release(StoreOp store_op, LoadOp load_op) {
 #ifndef TEST_HAS_NO_THREADS
   for (auto i = 0; i < 100; ++i) {
-    T old_value(make_value<T>(0));
-    T new_value(make_value<T>(1));
+    T old_value(make_value<std::remove_cv_t<T>>(0));
+    T new_value(make_value<std::remove_cv_t<T>>(1));
 
-    T copy = old_value;
+    T copy = const_cast<std::remove_cv_t<T> const&>(old_value);
     std::atomic_ref<T> const at(copy);
     int non_atomic = 5;
 
@@ -110,14 +110,15 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
     threads.reserve(number_of_threads);
 
     for (auto j = 0; j < number_of_threads; ++j) {
-      threads.push_back(support::make_test_thread([&at, &non_atomic, load_op, new_value] {
-        while (!equals(load_op(at), new_value)) {
-          std::this_thread::yield();
-        }
-        // Other thread's writes before the release store are visible
-        // in this thread's read after the acquire load
-        assert(non_atomic == 6);
-      }));
+      threads.push_back(support::make_test_thread(
+          [&at, &non_atomic, load_op, new_value = const_cast<std::remove_cv_t<T> const&>(new_value)] {
+            while (!equals(load_op(at), new_value)) {
+              std::this_thread::yield();
+            }
+            // Other thread's writes before the release store are visible
+            // in this thread's read after the acquire load
+            assert(non_atomic == 6);
+          }));
     }
 
     non_atomic = 6;
