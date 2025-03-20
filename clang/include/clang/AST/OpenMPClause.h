@@ -3777,10 +3777,10 @@ class OMPReductionClause final
 
   /// Get the list of help private variable reduction flags
   MutableArrayRef<bool> getPrivateVariableReductionFlags() {
-    return MutableArrayRef<bool>(getTrailingObjects<bool>(), varlist_size());
+    return MutableArrayRef(getTrailingObjects<bool>(), varlist_size());
   }
   ArrayRef<bool> getPrivateVariableReductionFlags() const {
-    return ArrayRef<bool>(getTrailingObjects<bool>(), varlist_size());
+    return ArrayRef(getTrailingObjects<bool>(), varlist_size());
   }
 
   /// Returns the number of Expr* objects in trailing storage
@@ -3890,7 +3890,7 @@ public:
   /// region with this clause.
   /// \param PostUpdate Expression that must be executed after exit from the
   /// OpenMP region with this clause.
-  /// \pram IsPrivateVarReduction array for private variable reduction flags
+  /// \param IsPrivateVarReduction array for private variable reduction flags
   static OMPReductionClause *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
          SourceLocation ModifierLoc, SourceLocation ColonLoc,

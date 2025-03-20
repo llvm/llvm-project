@@ -1165,8 +1165,8 @@ public:
     struct OpenMPReductionClauseModifiers {
       int ExtraModifier;
       int OriginalSharingModifier;
-      OpenMPReductionClauseModifiers(int extra, int original)
-          : ExtraModifier(extra), OriginalSharingModifier(original) {}
+      OpenMPReductionClauseModifiers(int Extra, int Original)
+          : ExtraModifier(Extra), OriginalSharingModifier(Original) {}
     };
   };
 
