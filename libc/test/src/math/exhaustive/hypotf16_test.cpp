@@ -24,7 +24,8 @@
 //   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
 //   using StorageType = typename FPBits::StorageType;
 //
-//   uint64_t check(uint16_t start, uint16_t stop, mpfr::RoundingMode rounding) {
+//   uint64_t check(uint16_t start, uint16_t stop, mpfr::RoundingMode rounding)
+//   {
 //     mpfr::ForceRoundingMode r(rounding);
 //     if (!r.success)
 //       return true;
@@ -40,7 +41,8 @@
 //         // Using MPFR will be much slower.
 //         // mpfr::BinaryInput<float16> input{x, y};
 //         // bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
-//         //  mpfr::Operation::Hypot, input, LIBC_NAMESPACE::hypotf16(x, y), 0.5,
+//         //  mpfr::Operation::Hypot, input, LIBC_NAMESPACE::hypotf16(x, y),
+//         0.5,
 //         //  rounding);
 //         failed += (!correct);
 //       } while (ybits++ < STOP);
