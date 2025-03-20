@@ -146,11 +146,26 @@ define void @insert_vec_v6i64_uaddlv_from_v4i32(ptr %0) {
 ; CHECK-LABEL: insert_vec_v6i64_uaddlv_from_v4i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    movi.2d v2, #0x000000ffffffff
 ; CHECK-NEXT:    str xzr, [x0, #16]
 ; CHECK-NEXT:    uaddlv.4s d1, v0
 ; CHECK-NEXT:    mov.d v0[0], v1[0]
-; CHECK-NEXT:    ucvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    ushr.2d v1, v0, #32
+; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    mov.d x8, v1[1]
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    scvtf s2, x9
+; CHECK-NEXT:    mov w9, #1333788672 ; =0x4f800000
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    dup.2s v3, w9
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    mov.s v2[1], v1[0]
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    fmul.2s v2, v2, v3
+; CHECK-NEXT:    mov.s v1[1], v0[0]
+; CHECK-NEXT:    fadd.2s v0, v2, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
 
@@ -166,10 +181,25 @@ define void @insert_vec_v2i64_uaddlv_from_v4i32(ptr %0) {
 ; CHECK-LABEL: insert_vec_v2i64_uaddlv_from_v4i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    movi.2d v2, #0x000000ffffffff
 ; CHECK-NEXT:    uaddlv.4s d1, v0
 ; CHECK-NEXT:    mov.d v0[0], v1[0]
-; CHECK-NEXT:    ucvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    ushr.2d v1, v0, #32
+; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    mov.d x8, v1[1]
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    scvtf s2, x9
+; CHECK-NEXT:    mov w9, #1333788672 ; =0x4f800000
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    dup.2s v3, w9
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    mov.s v2[1], v1[0]
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    fmul.2s v2, v2, v3
+; CHECK-NEXT:    mov.s v1[1], v0[0]
+; CHECK-NEXT:    fadd.2s v0, v2, v1
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 
@@ -185,11 +215,26 @@ define void @insert_vec_v5i64_uaddlv_from_v4i32(ptr %0) {
 ; CHECK-LABEL: insert_vec_v5i64_uaddlv_from_v4i32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    movi.2d v2, #0x000000ffffffff
 ; CHECK-NEXT:    str wzr, [x0, #16]
 ; CHECK-NEXT:    uaddlv.4s d1, v0
 ; CHECK-NEXT:    mov.d v0[0], v1[0]
-; CHECK-NEXT:    ucvtf.2d v0, v0
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    ushr.2d v1, v0, #32
+; CHECK-NEXT:    and.16b v0, v0, v2
+; CHECK-NEXT:    mov.d x8, v1[1]
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    scvtf s2, x9
+; CHECK-NEXT:    mov w9, #1333788672 ; =0x4f800000
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov.d x8, v0[1]
+; CHECK-NEXT:    dup.2s v3, w9
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x8
+; CHECK-NEXT:    mov.s v2[1], v1[0]
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    fmul.2s v2, v2, v3
+; CHECK-NEXT:    mov.s v1[1], v0[0]
+; CHECK-NEXT:    fadd.2s v0, v2, v1
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
 
@@ -250,12 +295,20 @@ define void @insert_vec_v16i64_uaddlv_from_v4i16(ptr %0) {
 ; CHECK-LABEL: insert_vec_v16i64_uaddlv_from_v4i16:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-NEXT:    movi.2d v2, #0000000000000000
-; CHECK-NEXT:    uaddlv.4h s1, v0
+; CHECK-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-NEXT:    mov w9, #1333788672 ; =0x4f800000
+; CHECK-NEXT:    scvtf s3, xzr
+; CHECK-NEXT:    dup.2s v4, w9
+; CHECK-NEXT:    uaddlv.4h s2, v0
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
-; CHECK-NEXT:    mov.s v2[0], v1[0]
-; CHECK-NEXT:    ucvtf.2d v1, v2
-; CHECK-NEXT:    fcvtn v1.2s, v1.2d
+; CHECK-NEXT:    mov.s v1[0], v2[0]
+; CHECK-NEXT:    mov.d x8, v1[1]
+; CHECK-NEXT:    scvtf s2, x8
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov.s v1[1], v2[0]
+; CHECK-NEXT:    fmul.2s v2, v4, v3[0]
+; CHECK-NEXT:    fadd.2s v1, v2, v1
 ; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
 
