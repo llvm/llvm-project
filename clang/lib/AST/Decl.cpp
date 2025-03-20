@@ -244,62 +244,6 @@ LinkageInfo LinkageComputer::getLVForType(const Type &T,
   return getTypeLinkageAndVisibility(&T);
 }
 
-/// Get the most restrictive linkage for the types in the given
-/// template parameter list.  For visibility purposes, template
-/// parameters are part of the signature of a template.
-LinkageInfo LinkageComputer::getLVForTemplateParameterList(
-    const TemplateParameterList *Params, LVComputationKind computation) {
-  LinkageInfo LV;
-  for (const NamedDecl *P : *Params) {
-    // Template type parameters are the most common and never
-    // contribute to visibility, pack or not.
-    if (isa<TemplateTypeParmDecl>(P))
-      continue;
-
-    // Non-type template parameters can be restricted by the value type, e.g.
-    //   template <enum X> class A { ... };
-    // We have to be careful here, though, because we can be dealing with
-    // dependent types.
-    if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P)) {
-      // Handle the non-pack case first.
-      if (!NTTP->isExpandedParameterPack()) {
-        if (!NTTP->getType()->isDependentType()) {
-          LV.merge(getLVForType(*NTTP->getType(), computation));
-        }
-        continue;
-      }
-
-      // Look at all the types in an expanded pack.
-      for (unsigned i = 0, n = NTTP->getNumExpansionTypes(); i != n; ++i) {
-        QualType type = NTTP->getExpansionType(i);
-        if (!type->isDependentType())
-          LV.merge(getTypeLinkageAndVisibility(type));
-      }
-      continue;
-    }
-
-    // Template template parameters can be restricted by their
-    // template parameters, recursively.
-    const auto *TTP = cast<TemplateTemplateParmDecl>(P);
-
-    // Handle the non-pack case first.
-    if (!TTP->isExpandedParameterPack()) {
-      LV.merge(getLVForTemplateParameterList(TTP->getTemplateParameters(),
-                                             computation));
-      continue;
-    }
-
-    // Look at all expansions in an expanded pack.
-    for (unsigned i = 0, n = TTP->getNumExpansionTemplateParameters();
-           i != n; ++i) {
-      LV.merge(getLVForTemplateParameterList(
-          TTP->getExpansionTemplateParameters(i), computation));
-    }
-  }
-
-  return LV;
-}
-
 static const Decl *getOutermostFuncOrBlockContext(const Decl *D) {
   const Decl *Ret = nullptr;
   const DeclContext *DC = D->getDeclContext();
@@ -324,10 +268,14 @@ LinkageComputer::getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
   for (const TemplateArgument &Arg : Args) {
     switch (Arg.getKind()) {
     case TemplateArgument::Null:
-    case TemplateArgument::Integral:
-    case TemplateArgument::Expression:
       continue;
 
+    case TemplateArgument::Integral:
+      LV.merge(getLVForType(*Arg.getIntegralType(), computation));
+      continue;
+    case TemplateArgument::Expression:
+      LV.merge(getLVForType(*Arg.getAsExpr()->getType(), computation));
+      continue;
     case TemplateArgument::Type:
       LV.merge(getLVForType(*Arg.getAsType(), computation));
       continue;
@@ -373,10 +321,9 @@ LinkageComputer::getLVForTemplateArgumentList(const TemplateArgumentList &TArgs,
 
 static bool shouldConsiderTemplateVisibility(const FunctionDecl *fn,
                         const FunctionTemplateSpecializationInfo *specInfo) {
-  // Include visibility from the template parameters and arguments
-  // only if this is not an explicit instantiation or specialization
-  // with direct explicit visibility.  (Implicit instantiations won't
-  // have a direct attribute.)
+  // Include visibility from the template arguments only if this is not an
+  // explicit instantiation or specialization with direct explicit visibility.
+  // (Implicit instantiations won't have a direct attribute.)
   if (!specInfo->isExplicitInstantiationOrSpecialization())
     return true;
 
@@ -404,11 +351,6 @@ void LinkageComputer::mergeTemplateLV(
   // template declaration.
   LV.setLinkage(tempLV.getLinkage());
 
-  // Merge information from the template parameters.
-  LinkageInfo paramsLV =
-      getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-  LV.mergeMaybeWithVisibility(paramsLV, considerVisibility);
-
   // Merge information from the template arguments.
   const TemplateArgumentList &templateArgs = *specInfo->TemplateArguments;
   LinkageInfo argsLV = getLVForTemplateArgumentList(templateArgs, computation);
@@ -431,14 +373,13 @@ static bool hasDirectVisibilityAttribute(const NamedDecl *D,
 static bool shouldConsiderTemplateVisibility(
                                  const ClassTemplateSpecializationDecl *spec,
                                  LVComputationKind computation) {
-  // Include visibility from the template parameters and arguments
-  // only if this is not an explicit instantiation or specialization
-  // with direct explicit visibility (and note that implicit
-  // instantiations won't have a direct attribute).
+  // Include visibility from the template arguments only if this is not an
+  // explicit instantiation or specialization with direct explicit visibility
+  // (and note that implicit instantiations won't have a direct attribute).
   //
-  // Furthermore, we want to ignore template parameters and arguments
-  // for an explicit specialization when computing the visibility of a
-  // member thereof with explicit visibility.
+  // Furthermore, we want to ignore template arguments for an explicit
+  // specialization when computing the visibility of a member thereof with
+  // explicit visibility.
   //
   // This is a bit complex; let's unpack it.
   //
@@ -469,19 +410,12 @@ void LinkageComputer::mergeTemplateLV(
     LVComputationKind computation) {
   bool considerVisibility = shouldConsiderTemplateVisibility(spec, computation);
 
-  // Merge information from the template parameters, but ignore
-  // visibility if we're only considering template arguments.
   ClassTemplateDecl *temp = spec->getSpecializedTemplate();
   // Merge information from the template declaration.
   LinkageInfo tempLV = getLVForDecl(temp, computation);
   // The linkage of the specialization should be consistent with the
   // template declaration.
   LV.setLinkage(tempLV.getLinkage());
-
-  LinkageInfo paramsLV =
-    getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-  LV.mergeMaybeWithVisibility(paramsLV,
-           considerVisibility && !hasExplicitVisibilityAlready(computation));
 
   // Merge information from the template arguments.  We ignore
   // template-argument visibility if we've got an explicit
@@ -525,14 +459,6 @@ void LinkageComputer::mergeTemplateLV(LinkageInfo &LV,
                                       const VarTemplateSpecializationDecl *spec,
                                       LVComputationKind computation) {
   bool considerVisibility = shouldConsiderTemplateVisibility(spec, computation);
-
-  // Merge information from the template parameters, but ignore
-  // visibility if we're only considering template arguments.
-  VarTemplateDecl *temp = spec->getSpecializedTemplate();
-  LinkageInfo tempLV =
-    getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-  LV.mergeMaybeWithVisibility(tempLV,
-           considerVisibility && !hasExplicitVisibilityAlready(computation));
 
   // Merge information from the template arguments.  We ignore
   // template-argument visibility if we've got an explicit
@@ -870,10 +796,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
   //     - a template
   } else if (const auto *temp = dyn_cast<TemplateDecl>(D)) {
-    bool considerVisibility = !hasExplicitVisibilityAlready(computation);
-    LinkageInfo tempLV =
-      getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-    LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
 
   //     An unnamed namespace or a namespace declared directly or indirectly
   //     within an unnamed namespace has internal linkage. All other namespaces
@@ -1041,14 +963,6 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   // Template members.
   } else if (const auto *temp = dyn_cast<TemplateDecl>(D)) {
-    bool considerVisibility =
-      (!LV.isVisibilityExplicit() &&
-       !classLV.isVisibilityExplicit() &&
-       !hasExplicitVisibilityAlready(computation));
-    LinkageInfo tempLV =
-      getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-    LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
-
     if (const auto *redeclTemp = dyn_cast<RedeclarableTemplateDecl>(temp)) {
       if (isExplicitMemberSpecialization(redeclTemp)) {
         explicitSpecSuppressor = temp->getTemplatedDecl();
