@@ -19,15 +19,15 @@ class LegalizerInfo;
 struct LegalityQuery;
 
 /// OptMIRBuilder optimizes instructions while building them. It
-/// checks its operands whether they are constant or undef. It never
-/// checks whether an operand is defined by G_FSINCOS. It checks
-/// operands and registers for G_IMPLICIT_DEF, G_CONSTANT,
-/// G_BUILD_VECTOR, and G_SPLAT_VECTOR and nothing else.
-/// Based on undef, the constants and their values, it folds
-/// instructions into constants, undef, or other instructions. For
-/// optmizations and constant folding it relies on GIConstant.
-/// It can fold G_MUL into G_ADD and G_SUB. Before folding
-/// it always queries the legalizer. When it fails to fold, it
+/// checks its operands whether they are constant or
+/// G_IMPLICIT_DEF. It never checks whether an operand is defined by
+/// G_FSINCOS. It checks operands and registers for G_IMPLICIT_DEF,
+/// G_CONSTANT, G_BUILD_VECTOR, and G_SPLAT_VECTOR and nothing else.
+/// Based on G_IMPLICIT_DEF, the constants and their values, it folds
+/// instructions into constants, G_IMPLICIT_DEF, or other
+/// instructions. For optmizations and constant folding it relies on
+/// GIConstant.  It can fold G_MUL into G_ADD and G_SUB. Before
+/// folding it always queries the legalizer. When it fails to fold, it
 /// delegates the building to the CSEMIRBuilder. It is the users
 /// responsibility to only attempt to build legal instructions pass
 /// the legalizer. OptMIRBuilder can safely be used in optimization
