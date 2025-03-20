@@ -36,3 +36,12 @@ def LD_RV32 : PairLoad_ri<"ld", GPRPairRV32>, Sched<[WriteLDD, ReadMemBase]>;
 def SD_RV32 : PairStore_rri<"sd", GPRPairRV32>, Sched<[WriteSTD, ReadStoreData,
                             ReadMemBase]>;
 } // Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32Only"
+
+//===----------------------------------------------------------------------===//
+// Assembler Pseudo Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZilsd, IsRV32] in {
+def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, GPR:$rs1, 0), 0>;
+def : InstAlias<"sd $rs2, (${rs1})", (SD_RV32 GPRPairRV32:$rs2, GPR:$rs1, 0), 0>;
+}
