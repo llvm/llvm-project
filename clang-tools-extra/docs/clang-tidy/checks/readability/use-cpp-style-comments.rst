@@ -3,7 +3,7 @@
 readability-use-cpp-style-comments
 ==================================
 
-Replace C-style comments with C++-style comments.
+Replaces C-style comments with C++-style comments.
 C-style comments (``/* ... */``) are inherited from C, while C++ introduces 
 ``//`` as a more concise, readable, and less error-prone alternative. Modern C++ 
 guidelines recommend using C++-style comments for consistency and 
