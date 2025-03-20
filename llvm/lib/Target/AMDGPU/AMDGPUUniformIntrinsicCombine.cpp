@@ -135,6 +135,7 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo *UI) {
   }
   return IsChanged;
 }
+
 class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
   static char ID;
