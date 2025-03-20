@@ -219,22 +219,20 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 static void sanitizePauthSubSection(
     Ctx &ctx, std::optional<llvm::BuildAttributeSubSection> &pauthSubSection,
     const InputSection &isec) {
+  if (!pauthSubSection)
+    return;
+  // The pauth subsection is non-optional, therefore unknown tags should
+  // generate an error.
+  auto *it = llvm::find_if(pauthSubSection->Content, [](const auto &e) {
+    return e.Tag != 1 && e.Tag != 2;
+  });
+  if (it != pauthSubSection->Content.end()) {
+    Err(ctx) << &isec << ": AArch64 Build Attributes: unknown tag: " << it->Tag
+             << "inside a non-optional subsection aeabi_pauthabi";
+  };
   /*
     Incomplete data: ignore
   */
-  if (!pauthSubSection)
-    return;
-  // Currently there are 2 known tags defined for the pauth subsection,
-  // however, user is allowed to add other, unknown tag. If such tags exists,
-  // remove them. (no need to check for duplicates, they should not be possible)
-  pauthSubSection->Content.erase(
-      std::remove_if(pauthSubSection->Content.begin(),
-                     pauthSubSection->Content.end(),
-                     [](const BuildAttributeItem &item) {
-                       return item.Tag != 1 && item.Tag != 2;
-                     }),
-      pauthSubSection->Content.end());
-
   if (pauthSubSection->Content.size() < 2) {
     if (0 == pauthSubSection->Content.size())
       Warn(ctx) << &isec
