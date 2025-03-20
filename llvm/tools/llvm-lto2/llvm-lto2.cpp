@@ -187,6 +187,18 @@ static cl::opt<bool> EnableFreestanding(
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
     cl::Hidden);
 
+static cl::opt<bool> WholeProgramVisibilityEnabledInLTO(
+    "whole-program-visibility-enabled-in-lto",
+    cl::desc("Enable whole program visibility during LTO"), cl::Hidden);
+
+static cl::opt<bool> ValidateAllVtablesHaveTypeInfos(
+    "validate-all-vtables-have-type-infos",
+    cl::desc("Validate that all vtables have type infos in LTO"), cl::Hidden);
+
+static cl::opt<bool>
+    AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
+                            cl::desc("All vtables have type infos"));
+
 extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
@@ -331,6 +343,13 @@ static int run(int argc, char **argv) {
   Conf.StatsFile = StatsFile;
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
+
+  if (WholeProgramVisibilityEnabledInLTO.getNumOccurrences() > 0)
+    Conf.HasWholeProgramVisibility = WholeProgramVisibilityEnabledInLTO;
+  if (ValidateAllVtablesHaveTypeInfos.getNumOccurrences() > 0)
+    Conf.ValidateAllVtablesHaveTypeInfos = ValidateAllVtablesHaveTypeInfos;
+  if (AllVtablesHaveTypeInfos.getNumOccurrences() > 0)
+    Conf.AllVtablesHaveTypeInfos = AllVtablesHaveTypeInfos;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
