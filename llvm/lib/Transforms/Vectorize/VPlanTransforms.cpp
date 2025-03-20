@@ -2195,6 +2195,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
+  if (Plan.getOrCreateBackedgeTakenCount()->getNumUsers() > 0)
+    VPValues.push_back(Plan.getOrCreateBackedgeTakenCount());
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
     append_range(VPValues, R.definedValues());

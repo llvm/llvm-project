@@ -266,7 +266,7 @@ def err_test_module_file_extension_version : Error<
   "(%3.%4)">;
 
 def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
-  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
+  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules; "
   "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
   InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
 

@@ -752,6 +752,7 @@ def ECALL : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ecall", "">, Sched<[Write
   let imm12 = 0;
 }
 
+let isTrap = 1 in
 def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
              Sched<[]> {
   let rs1 = 0;
@@ -762,6 +763,7 @@ def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
 // This is a de facto standard (as set by GNU binutils) 32-bit unimplemented
 // instruction (i.e., it should always trap, if your implementation has invalid
 // instruction traps).
+let isTrap = 1 in
 def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
             Sched<[]> {
   let rs1 = 0;

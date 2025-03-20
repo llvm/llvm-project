@@ -3597,10 +3597,12 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
 bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
     MachineInstr &MI) const {
-  MI.setDesc(TII.get(MI.getOperand(1).getImm()));
-  MI.removeOperand(1);
+  unsigned OpcodeOpIdx =
+      MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ? 1 : 3;
+  MI.setDesc(TII.get(MI.getOperand(OpcodeOpIdx).getImm()));
+  MI.removeOperand(OpcodeOpIdx);
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
-  return true;
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 // FIXME: This should be removed and let the patterns select. We just need the
@@ -4114,6 +4116,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
+  case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
     return selectBVHIntersectRayIntrinsic(I);
   case AMDGPU::G_SBFX:

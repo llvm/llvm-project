@@ -5386,12 +5386,15 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       PatternDef = nullptr;
   }
 
+  // True is the template definition is unreachable, otherwise false.
+  bool Unreachable = false;
   // FIXME: We need to track the instantiation stack in order to know which
   // definitions should be visible within this instantiation.
-  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Function,
-                                Function->getInstantiatedFromMemberFunction(),
-                                     PatternDecl, PatternDef, TSK,
-                                     /*Complain*/DefinitionRequired)) {
+  if (DiagnoseUninstantiableTemplate(
+          PointOfInstantiation, Function,
+          Function->getInstantiatedFromMemberFunction(), PatternDecl,
+          PatternDef, TSK,
+          /*Complain*/ DefinitionRequired, &Unreachable)) {
     if (DefinitionRequired)
       Function->setInvalidDecl();
     else if (TSK == TSK_ExplicitInstantiationDefinition ||
@@ -5416,11 +5419,18 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&
           !getSourceManager().isInSystemHeader(PatternDecl->getBeginLoc())) {
         Diag(PointOfInstantiation, diag::warn_func_template_missing)
-          << Function;
-        Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
-        if (getLangOpts().CPlusPlus11)
-          Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
-              << Function;
+            << Function;
+        if (Unreachable) {
+          // FIXME: would be nice to mention which module the function template
+          // comes from.
+          Diag(PatternDecl->getLocation(),
+               diag::note_unreachable_template_decl);
+        } else {
+          Diag(PatternDecl->getLocation(), diag::note_forward_template_decl);
+          if (getLangOpts().CPlusPlus11)
+            Diag(PointOfInstantiation, diag::note_inst_declaration_hint)
+                << Function;
+        }
       }
     }
 

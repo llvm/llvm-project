@@ -1854,3 +1854,2775 @@ define void @freeze_i256(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
   store i256 %freeze, ptr addrspace(1) %ptrb, align 4
   ret void
 }
+
+define void @freeze_i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i16, ptr addrspace(1) %ptra
+  %freeze = freeze i16 %a
+  store i16 %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x i16>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x i16> %a
+  store <2 x i16> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3i16:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_short v[2:3], v1, off offset:4
+; GFX10-SDAG-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3i16:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-GISEL-NEXT:    global_store_short_d16_hi v[2:3], v0, off offset:2
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v1, off offset:4
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3i16:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v1, off offset:4
+; GFX11-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3i16:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x2
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    global_store_d16_hi_b16 v[2:3], v0, off offset:2
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v1, off offset:4
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x i16>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x i16> %a
+  store <3 x i16> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v4i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v4i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x i16>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x i16> %a
+  store <4 x i16> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v8i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v8i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x i16>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x i16> %a
+  store <8 x i16> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v16i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v16i16:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v16i16:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16i16:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16i16:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x i16>, ptr addrspace(1) %ptra
+  %freeze = freeze <16 x i16> %a
+  store <16 x i16> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load half, ptr addrspace(1) %ptra
+  %freeze = freeze half %a
+  store half %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v2f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x half>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x half> %a
+  store <2 x half> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3f16:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_short v[2:3], v1, off offset:4
+; GFX10-SDAG-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3f16:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-GISEL-NEXT:    global_store_short_d16_hi v[2:3], v0, off offset:2
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v1, off offset:4
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3f16:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v1, off offset:4
+; GFX11-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3f16:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x2
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    global_store_d16_hi_b16 v[2:3], v0, off offset:2
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v1, off offset:4
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x half>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x half> %a
+  store <3 x half> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v4f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v4f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x half>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x half> %a
+  store <4 x half> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v8f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v8f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x half>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x half> %a
+  store <8 x half> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v16f16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v16f16:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v16f16:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16f16:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16f16:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x half>, ptr addrspace(1) %ptra
+  %freeze = freeze <16 x half> %a
+  store <16 x half> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_bf16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load bfloat, ptr addrspace(1) %ptra
+  %freeze = freeze bfloat %a
+  store bfloat %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2bf16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v2bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x bfloat>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x bfloat> %a
+  store <2 x bfloat> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3bf16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3bf16:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_short v[2:3], v1, off offset:4
+; GFX10-SDAG-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3bf16:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-GISEL-NEXT:    global_store_short_d16_hi v[2:3], v0, off offset:2
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v1, off offset:4
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3bf16:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v1, off offset:4
+; GFX11-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3bf16:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x2
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    global_store_d16_hi_b16 v[2:3], v0, off offset:2
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v1, off offset:4
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x bfloat>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x bfloat> %a
+  store <3 x bfloat> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4bf16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v4bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v4bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x bfloat>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x bfloat> %a
+  store <4 x bfloat> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8bf16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v8bf16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v8bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x bfloat>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x bfloat> %a
+  store <8 x bfloat> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_f64(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load double, ptr addrspace(1) %ptra
+  %freeze = freeze double %a
+  store double %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2f64(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v2f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x double>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x double> %a
+  store <2 x double> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3f64(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[8:9], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[8:9], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[8:9], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b64 v[8:9], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[8:9], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b64 v[2:3], v[8:9], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x double>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x double> %a
+  store <3 x double> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4f64(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v4f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v4f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v4f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v4f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x double>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x double> %a
+  store <4 x double> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8f64(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v8f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x3
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:32
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:32
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:48
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:16
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v8f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x3
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:32
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:32
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:48
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v8f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x3
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:16
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v8f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x3
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
+; GFX11-GISEL-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x double>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x double> %a
+  store <8 x double> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_p0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_p0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load ptr, ptr addrspace(1) %ptra
+  %freeze = freeze ptr %a
+  store ptr %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v2p0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2p0:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x ptr>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x ptr> %a
+  store <2 x ptr> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3p0:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[8:9], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[8:9], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3p0:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX10-GISEL-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, v4
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, v5
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[6:9], off
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3p0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b64 v[8:9], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[8:9], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3p0:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[6:9], off
+; GFX11-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x ptr>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x ptr> %a
+  store <3 x ptr> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v4p0:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v4p0:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v4p0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v4p0:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x ptr>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x ptr> %a
+  store <4 x ptr> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v8p0:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x3
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:32
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:32
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:48
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:16
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v8p0:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x3
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:32
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:32
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:48
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v8p0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x3
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:16
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v8p0:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x3
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
+; GFX11-GISEL-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x ptr>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x ptr> %a
+  store <8 x ptr> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v16p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v16p0:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x7
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:96
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:112
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:64
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:80
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[20:23], v[0:1], off offset:32
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[24:27], v[0:1], off offset:48
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[28:31], v[0:1], off
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[32:35], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:96
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:112
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(5)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:64
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:80
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[20:23], off offset:32
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[24:27], off offset:48
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[28:31], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[32:35], off offset:16
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v16p0:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x7
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:32
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:48
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[20:23], v[0:1], off offset:64
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[24:27], v[0:1], off offset:80
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[28:31], v[0:1], off offset:96
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[32:35], v[0:1], off offset:112
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(7)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(5)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:32
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(4)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[20:23], off offset:64
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[24:27], off offset:80
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[28:31], off offset:96
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[32:35], off offset:112
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16p0:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x7
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:112
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
+; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off
+; GFX11-SDAG-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:112
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:80
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[28:31], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[32:35], off offset:16
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16p0:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x7
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
+; GFX11-GISEL-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-GISEL-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:64
+; GFX11-GISEL-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:80
+; GFX11-GISEL-NEXT:    global_load_b128 v[28:31], v[0:1], off offset:96
+; GFX11-GISEL-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:112
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:64
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:80
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[28:31], off offset:96
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[32:35], off offset:112
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x ptr>, ptr addrspace(1) %ptra
+  %freeze = freeze <16 x ptr> %a
+  store <16 x ptr> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_p1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_p1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load ptr addrspace(1), ptr addrspace(1) %ptra
+  %freeze = freeze ptr addrspace(1) %a
+  store ptr addrspace(1) %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_v2p1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2p1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x ptr addrspace(1)>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x ptr addrspace(1)> %a
+  store <2 x ptr addrspace(1)> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3p1:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[8:9], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[8:9], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3p1:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
+; GFX10-GISEL-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, v4
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, v5
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[6:9], off
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3p1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b64 v[8:9], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[8:9], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3p1:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[6:9], off
+; GFX11-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x ptr addrspace(1)>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x ptr addrspace(1)> %a
+  store <3 x ptr addrspace(1)> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v4p1:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x1
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v4p1:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x1
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v4p1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v4p1:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x ptr addrspace(1)>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x ptr addrspace(1)> %a
+  store <4 x ptr addrspace(1)> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v8p1:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x3
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:32
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:48
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:32
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:48
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:16
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v8p1:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x3
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:32
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:32
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:48
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v8p1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x3
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:16
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v8p1:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x3
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
+; GFX11-GISEL-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x ptr addrspace(1)>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x ptr addrspace(1)> %a
+  store <8 x ptr addrspace(1)> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v16p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v16p1:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_clause 0x7
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:96
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:112
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:64
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:80
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[20:23], v[0:1], off offset:32
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[24:27], v[0:1], off offset:48
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[28:31], v[0:1], off
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[32:35], v[0:1], off offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off offset:96
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:112
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(5)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:64
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:80
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[20:23], off offset:32
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[24:27], off offset:48
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[28:31], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[32:35], off offset:16
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v16p1:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_clause 0x7
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[8:11], v[0:1], off offset:16
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off offset:32
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[16:19], v[0:1], off offset:48
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[20:23], v[0:1], off offset:64
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[24:27], v[0:1], off offset:80
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[28:31], v[0:1], off offset:96
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[32:35], v[0:1], off offset:112
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(7)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[8:11], off offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(5)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[12:15], off offset:32
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(4)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[16:19], off offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[20:23], off offset:64
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[24:27], off offset:80
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[28:31], off offset:96
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[32:35], off offset:112
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16p1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x7
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
+; GFX11-SDAG-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:112
+; GFX11-SDAG-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
+; GFX11-SDAG-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:80
+; GFX11-SDAG-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:32
+; GFX11-SDAG-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:48
+; GFX11-SDAG-NEXT:    global_load_b128 v[28:31], v[0:1], off
+; GFX11-SDAG-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:112
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:80
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[28:31], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[32:35], off offset:16
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16p1:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_clause 0x7
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:16
+; GFX11-GISEL-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:32
+; GFX11-GISEL-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:48
+; GFX11-GISEL-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:64
+; GFX11-GISEL-NEXT:    global_load_b128 v[24:27], v[0:1], off offset:80
+; GFX11-GISEL-NEXT:    global_load_b128 v[28:31], v[0:1], off offset:96
+; GFX11-GISEL-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:112
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:32
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[16:19], off offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[20:23], off offset:64
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[24:27], off offset:80
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[28:31], off offset:96
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[32:35], off offset:112
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x ptr addrspace(1)>, ptr addrspace(1) %ptra
+  %freeze = freeze <16 x ptr addrspace(1)> %a
+  store <16 x ptr addrspace(1)> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
+; GFX10-LABEL: freeze_p3:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read_b32 v0, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    ds_write_b32 v1, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_p3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b32 v0, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b32 v1, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load ptr addrspace(3), ptr addrspace(3) %ptra
+  %freeze = freeze ptr addrspace(3) %a
+  store ptr addrspace(3) %freeze, ptr addrspace(3) %ptrb
+  ret void
+}
+
+define void @freeze_v2p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
+; GFX10-LABEL: freeze_v2p3:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read_b64 v[2:3], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    ds_write_b64 v1, v[2:3]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2p3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b64 v[2:3], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b64 v1, v[2:3]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x ptr addrspace(3)>, ptr addrspace(3) %ptra
+  %freeze = freeze <2 x ptr addrspace(3)> %a
+  store <2 x ptr addrspace(3)> %freeze, ptr addrspace(3) %ptrb
+  ret void
+}
+
+define void @freeze_v3p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
+; GFX10-LABEL: freeze_v3p3:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read_b96 v[2:4], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    ds_write_b96 v1, v[2:4]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v3p3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b96 v[2:4], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b96 v1, v[2:4]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x ptr addrspace(3)>, ptr addrspace(3) %ptra
+  %freeze = freeze <3 x ptr addrspace(3)> %a
+  store <3 x ptr addrspace(3)> %freeze, ptr addrspace(3) %ptrb
+  ret void
+}
+
+define void @freeze_v4p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
+; GFX10-LABEL: freeze_v4p3:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    ds_read_b128 v[2:5], v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    ds_write_b128 v1, v[2:5]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v4p3:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    ds_load_b128 v[2:5], v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    ds_store_b128 v1, v[2:5]
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x ptr addrspace(3)>, ptr addrspace(3) %ptra
+  %freeze = freeze <4 x ptr addrspace(3)> %a
+  store <4 x ptr addrspace(3)> %freeze, ptr addrspace(3) %ptrb
+  ret void
+}
+
+define void @freeze_v8p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v8p3:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    ds_read_b128 v[2:5], v0 offset:16
+; GFX10-SDAG-NEXT:    ds_read_b128 v[6:9], v0
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX10-SDAG-NEXT:    ds_write_b128 v1, v[2:5] offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX10-SDAG-NEXT:    ds_write_b128 v1, v[6:9]
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v8p3:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    ds_read_b128 v[2:5], v0
+; GFX10-GISEL-NEXT:    ds_read_b128 v[6:9], v0 offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX10-GISEL-NEXT:    ds_write_b128 v1, v[2:5]
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX10-GISEL-NEXT:    ds_write_b128 v1, v[6:9] offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v8p3:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    ds_load_b128 v[2:5], v0 offset:16
+; GFX11-SDAG-NEXT:    ds_load_b128 v[6:9], v0
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[2:5] offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[6:9]
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v8p3:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    ds_load_b128 v[2:5], v0
+; GFX11-GISEL-NEXT:    ds_load_b128 v[6:9], v0 offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX11-GISEL-NEXT:    ds_store_b128 v1, v[2:5]
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX11-GISEL-NEXT:    ds_store_b128 v1, v[6:9] offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x ptr addrspace(3)>, ptr addrspace(3) %ptra
+  %freeze = freeze <8 x ptr addrspace(3)> %a
+  store <8 x ptr addrspace(3)> %freeze, ptr addrspace(3) %ptrb
+  ret void
+}
+
+define void @freeze_v16p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v16p3:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    ds_read_b128 v[2:5], v0 offset:32
+; GFX10-SDAG-NEXT:    ds_read_b128 v[6:9], v0 offset:48
+; GFX10-SDAG-NEXT:    ds_read_b128 v[10:13], v0
+; GFX10-SDAG-NEXT:    ds_read_b128 v[14:17], v0 offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-SDAG-NEXT:    ds_write_b128 v1, v[2:5] offset:32
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-SDAG-NEXT:    ds_write_b128 v1, v[6:9] offset:48
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-SDAG-NEXT:    ds_write_b128 v1, v[10:13]
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-SDAG-NEXT:    ds_write_b128 v1, v[14:17] offset:16
+; GFX10-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v16p3:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    ds_read_b128 v[2:5], v0
+; GFX10-GISEL-NEXT:    ds_read_b128 v[6:9], v0 offset:16
+; GFX10-GISEL-NEXT:    ds_read_b128 v[10:13], v0 offset:32
+; GFX10-GISEL-NEXT:    ds_read_b128 v[14:17], v0 offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-GISEL-NEXT:    ds_write_b128 v1, v[2:5]
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-GISEL-NEXT:    ds_write_b128 v1, v[6:9] offset:16
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-GISEL-NEXT:    ds_write_b128 v1, v[10:13] offset:32
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX10-GISEL-NEXT:    ds_write_b128 v1, v[14:17] offset:48
+; GFX10-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16p3:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    ds_load_b128 v[2:5], v0 offset:32
+; GFX11-SDAG-NEXT:    ds_load_b128 v[6:9], v0 offset:48
+; GFX11-SDAG-NEXT:    ds_load_b128 v[10:13], v0
+; GFX11-SDAG-NEXT:    ds_load_b128 v[14:17], v0 offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[2:5] offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[6:9] offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[10:13]
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-SDAG-NEXT:    ds_store_b128 v1, v[14:17] offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16p3:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    ds_load_b128 v[2:5], v0
+; GFX11-GISEL-NEXT:    ds_load_b128 v[6:9], v0 offset:16
+; GFX11-GISEL-NEXT:    ds_load_b128 v[10:13], v0 offset:32
+; GFX11-GISEL-NEXT:    ds_load_b128 v[14:17], v0 offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-GISEL-NEXT:    ds_store_b128 v1, v[2:5]
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-GISEL-NEXT:    ds_store_b128 v1, v[6:9] offset:16
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-GISEL-NEXT:    ds_store_b128 v1, v[10:13] offset:32
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX11-GISEL-NEXT:    ds_store_b128 v1, v[14:17] offset:48
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x ptr addrspace(3)>, ptr addrspace(3) %ptra
+  %freeze = freeze <16 x ptr addrspace(3)> %a
+  store <16 x ptr addrspace(3)> %freeze, ptr addrspace(3) %ptrb
+  ret void
+}
+
+define void @freeze_p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
+; GFX10-LABEL: freeze_p5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_p5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_load_b32 v0, v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b32 v1, v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load ptr addrspace(5), ptr addrspace(5) %ptra
+  %freeze = freeze ptr addrspace(5) %a
+  store ptr addrspace(5) %freeze, ptr addrspace(5) %ptrb
+  ret void
+}
+
+define void @freeze_v2p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
+; GFX10-LABEL: freeze_v2p5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v2p5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_load_b64 v[2:3], v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b64 v1, v[2:3], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x ptr addrspace(5)>, ptr addrspace(5) %ptra
+  %freeze = freeze <2 x ptr addrspace(5)> %a
+  store <2 x ptr addrspace(5)> %freeze, ptr addrspace(5) %ptrb
+  ret void
+}
+
+define void @freeze_v3p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
+; GFX10-LABEL: freeze_v3p5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x2
+; GFX10-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v4, v1, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v3p5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_load_b96 v[2:4], v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b96 v1, v[2:4], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x ptr addrspace(5)>, ptr addrspace(5) %ptra
+  %freeze = freeze <3 x ptr addrspace(5)> %a
+  store <3 x ptr addrspace(5)> %freeze, ptr addrspace(5) %ptrb
+  ret void
+}
+
+define void @freeze_v4p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
+; GFX10-LABEL: freeze_v4p5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x3
+; GFX10-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen offset:12
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    buffer_store_dword v4, v1, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v5, v1, s[0:3], 0 offen offset:12
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_v4p5:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    scratch_load_b128 v[2:5], v0, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 v1, v[2:5], off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x ptr addrspace(5)>, ptr addrspace(5) %ptra
+  %freeze = freeze <4 x ptr addrspace(5)> %a
+  store <4 x ptr addrspace(5)> %freeze, ptr addrspace(5) %ptrb
+  ret void
+}
+
+define void @freeze_v8p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
+; GFX10-LABEL: freeze_v8p5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x7
+; GFX10-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen offset:12
+; GFX10-NEXT:    buffer_load_dword v6, v0, s[0:3], 0 offen offset:16
+; GFX10-NEXT:    buffer_load_dword v7, v0, s[0:3], 0 offen offset:20
+; GFX10-NEXT:    buffer_load_dword v8, v0, s[0:3], 0 offen offset:24
+; GFX10-NEXT:    buffer_load_dword v9, v0, s[0:3], 0 offen offset:28
+; GFX10-NEXT:    s_waitcnt vmcnt(7)
+; GFX10-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(5)
+; GFX10-NEXT:    buffer_store_dword v4, v1, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(4)
+; GFX10-NEXT:    buffer_store_dword v5, v1, s[0:3], 0 offen offset:12
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    buffer_store_dword v6, v1, s[0:3], 0 offen offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    buffer_store_dword v7, v1, s[0:3], 0 offen offset:20
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    buffer_store_dword v8, v1, s[0:3], 0 offen offset:24
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v9, v1, s[0:3], 0 offen offset:28
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v8p5:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[2:5], v0, off offset:16
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[6:9], v0, off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[2:5], off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[6:9], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v8p5:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v6, 16, v0
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[2:5], v0, off
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[6:9], v6, off
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v0, 16, v1
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[2:5], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    scratch_store_b128 v0, v[6:9], off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x ptr addrspace(5)>, ptr addrspace(5) %ptra
+  %freeze = freeze <8 x ptr addrspace(5)> %a
+  store <8 x ptr addrspace(5)> %freeze, ptr addrspace(5) %ptrb
+  ret void
+}
+
+define void @freeze_v16p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
+; GFX10-LABEL: freeze_v16p5:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0xf
+; GFX10-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX10-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    buffer_load_dword v5, v0, s[0:3], 0 offen offset:12
+; GFX10-NEXT:    buffer_load_dword v6, v0, s[0:3], 0 offen offset:16
+; GFX10-NEXT:    buffer_load_dword v7, v0, s[0:3], 0 offen offset:20
+; GFX10-NEXT:    buffer_load_dword v8, v0, s[0:3], 0 offen offset:24
+; GFX10-NEXT:    buffer_load_dword v9, v0, s[0:3], 0 offen offset:28
+; GFX10-NEXT:    buffer_load_dword v10, v0, s[0:3], 0 offen offset:32
+; GFX10-NEXT:    buffer_load_dword v11, v0, s[0:3], 0 offen offset:36
+; GFX10-NEXT:    buffer_load_dword v12, v0, s[0:3], 0 offen offset:40
+; GFX10-NEXT:    buffer_load_dword v13, v0, s[0:3], 0 offen offset:44
+; GFX10-NEXT:    buffer_load_dword v14, v0, s[0:3], 0 offen offset:48
+; GFX10-NEXT:    buffer_load_dword v15, v0, s[0:3], 0 offen offset:52
+; GFX10-NEXT:    buffer_load_dword v16, v0, s[0:3], 0 offen offset:56
+; GFX10-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:60
+; GFX10-NEXT:    s_waitcnt vmcnt(15)
+; GFX10-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX10-NEXT:    s_waitcnt vmcnt(14)
+; GFX10-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(13)
+; GFX10-NEXT:    buffer_store_dword v4, v1, s[0:3], 0 offen offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(12)
+; GFX10-NEXT:    buffer_store_dword v5, v1, s[0:3], 0 offen offset:12
+; GFX10-NEXT:    s_waitcnt vmcnt(11)
+; GFX10-NEXT:    buffer_store_dword v6, v1, s[0:3], 0 offen offset:16
+; GFX10-NEXT:    s_waitcnt vmcnt(10)
+; GFX10-NEXT:    buffer_store_dword v7, v1, s[0:3], 0 offen offset:20
+; GFX10-NEXT:    s_waitcnt vmcnt(9)
+; GFX10-NEXT:    buffer_store_dword v8, v1, s[0:3], 0 offen offset:24
+; GFX10-NEXT:    s_waitcnt vmcnt(8)
+; GFX10-NEXT:    buffer_store_dword v9, v1, s[0:3], 0 offen offset:28
+; GFX10-NEXT:    s_waitcnt vmcnt(7)
+; GFX10-NEXT:    buffer_store_dword v10, v1, s[0:3], 0 offen offset:32
+; GFX10-NEXT:    s_waitcnt vmcnt(6)
+; GFX10-NEXT:    buffer_store_dword v11, v1, s[0:3], 0 offen offset:36
+; GFX10-NEXT:    s_waitcnt vmcnt(5)
+; GFX10-NEXT:    buffer_store_dword v12, v1, s[0:3], 0 offen offset:40
+; GFX10-NEXT:    s_waitcnt vmcnt(4)
+; GFX10-NEXT:    buffer_store_dword v13, v1, s[0:3], 0 offen offset:44
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    buffer_store_dword v14, v1, s[0:3], 0 offen offset:48
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    buffer_store_dword v15, v1, s[0:3], 0 offen offset:52
+; GFX10-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-NEXT:    buffer_store_dword v16, v1, s[0:3], 0 offen offset:56
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen offset:60
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16p5:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    s_clause 0x3
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[2:5], v0, off offset:32
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[6:9], v0, off offset:48
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[10:13], v0, off
+; GFX11-SDAG-NEXT:    scratch_load_b128 v[14:17], v0, off offset:16
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[2:5], off offset:32
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[6:9], off offset:48
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[10:13], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    scratch_store_b128 v1, v[14:17], off offset:16
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16p5:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v6, 16, v0
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v10, 32, v0
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v14, 48, v0
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v18, 32, v1
+; GFX11-GISEL-NEXT:    s_clause 0x3
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[2:5], v0, off
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[6:9], v6, off
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[10:13], v10, off
+; GFX11-GISEL-NEXT:    scratch_load_b128 v[14:17], v14, off
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v0, 16, v1
+; GFX11-GISEL-NEXT:    v_add_nc_u32_e32 v19, 48, v1
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-GISEL-NEXT:    scratch_store_b128 v1, v[2:5], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-GISEL-NEXT:    scratch_store_b128 v0, v[6:9], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-GISEL-NEXT:    scratch_store_b128 v18, v[10:13], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    scratch_store_b128 v19, v[14:17], off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x ptr addrspace(5)>, ptr addrspace(5) %ptra
+  %freeze = freeze <16 x ptr addrspace(5)> %a
+  store <16 x ptr addrspace(5)> %freeze, ptr addrspace(5) %ptrb
+  ret void
+}
+
+define void @freeze_i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_i8:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_i8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i8, ptr addrspace(1) %ptra
+  %freeze = freeze i8 %a
+  store i8 %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v2i8:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v2i8:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, 0xff
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v1, v1, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v2i8:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v2i8:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x i8>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x i8> %a
+  store <2 x i8> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3i8:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    v_lshrrev_b16 v1, 8, v0
+; GFX10-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX10-SDAG-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v4, off offset:2
+; GFX10-SDAG-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3i8:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v4, v4, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX10-GISEL-NEXT:    global_store_short v[2:3], v0, off
+; GFX10-GISEL-NEXT:    global_store_byte_d16_hi v[2:3], v0, off offset:2
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3i8:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    v_lshrrev_b16 v1, 8, v0
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v4, 0xff, v0
+; GFX11-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v1, v4, v1
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b8 v[2:3], v0, off offset:2
+; GFX11-SDAG-NEXT:    global_store_b16 v[2:3], v1, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3i8:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v4
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b16 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    global_store_d16_hi_b8 v[2:3], v0, off offset:2
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x i8>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x i8> %a
+  store <3 x i8> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v4i8:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v4i8:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 8
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, 0xff
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v4, v0, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_or_b32 v1, 0xff, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_or3_b32 v0, v1, v4, v0
+; GFX10-GISEL-NEXT:    global_store_dword v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v4i8:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v4i8:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 24, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v5
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX11-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v0, v1
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v5
+; GFX11-GISEL-NEXT:    v_or3_b32 v0, v0, v4, v1
+; GFX11-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x i8>, ptr addrspace(1) %ptra
+  %freeze = freeze <4 x i8> %a
+  store <4 x i8> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v8i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v8i8:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v8i8:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v4, 8
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v5, 0xff
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 8, v0
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 8, v1
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v8, v0, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v9, v1, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v6, v4, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v4, v4, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v7, v0, v5 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v5, v1, v5 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v0, v6
+; GFX10-GISEL-NEXT:    v_and_or_b32 v1, 0xff, v1, v4
+; GFX10-GISEL-NEXT:    v_or3_b32 v0, v0, v8, v7
+; GFX10-GISEL-NEXT:    v_or3_b32 v1, v1, v9, v5
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[2:3], v[0:1], off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v8i8:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v8i8:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 8, v1
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 24, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v9, 24, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v7, 0xff, v7
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v5
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v6, 0xff, v6
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v8, 0xff, v8
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v9, 0xff, v9
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 8, v7
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 24, v6
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v9, 24, v9
+; GFX11-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v0, v4
+; GFX11-GISEL-NEXT:    v_and_or_b32 v1, 0xff, v1, v7
+; GFX11-GISEL-NEXT:    v_or3_b32 v0, v0, v5, v6
+; GFX11-GISEL-NEXT:    v_or3_b32 v1, v1, v8, v9
+; GFX11-GISEL-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <8 x i8>, ptr addrspace(1) %ptra
+  %freeze = freeze <8 x i8> %a
+  store <8 x i8> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v16i8(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v16i8:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v16i8:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, 8
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0xff
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v8, 8, v4
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v9, 8, v5
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v10, 8, v6
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v11, 8, v7
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v12, v4, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v8, v0, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v9, v0, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v10, v0, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v0, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v13, v4, v1 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v14, v5, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v15, v5, v1 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v16, v6, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v17, v6, v1 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v18, v7, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_b32_sdwa v1, v7, v1 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_and_or_b32 v4, 0xff, v4, v8
+; GFX10-GISEL-NEXT:    v_and_or_b32 v5, 0xff, v5, v9
+; GFX10-GISEL-NEXT:    v_and_or_b32 v6, 0xff, v6, v10
+; GFX10-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v7, v0
+; GFX10-GISEL-NEXT:    v_or3_b32 v4, v4, v12, v13
+; GFX10-GISEL-NEXT:    v_or3_b32 v5, v5, v14, v15
+; GFX10-GISEL-NEXT:    v_or3_b32 v6, v6, v16, v17
+; GFX10-GISEL-NEXT:    v_or3_b32 v7, v0, v18, v1
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[2:3], v[4:7], off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v16i8:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v16i8:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 8, v4
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v9, 8, v5
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v12, 8, v6
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v15, 8, v7
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v8, 24, v4
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v10, 16, v5
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v11, 24, v5
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v13, 16, v6
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v14, 24, v6
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v16, 16, v7
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v17, 24, v7
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v9, 0xff, v9
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v12, 0xff, v12
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v15, 0xff, v15
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v8, 0xff, v8
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v10, 0xff, v10
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v11, 0xff, v11
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v13, 0xff, v13
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v14, 0xff, v14
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v16, 0xff, v16
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v17, 0xff, v17
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v9, 8, v9
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v12, 8, v12
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v15, 8, v15
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 24, v8
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v11, 24, v11
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v14, 24, v14
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
+; GFX11-GISEL-NEXT:    v_lshlrev_b32_e32 v17, 24, v17
+; GFX11-GISEL-NEXT:    v_and_or_b32 v0, 0xff, v4, v0
+; GFX11-GISEL-NEXT:    v_and_or_b32 v5, 0xff, v5, v9
+; GFX11-GISEL-NEXT:    v_and_or_b32 v6, 0xff, v6, v12
+; GFX11-GISEL-NEXT:    v_and_or_b32 v7, 0xff, v7, v15
+; GFX11-GISEL-NEXT:    v_or3_b32 v4, v0, v1, v8
+; GFX11-GISEL-NEXT:    v_or3_b32 v5, v5, v10, v11
+; GFX11-GISEL-NEXT:    v_or3_b32 v6, v6, v13, v14
+; GFX11-GISEL-NEXT:    v_or3_b32 v7, v7, v16, v17
+; GFX11-GISEL-NEXT:    global_store_b128 v[2:3], v[4:7], off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <16 x i8>, ptr addrspace(1) %ptra
+  %freeze = freeze <16 x i8> %a
+  store <16 x i8> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_i1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_i1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i1, ptr addrspace(1) %ptra
+  %freeze = freeze i1 %a
+  store i1 %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v2i1:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v2i1:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-GISEL-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v2i1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-SDAG-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v2i1:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x i1>, ptr addrspace(1) %ptra
+  %freeze = freeze <2 x i1> %a
+  store <2 x i1> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3i1:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3i1:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 1, v0
+; GFX10-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 2, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v1, 2, v4
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX10-GISEL-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3i1:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX11-SDAG-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3i1:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 1, v0
+; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 2, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 2, v4
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x i1>, ptr addrspace(1) %ptra
+  %freeze = freeze <3 x i1> %a
+  store <3 x i1> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-LABEL: freeze_i1_vcc:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: freeze_i1_vcc:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i32, ptr addrspace(1) %ptra
+  %cmp = icmp eq i32 %a, 0
+  %freeze = freeze i1 %cmp
+  store i1 %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v2i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v2i1_vcc:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v2i1_vcc:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-GISEL-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v2i1_vcc:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-SDAG-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v2i1_vcc:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <2 x i32>, ptr addrspace(1) %ptra
+  %cmp = icmp eq <2 x i32> %a, zeroinitializer
+  %freeze = freeze <2 x i1> %cmp
+  store <2 x i1> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v3i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v3i1_vcc:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx3 v[4:6], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v1, 2, v4
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v3i1_vcc:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx3 v[4:6], v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v1, 2, v4
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX10-GISEL-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v3i1_vcc:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b96 v[4:6], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v1, 2, v4
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX11-SDAG-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v3i1_vcc:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b96 v[4:6], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 2, v4
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 7, v0
+; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <3 x i32>, ptr addrspace(1) %ptra
+  %cmp = icmp eq <3 x i32> %a, zeroinitializer
+  %freeze = freeze <3 x i1> %cmp
+  store <3 x i1> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}
+
+define void @freeze_v4i1_vcc(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
+; GFX10-SDAG-LABEL: freeze_v4i1_vcc:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v1, 3, v1
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 15, v0
+; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: freeze_v4i1_vcc:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 1, v5
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX10-GISEL-NEXT:    v_lshlrev_b16 v1, 3, v1
+; GFX10-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, 15, v0
+; GFX10-GISEL-NEXT:    global_store_byte v[2:3], v0, off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: freeze_v4i1_vcc:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX11-SDAG-NEXT:    v_lshlrev_b16 v1, 3, v1
+; GFX11-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 15, v0
+; GFX11-SDAG-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: freeze_v4i1_vcc:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v6
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v0, 1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v7
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v4, 1, v4
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v4, 2, v4
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v1, 1, v5
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v4
+; GFX11-GISEL-NEXT:    v_lshlrev_b16 v1, 3, v1
+; GFX11-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 15, v0
+; GFX11-GISEL-NEXT:    global_store_b8 v[2:3], v0, off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %a = load <4 x i32>, ptr addrspace(1) %ptra
+  %cmp = icmp eq <4 x i32> %a, zeroinitializer
+  %freeze = freeze <4 x i1> %cmp
+  store <4 x i1> %freeze, ptr addrspace(1) %ptrb
+  ret void
+}

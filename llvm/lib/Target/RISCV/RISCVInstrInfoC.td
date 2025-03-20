@@ -596,7 +596,7 @@ def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000>,
 
 // The all zeros pattern isn't a valid RISC-V instruction. It's used by GNU
 // binutils as 16-bit instruction known to be unimplemented (i.e., trapping).
-let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0, isTrap = 1 in
 def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther>,
               Sched<[]> {
   let Inst{15-0} = 0;

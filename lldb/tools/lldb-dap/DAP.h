@@ -361,8 +361,11 @@ struct DAP {
 
   /// Registers a request handler.
   template <typename Handler> void RegisterRequest() {
-    request_handlers[Handler::getCommand()] = std::make_unique<Handler>(*this);
+    request_handlers[Handler::GetCommand()] = std::make_unique<Handler>(*this);
   }
+
+  /// Return a key-value list of capabilities.
+  llvm::StringMap<bool> GetCapabilities();
 
   /// Debuggee will continue from stopped state.
   void WillContinue() { variables.Clear(); }

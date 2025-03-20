@@ -11268,13 +11268,11 @@ public:
 
   /// Determine whether we would be unable to instantiate this template (because
   /// it either has no definition, or is in the process of being instantiated).
-  bool DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
-                                      NamedDecl *Instantiation,
-                                      bool InstantiatedFromMember,
-                                      const NamedDecl *Pattern,
-                                      const NamedDecl *PatternDef,
-                                      TemplateSpecializationKind TSK,
-                                      bool Complain = true);
+  bool DiagnoseUninstantiableTemplate(
+      SourceLocation PointOfInstantiation, NamedDecl *Instantiation,
+      bool InstantiatedFromMember, const NamedDecl *Pattern,
+      const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
+      bool Complain = true, bool *Unreachable = nullptr);
 
   /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
   /// that the template parameter 'PrevDecl' is being shadowed by a new
