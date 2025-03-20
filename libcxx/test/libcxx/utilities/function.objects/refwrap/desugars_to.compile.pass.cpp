@@ -14,6 +14,7 @@
 // std::__desugars_to internal helper.
 
 #include <functional>
+#include <__type_traits/desugars_to.h>
 
 struct Operation {};
 struct Tag {};
