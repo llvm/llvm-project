@@ -147,7 +147,8 @@ static bool isSymbolAvailableInC89(const llvm::StringTable &Strings,
   }
 
   // FIXME: add other C89 symbols here
-  if (NameStr == "log") {
+  if (NameStr == "log" || NameStr == "va_start" || NameStr == "va_arg" ||
+      NameStr == "va_end") {
     return true;
   }
 
