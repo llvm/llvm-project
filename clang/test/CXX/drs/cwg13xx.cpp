@@ -81,14 +81,14 @@ namespace cwg1310 { // cwg1310: 5
     W<int>::W<int>::X w1bx;
     typename W<int>::W w2a;
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
-    // cxx98-error@-2 {{'typename' occurs outside of a template}}
+    // cxx98-error@-2 {{'typename' outside of a template is a C++11 extension}}
     typename W<int>::W::X w2ax;
-    // cxx98-error@-1 {{'typename' occurs outside of a template}}
+    // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
     typename W<int>::W<int> w2b;
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'typename' keyword}}
-    // cxx98-error@-2 {{'typename' occurs outside of a template}}
+    // cxx98-error@-2 {{'typename' outside of a template is a C++11 extension}}
     typename W<int>::W<int>::X w2bx;
-    // cxx98-error@-1 {{'typename' occurs outside of a template}}
+    // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
     W<int>::template W<int> w3;
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
     // cxx98-error@-2 {{'template' keyword outside of a template}}
@@ -97,10 +97,10 @@ namespace cwg1310 { // cwg1310: 5
     typename W<int>::template W<int> w4;
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
     // cxx98-error@-2 {{'template' keyword outside of a template}}
-    // cxx98-error@-3 {{'typename' occurs outside of a template}}
+    // cxx98-error@-3 {{'typename' outside of a template is a C++11 extension}}
     typename W<int>::template W<int>::X w4x;
     // cxx98-error@-1 {{'template' keyword outside of a template}}
-    // cxx98-error@-2 {{'typename' occurs outside of a template}}
+    // cxx98-error@-2 {{'typename' outside of a template is a C++11 extension}}
 
     TT<W<int>::W> tt1;
     // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a type in this context}}

@@ -1333,9 +1333,9 @@ namespace cwg382 { // cwg382: 2.7 c++11
   // FIXME: Should we allow this in C++98 mode?
   struct A { typedef int T; };
   typename A::T t;
-  // cxx98-error@-1 {{'typename' occurs outside of a template}}
+  // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   typename cwg382::A a;
-  // cxx98-error@-1 {{'typename' occurs outside of a template}}
+  // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   typename A b;
   // expected-error@-1 {{expected a qualified name after 'typename'}}
 } // namespace cwg382
