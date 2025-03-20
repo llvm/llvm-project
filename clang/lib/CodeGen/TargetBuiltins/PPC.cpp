@@ -149,10 +149,9 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     llvm::Triple Triple = getTarget().getTriple();
 
-    unsigned LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue;
     typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUInfo;
 
-    std::tie(LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue) =
+    auto [LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue] =
         static_cast<CPUInfo>(StringSwitch<CPUInfo>(CPUStr)
 #define PPC_CPU(NAME, Linux_SUPPORT_METHOD, LinuxID, AIX_SUPPORT_METHOD,       \
                 AIXID)                                                         \
@@ -188,12 +187,10 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     if (Triple.isOSAIX()) {
-      unsigned SupportMethod, FieldIdx, Mask, Value;
-      CmpInst::Predicate CompOp;
       typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
                          unsigned>
           CPUSupportType;
-      std::tie(SupportMethod, FieldIdx, Mask, CompOp, Value) =
+      auto [SupportMethod, FieldIdx, Mask, CompOp, Value] =
           static_cast<CPUSupportType>(StringSwitch<CPUSupportType>(CPUStr)
 #define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
                         VALUE)                                                 \
@@ -207,9 +204,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
     assert(Triple.isOSLinux() &&
            "__builtin_cpu_supports() is only supported for AIX and Linux.");
-    unsigned FeatureWord;
-    unsigned BitMask;
-    std::tie(FeatureWord, BitMask) =
+    auto [FeatureWord, BitMask] =
         StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
 #define PPC_LNX_FEATURE(Name, Description, EnumName, Bitmask, FA_WORD)         \
   .Case(Name, {FA_WORD, Bitmask})
@@ -935,7 +930,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     if (getTarget().isLittleEndian()) {
       // Reverse the double words in the vector we will extract from.
       Op0 = Builder.CreateBitCast(Op0, llvm::FixedVectorType::get(Int64Ty, 2));
-      Op0 = Builder.CreateShuffleVector(Op0, Op0, ArrayRef<int>{1, 0});
+      Op0 = Builder.CreateShuffleVector(Op0, Op0, {1, 0});
 
       // Reverse the index.
       Index = MaxIndex - Index;
@@ -972,7 +967,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Value *Call = Builder.CreateCall(F, {Op0, Op1});
 
       Value *ShuffleCall =
-          Builder.CreateShuffleVector(Call, Call, ArrayRef<int>{1, 0});
+          Builder.CreateShuffleVector(Call, Call, {1, 0});
       return ShuffleCall;
     } else {
       Op1 = ConstantInt::getSigned(Int32Ty, Index);

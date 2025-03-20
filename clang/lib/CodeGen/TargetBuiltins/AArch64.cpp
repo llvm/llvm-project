@@ -2572,8 +2572,8 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
   if (AccessKind != Write) {
     assert(AccessKind == NormalRead || AccessKind == VolatileRead);
     llvm::Function *F = CGM.getIntrinsic(
-        AccessKind == VolatileRead ? llvm::Intrinsic::read_volatile_register
-                                   : llvm::Intrinsic::read_register,
+        AccessKind == VolatileRead ? Intrinsic::read_volatile_register
+                                   : Intrinsic::read_register,
         Types);
     llvm::Value *Call = Builder.CreateCall(F, Metadata);
 
@@ -2588,7 +2588,7 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
     return Call;
   }
 
-  llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::write_register, Types);
+  llvm::Function *F = CGM.getIntrinsic(Intrinsic::write_register, Types);
   llvm::Value *ArgValue = CGF.EmitScalarExpr(E->getArg(1));
   if (MixedTypes) {
     // Extend 32 bit write value to 64 bit to pass to write.
@@ -4934,7 +4934,7 @@ Value *readX18AsPtr(CodeGenFunction &CGF) {
   llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
   llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
   llvm::Function *F =
-      CGF.CGM.getIntrinsic(llvm::Intrinsic::read_register, {CGF.Int64Ty});
+      CGF.CGM.getIntrinsic(Intrinsic::read_register, {CGF.Int64Ty});
   llvm::Value *X18 = CGF.Builder.CreateCall(F, Metadata);
   return CGF.Builder.CreateIntToPtr(X18, CGF.Int8PtrTy);
 }
@@ -5272,7 +5272,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
 
     llvm::Function *F =
-        CGM.getIntrinsic(llvm::Intrinsic::read_register, {Int64Ty});
+        CGM.getIntrinsic(Intrinsic::read_register, {Int64Ty});
     return Builder.CreateCall(F, Metadata);
   }
 
@@ -5281,7 +5281,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
       llvm_unreachable("Sema will ensure that the parameter is constant");
 
-    llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::aarch64_break);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::aarch64_break);
     return Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
   }
 
@@ -5470,12 +5470,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Type *Types[] = { RegisterType };
 
     if (BuiltinID == clang::AArch64::BI_ReadStatusReg) {
-      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::read_register, Types);
+      llvm::Function *F = CGM.getIntrinsic(Intrinsic::read_register, Types);
 
       return Builder.CreateCall(F, Metadata);
     }
 
-    llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::write_register, Types);
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::write_register, Types);
     llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
 
     return Builder.CreateCall(F, { Metadata, ArgValue });
@@ -7892,8 +7892,8 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
 
     // Built the IR for the preserve_field_info intrinsic.
-    llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
+    llvm::Function *FnGetFieldInfo = Intrinsic::getOrInsertDeclaration(
+        &CGM.getModule(), Intrinsic::bpf_preserve_field_info,
         {FieldAddr->getType()});
     return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
   }
@@ -7914,11 +7914,11 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
 
     llvm::Function *FnDecl;
     if (BuiltinID == BPF::BI__builtin_btf_type_id)
-      FnDecl = llvm::Intrinsic::getOrInsertDeclaration(
-          &CGM.getModule(), llvm::Intrinsic::bpf_btf_type_id, {});
+      FnDecl = Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(), Intrinsic::bpf_btf_type_id, {});
     else
-      FnDecl = llvm::Intrinsic::getOrInsertDeclaration(
-          &CGM.getModule(), llvm::Intrinsic::bpf_preserve_type_info, {});
+      FnDecl = Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(), Intrinsic::bpf_preserve_type_info, {});
     CallInst *Fn = Builder.CreateCall(FnDecl, {SeqNumVal, FlagValue});
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
     return Fn;
@@ -7952,8 +7952,8 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
     Value *FlagValue = ConstantInt::get(Int64Ty, Flag->getSExtValue());
     Value *SeqNumVal = ConstantInt::get(Int32Ty, BuiltinSeqNum++);
 
-    llvm::Function *IntrinsicFn = llvm::Intrinsic::getOrInsertDeclaration(
-        &CGM.getModule(), llvm::Intrinsic::bpf_preserve_enum_value, {});
+    llvm::Function *IntrinsicFn = Intrinsic::getOrInsertDeclaration(
+        &CGM.getModule(), Intrinsic::bpf_preserve_enum_value, {});
     CallInst *Fn =
         Builder.CreateCall(IntrinsicFn, {SeqNumVal, EnumStrVal, FlagValue});
     Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);

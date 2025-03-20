@@ -337,7 +337,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddph512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddph512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddph512_mask3:
-    IID = llvm::Intrinsic::x86_avx512fp16_vfmadd_ph_512;
+    IID = Intrinsic::x86_avx512fp16_vfmadd_ph_512;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubaddph512_mask3:
     Subtract = true;
@@ -345,7 +345,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubph512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubph512_mask3:
-    IID = llvm::Intrinsic::x86_avx512fp16_vfmaddsub_ph_512;
+    IID = Intrinsic::x86_avx512fp16_vfmaddsub_ph_512;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubps512_mask3:
     Subtract = true;
@@ -353,21 +353,21 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddps512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddps512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddps512_mask3:
-    IID = llvm::Intrinsic::x86_avx512_vfmadd_ps_512; break;
+    IID = Intrinsic::x86_avx512_vfmadd_ps_512; break;
   case clang::X86::BI__builtin_ia32_vfmsubpd512_mask3:
     Subtract = true;
     [[fallthrough]];
   case clang::X86::BI__builtin_ia32_vfmaddpd512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddpd512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddpd512_mask3:
-    IID = llvm::Intrinsic::x86_avx512_vfmadd_pd_512; break;
+    IID = Intrinsic::x86_avx512_vfmadd_pd_512; break;
   case clang::X86::BI__builtin_ia32_vfmsubaddps512_mask3:
     Subtract = true;
     [[fallthrough]];
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_mask3:
-    IID = llvm::Intrinsic::x86_avx512_vfmaddsub_ps_512;
+    IID = Intrinsic::x86_avx512_vfmaddsub_ps_512;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubaddpd512_mask3:
     Subtract = true;
@@ -375,7 +375,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_mask3:
-    IID = llvm::Intrinsic::x86_avx512_vfmaddsub_pd_512;
+    IID = Intrinsic::x86_avx512_vfmaddsub_pd_512;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubph256_round_mask3:
     Subtract = true;
@@ -383,7 +383,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddph256_round_mask:
   case clang::X86::BI__builtin_ia32_vfmaddph256_round_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddph256_round_mask3:
-    IID = llvm::Intrinsic::x86_avx10_vfmaddph256;
+    IID = Intrinsic::x86_avx10_vfmaddph256;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubaddph256_round_mask3:
     Subtract = true;
@@ -391,7 +391,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubph256_round_mask3:
-    IID = llvm::Intrinsic::x86_avx10_vfmaddsubph256;
+    IID = Intrinsic::x86_avx10_vfmaddsubph256;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubps256_round_mask3:
     Subtract = true;
@@ -399,7 +399,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddps256_round_mask:
   case clang::X86::BI__builtin_ia32_vfmaddps256_round_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddps256_round_mask3:
-    IID = llvm::Intrinsic::x86_avx10_vfmaddps256;
+    IID = Intrinsic::x86_avx10_vfmaddps256;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubpd256_round_mask3:
     Subtract = true;
@@ -407,7 +407,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddpd256_round_mask:
   case clang::X86::BI__builtin_ia32_vfmaddpd256_round_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddpd256_round_mask3:
-    IID = llvm::Intrinsic::x86_avx10_vfmaddpd256;
+    IID = Intrinsic::x86_avx10_vfmaddpd256;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubaddps256_round_mask3:
     Subtract = true;
@@ -415,7 +415,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubps256_round_mask3:
-    IID = llvm::Intrinsic::x86_avx10_vfmaddsubps256;
+    IID = Intrinsic::x86_avx10_vfmaddsubps256;
     break;
   case clang::X86::BI__builtin_ia32_vfmsubaddpd256_round_mask3:
     Subtract = true;
@@ -423,7 +423,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_mask:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd256_round_mask3:
-    IID = llvm::Intrinsic::x86_avx10_vfmaddsubpd256;
+    IID = Intrinsic::x86_avx10_vfmaddsubpd256;
     break;
   }
 
@@ -670,7 +670,7 @@ static Value *EmitX86CvtF16ToFloatExpr(CodeGenFunction &CGF,
   if (NumDstElts !=
       cast<llvm::FixedVectorType>(Src->getType())->getNumElements()) {
     assert(NumDstElts == 4 && "Unexpected vector size");
-    Src = CGF.Builder.CreateShuffleVector(Src, ArrayRef<int>{0, 1, 2, 3});
+    Src = CGF.Builder.CreateShuffleVector(Src, {0, 1, 2, 3});
   }
 
   // Bitcast from vXi16 to vXf16.
@@ -705,9 +705,7 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 
   // Calculate the index needed to access the correct field based on the
   // range. Also adjust the expected value.
-  unsigned Index;
-  unsigned Value;
-  std::tie(Index, Value) = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
+  auto [Index, Value] = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
 #define X86_VENDOR(ENUM, STRING)                                               \
   .Case(STRING, {0u, static_cast<unsigned>(llvm::X86::ENUM)})
 #define X86_CPU_TYPE_ALIAS(ENUM, ALIAS)                                        \

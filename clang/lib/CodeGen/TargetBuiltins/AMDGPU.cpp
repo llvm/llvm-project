@@ -209,7 +209,7 @@ static Value *handleAsDoubleBuiltin(CodeGenFunction &CGF, const CallExpr *E) {
   if (CGF.CGM.getTarget().getTriple().isDXIL())
     return CGF.Builder.CreateIntrinsic(
         /*ReturnType=*/ResultType, Intrinsic::dx_asdouble,
-        ArrayRef<Value *>{OpLowBits, OpHighBits}, nullptr, "hlsl.asdouble");
+        {OpLowBits, OpHighBits}, nullptr, "hlsl.asdouble");
 
   if (!E->getArg(0)->getType()->isVectorType()) {
     OpLowBits = CGF.Builder.CreateVectorSplat(1, OpLowBits);
@@ -240,13 +240,13 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
     auto *FCompInst = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
     CMP = CGF->Builder.CreateIntrinsic(
         CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
-        {FCompInst}, nullptr);
+        {FCompInst});
   } else
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
 
   if (CGF->CGM.getTarget().getTriple().isDXIL())
     LastInstr = CGF->Builder.CreateIntrinsic(
-        CGF->VoidTy, llvm::Intrinsic::dx_discard, {CMP}, nullptr);
+        CGF->VoidTy, Intrinsic::dx_discard, {CMP});
   else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
     BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
     BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
@@ -255,11 +255,9 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
     CGF->Builder.SetInsertPoint(LT0);
 
-    CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::spv_discard, {},
-                                 nullptr);
+    CGF->Builder.CreateIntrinsic(CGF->VoidTy, Intrinsic::spv_discard, {});
 
     LastInstr = CGF->Builder.CreateBr(End);
-
     CGF->Builder.SetInsertPoint(End);
   } else {
     llvm_unreachable("Backend Codegen not supported.");
@@ -442,11 +440,11 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
                                                CGHLSLRuntime &RT, QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
-    return llvm::Intrinsic::spv_wave_reduce_sum;
+    return Intrinsic::spv_wave_reduce_sum;
   case llvm::Triple::dxil: {
     if (QT->isUnsignedIntegerType())
-      return llvm::Intrinsic::dx_wave_reduce_usum;
-    return llvm::Intrinsic::dx_wave_reduce_sum;
+      return Intrinsic::dx_wave_reduce_usum;
+    return Intrinsic::dx_wave_reduce_sum;
   }
   default:
     llvm_unreachable("Intrinsic WaveActiveSum"
@@ -460,12 +458,12 @@ static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
   switch (Arch) {
   case llvm::Triple::spirv:
     if (QT->isUnsignedIntegerType())
-      return llvm::Intrinsic::spv_wave_reduce_umax;
-    return llvm::Intrinsic::spv_wave_reduce_max;
+      return Intrinsic::spv_wave_reduce_umax;
+    return Intrinsic::spv_wave_reduce_max;
   case llvm::Triple::dxil: {
     if (QT->isUnsignedIntegerType())
-      return llvm::Intrinsic::dx_wave_reduce_umax;
-    return llvm::Intrinsic::dx_wave_reduce_max;
+      return Intrinsic::dx_wave_reduce_umax;
+    return Intrinsic::dx_wave_reduce_max;
   }
   default:
     llvm_unreachable("Intrinsic WaveActiveMax"
@@ -504,17 +502,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       LowB = Builder.CreateExtractElement(OpB, (uint64_t)0, "LowB");
       HighB = Builder.CreateExtractElement(OpB, (uint64_t)1, "HighB");
     } else {
-      LowA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{0, 2}, "LowA");
-      HighA = Builder.CreateShuffleVector(OpA, ArrayRef<int>{1, 3}, "HighA");
-      LowB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{0, 2}, "LowB");
-      HighB = Builder.CreateShuffleVector(OpB, ArrayRef<int>{1, 3}, "HighB");
+      LowA = Builder.CreateShuffleVector(OpA, {0, 2}, "LowA");
+      HighA = Builder.CreateShuffleVector(OpA, {1, 3}, "HighA");
+      LowB = Builder.CreateShuffleVector(OpB, {0, 2}, "LowB");
+      HighB = Builder.CreateShuffleVector(OpB, {1, 3}, "HighB");
     }
 
     // Use an uadd_with_overflow to compute the sum of low words and obtain a
     // carry value
     llvm::Value *Carry;
     llvm::Value *LowSum = EmitOverflowIntrinsic(
-        *this, llvm::Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
+        *this, Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
     llvm::Value *ZExtCarry =
         Builder.CreateZExt(Carry, HighA->getType(), "CarryZExt");
 
@@ -525,7 +523,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     if (NumElements == 4) {
       return Builder.CreateShuffleVector(LowSum, HighSumPlusCarry,
-                                         ArrayRef<int>{0, 2, 1, 3},
+                                         {0, 2, 1, 3},
                                          "hlsl.AddUint64");
     }
 
@@ -1341,11 +1339,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     // The builtins take these arguments as vec4 where the last element is
     // ignored. The intrinsic takes them as vec3.
     RayOrigin = Builder.CreateShuffleVector(RayOrigin, RayOrigin,
-                                            ArrayRef<int>{0, 1, 2});
+                                            {0, 1, 2});
     RayDir =
-        Builder.CreateShuffleVector(RayDir, RayDir, ArrayRef<int>{0, 1, 2});
+        Builder.CreateShuffleVector(RayDir, RayDir, {0, 1, 2});
     RayInverseDir = Builder.CreateShuffleVector(RayInverseDir, RayInverseDir,
-                                                ArrayRef<int>{0, 1, 2});
+                                                {0, 1, 2});
 
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_image_bvh_intersect_ray,
                                    {NodePtr->getType(), RayDir->getType()});
