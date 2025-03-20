@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 // A glvalue of type "cv1 T1" can be cast to type "rvalue reference to
 // cv2 T2" if "cv2 T2" is reference-compatible with "cv1 T1" (8.5.3).
@@ -23,3 +22,67 @@ void test(A &a, B &b) {
   const A &&ar10 = static_cast<const A&&>(xvalue<A>());
   const A &&ar11 = static_cast<const A&&>(xvalue<B>());
 }
+
+struct C : private A { // expected-note 4 {{declared private here}}
+    C&& that();
+
+    void f() {
+        (void)static_cast<A&&>(*this);
+        (void)static_cast<const A&&>(*this);
+
+        (void)static_cast<A&&>(that());
+        (void)static_cast<const A&&>(that());
+    }
+};
+C c;
+const C cc;
+
+void f() {
+    static_cast<A&&>(c);        // expected-error {{cannot cast 'C' to its private base class 'A'}}
+    static_cast<A&&>(c.that()); // expected-error {{cannot cast 'C' to its private base class 'A'}}
+
+    static_cast<const A&&>(c);        // expected-error {{cannot cast 'C' to its private base class 'const A'}}
+    static_cast<const A&&>(c.that()); // expected-error {{cannot cast 'C' to its private base class 'const A'}}
+}
+
+constexpr auto v = (
+    (A&&)c,
+    (A&&)(C&&)c,
+    (A&&)cc,
+    (A&&)(const C&&)c,
+    (const A&&)c,
+    (const A&&)(C&&)c,
+    (const A&&)cc,
+    (const A&&)(const C&&)c
+);
+
+struct D : A, B { // expected-warning {{direct base 'A' is inaccessible due to ambiguity}}
+    D&& rv();
+};
+D d;
+
+void g(const D cd) {
+    static_cast<A&&>(d);      // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    static_cast<A&&>(d.rv()); // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+
+    static_cast<const A&&>(d);      // expected-error {{ambiguous conversion from derived class 'D' to base class 'const A'}}
+    static_cast<const A&&>(d.rv()); // expected-error {{ambiguous conversion from derived class 'D' to base class 'const A'}}
+
+    (A&&)d;                  // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (A&&)(D&&)d;             // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (A&&)cd;                 // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (A&&)(const D&&)d;       // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (const A&&)d;            // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (const A&&)(D&&)d;       // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (const A&&)cd;           // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+    (const A&&)(const D&&)d; // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
+}
+
+template<class T, class U>
+auto h(U u = {}) -> decltype(static_cast<T&&>(u));
+
+template<class, class>
+int h();
+
+int i = h<A, C>();
+int j = h<A, D>();
