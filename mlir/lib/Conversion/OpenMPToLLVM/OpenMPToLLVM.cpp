@@ -38,23 +38,23 @@ namespace {
 /// Region bodies, if any, are not modified and expected to either be processed
 /// by the conversion infrastructure or already contain ops compatible with LLVM
 /// dialect types.
-template <typename T, bool SupportsMemRefOperand = true>
+template <typename T>
 struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
   using ConvertOpToLLVMPattern<T>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(T curOp, typename T::Adaptor adaptor,
+  matchAndRewrite(T op, typename T::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Translate result types.
     const TypeConverter *converter = ConvertToLLVMPattern::getTypeConverter();
     SmallVector<Type> resTypes;
-    if (failed(converter->convertTypes(curOp->getResultTypes(), resTypes)))
+    if (failed(converter->convertTypes(op->getResultTypes(), resTypes)))
       return failure();
 
     // Translate type attributes.
     // They are kept unmodified except if they are type attributes.
     SmallVector<NamedAttribute> convertedAttrs;
-    for (NamedAttribute attr : curOp->getAttrs()) {
+    for (NamedAttribute attr : op->getAttrs()) {
       if (auto typeAttr = dyn_cast<TypeAttr>(attr.getValue())) {
         Type convertedType = converter->convertType(typeAttr.getValue());
         convertedAttrs.emplace_back(attr.getName(),
@@ -66,29 +66,32 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
 
     // Translate operands.
     SmallVector<Value> convertedOperands;
-    convertedOperands.reserve(curOp->getNumOperands());
+    convertedOperands.reserve(op->getNumOperands());
     for (auto [originalOperand, convertedOperand] :
-         llvm::zip_equal(curOp->getOperands(), adaptor.getOperands())) {
+         llvm::zip_equal(op->getOperands(), adaptor.getOperands())) {
       if (!originalOperand)
         return failure();
 
-      if constexpr (!SupportsMemRefOperand) {
+      // TODO: Revisit whether we need to trigger an error specifically for this
+      // set of operations. Consider removing this check or updating the list.
+      if constexpr (llvm::is_one_of<T, omp::AtomicUpdateOp, omp::AtomicWriteOp,
+                                    omp::FlushOp, omp::MapBoundsOp,
+                                    omp::ThreadprivateOp>::value) {
         if (isa<MemRefType>(originalOperand.getType())) {
           // TODO: Support memref type in variable operands
-          return rewriter.notifyMatchFailure(curOp,
-                                             "memref is not supported yet");
+          return rewriter.notifyMatchFailure(op, "memref is not supported yet");
         }
       }
       convertedOperands.push_back(convertedOperand);
     }
 
     // Create new operation.
-    auto newOp = rewriter.create<T>(curOp.getLoc(), resTypes, convertedOperands,
+    auto newOp = rewriter.create<T>(op.getLoc(), resTypes, convertedOperands,
                                     convertedAttrs);
 
     // Translate regions.
     for (auto [originalRegion, convertedRegion] :
-         llvm::zip_equal(curOp->getRegions(), newOp->getRegions())) {
+         llvm::zip_equal(op->getRegions(), newOp->getRegions())) {
       rewriter.inlineRegionBefore(originalRegion, convertedRegion,
                                   convertedRegion.end());
       if (failed(rewriter.convertRegionTypes(&convertedRegion,
@@ -97,7 +100,7 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
     }
 
     // Delete old operation and replace result uses with those of the new one.
-    rewriter.replaceOp(curOp, newOp->getResults());
+    rewriter.replaceOp(op, newOp->getResults());
     return success();
   }
 };
@@ -125,6 +128,15 @@ void mlir::configureOpenMPToLLVMConversionLegality(
   });
 }
 
+/// Add an `OpenMPOpConversion<T>` conversion pattern for each operation type
+/// passed as template argument.
+template <typename... Ts>
+static inline RewritePatternSet &
+addOpenMPOpConversions(LLVMTypeConverter &converter,
+                       RewritePatternSet &patterns) {
+  return patterns.add<OpenMPOpConversion<Ts>...>(converter);
+}
+
 void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
   // This type is allowed when converting OpenMP to LLVM Dialect, it carries
@@ -133,43 +145,11 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
   converter.addConversion(
       [&](omp::MapBoundsType type) -> Type { return type; });
 
-  patterns.add<
-      OpenMPOpConversion<omp::AtomicCaptureOp>,
-      OpenMPOpConversion<omp::AtomicReadOp>,
-      OpenMPOpConversion<omp::AtomicUpdateOp, /*SupportsMemRefOperand=*/false>,
-      OpenMPOpConversion<omp::AtomicWriteOp, /*SupportsMemRefOperand=*/false>,
-      OpenMPOpConversion<omp::BarrierOp>,
-      OpenMPOpConversion<omp::CancellationPointOp>,
-      OpenMPOpConversion<omp::CancelOp>,
-      OpenMPOpConversion<omp::CriticalDeclareOp>,
-      OpenMPOpConversion<omp::CriticalOp>,
-      OpenMPOpConversion<omp::DeclareMapperInfoOp>,
-      OpenMPOpConversion<omp::DeclareMapperOp>,
-      OpenMPOpConversion<omp::DeclareReductionOp>,
-      OpenMPOpConversion<omp::DistributeOp>,
-      OpenMPOpConversion<omp::FlushOp, /*SupportsMemRefOperand=*/false>,
-      OpenMPOpConversion<omp::LoopNestOp>, OpenMPOpConversion<omp::LoopOp>,
-      OpenMPOpConversion<omp::MapBoundsOp, /*SupportsMemRefOperand=*/false>,
-      OpenMPOpConversion<omp::MapInfoOp>, OpenMPOpConversion<omp::MaskedOp>,
-      OpenMPOpConversion<omp::MasterOp>, OpenMPOpConversion<omp::OrderedOp>,
-      OpenMPOpConversion<omp::OrderedRegionOp>,
-      OpenMPOpConversion<omp::ParallelOp>,
-      OpenMPOpConversion<omp::PrivateClauseOp>, OpenMPOpConversion<omp::ScanOp>,
-      OpenMPOpConversion<omp::SectionOp>, OpenMPOpConversion<omp::SectionsOp>,
-      OpenMPOpConversion<omp::SimdOp>, OpenMPOpConversion<omp::SingleOp>,
-      OpenMPOpConversion<omp::TargetDataOp>,
-      OpenMPOpConversion<omp::TargetEnterDataOp>,
-      OpenMPOpConversion<omp::TargetExitDataOp>,
-      OpenMPOpConversion<omp::TargetOp>,
-      OpenMPOpConversion<omp::TargetUpdateOp>,
-      OpenMPOpConversion<omp::TaskgroupOp>, OpenMPOpConversion<omp::TaskloopOp>,
-      OpenMPOpConversion<omp::TaskOp>, OpenMPOpConversion<omp::TaskwaitOp>,
-      OpenMPOpConversion<omp::TaskyieldOp>, OpenMPOpConversion<omp::TeamsOp>,
-      OpenMPOpConversion<omp::TerminatorOp>,
-      OpenMPOpConversion<omp::ThreadprivateOp, /*SupportsMemRefOperand=*/false>,
-      OpenMPOpConversion<omp::WorkshareLoopWrapperOp>,
-      OpenMPOpConversion<omp::WorkshareOp>, OpenMPOpConversion<omp::WsloopOp>,
-      OpenMPOpConversion<omp::YieldOp>>(converter);
+  // Add conversions for all OpenMP operations.
+  addOpenMPOpConversions<
+#define GET_OP_LIST
+#include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
+      >(converter, patterns);
 }
 
 namespace {
