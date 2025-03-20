@@ -135,8 +135,7 @@ public:
     if (GV->isDeclaration())
       return;
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
-      return;
+    if (!FD) return;
     auto *Fn = cast<llvm::Function>(GV);
 
     if (FD->getAttr<AVRInterruptAttr>())
@@ -146,7 +145,7 @@ public:
       Fn->addFnAttr("signal");
   }
 };
-} // namespace
+}
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createAVRTargetCodeGenInfo(CodeGenModule &CGM, unsigned NPR,

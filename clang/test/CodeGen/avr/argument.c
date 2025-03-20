@@ -119,8 +119,8 @@ struct s8_t {
   char a;
 };
 
-// AVR-NOT:  {{.*}} signext
-// TINY-NOT: {{.*}} signext
+// AVR:  define {{.*}} i8 @foob(i8 {{.*}})
+// TINY  define {{.*}} i8 @foob(i8 {{.*}})
 char foob(struct s8_t a) {
   return a.a + 1;
 }
