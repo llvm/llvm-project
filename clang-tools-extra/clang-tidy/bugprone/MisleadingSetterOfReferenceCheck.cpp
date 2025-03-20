@@ -16,14 +16,14 @@ namespace clang::tidy::bugprone {
 
 void MisleadingSetterOfReferenceCheck::registerMatchers(MatchFinder *Finder) {
   auto RefField =
-      fieldDecl(unless(isPublic()),
-                hasType(referenceType(pointee(equalsBoundNode("type")))))
+      fieldDecl(unless(isPublic()), hasType(hasCanonicalType(referenceType(
+                                        pointee(equalsBoundNode("type"))))))
           .bind("member");
-  auto AssignLHS =
-      memberExpr(hasObjectExpression(cxxThisExpr()), member(RefField));
-  auto DerefOperand = expr(ignoringParenImpCasts(
+  auto AssignLHS = memberExpr(
+      hasObjectExpression(ignoringParenCasts(cxxThisExpr())), member(RefField));
+  auto DerefOperand = expr(ignoringParenCasts(
       declRefExpr(to(parmVarDecl(equalsBoundNode("parm"))))));
-  auto AssignRHS = expr(ignoringParenImpCasts(
+  auto AssignRHS = expr(ignoringParenCasts(
       unaryOperator(hasOperatorName("*"), hasUnaryOperand(DerefOperand))));
 
   auto BinaryOpAssign = binaryOperator(hasOperatorName("="), hasLHS(AssignLHS),
@@ -35,11 +35,14 @@ void MisleadingSetterOfReferenceCheck::registerMatchers(MatchFinder *Finder) {
       compoundStmt(statementCountIs(1),
                    anyOf(has(BinaryOpAssign), has(CXXOperatorCallAssign)));
   auto BadSetFunction =
-      cxxMethodDecl(parameterCountIs(1), isPublic(),
-                    hasAnyParameter(parmVarDecl(hasType(pointerType(pointee(
-                                                    qualType().bind("type")))))
-                                        .bind("parm")),
-                    hasBody(SetBody))
+      cxxMethodDecl(
+          parameterCountIs(1), isPublic(),
+          hasParameter(
+              0,
+              parmVarDecl(hasType(hasCanonicalType(pointerType(pointee(qualType(
+                              hasCanonicalType(qualType().bind("type"))))))))
+                  .bind("parm")),
+          hasBody(SetBody))
           .bind("bad-set-function");
   Finder->addMatcher(BadSetFunction, this);
 }
@@ -50,8 +53,9 @@ void MisleadingSetterOfReferenceCheck::check(
   const auto *Member = Result.Nodes.getNodeAs<FieldDecl>("member");
 
   diag(Found->getBeginLoc(),
-       "function \'%0\' can be mistakenly used in order to change the "
-       "reference \'%1\' instead of the value of it")
+       "function '%0' can be mistakenly used in order to change the "
+       "reference '%1' instead of the value of it; consider not using a "
+       "pointer as argument")
       << Found->getName() << Member->getName();
 }
 
