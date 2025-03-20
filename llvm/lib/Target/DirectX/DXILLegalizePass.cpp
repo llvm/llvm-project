@@ -24,24 +24,15 @@ static void fixI8TruncUseChain(Instruction &I,
                                SmallVectorImpl<Instruction *> &ToRemove,
                                DenseMap<Value *, Value *> &ReplacedValues) {
 
-  auto *Cmp = dyn_cast<CmpInst>(&I);
-
-  if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
-    if (Trunc->getDestTy()->isIntegerTy(8)) {
-      ReplacedValues[Trunc] = Trunc->getOperand(0);
-      ToRemove.push_back(Trunc);
-    }
-  } else if (I.getType()->isIntegerTy(8) ||
-             (Cmp && Cmp->getOperand(0)->getType()->isIntegerTy(8))) {
-    IRBuilder<> Builder(&I);
-
-    SmallVector<Value *> NewOperands;
+  auto ProcessOperands = [&](SmallVector<Value *> &NewOperands) {
     Type *InstrType = IntegerType::get(I.getContext(), 32);
+
     for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
       Value *Op = I.getOperand(OpIdx);
       if (ReplacedValues.count(Op))
         InstrType = ReplacedValues[Op]->getType();
     }
+
     for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
       Value *Op = I.getOperand(OpIdx);
       if (ReplacedValues.count(Op))
@@ -52,6 +43,8 @@ static void fixI8TruncUseChain(Instruction &I,
         // Note: options here are sext or sextOrTrunc.
         // Since i8 isn't supported, we assume new values
         // will always have a higher bitness.
+        assert(NewBitWidth > Value.getBitWidth() &&
+               "Replacement's BitWidth should be larger than Current.");
         APInt NewValue = Value.sext(NewBitWidth);
         NewOperands.push_back(ConstantInt::get(InstrType, NewValue));
       } else {
@@ -59,29 +52,46 @@ static void fixI8TruncUseChain(Instruction &I,
         NewOperands.push_back(Op);
       }
     }
-
-    Value *NewInst = nullptr;
-    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
-      NewInst =
-          Builder.CreateBinOp(BO->getOpcode(), NewOperands[0], NewOperands[1]);
-
-      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
-        if (OBO->hasNoSignedWrap())
-          cast<BinaryOperator>(NewInst)->setHasNoSignedWrap();
-        if (OBO->hasNoUnsignedWrap())
-          cast<BinaryOperator>(NewInst)->setHasNoUnsignedWrap();
-      }
-    } else if (Cmp) {
-      NewInst = Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0],
-                                  NewOperands[1]);
-      Cmp->replaceAllUsesWith(NewInst);
+  };
+  IRBuilder<> Builder(&I);
+  if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
+    if (Trunc->getDestTy()->isIntegerTy(8)) {
+      ReplacedValues[Trunc] = Trunc->getOperand(0);
+      ToRemove.push_back(Trunc);
     }
-
-    if (NewInst) {
-      ReplacedValues[&I] = NewInst;
-      ToRemove.push_back(&I);
+  }
+  Value *NewInst = nullptr;
+  if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+    if (!I.getType()->isIntegerTy(8))
+      return;
+    SmallVector<Value *> NewOperands;
+    ProcessOperands(NewOperands);
+    NewInst =
+        Builder.CreateBinOp(BO->getOpcode(), NewOperands[0], NewOperands[1]);
+    if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
+      if (OBO->hasNoSignedWrap())
+        cast<BinaryOperator>(NewInst)->setHasNoSignedWrap();
+      if (OBO->hasNoUnsignedWrap())
+        cast<BinaryOperator>(NewInst)->setHasNoUnsignedWrap();
     }
-  } else if (auto *Cast = dyn_cast<CastInst>(&I)) {
+  }
+
+  if (auto *Cmp = dyn_cast<CmpInst>(&I)) {
+    if (!Cmp->getOperand(0)->getType()->isIntegerTy(8))
+      return;
+    SmallVector<Value *> NewOperands;
+    ProcessOperands(NewOperands);
+    NewInst =
+        Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0], NewOperands[1]);
+    Cmp->replaceAllUsesWith(NewInst);
+  }
+  if (NewInst) {
+    ReplacedValues[&I] = NewInst;
+    ToRemove.push_back(&I);
+    return;
+  }
+
+  if (auto *Cast = dyn_cast<CastInst>(&I)) {
     if (Cast->getSrcTy()->isIntegerTy(8)) {
       ToRemove.push_back(Cast);
       Cast->replaceAllUsesWith(ReplacedValues[Cast->getOperand(0)]);
