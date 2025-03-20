@@ -235,18 +235,26 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class GoToRequestHandler : public LegacyRequestHandler {
+class GotoRequestHandler final
+    : public RequestHandler<protocol::GotoArguments,
+                            protocol::GotoResponseBody> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "goto"; }
-  void operator()(const llvm::json::Object &request) const override;
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "goto"; }
+
+  llvm::Expected<protocol::GotoResponseBody>
+  Run(const protocol::GotoArguments &args) const override;
 };
 
-class GoToTargetsRequestHandler : public LegacyRequestHandler {
+class GotoTargetsRequestHandler final
+    : public RequestHandler<protocol::GotoTargetsArguments,
+                            protocol::GotoTargetsResponseBody> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
-  static llvm::StringLiteral getCommand() { return "gotoTargets"; }
-  void operator()(const llvm::json::Object &request) const override;
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "gotoTargets"; }
+
+  llvm::Expected<protocol::GotoTargetsResponseBody>
+  Run(const protocol::GotoTargetsArguments &args) const override;
 };
 
 class InitializeRequestHandler : public LegacyRequestHandler {

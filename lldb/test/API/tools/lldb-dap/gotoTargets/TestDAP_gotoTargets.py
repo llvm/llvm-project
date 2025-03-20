@@ -63,7 +63,7 @@ class TestDAP_gotoTargets(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_goto(thread_id, target_id)
         self.assertEqual(response["success"], True, "goto request with targetId should be successful")
 
-        stopped_events = self.dap_server.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped(timeout=0.200)
         is_goto = lambda event: event["body"]["reason"] == "goto"
         has_goto_event = any(map(is_goto, stopped_events))
         self.assertEqual(has_goto_event, True, "expected a stopped event with reason `goto`")
@@ -126,7 +126,7 @@ class TestDAP_gotoTargets(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_goto(thread_id, target_id)
         self.assertEqual(response["success"], True, "expects success to go to targetId")
 
-        stopped_events = self.dap_server.wait_for_stopped()
+        stopped_events = self.dap_server.wait_for_stopped(timeout=0.200)  # 200ms
         is_goto = lambda event: event["body"]["reason"] == "goto"
         has_goto_event = any(map(is_goto, stopped_events))
         self.assertEqual(has_goto_event, True, "expects stopped event with reason goto")
