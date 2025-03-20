@@ -750,24 +750,14 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallChecker : Checker<"VirtualCall">,
-  HelpText<"Check virtual function calls during construction/destruction">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "ShowFixIts",
-                  "Enable fix-it hints for this checker",
-                  "false",
-                  InAlpha>,
-    CmdLineOption<Boolean,
-                  "PureOnly",
-                  "Disables the checker. Keeps cplusplus.PureVirtualCall "
-                  "enabled. This option is only provided for backwards "
-                  "compatibility.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def VirtualCallChecker
+    : Checker<"VirtualCall">,
+      HelpText<"Check virtual function calls during construction/destruction">,
+      CheckerOptions<[CmdLineOption<Boolean, "ShowFixIts",
+                                    "Enable fix-it hints for this checker",
+                                    "false", InAlpha>]>,
+      Dependencies<[VirtualCallModeling]>,
+      Documentation<HasDocumentation>;
 
 } // end: "optin.cplusplus"
 

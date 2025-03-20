@@ -3814,7 +3814,7 @@ private:
       if (AllConstsOrCasts)
         CastMaxMinBWSizes =
             std::make_pair(std::numeric_limits<unsigned>::max(), 1);
-      MustGather.insert(VL.begin(), VL.end());
+      MustGather.insert_range(VL);
     }
 
     if (UserTreeIdx.UserTE)
@@ -6635,14 +6635,11 @@ void BoUpSLP::reorderTopToBottom() {
             assert(SLPReVec && "Only supported by REVEC.");
             // ShuffleVectorInst does not do reorderOperands (and it should not
             // because ShuffleVectorInst supports only a limited set of
-            // patterns). Only do reorderNodeWithReuses if all of the users are
-            // not ShuffleVectorInst.
-            if (isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
+            // patterns). Only do reorderNodeWithReuses if the user is not
+            // ShuffleVectorInst.
+            if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->hasState() &&
+                isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
               continue;
-            assert((!TE->UserTreeIndex ||
-                    !isa<ShuffleVectorInst>(
-                        TE->UserTreeIndex.UserTE->getMainOp())) &&
-                   "Does not know how to reorder.");
           }
           // Update ordering of the operands with the smaller VF than the given
           // one.
@@ -7526,7 +7523,7 @@ static void gatherPossiblyVectorizableLoads(
       assert(!LocalToAdd.empty() && "Expected some elements to add.");
       for (unsigned Idx : LocalToAdd)
         It->emplace_back(Data[Idx].first, Data[Idx].second + Offset);
-      ToAdd.insert(LocalToAdd.begin(), LocalToAdd.end());
+      ToAdd.insert_range(LocalToAdd);
       It = FindMatchingLoads(Data, GatheredLoads, LocalToAdd, Repeated, Offset,
                              Start);
     }
@@ -7573,8 +7570,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   SmallVector<SmallPtrSet<const Value *, 4>> LoadSetsToVectorize(
       LoadEntriesToVectorize.size());
   for (auto [Idx, Set] : zip(LoadEntriesToVectorize, LoadSetsToVectorize))
-    Set.insert(VectorizableTree[Idx]->Scalars.begin(),
-               VectorizableTree[Idx]->Scalars.end());
+    Set.insert_range(VectorizableTree[Idx]->Scalars);
 
   // Sort loads by distance.
   auto LoadSorter = [](const std::pair<LoadInst *, int> &L1,
@@ -7698,7 +7694,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             }
             if (LS != LoadsState::Gather) {
               Results.emplace_back(Values, LS);
-              VectorizedLoads.insert(Slice.begin(), Slice.end());
+              VectorizedLoads.insert_range(Slice);
               // If we vectorized initial block, no need to try to vectorize it
               // again.
               if (Cnt == StartIdx)
@@ -7726,7 +7722,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
         ArrayRef<Value *> Values(
             reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
         Results.emplace_back(Values, LoadsState::ScatterVectorize);
-        VectorizedLoads.insert(Slice.begin(), Slice.end());
+        VectorizedLoads.insert_range(Slice);
         // If we vectorized initial block, no need to try to vectorize it again.
         if (Cnt == StartIdx)
           StartIdx += NumElts;
@@ -18517,7 +18513,9 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
                                                      BoUpSLP *SLP) {
   SmallVector<ScheduleData *> WorkList;
   auto ProcessNode = [&](ScheduleData *BundleMember) {
-    assert(!BundleMember->hasValidDependencies() && "invalid deps expected.");
+    if (BundleMember->hasValidDependencies())
+      return;
+    LLVM_DEBUG(dbgs() << "SLP:       update deps of " << *BundleMember << "\n");
     BundleMember->initDependencies();
     BundleMember->resetUnscheduledDeps();
     // Handle def-use chain dependencies.
@@ -18666,39 +18664,31 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
   while (!WorkList.empty()) {
     ScheduleData *SD = WorkList.pop_back_val();
     ArrayRef<ScheduleBundle *> Bundles = getScheduleBundles(SD->getInst());
-    if (!Bundles.empty()) {
-      for (ScheduleBundle *Bundle : Bundles) {
-        if (!Visited.insert(Bundle).second || Bundle->hasValidDependencies())
-          continue;
-        assert(isInSchedulingRegion(*Bundle) &&
-               "ScheduleData not in scheduling region");
-        for (ScheduleData *BundleMember : Bundle->getBundle()) {
-          if (BundleMember->hasValidDependencies())
-            continue;
-          LLVM_DEBUG(dbgs()
-                     << "SLP:       update deps of " << *BundleMember << "\n");
-          ProcessNode(BundleMember);
-        }
-      }
-    } else if (!SD->hasValidDependencies()) {
-      LLVM_DEBUG(dbgs() << "SLP:       update deps of " << *SD << "\n");
+    if (Bundles.empty()) {
       ProcessNode(SD);
-    }
-    if (InsertInReadyList && SD->isReady()) {
-      if (Bundles.empty()) {
+      if (InsertInReadyList && SD->isReady()) {
         ReadyInsts.insert(SD);
         LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *SD << "\n");
-        continue;
       }
-      for (ScheduleBundle *Bundle : Bundles) {
+      continue;
+    }
+    for_each(Bundles, [&](ScheduleBundle *Bundle) {
+      if (!Visited.insert(Bundle).second || Bundle->hasValidDependencies())
+        return;
+      assert(isInSchedulingRegion(*Bundle) &&
+             "ScheduleData not in scheduling region");
+      for_each(Bundle->getBundle(), ProcessNode);
+    });
+    if (InsertInReadyList && SD->isReady()) {
+      for_each(Bundles, [&](ScheduleBundle *Bundle) {
         assert(isInSchedulingRegion(*Bundle) &&
                "ScheduleData not in scheduling region");
-        if (Bundle->isReady()) {
-          ReadyInsts.insert(Bundle);
-          LLVM_DEBUG(dbgs()
-                     << "SLP:     gets ready on update: " << *Bundle << "\n");
-        }
-      }
+        if (!Bundle->isReady())
+          return;
+        ReadyInsts.insert(Bundle);
+        LLVM_DEBUG(dbgs() << "SLP:     gets ready on update: " << *Bundle
+                          << "\n");
+      });
     }
   }
 }
@@ -19641,8 +19631,8 @@ void BoUpSLP::computeMinimumValueSizes() {
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
       if (UserIgnoreList)
-        AnalyzedMinBWVals.insert(TreeRoot.begin(), TreeRoot.end());
-      NodesToKeepBWs.insert(ToDemote.begin(), ToDemote.end());
+        AnalyzedMinBWVals.insert_range(TreeRoot);
+      NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
 
@@ -20064,7 +20054,7 @@ bool SLPVectorizerPass::vectorizeStores(
               } else if (*Res) {
                 // Mark the vectorized stores so that we don't vectorize them
                 // again.
-                VectorizedStores.insert(Slice.begin(), Slice.end());
+                VectorizedStores.insert_range(Slice);
                 // Mark the vectorized stores so that we don't vectorize them
                 // again.
                 AnyProfitableGraph = RepeatChanged = Changed = true;
@@ -21694,7 +21684,7 @@ public:
 #ifndef NDEBUG
       SmallSet<Value *, 4> IgnoreSet;
       for (ArrayRef<Value *> RdxOps : ReductionOps)
-        IgnoreSet.insert(RdxOps.begin(), RdxOps.end());
+        IgnoreSet.insert_range(RdxOps);
 #endif
       for (ArrayRef<Value *> RdxOps : ReductionOps) {
         for (Value *Ignore : RdxOps) {
@@ -23097,7 +23087,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           return !PHI || R.isDeleted(PHI);
         }))
       PHIToOpcodes.clear();
-    VisitedInstrs.insert(Incoming.begin(), Incoming.end());
+    VisitedInstrs.insert_range(Incoming);
   } while (HaveVectorizedPhiNodes);
 
   VisitedInstrs.clear();
