@@ -14776,6 +14776,29 @@ const SCEVPredicate *ScalarEvolution::getWrapPredicate(
 
 namespace {
 
+/// Return true if \p AR is known to not wrap via the loops backedge-taken count
+/// \p BTC.
+static bool proveNoWrapViaBTC(const SCEVAddRecExpr *AR,
+                              SCEVWrapPredicate::IncrementWrapFlags Pred,
+                              ScalarEvolution &SE) {
+  const Loop *L = AR->getLoop();
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return false;
+  if (!match(AR->getStepRecurrence(SE), m_scev_One()) ||
+      AR->getType() != BTC->getType())
+    return false;
+  // AR has a step of 1, it is NSSW/NUSW if Start + BTC >= Start.
+  auto *Add = SE.getAddExpr(AR->getStart(), BTC);
+  assert((Pred == SCEVWrapPredicate::IncrementNSSW ||
+          Pred == SCEVWrapPredicate::IncrementNUSW) &&
+         "Unexpected predicate");
+  return SE.isKnownPredicate(Pred == SCEVWrapPredicate::IncrementNSSW
+                                 ? CmpInst::ICMP_SGE
+                                 : CmpInst::ICMP_UGE,
+                             Add, AR->getStart());
+}
+
 class SCEVPredicateRewriter : public SCEVRewriteVisitor<SCEVPredicateRewriter> {
 public:
 
@@ -14861,6 +14884,8 @@ private:
 
   bool addOverflowAssumption(const SCEVAddRecExpr *AR,
                              SCEVWrapPredicate::IncrementWrapFlags AddedFlags) {
+    if (proveNoWrapViaBTC(AR, AddedFlags, SE))
+      return true;
     auto *A = SE.getWrapPredicate(AR, AddedFlags);
     return addOverflowAssumption(A);
   }
