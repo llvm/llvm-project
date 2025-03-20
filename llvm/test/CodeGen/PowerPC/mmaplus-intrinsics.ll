@@ -30,7 +30,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmr v3, v2
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp34, 0
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
 ; CHECK-NEXT:    stxv v5, 32(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
@@ -41,7 +41,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    vmr v3, v2
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp34, 0
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
@@ -55,7 +55,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-O0-NEXT:    vmr v3, v4
 ; CHECK-O0-NEXT:    vmr v2, v4
 ; CHECK-O0-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp34, 0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r3)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -73,7 +73,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-O0-BE-NEXT:    vmr v3, v4
 ; CHECK-O0-BE-NEXT:    vmr v2, v4
 ; CHECK-O0-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp34, 0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r3)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -88,7 +88,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-AIX64:       # %bb.0: # %entry
 ; CHECK-AIX64-NEXT:    vmr 3, 2
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 34, 34, 0
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(3)
@@ -99,7 +99,7 @@ define void @ass_acc(ptr %ptr, <16 x i8> %vc) {
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    vmr 3, 2
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 34, 34, 0
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(3)
@@ -120,7 +120,7 @@ define void @ld_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-NEXT:    lxv v2, 16(r3)
 ; CHECK-NEXT:    lxv v4, 48(r3)
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r7)
 ; CHECK-NEXT:    stxv v5, 32(r7)
 ; CHECK-NEXT:    stxv v2, 16(r7)
@@ -134,7 +134,7 @@ define void @ld_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-NEXT:    lxv v2, 32(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r3)
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-NEXT:    stxv v4, 32(r7)
 ; CHECK-BE-NEXT:    stxv v3, 16(r7)
@@ -154,7 +154,7 @@ define void @ld_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-NEXT:    lxv vs0, 48(r3)
 ; CHECK-O0-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-O0-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -178,7 +178,7 @@ define void @ld_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-O0-BE-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-O0-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -196,7 +196,7 @@ define void @ld_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX64-NEXT:    lxv 2, 32(3)
 ; CHECK-AIX64-NEXT:    lxv 4, 0(3)
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 36, 34, 0
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(5)
@@ -210,7 +210,7 @@ define void @ld_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX32-NEXT:    lxv 2, 32(3)
 ; CHECK-AIX32-NEXT:    lxv 4, 0(3)
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 36, 34, 0
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(5)
@@ -235,7 +235,7 @@ define void @ld_op_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-NEXT:    lxv v0, 48(r3)
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp32, vsp36, 0
 ; CHECK-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r7)
 ; CHECK-NEXT:    stxv v5, 32(r7)
 ; CHECK-NEXT:    stxv v2, 16(r7)
@@ -250,7 +250,7 @@ define void @ld_op_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-NEXT:    lxv v0, 0(r3)
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp32, vsp36, 0
 ; CHECK-BE-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-NEXT:    stxv v4, 32(r7)
 ; CHECK-BE-NEXT:    stxv v3, 16(r7)
@@ -271,7 +271,7 @@ define void @ld_op_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-O0-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp32, 0
 ; CHECK-O0-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -296,7 +296,7 @@ define void @ld_op_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-BE-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-O0-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp32, 0
 ; CHECK-O0-BE-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -315,7 +315,7 @@ define void @ld_op_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX64-NEXT:    lxv 0, 0(3)
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 32, 36, 0
 ; CHECK-AIX64-NEXT:    xvi4ger8pp 0, 2, 2
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(5)
@@ -330,7 +330,7 @@ define void @ld_op_st_xxmtacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX32-NEXT:    lxv 0, 0(3)
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 32, 36, 0
 ; CHECK-AIX32-NEXT:    xvi4ger8pp 0, 2, 2
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(5)
@@ -355,7 +355,7 @@ define void @ld_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-NEXT:    lxv v2, 16(r3)
 ; CHECK-NEXT:    lxv v4, 48(r3)
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
 ; CHECK-NEXT:    stxv v5, 32(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
@@ -373,7 +373,7 @@ define void @ld_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-NEXT:    lxv v2, 32(r3)
 ; CHECK-BE-NEXT:    lxv v4, 0(r3)
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp34, 0
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
@@ -397,7 +397,7 @@ define void @ld_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-NEXT:    lxv vs0, 48(r3)
 ; CHECK-O0-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-O0-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs3, v4, v4
 ; CHECK-O0-NEXT:    stxv vs3, 48(r3)
 ; CHECK-O0-NEXT:    xxlor vs2, v5, v5
@@ -425,7 +425,7 @@ define void @ld_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-BE-NEXT:    lxv vs0, 0(r3)
 ; CHECK-O0-BE-NEXT:    xxlor v2, vs0, vs0
 ; CHECK-O0-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp34, vsp36, 0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs3, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-O0-BE-NEXT:    xxlor vs2, v4, v4
@@ -447,7 +447,7 @@ define void @ld_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX64-NEXT:    lxv 2, 32(3)
 ; CHECK-AIX64-NEXT:    lxv 4, 0(3)
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 36, 34, 0
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(3)
@@ -465,7 +465,7 @@ define void @ld_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX32-NEXT:    lxv 2, 32(3)
 ; CHECK-AIX32-NEXT:    lxv 4, 0(3)
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 36, 34, 0
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(3)
@@ -495,7 +495,7 @@ define void @ld_op_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-NEXT:    lxv v0, 48(r3)
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp32, vsp36, 0
 ; CHECK-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r7)
 ; CHECK-NEXT:    stxv v5, 32(r7)
 ; CHECK-NEXT:    stxv v2, 16(r7)
@@ -510,7 +510,7 @@ define void @ld_op_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-BE-NEXT:    lxv v0, 0(r3)
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp32, vsp36, 0
 ; CHECK-BE-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-NEXT:    stxv v4, 32(r7)
 ; CHECK-BE-NEXT:    stxv v3, 16(r7)
@@ -531,7 +531,7 @@ define void @ld_op_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-O0-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp32, 0
 ; CHECK-O0-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -556,7 +556,7 @@ define void @ld_op_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-O0-BE-NEXT:    xxlor v4, vs0, vs0
 ; CHECK-O0-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp36, vsp32, 0
 ; CHECK-O0-BE-NEXT:    xvi4ger8pp wacc0, v2, v2
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -575,7 +575,7 @@ define void @ld_op_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX64-NEXT:    lxv 0, 0(3)
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 32, 36, 0
 ; CHECK-AIX64-NEXT:    xvi4ger8pp 0, 2, 2
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(5)
@@ -590,7 +590,7 @@ define void @ld_op_st_xxmfacc(ptr %vqp, ptr %vpp, <16 x i8> %vc, ptr %resp) {
 ; CHECK-AIX32-NEXT:    lxv 0, 0(3)
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 32, 36, 0
 ; CHECK-AIX32-NEXT:    xvi4ger8pp 0, 2, 2
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(5)
@@ -618,7 +618,7 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp38, vsp32, 0
 ; CHECK-NEXT:    xvf64gerpp wacc0, vsp34, v2
 ; CHECK-NEXT:    xvf64gerpp wacc0, vsp36, v4
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
 ; CHECK-NEXT:    stxv v5, 32(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
@@ -637,7 +637,7 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp38, vsp32, 0
 ; CHECK-BE-NEXT:    xvf64gerpp wacc0, vsp34, v2
 ; CHECK-BE-NEXT:    xvf64gerpp wacc0, vsp36, v4
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
@@ -667,7 +667,7 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-O0-NEXT:    xvf64gerpp wacc0, vsp32, vs0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    xvf64gerpp wacc0, vsp34, vs0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r3)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -701,7 +701,7 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-O0-BE-NEXT:    xvf64gerpp wacc0, vsp32, vs0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-BE-NEXT:    xvf64gerpp wacc0, vsp34, vs0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r3)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -724,7 +724,7 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 38, 32, 0
 ; CHECK-AIX64-NEXT:    xvf64gerpp 0, 34, 2
 ; CHECK-AIX64-NEXT:    xvf64gerpp 0, 36, 4
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(3)
@@ -743,7 +743,7 @@ define void @cmplx_xxmacc(ptr %ptr1, ptr %ptr2, <16 x i8> %vc1, <16 x i8> %vc2) 
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 38, 32, 0
 ; CHECK-AIX32-NEXT:    xvf64gerpp 0, 34, 2
 ; CHECK-AIX32-NEXT:    xvf64gerpp 0, 36, 4
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(3)
@@ -770,7 +770,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-LABEL: int_xxsetaccz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz wacc0
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
 ; CHECK-NEXT:    stxv v5, 32(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
@@ -780,7 +780,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-BE-LABEL: int_xxsetaccz:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxsetaccz wacc0
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
@@ -790,7 +790,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-O0-LABEL: int_xxsetaccz:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    xxsetaccz wacc0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r3)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -804,7 +804,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-O0-BE-LABEL: int_xxsetaccz:
 ; CHECK-O0-BE:       # %bb.0: # %entry
 ; CHECK-O0-BE-NEXT:    xxsetaccz wacc0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r3)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -818,7 +818,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-AIX64-LABEL: int_xxsetaccz:
 ; CHECK-AIX64:       # %bb.0: # %entry
 ; CHECK-AIX64-NEXT:    xxsetaccz 0
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(3)
@@ -828,7 +828,7 @@ define void @int_xxsetaccz(ptr %ptr) {
 ; CHECK-AIX32-LABEL: int_xxsetaccz:
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    xxsetaccz 0
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(3)
@@ -846,7 +846,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-LABEL: disass_acc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz wacc0
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v5, 0(r3)
 ; CHECK-NEXT:    stxv v4, 0(r4)
 ; CHECK-NEXT:    stxv v3, 0(r5)
@@ -856,7 +856,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-BE-LABEL: disass_acc:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxsetaccz wacc0
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v2, 0(r3)
 ; CHECK-BE-NEXT:    stxv v3, 0(r4)
 ; CHECK-BE-NEXT:    stxv v4, 0(r5)
@@ -866,7 +866,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-O0-LABEL: disass_acc:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    xxsetaccz wacc0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp32, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp32, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    vmr v2, v0
 ; CHECK-O0-NEXT:    xxlor vs0, v1, v1
 ; CHECK-O0-NEXT:    xxlor vs1, v4, v4
@@ -880,7 +880,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-O0-BE-LABEL: disass_acc:
 ; CHECK-O0-BE:       # %bb.0: # %entry
 ; CHECK-O0-BE-NEXT:    xxsetaccz wacc0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp36, vsp32, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp36, vsp32, wacc0, 0
 ; CHECK-O0-BE-NEXT:    vmr v2, v1
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v0, v0
 ; CHECK-O0-BE-NEXT:    xxlor vs1, v5, v5
@@ -894,7 +894,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-AIX64-LABEL: disass_acc:
 ; CHECK-AIX64:       # %bb.0: # %entry
 ; CHECK-AIX64-NEXT:    xxsetaccz 0
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 2, 0(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 0(4)
 ; CHECK-AIX64-NEXT:    stxv 4, 0(5)
@@ -904,7 +904,7 @@ define void @disass_acc(ptr %ptr1, ptr %ptr2, ptr %ptr3, ptr %ptr4) {
 ; CHECK-AIX32-LABEL: disass_acc:
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    xxsetaccz 0
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 2, 0(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 0(4)
 ; CHECK-AIX32-NEXT:    stxv 4, 0(5)
@@ -933,7 +933,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsetaccz wacc0
 ; CHECK-NEXT:    xvf32gerpp wacc0, v2, v2
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r3)
 ; CHECK-NEXT:    stxv v5, 32(r3)
 ; CHECK-NEXT:    stxv v2, 16(r3)
@@ -948,7 +948,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxsetaccz wacc0
 ; CHECK-BE-NEXT:    xvf32gerpp wacc0, v2, v2
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r3)
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    stxv v3, 16(r3)
@@ -963,7 +963,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    xxsetaccz wacc0
 ; CHECK-O0-NEXT:    xvf32gerpp wacc0, v2, v2
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs3, v4, v4
 ; CHECK-O0-NEXT:    stxv vs3, 48(r3)
 ; CHECK-O0-NEXT:    xxlor vs2, v5, v5
@@ -982,7 +982,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-O0-BE:       # %bb.0: # %entry
 ; CHECK-O0-BE-NEXT:    xxsetaccz wacc0
 ; CHECK-O0-BE-NEXT:    xvf32gerpp wacc0, v2, v2
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs3, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-O0-BE-NEXT:    xxlor vs2, v4, v4
@@ -1001,7 +1001,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-AIX64:       # %bb.0: # %entry
 ; CHECK-AIX64-NEXT:    xxsetaccz 0
 ; CHECK-AIX64-NEXT:    xvf32gerpp 0, 2, 2
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(3)
@@ -1016,7 +1016,7 @@ define void @testcse(ptr %res, <16 x i8> %vc) {
 ; CHECK-AIX32:       # %bb.0: # %entry
 ; CHECK-AIX32-NEXT:    xxsetaccz 0
 ; CHECK-AIX32-NEXT:    xvf32gerpp 0, 2, 2
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(3)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(3)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(3)
@@ -1052,7 +1052,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-NEXT:    dmxxinstfdmr512 wacc0, vsp32, vsp36, 0
 ; CHECK-NEXT:    plxvp vsp36, 8(r4), 0
 ; CHECK-NEXT:    pmxvf64gernn wacc0, vsp36, v2, 0, 0
-; CHECK-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-NEXT:    stxv v4, 48(r7)
 ; CHECK-NEXT:    stxv v5, 32(r7)
 ; CHECK-NEXT:    stxv v2, 16(r7)
@@ -1068,7 +1068,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-BE-NEXT:    dmxxinstfdmr512 wacc0, vsp32, vsp36, 0
 ; CHECK-BE-NEXT:    plxvp vsp36, 8(r4), 0
 ; CHECK-BE-NEXT:    pmxvf64gernn wacc0, vsp36, v2, 0, 0
-; CHECK-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-BE-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-NEXT:    stxv v4, 32(r7)
 ; CHECK-BE-NEXT:    stxv v3, 16(r7)
@@ -1092,7 +1092,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-O0-NEXT:    plxvp vsp34, 8(r4), 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    pmxvf64gernn wacc0, vsp34, vs0, 0, 0
-; CHECK-O0-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-NEXT:    xxlor vs0, v5, v5
@@ -1120,7 +1120,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-O0-BE-NEXT:    plxvp vsp34, 8(r4), 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
 ; CHECK-O0-BE-NEXT:    pmxvf64gernn wacc0, vsp34, vs0, 0, 0
-; CHECK-O0-BE-NEXT:    dmxxextfdmr512 wacc0, vsp34, vsp36, 0
+; CHECK-O0-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v5, v5
 ; CHECK-O0-BE-NEXT:    stxv vs0, 48(r7)
 ; CHECK-O0-BE-NEXT:    xxlor vs0, v4, v4
@@ -1140,7 +1140,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-AIX64-NEXT:    dmxxinstfdmr512 0, 32, 36, 0
 ; CHECK-AIX64-NEXT:    plxvp 36, 8(4), 0
 ; CHECK-AIX64-NEXT:    pmxvf64gernn 0, 36, 2, 0, 0
-; CHECK-AIX64-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX64-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX64-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX64-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX64-NEXT:    stxv 3, 16(5)
@@ -1156,7 +1156,7 @@ define void @test_ldst_1(ptr nocapture readonly %vqp, ptr %vpp, <16 x i8> %vc, p
 ; CHECK-AIX32-NEXT:    dmxxinstfdmr512 0, 32, 36, 0
 ; CHECK-AIX32-NEXT:    plxvp 36, 8(4), 0
 ; CHECK-AIX32-NEXT:    pmxvf64gernn 0, 36, 2, 0, 0
-; CHECK-AIX32-NEXT:    dmxxextfdmr512 0, 34, 36, 0
+; CHECK-AIX32-NEXT:    dmxxextfdmr512 34, 36, 0, 0
 ; CHECK-AIX32-NEXT:    stxv 5, 48(5)
 ; CHECK-AIX32-NEXT:    stxv 4, 32(5)
 ; CHECK-AIX32-NEXT:    stxv 3, 16(5)
