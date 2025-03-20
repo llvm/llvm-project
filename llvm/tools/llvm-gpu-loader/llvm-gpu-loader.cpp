@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file opens a device image passed on the command line and passes it to
-// one of the loader implementations for launch.
+// This utility is used to launch standard programs onto the GPU in conjunction
+// with the LLVM 'libc' project. It is designed to mimic a standard emulator
+// workflow, allowing for unit tests to be run on the GPU directly.
 //
 //===----------------------------------------------------------------------===//
 
-#include "Loader.h"
+#include "llvm-gpu-loader.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -21,6 +24,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -67,12 +71,6 @@ static cl::opt<bool>
                          cl::desc("Output resource usage of launched kernels"),
                          cl::init(false), cl::cat(loader_category));
 
-static cl::opt<bool>
-    no_parallelism("no-parallelism",
-                   cl::desc("Allows only a single process to use the GPU at a "
-                            "time. Useful to suppress out-of-resource errors"),
-                   cl::init(false), cl::cat(loader_category));
-
 static cl::opt<std::string> file(cl::Positional, cl::Required,
                                  cl::desc("<gpu executable>"),
                                  cl::cat(loader_category));
@@ -115,27 +113,42 @@ int main(int argc, const char **argv, const char **envp) {
   llvm::transform(args, std::back_inserter(new_argv),
                   [](const std::string &arg) { return arg.c_str(); });
 
-  // Claim a file lock on the executable so only a single process can enter this
-  // region if requested. This prevents the loader from spurious failures.
-  int fd = -1;
-  if (no_parallelism) {
-    fd = open(get_main_executable(argv[0]).c_str(), O_RDONLY);
-    if (flock(fd, LOCK_EX) == -1)
-      report_error(createStringError("Failed to lock '%s': %s", argv[0],
-                                     strerror(errno)));
-  }
+  Expected<llvm::object::ELF64LEObjectFile> elf_or_err =
+      llvm::object::ELF64LEObjectFile::create(image);
+  if (!elf_or_err)
+    report_error(elf_or_err.takeError());
 
-  // Drop the loader from the program arguments.
-  LaunchParameters params{threads_x, threads_y, threads_z,
-                          blocks_x,  blocks_y,  blocks_z};
-  int ret = load(new_argv.size(), new_argv.data(), envp,
-                 const_cast<char *>(image.getBufferStart()),
-                 image.getBufferSize(), params, print_resource_usage);
+  int ret = 1;
+  if (elf_or_err->getArch() == Triple::amdgcn) {
+#ifdef AMDHSA_SUPPORT
+    LaunchParameters params{threads_x, threads_y, threads_z,
+                            blocks_x,  blocks_y,  blocks_z};
 
-  if (no_parallelism) {
-    if (flock(fd, LOCK_UN) == -1)
-      report_error(createStringError("Failed to unlock '%s': %s", argv[0],
-                                     strerror(errno)));
+    ret = load_amdhsa(new_argv.size(), new_argv.data(), envp,
+                      const_cast<char *>(image.getBufferStart()),
+                      image.getBufferSize(), params, print_resource_usage);
+#else
+    report_error(createStringError(
+        "Unsupported architecture; %s",
+        Triple::getArchTypeName(elf_or_err->getArch()).bytes_begin()));
+#endif
+  } else if (elf_or_err->getArch() == Triple::nvptx64) {
+#ifdef NVPTX_SUPPORT
+    LaunchParameters params{threads_x, threads_y, threads_z,
+                            blocks_x,  blocks_y,  blocks_z};
+
+    ret = load_nvptx(new_argv.size(), new_argv.data(), envp,
+                     const_cast<char *>(image.getBufferStart()),
+                     image.getBufferSize(), params, print_resource_usage);
+#else
+    report_error(createStringError(
+        "Unsupported architecture; %s",
+        Triple::getArchTypeName(elf_or_err->getArch()).bytes_begin()));
+#endif
+  } else {
+    report_error(createStringError(
+        "Unsupported architecture; %s",
+        Triple::getArchTypeName(elf_or_err->getArch()).bytes_begin()));
   }
 
   return ret;
