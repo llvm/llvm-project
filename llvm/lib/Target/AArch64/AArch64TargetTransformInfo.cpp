@@ -1019,6 +1019,13 @@ struct SVEIntrinsicInfo {
         .setOperandIdxWithNoActiveLanes(0);
   }
 
+  // e.g. llvm.aarch64.sve.fcvtnt inactive, pg, op
+  static SVEIntrinsicInfo defaultMergingUnaryNarrowingTopOp() {
+    return SVEIntrinsicInfo()
+        .setGoverningPredicateOperandIdx(1)
+        .setOperandIdxInactiveLanesTakenFrom(0);
+  }
+
   // e.g. llvm.aarch64.sve.add_u pg, op1, op2
   static SVEIntrinsicInfo defaultUndefOp() {
     return SVEIntrinsicInfo()
@@ -1226,9 +1233,7 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fcvtnt_f16f32:
   case Intrinsic::aarch64_sve_fcvtnt_f32f64:
   case Intrinsic::aarch64_sve_fcvtxnt_f32f64:
-    return SVEIntrinsicInfo()
-        .setGoverningPredicateOperandIdx(1)
-        .setOperandIdxInactiveLanesTakenFrom(0);
+    return SVEIntrinsicInfo::defaultMergingUnaryNarrowingTopOp();
 
   case Intrinsic::aarch64_sve_fabd:
     return SVEIntrinsicInfo::defaultMergingOp(Intrinsic::aarch64_sve_fabd_u);
