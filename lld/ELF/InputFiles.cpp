@@ -229,6 +229,8 @@ static KnownAArch64BuildAttrSubsections extractBuildAttributesSubsections(
   KnownAArch64BuildAttrSubsections subSections;
   subSections.pauth.tagPlatform = attributes.getAttributeValue(
       "aeabi_pauthabi", llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM);
+  // Rather do this explicitly here, so behaviour in case of missing tags can be
+  // change in the future.
   if (std::nullopt == subSections.pauth.tagPlatform)
     subSections.pauth.tagPlatform = 0;
   subSections.pauth.tagScheme = attributes.getAttributeValue(
@@ -249,50 +251,6 @@ static KnownAArch64BuildAttrSubsections extractBuildAttributesSubsections(
     subSections.pauth.tagPlatform = 0;
 
   return subSections;
-}
-
-// Merge AArch64 Build Attributes subsection
-static void mergeAArch64BuildAttributes(
-    Ctx &ctx,
-    const std::array<std::optional<llvm::BuildAttributeSubSection>, 2>
-        &buildAttributesSubsections,
-    InputSection isec) {
-
-  auto [newPauthSubSection, newFAndBSubSection] = buildAttributesSubsections;
-
-  if (ctx.mergedPauthSubSection == std::nullopt) {
-    ctx.mergedPauthSubSection = newPauthSubSection;
-  }
-
-  if (ctx.mergedFAndBSubSection == std::nullopt)
-    ctx.mergedFAndBSubSection = newFAndBSubSection;
-
-  if (newPauthSubSection) {
-    // Since sanitizePauthSubSection sorts, we know that both vectors align.
-    // Merge pauth (values has to match)
-    if ((ctx.mergedPauthSubSection->Content[0].IntValue !=
-         newPauthSubSection->Content[0].IntValue) ||
-        ctx.mergedPauthSubSection->Content[1].IntValue !=
-            newPauthSubSection->Content[1].IntValue) {
-      ctx.mergedPauthSubSection->Content[0].IntValue =
-          std::numeric_limits<unsigned>::max();
-      ctx.mergedPauthSubSection->Content[1].IntValue =
-          std::numeric_limits<unsigned>::max();
-      Warn(ctx)
-          << &isec
-          << ": AArch64 Build Attributes: mismatch in 'aeabi_pauthabi' values "
-             "detected; marking 'aeabi_pauthabi' as invalid for this project";
-    }
-  }
-
-  // Since sanitizeFAndBSubSection sorts, we know that both vectors align.
-  // Merge Features and Bits
-  ctx.mergedFAndBSubSection->Content[0].IntValue &=
-      newFAndBSubSection->Content[0].IntValue;
-  ctx.mergedFAndBSubSection->Content[1].IntValue &=
-      newFAndBSubSection->Content[1].IntValue;
-  ctx.mergedFAndBSubSection->Content[2].IntValue &=
-      newFAndBSubSection->Content[2].IntValue;
 }
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
