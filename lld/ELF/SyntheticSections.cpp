@@ -2610,6 +2610,18 @@ PltSection::PltSection(Ctx &ctx)
   // modify the instructions in the PLT entries.
   if (ctx.arg.emachine == EM_SPARCV9)
     this->flags |= SHF_WRITE;
+
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .plt section can be marked with the SHF_AARCH64_PURECODE section flag. We
+  // only do this if all other executable sections also have the same section
+  // flag set, because otherwise .plt can't be allocated in the same segment as
+  // the other executable sections.
+  if (ctx.arg.emachine == EM_AARCH64 &&
+      all_of(ctx.inputSections, [](InputSectionBase *sec) {
+        return !(sec->flags & SHF_EXECINSTR) ||
+               (sec->flags & SHF_AARCH64_PURECODE);
+      }))
+    this->flags |= SHF_AARCH64_PURECODE;
 }
 
 void PltSection::writeTo(uint8_t *buf) {
