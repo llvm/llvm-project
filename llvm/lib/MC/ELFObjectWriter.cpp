@@ -1269,7 +1269,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   case MCSymbolRefExpr::VK_GOT:
   case MCSymbolRefExpr::VK_PLT:
   case MCSymbolRefExpr::VK_GOTPCREL:
-  case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
     return true;
   }
 
@@ -1526,16 +1525,13 @@ void ELFObjectWriter::fixSymbolsInTLSFixups(MCAssembler &Asm,
     case MCSymbolRefExpr::VK_GOTTPOFF:
     case MCSymbolRefExpr::VK_INDNTPOFF:
     case MCSymbolRefExpr::VK_NTPOFF:
-    case MCSymbolRefExpr::VK_GOTNTPOFF:
     case MCSymbolRefExpr::VK_TLSCALL:
     case MCSymbolRefExpr::VK_TLSDESC:
     case MCSymbolRefExpr::VK_TLSGD:
     case MCSymbolRefExpr::VK_TLSLD:
     case MCSymbolRefExpr::VK_TLSLDM:
     case MCSymbolRefExpr::VK_TPOFF:
-    case MCSymbolRefExpr::VK_TPREL:
     case MCSymbolRefExpr::VK_DTPOFF:
-    case MCSymbolRefExpr::VK_DTPREL:
       break;
     }
     Asm.registerSymbol(symRef.getSymbol());
