@@ -49,6 +49,8 @@ namespace Fortran::tools {
   default:
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
+    targetCharacteristics.DisableType(
+        Fortran::common::TypeCategory::Complex, /*kind=*/10);
     break;
   }
 
@@ -62,11 +64,16 @@ namespace Fortran::tools {
   constexpr bool f128Support = false;
 #endif
 
-  if constexpr (!f128Support)
+  if constexpr (!f128Support) {
     targetCharacteristics.DisableType(Fortran::common::TypeCategory::Real, 16);
+    targetCharacteristics.DisableType(
+        Fortran::common::TypeCategory::Complex, 16);
+  }
 
-  for (auto realKind : targetOptions.disabledRealKinds)
+  for (auto realKind : targetOptions.disabledRealKinds) {
     targetCharacteristics.DisableType(common::TypeCategory::Real, realKind);
+    targetCharacteristics.DisableType(common::TypeCategory::Complex, realKind);
+  }
 
   for (auto intKind : targetOptions.disabledIntegerKinds)
     targetCharacteristics.DisableType(common::TypeCategory::Integer, intKind);

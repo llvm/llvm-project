@@ -3735,7 +3735,7 @@ struct AAIntraFnReachabilityFunction final
       }
     }
 
-    DeadEdges.insert(LocalDeadEdges.begin(), LocalDeadEdges.end());
+    DeadEdges.insert_range(LocalDeadEdges);
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
                           IsTemporaryRQI);
   }
@@ -12221,8 +12221,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
           A.getInfoCache().getIndirectlyCallableFunctions(A);
-      PotentialCallees.insert(IndirectlyCallableFunctions.begin(),
-                              IndirectlyCallableFunctions.end());
+      PotentialCallees.insert_range(IndirectlyCallableFunctions);
     }
 
     if (PotentialCallees.empty())

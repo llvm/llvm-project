@@ -321,7 +321,7 @@ bool MergeFunctionsPass::runOnModule(Module &M) {
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
-  MF.getUsed().insert(UsedV.begin(), UsedV.end());
+  MF.getUsed().insert_range(UsedV);
   return MF.run(M);
 }
 

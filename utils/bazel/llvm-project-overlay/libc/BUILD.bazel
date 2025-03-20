@@ -1591,7 +1591,10 @@ libc_support_library(
 
 libc_support_library(
     name = "libc_external_common",
-    hdrs = glob(["shared/*.h"]),
+    hdrs = glob(
+        ["shared/*.h"],
+        exclude = ["shared/rpc_server.h"],
+    ),
     deps = [
         ":__support_common",
         ":__support_fputil_fp_bits",

@@ -147,8 +147,15 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::is_sorted(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(a, Less(), Proj(&copies)); assert(copies == 0);
-    if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(first, mid, last, Less(), Proj(&copies)); assert(copies == 0); }
-    if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(a, mid, Less(), Proj(&copies)); assert(copies == 0); }
+#if TEST_STD_VER < 26
+    if (!std::is_constant_evaluated())
+#endif
+    {
+      (void)std::ranges::inplace_merge(first, mid, last, Less(), Proj(&copies));
+      assert(copies == 0);
+      (void)std::ranges::inplace_merge(a, mid, Less(), Proj(&copies));
+      assert(copies == 0);
+    }
     (void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::lexicographical_compare(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::lower_bound(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
@@ -228,10 +235,19 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::sort(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::sort_heap(a, Less(), Proj(&copies)); assert(copies == 0);
-    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0); }
-    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_partition(a, UnaryTrue(), Proj(&copies)); assert(copies == 0); }
-    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(first, last, Less(), Proj(&copies)); assert(copies == 0); }
-    if (!std::is_constant_evaluated()) { (void)std::ranges::stable_sort(a, Less(), Proj(&copies)); assert(copies == 0); }
+#if TEST_STD_VER < 26
+    if (!std::is_constant_evaluated())
+#endif
+    {
+      (void)std::ranges::stable_partition(first, last, UnaryTrue(), Proj(&copies));
+      assert(copies == 0);
+      (void)std::ranges::stable_partition(a, UnaryTrue(), Proj(&copies));
+      assert(copies == 0);
+      (void)std::ranges::stable_sort(first, last, Less(), Proj(&copies));
+      assert(copies == 0);
+      (void)std::ranges::stable_sort(a, Less(), Proj(&copies));
+      assert(copies == 0);
+    }
 #if TEST_STD_VER > 20
     (void)std::ranges::starts_with(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::starts_with(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
