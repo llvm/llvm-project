@@ -19724,10 +19724,18 @@ bool SLPVectorizerPass::vectorizeStores(
       Type *ValueTy = StoreTy;
       if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
         ValueTy = Trunc->getSrcTy();
-      unsigned MinVF = std::max<unsigned>(
-          2, PowerOf2Ceil(TTI->getStoreMinimumVF(
-                 R.getMinVF(DL->getTypeStoreSizeInBits(StoreTy)), StoreTy,
-                 ValueTy)));
+      // When REVEC is enabled, StoreTy and ValueTy may be FixedVectorType. But
+      // getStoreMinimumVF only support scalar type as arguments. As a result,
+      // we need to use the element type of StoreTy and ValueTy to retrieve the
+      // VF and then transform it back.
+      // Remember: VF is defined as the number we want to vectorize, not the
+      // number of elements in the final vector.
+      Type *StoreScalarTy = StoreTy->getScalarType();
+      unsigned MinVF = PowerOf2Ceil(TTI->getStoreMinimumVF(
+          R.getMinVF(DL->getTypeStoreSizeInBits(StoreScalarTy)), StoreScalarTy,
+          ValueTy->getScalarType()));
+      MinVF /= getNumElements(StoreTy);
+      MinVF = std::max<unsigned>(2, MinVF);
 
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
