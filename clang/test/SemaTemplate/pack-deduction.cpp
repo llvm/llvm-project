@@ -158,12 +158,11 @@ namespace partial_full_mix {
 namespace substitution_vs_function_deduction {
   template <typename... T> struct A {
     template <typename... U> void f(void(*...)(T, U)); // expected-warning {{ISO C++11 requires a parenthesized pack declaration to have a name}}
-    template <typename... U> void g(void...(T, U)); // expected-note {{could not match 'void (T, U)' against 'void (*)(int, int)'}}
+    template <typename... U> void g(void...(T, U));
   };
   void f(int, int) {
     A<int>().f(f);
-    // FIXME: We fail to decay the parameter to a pointer type.
-    A<int>().g(f); // expected-error {{no match}}
+    A<int>().g(f);
   }
 }
 

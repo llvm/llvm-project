@@ -123,4 +123,4 @@ template<MutableField> struct WithMutableField {}; // cxx17-error {{cannot have 
 
 template<typename T> struct BadExtType { T t; }; // cxx20-note 2{{has a non-static data member of non-structural type}}
 template<BadExtType<_Atomic float> > struct AtomicFloatField; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
-template<BadExtType<_Atomic int> > struct AtomicInt; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}
+template<BadExtType<_Atomic int> > struct AtomicIntField; // cxx17-error {{cannot have type}} cxx20-error {{is not a structural type}}

@@ -352,6 +352,9 @@ Bug Fixes to C++ Support
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Function parameter packs and constant (non-type) template parameter packs
+  declared with an array or function type are now correctly adjusted to be of
+  the corresponding decayed pointer type.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
