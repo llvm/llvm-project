@@ -7801,10 +7801,6 @@ SDValue DAGTypeLegalizer::GenWidenVectorLoads(SmallVectorImpl<SDValue> &LdChain,
   // Load information
   SDValue Chain = LD->getChain();
   SDValue BasePtr = LD->getBasePtr();
-  // Lower to undef if BasePtr is Poison
-  if (BasePtr.getNode()->isPoison())
-    BasePtr = DAG.getUNDEF(BasePtr.getValueType());
-
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
