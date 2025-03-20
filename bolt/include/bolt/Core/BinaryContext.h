@@ -584,14 +584,13 @@ public:
   /// If \p NextJTAddress is different from zero, it is used as an upper
   /// bound for jump table memory layout.
   ///
-  /// Optionally, populate \p Address from jump table entries. The entries
-  /// could be partially populated if the jump table detection fails.
+  /// If \p JT is set, populate it with jump table entries. The entries could be
+  /// partially populated if the jump table detection fails.
   bool analyzeJumpTable(const uint64_t Address,
                         const JumpTable::JumpTableType Type,
                         const BinaryFunction &BF,
                         const uint64_t NextJTAddress = 0,
-                        JumpTable::AddressesType *EntriesAsAddress = nullptr,
-                        bool *HasEntryInFragment = nullptr) const;
+                        JumpTable *JT = nullptr) const;
 
   /// After jump table locations are established, this function will populate
   /// their EntriesAsAddress based on memory contents.

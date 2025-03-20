@@ -553,8 +553,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                                      const JumpTable::JumpTableType Type,
                                      const BinaryFunction &BF,
                                      const uint64_t NextJTAddress,
-                                     JumpTable::AddressesType *EntriesAsAddress,
-                                     bool *HasEntryInFragment) const {
+                                     JumpTable *JT) const {
   // Target address of __builtin_unreachable.
   const uint64_t UnreachableAddress = BF.getAddress() + BF.getSize();
 
@@ -571,11 +570,11 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   size_t TrimmedSize = 0;
 
   auto addEntryAddress = [&](uint64_t EntryAddress, bool Unreachable = false) {
-    if (!EntriesAsAddress)
+    if (!JT)
       return;
-    EntriesAsAddress->emplace_back(EntryAddress);
+    JT->EntriesAsAddress.emplace_back(EntryAddress);
     if (!Unreachable)
-      TrimmedSize = EntriesAsAddress->size();
+      TrimmedSize = JT->EntriesAsAddress.size();
   };
 
   ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
@@ -676,17 +675,17 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     ++NumRealEntries;
     LLVM_DEBUG(dbgs() << formatv("OK: {0:x} real entry\n", Value));
 
-    if (TargetBF != &BF && HasEntryInFragment)
-      *HasEntryInFragment = true;
+    if (TargetBF != &BF && JT)
+      JT->IsSplit = true;
     addEntryAddress(Value);
   }
 
   // Trim direct/normal jump table to exclude trailing unreachable entries that
   // can collide with a function address.
-  if (Type == JumpTable::JTT_X86_64_ABS && EntriesAsAddress &&
-      TrimmedSize != EntriesAsAddress->size() &&
+  if (Type == JumpTable::JTT_X86_64_ABS && JT &&
+      TrimmedSize != JT->EntriesAsAddress.size() &&
       getBinaryFunctionAtAddress(UnreachableAddress))
-    EntriesAsAddress->resize(TrimmedSize);
+    JT->EntriesAsAddress.resize(TrimmedSize);
 
   // It's a jump table if the number of real entries is more than 1, or there's
   // one real entry and one or more special targets. If there are only multiple
@@ -710,9 +709,8 @@ void BinaryContext::populateJumpTables() {
     if (NextJTI != JTE)
       NextJTAddress = NextJTI->second->getAddress();
 
-    const bool Success =
-        analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
-                         NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
+    const bool Success = analyzeJumpTable(
+        JT->getAddress(), JT->Type, *JT->Parents.front(), NextJTAddress, JT);
     if (!Success) {
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
