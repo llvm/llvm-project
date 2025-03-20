@@ -164,12 +164,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation(
     _Proj2&& __proj2,
     /*_ConstTimeDistance=*/false_type) {
   // Shorten sequences as much as possible by lopping off any equal prefix.
-  while (__first1 != __last1 && __first2 != __last2) {
-    if (!std::__invoke(__pred, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
-      break;
-    ++__first1;
-    ++__first2;
-  }
+  auto __result = std::__mismatch(__first1, __last1, __first2, __last2, __pred, __proj1, __proj2);
+
+  __first1 = __result.first;
+  __first2 = __result.second;
 
   if (__first1 == __last1)
     return __first2 == __last2;
