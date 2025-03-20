@@ -6,7 +6,7 @@
 // RUN:    -fno-rounding-math -fvisibility=hidden -O3 -fno-autolink \
 // RUN:    -fexceptions -fcolor-diagnostics
 
-// COM: Compile SPIRV source to a relocatable
+// COM: Compile SPIR-V source to a relocatable
 // RUN: AMD_COMGR_EMIT_VERBOSE_LOGS=1 AMD_COMGR_REDIRECT_LOGS=stdout \
 // RUN:   spirv-to-reloc %t.spv %t.o | FileCheck %s
 
