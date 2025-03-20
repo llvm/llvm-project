@@ -857,6 +857,10 @@ public:
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
 
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {
     case CC_C:
