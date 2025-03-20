@@ -12,8 +12,11 @@
 
 struct Tag {};
 struct Operation {};
+
+namespace std {
 template <>
-bool const std::__desugars_to_v<Tag, Operation> = true;
+bool const __desugars_to_v<Tag, Operation> = true;
+}
 
 void tests() {
   // Make sure that __desugars_to is false by default
