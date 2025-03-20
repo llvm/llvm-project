@@ -4606,22 +4606,21 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       // cost model.
       VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
                             CM, CM.CostKind);
-      if (VPRegionBlock *VectorRegion = P->getVectorLoopRegion()) {
-        for (VPBlockBase *Block :
-             vp_depth_first_shallow(VectorRegion->getEntry())) {
-          if (!isa<VPBasicBlock>(Block))
+      VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
+      assert(VectorRegion && "Expected to have a vector region!");
+      for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+               vp_depth_first_shallow(VectorRegion->getEntry()))) {
+        for (VPRecipeBase &R : *VPBB) {
+          auto *VPI = dyn_cast<VPInstruction>(&R);
+          if (!VPI)
             continue;
-          for (VPRecipeBase &R : *cast<VPBasicBlock>(Block)) {
-            if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-              switch (VPI->getOpcode()) {
-              case VPInstruction::ActiveLaneMask:
-              case VPInstruction::ExplicitVectorLength:
-                C += VPI->cost(VF, CostCtx);
-                break;
-              default:
-                break;
-              }
-            }
+          switch (VPI->getOpcode()) {
+          case VPInstruction::ActiveLaneMask:
+          case VPInstruction::ExplicitVectorLength:
+            C += VPI->cost(VF, CostCtx);
+            break;
+          default:
+            break;
           }
         }
       }
