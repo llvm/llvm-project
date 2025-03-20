@@ -3210,11 +3210,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        X.
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
-
-      // Queue up the class type into which this points.
-      Queue.push_back(MemberPtr->getClass());
-
-      // And directly continue with the pointee type.
+      addAssociatedClassesAndNamespaces(
+          Result, MemberPtr->getMostRecentCXXRecordDecl());
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }
