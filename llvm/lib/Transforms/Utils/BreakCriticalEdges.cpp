@@ -205,7 +205,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
     }
   }
 
-  unsigned NumSplitIdenticalEdges = 1; 
+  unsigned NumSplitIdenticalEdges = 1;
 
   // If there are any other edges from TIBB to DestBB, update those to go
   // through the split block, making those edges non-critical as well (and
