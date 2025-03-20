@@ -666,3 +666,31 @@ func.func @unrolled(%arg0: memref<2x4xf32>, %arg1: memref<1x2x4xf32>) {
   // PRODUCER-CONSUMER-MAXIMAL:          affine.load %{{.*}}[0, %{{.*}}, %{{.*}}]
   return
 }
+
+// Test for fusion of affine load/store on memrefs of MMA type.
+
+// PRODUCER-CONSUMER-LABEL: func @gpu_mma_cast
+func.func @gpu_mma_cast(%a: memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>, %b: memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>, %c: memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>) {
+  affine.for %i = 0 to 8 {
+    affine.for %j = 0 to 4 {
+      %v = affine.load %a[%i, %j] : memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>
+      affine.store %v, %b[%i, %j] : memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>
+    }
+  }
+
+  affine.for %i = 0 to 8 {
+    affine.for %j = 0 to 4 {
+      %v = affine.load %b[%i, %j] : memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>
+      affine.store %v, %c[%i, %j] : memref<8x4x!gpu.mma_matrix<16x16xf32, "AOp">, 3>
+    }
+  }
+  // PRODUCER-CONSUMER:      affine.for %{{.*}} = 0 to 8 {
+  // PRODUCER-CONSUMER-NEXT:   affine.for %{{.*}} = 0 to 4 {
+  // PRODUCER-CONSUMER-NEXT:     affine.load
+  // PRODUCER-CONSUMER-NEXT:     affine.store
+  // PRODUCER-CONSUMER-NEXT:     affine.load
+  // PRODUCER-CONSUMER-NEXT:     affine.store
+
+  return
+  // PRODUCER-CONSUMER: return
+}
