@@ -1320,6 +1320,13 @@ if(LLVM_LINK_LLVM_DYLIB AND LLVM_EXPORT_SYMBOLS_FOR_PLUGINS)
   message(FATAL_ERROR "LLVM_LINK_LLVM_DYLIB not compatible with LLVM_EXPORT_SYMBOLS_FOR_PLUGINS")
 endif()
 
+#The shared libs build for Linux on PowerPC requires -lpthread
+if(BUILD_SHARED_LIBS AND ${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND LLVM_HOST_TRIPLE MATCHES "powerpc*")
+    append("-lpthread"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+endif()
+
+
 # By default we should enable LLVM_ENABLE_IDE only for multi-configuration
 # generators. This option disables optional build system features that make IDEs
 # less usable.
