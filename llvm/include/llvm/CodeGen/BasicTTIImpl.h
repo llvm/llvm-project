@@ -2776,6 +2776,12 @@ public:
       }
       return Cost;
     }
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      if (TLI->isOperationLegalOrPromote(llvm::ISD::FMAXNUM_IEEE, LT.second))
+        return LT.first * 3;
+      break;
+    }
     default:
       break;
     }
