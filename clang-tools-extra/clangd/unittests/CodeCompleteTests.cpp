@@ -882,8 +882,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
               ElementsAre(AllOf(named("X"), insertInclude("\"bar.h\""))));
   // Can be disabled via option.
   CodeCompleteOptions NoInsertion;
-  NoInsertion.InsertIncludes =
-      CodeCompleteOptions::IncludeInsertion::NeverInsert;
+  NoInsertion.InsertIncludes = Config::HeaderInsertionPolicy::NeverInsert;
   Results = completions(TU, Test.point(), {Sym}, NoInsertion);
   EXPECT_THAT(Results.Completions,
               ElementsAre(AllOf(named("X"), Not(insertInclude()))));
@@ -1192,7 +1191,7 @@ TEST(CompletionTest, CommentsOnMembersFromHeaderOverloadBundling) {
       int delta(int i);
 
       void epsilon(long l);
-      
+
       /// This one has a comment.
       void epsilon(int i);
     };
