@@ -409,7 +409,7 @@ void TypeLocWriter::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocWriter::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   addSourceLocation(TL.getStarLoc());
-  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
+  Record.AddTypeSourceInfo(TL.getClassTInfo());
 }
 
 void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
