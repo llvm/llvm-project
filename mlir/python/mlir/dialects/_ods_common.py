@@ -104,7 +104,7 @@ def get_op_result_or_value(
     elif isinstance(arg, _cext.ir.OpResultList):
         return arg[0]
     else:
-        assert isinstance(arg, _cext.ir.Value)
+        assert isinstance(arg, _cext.ir.Value), f"expected Value, got {type(arg)}"
         return arg
 
 
