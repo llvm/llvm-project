@@ -1477,10 +1477,6 @@ namespace {
       }
     }
 
-    bool HeuristicallyComputeSizeOfPackExpr() const {
-      return !TemplateArgs.isRewrite();
-    }
-
     TemplateArgument
     getTemplateArgumentPackPatternForRewrite(const TemplateArgument &TA) {
       if (TA.getKind() != TemplateArgument::Pack)
