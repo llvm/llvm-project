@@ -10,12 +10,13 @@ unsigned up0() {
   return +a;
 }
 
-// CHECK: cir.func @up0() -> !cir.int<u, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["a", init]
+// CHECK: cir.func @up0() -> !u32i
+// CHECK:   %[[A:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(plus, %[[INPUT]])
 
 // LLVM: define i32 @up0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -30,12 +31,13 @@ unsigned um0() {
   return -a;
 }
 
-// CHECK: cir.func @um0() -> !cir.int<u, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["a", init]
+// CHECK: cir.func @um0() -> !u32i
+// CHECK:   %[[A:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(minus, %[[INPUT]])
 
 // LLVM: define i32 @um0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -52,12 +54,13 @@ unsigned un0() {
   return ~a; // a ^ -1 , not
 }
 
-// CHECK: cir.func @un0() -> !cir.int<u, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["a", init]
+// CHECK: cir.func @un0() -> !u32i
+// CHECK:   %[[A:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(not, %[[INPUT]])
 
 // LLVM: define i32 @un0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -75,16 +78,17 @@ int inc0() {
   return a;
 }
 
-// CHECK: cir.func @inc0() -> !cir.int<s, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["a", init]
-// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !cir.int<s, 32>
-// CHECK:   cir.store %[[ATMP]], %[[A]] : !cir.int<s, 32>
+// CHECK: cir.func @inc0() -> !s32i
+// CHECK:   %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @inc0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -102,16 +106,17 @@ int dec0() {
   return a;
 }
 
-// CHECK: cir.func @dec0() -> !cir.int<s, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["a", init]
-// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !cir.int<s, 32>
-// CHECK:   cir.store %[[ATMP]], %[[A]] : !cir.int<s, 32>
+// CHECK: cir.func @dec0() -> !s32i
+// CHECK:   %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @dec0()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -129,16 +134,17 @@ int inc1() {
   return a;
 }
 
-// CHECK: cir.func @inc1() -> !cir.int<s, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["a", init]
-// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !cir.int<s, 32>
-// CHECK:   cir.store %[[ATMP]], %[[A]] : !cir.int<s, 32>
+// CHECK: cir.func @inc1() -> !s32i
+// CHECK:   %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @inc1()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -156,16 +162,17 @@ int dec1() {
   return a;
 }
 
-// CHECK: cir.func @dec1() -> !cir.int<s, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["a", init]
-// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !cir.int<s, 32>
-// CHECK:   cir.store %[[ATMP]], %[[A]] : !cir.int<s, 32>
+// CHECK: cir.func @dec1() -> !s32i
+// CHECK:   %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[INPUT:.*]] = cir.load %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
 // CHECK:   %[[A_TO_OUTPUT:.*]] = cir.load %[[A]]
 
 // LLVM: define i32 @dec1()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -184,11 +191,11 @@ int inc2() {
   return b;
 }
 
-// CHECK: cir.func @inc2() -> !cir.int<s, 32>
-// CHECK:   %[[A:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["a", init]
-// CHECK:   %[[B:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["b", init]
-// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !cir.int<s, 32>
-// CHECK:   cir.store %[[ATMP]], %[[A]] : !cir.int<s, 32>
+// CHECK: cir.func @inc2() -> !s32i
+// CHECK:   %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CHECK:   %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CHECK:   %[[ATMP:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:   cir.store %[[ATMP]], %[[A]] : !s32i
 // CHECK:   %[[ATOB:.*]] = cir.load %[[A]]
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[ATOB]])
 // CHECK:   cir.store %[[INCREMENTED]], %[[A]]
@@ -196,6 +203,7 @@ int inc2() {
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load %[[B]]
 
 // LLVM: define i32 @inc2()
+// LLVM:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[B:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -226,6 +234,7 @@ float fpPlus() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(plus, %[[INPUT]])
 
 // LLVM: define float @fpPlus()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -246,6 +255,7 @@ float fpMinus() {
 // CHECK:   %[[OUTPUT:.*]] = cir.unary(minus, %[[INPUT]])
 
 // LLVM: define float @fpMinus()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -270,6 +280,7 @@ float fpPreInc() {
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
 
 // LLVM: define float @fpPreInc()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -294,6 +305,7 @@ float fpPreDec() {
 // CHECK:   %[[DECREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
 
 // LLVM: define float @fpPreDec()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -318,6 +330,7 @@ float fpPostInc() {
 // CHECK:   %[[INCREMENTED:.*]] = cir.unary(inc, %[[INPUT]])
 
 // LLVM: define float @fpPostInc()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -342,6 +355,7 @@ float fpPostDec() {
 // CHECK:   %[[DECREMENTED:.*]] = cir.unary(dec, %[[INPUT]])
 
 // LLVM: define float @fpPostDec()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -372,6 +386,7 @@ float fpPostInc2() {
 // CHECK:   %[[B_TO_OUTPUT:.*]] = cir.load %[[B]]
 
 // LLVM: define float @fpPostInc2()
+// LLVM:   %[[RV:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[A:.*]] = alloca float, i64 1, align 4
 // LLVM:   %[[B:.*]] = alloca float, i64 1, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4

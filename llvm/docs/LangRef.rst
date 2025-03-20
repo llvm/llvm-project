@@ -14562,6 +14562,33 @@ is lowered to a constant 0.
 Note that runtime support may be conditional on the privilege-level code is
 running at and the host platform.
 
+'``llvm.readsteadycounter``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i64 @llvm.readsteadycounter()
+
+Overview:
+"""""""""
+
+The '``llvm.readsteadycounter``' intrinsic provides access to the fixed
+frequency clock on targets that support it. Unlike '``llvm.readcyclecounter``',
+this clock is expected to tick at a constant rate, making it suitable for
+measuring elapsed time. The actual frequency of the clock is implementation
+defined.
+
+Semantics:
+""""""""""
+
+When directly supported, reading the steady counter should not modify any
+memory. Implementations are allowed to either return an application
+specific value or a system wide value. On backends without support, this
+is lowered to a constant 0.
+
 '``llvm.clear_cache``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15640,8 +15667,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use
-``llvm.experimental.memset.pattern`` on any integer bit width and for
-different address spaces. Not all targets support all bit widths however.
+``llvm.experimental.memset.pattern`` on any sized type and for different
+address spaces.
 
 ::
 

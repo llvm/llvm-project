@@ -719,7 +719,7 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
                                 MaybeAlign(HeadStore->getAlign()), StoredVal,
                                 HeadStore, AdjacentStores, StoreEv, BECount,
                                 IsNegStride)) {
-      TransformedStores.insert(AdjacentStores.begin(), AdjacentStores.end());
+      TransformedStores.insert_range(AdjacentStores);
       Changed = true;
     }
   }

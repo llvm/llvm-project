@@ -24,12 +24,14 @@
 // MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
 // MSVC warning C4389: '==': signed/unsigned mismatch
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244 /wd4389
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <vector>
 
+#include "sized_allocator.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "type_algorithms.h"
@@ -171,6 +173,90 @@ TEST_CONSTEXPR_CXX20 bool test() {
     test_vector_bool<64>();
     test_vector_bool<199>();
     test_vector_bool<256>();
+  }
+
+  // Make sure std::equal behaves properly with std::vector<bool> iterators with custom size types.
+  // See issue: https://github.com/llvm/llvm-project/issues/126369.
+  {
+    //// Tests for std::equal with aligned bits
+
+    { // Test the first (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(6, true, Alloc(1));
+      std::vector<bool, Alloc> expected(8, true, Alloc(1));
+      assert(std::equal(in.begin() + 4, in.end(), expected.begin() + 4));
+    }
+    { // Test the last word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin()));
+    }
+    { // Test middle words for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(24, true, Alloc(1));
+      std::vector<bool, Alloc> expected(29, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin()));
+    }
+
+    { // Test the first (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      assert(std::equal(in.begin() + 4, in.end(), expected.begin() + 4));
+    }
+    { // Test the last word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(24, true, Alloc(1));
+      std::vector<bool, Alloc> expected(32, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin()));
+    }
+    { // Test middle words for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(48, true, Alloc(1));
+      std::vector<bool, Alloc> expected(55, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin()));
+    }
+
+    //// Tests for std::equal with unaligned bits
+
+    { // Test the first (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(6, true, Alloc(1));
+      std::vector<bool, Alloc> expected(8, true, Alloc(1));
+      assert(std::equal(in.begin() + 4, in.end(), expected.begin()));
+    }
+    { // Test the last word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(4, true, Alloc(1));
+      std::vector<bool, Alloc> expected(8, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin() + 3));
+    }
+    { // Test middle words for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(16, true, Alloc(1));
+      std::vector<bool, Alloc> expected(24, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin() + 4));
+    }
+
+    { // Test the first (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      assert(std::equal(in.begin() + 4, in.end(), expected.begin()));
+    }
+    { // Test the last word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(12, true, Alloc(1));
+      std::vector<bool, Alloc> expected(16, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin() + 3));
+    }
+    { // Test the middle words for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(32, true, Alloc(1));
+      std::vector<bool, Alloc> expected(64, true, Alloc(1));
+      assert(std::equal(in.begin(), in.end(), expected.begin() + 4));
+    }
   }
 
   return true;
