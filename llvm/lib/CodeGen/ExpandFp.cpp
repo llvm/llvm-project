@@ -85,9 +85,9 @@ public:
     if (Ty->is16bitFPTy())
       return FRemExpander{B, Ty, 11, 0x8000, B.getFloatTy(), B.getInt16Ty()};
     if (Ty->isFloatTy() || Ty->isHalfTy())
-      return FRemExpander{B, Ty, 12, 0x80000000L, Ty, B.getInt32Ty()};
+      return FRemExpander{B, Ty, 12, 0x80000000UL, Ty, B.getInt32Ty()};
     if (Ty->isDoubleTy())
-      return FRemExpander{B, Ty, 26, 0x8000000000000000L, Ty, B.getInt64Ty()};
+      return FRemExpander{B, Ty, 26, 0x8000000000000000UL, Ty, B.getInt64Ty()};
 
     return std::nullopt;
   }
