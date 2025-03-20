@@ -791,6 +791,7 @@ let Predicates = [HasVendorXqcisync, IsRV32] in {
   def QC_C_SYNCWF : QCIRVInst16CBSYNC<0b100, "qc.c.syncwf">;
   def QC_C_SYNCWL : QCIRVInst16CBSYNC<0b101, "qc.c.syncwl">;
 
+  let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
   def QC_C_DELAY : RVInst16CI<0b000, 0b10, (outs),
                               (ins uimm5nonzero:$imm),
                               "qc.c.delay", "$imm"> {
