@@ -3811,7 +3811,7 @@ private:
       if (AllConstsOrCasts)
         CastMaxMinBWSizes =
             std::make_pair(std::numeric_limits<unsigned>::max(), 1);
-      MustGather.insert(VL.begin(), VL.end());
+      MustGather.insert_range(VL);
     }
 
     if (UserTreeIdx.UserTE)
@@ -4802,7 +4802,9 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
     if (!Entries.front().front()->ReuseShuffleIndices.empty() &&
         TE.getVectorFactor() == 2 && Mask.size() == 2 &&
         any_of(enumerate(Entries.front().front()->ReuseShuffleIndices),
-               [](const auto &P) { return P.value() % 2 != P.index() % 2; }))
+               [](const auto &P) {
+                 return P.value() % 2 != static_cast<int>(P.index()) % 2;
+               }))
       return std::nullopt;
 
     // Perfect match in the graph, will reuse the previously vectorized
@@ -7344,7 +7346,7 @@ static void gatherPossiblyVectorizableLoads(
       assert(!LocalToAdd.empty() && "Expected some elements to add.");
       for (unsigned Idx : LocalToAdd)
         It->emplace_back(Data[Idx].first, Data[Idx].second + Offset);
-      ToAdd.insert(LocalToAdd.begin(), LocalToAdd.end());
+      ToAdd.insert_range(LocalToAdd);
       It = FindMatchingLoads(Data, GatheredLoads, LocalToAdd, Repeated, Offset,
                              Start);
     }
@@ -7391,8 +7393,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   SmallVector<SmallPtrSet<const Value *, 4>> LoadSetsToVectorize(
       LoadEntriesToVectorize.size());
   for (auto [Idx, Set] : zip(LoadEntriesToVectorize, LoadSetsToVectorize))
-    Set.insert(VectorizableTree[Idx]->Scalars.begin(),
-               VectorizableTree[Idx]->Scalars.end());
+    Set.insert_range(VectorizableTree[Idx]->Scalars);
 
   // Sort loads by distance.
   auto LoadSorter = [](const std::pair<LoadInst *, int> &L1,
@@ -7516,7 +7517,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             }
             if (LS != LoadsState::Gather) {
               Results.emplace_back(Values, LS);
-              VectorizedLoads.insert(Slice.begin(), Slice.end());
+              VectorizedLoads.insert_range(Slice);
               // If we vectorized initial block, no need to try to vectorize it
               // again.
               if (Cnt == StartIdx)
@@ -7544,7 +7545,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
         ArrayRef<Value *> Values(
             reinterpret_cast<Value *const *>(Slice.begin()), Slice.size());
         Results.emplace_back(Values, LoadsState::ScatterVectorize);
-        VectorizedLoads.insert(Slice.begin(), Slice.end());
+        VectorizedLoads.insert_range(Slice);
         // If we vectorized initial block, no need to try to vectorize it again.
         if (Cnt == StartIdx)
           StartIdx += NumElts;
@@ -19424,8 +19425,8 @@ void BoUpSLP::computeMinimumValueSizes() {
             cast<IntegerType>(TreeRoot.front()->getType()->getScalarType())
                 ->getBitWidth()) {
       if (UserIgnoreList)
-        AnalyzedMinBWVals.insert(TreeRoot.begin(), TreeRoot.end());
-      NodesToKeepBWs.insert(ToDemote.begin(), ToDemote.end());
+        AnalyzedMinBWVals.insert_range(TreeRoot);
+      NodesToKeepBWs.insert_range(ToDemote);
       continue;
     }
 
@@ -19847,7 +19848,7 @@ bool SLPVectorizerPass::vectorizeStores(
               } else if (*Res) {
                 // Mark the vectorized stores so that we don't vectorize them
                 // again.
-                VectorizedStores.insert(Slice.begin(), Slice.end());
+                VectorizedStores.insert_range(Slice);
                 // Mark the vectorized stores so that we don't vectorize them
                 // again.
                 AnyProfitableGraph = RepeatChanged = Changed = true;
@@ -21478,7 +21479,7 @@ public:
 #ifndef NDEBUG
       SmallSet<Value *, 4> IgnoreSet;
       for (ArrayRef<Value *> RdxOps : ReductionOps)
-        IgnoreSet.insert(RdxOps.begin(), RdxOps.end());
+        IgnoreSet.insert_range(RdxOps);
 #endif
       for (ArrayRef<Value *> RdxOps : ReductionOps) {
         for (Value *Ignore : RdxOps) {
@@ -22881,7 +22882,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           return !PHI || R.isDeleted(PHI);
         }))
       PHIToOpcodes.clear();
-    VisitedInstrs.insert(Incoming.begin(), Incoming.end());
+    VisitedInstrs.insert_range(Incoming);
   } while (HaveVectorizedPhiNodes);
 
   VisitedInstrs.clear();

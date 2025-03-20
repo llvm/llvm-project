@@ -120,6 +120,9 @@ entry:
   ret <4 x i32> %c
 }
 
+; This is the zipeven pattern with a poison second operand.  That happens
+; to also be described as an identity shuffle, so this is testing that we
+; don't emit the zipeven instruction.
 define <4 x i32> @zipeven_v4i32_single(<4 x i32> %a) {
 ; CHECK-LABEL: zipeven_v4i32_single:
 ; CHECK:       # %bb.0: # %entry
@@ -129,6 +132,9 @@ entry:
   ret <4 x i32> %c
 }
 
+; This is the zipodd pattern with a poison second operand.  That happens
+; to also be described as a single slide, so this is testing that we
+; don't emit the zipodd instruction.
 define <4 x i32> @zipodd_v4i32_single(<4 x i32> %a) {
 ; CHECK-LABEL: zipodd_v4i32_single:
 ; CHECK:       # %bb.0: # %entry

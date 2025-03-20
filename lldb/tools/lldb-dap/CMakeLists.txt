@@ -1,8 +1,3 @@
-if (HAVE_LIBPTHREAD)
-  list(APPEND extra_libs pthread)
-endif ()
-
-
 if(APPLE)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in
@@ -23,6 +18,7 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  DAPLog.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
@@ -73,7 +69,7 @@ add_lldb_tool(lldb-dap
   Handler/TestGetTargetBreakpointsRequestHandler.cpp
   Handler/ThreadsRequestHandler.cpp
   Handler/VariablesRequestHandler.cpp
-  
+
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
@@ -81,7 +77,6 @@ add_lldb_tool(lldb-dap
   LINK_LIBS
     liblldb
     lldbHost
-    ${extra_libs}
 
   LINK_COMPONENTS
     Option
