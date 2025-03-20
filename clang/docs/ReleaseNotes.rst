@@ -81,6 +81,8 @@ C++2c Feature Support
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
 
+- Implemented `P2719Rx Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

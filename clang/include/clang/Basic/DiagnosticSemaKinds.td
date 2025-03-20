@@ -9844,8 +9844,11 @@ def err_type_aware_destroying_operator_delete : Error<
   "type aware destroying delete is not permitted in C++26">;
 def err_unsupported_type_aware_allocator : Error<
   "type aware allocation operators are disabled, enable with '-fcxx-type-aware-allocators'">;
-def warn_cxx26_type_aware_allocator : Warning<
-  "use or declaration of type aware allocators are incompatible with C++ standards before C++26">,
+
+def ext_cxx26_type_aware_allocators : ExtWarn<
+  "type aware allocators are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx26_type_aware_allocators : Warning<
+  "type aware allocators are incompatible with C++ standards before C++2c">,
   DefaultIgnore, InGroup<CXXPre26Compat>;
 def err_no_type_aware_cleanup_operator_delete : Error<
   "type aware %0 requires there to be a corresponding cleanup %1 in %2">;

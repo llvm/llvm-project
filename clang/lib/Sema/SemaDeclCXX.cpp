@@ -16444,9 +16444,12 @@ static inline bool CheckOperatorNewDeleteTypes(
     if (!SemaRef.getLangOpts().TypeAwareAllocators)
       return SemaRef.Diag(FnDecl->getLocation(),
                           diag::err_unsupported_type_aware_allocator);
-    if (!SemaRef.getLangOpts().CPlusPlus26)
-      SemaRef.Diag(FnDecl->getLocation(),
-                   diag::warn_cxx26_type_aware_allocator);
+    if (!FnDecl->isTemplateInstantiation()) {
+      unsigned DiagID = SemaRef.getLangOpts().CPlusPlus26
+                            ? diag::warn_cxx26_type_aware_allocators
+                            : diag::ext_cxx26_type_aware_allocators;
+      SemaRef.Diag(FnDecl->getLocation(), DiagID);
+    }
 
     if (OperatorKind == AllocationOperatorKind::New) {
       SizeParameterIndex = 1;
