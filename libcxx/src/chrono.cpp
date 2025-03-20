@@ -64,6 +64,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 namespace chrono {
 
@@ -262,4 +263,5 @@ steady_clock::time_point steady_clock::now() noexcept { return __libcpp_steady_c
 
 } // namespace chrono
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD

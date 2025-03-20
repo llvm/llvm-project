@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 #ifndef _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
 
@@ -382,4 +383,5 @@ wstring to_wstring(double val) { return as_string(get_swprintf(), initial_string
 wstring to_wstring(long double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%Lf", val); }
 #endif
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD
