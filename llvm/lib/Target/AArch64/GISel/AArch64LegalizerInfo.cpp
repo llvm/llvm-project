@@ -323,7 +323,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(0, s32, s128)
       .widenScalarToNextPow2(0)
       .minScalarEltSameAsIf(always, 1, 0)
-      .maxScalarEltSameAsIf(always, 1, 0);
+      .maxScalarEltSameAsIf(always, 1, 0)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_CTLZ)
       .legalFor({{s32, s32},
