@@ -2084,7 +2084,7 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   if (auto Status = translateSpirvToBitcodeImpl(InSet, TranslatedSpirv))
     return Status;
 
-  // Extract any SPIR-V flags from @llvm.cmdline
+  // Extract relevant -cc1 flags from @llvm.cmdline
   if (auto Status = extractSpirvFlags(TranslatedSpirv))
     return Status;
 
