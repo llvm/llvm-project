@@ -15,9 +15,13 @@
 
 #include <functional>
 
-static_assert(std::__desugars_to_v<std::__equal_tag, std::equal_to<void>, int, int>,
-              "something is wrong with the test");
+struct Operation {};
+struct Tag {};
+template <>
+bool const std::__desugars_to_v<Tag, Operation> = true;
+
+static_assert(std::__desugars_to_v<Tag, Operation>, "something is wrong with the test");
 
 // make sure we pass through reference_wrapper
-static_assert(std::__desugars_to_v<std::__equal_tag, std::reference_wrapper<std::equal_to<void> >, int, int>, "");
-static_assert(std::__desugars_to_v<std::__equal_tag, std::reference_wrapper<std::equal_to<void> const>, int, int>, "");
+static_assert(std::__desugars_to_v<Tag, std::reference_wrapper<Operation> >, "");
+static_assert(std::__desugars_to_v<Tag, std::reference_wrapper<Operation const> >, "");
