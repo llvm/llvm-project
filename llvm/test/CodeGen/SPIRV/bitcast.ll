@@ -24,8 +24,8 @@ entry:
 define <4 x i16> @test_vector_half4(<4 x half> nofpclass(nan inf) %p1) {
 entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
-  ; CHECK: %[[#]] = OpBitcast %[[#vec4_int_16]] %[[#arg0]]
+  ; CHECK: %[[#Res1:]] = OpBitcast %[[#vec4_int_16]] %[[#arg0]]
   %0 = bitcast <4 x half> %p1 to <4 x i16>
-  ;CHECK: OpReturnValue %[[#]]
+  ;CHECK: OpReturnValue %[[#Res1]]
   ret <4 x i16> %0
 }
