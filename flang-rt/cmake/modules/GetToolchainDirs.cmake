@@ -34,8 +34,9 @@
 function (get_toolchain_library_subdir outvar)
   set(outval "lib")
 
-  if (APPLE)
+  if (APPLE OR (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX"))
     # Required to be "darwin" for MachO toolchain.
+    # AIX uses lib/${os_dir} as if LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF
     get_toolchain_os_dirname(os_dirname)
     set(outval "${outval}/${os_dirname}")
   else ()

@@ -260,6 +260,29 @@ define amdgpu_kernel void @llvm_debugtrap() {
   unreachable
 }
 
+define amdgpu_kernel void @llvm_ubsantrap() {
+; GFX8V4-LABEL: llvm_ubsantrap:
+; GFX8V4:       ; %bb.0:
+; GFX8V4-NEXT:    s_mov_b64 s[0:1], s[6:7]
+; GFX8V4-NEXT:    s_trap 2
+;
+; GFX8V5-LABEL: llvm_ubsantrap:
+; GFX8V5:       ; %bb.0:
+; GFX8V5-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0xc8
+; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8V5-NEXT:    s_trap 2
+;
+; GFX9V4-LABEL: llvm_ubsantrap:
+; GFX9V4:       ; %bb.0:
+; GFX9V4-NEXT:    s_trap 2
+;
+; GFX9V5-LABEL: llvm_ubsantrap:
+; GFX9V5:       ; %bb.0:
+; GFX9V5-NEXT:    s_trap 2
+  call void @llvm.ubsantrap(i8 0)
+  unreachable
+}
+
 define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  {
 ; GFX8V4-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX8V4:       ; %bb.0:

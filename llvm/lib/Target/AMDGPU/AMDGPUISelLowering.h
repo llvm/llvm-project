@@ -209,7 +209,7 @@ public:
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 
-  MVT getVectorIdxTy(const DataLayout &) const override;
+  unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -402,6 +402,7 @@ enum NodeType : unsigned {
   TC_RETURN,
   TC_RETURN_GFX,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.
@@ -434,6 +435,10 @@ enum NodeType : unsigned {
   /// CLAMP value between 0.0 and 1.0. NaN clamped to 0, following clamp output
   /// modifier behavior with dx10_enable.
   CLAMP,
+#if LLPC_BUILD_NPI
+  
+  SUPR,
+#endif /* LLPC_BUILD_NPI */
 
   // This is SETCC with the full mask result which is used for a compare with a
   // result bit per item in the wavefront.

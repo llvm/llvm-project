@@ -1359,7 +1359,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize) {
   assert(FlatWorkGroupSize != 0);
-  if (STI->getTargetTriple().getArch() != Triple::amdgcn)
+  if (!STI->getTargetTriple().isAMDGCN())
     return 8;
   unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
@@ -1719,7 +1719,7 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   if (Version.Major >= 10) {
     KernelCode.compute_pgm_resource_registers |=
         S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-        S_00B848_MEM_ORDERED(1);
+        S_00B848_MEM_ORDERED(1) | S_00B848_FWD_PROGRESS(1);
   }
 }
 

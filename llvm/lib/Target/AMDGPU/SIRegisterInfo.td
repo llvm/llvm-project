@@ -1266,22 +1266,18 @@ defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p
 defm VReg_96 : VRegClass_STAGING<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], (add VGPR_96)>;
 defm VReg_128 : VRegClass_STAGING<4, Reg128Types.types, (add VGPR_128)>;
 defm VReg_160 : VRegClass_STAGING<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], (add VGPR_160)>;
+
+defm VReg_192 : VRegClass_STAGING<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
+defm VReg_224 : VRegClass_STAGING<7, [v7i32, v7f32], (add VGPR_224)>;
+defm VReg_256 : VRegClass_STAGING<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
+defm VReg_288 : VRegClass_STAGING<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], (add VGPR_288)>;
 #else /* LLPC_BUILD_NPI */
 defm VReg_96 : VRegClass<3, Reg96Types.types, (add VGPR_96)>;
 defm VReg_128 : VRegClass<4, Reg128Types.types, (add VGPR_128)>;
 defm VReg_160 : VRegClass<5, [v5i32, v5f32], (add VGPR_160)>;
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
-defm VReg_192 : VRegClass_STAGING<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
-#else /* LLPC_BUILD_NPI */
 defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
-#endif /* LLPC_BUILD_NPI */
 defm VReg_224 : VRegClass<7, [v7i32, v7f32], (add VGPR_224)>;
-#ifdef LLPC_BUILD_NPI
-defm VReg_256 : VRegClass_STAGING<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
-defm VReg_288 : VRegClass_STAGING<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], (add VGPR_288)>;
-#else /* LLPC_BUILD_NPI */
 defm VReg_256 : VRegClass<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
 defm VReg_288 : VRegClass<9, [v9i32, v9f32], (add VGPR_288)>;
 #endif /* LLPC_BUILD_NPI */
@@ -1587,9 +1583,7 @@ def RsrcReg128Op : RegisterOperand<RsrcReg128> {
 def VGPR_IDX_IDX_OP : RegisterOperand<VGPR_IDX_IDX_OP_RC> {
 }
 
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
-#ifdef LLPC_BUILD_NPI
 //  GVGPR Operands
 //===----------------------------------------------------------------------===//
 
@@ -1636,7 +1630,9 @@ def GSrcSimple : RegOrImmOperand<VS_32, "OPERAND_REG_INLINE_C_INT32"> {
   let PrintMethod = "printGSrcSimple";
 }
 
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_NPI
 //  SSrc_* Operands with an SGPR, a 32-bit immediate, or 64-bit immediate
 //  if supported by target.
 #else /* LLPC_BUILD_NPI */
@@ -1795,11 +1791,19 @@ def VRegSrc_1024: SrcReg9<VReg_1024, "OPW1024">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
 // True 16 Operands
+#ifdef LLPC_BUILD_NPI
+def VRegSrc_16 : RegisterOperand<VGPR_16_STAGING> {
+#else /* LLPC_BUILD_NPI */
 def VRegSrc_16 : RegisterOperand<VGPR_16> {
+#endif /* LLPC_BUILD_NPI */
   let DecoderMethod = "decodeOperand_VGPR_16";
   let EncoderMethod = "getMachineOpValueT16";
 }
+#ifdef LLPC_BUILD_NPI
+def VRegSrc_fake16: SrcReg9<VGPR_32_STAGING, "OPW16"> {
+#else /* LLPC_BUILD_NPI */
 def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
+#endif /* LLPC_BUILD_NPI */
   let EncoderMethod = "getMachineOpValueT16";
 }
 //===----------------------------------------------------------------------===//
@@ -1808,42 +1812,30 @@ def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
 
 // An 8-bit RegisterOperand wrapper for a VGPR
 #ifdef LLPC_BUILD_NPI
-def VGPRSrc_32 : RegisterOperand<VGPR_32_STAGING> {
+class VGPRSrc<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING)> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass";
 #else /* LLPC_BUILD_NPI */
 def VGPRSrc_32 : RegisterOperand<VGPR_32> {
-#endif /* LLPC_BUILD_NPI */
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
-#ifdef LLPC_BUILD_NPI
-def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
-#else /* LLPC_BUILD_NPI */
 def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
-#endif /* LLPC_BUILD_NPI */
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
+#endif /* LLPC_BUILD_NPI */
 }
 #ifdef LLPC_BUILD_NPI
-def VGPRSrc_64 : RegisterOperand<VReg_64_STAGING> {
-  let DecoderMethod = "DecodeVReg_64RegisterClass";
-}
+def VGPRSrc_32 : VGPRSrc<VGPR_32>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-def VGPRSrc_96 : RegisterOperand<VReg_96_STAGING> {
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576"] in {
+  def VGPRSrc_#size : VGPRSrc<!cast<RegisterClass>("VReg_"#size)>;
 #else /* LLPC_BUILD_NPI */
 def VGPRSrc_96 : RegisterOperand<VReg_96> {
-#endif /* LLPC_BUILD_NPI */
   let DecoderMethod = "DecodeVReg_96RegisterClass";
+#endif /* LLPC_BUILD_NPI */
 }
 
 #ifdef LLPC_BUILD_NPI
-def VGPRSrc_128 : RegisterOperand<VReg_128_STAGING> {
-  let DecoderMethod = "DecodeVReg_128RegisterClass";
-}
-
-def VGPRSrc_192 : RegisterOperand<VReg_192_STAGING> {
-  let DecoderMethod = "DecodeVReg_192RegisterClass";
-}
-
 def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
 #else /* LLPC_BUILD_NPI */
 def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
@@ -1852,6 +1844,12 @@ def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
 }
 
+#ifdef LLPC_BUILD_NPI
+def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+#endif /* LLPC_BUILD_NPI */
 // True 16 operands.
 #ifdef LLPC_BUILD_NPI
 def VGPRSrc_16 : RegisterOperand<VGPR_16_STAGING> {

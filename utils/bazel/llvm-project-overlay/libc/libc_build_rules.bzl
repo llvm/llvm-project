@@ -128,7 +128,6 @@ def libc_function(
 
     _libc_library_filegroups(name = name, is_function = True, **kwargs)
 
-
     # TODO(PR #130327): Remove this after downstream uses are migrated to libc_release_library.
     # This second target is the llvm libc C function with default visibility.
     func_attrs = [
@@ -156,6 +155,7 @@ def libc_release_library(
         weak_symbols: List of function names that should be marked as weak symbols.
         **kwargs: Other arguments relevant to cc_library.
     """
+
     # Combine all sources into a single filegroup to avoid repeated sources error.
     native.filegroup(
         name = name + "_srcs",

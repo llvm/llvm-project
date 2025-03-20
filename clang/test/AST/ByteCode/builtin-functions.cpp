@@ -1459,6 +1459,11 @@ namespace Memchr {
   constexpr bool b = !memchr("hello", 'h', 3); // both-error {{constant expression}} \
                                                // both-note {{non-constexpr function 'memchr' cannot be used in a constant expression}}
 
+  constexpr bool f() {
+    const char *c = "abcdef";
+    return __builtin_char_memchr(c + 1, 'f', 1) == nullptr;
+  }
+  static_assert(f());
 }
 
 namespace Strchr {

@@ -43,6 +43,7 @@ if (SPHINX_FOUND)
       errno
       fenv
       float
+      glob
       inttypes
       locale
       net/if
@@ -66,6 +67,7 @@ if (SPHINX_FOUND)
       threads
       uchar
       unistd
+      sys/utsname
       wchar
       wctype
     )

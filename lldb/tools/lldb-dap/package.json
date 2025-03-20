@@ -4,7 +4,7 @@
   "version": "0.2.10",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
-  "description": "LLDB debugging from VSCode",
+  "description": "Debugging with LLDB in Visual Studio Code",
   "license": "Apache 2.0 License with LLVM exceptions",
   "repository": {
     "type": "git",

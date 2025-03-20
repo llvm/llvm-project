@@ -66,6 +66,9 @@ def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
 //===----------------------------------------------------------------------===//
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
+#ifdef LLPC_BUILD_NPI
+def AMDGPUsupr : SDNode<"AMDGPUISD::SUPR", SDTFPUnaryOp>;
+#endif /* LLPC_BUILD_NPI */
 
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
@@ -1149,6 +1152,9 @@ def SCSrc_i1 : RegisterOperand<SReg_1_XEXEC> {
 // "off" depending on en operand.
 // ===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_NPI
+// TODO-GFX13 use Staging register classes?
+#endif /* LLPC_BUILD_NPI */
 def ExpSrc0 : RegisterOperand<VGPR_32> {
   let PrintMethod = "printExpSrc0";
   let ParserMatchClass = VReg32OrOffClass;
@@ -1267,6 +1273,10 @@ def omod0 : DefaultOperand<omod, 0>;
 // before a mandatory operand.
 def Clamp : NamedBitOperand<"clamp">;
 def Clamp0 : DefaultOperand<Clamp, 0>;
+#ifdef LLPC_BUILD_NPI
+def SUPR : NamedBitOperand<"supr">;
+def SUPR0 : DefaultOperand<SUPR, 0>;
+#endif /* LLPC_BUILD_NPI */
 def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : CustomOperand<i32, 1>;
@@ -1860,22 +1870,20 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
 #ifdef LLPC_BUILD_NPI
-                    VOPDstOperand_VGPR_32);
-#else /* LLPC_BUILD_NPI */
-                    VOPDstOperand<VGPR_32>);
-#endif /* LLPC_BUILD_NPI */
-  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
-#ifdef LLPC_BUILD_NPI
-                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
-                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
-                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
-                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
-                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
-                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
-                              !eq(VT.Size, 32)   : VOPDstOperand_VGPR_32,
+                    VOPDstOperand<VGPR_32_STAGING>);
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024_STAGING>,
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512_STAGING>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256_STAGING>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192_STAGING>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128_STAGING>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96_STAGING>,
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64_STAGING>,
+                              !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32_STAGING>,
                               !eq(VT.Size, 16)   : op16,
                               1                  : VOPDstS64orS32); // else VT == i1
 #else /* LLPC_BUILD_NPI */
+                    VOPDstOperand<VGPR_32>);
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
                               !eq(VT.Size, 512) : VOPDstOperand<VReg_512>,
                               !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
                               !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
@@ -1889,15 +1897,14 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
 
 class getVALUDstForVT_fake16<ValueType VT> {
 #ifdef LLPC_BUILD_NPI
-  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand_VGPR_32,
-#else /* LLPC_BUILD_NPI */
-  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
-#endif /* LLPC_BUILD_NPI */
-                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
-                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
-#ifdef LLPC_BUILD_NPI
+  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32_STAGING>,
+                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128_STAGING>,
+                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64_STAGING>,
                               !if(!eq(VT.Size, 16), VOPDstOperand_VGPR_32_Lo128,
 #else /* LLPC_BUILD_NPI */
+  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
+                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
+                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
                               !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32_Lo128>,
 #endif /* LLPC_BUILD_NPI */
                               VOPDstS64orS32)))); // else VT == i1
@@ -1909,7 +1916,7 @@ class getSDWADstForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 1),
                             SDWAVopcDst, // VOPC
 #ifdef LLPC_BUILD_NPI
-                            VOPDstOperand_VGPR_32); // VOP1/2 32-bit dst
+                            VOPDstOperand<VGPR_32_STAGING>); // VOP1/2 32-bit dst
 #else /* LLPC_BUILD_NPI */
                             VOPDstOperand<VGPR_32>); // VOP1/2 32-bit dst
 #endif /* LLPC_BUILD_NPI */
@@ -1976,22 +1983,25 @@ class getSOPSrcForVT<ValueType VT> {
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
 #ifdef LLPC_BUILD_NPI
-  !cond(!eq(VT.Size, 576) : RegisterOperand<VReg_576>,
-        !eq(VT.Size, 512) : RegisterOperand<VReg_512>,
-        !eq(VT.Size, 288) : RegisterOperand<VReg_288>,
-        !eq(VT.Size, 256) : RegisterOperand<VReg_256>,
-        !eq(VT.Size, 224) : RegisterOperand<VReg_224>,
+  !cond(!eq(VT.Size, 576) : VGPRSrc_576,
+        !eq(VT.Size, 512) : VGPRSrc_512,
+        !eq(VT.Size, 288) : VGPRSrc_288,
+        !eq(VT.Size, 256) : VGPRSrc_256,
+        !eq(VT.Size, 224) : VGPRSrc_224,
+        !eq(VT.Size, 192) : VGPRSrc_192,
+        !eq(VT.Size, 160) : VGPRSrc_160,
+        !eq(VT.Size, 128) : VGPRSrc_128,
+        !eq(VT.Size, 96)  : VGPRSrc_96,
+        !eq(VT.Size, 64)  : VGPRSrc_64,
+        !eq(VT.Size, 48)  : VGPRSrc_64,
 #else /* LLPC_BUILD_NPI */
   !cond(!eq(VT.Size, 512) : RegisterOperand<VReg_512>,
-#endif /* LLPC_BUILD_NPI */
         !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
-#ifdef LLPC_BUILD_NPI
-        !eq(VT.Size, 160) : RegisterOperand<VReg_160>,
-#endif /* LLPC_BUILD_NPI */
         !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+#endif /* LLPC_BUILD_NPI */
         !eq(VT.Size, 16)  : !if(IsTrue16,
                                 !if(IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
 #ifdef LLPC_BUILD_NPI
@@ -3012,6 +3022,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit HasOpSel = IsPacked;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
+#ifdef LLPC_BUILD_NPI
+  field bit HasSUPR = 0;
+#endif /* LLPC_BUILD_NPI */
 
   field bit HasModifiers = !or(isModifierType<Src0VT>.ret,
                                isModifierType<Src1VT>.ret,

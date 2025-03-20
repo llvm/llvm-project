@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_DENSESET_H
 #define LLVM_ADT_DENSESET_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/MathExtras.h"
@@ -236,6 +237,10 @@ public:
   template <typename InputIt> void insert(InputIt I, InputIt E) {
     for (; I != E; ++I)
       insert(*I);
+  }
+
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
   }
 };
 

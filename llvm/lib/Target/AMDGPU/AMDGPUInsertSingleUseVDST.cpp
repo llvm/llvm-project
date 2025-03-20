@@ -41,6 +41,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-insert-single-use-vdst"
 
+#define GET_INSTRMAP_INFO
+#define GET_INSTRINFO_NAMED_OPS
+
 namespace {
 class AMDGPUInsertSingleUseVDST : public MachineFunctionPass {
 private:
@@ -158,7 +161,7 @@ public:
 
     SII = ST.getInstrInfo();
     const auto *TRI = &SII->getRegisterInfo();
-    bool InstructionEmitted = false;
+    bool FunctionModified = false;
 
     for (MachineBasicBlock &MBB : MF) {
       DenseMap<MCRegUnit, unsigned> RegisterUseCount;
@@ -215,25 +218,36 @@ public:
         for (const MCRegUnit Unit : RegistersUsed)
           RegisterUseCount[Unit]++;
 
+        const auto Opcode = MI.getOpcode();
+
         // Do not attempt to optimise across exec mask changes.
         if (MI.modifiesRegister(AMDGPU::EXEC, TRI) ||
-            AMDGPU::isInvalidSingleUseConsumerInst(MI.getOpcode())) {
+            AMDGPU::isInvalidSingleUseConsumerInst(Opcode)) {
           for (auto &UsedReg : RegisterUseCount)
             UsedReg.second = 2;
         }
 
-        if (!SIInstrInfo::isVALU(MI) ||
-            AMDGPU::isInvalidSingleUseProducerInst(MI.getOpcode()))
+        const bool isVALU = SIInstrInfo::isVALU(MI);
+        const bool hasSUPR =
+            AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::supr);
+
+        if (!(isVALU || hasSUPR) ||
+            AMDGPU::isInvalidSingleUseProducerInst(Opcode))
           continue;
+
         if (AllProducerOperandsAreSingleUse) {
-          SingleUseProducerPositions.push_back({VALUInstrCount, &MI});
-          InstructionEmitted = true;
+          assert(isVALU || hasSUPR);
+          if (hasSUPR)
+            SII->getNamedOperand(MI, AMDGPU::OpName::supr)->setImm(1);
+          else // isVALU
+            SingleUseProducerPositions.push_back({VALUInstrCount, &MI});
+          FunctionModified = true;
         }
-        VALUInstrCount++;
+        VALUInstrCount += isVALU;
       }
       insertSingleUseInstructions(SingleUseProducerPositions);
     }
-    return InstructionEmitted;
+    return FunctionModified;
   }
 };
 } // namespace

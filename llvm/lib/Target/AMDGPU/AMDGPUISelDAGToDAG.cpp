@@ -454,8 +454,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   }
 
 #if LLPC_BUILD_NPI
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
-               Triple::amdgcn;
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
   if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
       CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
     uint64_t C = 0;
@@ -494,8 +493,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
 
 #if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
-               Triple::amdgcn;
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
 #endif /* LLPC_BUILD_NPI */
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
@@ -3700,6 +3698,7 @@ void AMDGPUDAGToDAGISel::SelectCvtTensor(SDNode *N, unsigned IntrID) {
   for (unsigned i = 1, numop = N->getNumOperands(); i < numop; ++i)
     Ops.push_back(N->getOperand(i));
   Ops.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // idxs
+  Ops.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // supr
 
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
@@ -4771,9 +4770,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   if ((Mods & SISrcMods::ABS) == 0) {
     unsigned ModsTmp;
     SelectVOP3ModsImpl(Src, Src, ModsTmp);
-
-    if ((ModsTmp & SISrcMods::NEG) != 0)
-      Mods ^= SISrcMods::NEG;
 #else /* LLPC_BUILD_NPI */
       if ((ModsTmp & SISrcMods::ABS) != 0)
         Mods |= SISrcMods::ABS;
@@ -4781,9 +4777,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-    if ((ModsTmp & SISrcMods::ABS) != 0)
-      Mods |= SISrcMods::ABS;
-  }
+    if ((ModsTmp & SISrcMods::NEG) != 0)
+      Mods ^= SISrcMods::NEG;
 #else /* LLPC_BUILD_NPI */
     // op_sel/op_sel_hi decide the source type and source.
     // If the source's op_sel_hi is set, it indicates to do a conversion from fp16.
@@ -4792,10 +4787,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  // op_sel/op_sel_hi decide the source type and source.
-  // If the source's op_sel_hi is set, it indicates to do a conversion from
-  // fp16. If the sources's op_sel is set, it picks the high half of the source
-  // register.
+    if ((ModsTmp & SISrcMods::ABS) != 0)
+      Mods |= SISrcMods::ABS;
+  }
 #else /* LLPC_BUILD_NPI */
     Mods |= SISrcMods::OP_SEL_1;
     if (isExtractHiElt(Src, Src)) {
@@ -4803,16 +4797,21 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  Mods |= SISrcMods::OP_SEL_1;
-  if (IsExtractHigh ||
-      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
-    Mods |= SISrcMods::OP_SEL_0;
+  // op_sel/op_sel_hi decide the source type and source.
+  // If the source's op_sel_hi is set, it indicates to do a conversion from
+  // fp16. If the sources's op_sel is set, it picks the high half of the source
+  // register.
 #else /* LLPC_BUILD_NPI */
       // TODO: Should we try to look for neg/abs here?
     }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
+  Mods |= SISrcMods::OP_SEL_1;
+  if (IsExtractHigh ||
+      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
+    Mods |= SISrcMods::OP_SEL_0;
+
     // TODO: Should we try to look for neg/abs here?
 #else /* LLPC_BUILD_NPI */
     return true;
@@ -5061,7 +5060,7 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
-  assert(CurDAG->getTarget().getTargetTriple().getArch() == Triple::amdgcn);
+  assert(CurDAG->getTarget().getTargetTriple().isAMDGCN());
 
   const SIRegisterInfo *SIRI =
     static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());

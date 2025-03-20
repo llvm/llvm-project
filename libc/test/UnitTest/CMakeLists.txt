@@ -188,3 +188,12 @@ add_header_library(
     libc.src.__support.StringUtil.error_to_string
     libc.src.errno.errno
 )
+
+add_header_library(
+  ErrnoCheckingTest
+  HDRS
+    ErrnoCheckingTest.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.errno.errno
+)

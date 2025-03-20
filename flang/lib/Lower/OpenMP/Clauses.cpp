@@ -132,6 +132,25 @@ Object makeObject(const parser::OmpObject &object,
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
 }
 
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx) {
+  return makeList(objects.v, [&](const parser::OmpArgument &arg) {
+    return common::visit(
+        common::visitors{
+            [&](const parser::OmpLocator &locator) -> Object {
+              if (auto *object = std::get_if<parser::OmpObject>(&locator.u)) {
+                return makeObject(*object, semaCtx);
+              }
+              llvm_unreachable("Expecting object");
+            },
+            [](auto &&s) -> Object { //
+              llvm_unreachable("Expecting object");
+            },
+        },
+        arg.u);
+  });
+}
+
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
@@ -164,8 +183,8 @@ std::optional<Object> getBaseObject(const Object &object,
       // as the symbol in the input object,
       // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
       // Here we have the Symbol(A), which is what we started with.
+      (void)symRef;
       assert(&**symRef == object.sym());
-      [[maybe_unused]] auto *unused = symRef;
       return std::nullopt;
     }
   } else {

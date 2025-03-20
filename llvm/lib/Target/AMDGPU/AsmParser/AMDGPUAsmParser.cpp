@@ -141,6 +141,9 @@ public:
     ImmTyTFE,
     ImmTyD16,
     ImmTyClamp,
+#if LLPC_BUILD_NPI
+    ImmTySUPR,
+#endif /* LLPC_BUILD_NPI */
     ImmTyOModSI,
 #if LLPC_BUILD_NPI
     ImmTySemaId,
@@ -1283,6 +1286,9 @@ public:
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
     case ImmTyClamp: OS << "Clamp"; break;
+#if LLPC_BUILD_NPI
+    case ImmTySUPR: OS << "SUPR"; break;
+#endif /* LLPC_BUILD_NPI */
     case ImmTyOModSI: OS << "OModSI"; break;
     case ImmTyDPP8: OS << "DPP8"; break;
     case ImmTyDppCtrl: OS << "DppCtrl"; break;
@@ -6442,7 +6448,7 @@ bool AMDGPUAsmParser::ParseAsAbsoluteExpression(uint32_t &Ret) {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   std::string TargetIDDirective;
@@ -6529,7 +6535,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
+  if (!getSTI().getTargetTriple().isAMDGCN())
     return TokError("directive only supported for amdgcn architecture");
 
   if (!isHsaAbi(getSTI()))
@@ -7224,7 +7230,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveISAVersion() {
-  if (getSTI().getTargetTriple().getArch() != Triple::amdgcn) {
+  if (!getSTI().getTargetTriple().isAMDGCN()) {
     return Error(getLoc(),
                  ".amd_amdgpu_isa directive is not available on non-amdgcn "
                  "architectures");

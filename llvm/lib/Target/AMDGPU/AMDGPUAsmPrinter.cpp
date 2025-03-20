@@ -1317,6 +1317,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
 #endif /* LLPC_BUILD_NPI */
     ProgInfo.MemOrdered = 1;
+    ProgInfo.FwdProgress = 1;
   }
 
   // 0 = X, 1 = XY, 2 = XYZ

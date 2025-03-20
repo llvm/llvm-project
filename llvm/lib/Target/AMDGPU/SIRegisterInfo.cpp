@@ -537,6 +537,7 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
     return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
                           : FuncInfo->getStackPtrOffsetReg();
 
+
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
@@ -3053,12 +3054,15 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // available.
         if (!TmpReg)
           TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                 MI, false, 0);
-        BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
-            .addDef(TmpReg, RegState::Renamable)
-            .addReg(FrameReg)
-            .addImm(ST.getWavefrontSizeLog2())
-            .setOperandDead(3); // Set SCC dead
+                                                 MI, /*RestoreAfter=*/false, 0,
+                                                 /*AllowSpill=*/false);
+        if (TmpReg) {
+          BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
+              .addDef(TmpReg, RegState::Renamable)
+              .addReg(FrameReg)
+              .addImm(ST.getWavefrontSizeLog2())
+              .setOperandDead(3); // Set SCC dead
+        }
         MaterializedReg = TmpReg;
       }
 
@@ -3086,18 +3090,20 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           DstReg = TmpReg;
         }
 
-        auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
-                          .addDef(DstReg, RegState::Renamable)
-                          .addReg(MaterializedReg, RegState::Kill)
-                          .add(OtherOp);
-        if (DeadSCC)
-          AddI32.setOperandDead(3);
+        if (TmpReg) {
+          auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
+                            .addDef(DstReg, RegState::Renamable)
+                            .addReg(MaterializedReg, RegState::Kill)
+                            .add(OtherOp);
+          if (DeadSCC)
+            AddI32.setOperandDead(3);
 
-        MaterializedReg = DstReg;
+          MaterializedReg = DstReg;
 
-        OtherOp.ChangeToRegister(MaterializedReg, false);
-        OtherOp.setIsKill(true);
-        OtherOp.setIsRenamable(true);
+          OtherOp.ChangeToRegister(MaterializedReg, false);
+          OtherOp.setIsKill(true);
+          OtherOp.setIsRenamable(true);
+        }
         FIOp->ChangeToImmediate(Offset);
       } else {
         // If we don't have any other offset to apply, we can just directly

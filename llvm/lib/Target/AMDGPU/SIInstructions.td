@@ -727,16 +727,16 @@ multiclass SI_CS_CHAIN_TC<
       SchedRW = [WriteBranch],
       isConvergent = 1,
       WaveSizePredicate = wavesizepred in {
-  // This is essentially a tail call, but it also takes a mask to put in EXEC
-  // right before jumping to the callee.
-  def NAME: SPseudoInstSI <(outs),
-      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
+    // This is essentially a tail call, but it also takes a mask to put in EXEC
+    // right before jumping to the callee.
+    def NAME: SPseudoInstSI <(outs),
+        (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
 
-  // Same as above, but it will first try to reallocate the VGPRs, and choose an
-  // EXEC mask and a callee depending on the success of the reallocation attempt.
-  def _DVGPR : SPseudoInstSI <(outs),
-      (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
-           SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+    // Same as above, but it will first try to reallocate the VGPRs, and choose an
+    // EXEC mask and a callee depending on the success of the reallocation attempt.
+    def _DVGPR : SPseudoInstSI <(outs),
+        (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+             SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
   } // End FixedSize = 0 etc
 }
 
@@ -770,16 +770,15 @@ defm : si_cs_chain_tc_patterns<i64>;
 multiclass si_cs_chain_tc_dvgpr_patterns<
   ValueType execvt, RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
   Instruction tc = SI_CS_CHAIN_TC_W32_DVGPR> {
-  let AddedComplexity = 90 in {
   foreach callee = [ (i64 0), (tglobaladdr) ] in {
   def : GCNPat<
-    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec,
-                           i32:$numvgprs, execvt:$fbexec, i64:$fbcallee),
+    (AMDGPUtc_return_chain_dvgpr i64:$src0, callee, (i32 timm:$fpdiff),
+                                 execvt:$exec, i32:$numvgprs,
+                                 execvt:$fbexec, i64:$fbcallee),
     (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
         SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
   >;
   }
-  } // AddedComplexity
 }
 
 defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.

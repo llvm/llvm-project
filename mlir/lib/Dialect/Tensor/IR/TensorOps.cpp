@@ -2476,8 +2476,6 @@ public:
         loc, sliceOp.getType(), castOp.getSource(), sliceOp.getOffsets(),
         sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
         sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
-    if (newResult.getType() != sliceOp.getType())
-      newResult = rewriter.create<CastOp>(loc, sliceOp.getType(), newResult);
     rewriter.replaceOp(sliceOp, newResult);
     return success();
   }

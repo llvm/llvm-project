@@ -338,20 +338,22 @@ def CPolBit {
 #ifdef LLPC_BUILD_NPI
   int NV = 5;
   int SCAL = 9;
+}
+
+class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
+  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
 #endif /* LLPC_BUILD_NPI */
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
-
 #ifdef LLPC_BUILD_NPI
-def VOPDstOperand_VGPR_32 : VOPDstOperand <VGPR_32_STAGING> {
-  let DecoderMethod = "DecodeVGPR_32RegisterClass";
-}
-
 def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
+#else /* LLPC_BUILD_NPI */
+class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
+#endif /* LLPC_BUILD_NPI */
 
+#ifdef LLPC_BUILD_NPI
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16_STAGING> {
 #else /* LLPC_BUILD_NPI */
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
@@ -370,7 +372,11 @@ def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
 }
 
 // Source-encoded destination operand for instructions like v_swap_b16.
+#ifdef LLPC_BUILD_NPI
+def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_STAGING_Lo128> {
+#else /* LLPC_BUILD_NPI */
 def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+#endif /* LLPC_BUILD_NPI */
   let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
   let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
 }

@@ -437,7 +437,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
       m_thread_id_to_index_id_map(), m_exit_status(-1),
       m_thread_list_real(*this), m_thread_list(*this), m_thread_plans(*this),
-      m_extended_thread_list(*this), m_extended_thread_stop_id(0),
+      m_extended_thread_list(*this),
+      m_base_direction(RunDirection::eRunForward), m_extended_thread_stop_id(0),
       m_queue_list(this), m_queue_list_stop_id(0),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
@@ -845,6 +846,7 @@ bool Process::HandleProcessStateChangedEvent(
             switch (thread_stop_reason) {
             case eStopReasonInvalid:
             case eStopReasonNone:
+            case eStopReasonHistoryBoundary:
               break;
 
             case eStopReasonSignal: {
@@ -3233,6 +3235,13 @@ Status Process::ConnectRemote(llvm::StringRef remote_url) {
   return error;
 }
 
+void Process::SetBaseDirection(RunDirection direction) {
+  if (m_base_direction == direction)
+    return;
+  m_thread_list.DiscardThreadPlans();
+  m_base_direction = direction;
+}
+
 Status Process::PrivateResume() {
   Log *log(GetLog(LLDBLog::Process | LLDBLog::Step));
   LLDB_LOGF(log,
@@ -3259,18 +3268,25 @@ Status Process::PrivateResume() {
     // (suspended/running/stepping). Threads should also check their resume
     // signal in lldb::Thread::GetResumeSignal() to see if they are supposed to
     // start back up with a signal.
-    if (m_thread_list.WillResume()) {
+    RunDirection direction;
+    if (m_thread_list.WillResume(direction)) {
+      LLDB_LOGF(log, "Process::PrivateResume WillResume direction=%d",
+                direction);
       // Last thing, do the PreResumeActions.
       if (!RunPreResumeActions()) {
         error = Status::FromErrorString(
             "Process::PrivateResume PreResumeActions failed, not resuming.");
+        LLDB_LOGF(
+            log,
+            "Process::PrivateResume PreResumeActions failed, not resuming.");
       } else {
         m_mod_id.BumpResumeID();
-        error = DoResume();
+        error = DoResume(direction);
         if (error.Success()) {
           DidResume();
           m_thread_list.DidResume();
-          LLDB_LOGF(log, "Process thinks the process has resumed.");
+          LLDB_LOGF(log,
+                    "Process::PrivateResume thinks the process has resumed.");
         } else {
           LLDB_LOGF(log, "Process::PrivateResume() DoResume failed.");
           return error;

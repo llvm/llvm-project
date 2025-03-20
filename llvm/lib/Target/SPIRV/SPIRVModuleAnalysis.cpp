@@ -361,11 +361,16 @@ void SPIRVModuleAnalysis::visitDecl(
   } else if (Opcode == SPIRV::OpFunction ||
              Opcode == SPIRV::OpFunctionParameter) {
     GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
-  } else if (Opcode == SPIRV::OpTypeStruct) {
+  } else if (Opcode == SPIRV::OpTypeStruct ||
+             Opcode == SPIRV::OpConstantComposite) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
     const MachineInstr *NextInstr = MI.getNextNode();
     while (NextInstr &&
-           NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) {
+           ((Opcode == SPIRV::OpTypeStruct &&
+             NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) ||
+            (Opcode == SPIRV::OpConstantComposite &&
+             NextInstr->getOpcode() ==
+                 SPIRV::OpConstantCompositeContinuedINTEL))) {
       MCRegister Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
       MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
       MAI.setSkipEmission(NextInstr);

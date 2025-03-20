@@ -330,6 +330,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+  unsigned ScratchReservedForDynamicVGPRs = 0;
   bool UsesWholeWave = false;
 
   SIMachineFunctionInfo() = default;
@@ -389,6 +390,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
+                       MFI.ScratchReservedForDynamicVGPRs, 0);
     YamlIO.mapOptional("usesWholeWave", MFI.UsesWholeWave, false);
   }
 };
@@ -526,8 +529,8 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
-  // The size of the scratch space reserved for the CWSR trap handler to spill
-  // some of the dynamic VGPRs.
+  // The size in bytes of the scratch space reserved for the CWSR trap handler
+  // to spill some of the dynamic VGPRs.
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   // Tracks information about user SGPRs that will be setup by hardware which
@@ -913,8 +916,8 @@ public:
     return ScratchReservedForDynamicVGPRs;
   }
 
-  void setScratchReservedForDynamicVGPRs(unsigned Size) {
-    ScratchReservedForDynamicVGPRs = Size;
+  void setScratchReservedForDynamicVGPRs(unsigned SizeInBytes) {
+    ScratchReservedForDynamicVGPRs = SizeInBytes;
   }
 
   // Add user SGPRs.

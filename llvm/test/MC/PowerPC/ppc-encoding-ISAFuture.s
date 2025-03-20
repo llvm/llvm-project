@@ -96,3 +96,33 @@
 # CHECK-BE: stxvprll 6, 0, 1              # encoding: [0x7c,0xc0,0x0d,0xda]
 # CHECK-LE: stxvprll 6, 0, 1              # encoding: [0xda,0x0d,0xc0,0x7c]
             stxvprll 6, 0, 1
+
+            dmxvi8gerx4 1, 2, 4
+# CHECK-BE: dmxvi8gerx4 1, 2, 4                     # encoding: [0xec,0x82,0x20,0x58]
+# CHECK-LE: dmxvi8gerx4 1, 2, 4                     # encoding: [0x58,0x20,0x82,0xec]
+
+            dmxvi8gerx4pp 1, 0, 2
+# CHECK-BE: dmxvi8gerx4pp 1, 0, 2                   # encoding: [0xec,0x80,0x10,0x50]
+# CHECK-LE: dmxvi8gerx4pp 1, 0, 2                   # encoding: [0x50,0x10,0x80,0xec]
+
+            pmdmxvi8gerx4 0, 2, 4, 8, 4, 4
+# CHECK-BE: pmdmxvi8gerx4 0, 2, 4, 8, 4, 4          # encoding: [0x07,0x90,0x40,0x84,
+# CHECK-BE-SAME:                                                 0xec,0x02,0x20,0x58]
+# CHECK-LE: pmdmxvi8gerx4 0, 2, 4, 8, 4, 4          # encoding: [0x84,0x40,0x90,0x07,
+# CHECK-LE-SAME:                                                 0x58,0x20,0x02,0xec]
+
+            pmdmxvi8gerx4pp 1, 0, 4, 8, 4, 4
+#CHECK-BE:  pmdmxvi8gerx4pp 1, 0, 4, 8, 4, 4        # encoding: [0x07,0x90,0x40,0x84,
+#CHECK-BE-SAME:                                                  0xec,0x80,0x20,0x50]
+#CHECK-LE: pmdmxvi8gerx4pp 1, 0, 4, 8, 4, 4        # encoding: [0x84,0x40,0x90,0x07,
+#CHECK-LE-SAME:                                                 0x50,0x20,0x80,0xec]
+
+            dmxvi8gerx4spp 1, 2, 4
+#CHECK-BE:  dmxvi8gerx4spp 1, 2, 4                  # encoding: [0xec,0x82,0x23,0x10]
+#CHECK-LE:  dmxvi8gerx4spp 1, 2, 4                  # encoding: [0x10,0x23,0x82,0xec]
+
+            pmdmxvi8gerx4spp 0, 2, 4, 8, 4, 4
+#CHECK-BE:  pmdmxvi8gerx4spp 0, 2, 4, 8, 4, 4       # encoding: [0x07,0x90,0x40,0x84,
+#CHECK-BE-SAME:                                                  0xec,0x02,0x23,0x10]
+#CHECK-LE:  pmdmxvi8gerx4spp 0, 2, 4, 8, 4, 4       # encoding: [0x84,0x40,0x90,0x07,
+#CHECK-LE-SAME:                                                  0x10,0x23,0x02,0xec]

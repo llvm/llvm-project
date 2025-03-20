@@ -541,15 +541,29 @@ def VOP_MADMK_F64 : VOP_MADMK <f64>;
 // given VT.
 class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
    RegisterOperand ret =
+#ifdef LLPC_BUILD_NPI
+   !cond(!eq(VT.Size, 128) : VGPRSrc_128,
+         !eq(VT.Size, 96)  : VGPRSrc_96,
+         !eq(VT.Size, 64)  : VGPRSrc_64,
+         !eq(VT.Size, 48)  : VGPRSrc_64,
+#else /* LLPC_BUILD_NPI */
    !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
          !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
          !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
          !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+#endif /* LLPC_BUILD_NPI */
          !eq(VT.Size, 16)  : !if(IsTrue16,
+#ifdef LLPC_BUILD_NPI
+                                 !if(IsFake16, VGPRSrc_32,
+                                               VGPRSrc_16),
+                                 VGPRSrc_32),
+         1                 : VGPRSrc_32);
+#else /* LLPC_BUILD_NPI */
                                  !if(IsFake16, RegisterOperand<VGPR_32>,
                                                RegisterOperand<VGPR_16>),
                                  RegisterOperand<VGPR_32>),
          1                 : RegisterOperand<VGPR_32>);
+#endif /* LLPC_BUILD_NPI */
 }
 
 // FIXME: Remove src2_modifiers. It isn't used, so is wasting memory

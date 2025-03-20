@@ -280,8 +280,8 @@ Register SIMachineFunctionInfo::addLDSKernelId() {
 SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
     const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
     unsigned AllocSizeDWord, int KernArgIdx, int PaddingSGPRs) {
-  assert(!ArgInfo.PreloadKernArgs.count(KernArgIdx) &&
-         "Preload kernel argument allocated twice.");
+  auto [It, Inserted] = ArgInfo.PreloadKernArgs.try_emplace(KernArgIdx);
+  assert(Inserted && "Preload kernel argument allocated twice.");
   NumUserSGPRs += PaddingSGPRs;
   // If the available register tuples are aligned with the kernarg to be
   // preloaded use that register, otherwise we need to use a set of SGPRs and
@@ -290,20 +290,22 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
     ArgInfo.FirstKernArgPreloadReg = getNextUserSGPR();
   Register PreloadReg =
       TRI.getMatchingSuperReg(getNextUserSGPR(), AMDGPU::sub0, RC);
+  auto &Regs = It->second.Regs;
   if (PreloadReg &&
       (RC == &AMDGPU::SReg_32RegClass || RC == &AMDGPU::SReg_64RegClass)) {
-    ArgInfo.PreloadKernArgs[KernArgIdx].Regs.push_back(PreloadReg);
+    Regs.push_back(PreloadReg);
     NumUserSGPRs += AllocSizeDWord;
   } else {
+    Regs.reserve(AllocSizeDWord);
     for (unsigned I = 0; I < AllocSizeDWord; ++I) {
-      ArgInfo.PreloadKernArgs[KernArgIdx].Regs.push_back(getNextUserSGPR());
+      Regs.push_back(getNextUserSGPR());
       NumUserSGPRs++;
     }
   }
 
   // Track the actual number of SGPRs that HW will preload to.
   UserSGPRInfo.allocKernargPreloadSGPRs(AllocSizeDWord + PaddingSGPRs);
-  return &ArgInfo.PreloadKernArgs[KernArgIdx].Regs;
+  return &Regs;
 }
 
 void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
@@ -751,6 +753,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
 #else /* LLPC_BUILD_NPI */
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
 #endif /* LLPC_BUILD_NPI */
+      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
       UsesWholeWave(MFI.usesWholeWave()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));

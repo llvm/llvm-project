@@ -1195,12 +1195,12 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
                           (ins bitop3_0:$bitop3, op_sel0:$op_sel));
 
 #ifdef LLPC_BUILD_NPI
-  let InsVOP3DPP16 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
-                          (ins bitop3_0:$bitop3),
-                          !if (HasOpSel, (ins op_sel0:$op_sel), (ins)),
-                          (ins dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
-                               DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl, Dpp16FI:$fi));
-  let InsVOP3DPP = InsVOP3DPP16;
+  let InsVOP3DPP =
+      !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
+           (ins bitop3_0:$bitop3), !if(HasOpSel, (ins op_sel0:$op_sel), (ins)),
+           (ins dpp_ctrl:$dpp_ctrl, DppRowMask:$row_mask,
+               DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl));
+  let InsVOP3DPP16 = !con(InsVOP3DPP, (ins Dpp16FI:$fi));
 
   let InsVOP3DPP8 = !con(getInsVOP3DPPBase<InsVOP3DPPBase, DstRCVOP3DPP, 3, 1>.ret,
                          (ins bitop3_0:$bitop3),
@@ -1214,7 +1214,7 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let AsmVOP3OpSel = !subst("$op_sel", "$bitop3$op_sel", getAsmVOP3OpSel<3, 0, 0, 0, 0, 0>.ret);
 #ifdef LLPC_BUILD_NPI
   let AsmVOP3DPP16 = getAsmVOP3DPP16<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
-  let AsmVOP3DPP = AsmVOP3DPP16;
+  let AsmVOP3DPP = getAsmVOP3DPP<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret # "$bitop3";
 #endif /* LLPC_BUILD_NPI */
