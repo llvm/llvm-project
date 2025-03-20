@@ -51,9 +51,9 @@ public:
   /// not at all depending on the implementation target's characteristics and
   /// preference.
   bool needsConversion(mlir::Type ty) {
-    if (ty.isa<BoxProcType>())
+    if (mlir::isa<BoxProcType>(ty))
       return true;
-    if (auto funcTy = ty.dyn_cast<mlir::FunctionType>()) {
+    if (auto funcTy = mlir::dyn_cast<mlir::FunctionType>(ty)) {
       for (auto t : funcTy.getInputs())
         if (needsConversion(t))
           return true;
@@ -62,32 +62,47 @@ public:
           return true;
       return false;
     }
-    if (auto tupleTy = ty.dyn_cast<mlir::TupleType>()) {
+    if (auto tupleTy = mlir::dyn_cast<mlir::TupleType>(ty)) {
       for (auto t : tupleTy.getTypes())
         if (needsConversion(t))
           return true;
       return false;
     }
-    if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::is_contained(visitedTypes, recTy))
-        return false;
+    if (auto recTy = mlir::dyn_cast<RecordType>(ty)) {
+      auto [visited, inserted] = visitedTypes.try_emplace(ty, false);
+      if (!inserted)
+        return visited->second;
+      bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
+      needConversionIsVisitingRecordType = true;
       bool result = false;
-      visitedTypes.push_back(recTy);
       for (auto t : recTy.getTypeList()) {
         if (needsConversion(t.second)) {
           result = true;
           break;
         }
       }
-      visitedTypes.pop_back();
+      // Only keep the result cached if the fir.type visited was a "top-level
+      // type". Nested types with a recursive reference to the "top-level type"
+      // may incorrectly have been resolved as not needed conversions because it
+      // had not been determined yet if the "top-level type" needed conversion.
+      // This is not an issue to determine the "top-level type" need of
+      // conversion, but the result should not be kept and later used in other
+      // contexts.
+      needConversionIsVisitingRecordType = wasAlreadyVisitingRecordType;
+      if (needConversionIsVisitingRecordType)
+        visitedTypes.erase(ty);
+      else
+        visitedTypes.find(ty)->second = result;
       return result;
     }
-    if (auto boxTy = ty.dyn_cast<BaseBoxType>())
+    if (auto boxTy = mlir::dyn_cast<BaseBoxType>(ty))
       return needsConversion(boxTy.getEleTy());
     if (isa_ref_type(ty))
       return needsConversion(unwrapRefType(ty));
-    if (auto t = ty.dyn_cast<SequenceType>())
+    if (auto t = mlir::dyn_cast<SequenceType>(ty))
       return needsConversion(unwrapSequenceType(ty));
+    if (auto t = mlir::dyn_cast<TypeDescType>(ty))
+      return needsConversion(t.getOfTy());
     return false;
   }
 
@@ -139,10 +154,8 @@ public:
                                  ty.getName().str() + boxprocSuffix.str());
       if (rec.isFinalized())
         return rec;
-      auto it = convertedTypes.try_emplace(ty, rec);
-      if (!it.second) {
-        llvm::errs() << "failed\n" << ty << "\n";
-      }
+      [[maybe_unused]] auto it = convertedTypes.try_emplace(ty, rec);
+      assert(it.second && "expected ty to not be in the map");
       std::vector<RecordType::TypePair> ps = ty.getLenParamList();
       std::vector<RecordType::TypePair> cs;
       for (auto t : ty.getTypeList()) {
@@ -152,9 +165,12 @@ public:
           cs.emplace_back(t.first, t.second);
       }
       rec.finalize(ps, cs);
+      rec.pack(ty.isPacked());
       return rec;
     });
-    addArgumentMaterialization(materializeProcedure);
+    addConversion([&](TypeDescType ty) {
+      return TypeDescType::get(convertType(ty.getOfTy()));
+    });
     addSourceMaterialization(materializeProcedure);
     addTargetMaterialization(materializeProcedure);
   }
@@ -171,11 +187,12 @@ public:
   void setLocation(mlir::Location location) { loc = location; }
 
 private:
-  llvm::SmallVector<mlir::Type> visitedTypes;
-  // Map to deal with recursive derived types (avoid infinite loops).
+  // Maps to deal with recursive derived types (avoid infinite loops).
   // Caching is also beneficial for apps with big types (dozens of
   // components and or parent types), so the lifetime of the cache
   // is the whole pass.
+  llvm::DenseMap<mlir::Type, bool> visitedTypes;
+  bool needConversionIsVisitingRecordType = false;
   llvm::DenseMap<mlir::Type, mlir::Type> convertedTypes;
   mlir::Location loc;
 };
@@ -197,8 +214,7 @@ private:
 class BoxedProcedurePass
     : public fir::impl::BoxedProcedurePassBase<BoxedProcedurePass> {
 public:
-  BoxedProcedurePass() { options = {true}; }
-  BoxedProcedurePass(bool useThunks) { options = {useThunks}; }
+  using BoxedProcedurePassBase<BoxedProcedurePass>::BoxedProcedurePassBase;
 
   inline mlir::ModuleOp getModule() { return getOperation(); }
 
@@ -207,7 +223,6 @@ public:
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
       BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
-      mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
         bool opIsValid = true;
         typeConverter.setLocation(op->getLoc());
@@ -232,7 +247,7 @@ public:
           if (typeConverter.needsConversion(ty)) {
             rewriter.startOpModification(func);
             auto toTy =
-                typeConverter.convertType(ty).cast<mlir::FunctionType>();
+                mlir::cast<mlir::FunctionType>(typeConverter.convertType(ty));
             if (!func.empty())
               for (auto e : llvm::enumerate(toTy.getInputs())) {
                 unsigned i = e.index();
@@ -249,16 +264,24 @@ public:
           // Rewrite all `fir.emboxproc` ops to either `fir.convert` or a thunk
           // as required.
           mlir::Type toTy = typeConverter.convertType(
-              embox.getType().cast<BoxProcType>().getEleTy());
+              mlir::cast<BoxProcType>(embox.getType()).getEleTy());
           rewriter.setInsertionPoint(embox);
           if (embox.getHost()) {
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
             FirOpBuilder builder(rewriter, module);
+            const auto triple{fir::getTargetTriple(module)};
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
-            mlir::Type buffTy = SequenceType::get({32}, i8Ty);
+            // For AArch64, PPC32 and PPC64, the thunk is populated by a call to
+            // __trampoline_setup, which is defined in
+            // compiler-rt/lib/builtins/trampoline_setup.c and requires the
+            // thunk size greater than 32 bytes.  For RISCV and x86_64, the
+            // thunk setup doesn't go through __trampoline_setup and fits in 32
+            // bytes.
+            fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
+            mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);
             mlir::Value closure =
                 builder.createConvert(loc, i8Ptr, embox.getHost());
@@ -325,8 +348,9 @@ public:
             rewriter.setInsertionPoint(coor);
             auto toTy = typeConverter.convertType(ty);
             auto toBaseTy = typeConverter.convertType(baseTy);
-            rewriter.replaceOpWithNewOp<CoordinateOp>(coor, toTy, coor.getRef(),
-                                                      coor.getCoor(), toBaseTy);
+            rewriter.replaceOpWithNewOp<CoordinateOp>(
+                coor, toTy, coor.getRef(), coor.getCoor(), toBaseTy,
+                coor.getFieldIndicesAttr());
             opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {
@@ -353,13 +377,22 @@ public:
                 index, toTy, index.getFieldId(), toOnTy, index.getTypeparams());
             opIsValid = false;
           }
-        } else if (op->getDialect() == firDialect) {
+        } else {
           rewriter.startOpModification(op);
+          // Convert the operands if needed
           for (auto i : llvm::enumerate(op->getResultTypes()))
             if (typeConverter.needsConversion(i.value())) {
               auto toTy = typeConverter.convertType(i.value());
               op->getResult(i.index()).setType(toTy);
             }
+
+          // Convert the type attributes if needed
+          for (const mlir::NamedAttribute &attr : op->getAttrDictionary())
+            if (auto tyAttr = llvm::dyn_cast<mlir::TypeAttr>(attr.getValue()))
+              if (typeConverter.needsConversion(tyAttr.getValue())) {
+                auto toTy = typeConverter.convertType(tyAttr.getValue());
+                op->setAttr(attr.getName(), mlir::TypeAttr::get(toTy));
+              }
           rewriter.finalizeOpModification(op);
         }
         // Ensure block arguments are updated if needed.
@@ -383,11 +416,3 @@ private:
   BoxedProcedureOptions options;
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> fir::createBoxedProcedurePass() {
-  return std::make_unique<BoxedProcedurePass>();
-}
-
-std::unique_ptr<mlir::Pass> fir::createBoxedProcedurePass(bool useThunks) {
-  return std::make_unique<BoxedProcedurePass>(useThunks);
-}

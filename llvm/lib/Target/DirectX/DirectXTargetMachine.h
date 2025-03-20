@@ -12,12 +12,12 @@
 #define LLVM_DIRECTX_DIRECTXTARGETMACHINE_H
 
 #include "DirectXSubtarget.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>
 
 namespace llvm {
 class Function;
-class DirectXTargetMachine : public LLVMTargetMachine {
+class DirectXTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   std::unique_ptr<DirectXSubtarget> Subtarget;
 
@@ -47,8 +47,7 @@ public:
   }
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 } // namespace llvm
 

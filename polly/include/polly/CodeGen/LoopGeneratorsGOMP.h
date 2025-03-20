@@ -25,9 +25,8 @@ namespace polly {
 class ParallelLoopGeneratorGOMP final : public ParallelLoopGenerator {
 public:
   /// Create a parallel loop generator for the current function.
-  ParallelLoopGeneratorGOMP(PollyIRBuilder &Builder, LoopInfo &LI,
-                            DominatorTree &DT, const DataLayout &DL)
-      : ParallelLoopGenerator(Builder, LI, DT, DL) {}
+  ParallelLoopGeneratorGOMP(PollyIRBuilder &Builder, const DataLayout &DL)
+      : ParallelLoopGenerator(Builder, DL) {}
 
   // The functions below may be used if one does not want to generate a
   // specific OpenMP parallel loop, but generate individual parts of it

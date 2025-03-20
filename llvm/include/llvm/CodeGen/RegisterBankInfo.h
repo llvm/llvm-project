@@ -399,27 +399,27 @@ protected:
 
   /// Keep dynamically allocated PartialMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const PartialMapping>>
+  mutable DenseMap<hash_code, std::unique_ptr<const PartialMapping>>
       MapOfPartialMappings;
 
   /// Keep dynamically allocated ValueMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const ValueMapping>>
+  mutable DenseMap<hash_code, std::unique_ptr<const ValueMapping>>
       MapOfValueMappings;
 
   /// Keep dynamically allocated array of ValueMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<ValueMapping[]>>
+  mutable DenseMap<hash_code, std::unique_ptr<ValueMapping[]>>
       MapOfOperandsMappings;
 
   /// Keep dynamically allocated InstructionMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const InstructionMapping>>
+  mutable DenseMap<hash_code, std::unique_ptr<const InstructionMapping>>
       MapOfInstructionMappings;
 
   /// Getting the minimal register class of a physreg is expensive.
   /// Cache this information as we get it.
-  mutable DenseMap<unsigned, const TargetRegisterClass *> PhysRegMinimalRCs;
+  mutable DenseMap<MCRegister, const TargetRegisterClass *> PhysRegMinimalRCs;
 
   /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
@@ -445,7 +445,7 @@ protected:
   /// Get the MinimalPhysRegClass for Reg.
   /// \pre Reg is a physical register.
   const TargetRegisterClass *
-  getMinimalPhysRegClass(Register Reg, const TargetRegisterInfo &TRI) const;
+  getMinimalPhysRegClass(MCRegister Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.
   /// See getInstrMapping for more details on what a mapping represents.

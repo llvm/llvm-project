@@ -1,9 +1,9 @@
 ! RUN: not llvm-mc %s -triple=sparc   -show-encoding 2>&1 | FileCheck %s --check-prefix=V8
 ! RUN: not llvm-mc %s -triple=sparcv9 -show-encoding 2>&1 | FileCheck %s --check-prefix=V9
 
-! V8: error: malformed ASI tag, must be a constant integer expression
+! V8: error: expected absolute expression
 ! V8-NEXT: lduba [%i0] asi, %o2
-! V9: error: malformed ASI tag, must be %asi, a constant integer expression, or a named tag
+! V9: error: unexpected token
 ! V9-NEXT: lduba [%i0] asi, %o2
 lduba [%i0] asi, %o2
 

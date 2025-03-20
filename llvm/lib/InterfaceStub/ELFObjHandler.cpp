@@ -57,7 +57,7 @@ static void initELFHeader(typename ELFT::Ehdr &ElfHeader, uint16_t Machine) {
   ElfHeader.e_ident[EI_MAG2] = ElfMagic[EI_MAG2];
   ElfHeader.e_ident[EI_MAG3] = ElfMagic[EI_MAG3];
   ElfHeader.e_ident[EI_CLASS] = ELFT::Is64Bits ? ELFCLASS64 : ELFCLASS32;
-  bool IsLittleEndian = ELFT::TargetEndianness == llvm::endianness::little;
+  bool IsLittleEndian = ELFT::Endianness == llvm::endianness::little;
   ElfHeader.e_ident[EI_DATA] = IsLittleEndian ? ELFDATA2LSB : ELFDATA2MSB;
   ElfHeader.e_ident[EI_VERSION] = EV_CURRENT;
   ElfHeader.e_ident[EI_OSABI] = ELFOSABI_NONE;

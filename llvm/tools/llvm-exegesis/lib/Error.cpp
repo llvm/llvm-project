@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Error.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
 #ifdef LLVM_ON_UNIX
 #include "llvm/Support/SystemZ/zOSSupport.h"

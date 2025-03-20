@@ -315,10 +315,10 @@ int f38(int i, s38_no_align s1, s38_no_align s2) {
 // CHECK: %s2 = alloca %struct.s38, align 4
 // CHECK: store i64 %s1.coerce, ptr %{{.*}}, align 4
 // CHECK: store i64 %s2.coerce, ptr %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s38_no_align g38;
@@ -339,10 +339,10 @@ int f38_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: %s2 = alloca %struct.s38, align 4
 // CHECK: store i64 %s1.coerce, ptr %{{.*}}, align 4
 // CHECK: store i64 %s2.coerce, ptr %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s38, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s38, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s38, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller38_stack() {
@@ -368,10 +368,10 @@ int f39(int i, s39_with_align s1, s39_with_align s2) {
 // CHECK: %s2 = alloca %struct.s39, align 16
 // CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
 // CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s39_with_align g39;
@@ -392,10 +392,10 @@ int f39_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: %s2 = alloca %struct.s39, align 16
 // CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
 // CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s39, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s39, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s39, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller39_stack() {
@@ -423,10 +423,10 @@ int f40(int i, s40_no_align s1, s40_no_align s2) {
 // CHECK: %s2 = alloca %struct.s40, align 4
 // CHECK: store [2 x i64] %s1.coerce, ptr %{{.*}}, align 4
 // CHECK: store [2 x i64] %s2.coerce, ptr %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s40_no_align g40;
@@ -447,10 +447,10 @@ int f40_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: %s2 = alloca %struct.s40, align 4
 // CHECK: store [2 x i64] %s1.coerce, ptr %{{.*}}, align 4
 // CHECK: store [2 x i64] %s2.coerce, ptr %{{.*}}, align 4
-// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s40, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s40, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s40, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller40_stack() {
@@ -478,10 +478,10 @@ int f41(int i, s41_with_align s1, s41_with_align s2) {
 // CHECK: %s2 = alloca %struct.s41, align 16
 // CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
 // CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s41_with_align g41;
@@ -502,10 +502,10 @@ int f41_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
 // CHECK: %s2 = alloca %struct.s41, align 16
 // CHECK: store i128 %s1.coerce, ptr %{{.*}}, align 16
 // CHECK: store i128 %s2.coerce, ptr %{{.*}}, align 16
-// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s41, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s41, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s41, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller41_stack() {
@@ -531,10 +531,10 @@ typedef struct s42 s42_no_align;
 __attribute__ ((noinline))
 int f42(int i, s42_no_align s1, s42_no_align s2) {
 // CHECK: define{{.*}} i32 @f42(i32 noundef %i, ptr noundef %s1, ptr noundef %s2)
-// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s42_no_align g42;
@@ -553,10 +553,10 @@ __attribute__ ((noinline))
 int f42_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
               int i9, s42_no_align s1, s42_no_align s2) {
 // CHECK: define{{.*}} i32 @f42_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr noundef %s1, ptr noundef %s2)
-// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s42, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s42, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s42, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller42_stack() {
@@ -584,10 +584,10 @@ typedef struct s43 s43_with_align;
 __attribute__ ((noinline))
 int f43(int i, s43_with_align s1, s43_with_align s2) {
 // CHECK: define{{.*}} i32 @f43(i32 noundef %i, ptr noundef %s1, ptr noundef %s2)
-// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + s1.s + s2.s;
 }
 s43_with_align g43;
@@ -606,10 +606,10 @@ __attribute__ ((noinline))
 int f43_stack(int i, int i2, int i3, int i4, int i5, int i6, int i7, int i8,
               int i9, s43_with_align s1, s43_with_align s2) {
 // CHECK: define{{.*}} i32 @f43_stack(i32 noundef %i, i32 noundef %i2, i32 noundef %i3, i32 noundef %i4, i32 noundef %i5, i32 noundef %i6, i32 noundef %i7, i32 noundef %i8, i32 noundef %i9, ptr noundef %s1, ptr noundef %s2)
-// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 0
-// CHECK: getelementptr inbounds %struct.s43, ptr %s1, i32 0, i32 1
-// CHECK: getelementptr inbounds %struct.s43, ptr %s2, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s2, i32 0, i32 0
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s1, i32 0, i32 1
+// CHECK: getelementptr inbounds nuw %struct.s43, ptr %s2, i32 0, i32 1
   return s1.i + s2.i + i + i2 + i3 + i4 + i5 + i6 + i7 + i8 + i9 + s1.s + s2.s;
 }
 int caller43_stack() {

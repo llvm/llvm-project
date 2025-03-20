@@ -115,11 +115,7 @@ void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
 // Helper - mark I as having been traversed, having range R.
 void Float2IntPass::seen(Instruction *I, ConstantRange R) {
   LLVM_DEBUG(dbgs() << "F2I: " << *I << ":" << R << "\n");
-  auto IT = SeenInsts.find(I);
-  if (IT != SeenInsts.end())
-    IT->second = std::move(R);
-  else
-    SeenInsts.insert(std::make_pair(I, std::move(R)));
+  SeenInsts.insert_or_assign(I, std::move(R));
 }
 
 // Helper - get a range representing a poison value.
@@ -359,9 +355,7 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 
     // The number of bits required is the maximum of the upper and
     // lower limits, plus one so it can be signed.
-    unsigned MinBW = std::max(R.getLower().getSignificantBits(),
-                              R.getUpper().getSignificantBits()) +
-                     1;
+    unsigned MinBW = R.getMinSignedBits() + 1;
     LLVM_DEBUG(dbgs() << "F2I: MinBitwidth=" << MinBW << ", R: " << R << "\n");
 
     // If we've run off the realms of the exactly representable integers,
@@ -388,8 +382,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       } else if (MinBW <= 64) {
         Ty = Type::getInt64Ty(*Ctx);
       } else {
-        LLVM_DEBUG(dbgs() << "F2I: Value requires more than bits to represent "
-                             "than the target supports!\n");
+        LLVM_DEBUG(dbgs() << "F2I: Value requires more bits to represent than "
+                             "the target supports!\n");
         continue;
       }
     }
@@ -404,9 +398,9 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 }
 
 Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
-  if (ConvertedInsts.contains(I))
+  if (auto It = ConvertedInsts.find(I); It != ConvertedInsts.end())
     // Already converted this instruction.
-    return ConvertedInsts[I];
+    return It->second;
 
   SmallVector<Value*,4> NewOperands;
   for (Value *V : I->operands()) {
@@ -499,7 +493,7 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   walkBackwards();
   walkForwards();
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   bool Modified = validateAndTransform(DL);
   if (Modified)
     cleanup();

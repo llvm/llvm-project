@@ -47,7 +47,7 @@ def get_checkers(checkers_td, checkers_rst):
         parent_package_ = package["ParentPackage"]
         hidden = (checker["Hidden"] != 0) or (package["Hidden"] != 0)
 
-        while parent_package_ != None:
+        while parent_package_ is not None:
             parent_package = table_entries[parent_package_["def"]]
             checker_package_prefix = (
                 parent_package["PackageName"] + "." + checker_package_prefix
@@ -59,7 +59,7 @@ def get_checkers(checkers_td, checkers_rst):
             "clang-analyzer-" + checker_package_prefix + "." + checker_name
         )
         anchor_url = re.sub(
-            "\.", "-", checker_package_prefix + "." + checker_name
+            r"\.", "-", checker_package_prefix + "." + checker_name
         ).lower()
 
         if not hidden and "alpha" not in full_package_name.lower():
@@ -130,7 +130,7 @@ Args:
 def update_documentation_list(checkers):
     with open(os.path.join(__location__, "list.rst"), "r+") as f:
         f_text = f.read()
-        check_text = f_text.split(".. csv-table:: Aliases..\n")[1]
+        check_text = f_text.split(':header: "Name", "Redirect", "Offers fixes"\n')[1]
         checks = [x for x in check_text.split("\n") if ":header:" not in x and x]
         old_check_text = "\n".join(checks)
         checks = [x for x in checks if "clang-analyzer-" not in x]

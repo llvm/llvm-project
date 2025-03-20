@@ -20,8 +20,8 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -29,7 +29,9 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
 #include <optional>
+#include <string>
 
 namespace llvm {
 class MDNode;
@@ -38,6 +40,7 @@ class MDNode;
 namespace clang {
 class ClassTemplateSpecializationDecl;
 class GlobalDecl;
+class Module;
 class ModuleMap;
 class ObjCInterfaceDecl;
 class UsingDecl;
@@ -82,6 +85,12 @@ class CGDebugInfo {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
@@ -187,6 +196,8 @@ class CGDebugInfo {
   llvm::DIType *CreateType(const PointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const BlockPointerType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
+                           llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -337,14 +348,19 @@ class CGDebugInfo {
                                           llvm::DIScope *RecordTy,
                                           const RecordDecl *RD);
 
-  /// Create type for binding declarations.
-  llvm::DIType *CreateBindingDeclType(const BindingDecl *BD);
-
   /// Create an anonnymous zero-size separator for bit-field-decl if needed on
   /// the target.
   llvm::DIDerivedType *createBitFieldSeparatorIfNeeded(
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
+
+  /// A cache that maps names of artificial inlined functions to subprograms.
+  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+
+  /// A function that returns the subprogram corresponding to the artificial
+  /// inlined function for traps.
+  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
+                                                  llvm::DIFile *FileScope);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -529,6 +545,12 @@ public:
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
+  /// Emit a pseudo variable and debug info for an intermediate value if it does
+  /// not correspond to a variable in the source code, so that a profiler can
+  /// track more accurate usage of certain instructions of interest.
+  void EmitPseudoVariable(CGBuilderTy &Builder, llvm::Instruction *Value,
+                          QualType Ty);
+
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);
 
@@ -602,6 +624,18 @@ public:
     return CoroutineParameterMappings;
   }
 
+  /// Create a debug location from `TrapLocation` that adds an artificial inline
+  /// frame where the frame name is
+  ///
+  /// * `<Prefix>:<Category>:<FailureMsg>`
+  ///
+  /// `<Prefix>` is "__clang_trap_msg".
+  ///
+  /// This is used to store failure reasons for traps.
+  llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                                StringRef Category,
+                                                StringRef FailureMsg);
+
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
@@ -626,7 +660,8 @@ private:
     llvm::DIType *WrappedType;
   };
 
-  std::string GetName(const Decl*, bool Qualified = false) const;
+  bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
+  std::string GetName(const Decl *, bool Qualified = false) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,

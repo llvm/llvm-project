@@ -16,6 +16,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -24,6 +25,11 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
+
+cl::opt<bool> NoKernelInfoEndLTO(
+    "no-kernel-info-end-lto",
+    cl::desc("remove the kernel-info pass at the end of the full LTO pipeline"),
+    cl::init(false), cl::Hidden);
 
 //---------------------------------------------------------------------------
 // TargetMachine Class
@@ -43,6 +49,12 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
 
+  // Remaining logic below is ELF-specific. For other object file formats where
+  // the large code model is mostly used for JIT compilation, just look at the
+  // code model.
+  if (!getTargetTriple().isOSBinFormatELF())
+    return getCodeModel() == CodeModel::Large;
+
   auto *GO = GVal->getAliaseeObject();
 
   // Be conservative if we can't find an underlying GlobalObject.
@@ -51,9 +63,20 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
 
   auto *GV = dyn_cast<GlobalVariable>(GO);
 
+  auto IsPrefix = [](StringRef Name, StringRef Prefix) {
+    return Name.consume_front(Prefix) && (Name.empty() || Name[0] == '.');
+  };
+
   // Functions/GlobalIFuncs are only large under the large code model.
-  if (!GV)
+  if (!GV) {
+    // Handle explicit sections as we do for GlobalVariables with an explicit
+    // section, see comments below.
+    if (GO->hasSection()) {
+      StringRef Name = GO->getSection();
+      return IsPrefix(Name, ".ltext");
+    }
     return getCodeModel() == CodeModel::Large;
+  }
 
   if (GV->isThreadLocal())
     return false;
@@ -73,11 +96,8 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   // data sections. The code model attribute overrides this above.
   if (GV->hasSection()) {
     StringRef Name = GV->getSection();
-    auto IsPrefix = [&](StringRef Prefix) {
-      StringRef S = Name;
-      return S.consume_front(Prefix) && (S.empty() || S[0] == '.');
-    };
-    return IsPrefix(".lbss") || IsPrefix(".ldata") || IsPrefix(".lrodata");
+    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
+           IsPrefix(Name, ".lrodata");
   }
 
   // Respect large data threshold for medium and large code models.
@@ -91,7 +111,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;
   }
@@ -189,7 +209,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
     // don't assume the variables to be DSO local unless we actually know
     // that for sure. This only has to be done for variables; for functions
     // the linker can insert thunks for calling functions from another DLL.
-    if (TT.isWindowsGNUEnvironment() && GV->isDeclarationForLinker() &&
+    if (TT.isOSCygMing() && GV->isDeclarationForLinker() &&
         isa<GlobalVariable>(GV))
       return false;
 
@@ -247,14 +267,9 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   return Model;
 }
 
-/// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
-
-void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
-
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(F.getParent()->getDataLayout());
+  return TargetTransformInfo(F.getDataLayout());
 }
 
 void TargetMachine::getNameWithPrefix(SmallVectorImpl<char> &Name,

@@ -13,14 +13,14 @@
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-
-#include <errno.h>
 
 #include "inv_trigf_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_EXCEPTS = 4;
 
 // Exceptional values when |x| <= 0.5
@@ -35,10 +35,11 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS = {{
     // x = -0x1.04c444p-12, acosf(x) = 0x1.923p0 (RZ)
     {0xb9826222, 0x3fc91800, 1, 0, 1},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   uint32_t x_uint = xbits.uintval();
   uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
@@ -52,9 +53,11 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
       //   acos(x) = pi/2 - asin(x)
       //           ~ pi/2 - x - x^3 / 6
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       // Check for exceptional values
       if (auto r = ACOSF_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
         return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
       double xd = static_cast<double>(x);
       return static_cast<float>(fputil::multiply_add(
@@ -113,11 +116,11 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   xbits.set_sign(Sign::POS);
   double xd = static_cast<double>(xbits.get_val());
   double u = fputil::multiply_add(-0.5, xd, 0.5);
-  double cv = 2 * fputil::sqrt(u);
+  double cv = 2 * fputil::sqrt<double>(u);
 
   double r3 = asin_eval(u);
   double r = fputil::multiply_add(cv * u, r3, cv);
   return static_cast<float>(x_sign ? M_MATH_PI - r : r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

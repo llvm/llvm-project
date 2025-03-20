@@ -24,29 +24,30 @@ def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "arith::ArithDialect",
+    "vector::VectorDialect"
   ];
   let options = [Option<"chipset", "chipset", "std::string",
                         /*default=*/"\"gfx000\"",
                         "Chipset that these operations will run on">];
 }
 
-def OptimizeSharedMemory : Pass<"amdgpu-optimize-shared-memory"> {
-  let summary = "Optimizes accesses to shared memory memrefs in order to reduce bank conflicts.";
+def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
+  let summary = "Resolve memref.extract_strided_metadata on AMDGPU ops";
   let description = [{
-    This pass adds a transformation and pass to the AMDGPU dialect that
-    attempts to optimize reads/writes from a memref representing GPU shared
-    memory in order to avoid bank conflicts.
+    This pass rrewrites `memref.extract_strided_metadata` operations
+    targeting the AMDGPU dialect casts.
+
+    The patterns in this pass should normally be run alongside those in
+    -expand-strided-metadata, and creating a pass that combines those two
+    sets of patterns is the recommended way to use this functionality.
+    However, this pass (which will likely need a second -expand-strided-metadata
+    after it) is provided so that simple usecases do not need to create custom passes.
+    These patterns have not been added to -expnad-strided-metadata to
+    prevent the memref dialect from depending on platform-specific code.
   }];
   let dependentDialects = [
-    "memref::MemRefDialect", "vector::VectorDialect"
-  ];
-  let options = [
-    Option<"sharedMemoryLineSizeBytes", "shared-memory-line-size-bytes", "int64_t",
-           /*default=*/"128",
-           "Shared memory line size in bytes">,
-    Option<"defaultVectorSizeBits", "default-vector-size-bits", "int64_t",
-           /*default=*/"128",
-           "Default vector size in bits">,
+    "arith::ArithDialect",
+    "memref::MemRefDialect"
   ];
 }
 

@@ -73,7 +73,7 @@ Expr<SomeDerived> FoldOperation(
   for (auto &&[symbol, value] : std::move(structure)) {
     auto expr{Fold(context, std::move(value.value()))};
     if (IsPointer(symbol)) {
-      if (IsNullPointer(expr)) {
+      if (IsNullPointer(&expr)) {
         // Handle x%c when x designates a named constant of derived
         // type and %c is NULL() in that constant.
         expr = Expr<SomeType>{NullPointer{}};
@@ -86,9 +86,10 @@ Expr<SomeDerived> FoldOperation(
       // F2023: 10.1.12 (3)(a)
       // If comp-spec is not null() for the allocatable component the
       // structure constructor is not a constant expression.
-      isConstant &= IsNullPointer(expr);
+      isConstant &= IsNullAllocatable(&expr) || IsBareNullPointer(&expr);
     } else {
-      isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
+      isConstant &=
+          IsActuallyConstant(expr) || IsNullPointerOrAllocatable(&expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
@@ -272,6 +273,7 @@ std::optional<Expr<SomeType>> FoldTransfer(
     }
   }
   if (sourceBytes && IsActuallyConstant(*source) && moldType && extents &&
+      !moldType->IsPolymorphic() &&
       (moldLength || moldType->category() != TypeCategory::Character)) {
     std::size_t elements{
         extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};

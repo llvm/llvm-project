@@ -16,11 +16,10 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-#include <errno.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -29,10 +28,12 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Exceptional values
   if (LIBC_UNLIKELY(x_u == 0xc236'bd8cU)) { // x = -0x1.6d7b18p+5f
     return 0x1.108a58p-66f - x * 0x1.0p-95f;
   }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // When |x| >= 89, |x| < 2^-25, or x is nan
   if (LIBC_UNLIKELY(x_abs >= 0x42b2'0000U || x_abs <= 0x3280'0000U)) {
@@ -105,4 +106,4 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   return static_cast<float>(exp_hi * exp_mid * exp_lo);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

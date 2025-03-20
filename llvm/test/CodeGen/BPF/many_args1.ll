@@ -1,4 +1,4 @@
-; RUN: not llc -march=bpf < %s 2> %t1
+; RUN: not llc -mtriple=bpf -mcpu=v1 < %s 2> %t1
 ; RUN: FileCheck %s < %t1
 ; CHECK: error: <unknown>:0:0: in function foo i32 (i32, i32, i32): {{t10|0x[0-f]+}}: i64 = GlobalAddress<ptr @bar> 0 too many arguments
 

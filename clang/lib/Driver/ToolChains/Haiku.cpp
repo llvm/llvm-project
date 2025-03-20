@@ -107,7 +107,7 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX() && ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
@@ -119,7 +119,8 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
     }

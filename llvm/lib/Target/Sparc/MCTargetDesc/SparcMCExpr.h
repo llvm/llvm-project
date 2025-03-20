@@ -95,14 +95,11 @@ public:
   /// @}
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAsmLayout *Layout,
-                                 const MCFixup *Fixup) const override;
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

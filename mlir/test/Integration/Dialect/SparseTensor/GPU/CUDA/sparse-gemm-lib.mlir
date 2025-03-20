@@ -2,7 +2,7 @@
 //
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   --sparsifier="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
-// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE: %{run} = mlir-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \
@@ -68,9 +68,9 @@ module {
     // CHECK-NEXT: nse = 20
     // CHECK-NEXT: dim = ( 8, 8 )
     // CHECK-NEXT: lvl = ( 8, 8 )
-    // CHECK-NEXT: pos[1] : ( 0, 5, 5, 6, 7, 8, 12, 16, 20,
-    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 6, 7, 2, 3, 4, 1, 2, 6, 7, 1, 2, 6, 7, 1, 2, 6, 7,
-    // CHECK-NEXT: values : ( 1, 39, 52, 45, 51, 16, 25, 36, 117, 158, 135, 144, 156, 318, 301, 324, 208, 430, 405, 436,
+    // CHECK-NEXT: pos[1] : ( 0, 5, 5, 6, 7, 8, 12, 16, 20 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 2, 6, 7, 2, 3, 4, 1, 2, 6, 7, 1, 2, 6, 7, 1, 2, 6, 7 )
+    // CHECK-NEXT: values : ( 1, 39, 52, 45, 51, 16, 25, 36, 117, 158, 135, 144, 156, 318, 301, 324, 208, 430, 405, 436 )
     // CHECK-NEXT: ----
     sparse_tensor.print %Ccsr : tensor<8x8xf32, #CSR>
 

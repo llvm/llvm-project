@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 
 #include "common_constants.h"
-#include "math_utils.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -18,11 +17,10 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
-#include <errno.h>
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct ExpBase {
   // Base = e
@@ -161,12 +159,12 @@ template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
   int k = static_cast<int>(kd);
   // hi = floor(kd * 2^(-MID_BITS))
   // exp_hi = shift hi to the exponent field of double precision.
-  int64_t exp_hi = static_cast<int64_t>((k >> Base::MID_BITS))
-                   << fputil::FPBits<double>::FRACTION_LEN;
+  uint64_t exp_hi = static_cast<uint64_t>(k >> Base::MID_BITS)
+                    << fputil::FPBits<double>::FRACTION_LEN;
   // mh = 2^hi * 2^mid
   // mh_bits = bit field of mh
-  int64_t mh_bits = Base::EXP_2_MID[k & Base::MID_MASK] + exp_hi;
-  double mh = fputil::FPBits<double>(uint64_t(mh_bits)).get_val();
+  uint64_t mh_bits = Base::EXP_2_MID[k & Base::MID_MASK] + exp_hi;
+  double mh = fputil::FPBits<double>(mh_bits).get_val();
   // dx = lo = x - (hi + mid) * log(2)
   double dx = fputil::multiply_add(
       kd, Base::M_LOGB_2_LO, fputil::multiply_add(kd, Base::M_LOGB_2_HI, xd));
@@ -340,8 +338,9 @@ LIBC_INLINE static double log_eval(double x) {
 //   double(2^-1022 + x) - 2^-1022 = double(x).
 // So if we scale x up by 2^1022, we can use
 //   double(1.0 + 2^1022 * x) - 1.0 to test how x is rounded in denormal range.
-LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
-                                                  double err) {
+template <bool SKIP_ZIV_TEST = false>
+LIBC_INLINE static cpp::optional<double>
+ziv_test_denorm(int hi, double mid, double lo, double err) {
   using FPBits = typename fputil::FPBits<double>;
 
   // Scaling factor = 1/(min normal number) = 2^1022
@@ -362,24 +361,29 @@ LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
     scale_down = 0x3FF0'0000'0000'0000; // 1023 in the exponent field.
   }
 
-  double err_scaled =
-      cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(err));
-
-  double lo_u = lo_scaled + err_scaled;
-  double lo_l = lo_scaled - err_scaled;
-
   // By adding 1.0, the results will have similar rounding points as denormal
   // outputs.
-  double upper = extra_factor + (mid_hi + lo_u);
-  double lower = extra_factor + (mid_hi + lo_l);
+  if constexpr (SKIP_ZIV_TEST) {
+    double r = extra_factor + (mid_hi + lo_scaled);
+    return cpp::bit_cast<double>(cpp::bit_cast<uint64_t>(r) - scale_down);
+  } else {
+    double err_scaled =
+        cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(err));
 
-  if (LIBC_LIKELY(upper == lower)) {
-    return cpp::bit_cast<double>(cpp::bit_cast<uint64_t>(upper) - scale_down);
+    double lo_u = lo_scaled + err_scaled;
+    double lo_l = lo_scaled - err_scaled;
+
+    double upper = extra_factor + (mid_hi + lo_u);
+    double lower = extra_factor + (mid_hi + lo_l);
+
+    if (LIBC_LIKELY(upper == lower)) {
+      return cpp::bit_cast<double>(cpp::bit_cast<uint64_t>(upper) - scale_down);
+    }
+
+    return cpp::nullopt;
   }
-
-  return cpp::nullopt;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

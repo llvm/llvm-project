@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cstdint>
 
 namespace llvm {
@@ -194,7 +195,7 @@ bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
+bool foldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
                             MemorySSAUpdater *MSSAU = nullptr,
                             const TargetTransformInfo *TTI = nullptr,
                             unsigned BonusInstThreshold = 1);
@@ -258,25 +259,35 @@ CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 ///  Dbg Intrinsic utilities
 ///
 
+/// Creates and inserts a dbg_value record intrinsic before a store
+/// that has an associated llvm.dbg.value intrinsic.
+void InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
+                                DIBuilder &Builder);
+
+/// Creates and inserts an llvm.dbg.value intrinsic before a store
+/// that has an associated llvm.dbg.value intrinsic.
+void InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII, StoreInst *SI,
+                                DIBuilder &Builder);
+
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      StoreInst *SI, DIBuilder &Builder);
-void ConvertDebugDeclareToDebugValue(DPValue *DPV, StoreInst *SI,
+void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, StoreInst *SI,
                                      DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
 /// that has an associated llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      LoadInst *LI, DIBuilder &Builder);
-void ConvertDebugDeclareToDebugValue(DPValue *DPV, LoadInst *LI,
+void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
                                      DIBuilder &Builder);
 
 /// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
 /// llvm.dbg.declare intrinsic.
 void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
                                      PHINode *LI, DIBuilder &Builder);
-void ConvertDebugDeclareToDebugValue(DPValue *DPV, PHINode *LI,
+void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *LI,
                                      DIBuilder &Builder);
 
 /// Lowers llvm.dbg.declare intrinsics into appropriate set of
@@ -313,7 +324,7 @@ void salvageDebugInfo(Instruction &I);
 /// Mark undef if salvaging cannot be completed.
 void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns,
-                                  ArrayRef<DPValue *> DPInsns);
+                                  ArrayRef<DbgVariableRecord *> DPInsns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
@@ -401,14 +412,6 @@ Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
-/// Combine the metadata of two instructions so that K can replace J. Some
-/// metadata kinds can only be kept if K does not move, meaning it dominated
-/// J in the original IR.
-///
-/// Metadata not listed as known via KnownIDs is removed
-void combineMetadata(Instruction *K, const Instruction *J,
-                     ArrayRef<unsigned> KnownIDs, bool DoesKMove);
-
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some
 /// metadata can only be kept if K dominates J. For this to be correct,
@@ -417,6 +420,11 @@ void combineMetadata(Instruction *K, const Instruction *J,
 /// Unknown metadata is removed.
 void combineMetadataForCSE(Instruction *K, const Instruction *J,
                            bool DoesKMove);
+
+/// Combine metadata of two instructions, where instruction J is a memory
+/// access that has been merged into K. This will intersect alias-analysis
+/// metadata, while preserving other known metadata.
+void combineAAMetadata(Instruction *K, const Instruction *J);
 
 /// Copy the metadata from the source instruction to the destination (the
 /// replacement for the source instruction).
@@ -439,6 +447,18 @@ unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
 /// the end of the given BasicBlock. Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlock *BB);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the given edge and the callback ShouldReplace returns true. Returns the
+/// number of replacements made.
+unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Edge,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the end of the given BasicBlock and the callback ShouldReplace returns true.
+/// Returns the number of replacements made.
+unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
 
 /// Return true if this call calls a gc leaf function.
 ///
@@ -477,6 +497,10 @@ void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 /// Given a constant, create a debug information expression.
 DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                                        Type &Ty);
+
+/// Remap the operands of the debug records attached to \p Inst, and the
+/// operands of \p Inst itself if it's a debug intrinsic.
+void remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst);
 
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching

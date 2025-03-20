@@ -81,7 +81,7 @@ define <16 x i8> @test1_as1(<2 x i64> %x) {
 
 define <16 x i8> @test1_as1_gep(<2 x i64> %x) {
 ; CHECK-LABEL: @test1_as1_gep(
-; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) getelementptr inbounds ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i32 0, i32 4), align 1
+; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr addrspace(1) getelementptr inbounds nuw (i8, ptr addrspace(1) @GLOBAL_as1_gep, i32 16), align 1
 ; CHECK-NEXT:    ret <16 x i8> [[TMP]]
 ;
   %tmp = load <16 x i8>, ptr addrspace(1) getelementptr ([8 x i32], ptr addrspace(1) @GLOBAL_as1_gep, i16 0, i16 4), align 1
@@ -112,7 +112,7 @@ define void @test3(ptr sret(%struct.s) %a4) {
 ; Check that the alignment is bumped up the alignment of the sret type.
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[A4:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    call void @use(ptr [[A4]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[A4]])
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %a4, i8 0, i64 16, i1 false)

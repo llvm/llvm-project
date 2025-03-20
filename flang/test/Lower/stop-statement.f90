@@ -21,10 +21,10 @@ end subroutine
 ! CHECK-LABEL: stop_error
 subroutine stop_error()
   error stop
- ! CHECK-DAG: %[[c0:.*]] = arith.constant 0 : i32
+ ! CHECK-DAG: %[[c_1:.*]] = arith.constant 1 : i32
  ! CHECK-DAG: %[[true:.*]] = arith.constant true
  ! CHECK-DAG: %[[false:.*]] = arith.constant false
- ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c0]], %[[true]], %[[false]])
+ ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c_1]], %[[true]], %[[false]])
  ! CHECK-NEXT: fir.unreachable
 end subroutine
 
@@ -75,5 +75,5 @@ subroutine stop_char_lit
   stop 'crash'
 end subroutine stop_char_lit
 
-! CHECK-DAG: func private @_Fortran{{.*}}StopStatement(i32, i1, i1) -> none
-! CHECK-DAG: func private @_Fortran{{.*}}StopStatementText(!fir.ref<i8>, i64, i1, i1) -> none
+! CHECK-DAG: func private @_Fortran{{.*}}StopStatement(i32, i1, i1)
+! CHECK-DAG: func private @_Fortran{{.*}}StopStatementText(!fir.ref<i8>, i64, i1, i1)

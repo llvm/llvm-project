@@ -42,7 +42,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // Constructors
@@ -99,6 +100,11 @@ public:
   /// \return
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
+
+  /// Reset the statistics collected for this target.
+  /// This includes clearing symbol table and debug info parsing/index time for
+  /// all modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
 
   /// Return the platform object associated with the target.
   ///
@@ -878,6 +884,10 @@ public:
                                            uint32_t count,
                                            const char *flavor_string);
 
+  lldb::SBInstructionList ReadInstructions(lldb::SBAddress start_addr,
+                                           lldb::SBAddress end_addr,
+                                           const char *flavor_string);
+
   lldb::SBInstructionList GetInstructions(lldb::SBAddress base_addr,
                                           const void *buf, size_t size);
 
@@ -938,6 +948,7 @@ public:
 
 protected:
   friend class SBAddress;
+  friend class SBAddressRange;
   friend class SBBlock;
   friend class SBBreakpoint;
   friend class SBBreakpointList;
@@ -953,6 +964,8 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBType;
+  friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;
 

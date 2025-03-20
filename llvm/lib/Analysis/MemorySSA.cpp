@@ -25,6 +25,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
@@ -292,6 +293,8 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     // clobbers where they don't really exist at all. Please see D43269 for
     // context.
     switch (II->getIntrinsicID()) {
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::invariant_start:
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
@@ -1228,7 +1231,7 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
 }
 
 MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
-    : DT(DT), F(Func), LiveOnEntryDef(nullptr), Walker(nullptr),
+    : DT(DT), F(&Func), LiveOnEntryDef(nullptr), Walker(nullptr),
       SkipWalker(nullptr) {
   // Build MemorySSA using a batch alias analysis. This reuses the internal
   // state that AA collects during an alias()/getModRefInfo() call. This is
@@ -1237,8 +1240,29 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
   // make queries about all the instructions in the Function.
   assert(AA && "No alias analysis?");
   BatchAAResults BatchAA(*AA);
-  buildMemorySSA(BatchAA);
-  // Intentionally leave AA to nullptr while building so we don't accidently
+  buildMemorySSA(BatchAA, iterator_range(F->begin(), F->end()));
+  // Intentionally leave AA to nullptr while building so we don't accidentally
+  // use non-batch AliasAnalysis.
+  this->AA = AA;
+  // Also create the walker here.
+  getWalker();
+}
+
+MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
+    : DT(DT), L(&L), LiveOnEntryDef(nullptr), Walker(nullptr),
+      SkipWalker(nullptr) {
+  // Build MemorySSA using a batch alias analysis. This reuses the internal
+  // state that AA collects during an alias()/getModRefInfo() call. This is
+  // safe because there are no CFG changes while building MemorySSA and can
+  // significantly reduce the time spent by the compiler in AA, because we will
+  // make queries about all the instructions in the Function.
+  assert(AA && "No alias analysis?");
+  BatchAAResults BatchAA(*AA);
+  buildMemorySSA(
+      BatchAA, map_range(L.blocks(), [](const BasicBlock *BB) -> BasicBlock & {
+        return *const_cast<BasicBlock *>(BB);
+      }));
+  // Intentionally leave AA to nullptr while building so we don't accidentally
   // use non-batch AliasAnalysis.
   this->AA = AA;
   // Also create the walker here.
@@ -1491,16 +1515,17 @@ void MemorySSA::placePHINodes(
     createMemoryPhi(BB);
 }
 
-void MemorySSA::buildMemorySSA(BatchAAResults &BAA) {
+template <typename IterT>
+void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // We create an access to represent "live on entry", for things like
   // arguments or users of globals, where the memory they use is defined before
   // the beginning of the function. We do not actually insert it into the IR.
   // We do not define a live on exit for the immediate uses, and thus our
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
-  BasicBlock &StartingPoint = F.getEntryBlock();
-  LiveOnEntryDef.reset(new MemoryDef(F.getContext(), nullptr, nullptr,
-                                     &StartingPoint, NextID++));
+  BasicBlock &StartingPoint = *Blocks.begin();
+  LiveOnEntryDef.reset(new MemoryDef(StartingPoint.getContext(), nullptr,
+                                     nullptr, &StartingPoint, NextID++));
 
   // We maintain lists of memory accesses per-block, trading memory for time. We
   // could just look up the memory access for every possible instruction in the
@@ -1508,7 +1533,7 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA) {
   SmallPtrSet<BasicBlock *, 32> DefiningBlocks;
   // Go through each block, figure out where defs occur, and chain together all
   // the accesses.
-  for (BasicBlock &B : F) {
+  for (BasicBlock &B : Blocks) {
     bool InsertIntoDef = false;
     AccessList *Accesses = nullptr;
     DefsList *Defs = nullptr;
@@ -1535,11 +1560,29 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA) {
   // Now do regular SSA renaming on the MemoryDef/MemoryUse. Visited will get
   // filled in with all blocks.
   SmallPtrSet<BasicBlock *, 16> Visited;
-  renamePass(DT->getRootNode(), LiveOnEntryDef.get(), Visited);
+  if (L) {
+    // Only building MemorySSA for a single loop. placePHINodes may have
+    // inserted a MemoryPhi in the loop's preheader. As this is outside the
+    // scope of the loop, set them to LiveOnEntry.
+    if (auto *P = getMemoryAccess(L->getLoopPreheader())) {
+      for (Use &U : make_early_inc_range(P->uses()))
+        U.set(LiveOnEntryDef.get());
+      removeFromLists(P);
+    }
+    // Now rename accesses in the loop. Populate Visited with the exit blocks of
+    // the loop, to limit the scope of the renaming.
+    SmallVector<BasicBlock *> ExitBlocks;
+    L->getExitBlocks(ExitBlocks);
+    Visited.insert(ExitBlocks.begin(), ExitBlocks.end());
+    renamePass(DT->getNode(L->getLoopPreheader()), LiveOnEntryDef.get(),
+               Visited);
+  } else {
+    renamePass(DT->getRootNode(), LiveOnEntryDef.get(), Visited);
+  }
 
   // Mark the uses in unreachable blocks as live on entry, so that they go
   // somewhere.
-  for (auto &BB : F)
+  for (auto &BB : Blocks)
     if (!Visited.count(&BB))
       markUnreachableAsLiveOnEntry(&BB);
 }
@@ -1725,6 +1768,8 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
     case Intrinsic::pseudoprobe:
@@ -1847,7 +1892,10 @@ void MemorySSA::removeFromLists(MemoryAccess *MA, bool ShouldDelete) {
 
 void MemorySSA::print(raw_ostream &OS) const {
   MemorySSAAnnotatedWriter Writer(this);
-  F.print(OS, &Writer);
+  Function *F = this->F;
+  if (L)
+    F = L->getHeader()->getParent();
+  F->print(OS, &Writer);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1860,10 +1908,23 @@ void MemorySSA::verifyMemorySSA(VerificationLevel VL) const {
 #endif
 
 #ifndef NDEBUG
-  verifyOrderingDominationAndDefUses(F, VL);
-  verifyDominationNumbers(F);
-  if (VL == VerificationLevel::Full)
-    verifyPrevDefInPhis(F);
+  if (F) {
+    auto Blocks = iterator_range(F->begin(), F->end());
+    verifyOrderingDominationAndDefUses(Blocks, VL);
+    verifyDominationNumbers(Blocks);
+    if (VL == VerificationLevel::Full)
+      verifyPrevDefInPhis(Blocks);
+  } else {
+    assert(L && "must either have loop or function");
+    auto Blocks =
+        map_range(L->blocks(), [](const BasicBlock *BB) -> BasicBlock & {
+          return *const_cast<BasicBlock *>(BB);
+        });
+    verifyOrderingDominationAndDefUses(Blocks, VL);
+    verifyDominationNumbers(Blocks);
+    if (VL == VerificationLevel::Full)
+      verifyPrevDefInPhis(Blocks);
+  }
 #endif
   // Previously, the verification used to also verify that the clobberingAccess
   // cached by MemorySSA is the same as the clobberingAccess found at a later
@@ -1877,8 +1938,9 @@ void MemorySSA::verifyMemorySSA(VerificationLevel VL) const {
   // example, see test4 added in D51960.
 }
 
-void MemorySSA::verifyPrevDefInPhis(Function &F) const {
-  for (const BasicBlock &BB : F) {
+template <typename IterT>
+void MemorySSA::verifyPrevDefInPhis(IterT Blocks) const {
+  for (const BasicBlock &BB : Blocks) {
     if (MemoryPhi *Phi = getMemoryAccess(&BB)) {
       for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
         auto *Pred = Phi->getIncomingBlock(I);
@@ -1913,12 +1975,13 @@ void MemorySSA::verifyPrevDefInPhis(Function &F) const {
 
 /// Verify that all of the blocks we believe to have valid domination numbers
 /// actually have valid domination numbers.
-void MemorySSA::verifyDominationNumbers(const Function &F) const {
+template <typename IterT>
+void MemorySSA::verifyDominationNumbers(IterT Blocks) const {
   if (BlockNumberingValid.empty())
     return;
 
   SmallPtrSet<const BasicBlock *, 16> ValidBlocks = BlockNumberingValid;
-  for (const BasicBlock &BB : F) {
+  for (const BasicBlock &BB : Blocks) {
     if (!ValidBlocks.count(&BB))
       continue;
 
@@ -1954,14 +2017,15 @@ void MemorySSA::verifyDominationNumbers(const Function &F) const {
 /// Verify def-uses: the immediate use information - walk all the memory
 /// accesses and verifying that, for each use, it appears in the appropriate
 /// def's use list
-void MemorySSA::verifyOrderingDominationAndDefUses(Function &F,
+template <typename IterT>
+void MemorySSA::verifyOrderingDominationAndDefUses(IterT Blocks,
                                                    VerificationLevel VL) const {
   // Walk all the blocks, comparing what the lookups think and what the access
   // lists think, as well as the order in the blocks vs the order in the access
   // lists.
   SmallVector<MemoryAccess *, 32> ActualAccesses;
   SmallVector<MemoryAccess *, 32> ActualDefs;
-  for (BasicBlock &B : F) {
+  for (BasicBlock &B : Blocks) {
     const AccessList *AL = getBlockAccesses(&B);
     const auto *DL = getBlockDefs(&B);
     MemoryPhi *Phi = getMemoryAccess(&B);
@@ -2443,45 +2507,22 @@ getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
   if (isa<Constant>(PointerOperand))
     return nullptr;
 
-  // Queue to process all pointers that are equivalent to load operand.
-  SmallVector<const Value *, 8> PointerUsesQueue;
-  PointerUsesQueue.push_back(PointerOperand);
-
   const Instruction *MostDominatingInstruction = &I;
 
-  // FIXME: This loop is O(n^2) because dominates can be O(n) and in worst case
-  // we will see all the instructions. It may not matter in practice. If it
-  // does, we will have to support MemorySSA construction and updates.
-  while (!PointerUsesQueue.empty()) {
-    const Value *Ptr = PointerUsesQueue.pop_back_val();
-    assert(Ptr && !isa<GlobalValue>(Ptr) &&
-           "Null or GlobalValue should not be inserted");
+  for (const User *Us : PointerOperand->users()) {
+    auto *U = dyn_cast<Instruction>(Us);
+    if (!U || U == &I || !DT.dominates(U, MostDominatingInstruction))
+      continue;
 
-    for (const User *Us : Ptr->users()) {
-      auto *U = dyn_cast<Instruction>(Us);
-      if (!U || U == &I || !DT.dominates(U, MostDominatingInstruction))
-        continue;
-
-      // Add bitcasts and zero GEPs to queue.
-      if (isa<BitCastInst>(U)) {
-        PointerUsesQueue.push_back(U);
-        continue;
-      }
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-        if (GEP->hasAllZeroIndices())
-          PointerUsesQueue.push_back(U);
-        continue;
-      }
-
-      // If we hit a load/store with an invariant.group metadata and the same
-      // pointer operand, we can assume that value pointed to by the pointer
-      // operand didn't change.
-      if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
-          getLoadStorePointerOperand(U) == Ptr && !U->isVolatile()) {
-        MostDominatingInstruction = U;
-      }
+    // If we hit a load/store with an invariant.group metadata and the same
+    // pointer operand, we can assume that value pointed to by the pointer
+    // operand didn't change.
+    if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
+        getLoadStorePointerOperand(U) == PointerOperand && !U->isVolatile()) {
+      MostDominatingInstruction = U;
     }
   }
+
   return MostDominatingInstruction == &I ? nullptr : MostDominatingInstruction;
 }
 

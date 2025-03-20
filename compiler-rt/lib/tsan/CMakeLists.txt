@@ -31,11 +31,11 @@ if(COMPILER_RT_LIBCXX_PATH AND
       DEPS ${TSAN_RUNTIME_LIBRARIES}
       CFLAGS ${TARGET_CFLAGS} -fsanitize=thread
       USE_TOOLCHAIN)
-    list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-build)
+    list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-install-cmake326-workaround)
   endforeach()
 
   add_custom_target(libcxx_tsan DEPENDS ${libcxx_tsan_deps})
-  set_target_properties(libcxx_tsan PROPERTIES FOLDER "Compiler-RT Misc")
+  set_target_properties(libcxx_tsan PROPERTIES FOLDER "Compiler-RT/Metatargets")
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)

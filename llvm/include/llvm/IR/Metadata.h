@@ -43,7 +43,7 @@ namespace llvm {
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
-class DPValue;
+class DbgVariableRecord;
 template <typename T> class StringMapEntry;
 template <typename ValueTy> class StringMapEntryStorage;
 class Type;
@@ -138,6 +138,10 @@ public:
   void printAsOperand(raw_ostream &OS, ModuleSlotTracker &MST,
                       const Module *M = nullptr) const;
   /// @}
+
+  /// Metadata IDs that may generate poison.
+  constexpr static const unsigned PoisonGeneratingIDs[] = {
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -205,23 +209,23 @@ private:
 /// Base class for tracking ValueAsMetadata/DIArgLists with user lookups and
 /// Owner callbacks outside of ValueAsMetadata.
 ///
-/// Currently only inherited by DPValue; if other classes need to use it, then
-/// a SubclassID will need to be added (either as a new field or by making
-/// DebugValue into a PointerIntUnion) to discriminate between the subclasses in
-/// lookup and callback handling.
+/// Currently only inherited by DbgVariableRecord; if other classes need to use
+/// it, then a SubclassID will need to be added (either as a new field or by
+/// making DebugValue into a PointerIntUnion) to discriminate between the
+/// subclasses in lookup and callback handling.
 class DebugValueUser {
 protected:
   // Capacity to store 3 debug values.
   // TODO: Not all DebugValueUser instances need all 3 elements, if we
-  // restructure the DPValue class then we can template parameterize this array
-  // size.
+  // restructure the DbgVariableRecord class then we can template parameterize
+  // this array size.
   std::array<Metadata *, 3> DebugValues;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
 public:
-  DPValue *getUser();
-  const DPValue *getUser() const;
+  DbgVariableRecord *getUser();
+  const DbgVariableRecord *getUser() const;
   /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
   /// is a pointer to one of the pointers in `DebugValues` (so should be type
   /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
@@ -407,8 +411,8 @@ public:
   static void SalvageDebugInfo(const Constant &C); 
   /// Returns the list of all DIArgList users of this.
   SmallVector<Metadata *> getAllArgListUsers();
-  /// Returns the list of all DPValue users of this.
-  SmallVector<DPValue *> getAllDPValueUsers();
+  /// Returns the list of all DbgVariableRecord users of this.
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers();
 
   /// Resolve all uses of this.
   ///
@@ -494,8 +498,8 @@ public:
   SmallVector<Metadata *> getAllArgListUsers() {
     return ReplaceableMetadataImpl::getAllArgListUsers();
   }
-  SmallVector<DPValue *> getAllDPValueUsers() {
-    return ReplaceableMetadataImpl::getAllDPValueUsers();
+  SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
+    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
   }
 
   static void handleDeletion(Value *V);
@@ -846,8 +850,10 @@ struct AAMDNodes {
   AAMDNodes concat(const AAMDNodes &Other) const;
 
   /// Create a new AAMDNode for accessing \p AccessSize bytes of this AAMDNode.
-  /// If his AAMDNode has !tbaa.struct and \p AccessSize matches the size of the
-  /// field at offset 0, get the TBAA tag describing the accessed field.
+  /// If this AAMDNode has !tbaa.struct and \p AccessSize matches the size of
+  /// the field at offset 0, get the TBAA tag describing the accessed field.
+  /// If such an AAMDNode already embeds !tbaa, the existing one is retrieved.
+  /// Finally, !tbaa.struct is zeroed out.
   AAMDNodes adjustForAccess(unsigned AccessSize);
   AAMDNodes adjustForAccess(size_t Offset, Type *AccessTy,
                             const DataLayout &DL);
@@ -1179,7 +1185,7 @@ class MDNode : public Metadata {
 
 protected:
   MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
-         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = std::nullopt);
+         ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2 = {});
   ~MDNode() = default;
 
   void *operator new(size_t Size, size_t NumOps, StorageType Storage);
@@ -1454,6 +1460,7 @@ public:
   static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
   static MDNode *getMostGenericFPMath(MDNode *A, MDNode *B);
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
+  static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
@@ -1461,6 +1468,8 @@ public:
   static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
                                        const Instruction *AInstr,
                                        const Instruction *BInstr);
+  static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.
@@ -1487,8 +1496,7 @@ class MDTuple : public MDNode {
 
   TempMDTuple cloneImpl() const {
     ArrayRef<MDOperand> Operands = operands();
-    return getTemporary(getContext(), SmallVector<Metadata *, 4>(
-                                          Operands.begin(), Operands.end()));
+    return getTemporary(getContext(), SmallVector<Metadata *, 4>(Operands));
   }
 
 public:

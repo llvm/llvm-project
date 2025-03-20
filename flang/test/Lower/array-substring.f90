@@ -1,4 +1,7 @@
 ! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck %s --check-prefix=NO-NSW
+
+! NO-NSW-NOT: overflow<nsw>
 
 ! CHECK-LABEL: func @_QPtest(
 ! CHECK-SAME:     %[[VAL_0:.*]]: !fir.boxchar<1>{{.*}}) -> !fir.array<1x!fir.logical<4>> {
@@ -21,9 +24,8 @@
 ! CHECK:         %[[VAL_16:.*]] = fir.array_coor %[[VAL_7]](%[[VAL_9]]) {{\[}}%[[VAL_10]]] %[[VAL_15]] : (!fir.ref<!fir.array<1x!fir.char<1,12>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.char<1,12>>
 ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<!fir.array<12x!fir.char<1>>>
 ! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_2]] : (!fir.ref<!fir.array<12x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:         %[[VAL_20:.*]] = fir.array_coor %[[VAL_11]](%[[VAL_9]]) %[[VAL_15]] : (!fir.ref<!fir.array<1x!fir.char<1,8>>>, !fir.shape<1>, index) -> !fir.ref<!fir.char<1,8>>
-! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_4]] : (index) -> i64
 ! CHECK:         %[[VAL_24:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_23]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
@@ -31,8 +33,9 @@
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
 ! CHECK:         %[[VAL_27:.*]] = fir.array_coor %[[VAL_8]](%[[VAL_9]]) %[[VAL_15]] : (!fir.ref<!fir.array<1x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:         fir.store %[[VAL_26]] to %[[VAL_27]] : !fir.ref<!fir.logical<4>>
+! CHECK:         %[[VAL_15_NSW:.*]] = arith.addi %[[VAL_12]], %[[VAL_1]] overflow<nsw> : index
 ! CHECK:         %[[VAL_28:.*]] = arith.subi %[[VAL_13]], %[[VAL_1]] : index
-! CHECK:         br ^bb1(%[[VAL_15]], %[[VAL_28]] : index, index)
+! CHECK:         br ^bb1(%[[VAL_15_NSW]], %[[VAL_28]] : index, index)
 ! CHECK:       ^bb3:
 ! CHECK:         %[[VAL_29:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.array<1x!fir.logical<4>>>
 ! CHECK:         return %[[VAL_29]] : !fir.array<1x!fir.logical<4>>

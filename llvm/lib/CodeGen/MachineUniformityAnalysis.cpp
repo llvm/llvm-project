@@ -117,12 +117,12 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
     if (!Op.getReg().isVirtual())
       continue;
     auto Reg = Op.getReg();
-    if (isDivergent(Reg))
-      continue;
     for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
       if (DefCycle.contains(UserInstr.getParent()))
         continue;
       markDivergent(UserInstr);
+
+      recordTemporalDivergence(Reg, &UserInstr, &DefCycle);
     }
   }
 }
@@ -155,7 +155,7 @@ template struct llvm::GenericUniformityAnalysisImplDeleter<
 
 MachineUniformityInfo llvm::computeMachineUniformityInfo(
     MachineFunction &F, const MachineCycleInfo &cycleInfo,
-    const MachineDomTree &domTree, bool HasBranchDivergence) {
+    const MachineDominatorTree &domTree, bool HasBranchDivergence) {
   assert(F.getRegInfo().isSSA() && "Expected to be run on SSA form!");
   MachineUniformityInfo UI(domTree, cycleInfo);
   if (HasBranchDivergence)
@@ -185,21 +185,21 @@ MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
 }
 
 INITIALIZE_PASS_BEGIN(MachineUniformityAnalysisPass, "machine-uniformity",
-                      "Machine Uniformity Info Analysis", true, true)
+                      "Machine Uniformity Info Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineCycleInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineUniformityAnalysisPass, "machine-uniformity",
-                    "Machine Uniformity Info Analysis", true, true)
+                    "Machine Uniformity Info Analysis", false, true)
 
 void MachineUniformityAnalysisPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineCycleInfoWrapperPass>();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequiredTransitive<MachineCycleInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool MachineUniformityAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
-  auto &DomTree = getAnalysis<MachineDominatorTree>().getBase();
+  auto &DomTree = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto &CI = getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   // FIXME: Query TTI::hasBranchDivergence. -run-pass seems to end up with a
   // default NoTTI

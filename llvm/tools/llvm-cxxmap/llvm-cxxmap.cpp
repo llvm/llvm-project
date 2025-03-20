@@ -25,30 +25,31 @@
 
 using namespace llvm;
 
-cl::OptionCategory CXXMapCategory("CXX Map Options");
+static cl::OptionCategory CXXMapCategory("CXX Map Options");
 
-cl::opt<std::string> OldSymbolFile(cl::Positional, cl::Required,
-                                   cl::desc("<symbol-file>"),
-                                   cl::cat(CXXMapCategory));
-cl::opt<std::string> NewSymbolFile(cl::Positional, cl::Required,
-                                   cl::desc("<symbol-file>"),
-                                   cl::cat(CXXMapCategory));
-cl::opt<std::string> RemappingFile("remapping-file", cl::Required,
-                                   cl::desc("Remapping file"),
-                                   cl::cat(CXXMapCategory));
-cl::alias RemappingFileA("r", cl::aliasopt(RemappingFile),
-                         cl::cat(CXXMapCategory));
-cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                    cl::init("-"), cl::desc("Output file"),
-                                    cl::cat(CXXMapCategory));
-cl::alias OutputFilenameA("o", cl::aliasopt(OutputFilename),
-                          cl::cat(CXXMapCategory));
+static cl::opt<std::string> OldSymbolFile(cl::Positional, cl::Required,
+                                          cl::desc("<symbol-file>"),
+                                          cl::cat(CXXMapCategory));
+static cl::opt<std::string> NewSymbolFile(cl::Positional, cl::Required,
+                                          cl::desc("<symbol-file>"),
+                                          cl::cat(CXXMapCategory));
+static cl::opt<std::string> RemappingFile("remapping-file", cl::Required,
+                                          cl::desc("Remapping file"),
+                                          cl::cat(CXXMapCategory));
+static cl::alias RemappingFileA("r", cl::aliasopt(RemappingFile),
+                                cl::cat(CXXMapCategory));
+static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
+                                           cl::init("-"),
+                                           cl::desc("Output file"),
+                                           cl::cat(CXXMapCategory));
+static cl::alias OutputFilenameA("o", cl::aliasopt(OutputFilename),
+                                 cl::cat(CXXMapCategory));
 
-cl::opt<bool> WarnAmbiguous(
+static cl::opt<bool> WarnAmbiguous(
     "Wambiguous",
     cl::desc("Warn on equivalent symbols in the output symbol list"),
     cl::cat(CXXMapCategory));
-cl::opt<bool> WarnIncomplete(
+static cl::opt<bool> WarnIncomplete(
     "Wincomplete",
     cl::desc("Warn on input symbols missing from output symbol list"),
     cl::cat(CXXMapCategory));
@@ -144,15 +145,18 @@ int main(int argc, const char *argv[]) {
   cl::HideUnrelatedOptions({&CXXMapCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM C++ mangled name remapper\n");
 
-  auto OldSymbolBufOrError = MemoryBuffer::getFileOrSTDIN(OldSymbolFile);
+  auto OldSymbolBufOrError =
+      MemoryBuffer::getFileOrSTDIN(OldSymbolFile, /*IsText=*/true);
   if (!OldSymbolBufOrError)
     exitWithErrorCode(OldSymbolBufOrError.getError(), OldSymbolFile);
 
-  auto NewSymbolBufOrError = MemoryBuffer::getFileOrSTDIN(NewSymbolFile);
+  auto NewSymbolBufOrError =
+      MemoryBuffer::getFileOrSTDIN(NewSymbolFile, /*IsText=*/true);
   if (!NewSymbolBufOrError)
     exitWithErrorCode(NewSymbolBufOrError.getError(), NewSymbolFile);
 
-  auto RemappingBufOrError = MemoryBuffer::getFileOrSTDIN(RemappingFile);
+  auto RemappingBufOrError =
+      MemoryBuffer::getFileOrSTDIN(RemappingFile, /*IsText=*/true);
   if (!RemappingBufOrError)
     exitWithErrorCode(RemappingBufOrError.getError(), RemappingFile);
 

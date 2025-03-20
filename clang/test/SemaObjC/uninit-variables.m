@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized -fsyntax-only -fblocks %s -verify
+// RUN: %clang_cc1 -Wuninitialized -fsyntax-only -fblocks %s -verify
 
 #include <stdarg.h>
 

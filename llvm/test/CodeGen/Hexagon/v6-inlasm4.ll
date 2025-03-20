@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -disable-hexagon-shuffle=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -disable-hexagon-shuffle=1 < %s | FileCheck %s
 ; CHECK: q{{[0-3]}} = vsetq(r{{[0-9]+}})
 
 target triple = "hexagon"

@@ -1147,11 +1147,42 @@ void ItaniumVTableBuilder::ComputeThisAdjustments() {
       continue;
 
     // Add it.
-    VTableThunks[VTableIndex].This = ThisAdjustment;
+    auto SetThisAdjustmentThunk = [&](uint64_t Idx) {
+      // If a this pointer adjustment is required, record the method that
+      // created the vtable entry. MD is not necessarily the method that
+      // created the entry since derived classes overwrite base class
+      // information in MethodInfoMap, hence findOriginalMethodInMap is called
+      // here.
+      //
+      // For example, in the following class hierarchy, if MD = D1::m and
+      // Overrider = D2:m, the original method that created the entry is B0:m,
+      // which is what findOriginalMethodInMap(MD) returns:
+      //
+      // struct B0 { int a; virtual void m(); };
+      // struct D0 : B0 { int a; void m() override; };
+      // struct D1 : B0 { int a; void m() override; };
+      // struct D2 : D0, D1 { int a; void m() override; };
+      //
+      // We need to record the method because we cannot
+      // call findOriginalMethod to find the method that created the entry if
+      // the method in the entry requires adjustment.
+      //
+      // Do not set ThunkInfo::Method if Idx is already in VTableThunks. This
+      // can happen when covariant return adjustment is required too.
+      auto [It, Inserted] = VTableThunks.try_emplace(Idx);
+      if (Inserted) {
+        const CXXMethodDecl *Method = VTables.findOriginalMethodInMap(MD);
+        It->second.Method = Method;
+        It->second.ThisType = Method->getThisType().getTypePtr();
+      }
+      It->second.This = ThisAdjustment;
+    };
+
+    SetThisAdjustmentThunk(VTableIndex);
 
     if (isa<CXXDestructorDecl>(MD)) {
       // Add an adjustment for the deleting destructor as well.
-      VTableThunks[VTableIndex + 1].This = ThisAdjustment;
+      SetThisAdjustmentThunk(VTableIndex + 1);
     }
   }
 
@@ -1509,6 +1540,8 @@ void ItaniumVTableBuilder::AddMethods(
           FindNearestOverriddenMethod(MD, PrimaryBases)) {
       if (ComputeReturnAdjustmentBaseOffset(Context, MD,
                                             OverriddenMD).isEmpty()) {
+        VTables.setOriginalMethod(MD, OverriddenMD);
+
         // Replace the method info of the overridden method with our own
         // method.
         assert(MethodInfoMap.count(OverriddenMD) &&
@@ -1547,7 +1580,8 @@ void ItaniumVTableBuilder::AddMethods(
 
             // This is a virtual thunk for the most derived class, add it.
             AddThunk(Overrider.Method,
-                     ThunkInfo(ThisAdjustment, ReturnAdjustment));
+                     ThunkInfo(ThisAdjustment, ReturnAdjustment,
+                               OverriddenMD->getThisType().getTypePtr()));
           }
         }
 
@@ -1614,6 +1648,16 @@ void ItaniumVTableBuilder::AddMethods(
 
     ReturnAdjustment ReturnAdjustment =
       ComputeReturnAdjustment(ReturnAdjustmentOffset);
+
+    // If a return adjustment is required, record the method that created the
+    // vtable entry. We need to record the method because we cannot call
+    // findOriginalMethod to find the method that created the entry if the
+    // method in the entry requires adjustment.
+    if (!ReturnAdjustment.isEmpty()) {
+      auto &VTT = VTableThunks[Components.size()];
+      VTT.Method = MD;
+      VTT.ThisType = MD->getThisType().getTypePtr();
+    }
 
     AddMethod(Overrider.Method, ReturnAdjustment);
   }
@@ -1890,10 +1934,30 @@ void ItaniumVTableBuilder::LayoutVTablesForVirtualBases(
   }
 }
 
+static void printThunkMethod(const ThunkInfo &Info, raw_ostream &Out) {
+  if (!Info.Method)
+    return;
+  std::string Str = PredefinedExpr::ComputeName(
+      PredefinedIdentKind::PrettyFunctionNoVirtual, Info.Method);
+  Out << " method: " << Str;
+}
+
 /// dumpLayout - Dump the vtable layout.
 void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
   // FIXME: write more tests that actually use the dumpLayout output to prevent
   // ItaniumVTableBuilder regressions.
+
+  Out << "Original map\n";
+
+  for (const auto &P : VTables.getOriginalMethodMap()) {
+    std::string Str0 =
+        PredefinedExpr::ComputeName(PredefinedIdentKind::PrettyFunctionNoVirtual,
+                                    P.first);
+    std::string Str1 =
+        PredefinedExpr::ComputeName(PredefinedIdentKind::PrettyFunctionNoVirtual,
+                                    P.second);
+    Out << " " << Str0 << " -> " << Str1 << "\n";
+  }
 
   if (isBuildingConstructorVTable()) {
     Out << "Construction vtable for ('";
@@ -1978,6 +2042,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
           }
 
           Out << ']';
+          printThunkMethod(Thunk, Out);
         }
 
         // If this function pointer has a 'this' pointer adjustment, dump it.
@@ -1991,6 +2056,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
           }
 
           Out << ']';
+          printThunkMethod(Thunk, Out);
         }
       }
 
@@ -2027,6 +2093,7 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
           Out << ']';
         }
+        printThunkMethod(Thunk, Out);
       }
 
       break;
@@ -2048,8 +2115,8 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
     // Dump the next address point.
     uint64_t NextIndex = Index + 1;
-    if (AddressPointsByIndex.count(NextIndex)) {
-      if (AddressPointsByIndex.count(NextIndex) == 1) {
+    if (unsigned Count = AddressPointsByIndex.count(NextIndex)) {
+      if (Count == 1) {
         const BaseSubobject &Base =
           AddressPointsByIndex.find(NextIndex)->second;
 
@@ -2125,7 +2192,6 @@ void ItaniumVTableBuilder::dumpLayout(raw_ostream &Out) {
 
       ThunkInfoVectorTy ThunksVector = Thunks[MD];
       llvm::sort(ThunksVector, [](const ThunkInfo &LHS, const ThunkInfo &RHS) {
-        assert(LHS.Method == nullptr && RHS.Method == nullptr);
         return std::tie(LHS.This, LHS.Return) < std::tie(RHS.This, RHS.Return);
       });
 
@@ -2312,6 +2378,35 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
   assert(I != VirtualBaseClassOffsetOffsets.end() && "Did not find index!");
 
   return I->second;
+}
+
+GlobalDecl ItaniumVTableContext::findOriginalMethod(GlobalDecl GD) {
+  const auto *MD = cast<CXXMethodDecl>(GD.getDecl());
+  computeVTableRelatedInformation(MD->getParent());
+  const CXXMethodDecl *OriginalMD = findOriginalMethodInMap(MD);
+
+  if (const auto *DD = dyn_cast<CXXDestructorDecl>(OriginalMD))
+    return GlobalDecl(DD, GD.getDtorType());
+  return OriginalMD;
+}
+
+const CXXMethodDecl *
+ItaniumVTableContext::findOriginalMethodInMap(const CXXMethodDecl *MD) const {
+  // Traverse the chain of virtual methods until we find the method that added
+  // the v-table slot.
+  while (true) {
+    auto I = OriginalMethodMap.find(MD);
+
+    // MD doesn't exist in OriginalMethodMap, so it must be the method we are
+    // looking for.
+    if (I == OriginalMethodMap.end())
+      break;
+
+    // Set MD to the overridden method.
+    MD = I->second;
+  }
+
+  return MD;
 }
 
 static std::unique_ptr<VTableLayout>
@@ -3094,9 +3189,9 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
                                     ReturnAdjustmentOffset.VirtualBase);
       }
     }
-
+    auto ThisType = (OverriddenMD ? OverriddenMD : MD)->getThisType().getTypePtr();
     AddMethod(FinalOverriderMD,
-              ThunkInfo(ThisAdjustmentOffset, ReturnAdjustment,
+              ThunkInfo(ThisAdjustmentOffset, ReturnAdjustment, ThisType,
                         ForceReturnAdjustmentMangling ? MD : nullptr));
   }
 }
@@ -3738,8 +3833,8 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
   unsigned VBTableIndex = 1 + VBI->VBTableIndices.size();
   for (const auto &VB : RD->vbases()) {
     const CXXRecordDecl *CurVBase = VB.getType()->getAsCXXRecordDecl();
-    if (!VBI->VBTableIndices.count(CurVBase))
-      VBI->VBTableIndices[CurVBase] = VBTableIndex++;
+    if (VBI->VBTableIndices.try_emplace(CurVBase, VBTableIndex).second)
+      ++VBTableIndex;
   }
 
   return *VBI;

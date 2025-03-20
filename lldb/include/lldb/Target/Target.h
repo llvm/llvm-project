@@ -25,6 +25,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
@@ -34,8 +35,10 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RealpathPrefixes.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -113,9 +116,17 @@ public:
 
   void SetDisableSTDIO(bool b);
 
+  llvm::StringRef GetLaunchWorkingDirectory() const;
+
   const char *GetDisassemblyFlavor() const;
 
+  const char *GetDisassemblyCPU() const;
+
+  const char *GetDisassemblyFeatures() const;
+
   InlineStrategy GetInlineStrategy() const;
+
+  RealpathPrefixes GetSourceRealpathPrefixes() const;
 
   llvm::StringRef GetArg0() const;
 
@@ -140,6 +151,8 @@ public:
   bool GetSkipPrologue() const;
 
   PathMappingList &GetSourcePathMap() const;
+
+  PathMappingList &GetObjectPathMap() const;
 
   bool GetAutoSourceMapRelative() const;
 
@@ -200,7 +213,7 @@ public:
 
   bool GetBreakpointsConsultPlatformAvoidList();
 
-  lldb::LanguageType GetLanguage() const;
+  SourceLanguage GetLanguage() const;
 
   llvm::StringRef GetExpressionPrefixContents();
 
@@ -243,6 +256,10 @@ public:
   void SetProcessLaunchInfo(const ProcessLaunchInfo &launch_info);
 
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
+
+  bool GetUseDIL(ExecutionContext *exe_ctx) const;
+
+  void SetUseDIL(ExecutionContext *exe_ctx, bool b);
 
   void SetRequireHardwareBreakpoints(bool b);
 
@@ -310,9 +327,26 @@ public:
     m_execution_policy = policy;
   }
 
-  lldb::LanguageType GetLanguage() const { return m_language; }
+  SourceLanguage GetLanguage() const { return m_language; }
 
-  void SetLanguage(lldb::LanguageType language) { m_language = language; }
+  void SetLanguage(lldb::LanguageType language_type) {
+    m_language = SourceLanguage(language_type);
+  }
+
+  void SetPreferredSymbolContexts(SymbolContextList contexts) {
+    m_preferred_lookup_contexts = std::move(contexts);
+  }
+
+  const SymbolContextList &GetPreferredSymbolContexts() const {
+    return m_preferred_lookup_contexts;
+  }
+
+  /// Set the language using a pair of language code and version as
+  /// defined by the DWARF 6 specification.
+  /// WARNING: These codes may change until DWARF 6 is finalized.
+  void SetLanguage(uint16_t name, uint32_t version) {
+    m_language = SourceLanguage(name, version);
+  }
 
   bool DoesCoerceToId() const { return m_coerce_to_id; }
 
@@ -445,7 +479,7 @@ public:
 
 private:
   ExecutionPolicy m_execution_policy = default_execution_policy;
-  lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
+  SourceLanguage m_language;
   std::string m_prefix;
   bool m_coerce_to_id = false;
   bool m_unwind_on_error = true;
@@ -475,6 +509,11 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  ///< During expression evaluation, any SymbolContext in this list will be
+  ///< used for symbol/function lookup before any other context (except for
+  ///< the module corresponding to the current frame).
+  SymbolContextList m_preferred_lookup_contexts;
 };
 
 // Target
@@ -499,9 +538,9 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -1068,9 +1107,11 @@ public:
   // section, then read from the file cache
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
-  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
-                    Status &error, bool force_live_memory = false,
-                    lldb::addr_t *load_addr_ptr = nullptr);
+  //
+  // The method is virtual for mocking in the unit tests.
+  virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                            Status &error, bool force_live_memory = false,
+                            lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1124,9 +1165,13 @@ public:
                              Address &pointer_addr,
                              bool force_live_memory = false);
 
-  SectionLoadList &GetSectionLoadList() {
-    return m_section_load_history.GetCurrentSectionLoadList();
-  }
+  bool HasLoadedSections();
+
+  lldb::addr_t GetSectionLoadAddress(const lldb::SectionSP &section_sp);
+
+  void ClearSectionLoadList();
+
+  void DumpSectionLoadList(Stream &s);
 
   static Target *GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
                                        const SymbolContext *sc_ptr);
@@ -1160,7 +1205,7 @@ public:
 
   UserExpression *
   GetUserExpressionForLanguage(llvm::StringRef expr, llvm::StringRef prefix,
-                               lldb::LanguageType language,
+                               SourceLanguage language,
                                Expression::ResultType desired_type,
                                const EvaluateExpressionOptions &options,
                                ValueObject *ctx_obj, Status &error);
@@ -1191,7 +1236,8 @@ public:
   bool ResolveFileAddress(lldb::addr_t load_addr, Address &so_addr);
 
   bool ResolveLoadAddress(lldb::addr_t load_addr, Address &so_addr,
-                          uint32_t stop_id = SectionLoadHistory::eStopIDNow);
+                          uint32_t stop_id = SectionLoadHistory::eStopIDNow,
+                          bool allow_section_end = false);
 
   bool SetSectionLoadAddress(const lldb::SectionSP &section,
                              lldb::addr_t load_addr,
@@ -1207,6 +1253,10 @@ public:
                           lldb::addr_t load_addr);
 
   void ClearAllLoadedSections();
+
+  lldb_private::SummaryStatisticsSP GetSummaryStatisticsSPForProviderName(
+      lldb_private::TypeSummaryImpl &summary_provider);
+  lldb_private::SummaryStatisticsCache &GetSummaryStatisticsCache();
 
   /// Set the \a Trace object containing processor trace information of this
   /// target.
@@ -1281,6 +1331,7 @@ public:
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
+      NoPreference,
       AlreadyContinued
     };
 
@@ -1371,8 +1422,7 @@ public:
     /// This holds the dictionary of keys & values that can be used to
     /// parametrize any given callback's behavior.
     StructuredDataImpl m_extra_args;
-    /// This holds the python callback object.
-    StructuredData::GenericSP m_implementation_sp;
+    lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
     /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     /// and fill it with commands, and SetSpecifier to set the specifier shared
@@ -1541,6 +1591,7 @@ protected:
   std::string m_label;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
+  SummaryStatisticsCache m_summary_statistics_cache;
   SectionLoadHistory m_section_load_history;
   BreakpointList m_breakpoint_list;
   BreakpointList m_internal_breakpoint_list;
@@ -1604,9 +1655,11 @@ public:
   llvm::json::Value
   ReportStatistics(const lldb_private::StatisticsOptions &options);
 
+  void ResetStatistics();
+
   TargetStats &GetStatistics() { return m_stats; }
 
-private:
+protected:
   /// Construct with optional file and arch.
   ///
   /// This member is private. Clients must use
@@ -1633,6 +1686,10 @@ private:
 
   Target(const Target &) = delete;
   const Target &operator=(const Target &) = delete;
+
+  SectionLoadList &GetSectionLoadList() {
+    return m_section_load_history.GetCurrentSectionLoadList();
+  }
 };
 
 } // namespace lldb_private

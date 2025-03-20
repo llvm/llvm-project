@@ -233,7 +233,7 @@ public:
         if (!tooling::applyAllReplacements(Replacements.get(), Rewrite)) {
           llvm::errs() << "Can't apply replacements for file " << File << "\n";
         }
-        AnyNotWritten &= Rewrite.overwriteChangedFiles();
+        AnyNotWritten |= Rewrite.overwriteChangedFiles();
       }
 
       if (AnyNotWritten) {
@@ -336,6 +336,7 @@ private:
   std::unique_ptr<ClangTidyProfiling> Profiling;
   std::unique_ptr<ast_matchers::MatchFinder> Finder;
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
+  void anchor() override {};
 };
 
 } // namespace
@@ -373,11 +374,11 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
 
   const auto &RegisteredCheckers =
       AnalyzerOptions::getRegisteredCheckers(IncludeExperimental);
-  bool AnalyzerChecksEnabled = false;
-  for (StringRef CheckName : RegisteredCheckers) {
-    std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
-    AnalyzerChecksEnabled |= Context.isCheckEnabled(ClangTidyCheckName);
-  }
+  const bool AnalyzerChecksEnabled =
+      llvm::any_of(RegisteredCheckers, [&](StringRef CheckName) -> bool {
+        return Context.isCheckEnabled(
+            (AnalyzerCheckNamePrefix + CheckName).str());
+      });
 
   if (!AnalyzerChecksEnabled)
     return List;
@@ -419,7 +420,7 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecksForLanguage(&Context);
 
-  ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
+  ast_matchers::MatchFinderOptions FinderOptions;
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
@@ -427,6 +428,10 @@ ClangTidyASTConsumerFactory::createASTConsumer(
         Context.getProfileStorageParams());
     FinderOptions.CheckProfiling.emplace(Profiling->Records);
   }
+
+  // Avoid processing system headers, unless the user explicitly requests it
+  if (!Context.getOptions().SystemHeaders.value_or(false))
+    FinderOptions.SkipSystemHeaders = true;
 
   std::unique_ptr<ast_matchers::MatchFinder> Finder(
       new ast_matchers::MatchFinder(std::move(FinderOptions)));
@@ -458,11 +463,10 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   if (!AnalyzerOptions.CheckersAndPackages.empty()) {
     setStaticAnalyzerCheckerOpts(Context.getOptions(), AnalyzerOptions);
     AnalyzerOptions.AnalysisDiagOpt = PD_NONE;
-    AnalyzerOptions.eagerlyAssumeBinOpBifurcation = true;
     std::unique_ptr<ento::AnalysisASTConsumer> AnalysisConsumer =
         ento::CreateAnalysisConsumer(Compiler);
     AnalysisConsumer->AddDiagnosticConsumer(
-        new AnalyzerDiagnosticConsumer(Context));
+        std::make_unique<AnalyzerDiagnosticConsumer>(Context));
     Consumers.push_back(std::move(AnalysisConsumer));
   }
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
@@ -646,9 +650,9 @@ void exportReplacements(const llvm::StringRef MainFilePath,
   YAML << TUD;
 }
 
-NamesAndOptions
+ChecksAndOptions
 getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
-  NamesAndOptions Result;
+  ChecksAndOptions Result;
   ClangTidyOptions Opts;
   Opts.Checks = "*";
   clang::tidy::ClangTidyContext Context(
@@ -661,7 +665,7 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
   }
 
   for (const auto &Factory : Factories)
-    Result.Names.insert(Factory.getKey());
+    Result.Checks.insert(Factory.getKey());
 
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
   SmallString<64> Buffer(AnalyzerCheckNamePrefix);
@@ -670,7 +674,19 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
            AllowEnablingAnalyzerAlphaCheckers)) {
     Buffer.truncate(DefSize);
     Buffer.append(AnalyzerCheck);
-    Result.Names.insert(Buffer);
+    Result.Checks.insert(Buffer);
+  }
+  for (std::string OptionName : {
+#define GET_CHECKER_OPTIONS
+#define CHECKER_OPTION(TYPE, CHECKER, OPTION_NAME, DESCRIPTION, DEFAULT,       \
+                       RELEASE, HIDDEN)                                        \
+  Twine(AnalyzerCheckNamePrefix).concat(CHECKER ":" OPTION_NAME).str(),
+
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER_OPTION
+#undef GET_CHECKER_OPTIONS
+       }) {
+    Result.Options.insert(OptionName);
   }
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 

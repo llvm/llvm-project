@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs < %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
 ; Test that the aggressive anti-dependence breaker does not attempt

@@ -2,6 +2,7 @@ add_subdirectory(Utils)
 
 add_mlir_library(MLIRTransforms
   Canonicalizer.cpp
+  CompositePass.cpp
   ControlFlowSink.cpp
   CSE.cpp
   GenerateRuntimeVerification.cpp
@@ -28,7 +29,6 @@ add_mlir_library(MLIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
-  MLIRCopyOpInterface
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
   MLIRMemorySlotInterfaces
@@ -37,4 +37,5 @@ add_mlir_library(MLIRTransforms
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTransformUtils
+  MLIRUBDialect
   )

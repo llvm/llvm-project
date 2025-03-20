@@ -12,6 +12,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceMgrAdapter.h"
 #include "clang/Basic/Version.h"
@@ -55,7 +56,7 @@ APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
   for (const auto &Entry : Readers) {
-    if (auto Reader = Entry.second.dyn_cast<APINotesReader *>())
+    if (auto Reader = dyn_cast_if_present<APINotesReader *>(Entry.second))
       delete Reader;
   }
 
@@ -221,6 +222,7 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
                                           ArrayRef<std::string> SearchPaths) {
   FileManager &FM = SM.getFileManager();
   auto ModuleName = M->getTopLevelModuleName();
+  auto ExportedModuleName = M->getTopLevelModule()->ExportAsModule;
   llvm::SmallVector<FileEntryRef, 2> APINotes;
 
   // First, look relative to the module itself.
@@ -233,6 +235,10 @@ APINotesManager::getCurrentModuleAPINotes(Module *M, bool LookInModule,
 
         APINotes.push_back(*File);
       }
+      // If module FooCore is re-exported through module Foo, try Foo.apinotes.
+      if (!ExportedModuleName.empty())
+        if (auto File = findAPINotesFile(Dir, ExportedModuleName, WantPublic))
+          APINotes.push_back(*File);
     };
 
     if (M->IsFramework) {
@@ -368,14 +374,14 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       ++NumDirectoryCacheHits;
 
       // We've been redirected to another directory for answers. Follow it.
-      if (Known->second && Known->second.is<DirectoryEntryRef>()) {
+      if (Known->second && isa<DirectoryEntryRef>(Known->second)) {
         DirsVisited.insert(*Dir);
-        Dir = Known->second.get<DirectoryEntryRef>();
+        Dir = cast<DirectoryEntryRef>(Known->second);
         continue;
       }
 
       // We have the answer.
-      if (auto Reader = Known->second.dyn_cast<APINotesReader *>())
+      if (auto Reader = dyn_cast_if_present<APINotesReader *>(Known->second))
         Results.push_back(Reader);
       break;
     }

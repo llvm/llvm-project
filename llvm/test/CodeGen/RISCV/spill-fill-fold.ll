@@ -290,8 +290,8 @@ define double @spill_i64_to_double(i64 %a) nounwind {
 ; RV32ID-NEXT:    fsd fs9, 40(sp) # 8-byte Folded Spill
 ; RV32ID-NEXT:    fsd fs10, 32(sp) # 8-byte Folded Spill
 ; RV32ID-NEXT:    fsd fs11, 24(sp) # 8-byte Folded Spill
-; RV32ID-NEXT:    sw a1, 20(sp)
 ; RV32ID-NEXT:    sw a0, 16(sp)
+; RV32ID-NEXT:    sw a1, 20(sp)
 ; RV32ID-NEXT:    fld fa5, 16(sp)
 ; RV32ID-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
 ; RV32ID-NEXT:    #APP
@@ -804,13 +804,15 @@ define double @fill_i64_to_double(i64 %a) nounwind {
 ; RV32ID-NEXT:    fsd fs9, 40(sp) # 8-byte Folded Spill
 ; RV32ID-NEXT:    fsd fs10, 32(sp) # 8-byte Folded Spill
 ; RV32ID-NEXT:    fsd fs11, 24(sp) # 8-byte Folded Spill
-; RV32ID-NEXT:    sw a1, 20(sp)
-; RV32ID-NEXT:    sw a0, 16(sp)
-; RV32ID-NEXT:    fld fa5, 16(sp)
-; RV32ID-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
+; RV32ID-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
 ; RV32ID-NEXT:    #APP
 ; RV32ID-NEXT:    #NO_APP
-; RV32ID-NEXT:    fld fa0, 8(sp) # 8-byte Folded Reload
+; RV32ID-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    sw a0, 16(sp)
+; RV32ID-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    sw a0, 20(sp)
+; RV32ID-NEXT:    fld fa0, 16(sp)
 ; RV32ID-NEXT:    lw ra, 172(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    lw s0, 168(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    lw s1, 164(sp) # 4-byte Folded Reload

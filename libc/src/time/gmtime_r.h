@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_SRC_TIME_GMTIME_R_H
 #define LLVM_LIBC_SRC_TIME_GMTIME_R_H
 
-#include <time.h>
+#include "hdr/types/struct_tm.h"
+#include "hdr/types/time_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct tm *gmtime_r(const time_t *timer, struct tm *result);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_TIME_GMTIME_R_H

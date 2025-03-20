@@ -64,6 +64,23 @@ FunctionPass *llvm::createX86FixupVectorConstants() {
   return new X86FixupVectorConstantsPass();
 }
 
+/// Normally, we only allow poison in vector splats. However, as this is part
+/// of the backend, and working with the DAG representation, which currently
+/// only natively represents undef values, we need to accept undefs here.
+static Constant *getSplatValueAllowUndef(const ConstantVector *C) {
+  Constant *Res = nullptr;
+  for (Value *Op : C->operands()) {
+    Constant *OpC = cast<Constant>(Op);
+    if (isa<UndefValue>(OpC))
+      continue;
+    if (!Res)
+      Res = OpC;
+    else if (Res != OpC)
+      return nullptr;
+  }
+  return Res;
+}
+
 // Attempt to extract the full width of bits data from the constant.
 static std::optional<APInt> extractConstantBits(const Constant *C) {
   unsigned NumBits = C->getType()->getPrimitiveSizeInBits();
@@ -78,7 +95,7 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
     return CFP->getValue().bitcastToAPInt();
 
   if (auto *CV = dyn_cast<ConstantVector>(C)) {
-    if (auto *CVSplat = CV->getSplatValue(/*AllowUndefs*/ true)) {
+    if (auto *CVSplat = getSplatValueAllowUndef(CV)) {
       if (std::optional<APInt> Bits = extractConstantBits(CVSplat)) {
         assert((NumBits % Bits->getBitWidth()) == 0 && "Illegal splat");
         return APInt::getSplat(NumBits, *Bits);
@@ -321,6 +338,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   bool HasDQI = ST->hasDQI();
   bool HasBWI = ST->hasBWI();
   bool HasVLX = ST->hasVLX();
+  bool MultiDomain = ST->hasAVX512() || ST->hasNoDomainDelayMov();
 
   struct FixupEntry {
     int Op;
@@ -342,8 +360,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
     if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
-      RegBitWidth =
-          RegBitWidth ? RegBitWidth : C->getType()->getPrimitiveSizeInBits();
+      unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
+      RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
         if (Fixup.Op) {
           // Construct a suitable constant and adjust the MI to use the new
@@ -384,47 +402,107 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   case X86::VMOVAPDrm:
   case X86::VMOVAPSrm:
   case X86::VMOVUPDrm:
-  case X86::VMOVUPSrm:
-    return FixupConstant({{X86::VMOVSSrm, 1, 32, rebuildZeroUpperCst},
-                          {X86::VBROADCASTSSrm, 1, 32, rebuildSplatCst},
-                          {X86::VMOVSDrm, 1, 64, rebuildZeroUpperCst},
-                          {X86::VMOVDDUPrm, 1, 64, rebuildSplatCst}},
-                         128, 1);
+  case X86::VMOVUPSrm: {
+    FixupEntry Fixups[] = {
+        {MultiDomain ? X86::VPMOVSXBQrm : 0, 2, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQrm : 0, 2, 8, rebuildZExtCst},
+        {X86::VMOVSSrm, 1, 32, rebuildZeroUpperCst},
+        {X86::VBROADCASTSSrm, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDrm : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDrm : 0, 4, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQrm : 0, 2, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQrm : 0, 2, 16, rebuildZExtCst},
+        {X86::VMOVSDrm, 1, 64, rebuildZeroUpperCst},
+        {X86::VMOVDDUPrm, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWDrm : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDrm : 0, 4, 16, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXDQrm : 0, 2, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQrm : 0, 2, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 128, 1);
+  }
   case X86::VMOVAPDYrm:
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
-  case X86::VMOVUPSYrm:
-    return FixupConstant({{X86::VBROADCASTSSYrm, 1, 32, rebuildSplatCst},
-                          {X86::VBROADCASTSDYrm, 1, 64, rebuildSplatCst},
-                          {X86::VBROADCASTF128rm, 1, 128, rebuildSplatCst}},
-                         256, 1);
+  case X86::VMOVUPSYrm: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSYrm, 1, 32, rebuildSplatCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVSXBQYrm : 0, 4, 8, rebuildSExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVZXBQYrm : 0, 4, 8, rebuildZExtCst},
+        {X86::VBROADCASTSDYrm, 1, 64, rebuildSplatCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVSXBDYrm : 0, 8, 8, rebuildSExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVZXBDYrm : 0, 8, 8, rebuildZExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVSXWQYrm : 0, 4, 16, rebuildSExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVZXWQYrm : 0, 4, 16, rebuildZExtCst},
+        {X86::VBROADCASTF128rm, 1, 128, rebuildSplatCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVSXWDYrm : 0, 8, 16, rebuildSExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVZXWDYrm : 0, 8, 16, rebuildZExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVSXDQYrm : 0, 4, 32, rebuildSExtCst},
+        {HasAVX2 && MultiDomain ? X86::VPMOVZXDQYrm : 0, 4, 32,
+         rebuildZExtCst}};
+    return FixupConstant(Fixups, 256, 1);
+  }
   case X86::VMOVAPDZ128rm:
   case X86::VMOVAPSZ128rm:
   case X86::VMOVUPDZ128rm:
-  case X86::VMOVUPSZ128rm:
-    return FixupConstant({{X86::VMOVSSZrm, 1, 32, rebuildZeroUpperCst},
-                          {X86::VBROADCASTSSZ128rm, 1, 32, rebuildSplatCst},
-                          {X86::VMOVSDZrm, 1, 64, rebuildZeroUpperCst},
-                          {X86::VMOVDDUPZ128rm, 1, 64, rebuildSplatCst}},
-                         128, 1);
+  case X86::VMOVUPSZ128rm: {
+    FixupEntry Fixups[] = {
+        {MultiDomain ? X86::VPMOVSXBQZ128rm : 0, 2, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZ128rm : 0, 2, 8, rebuildZExtCst},
+        {X86::VMOVSSZrm, 1, 32, rebuildZeroUpperCst},
+        {X86::VBROADCASTSSZ128rm, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZ128rm : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZ128rm : 0, 4, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZ128rm : 0, 2, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZ128rm : 0, 2, 16, rebuildZExtCst},
+        {X86::VMOVSDZrm, 1, 64, rebuildZeroUpperCst},
+        {X86::VMOVDDUPZ128rm, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWDZ128rm : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZ128rm : 0, 4, 16, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXDQZ128rm : 0, 2, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZ128rm : 0, 2, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 128, 1);
+  }
   case X86::VMOVAPDZ256rm:
   case X86::VMOVAPSZ256rm:
   case X86::VMOVUPDZ256rm:
-  case X86::VMOVUPSZ256rm:
-    return FixupConstant(
-        {{X86::VBROADCASTSSZ256rm, 1, 32, rebuildSplatCst},
-         {X86::VBROADCASTSDZ256rm, 1, 64, rebuildSplatCst},
-         {X86::VBROADCASTF32X4Z256rm, 1, 128, rebuildSplatCst}},
-        256, 1);
+  case X86::VMOVUPSZ256rm: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSZ256rm, 1, 32, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBQZ256rm : 0, 4, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZ256rm : 0, 4, 8, rebuildZExtCst},
+        {X86::VBROADCASTSDZ256rm, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZ256rm : 0, 8, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZ256rm : 0, 8, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZ256rm : 0, 4, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZ256rm : 0, 4, 16, rebuildZExtCst},
+        {X86::VBROADCASTF32X4Z256rm, 1, 128, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWDZ256rm : 0, 8, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZ256rm : 0, 8, 16, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXDQZ256rm : 0, 4, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZ256rm : 0, 4, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 256, 1);
+  }
   case X86::VMOVAPDZrm:
   case X86::VMOVAPSZrm:
   case X86::VMOVUPDZrm:
-  case X86::VMOVUPSZrm:
-    return FixupConstant({{X86::VBROADCASTSSZrm, 1, 32, rebuildSplatCst},
-                          {X86::VBROADCASTSDZrm, 1, 64, rebuildSplatCst},
-                          {X86::VBROADCASTF32X4rm, 1, 128, rebuildSplatCst},
-                          {X86::VBROADCASTF64X4rm, 1, 256, rebuildSplatCst}},
-                         512, 1);
+  case X86::VMOVUPSZrm: {
+    FixupEntry Fixups[] = {
+        {X86::VBROADCASTSSZrm, 1, 32, rebuildSplatCst},
+        {X86::VBROADCASTSDZrm, 1, 64, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBQZrm : 0, 8, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBQZrm : 0, 8, 8, rebuildZExtCst},
+        {X86::VBROADCASTF32X4Zrm, 1, 128, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXBDZrm : 0, 16, 8, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXBDZrm : 0, 16, 8, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXWQZrm : 0, 8, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWQZrm : 0, 8, 16, rebuildZExtCst},
+        {X86::VBROADCASTF64X4Zrm, 1, 256, rebuildSplatCst},
+        {MultiDomain ? X86::VPMOVSXWDZrm : 0, 16, 16, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXWDZrm : 0, 16, 16, rebuildZExtCst},
+        {MultiDomain ? X86::VPMOVSXDQZrm : 0, 8, 32, rebuildSExtCst},
+        {MultiDomain ? X86::VPMOVZXDQZrm : 0, 8, 32, rebuildZExtCst}};
+    return FixupConstant(Fixups, 512, 1);
+  }
     /* Integer Loads */
   case X86::MOVDQArm:
   case X86::MOVDQUrm: {
@@ -555,12 +633,12 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
         {X86::VPBROADCASTQZrm, 1, 64, rebuildSplatCst},
         {X86::VPMOVSXBQZrm, 8, 8, rebuildSExtCst},
         {X86::VPMOVZXBQZrm, 8, 8, rebuildZExtCst},
-        {X86::VBROADCASTI32X4rm, 1, 128, rebuildSplatCst},
+        {X86::VBROADCASTI32X4Zrm, 1, 128, rebuildSplatCst},
         {X86::VPMOVSXBDZrm, 16, 8, rebuildSExtCst},
         {X86::VPMOVZXBDZrm, 16, 8, rebuildZExtCst},
         {X86::VPMOVSXWQZrm, 8, 16, rebuildSExtCst},
         {X86::VPMOVZXWQZrm, 8, 16, rebuildZExtCst},
-        {X86::VBROADCASTI64X4rm, 1, 256, rebuildSplatCst},
+        {X86::VBROADCASTI64X4Zrm, 1, 256, rebuildSplatCst},
         {HasBWI ? X86::VPMOVSXBWZrm : 0, 32, 8, rebuildSExtCst},
         {HasBWI ? X86::VPMOVZXBWZrm : 0, 32, 8, rebuildZExtCst},
         {X86::VPMOVSXWDZrm, 16, 16, rebuildSExtCst},
@@ -571,33 +649,17 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   }
   }
 
-  auto ConvertToBroadcastAVX512 = [&](unsigned OpSrc32, unsigned OpSrc64) {
-    unsigned OpBcst32 = 0, OpBcst64 = 0;
-    unsigned OpNoBcst32 = 0, OpNoBcst64 = 0;
-    if (OpSrc32) {
+  auto ConvertToBroadcast = [&](unsigned OpSrc, int BW) {
+    if (OpSrc) {
       if (const X86FoldTableEntry *Mem2Bcst =
-              llvm::lookupBroadcastFoldTableBySize(OpSrc32, 32)) {
-        OpBcst32 = Mem2Bcst->DstOp;
-        OpNoBcst32 = Mem2Bcst->Flags & TB_INDEX_MASK;
+              llvm::lookupBroadcastFoldTableBySize(OpSrc, BW)) {
+        unsigned OpBcst = Mem2Bcst->DstOp;
+        unsigned OpNoBcst = Mem2Bcst->Flags & TB_INDEX_MASK;
+        FixupEntry Fixups[] = {{(int)OpBcst, 1, BW, rebuildSplatCst}};
+        // TODO: Add support for RegBitWidth, but currently rebuildSplatCst
+        // doesn't require it (defaults to Constant::getPrimitiveSizeInBits).
+        return FixupConstant(Fixups, 0, OpNoBcst);
       }
-    }
-    if (OpSrc64) {
-      if (const X86FoldTableEntry *Mem2Bcst =
-              llvm::lookupBroadcastFoldTableBySize(OpSrc64, 64)) {
-        OpBcst64 = Mem2Bcst->DstOp;
-        OpNoBcst64 = Mem2Bcst->Flags & TB_INDEX_MASK;
-      }
-    }
-    assert(((OpBcst32 == 0) || (OpBcst64 == 0) || (OpNoBcst32 == OpNoBcst64)) &&
-           "OperandNo mismatch");
-
-    if (OpBcst32 || OpBcst64) {
-      unsigned OpNo = OpBcst32 == 0 ? OpNoBcst64 : OpNoBcst32;
-      FixupEntry Fixups[] = {{(int)OpBcst32, 32, 32, rebuildSplatCst},
-                             {(int)OpBcst64, 64, 64, rebuildSplatCst}};
-      // TODO: Add support for RegBitWidth, but currently rebuildSplatCst
-      // doesn't require it (defaults to Constant::getPrimitiveSizeInBits).
-      return FixupConstant(Fixups, 0, OpNo);
     }
     return false;
   };
@@ -605,7 +667,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   // Attempt to find a AVX512 mapping from a full width memory-fold instruction
   // to a broadcast-fold instruction variant.
   if ((MI.getDesc().TSFlags & X86II::EncodingMask) == X86II::EVEX)
-    return ConvertToBroadcastAVX512(Opc, Opc);
+    return ConvertToBroadcast(Opc, 32) || ConvertToBroadcast(Opc, 64);
 
   // Reverse the X86InstrInfo::setExecutionDomainCustom EVEX->VEX logic
   // conversion to see if we can convert to a broadcasted (integer) logic op.
@@ -662,7 +724,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       break;
     }
     if (OpSrc32 || OpSrc64)
-      return ConvertToBroadcastAVX512(OpSrc32, OpSrc64);
+      return ConvertToBroadcast(OpSrc32, 32) || ConvertToBroadcast(OpSrc64, 64);
   }
 
   return false;

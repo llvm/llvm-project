@@ -13,9 +13,10 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  edge [fontname=Courier, fontsize=30]
 ; CHECK-NEXT:  compound=true
 ; CHECK-NEXT:  N0 [label =
-; CHECK-NEXT:    "ph:\l" +
-; CHECK-NEXT:    "No successors\l"
+; CHECK-NEXT:    "ir-bb\<for.body.preheader\>:\l" +
+; CHECK-NEXT:    "Successor(s): vector.ph\l"
 ; CHECK-NEXT:  ]
+; CHECK-NEXT:  N0 -> N1 [ label=""]
 ; CHECK-NEXT:  N1 [label =
 ; CHECK-NEXT:    "vector.ph:\l" +
 ; CHECK-NEXT:    "Successor(s): vector loop\l"
@@ -31,7 +32,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr inbounds ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR:%.+]]\> = vector-pointer ir\<%arrayidx\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load vp\<[[VEC_PTR]]\>\l" +
-; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>) (using vector intrinsic)\l" +
+; CHECK-NEXT:    "  WIDEN-INTRINSIC ir\<%call\> = call llvm.sqrt(ir\<%lv\>)\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  vp\<[[VEC_PTR2:%.+]]\> = vector-pointer ir\<%arrayidx2\>\l" +
 ; CHECK-NEXT:    "  WIDEN store vp\<[[VEC_PTR2]]\>, ir\<%call\>\l" +

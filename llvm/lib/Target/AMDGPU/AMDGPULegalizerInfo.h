@@ -108,10 +108,12 @@ public:
   bool legalizeMul(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
+  bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
 
-  bool loadInputValue(Register DstReg, MachineIRBuilder &B,
-                      const ArgDescriptor *Arg,
-                      const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+  void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
+                           const ArgDescriptor *Arg,
+                           const TargetRegisterClass *ArgRC, LLT ArgTy) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
@@ -173,9 +175,6 @@ public:
   bool legalizeRsqClampIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                  MachineIRBuilder &B) const;
 
-  bool legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
-                                   MachineInstr &MI, Intrinsic::ID IID) const;
-
   bool getImplicitArgPtr(Register DstReg, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 
@@ -196,21 +195,27 @@ public:
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg, bool ImageStore = false) const;
-  Register fixStoreSourceType(MachineIRBuilder &B, Register VData,
+  Register fixStoreSourceType(MachineIRBuilder &B, Register VData, LLT MemTy,
                               bool IsFormat) const;
 
-  bool legalizeBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B, bool IsTyped,
-                           bool IsFormat) const;
-  bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, bool IsFormat,
-                          bool IsTyped) const;
+  bool legalizeBufferStore(MachineInstr &MI, LegalizerHelper &Helper,
+                           bool IsTyped, bool IsFormat) const;
+  bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
+                          bool IsFormat, bool IsTyped) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
+  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
+                                        MachineIRBuilder &B) const;
+
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
+
+  bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
+                      Intrinsic::ID IID) const;
+
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
-  bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
 
@@ -226,16 +231,18 @@ public:
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
 
-  bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &B) const;
+  bool legalizeSBufferPrefetch(LegalizerHelper &Helper, MachineInstr &MI) const;
+
+  bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
   bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &B) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
   bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
                        MachineIRBuilder &B) const;
-  bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                  MachineIRBuilder &B) const;
+  bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;

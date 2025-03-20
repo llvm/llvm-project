@@ -6,7 +6,7 @@
 ; RUN: -split-dwarf-file=main.dwo -o main.o
 ; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-inlined-subroutine-gc-sections-range-helper.s \
 ; RUN: -split-dwarf-file=helper.dwo -o helper.o
-; RUN: %clang --target=x86_64-pc-linux -fuse-ld=lld -Wl,-gc-sections -Wl,-q -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: %clang -fuse-ld=lld -Wl,-gc-sections -Wl,-q -gdwarf-5 -gsplit-dwarf=split main.o helper.o -o main.exe
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
 ; RUN: llvm-dwarfdump --debug-addr main.exe > log.txt
 ; RUN: llvm-dwarfdump --debug-rnglists --verbose --show-form main.dwo >> log.txt
@@ -19,8 +19,8 @@
 ; RUN: cat log.txt | FileCheck -check-prefix=BOLT-PRE %s
 ; RUN: cat logBolt.txt | FileCheck -check-prefix=BOLT-MAIN %s
 
-; Tests whether BOLT handles correctly DW_TAG_inlined_subroutine when DW_AT_ranges is 0,
-; and split dwarf is enabled.
+;; Tests whether BOLT handles correctly DW_TAG_inlined_subroutine when DW_AT_ranges is 0,
+;; and split dwarf is enabled.
 
 ; BOLT-PRE: Addrs:
 ; BOLT-PRE: 0x0000000000000000

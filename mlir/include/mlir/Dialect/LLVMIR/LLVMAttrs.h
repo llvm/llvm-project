@@ -60,6 +60,15 @@ public:
   static bool classof(Attribute attr);
 };
 
+/// This class represents a LLVM attribute that describes a debug info variable.
+class DIVariableAttr : public DINodeAttr {
+public:
+  using DINodeAttr::DINodeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
 /// Base class for LLVM attributes participating in the TBAA graph.
 class TBAANodeAttr : public Attribute {
 public:
@@ -80,6 +89,7 @@ public:
 // TODO: this shouldn't be needed after we unify the attribute generation, i.e.
 // --gen-attr-* and --gen-attrdef-*.
 using cconv::CConv;
+using tailcallkind::TailCallKind;
 using linkage::Linkage;
 } // namespace LLVM
 } // namespace mlir

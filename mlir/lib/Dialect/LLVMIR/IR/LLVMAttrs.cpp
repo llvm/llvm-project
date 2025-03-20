@@ -27,8 +27,8 @@ using namespace mlir::LLVM;
 /// Parses DWARF expression arguments with respect to the DWARF operation
 /// opcode. Some DWARF expression operations have a specific number of operands
 /// and may appear in a textual form.
-static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
-                                        SmallVector<uint64_t> &args);
+static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                                      SmallVector<uint64_t> &args);
 
 /// Prints DWARF expression arguments with respect to the specific DWARF
 /// operation. Some operands are printed in their textual form.
@@ -48,7 +48,25 @@ void LLVMDialect::registerAttributes() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
+
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// AliasScopeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute id, AliasScopeDomainAttr domain,
+                       StringAttr description) {
+  (void)domain;
+  (void)description;
+  if (!llvm::isa<StringAttr, DistinctAttr>(id))
+    return emitError()
+           << "id of an alias scope must be a StringAttr or a DistrinctAttr";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -56,12 +74,14 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
-                   DILabelAttr, DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                   DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                   DISubroutineTypeAttr>(attr);
+  return llvm::isa<
+      DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr, DIGenericSubrangeAttr,
+      DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
+      DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+      DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+      DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -69,8 +89,9 @@ bool DINodeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DIScopeAttr::classof(Attribute attr) {
-  return llvm::isa<DICompileUnitAttr, DICompositeTypeAttr, DIFileAttr,
-                   DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(attr);
+  return llvm::isa<DICommonBlockAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                   DIFileAttr, DILocalScopeAttr, DIModuleAttr, DINamespaceAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,12 +104,21 @@ bool DILocalScopeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIVariableAttr
+//===----------------------------------------------------------------------===//
+
+bool DIVariableAttr::classof(Attribute attr) {
+  return llvm::isa<DILocalVariableAttr, DIGlobalVariableAttr>(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // DITypeAttr
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
   return llvm::isa<DINullTypeAttr, DIBasicTypeAttr, DICompositeTypeAttr,
-                   DIDerivedTypeAttr, DISubroutineTypeAttr>(attr);
+                   DIDerivedTypeAttr, DIStringTypeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -132,8 +162,8 @@ DIExpressionAttr DIExpressionAttr::get(MLIRContext *context) {
   return get(context, ArrayRef<DIExpressionElemAttr>({}));
 }
 
-LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
-                                 SmallVector<uint64_t> &args) {
+ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                               SmallVector<uint64_t> &args) {
   auto operandParser = [&]() -> LogicalResult {
     uint64_t operand = 0;
     if (!args.empty() && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
@@ -192,16 +222,74 @@ void printExpressionArg(AsmPrinter &printer, uint64_t opcode,
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::withRecId(DistinctAttr recId) {
-  return DICompositeTypeAttr::get(getContext(), getTag(), recId, getName(),
-                                  getFile(), getLine(), getScope(),
-                                  getBaseType(), getFlags(), getSizeInBits(),
-                                  getAlignInBits(), getElements());
+  return DICompositeTypeAttr::get(
+      getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
+      getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
+      getAlignInBits(), getElements(), getDataLocation(), getRank(),
+      getAllocated(), getAssociated());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
-  return DICompositeTypeAttr::get(recId.getContext(), 0, recId, {}, {}, 0, {},
-                                  {}, DIFlags(), 0, 0, {});
+  return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                                  0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
+                                  {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// DISubprogramAttr
+//===----------------------------------------------------------------------===//
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
+  return DISubprogramAttr::get(getContext(), recId, getIsRecSelf(), getId(),
+                               getCompileUnit(), getScope(), getName(),
+                               getLinkageName(), getFile(), getLine(),
+                               getScopeLine(), getSubprogramFlags(), getType(),
+                               getRetainedNodes(), getAnnotations());
+}
+
+DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
+  return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
+                               {}, {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
+}
+
+//===----------------------------------------------------------------------===//
+// ConstantRangeAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  IntegerType widthType;
+  if (parser.parseLess() || parser.parseType(widthType) ||
+      parser.parseComma()) {
+    return Attribute{};
+  }
+  unsigned bitWidth = widthType.getWidth();
+  APInt lower(bitWidth, 0);
+  APInt upper(bitWidth, 0);
+  if (parser.parseInteger(lower) || parser.parseComma() ||
+      parser.parseInteger(upper) || parser.parseGreater())
+    return Attribute{};
+  // Non-positive numbers may use more bits than `bitWidth`
+  lower = lower.sextOrTrunc(bitWidth);
+  upper = upper.sextOrTrunc(bitWidth);
+  return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
+                                              upper);
+}
+
+void ConstantRangeAttr::print(AsmPrinter &printer) const {
+  printer << "<i" << getLower().getBitWidth() << ", " << getLower() << ", "
+          << getUpper() << ">";
+}
+
+LogicalResult
+ConstantRangeAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                          APInt lower, APInt upper) {
+  if (lower.getBitWidth() != upper.getBitWidth())
+    return emitError()
+           << "expected lower and upper to have matching bitwidths but got "
+           << lower.getBitWidth() << " vs. " << upper.getBitWidth();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -216,12 +304,32 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                    }));
 }
 
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context,
+                               llvm::ArrayRef<StringRef> features) {
+  return Base::getChecked(emitError, context,
+                          llvm::map_to_vector(features, [&](StringRef feature) {
+                            return StringAttr::get(context, feature);
+                          }));
+}
+
 TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                                            StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
   return get(context, features);
+}
+
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context, StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
+  ArrayRef featuresRef(features);
+  return getChecked(emitError, context, featuresRef);
 }
 
 LogicalResult
@@ -257,7 +365,7 @@ std::string TargetFeaturesAttr::getFeaturesString() const {
   llvm::raw_string_ostream ss(featuresString);
   llvm::interleave(
       getFeatures(), ss, [&](auto &feature) { ss << feature.strref(); }, ",");
-  return ss.str();
+  return featuresString;
 }
 
 TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {

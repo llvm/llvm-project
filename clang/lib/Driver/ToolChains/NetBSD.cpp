@@ -311,7 +311,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
@@ -326,7 +326,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       CmdArgs.push_back("-lm");
@@ -563,18 +564,4 @@ void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
-
-  VersionTuple OsVersion = getTriple().getOSVersion();
-  bool UseInitArrayDefault =
-      OsVersion >= VersionTuple(9) || OsVersion.getMajor() == 0 ||
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getArch() == llvm::Triple::aarch64_be ||
-      getTriple().getArch() == llvm::Triple::arm ||
-      getTriple().getArch() == llvm::Triple::armeb ||
-      getTriple().getArch() == llvm::Triple::riscv32 ||
-      getTriple().getArch() == llvm::Triple::riscv64;
-
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array, UseInitArrayDefault))
-    CC1Args.push_back("-fno-use-init-array");
 }

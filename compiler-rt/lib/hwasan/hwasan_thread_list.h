@@ -18,7 +18,7 @@
 // * Start of the shadow memory region is aligned to 2**kShadowBaseAlignment.
 // * All stack ring buffers are located within (2**kShadowBaseAlignment)
 // sized region below and adjacent to the shadow region.
-// * Each ring buffer has a size of (2**N)*4096 where N is in [0, 8), and is
+// * Each ring buffer has a size of (2**N)*4096 where N is in [0, 7), and is
 // aligned to twice its size. The value of N can be different for each buffer.
 //
 // These constrains guarantee that, given an address A of any element of the
@@ -55,7 +55,10 @@ static uptr RingBufferSize() {
   uptr desired_bytes = flags()->stack_history_size * sizeof(uptr);
   // FIXME: increase the limit to 8 once this bug is fixed:
   // https://bugs.llvm.org/show_bug.cgi?id=39030
-  for (int shift = 1; shift < 7; ++shift) {
+  // Note that we *cannot* do that on Android, as the runtime will indefinitely
+  // have to support code that is compiled with ashr, which only works with
+  // shifts up to 6.
+  for (int shift = 0; shift < 7; ++shift) {
     uptr size = 4096 * (1ULL << shift);
     if (size >= desired_bytes)
       return size;

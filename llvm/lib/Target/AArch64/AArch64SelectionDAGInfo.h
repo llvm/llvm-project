@@ -19,10 +19,14 @@ namespace llvm {
 
 class AArch64SelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
-  SDValue EmitMOPS(AArch64ISD::NodeType SDOpcode, SelectionDAG &DAG,
-                   const SDLoc &DL, SDValue Chain, SDValue Dst,
-                   SDValue SrcOrValue, SDValue Size, Align Alignment,
-                   bool isVolatile, MachinePointerInfo DstPtrInfo,
+  bool isTargetMemoryOpcode(unsigned Opcode) const override;
+
+  bool isTargetStrictFPOpcode(unsigned Opcode) const override;
+
+  SDValue EmitMOPS(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
+                   SDValue Chain, SDValue Dst, SDValue SrcOrValue, SDValue Size,
+                   Align Alignment, bool isVolatile,
+                   MachinePointerInfo DstPtrInfo,
                    MachinePointerInfo SrcPtrInfo) const;
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
@@ -47,6 +51,11 @@ public:
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   MachinePointerInfo DstPtrInfo,
                                   bool ZeroData) const override;
+
+  SDValue EmitStreamingCompatibleMemLibCall(SelectionDAG &DAG, const SDLoc &DL,
+                                            SDValue Chain, SDValue Dst,
+                                            SDValue Src, SDValue Size,
+                                            RTLIB::Libcall LC) const;
 };
 }
 

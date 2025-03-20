@@ -10,9 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
+#include "llvm/Support/Allocator.h"
 
 #if defined(LLVM_USE_RW_MUTEX_IMPL)
 using namespace llvm;
@@ -26,8 +27,10 @@ RWMutexImpl::~RWMutexImpl() = default;
 
 bool RWMutexImpl::lock_shared() { return true; }
 bool RWMutexImpl::unlock_shared() { return true; }
+bool RWMutexImpl::try_lock_shared() { return true; }
 bool RWMutexImpl::lock() { return true; }
 bool RWMutexImpl::unlock() { return true; }
+bool RWMutexImpl::try_lock() { return true; }
 
 #else
 
@@ -87,6 +90,14 @@ RWMutexImpl::unlock_shared()
   return errorcode == 0;
 }
 
+bool RWMutexImpl::try_lock_shared() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
+  assert(rwlock != nullptr);
+
+  int errorcode = pthread_rwlock_tryrdlock(rwlock);
+  return errorcode == 0;
+}
+
 bool
 RWMutexImpl::lock()
 {
@@ -107,6 +118,14 @@ RWMutexImpl::unlock()
   return errorcode == 0;
 }
 
+bool RWMutexImpl::try_lock() {
+  pthread_rwlock_t *rwlock = static_cast<pthread_rwlock_t *>(data_);
+  assert(rwlock != nullptr);
+
+  int errorcode = pthread_rwlock_trywrlock(rwlock);
+  return errorcode == 0;
+}
+
 #else
 
 RWMutexImpl::RWMutexImpl() : data_(new MutexImpl(false)) { }
@@ -123,12 +142,20 @@ bool RWMutexImpl::unlock_shared() {
   return static_cast<MutexImpl *>(data_)->release();
 }
 
+bool RWMutexImpl::try_lock_shared() {
+  return static_cast<MutexImpl *>(data_)->tryacquire();
+}
+
 bool RWMutexImpl::lock() {
   return static_cast<MutexImpl *>(data_)->acquire();
 }
 
 bool RWMutexImpl::unlock() {
   return static_cast<MutexImpl *>(data_)->release();
+}
+
+bool RWMutexImpl::try_lock() {
+  return static_cast<MutexImpl *>(data_)->tryacquire();
 }
 
 #endif

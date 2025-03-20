@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 #define MLIR_DIALECT_VECTOR_UTILS_VECTORUTILS_H_
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -101,6 +102,29 @@ bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
 std::optional<StaticTileOffsetRange>
 createUnrollIterator(VectorType vType, int64_t targetRank = 1);
 
+/// Returns a functor (int64_t -> Value) which returns a constant vscale
+/// multiple.
+///
+/// Example:
+/// ```c++
+/// auto createVscaleMultiple = makeVscaleConstantBuilder(rewriter, loc);
+/// auto c4Vscale = createVscaleMultiple(4); // 4 * vector.vscale
+/// ```
+inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
+  Value vscale = nullptr;
+  return [loc, vscale, &rewriter](int64_t multiplier) mutable {
+    if (!vscale)
+      vscale = rewriter.create<vector::VectorScaleOp>(loc);
+    return rewriter.create<arith::MulIOp>(
+        loc, vscale, rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
+  };
+}
+
+/// Returns a range over the dims (size and scalability) of a VectorType.
+inline auto getDims(VectorType vType) {
+  return llvm::zip_equal(vType.getShape(), vType.getScalableDims());
+}
+
 /// A wrapper for getMixedSizes for vector.transfer_read and
 /// vector.transfer_write Ops (for source and destination, respectively).
 ///
@@ -112,6 +136,105 @@ SmallVector<OpFoldResult> getMixedSizesXfer(bool hasTensorSemantics,
                                             Operation *xfer,
                                             RewriterBase &rewriter);
 
+/// A pattern for ops that implement `MaskableOpInterface` and that _might_ be
+/// masked (i.e. inside `vector.mask` Op region). In particular:
+///   1. Matches `SourceOp` operation, Op.
+///   2.1. If Op is masked, retrieves the masking Op, maskOp, and updates the
+///     insertion point to avoid inserting new ops into the `vector.mask` Op
+///     region (which only allows one Op).
+///   2.2 If Op is not masked, this step is skipped.
+///   3. Invokes `matchAndRewriteMaskableOp` on Op and optionally maskOp if
+///     found in step 2.1.
+///
+/// This wrapper frees patterns from re-implementing the logic to update the
+/// insertion point when a maskable Op is masked. Such patterns are still
+/// responsible for providing an updated ("rewritten") version of:
+///   a. the source Op when mask _is not_ present,
+///   b. the source Op and the masking Op when mask _is_ present.
+/// To use this pattern, implement `matchAndRewriteMaskableOp`. Note that
+/// the return value will depend on the case above.
+template <class SourceOp>
+struct MaskableOpRewritePattern : OpRewritePattern<SourceOp> {
+  using OpRewritePattern<SourceOp>::OpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(SourceOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    auto maskableOp = dyn_cast<MaskableOpInterface>(sourceOp.getOperation());
+    if (!maskableOp)
+      return failure();
+
+    Operation *rootOp = sourceOp;
+
+    // If this Op is masked, update the insertion point to avoid inserting into
+    // the vector.mask Op region.
+    OpBuilder::InsertionGuard guard(rewriter);
+    MaskingOpInterface maskOp;
+    if (maskableOp.isMasked()) {
+      maskOp = maskableOp.getMaskingOp();
+      rewriter.setInsertionPoint(maskOp);
+      rootOp = maskOp;
+    }
+
+    FailureOr<Value> newOp =
+        matchAndRewriteMaskableOp(sourceOp, maskOp, rewriter);
+    if (failed(newOp))
+      return failure();
+
+    // Rewriting succeeded but there are no values to replace.
+    if (rootOp->getNumResults() == 0) {
+      rewriter.eraseOp(rootOp);
+    } else {
+      assert(*newOp != Value() &&
+             "Cannot replace an op's use with an empty value.");
+      rewriter.replaceOp(rootOp, *newOp);
+    }
+    return success();
+  }
+
+public:
+  // Matches `sourceOp` that can potentially be masked with `maskingOp`. If the
+  // latter is present, returns a replacement for `maskingOp`. Otherwise,
+  // returns a replacement for `sourceOp`.
+  virtual FailureOr<Value>
+  matchAndRewriteMaskableOp(SourceOp sourceOp, MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const = 0;
+};
+
+/// Returns true if the input Vector type can be linearized.
+///
+/// Linearization is meant in the sense of flattening vectors, e.g.:
+///   * vector<NxMxKxi32> -> vector<N*M*Kxi32>
+/// In this sense, Vectors that are either:
+///   * already linearized, or
+///   * contain more than 1 scalable dimensions,
+/// are not linearizable.
+bool isLinearizableVector(VectorType type);
+
+/// Create a TransferReadOp from `source` with static shape `readShape`. If the
+/// vector type for the read is not the same as the type of `source`, then a
+/// mask is created on the read, if use of mask is specified or the bounds on a
+/// dimension are different.
+///
+/// `useInBoundsInsteadOfMasking` if false, the inBoundsVal values are set
+/// properly, based on
+///   the rank dimensions of the source and destination tensors. And that is
+///   what determines if masking is done.
+///
+/// Note that the internal `vector::TransferReadOp` always read at indices zero
+/// for each dimension of the passed in tensor.
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> readShape, Value padValue,
+                             bool useInBoundsInsteadOfMasking);
+
+/// Returns success if `inputVectorSizes` is a valid masking configuraion for
+/// given `shape`, i.e., it meets:
+///   1. The numbers of elements in both array are equal.
+///   2. `inputVectorSizes` does not have dynamic dimensions.
+///   3. All the values in `inputVectorSizes` are greater than or equal to
+///      static sizes in `shape`.
+LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                                       ArrayRef<int64_t> inputVectorSizes);
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

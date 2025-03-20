@@ -336,9 +336,22 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
 
   if (isReachedBefore(&I, &InsertPoint, &DT, PDT))
     for (const Use &U : I.uses())
-      if (auto *UserInst = dyn_cast<Instruction>(U.getUser()))
-        if (UserInst != &InsertPoint && !DT.dominates(&InsertPoint, U))
+      if (auto *UserInst = dyn_cast<Instruction>(U.getUser())) {
+        // If InsertPoint is in a BB that comes after I, then we cannot move if
+        // I is used in the terminator of the current BB.
+        if (I.getParent() == InsertPoint.getParent() &&
+            UserInst == I.getParent()->getTerminator())
           return false;
+        if (UserInst != &InsertPoint && !DT.dominates(&InsertPoint, U)) {
+          // If UserInst is an instruction that appears later in the same BB as
+          // I, then it is okay to move since I will still be available when
+          // UserInst is executed.
+          if (CheckForEntireBlock && I.getParent() == UserInst->getParent() &&
+              DT.dominates(&I, UserInst))
+            continue;
+          return false;
+        }
+      }
   if (isReachedBefore(&InsertPoint, &I, &DT, PDT))
     for (const Value *Op : I.operands())
       if (auto *OpInst = dyn_cast<Instruction>(Op)) {
@@ -385,7 +398,7 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   // Check if I has any output/flow/anti dependences with instructions from \p
   // StartInst to \p EndInst.
   if (llvm::any_of(InstsToCheck, [&DI, &I](Instruction *CurInst) {
-        auto DepResult = DI->depends(&I, CurInst, true);
+        auto DepResult = DI->depends(&I, CurInst);
         if (DepResult && (DepResult->isOutput() || DepResult->isFlow() ||
                           DepResult->isAnti()))
           return true;
@@ -414,7 +427,7 @@ void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                           DependenceInfo &DI) {
   for (Instruction &I :
        llvm::make_early_inc_range(llvm::drop_begin(llvm::reverse(FromBB)))) {
-    Instruction *MovePos = ToBB.getFirstNonPHIOrDbg();
+    BasicBlock::iterator MovePos = ToBB.getFirstNonPHIOrDbg();
 
     if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
       I.moveBeforePreserving(MovePos);
@@ -429,7 +442,7 @@ void llvm::moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
   while (FromBB.size() > 1) {
     Instruction &I = FromBB.front();
     if (isSafeToMoveBefore(I, *MovePos, DT, &PDT, &DI))
-      I.moveBeforePreserving(MovePos);
+      I.moveBeforePreserving(MovePos->getIterator());
   }
 }
 

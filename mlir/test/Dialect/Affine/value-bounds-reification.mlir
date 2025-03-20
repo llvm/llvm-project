@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args" \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{reify-to-func-args}))' \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
-// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args use-arith-ops" \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{reify-to-func-args use-arith-ops}))' \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s --check-prefix=CHECK-ARITH
 
 // CHECK-LABEL: func @reify_through_chain(
@@ -47,7 +47,7 @@ func.func @reify_slice_bound(%t: tensor<?x?xi32>, %idx: index, %ub: index, %f: f
     %bound = "test.reify_bound"(%filled) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
     "test.some_use"(%bound) : (index) -> ()
 
-    %bound_const = "test.reify_constant_bound"(%filled) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
+    %bound_const = "test.reify_bound"(%filled) {dim = 1, type = "UB", constant} : (tensor<1x?xi32>) -> (index)
     "test.some_use"(%bound_const) : (index) -> ()
   }
   return
@@ -93,7 +93,7 @@ func.func @reify_slice_bound2(%lb0: index, %ub0: index, %step0: index,
 
     // CHECK: %[[c129:.*]] = arith.constant 129 : index
     // CHECK: "test.some_use"(%[[c129]])
-    %lb1_ub_const = "test.reify_constant_bound"(%lb1) {type = "UB"} : (index) -> (index)
+    %lb1_ub_const = "test.reify_bound"(%lb1) {type = "UB", constant} : (index) -> (index)
     "test.some_use"(%lb1_ub_const) : (index) -> ()
 
     scf.for %iv1 = %lb1 to %ub1 step %c32 {
@@ -116,7 +116,7 @@ func.func @reify_slice_bound2(%lb0: index, %ub0: index, %step0: index,
 
         // CHECK: %[[c32:.*]] = arith.constant 32 : index
         // CHECK: "test.some_use"(%[[c32]])
-        %matmul_ub_const = "test.reify_constant_bound"(%matmul) {dim = 1, type = "UB"} : (tensor<1x?xi32>) -> (index)
+        %matmul_ub_const = "test.reify_bound"(%matmul) {dim = 1, type = "UB", constant} : (tensor<1x?xi32>) -> (index)
         "test.some_use"(%matmul_ub_const) : (index) -> ()
       }
     }

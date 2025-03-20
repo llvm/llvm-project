@@ -28,9 +28,9 @@
 /// polymorphism as outlined in the "Value Semantics and Concept-based
 /// Polymorphism" talk (or its abbreviated sibling "Inheritance Is The Base
 /// Class of Evil") by Sean Parent:
-/// * http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations
+/// * https://sean-parent.stlab.cc/papers-and-presentations
 /// * http://www.youtube.com/watch?v=_BpMYeUFXv8
-/// * http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil
+/// * https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil
 ///
 //===----------------------------------------------------------------------===//
 
@@ -39,16 +39,10 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManagerInternal.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
@@ -60,26 +54,10 @@
 #include <utility>
 #include <vector>
 
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace llvm {
 
-// RemoveDIs: Provide facilities for converting debug-info from one form to
-// another, which are no-ops for everything but modules.
-template <class IRUnitT> inline bool shouldConvertDbgInfo(IRUnitT &IR) {
-  return false;
-}
-template <> inline bool shouldConvertDbgInfo(Module &IR) {
-  return !IR.IsNewDbgInfoFormat && UseNewDbgInfoFormat;
-}
-template <class IRUnitT> inline void doConvertDbgInfoToNew(IRUnitT &IR) {}
-template <> inline void doConvertDbgInfoToNew(Module &IR) {
-  IR.convertToNewDbgValues();
-}
-template <class IRUnitT> inline void doConvertDebugInfoToOld(IRUnitT &IR) {}
-template <> inline void doConvertDebugInfoToOld(Module &IR) {
-  IR.convertFromNewDbgValues();
-}
+class Function;
+class Module;
 
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -165,12 +143,6 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 
 } // namespace detail
 
-// Forward declare the pass instrumentation analysis explicitly queried in
-// generic PassManager code.
-// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
-// header.
-class PassInstrumentationAnalysis;
-
 /// Manages a sequence of passes over a particular unit of IR.
 ///
 /// A pass manager contains a sequence of passes to run over a particular unit
@@ -216,61 +188,11 @@ public:
   /// Run all of the passes in this manager over the given unit of IR.
   /// ExtraArgs are passed to each pass.
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
-                        ExtraArgTs... ExtraArgs) {
-    PreservedAnalyses PA = PreservedAnalyses::all();
-
-    // Request PassInstrumentation from analysis manager, will use it to run
-    // instrumenting callbacks for the passes later.
-    // Here we use std::tuple wrapper over getResult which helps to extract
-    // AnalysisManager's arguments out of the whole ExtraArgs set.
-    PassInstrumentation PI =
-        detail::getAnalysisResult<PassInstrumentationAnalysis>(
-            AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
-
-    // RemoveDIs: if requested, convert debug-info to DbgRecord representation
-    // for duration of these passes.
-    bool ShouldConvertDbgInfo = shouldConvertDbgInfo(IR);
-    if (ShouldConvertDbgInfo)
-      doConvertDbgInfoToNew(IR);
-
-    for (auto &Pass : Passes) {
-      // Check the PassInstrumentation's BeforePass callbacks before running the
-      // pass, skip its execution completely if asked to (callback returns
-      // false).
-      if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
-        continue;
-
-      PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
-
-      // Update the analysis manager as each pass runs and potentially
-      // invalidates analyses.
-      AM.invalidate(IR, PassPA);
-
-      // Call onto PassInstrumentation's AfterPass callbacks immediately after
-      // running the pass.
-      PI.runAfterPass<IRUnitT>(*Pass, IR, PassPA);
-
-      // Finally, intersect the preserved analyses to compute the aggregate
-      // preserved set for this pass manager.
-      PA.intersect(std::move(PassPA));
-    }
-
-    if (ShouldConvertDbgInfo)
-      doConvertDebugInfoToOld(IR);
-
-    // Invalidation was handled after each pass in the above loop for the
-    // current unit of IR. Therefore, the remaining analysis results in the
-    // AnalysisManager are preserved. We mark this with a set so that we don't
-    // need to inspect each one individually.
-    PA.preserveSet<AllAnalysesOn<IRUnitT>>();
-
-    return PA;
-  }
+                        ExtraArgTs... ExtraArgs);
 
   template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<!std::is_same<PassT, PassManager>::value>
-      addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<!std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
     using PassModelT =
         detail::PassModel<IRUnitT, PassT, AnalysisManagerT, ExtraArgTs...>;
     // Do not use make_unique or emplace_back, they cause too many template
@@ -280,14 +202,13 @@ public:
   }
 
   /// When adding a pass manager pass that has the same type as this pass
-  /// manager, simply move the passes over. This is because we don't have use
-  /// cases rely on executing nested pass managers. Doing this could reduce
-  /// implementation complexity and avoid potential invalidation issues that may
-  /// happen with nested pass managers of the same type.
+  /// manager, simply move the passes over. This is because we don't have
+  /// use cases rely on executing nested pass managers. Doing this could
+  /// reduce implementation complexity and avoid potential invalidation
+  /// issues that may happen with nested pass managers of the same type.
   template <typename PassT>
-  LLVM_ATTRIBUTE_MINSIZE
-      std::enable_if_t<std::is_same<PassT, PassManager>::value>
-      addPass(PassT &&Pass) {
+  LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<std::is_same_v<PassT, PassManager>>
+  addPass(PassT &&Pass) {
     for (auto &P : Pass.Passes)
       Passes.push_back(std::move(P));
   }
@@ -304,41 +225,25 @@ protected:
   std::vector<std::unique_ptr<PassConceptT>> Passes;
 };
 
+template <typename IRUnitT>
+void printIRUnitNameForStackTrace(raw_ostream &OS, const IRUnitT &IR);
+
+template <>
+void printIRUnitNameForStackTrace<Module>(raw_ostream &OS, const Module &IR);
+
 extern template class PassManager<Module>;
 
 /// Convenience typedef for a pass manager over modules.
 using ModulePassManager = PassManager<Module>;
 
+template <>
+void printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                            const Function &IR);
+
 extern template class PassManager<Function>;
 
 /// Convenience typedef for a pass manager over functions.
 using FunctionPassManager = PassManager<Function>;
-
-/// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
-/// managers. Goes before AnalysisManager definition to provide its
-/// internals (e.g PassInstrumentationAnalysis::ID) for use there if needed.
-/// FIXME: figure out a way to move PassInstrumentationAnalysis into its own
-/// header.
-class PassInstrumentationAnalysis
-    : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
-  friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
-
-  PassInstrumentationCallbacks *Callbacks;
-
-public:
-  /// PassInstrumentationCallbacks object is shared, owned by something else,
-  /// not this analysis.
-  PassInstrumentationAnalysis(PassInstrumentationCallbacks *Callbacks = nullptr)
-      : Callbacks(Callbacks) {}
-
-  using Result = PassInstrumentation;
-
-  template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
-  Result run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {
-    return PassInstrumentation(Callbacks);
-  }
-};
 
 /// A container for analyses that lazily runs them and caches their
 /// results.
@@ -493,6 +398,11 @@ public:
     AnalysisResultLists.clear();
   }
 
+  /// Returns true if the specified analysis pass is registered.
+  template <typename PassT> bool isPassRegistered() const {
+    return AnalysisPasses.count(PassT::ID());
+  }
+
   /// Get the result of an analysis pass for a given IR unit.
   ///
   /// Runs the analysis if a cached result is not available.
@@ -553,10 +463,9 @@ public:
   /// and this function returns true.
   ///
   /// (Note: Although the return value of this function indicates whether or not
-  /// an analysis was previously registered, there intentionally isn't a way to
-  /// query this directly.  Instead, you should just register all the analyses
-  /// you might want and let this class run them lazily.  This idiom lets us
-  /// minimize the number of times we have to look up analyses in our
+  /// an analysis was previously registered, you should just register all the
+  /// analyses you might want and let this class run them lazily.  This idiom
+  /// lets us minimize the number of times we have to look up analyses in our
   /// hashtable.)
   template <typename PassBuilderT>
   bool registerPass(PassBuilderT &&PassBuilder) {
@@ -1025,58 +934,6 @@ struct InvalidateAllAnalysesPass : PassInfoMixin<InvalidateAllAnalysesPass> {
     return PreservedAnalyses::none();
   }
 };
-
-/// A utility pass template that simply runs another pass multiple times.
-///
-/// This can be useful when debugging or testing passes. It also serves as an
-/// example of how to extend the pass manager in ways beyond composition.
-template <typename PassT>
-class RepeatedPass : public PassInfoMixin<RepeatedPass<PassT>> {
-public:
-  RepeatedPass(int Count, PassT &&P)
-      : Count(Count), P(std::forward<PassT>(P)) {}
-
-  template <typename IRUnitT, typename AnalysisManagerT, typename... Ts>
-  PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM, Ts &&... Args) {
-
-    // Request PassInstrumentation from analysis manager, will use it to run
-    // instrumenting callbacks for the passes later.
-    // Here we use std::tuple wrapper over getResult which helps to extract
-    // AnalysisManager's arguments out of the whole Args set.
-    PassInstrumentation PI =
-        detail::getAnalysisResult<PassInstrumentationAnalysis>(
-            AM, IR, std::tuple<Ts...>(Args...));
-
-    auto PA = PreservedAnalyses::all();
-    for (int i = 0; i < Count; ++i) {
-      // Check the PassInstrumentation's BeforePass callbacks before running the
-      // pass, skip its execution completely if asked to (callback returns
-      // false).
-      if (!PI.runBeforePass<IRUnitT>(P, IR))
-        continue;
-      PreservedAnalyses IterPA = P.run(IR, AM, std::forward<Ts>(Args)...);
-      PA.intersect(IterPA);
-      PI.runAfterPass(P, IR, IterPA);
-    }
-    return PA;
-  }
-
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    OS << "repeat<" << Count << ">(";
-    P.printPipeline(OS, MapClassName2PassName);
-    OS << ')';
-  }
-
-private:
-  int Count;
-  PassT P;
-};
-
-template <typename PassT>
-RepeatedPass<PassT> createRepeatedPass(int Count, PassT &&P) {
-  return RepeatedPass<PassT>(Count, std::forward<PassT>(P));
-}
 
 } // end namespace llvm
 

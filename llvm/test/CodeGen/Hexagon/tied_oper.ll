@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -verify-machineinstrs -disable-hexagon-peephole < %s
+; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs -disable-hexagon-peephole < %s
 ; REQUIRES: asserts
 
 ; This test checks if tied operands are consistent.

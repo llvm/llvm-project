@@ -13,11 +13,11 @@
 ; Function Attrs: convergent norecurse nounwind
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
-; CHECK: @[[KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; CHECK: @G = external global i8
+; CHECK: @kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
-define weak void @__omp_offloading_fd02_c0934fc2_foo_l4(ptr %dyn) #0 {
+define weak ptx_kernel void @__omp_offloading_fd02_c0934fc2_foo_l4(ptr %dyn) #0 {
 ; CHECK: Function Attrs: norecurse nounwind
 ; CHECK-LABEL: @__omp_offloading_fd02_c0934fc2_foo_l4(
 ; CHECK-NEXT:  entry:
@@ -79,12 +79,10 @@ attributes #1 = { convergent nounwind "frame-pointer"="all" "min-legal-vector-wi
 attributes #2 = { convergent }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3, !4, !5, !6}
 !llvm.ident = !{!7}
 
 !0 = !{i32 0, i32 64770, i32 -1064087614, !"foo", i32 4, i32 0}
-!1 = !{ptr @__omp_offloading_fd02_c0934fc2_foo_l4, !"kernel", i32 1}
 !2 = !{i32 1, !"wchar_size", i32 4}
 !3 = !{i32 7, !"openmp", i32 50}
 !4 = !{i32 7, !"openmp-device", i32 50}
@@ -97,11 +95,10 @@ attributes #2 = { convergent }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 -1064087614, !"foo", i32 4, i32 0}
-; CHECK: [[META1:![0-9]+]] = !{ptr @__omp_offloading_fd02_c0934fc2_foo_l4, !"kernel", i32 1}
-; CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META7:![0-9]+]] = !{!"clang version 14.0.0"}
+; CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK: [[META4:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
+; CHECK: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ;.

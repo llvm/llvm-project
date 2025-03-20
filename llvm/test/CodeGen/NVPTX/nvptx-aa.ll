@@ -111,3 +111,40 @@ loop:
 done:
   ret i8 %v2
 }
+
+;; Address space information may be encoded anywhere along the UD chain.
+;; We define a set of tests that:
+;;  1. Perform some number of address space casts on pointer A and B
+;;  2. Store a value to address A
+;;  3. Store a value to address B (that we know does not alias with A)
+
+;; generic->space
+; CHECK-ALIAS-LABEL: Function: test_traversal_gen_space
+; CHECK-ALIAS: NoAlias: i32 addrspace(1)* %global, i32 addrspace(5)* %local
+define void @test_traversal_gen_space(ptr %gen, ptr addrspace(1) %global) {
+  %local = addrspacecast ptr %gen to ptr addrspace(5)
+  store i32 1, ptr addrspace(5) %local, align 8
+  store i32 5, ptr addrspace(1) %global, align 8
+  ret void
+}
+
+;; space->generic
+; CHECK-ALIAS-LABEL: Function: test_traversal_space_gen
+; CHECK-ALIAS: NoAlias: i32* %gen, i32 addrspace(1)* %global
+define void @test_traversal_space_gen(ptr addrspace(5) %local, ptr addrspace(1) %global) {
+  %gen = addrspacecast ptr addrspace(5) %local to ptr
+  store i32 2, ptr %gen, align 8
+  store i32 5, ptr addrspace(1) %global, align 8
+  ret void
+}
+
+;; generic->space->generic
+; CHECK-ALIAS-LABEL: Function: test_traversal_gen_space_gen
+; CHECK-ALIAS: NoAlias: i32* %gen2, i32 addrspace(1)* %global
+define void @test_traversal_gen_space_gen(ptr %gen1, ptr addrspace(1) %global) {
+  %local = addrspacecast ptr %gen1 to ptr addrspace(5)
+  %gen2 = addrspacecast ptr addrspace(5) %local to ptr
+  store i32 3, ptr %gen2, align 8
+  store i32 5, ptr addrspace(1) %global, align 8
+  ret void
+}

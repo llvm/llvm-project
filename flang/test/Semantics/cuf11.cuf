@@ -1,0 +1,36 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+module mod1
+contains
+  attributes(global) subroutine sub1(adev)
+    real :: adev(10)
+    integer :: tid
+    tid = threadIdx%x
+! Use to crash the compiler. Make sure we have the proper semantic error.
+!ERROR: Actual argument for 'i=' has bad type 'REAL(4)'
+    adev(tid + 1) = scale(real(tid), 2.0) 
+  end subroutine sub1
+end module
+
+subroutine sub1()
+  real, device :: adev(10), bdev(10)
+  real :: ahost(10)
+
+!ERROR: More than one reference to a CUDA object on the right hand side of the assigment
+  ahost = adev + bdev
+
+  ahost = adev + adev
+
+end subroutine
+
+logical function compare_h(a,b)
+!ERROR: Derived type 'h' not found
+  type(h) :: a, b
+!ERROR: 'a' is not an object of derived type; it is implicitly typed
+!ERROR: 'b' is not an object of derived type; it is implicitly typed
+  compare_h = (a%h .eq. b%h)
+end
+
+attributes(global) subroutine sub2()
+  if (threadIdx%x == 1) print *, "I'm number one"
+end subroutine

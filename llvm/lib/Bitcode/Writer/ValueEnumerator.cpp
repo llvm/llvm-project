@@ -144,10 +144,10 @@ static OrderMap orderModule(const Module &M) {
           }
         };
 
-        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-          OrderConstantFromMetadata(DPV.getRawLocation());
-          if (DPV.isDbgAssign())
-            OrderConstantFromMetadata(DPV.getRawAddress());
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          OrderConstantFromMetadata(DVR.getRawLocation());
+          if (DVR.isDbgAssign())
+            OrderConstantFromMetadata(DVR.getRawAddress());
         }
 
         for (const Value *V : I.operands()) {
@@ -285,10 +285,10 @@ static UseListOrderStack predictUseListOrder(const Module &M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F) {
       for (const Instruction &I : BB) {
-        for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-          PredictValueOrderFromMetadata(DPV.getRawLocation());
-          if (DPV.isDbgAssign())
-            PredictValueOrderFromMetadata(DPV.getRawAddress());
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          PredictValueOrderFromMetadata(DVR.getRawLocation());
+          if (DVR.isDbgAssign())
+            PredictValueOrderFromMetadata(DVR.getRawAddress());
         }
         for (const Value *Op : I.operands()) {
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
@@ -441,21 +441,21 @@ ValueEnumerator::ValueEnumerator(const Module &M,
         };
 
         for (DbgRecord &DR : I.getDbgRecordRange()) {
-          if (DPLabel *DPL = dyn_cast<DPLabel>(&DR)) {
-            EnumerateMetadata(&F, DPL->getLabel());
-            EnumerateMetadata(&F, &*DPL->getDebugLoc());
+          if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+            EnumerateMetadata(&F, DLR->getLabel());
+            EnumerateMetadata(&F, &*DLR->getDebugLoc());
             continue;
           }
           // Enumerate non-local location metadata.
-          DPValue &DPV = cast<DPValue>(DR);
-          EnumerateNonLocalValuesFromMetadata(DPV.getRawLocation());
-          EnumerateMetadata(&F, DPV.getExpression());
-          EnumerateMetadata(&F, DPV.getVariable());
-          EnumerateMetadata(&F, &*DPV.getDebugLoc());
-          if (DPV.isDbgAssign()) {
-            EnumerateNonLocalValuesFromMetadata(DPV.getRawAddress());
-            EnumerateMetadata(&F, DPV.getAssignID());
-            EnumerateMetadata(&F, DPV.getAddressExpression());
+          DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
+          EnumerateNonLocalValuesFromMetadata(DVR.getRawLocation());
+          EnumerateMetadata(&F, DVR.getExpression());
+          EnumerateMetadata(&F, DVR.getVariable());
+          EnumerateMetadata(&F, &*DVR.getDebugLoc());
+          if (DVR.isDbgAssign()) {
+            EnumerateNonLocalValuesFromMetadata(DVR.getRawAddress());
+            EnumerateMetadata(&F, DVR.getAssignID());
+            EnumerateMetadata(&F, DVR.getAddressExpression());
           }
         }
         for (const Use &Op : I.operands()) {
@@ -620,8 +620,8 @@ void ValueEnumerator::EnumerateNamedMetadata(const Module &M) {
 }
 
 void ValueEnumerator::EnumerateNamedMDNode(const NamedMDNode *MD) {
-  for (unsigned i = 0, e = MD->getNumOperands(); i != e; ++i)
-    EnumerateMetadata(nullptr, MD->getOperand(i));
+  for (const MDNode *N : MD->operands())
+    EnumerateMetadata(nullptr, N);
 }
 
 unsigned ValueEnumerator::getMetadataFunctionID(const Function *F) const {
@@ -931,10 +931,9 @@ void ValueEnumerator::EnumerateValue(const Value *V) {
       // itself.  This makes it more likely that we can avoid forward references
       // in the reader.  We know that there can be no cycles in the constants
       // graph that don't go through a global variable.
-      for (User::const_op_iterator I = C->op_begin(), E = C->op_end();
-           I != E; ++I)
-        if (!isa<BasicBlock>(*I)) // Don't enumerate BB operand to BlockAddress.
-          EnumerateValue(*I);
+      for (const Use &U : C->operands())
+        if (!isa<BasicBlock>(U)) // Don't enumerate BB operand to BlockAddress.
+          EnumerateValue(U);
       if (auto *CE = dyn_cast<ConstantExpr>(C)) {
         if (CE->getOpcode() == Instruction::ShuffleVector)
           EnumerateValue(CE->getShuffleMaskForBitcode());
@@ -1128,12 +1127,14 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
           AddFnLocalMetadata(MD->getMetadata());
       }
       /// RemoveDIs: Add non-instruction function-local metadata uses.
-      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-        assert(DPV.getRawLocation() && "DPValue location unexpectedly null");
-        AddFnLocalMetadata(DPV.getRawLocation());
-        if (DPV.isDbgAssign()) {
-          assert(DPV.getRawAddress() && "DPValue location unexpectedly null");
-          AddFnLocalMetadata(DPV.getRawAddress());
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        assert(DVR.getRawLocation() &&
+               "DbgVariableRecord location unexpectedly null");
+        AddFnLocalMetadata(DVR.getRawLocation());
+        if (DVR.isDbgAssign()) {
+          assert(DVR.getRawAddress() &&
+                 "DbgVariableRecord location unexpectedly null");
+          AddFnLocalMetadata(DVR.getRawAddress());
         }
       }
       if (!I.getType()->isVoidTy())
@@ -1142,12 +1143,12 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   }
 
   // Add all of the function-local metadata.
-  for (unsigned i = 0, e = FnLocalMDVector.size(); i != e; ++i) {
+  for (const LocalAsMetadata *Local : FnLocalMDVector) {
     // At this point, every local values have been incorporated, we shouldn't
     // have a metadata operand that references a value that hasn't been seen.
-    assert(ValueMap.count(FnLocalMDVector[i]->getValue()) &&
+    assert(ValueMap.count(Local->getValue()) &&
            "Missing value for metadata operand");
-    EnumerateFunctionLocalMetadata(F, FnLocalMDVector[i]);
+    EnumerateFunctionLocalMetadata(F, Local);
   }
   // DIArgList entries must come after function-local metadata, as it is not
   // possible to forward-reference them.
@@ -1157,8 +1158,8 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
 
 void ValueEnumerator::purgeFunction() {
   /// Remove purged values from the ValueMap.
-  for (unsigned i = NumModuleValues, e = Values.size(); i != e; ++i)
-    ValueMap.erase(Values[i].first);
+  for (const auto &V : llvm::drop_begin(Values, NumModuleValues))
+    ValueMap.erase(V.first);
   for (const Metadata *MD : llvm::drop_begin(MDs, NumModuleMDs))
     MetadataMap.erase(MD);
   for (const BasicBlock *BB : BasicBlocks)
@@ -1189,6 +1190,6 @@ unsigned ValueEnumerator::getGlobalBasicBlockID(const BasicBlock *BB) const {
   return getGlobalBasicBlockID(BB);
 }
 
-uint64_t ValueEnumerator::computeBitsRequiredForTypeIndicies() const {
+uint64_t ValueEnumerator::computeBitsRequiredForTypeIndices() const {
   return Log2_32_Ceil(getTypes().size() + 1);
 }

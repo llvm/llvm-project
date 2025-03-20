@@ -13,6 +13,7 @@
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -88,6 +89,8 @@ struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   }
 };
 
+static SmallVector<const char *> RuntimeLibcallSymbols;
+
 // Initialize the configured targets if they have not been initialized.
 static void lto_initialize() {
   if (!initialized) {
@@ -108,6 +111,7 @@ static void lto_initialize() {
     LTOContext = &Context;
     LTOContext->setDiagnosticHandler(
         std::make_unique<LTOToolDiagnosticHandler>(), true);
+    RuntimeLibcallSymbols = lto::LTO::getRuntimeLibcallSymbols(Triple());
     initialized = true;
   }
 }
@@ -298,11 +302,11 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
 void lto_module_dispose(lto_module_t mod) { delete unwrap(mod); }
 
 const char* lto_module_get_target_triple(lto_module_t mod) {
-  return unwrap(mod)->getTargetTriple().c_str();
+  return unwrap(mod)->getTargetTriple().str().c_str();
 }
 
 void lto_module_set_target_triple(lto_module_t mod, const char *triple) {
-  return unwrap(mod)->setTargetTriple(StringRef(triple));
+  return unwrap(mod)->setTargetTriple(Triple(StringRef(triple)));
 }
 
 unsigned int lto_module_get_num_symbols(lto_module_t mod) {
@@ -691,7 +695,6 @@ extern const char *lto_input_get_dependent_library(lto_input_t input,
 }
 
 extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
-  auto symbols = lto::LTO::getRuntimeLibcallSymbols();
-  *size = symbols.size();
-  return symbols.data();
+  *size = RuntimeLibcallSymbols.size();
+  return RuntimeLibcallSymbols.data();
 }

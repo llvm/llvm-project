@@ -1,6 +1,6 @@
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_subgroup_rotate %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-extensions=SPV_KHR_subgroup_rotate %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_subgroup_rotate %s -o - | FileCheck %s
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_subgroup_rotate %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: OpGroupNonUniformRotateKHR instruction requires the following SPIR-V extension: SPV_KHR_subgroup_rotate
 
@@ -17,7 +17,7 @@
 ; CHECK-DAG: %[[ScopeSubgroup:.*]] = OpConstant %[[TyInt32]] 3
 ; CHECK-DAG: %[[ConstInt2:.*]] = OpConstant %[[TyInt32]] 2
 ; CHECK-DAG: %[[ConstInt4:.*]] = OpConstant %[[TyInt32]] 4
-		
+
 target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
 target triple = "spir"
 

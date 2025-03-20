@@ -2,6 +2,12 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify=expected,cxx98-14 -std=gnu++11 %s
 // RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify=expected,cxx98-14 -std=gnu++14 %s
 // RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify -std=gnu++17 %s
+
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify=expected,cxx98-14 -std=gnu++11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify=expected,cxx98-14 -std=gnu++14 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -Wunused-variable -Wunused-label -Wno-c++1y-extensions -verify -std=gnu++17 %s -fexperimental-new-constant-interpreter
+
 template<typename T> void f() {
   T t;
   t = 17;

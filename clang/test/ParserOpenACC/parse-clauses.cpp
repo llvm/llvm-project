@@ -2,31 +2,43 @@
 
 template<unsigned I, typename T>
 void templ() {
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
 #pragma acc loop collapse(I)
-  for(;;){}
+  for(int i = 0; i < 5;++i)
+    for(int j = 0; j < 5; ++j)
+      for(int k = 0; k < 5; ++k)
+        for(int l = 0; l < 5; ++l)
+          for(int m = 0; m < 5; ++m)
+            for(int n = 0; n < 5; ++n)
+              for(int o = 0; o < 5; ++o);
 
-  // expected-warning@+2{{OpenACC clause 'collapse' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'loop' not yet implemented, pragma ignored}}
 #pragma acc loop collapse(T::value)
-  for(;;){}
+  for(int i = 0;i < 5;++i)
+    for(int j = 0; j < 5; ++j)
+      for(int k = 0; k < 5; ++k)
+        for(int l = 0; l < 5; ++l)
+          for(int m = 0; m < 5;++m)
+            for(;;)
+              for(;;);
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(T::value)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(I)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(T::value)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(I)
   for(;;){}
+
+#pragma acc parallel async
+  for(;;){}
+
+
+  T t;
+#pragma acc exit data delete(t)
+  ;
 }
 
 struct S {
@@ -37,67 +49,15 @@ void use() {
   templ<7, S>();
 }
 
-namespace NS {
-void NSFunc();
+// expected-error@+2{{expected ')'}}
+// expected-note@+1{{to match this '('}}
+#pragma acc routine(use) seq bind(NS::NSFunc)
 
-class RecordTy { // #RecTy
-  static constexpr bool Value = false; // #VAL
-  void priv_mem_function(); // #PrivMemFun
-  public:
-  static constexpr bool ValuePub = true;
-  void mem_function();
-};
-template<typename T>
-class TemplTy{};
-void function();
-}
+  // expected-error@+1{{string literal with user-defined suffix cannot be used here}}
+#pragma acc routine(use) seq bind("unknown udl"_UDL)
 
-
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::NSFunc)
-  // expected-error@+4{{'RecordTy' does not refer to a value}}
-  // expected-note@#RecTy{{declared here}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::RecordTy)
-  // expected-error@+4{{'Value' is a private member of 'NS::RecordTy'}}
-  // expected-note@#VAL{{implicitly declared private here}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::Value)
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::ValuePub)
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::TemplTy<int>)
-  // expected-error@+3{{no member named 'unknown' in namespace 'NS'}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::unknown<int>)
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::function)
-  // expected-error@+4{{'priv_mem_function' is a private member of 'NS::RecordTy'}}
-  // expected-note@#PrivMemFun{{implicitly declared private here}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::priv_mem_function)
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::mem_function)
-
-  // expected-error@+3{{string literal with user-defined suffix cannot be used here}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind("unknown udl"_UDL)
-
-  // expected-warning@+3{{encoding prefix 'u' on an unevaluated string literal has no effect}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(u"16 bits")
-  // expected-warning@+3{{encoding prefix 'U' on an unevaluated string literal has no effect}}
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(use) bind(U"32 bits")
+  // expected-warning@+1{{encoding prefix 'u' on an unevaluated string literal has no effect}}
+#pragma acc routine(use) seq bind(u"16 bits")
+void another_func();
+  // expected-warning@+1{{encoding prefix 'U' on an unevaluated string literal has no effect}}
+#pragma acc routine(another_func) seq bind(U"32 bits")

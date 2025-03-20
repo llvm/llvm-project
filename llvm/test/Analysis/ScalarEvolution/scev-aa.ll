@@ -223,7 +223,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; different loops where neither dominates the other.  This used to crash
 ; because we expected the arguments to an AddExpr to have a strict
 ; dominance order.
-define void @test_no_dom(ptr %data) {
+define void @test_no_dom(ptr %data, i1 %arg) {
 entry:
   load double, ptr %data
   br label %for.body
@@ -231,7 +231,7 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br i1 undef, label %subloop1, label %subloop2
+  br i1 %arg, label %subloop1, label %subloop2
 
 subloop1:
   %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
@@ -266,7 +266,7 @@ declare ptr @get_addr(i32 %i)
 ; In this case, checking %addr1 and %add2 involves two addrecs in two
 ; different loops where neither dominates the other.  This is analogous
 ; to test_no_dom, but involves SCEVUnknown as opposed to SCEVAddRecExpr.
-define void @test_no_dom2(ptr %data) {
+define void @test_no_dom2(ptr %data, i1 %arg) {
 entry:
   load double, ptr %data
   br label %for.body
@@ -274,7 +274,7 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.latch ]
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br i1 undef, label %subloop1, label %subloop2
+  br i1 %arg, label %subloop1, label %subloop2
 
 subloop1:
   %iv1 = phi i32 [0, %for.body], [%iv1.next, %subloop1]
@@ -336,6 +336,32 @@ subloop2:
 
 for.latch:
   br label %for.body
+
+for.end:
+  ret void
+}
+
+; CHECK-LABEL: Function: test_different_pointer_bases_of_inttoptr: 2 pointers, 0 call sites
+; CHECK:   NoAlias:	<16 x i8>* %tmp5, <16 x i8>* %tmp7
+
+define void @test_different_pointer_bases_of_inttoptr() {
+entry:
+  br label %for.body
+
+for.body:
+  %tmp = phi i32 [ %next, %for.body ], [ 1, %entry ]
+  %tmp1 = shl nsw i32 %tmp, 1
+  %tmp2 = add nuw nsw i32 %tmp1, %tmp1
+  %tmp3 = mul nsw i32 %tmp2, 1408
+  %tmp4 = add nsw i32 %tmp3, 1408
+  %tmp5 = getelementptr inbounds i8, ptr inttoptr (i32 1024 to ptr), i32 %tmp1
+  %tmp6 = load <16 x i8>, ptr %tmp5, align 1
+  %tmp7 = getelementptr inbounds i8, ptr inttoptr (i32 4096 to ptr), i32 %tmp4
+  store <16 x i8> %tmp6, ptr %tmp7, align 1
+
+  %next = add i32 %tmp, 2
+  %exitcond = icmp slt i32 %next, 10
+  br i1 %exitcond, label %for.body, label %for.end
 
 for.end:
   ret void

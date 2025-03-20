@@ -1,0 +1,183 @@
+# RUN: llc %s -start-before=livedebugvalues -o - | \
+# RUN:     FileCheck %s --implicit-check-not=prologue_end
+#
+## When picking a "backup" location of the first non-trivial instruction in
+## a function, don't select a location outside of the entry block. We have to
+## give it the function's scope-line, and installing that outside of the entry
+## block is liable to be misleading.
+##
+## Produced from the C below with "clang -O2 -g -mllvm
+## -stop-before=livedebugvalues", then modified to unrotate and shift early
+## insts into the loop block. This means the MIR is meaningless, we only test
+## whether the scope-line will leak into the loop block or not.
+##
+## int glob = 0;
+## int foo(int arg, int sum) {
+##   arg += sum;
+##   while (arg) {
+##     glob--;
+##     arg %= glob;
+##   }
+##   return 0;
+## }
+#
+# CHECK-LABEL: foo:
+# CHECK:        .loc    0 2 0
+# CHECK:        # %bb.0:
+# CHECK-NEXT:   movl    %edi, %edx
+# CHECK-NEXT:   .loc    0 0 0 is_stmt 0
+# CHECK-NEXT:   .Ltmp0:
+# CHECK-NEXT:   .p2align        4
+# CHECK-NEXT:   .LBB0_1:
+# CHECK-LABEL:  addl    %esi, %edx
+
+## Second function in this file: test that we don't crash when having trailing
+## empty blocks and no location for a prologue. Test that a .loc is produced,
+## with an implicit-not check for there being no prologue_end.
+#
+# CHECK-LABEL: f:
+# CHECK: .loc    0 1234 0
+
+ 
+--- |
+  ; ModuleID = 'out2.ll'
+  source_filename = "foo.c"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  @glob = dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
+  
+  define dso_local noundef i32 @foo(i32 noundef %arg, i32 noundef %sum) local_unnamed_addr !dbg !9 {
+  entry:
+    %add = add nsw i32 %sum, %arg
+    br label %while.body.preheader
+  
+  while.body.preheader:                             ; preds = %entry
+    %glob.promoted = load i32, ptr @glob, align 4
+    br label %while.body, !dbg !13
+  
+  while.body:                                       ; preds = %while.body, %while.body.preheader
+    %arg.addr.06 = phi i32 [ %rem, %while.body ], [ %add, %while.body.preheader ]
+    %dec35 = phi i32 [ %dec, %while.body ], [ %glob.promoted, %while.body.preheader ]
+    %dec = add nsw i32 %dec35, -1, !dbg !14
+    %0 = add i32 %dec35, -1, !dbg !16
+    %rem = srem i32 %arg.addr.06, %0, !dbg !16
+    %tobool.not = icmp eq i32 %rem, 0, !dbg !13
+    br i1 %tobool.not, label %while.cond.while.end_crit_edge, label %while.body, !dbg !13
+  
+  while.cond.while.end_crit_edge:                   ; preds = %while.body
+    store i32 %dec, ptr @glob, align 4, !dbg !14
+    br label %while.end, !dbg !13
+  
+  while.end:                                        ; preds = %while.cond.while.end_crit_edge
+    ret i32 0, !dbg !17
+  }
+  
+  define void @f() !dbg !18 {
+  entry:
+    %0 = call ptr @llvm.returnaddress(i32 0)
+    br label %do.body
+
+  do.body:
+    unreachable
+  }
+
+  declare ptr @llvm.returnaddress(i32 immarg)
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!6, !7}
+  !llvm.ident = !{!8}
+  
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "glob", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
+  !3 = !DIFile(filename: "foo.c", directory: "")
+  !4 = !{!0}
+  !5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !6 = !{i32 7, !"Dwarf Version", i32 5}
+  !7 = !{i32 2, !"Debug Info Version", i32 3}
+  !8 = !{!"clang"}
+  !9 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 2, type: !10, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !12)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{!5, !5, !5}
+  !12 = !{}
+  !13 = !DILocation(line: 4, column: 3, scope: !9)
+  !14 = !DILocation(line: 5, column: 9, scope: !15)
+  !15 = distinct !DILexicalBlock(scope: !9, file: !3, line: 4, column: 15)
+  !16 = !DILocation(line: 6, column: 9, scope: !15)
+  !17 = !DILocation(line: 8, column: 3, scope: !9)
+  !18 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 37, type: !10, scopeLine: 1234, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2)
+
+...
+---
+name:            foo
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$edi' }
+  - { reg: '$esi' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    $edx = MOV32rr $edi
+  
+  bb.1.while.body (align 16):
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+    liveins: $ecx, $edx, $esi
+
+    renamable $edx = nsw ADD32rr killed renamable $edx, renamable $esi, implicit-def dead $eflags
+    renamable $ecx = MOV32rm $rip, 1, $noreg, @glob, $noreg :: (dereferenceable load (s32) from @glob)
+    renamable $ecx = DEC32r killed renamable $ecx, implicit-def dead $eflags
+    $eax = MOV32rr killed $edx
+    CDQ implicit-def $eax, implicit-def $edx, implicit $eax
+    IDIV32r renamable $ecx, implicit-def dead $eax, implicit-def $edx, implicit-def dead $eflags, implicit $eax, implicit $edx
+    TEST32rr renamable $edx, renamable $edx, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit killed $eflags
+  
+  bb.2.while.cond.while.end_crit_edge:
+    liveins: $ecx, $esi
+  
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, killed renamable $ecx, debug-location !14 :: (store (s32) into @glob)
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, debug-location !17
+    RET64 $eax, debug-location !17
+
+...
+---
+name:            f
+alignment:       16
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+tracksDebugUserValues: true
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    1
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16 }
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_register $rbp
+
+  bb.1.do.body:
+
+...

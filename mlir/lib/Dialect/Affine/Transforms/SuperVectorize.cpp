@@ -609,9 +609,8 @@ makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
 }
 
 static NestedPattern &vectorTransferPattern() {
-  static auto pattern = affine::matcher::Op([](Operation &op) {
-    return isa<vector::TransferReadOp, vector::TransferWriteOp>(op);
-  });
+  static auto pattern = affine::matcher::Op(
+      llvm::IsaPred<vector::TransferReadOp, vector::TransferWriteOp>);
   return pattern;
 }
 
@@ -1107,6 +1106,10 @@ static bool isUniformDefinition(Value value,
     if (!loop.isDefinedOutsideOfLoop(value))
       return false;
   }
+
+  if (!value.getType().isIntOrIndexOrFloat())
+    return false;
+
   return true;
 }
 

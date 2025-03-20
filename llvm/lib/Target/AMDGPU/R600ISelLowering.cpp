@@ -15,7 +15,6 @@
 #include "AMDGPU.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
-#include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
 #include "R600TargetMachine.h"
@@ -763,8 +762,8 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
                                                    const SDLoc &DL,
                                                    unsigned DwordOffset) const {
   unsigned ByteOffset = DwordOffset * 4;
-  PointerType * PtrType = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                      AMDGPUAS::PARAM_I_ADDRESS);
+  PointerType *PtrType =
+      PointerType::get(*DAG.getContext(), AMDGPUAS::PARAM_I_ADDRESS);
 
   // We shouldn't be using an offset wider than 16-bits for implicit parameters.
   assert(isInt<16>(ByteOffset));
@@ -775,13 +774,11 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
 }
 
 bool R600TargetLowering::isZero(SDValue Op) const {
-  if(ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op)) {
+  if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op))
     return Cst->isZero();
-  } else if(ConstantFPSDNode *CstFP = dyn_cast<ConstantFPSDNode>(Op)){
+  if (ConstantFPSDNode *CstFP = dyn_cast<ConstantFPSDNode>(Op))
     return CstFP->isZero();
-  } else {
-    return false;
-  }
+  return false;
 }
 
 bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
@@ -922,7 +919,7 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
     HWTrue = DAG.getConstantFP(1.0f, DL, CompareVT);
     HWFalse = DAG.getConstantFP(0.0f, DL, CompareVT);
   } else if (CompareVT == MVT::i32) {
-    HWTrue = DAG.getConstant(-1, DL, CompareVT);
+    HWTrue = DAG.getAllOnesConstant(DL, CompareVT);
     HWFalse = DAG.getConstant(0, DL, CompareVT);
   }
   else {
@@ -952,7 +949,7 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   unsigned DestAS = ASC->getDestAddressSpace();
 
   if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
-    return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
+    return DAG.getSignedConstant(TM.getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }
@@ -1187,7 +1184,8 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getMemIntrinsicNode(AMDGPUISD::STORE_MSKOR, DL,
                                      Op->getVTList(), Args, MemVT,
                                      StoreNode->getMemOperand());
-    } else if (Ptr->getOpcode() != AMDGPUISD::DWORDADDR && VT.bitsGE(MVT::i32)) {
+    }
+    if (Ptr->getOpcode() != AMDGPUISD::DWORDADDR && VT.bitsGE(MVT::i32)) {
       // Convert pointer from byte address to dword address.
       Ptr = DAG.getNode(AMDGPUISD::DWORDADDR, DL, PtrVT, DWordAddr);
 
@@ -1348,16 +1346,15 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     if (isa<Constant>(LoadNode->getMemOperand()->getValue()) ||
         isa<ConstantSDNode>(Ptr)) {
       return constBufferLoad(LoadNode, LoadNode->getAddressSpace(), DAG);
-    } else {
-      //TODO: Does this even work?
-      // non-constant ptr can't be folded, keeps it as a v4f32 load
-      Result = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::v4i32,
-          DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
-                      DAG.getConstant(4, DL, MVT::i32)),
-                      DAG.getConstant(LoadNode->getAddressSpace() -
-                                      AMDGPUAS::CONSTANT_BUFFER_0, DL, MVT::i32)
-          );
     }
+    // TODO: Does this even work?
+    //  non-constant ptr can't be folded, keeps it as a v4f32 load
+    Result = DAG.getNode(AMDGPUISD::CONST_ADDRESS, DL, MVT::v4i32,
+                         DAG.getNode(ISD::SRL, DL, MVT::i32, Ptr,
+                                     DAG.getConstant(4, DL, MVT::i32)),
+                         DAG.getConstant(LoadNode->getAddressSpace() -
+                                             AMDGPUAS::CONSTANT_BUFFER_0,
+                                         DL, MVT::i32));
 
     if (!VT.isVector()) {
       Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
@@ -1650,16 +1647,18 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   SwizzleRemap.clear();
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   return BuildVector;
@@ -1751,11 +1750,11 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     }
 
     return DAG.getNode(ISD::SELECT_CC, DL, N->getValueType(0),
-                           SelectCC.getOperand(0), // LHS
-                           SelectCC.getOperand(1), // RHS
-                           DAG.getConstant(-1, DL, MVT::i32), // True
-                           DAG.getConstant(0, DL, MVT::i32),  // False
-                           SelectCC.getOperand(4)); // CC
+                       SelectCC.getOperand(0),               // LHS
+                       SelectCC.getOperand(1),               // RHS
+                       DAG.getAllOnesConstant(DL, MVT::i32), // True
+                       DAG.getConstant(0, DL, MVT::i32),     // False
+                       SelectCC.getOperand(4));              // CC
   }
 
   // insert_vector_elt (build_vector elt0, ... , eltN), NewEltIdx, idx
@@ -2177,14 +2176,33 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 TargetLowering::AtomicExpansionKind
 R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
+  case AtomicRMWInst::Nand:
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMax:
+  case AtomicRMWInst::FMin:
+    return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
     // instruction defintions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::Xchg: {
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
+    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
+    if (ValSize == 32 || ValSize == 64)
+      return AtomicExpansionKind::None;
+    return AtomicExpansionKind::CmpXChg;
+  }
   default:
-    break;
+    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
+      unsigned Size = IntTy->getBitWidth();
+      if (Size == 32 || Size == 64)
+        return AtomicExpansionKind::None;
+    }
+
+    return AtomicExpansionKind::CmpXChg;
   }
 
-  return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  llvm_unreachable("covered atomicrmw op switch");
 }

@@ -58,7 +58,7 @@ entry:
   ; Ensure !prof and !callees metadata for indirect call promotion removed.
   ; TRAP-NOT: prof
   ; TRAP-NOT: callees
-  ; TRAP:   br i1 %.not, label %1, label %0
+  ; TRAP:   br i1 %.not, label %1, label %0, !prof ![[PROF:[0-9]+]]
   ; TRAP: 0:
   ; TRAP:   tail call void @llvm.debugtrap()
   ; TRAP:   br label %1
@@ -88,6 +88,8 @@ entry:
 }
 ; CHECK-LABEL:   ret i32
 ; CHECK-LABEL: }
+
+; TRAP: ![[PROF]] = !{!"branch_weights", i32 1048575, i32 1}
 
 declare i1 @llvm.type.test(i8*, metadata)
 declare void @llvm.assume(i1)

@@ -44,6 +44,10 @@ function(create_object_library fq_target_name)
     message(FATAL_ERROR "'add_object_library' rule requires SRCS to be specified.")
   endif()
 
+  if(NOT ADD_OBJECT_CXX_STANDARD)
+    set(ADD_OBJECT_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
+
   set(internal_target_name ${fq_target_name}.__internal__)
   set(public_packaging_for_internal "-DLIBC_COPT_PUBLIC_PACKAGING")
 
@@ -61,22 +65,6 @@ function(create_object_library fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
-  # The NVPTX target is installed as LLVM-IR but the internal testing toolchain
-  # cannot handle it natively. Make a separate internal target for testing.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND NOT LIBC_GPU_TESTS_DISABLED)
-    add_library(
-      ${internal_target_name}
-      EXCLUDE_FROM_ALL
-      OBJECT
-      ${ADD_OBJECT_SRCS}
-      ${ADD_OBJECT_HDRS}
-    )
-    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
-    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    target_compile_options(${internal_target_name} PRIVATE ${compile_options}
-                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
-  endif()
-
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding object library ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
@@ -86,15 +74,12 @@ function(create_object_library fq_target_name)
     endif()
   endif()
 
-  if(fq_deps_list)
-    add_dependencies(${fq_target_name} ${fq_deps_list})
-    # Add deps as link libraries to inherit interface compile and link options.
-    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
-  endif()
+  list(APPEND fq_deps_list libc.src.__support.macros.config)
+  list(REMOVE_DUPLICATES fq_deps_list)
+  add_dependencies(${fq_target_name} ${fq_deps_list})
+  # Add deps as link libraries to inherit interface compile and link options.
+  target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
 
-  if(NOT ADD_OBJECT_CXX_STANDARD)
-    set(ADD_OBJECT_CXX_STANDARD ${CMAKE_CXX_STANDARD})
-  endif()
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
@@ -246,9 +231,6 @@ function(create_entrypoint_object fq_target_name)
   if(NOT ADD_ENTRYPOINT_OBJ_SRCS)
     message(FATAL_ERROR "`add_entrypoint_object` rule requires SRCS to be specified.")
   endif()
-  if(NOT ADD_ENTRYPOINT_OBJ_HDRS)
-    message(FATAL_ERROR "`add_entrypoint_object` rule requires HDRS to be specified.")
-  endif()
   if(NOT ADD_ENTRYPOINT_OBJ_CXX_STANDARD)
     set(ADD_ENTRYPOINT_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
@@ -282,12 +264,6 @@ function(create_entrypoint_object fq_target_name)
   add_dependencies(${internal_target_name} ${full_deps_list})
   target_link_libraries(${internal_target_name} ${full_deps_list})
 
-  # The NVPTX target cannot use LTO for the internal targets used for testing.
-  if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    target_compile_options(${internal_target_name} PRIVATE
-                           -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
-  endif()
-
   add_library(
     ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
@@ -302,6 +278,17 @@ function(create_entrypoint_object fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name} ${full_deps_list})
   target_link_libraries(${fq_target_name} ${full_deps_list})
+
+  # Builtin recognition causes issues when trying to implement the builtin
+  # functions themselves. The GPU backends do not use libcalls so we disable the
+  # known problematic ones on the entrypoints that implement them.
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
+                      memset strcmp strstr)
+    if(${ADD_ENTRYPOINT_OBJ_NAME} IN_LIST libc_builtins)
+      target_compile_options(${fq_target_name} PRIVATE -fno-builtin-${ADD_ENTRYPOINT_OBJ_NAME})
+    endif()
+  endif()
 
   set_target_properties(
     ${fq_target_name}
@@ -465,3 +452,41 @@ function(add_redirector_object target_name)
     BEFORE PRIVATE -fPIC ${LIBC_COMPILE_OPTIONS_DEFAULT}
   )
 endfunction(add_redirector_object)
+
+# Helper to define a function with multiple implementations
+# - Computes flags to satisfy required/rejected features and arch,
+# - Declares an entry point,
+# - Attach the REQUIRE_CPU_FEATURES property to the target,
+# - Add the fully qualified target to `${name}_implementations` global property for tests.
+function(add_implementation name impl_name)
+  cmake_parse_arguments(
+    "ADD_IMPL"
+    "" # Optional arguments
+    "" # Single value arguments
+    "REQUIRE;SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;MLLVM_COMPILE_OPTIONS" # Multi value arguments
+    ${ARGN})
+
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
+    foreach(opt IN LISTS ADD_IMPL_MLLVM_COMPILE_OPTIONS)
+      list(APPEND ADD_IMPL_COMPILE_OPTIONS "SHELL:-mllvm ${opt}")
+    endforeach()
+  endif()
+
+  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    # Prevent warning when passing x86 SIMD types as template arguments.
+    # e.g. "warning: ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+    list(APPEND ADD_IMPL_COMPILE_OPTIONS "-Wno-ignored-attributes")
+  endif()
+
+  add_entrypoint_object(${impl_name}
+    NAME ${name}
+    SRCS ${ADD_IMPL_SRCS}
+    HDRS ${ADD_IMPL_HDRS}
+    DEPENDS ${ADD_IMPL_DEPENDS}
+    COMPILE_OPTIONS ${libc_opt_high_flag} ${ADD_IMPL_COMPILE_OPTIONS}
+  )
+  get_fq_target_name(${impl_name} fq_target_name)
+  set_target_properties(${fq_target_name} PROPERTIES REQUIRE_CPU_FEATURES "${ADD_IMPL_REQUIRE}")
+  set_property(GLOBAL APPEND PROPERTY "${name}_implementations" "${fq_target_name}")
+endfunction()

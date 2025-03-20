@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -186,11 +187,24 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
         StringSwitch<std::optional<StringRef>>(strAttr.getValue())
             .Case("alias_test:dot_in_name", StringRef("test.alias"))
             .Case("alias_test:trailing_digit", StringRef("test_alias0"))
-            .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
-            .Case("alias_test:sanitize_conflict_a",
+            .Case("alias_test:trailing_digit_conflict_a",
+                  StringRef("test_alias_conflict0_1_1_1"))
+            .Case("alias_test:trailing_digit_conflict_b",
                   StringRef("test_alias_conflict0"))
-            .Case("alias_test:sanitize_conflict_b",
+            .Case("alias_test:trailing_digit_conflict_c",
+                  StringRef("test_alias_conflict0"))
+            .Case("alias_test:trailing_digit_conflict_d",
                   StringRef("test_alias_conflict0_"))
+            .Case("alias_test:trailing_digit_conflict_e",
+                  StringRef("test_alias_conflict0_1"))
+            .Case("alias_test:trailing_digit_conflict_f",
+                  StringRef("test_alias_conflict0_1"))
+            .Case("alias_test:trailing_digit_conflict_g",
+                  StringRef("test_alias_conflict0_1_"))
+            .Case("alias_test:trailing_digit_conflict_h",
+                  StringRef("test_alias_conflict0_1_1"))
+            .Case("alias_test:prefixed_digit", StringRef("0_test_alias"))
+            .Case("alias_test:prefixed_symbol", StringRef("%test"))
             .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
             .Default(std::nullopt);
     if (!aliasName)

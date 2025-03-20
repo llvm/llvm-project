@@ -26,7 +26,7 @@ class AffectedRangeManager {
 public:
   AffectedRangeManager(const SourceManager &SourceMgr,
                        const ArrayRef<CharSourceRange> Ranges)
-      : SourceMgr(SourceMgr), Ranges(Ranges.begin(), Ranges.end()) {}
+      : SourceMgr(SourceMgr), Ranges(Ranges) {}
 
   // Determines which lines are affected by the SourceRanges given as input.
   // Returns \c true if at least one line in \p Lines or one of their
@@ -47,8 +47,8 @@ private:
   bool affectsLeadingEmptyLines(const FormatToken &Tok);
 
   // Marks all lines between I and E as well as all their children as affected.
-  void markAllAsAffected(SmallVectorImpl<AnnotatedLine *>::iterator I,
-                         SmallVectorImpl<AnnotatedLine *>::iterator E);
+  void markAllAsAffected(ArrayRef<AnnotatedLine *>::iterator I,
+                         ArrayRef<AnnotatedLine *>::iterator E);
 
   // Determines whether 'Line' is affected by the SourceRanges given as input.
   // Returns \c true if line or one if its children is affected.

@@ -44,8 +44,8 @@ public:
                                   int &FARsLeft) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   ABIArgInfo extendType(QualType Ty) const;
 
@@ -146,7 +146,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
@@ -192,7 +192,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     for (const FieldDecl *FD : RD->fields()) {
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
-        unsigned BitWidth = FD->getBitWidthValue(getContext());
+        unsigned BitWidth = FD->getBitWidthValue();
         // Zero-width bitfields are ignored.
         if (BitWidth == 0)
           continue;
@@ -305,8 +305,9 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (GARsLeft)
       GARsLeft -= 1;
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                           CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   uint64_t Size = getContext().getTypeSize(Ty);
@@ -381,7 +382,9 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+        return getNaturalAlignIndirect(
+            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
     }
 
     return ABIArgInfo::getDirect();
@@ -404,7 +407,9 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     return ABIArgInfo::getDirect(
         llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), GRLen), 2));
   }
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
 ABIArgInfo LoongArchABIInfo::classifyReturnType(QualType RetTy) const {
@@ -417,14 +422,13 @@ ABIArgInfo LoongArchABIInfo::classifyReturnType(QualType RetTy) const {
   return classifyArgumentType(RetTy, /*IsFixed=*/true, GARsLeft, FARsLeft);
 }
 
-Address LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty) const {
+RValue LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(GRLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true))
-    return Address(CGF.Builder.CreateLoad(VAListAddr),
-                   CGF.ConvertTypeForMem(Ty), SlotSize);
+    return Slot.asRValue();
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 
@@ -432,7 +436,7 @@ Address LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
                           /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
                           SlotSize,
-                          /*AllowHigherAlign=*/true);
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 ABIArgInfo LoongArchABIInfo::extendType(QualType Ty) const {

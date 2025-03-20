@@ -43,7 +43,7 @@
 namespace llvm {
 
 class Function;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineFunction;
 class Module;
 
@@ -58,12 +58,20 @@ public:
   using StubValueTy = PointerIntPair<MCSymbol *, 1, bool>;
   using SymbolListTy = std::vector<std::pair<MCSymbol *, StubValueTy>>;
 
+  /// A variant of SymbolListTy where the stub is a generalized MCExpr.
+  using ExprStubListTy = std::vector<std::pair<MCSymbol *, const MCExpr *>>;
+
   virtual ~MachineModuleInfoImpl();
 
 protected:
   /// Return the entries from a DenseMap in a deterministic sorted orer.
   /// Clears the map.
   static SymbolListTy getSortedStubs(DenseMap<MCSymbol*, StubValueTy>&);
+
+  /// Return the entries from a DenseMap in a deterministic sorted orer.
+  /// Clears the map.
+  static ExprStubListTy
+  getSortedExprStubs(DenseMap<MCSymbol *, const MCExpr *> &);
 };
 
 //===----------------------------------------------------------------------===//
@@ -75,7 +83,7 @@ class MachineModuleInfo {
   friend class MachineModuleInfoWrapperPass;
   friend class MachineModuleAnalysis;
 
-  const LLVMTargetMachine &TM;
+  const TargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
   MCContext Context;
@@ -91,27 +99,6 @@ class MachineModuleInfo {
   /// want.
   MachineModuleInfoImpl *ObjFileMMI;
 
-  /// \name Exception Handling
-  /// \{
-
-  /// The current call site index being processed, if any. 0 if none.
-  unsigned CurCallSite = 0;
-
-  /// \}
-
-  // TODO: Ideally, what we'd like is to have a switch that allows emitting
-  // synchronous (precise at call-sites only) CFA into .eh_frame. However,
-  // even under this switch, we'd like .debug_frame to be precise when using
-  // -g. At this moment, there's no way to specify that some CFI directives
-  // go into .eh_frame only, while others go into .debug_frame only.
-
-  /// True if debugging information is available in this module.
-  bool DbgInfoAvailable = false;
-
-  /// True if this module is being built for windows/msvc, and uses floating
-  /// point.  This is used to emit an undefined reference to _fltused.
-  bool UsesMSVCFloatingPoint = false;
-
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
   /// Next unique number available for a MachineFunction.
@@ -122,10 +109,9 @@ class MachineModuleInfo {
   MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
 
 public:
-  explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
+  explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfo(const LLVMTargetMachine *TM,
-                             MCContext *ExtContext);
+  explicit MachineModuleInfo(const TargetMachine *TM, MCContext *ExtContext);
 
   MachineModuleInfo(MachineModuleInfo &&MMII);
 
@@ -134,7 +120,7 @@ public:
   void initialize();
   void finalize();
 
-  const LLVMTargetMachine &getTarget() const { return TM; }
+  const TargetMachine &getTarget() const { return TM; }
 
   const MCContext &getContext() const {
     return ExternalContext ? *ExternalContext : Context;
@@ -147,10 +133,14 @@ public:
 
   /// Returns the MachineFunction constructed for the IR function \p F.
   /// Creates a new MachineFunction if none exists yet.
+  /// NOTE: New pass manager clients shall not use this method to get
+  /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   MachineFunction &getOrCreateMachineFunction(Function &F);
 
   /// \brief Returns the MachineFunction associated to IR function \p F if there
   /// is one, otherwise nullptr.
+  /// NOTE: New pass manager clients shall not use this method to get
+  /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   MachineFunction *getMachineFunction(const Function &F) const;
 
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to
@@ -174,23 +164,6 @@ public:
     return const_cast<MachineModuleInfo*>(this)->getObjFileInfo<Ty>();
   }
 
-  /// Returns true if valid debug info is present.
-  bool hasDebugInfo() const { return DbgInfoAvailable; }
-
-  bool usesMSVCFloatingPoint() const { return UsesMSVCFloatingPoint; }
-
-  void setUsesMSVCFloatingPoint(bool b) { UsesMSVCFloatingPoint = b; }
-
-  /// \name Exception Handling
-  /// \{
-
-  /// Set the call site currently being processed.
-  void setCurrentCallSite(unsigned Site) { CurCallSite = Site; }
-
-  /// Get the call site currently being processed, if any.  return zero if
-  /// none.
-  unsigned getCurrentCallSite() { return CurCallSite; }
-
   /// \}
 }; // End class MachineModuleInfo
 
@@ -199,9 +172,9 @@ class MachineModuleInfoWrapperPass : public ImmutablePass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
+  explicit MachineModuleInfoWrapperPass(const TargetMachine *TM = nullptr);
 
-  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM,
+  explicit MachineModuleInfoWrapperPass(const TargetMachine *TM,
                                         MCContext *ExtContext);
 
   // Initialization and Finalization

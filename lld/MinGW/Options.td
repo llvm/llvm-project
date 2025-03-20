@@ -139,6 +139,8 @@ defm threads
 defm tsaware: B_disable<"tsaware",
     "Set the 'Terminal Server aware' flag", "Don't set the 'Terminal Server aware' flag">;
 defm undefined: Eq<"undefined", "Include symbol in the link, if available">;
+defm undefined_glob: EEq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
 defm whole_archive: B<"whole-archive",
     "Include all object files for following archives",
     "No longer include all object files for following archives">;
@@ -160,6 +162,8 @@ def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_sample_profile: JJ<"lto-sample-profile=">,
+  HelpText<"Sample profile file path">;
 
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
@@ -198,6 +202,7 @@ def _HASH_HASH_HASH : Flag<["-"], "###">,
     HelpText<"Print (but do not run) the commands to run for this compilation">;
 def appcontainer: F<"appcontainer">, HelpText<"Set the appcontainer flag in the executable">;
 defm delayload: Eq<"delayload", "DLL to load only on demand">;
+defm dependent_load_flag: EEq<"dependent-load-flag", "Override default LibraryLoad flags">;
 defm mllvm: EqNoHelp<"mllvm">;
 defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argument is empty">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
@@ -208,9 +213,12 @@ defm guard_longjmp : B<"guard-longjmp",
   "Do not enable Control Flow Guard long jump hardening">;
 defm error_limit:
   EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
-def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">, 
+def build_id: J<"build-id=">, HelpText<"Generate build ID note (pass none to disable)">,
   MetaVarName<"<arg>">;
 def : F<"build-id">, Alias<build_id>, HelpText<"Alias for --build-id=">;
+def functionpadmin: J<"functionpadmin=">, HelpText<"Prepares an image for hotpatching">,
+  MetaVarName<"<arg>">;
+def : F<"functionpadmin">, Alias<functionpadmin>, HelpText<"Alias for --functionpadmin=">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;
@@ -240,6 +248,9 @@ defm: EqNoHelp<"plugin">;
 defm: EqNoHelp<"sysroot">;
 def: F<"sort-common">;
 def: F<"start-group">;
+
+// Ignored options, that produce warnings
+defm rpath: EqNoHelp<"rpath">;
 
 // Ignore GCC collect2 LTO plugin related options. Note that we don't support
 // GCC LTO, but GCC collect2 passes these options even in non-LTO mode.

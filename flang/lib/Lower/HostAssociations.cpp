@@ -182,10 +182,10 @@ class CapturedProcedure : public CapturedSymbols<CapturedProcedure> {
 public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
+    mlir::Type funTy = Fortran::lower::getDummyProcedureType(sym, converter);
     if (Fortran::semantics::IsPointer(sym))
-      TODO(converter.getCurrentLocation(),
-           "capture procedure pointer in internal procedure");
-    return Fortran::lower::getDummyProcedureType(sym, converter);
+      return fir::ReferenceType::get(funTy);
+    return funTy;
   }
 
   static void instantiateHostTuple(const InstantiateHostTuple &args,
@@ -219,7 +219,7 @@ public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
     fir::KindTy kind =
-        converter.genType(sym).cast<fir::CharacterType>().getFKind();
+        mlir::cast<fir::CharacterType>(converter.genType(sym)).getFKind();
     return fir::BoxCharType::get(&converter.getMLIRContext(), kind);
   }
 
@@ -293,7 +293,7 @@ public:
     mlir::Location loc = args.loc;
     mlir::Value box = args.valueInTuple;
     if (Fortran::semantics::IsOptional(sym)) {
-      auto boxTy = box.getType().cast<fir::BaseBoxType>();
+      auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
       auto eleTy = boxTy.getEleTy();
       if (!fir::isa_ref_type(eleTy))
         eleTy = builder.getRefType(eleTy);
@@ -315,7 +315,11 @@ class CapturedAllocatableAndPointer
 public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
-    return fir::ReferenceType::get(converter.genType(sym));
+    mlir::Type baseType = converter.genType(sym);
+    if (sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
+      return fir::ReferenceType::get(
+          Fortran::lower::getCrayPointeeBoxType(baseType));
+    return fir::ReferenceType::get(baseType);
   }
   static void instantiateHostTuple(const InstantiateHostTuple &args,
                                    Fortran::lower::AbstractConverter &converter,
@@ -362,7 +366,8 @@ public:
   }
 };
 
-/// Class defining how arrays are captured inside internal procedures.
+/// Class defining how arrays, including assumed-ranks, are captured inside
+/// internal procedures.
 /// Array are captured via a `fir.box<fir.array<T>>` descriptor that belongs to
 /// the host tuple. This allows capturing lower bounds, which can be done by
 /// providing a ShapeShiftOp argument to the EmboxOp.
@@ -377,8 +382,8 @@ public:
                             const Fortran::semantics::Symbol &sym) {
     mlir::Type type = converter.genType(sym);
     bool isPolymorphic = Fortran::semantics::IsPolymorphic(sym);
-    assert((type.isa<fir::SequenceType>() ||
-            (isPolymorphic && type.isa<fir::ClassType>())) &&
+    assert((mlir::isa<fir::SequenceType>(type) ||
+            (isPolymorphic && mlir::isa<fir::ClassType>(type))) &&
            "must be a sequence type");
     if (isPolymorphic)
       return type;
@@ -426,7 +431,7 @@ public:
     mlir::Value box = args.valueInTuple;
     mlir::IndexType idxTy = builder.getIndexType();
     llvm::SmallVector<mlir::Value> lbounds;
-    if (!ba.lboundIsAllOnes()) {
+    if (!ba.lboundIsAllOnes() && !Fortran::evaluate::IsAssumedRank(sym)) {
       if (ba.isStaticArray()) {
         for (std::int64_t lb : ba.staticLBound())
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, lb));
@@ -455,7 +460,7 @@ public:
       // (absent boxes are null descriptor addresses, not descriptors containing
       // a null base address).
       if (Fortran::semantics::IsOptional(sym)) {
-        auto boxTy = box.getType().cast<fir::BaseBoxType>();
+        auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
         auto eleTy = boxTy.getEleTy();
         if (!fir::isa_ref_type(eleTy))
           eleTy = builder.getRefType(eleTy);
@@ -484,7 +489,8 @@ private:
     const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
-           !isDerivedWithLenParameters(sym);
+           !isDerivedWithLenParameters(sym) &&
+           !Fortran::evaluate::IsAssumedRank(sym);
   }
 };
 } // namespace
@@ -507,9 +513,10 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsProcedure(sym))
     return CapturedProcedure::visit(visitor, converter, sym, ba);
   ba.analyze(sym);
-  if (Fortran::semantics::IsAllocatableOrPointer(sym))
+  if (Fortran::semantics::IsAllocatableOrPointer(sym) ||
+      sym.GetUltimate().test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
-  if (ba.isArray())
+  if (ba.isArray()) // include assumed-ranks.
     return CapturedArrays::visit(visitor, converter, sym, ba);
   if (Fortran::semantics::IsPolymorphic(sym))
     return CapturedPolymorphicScalar::visit(visitor, converter, sym, ba);
@@ -522,7 +529,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
 // `t` should be the result of getArgumentType, which has a type of
 // `!fir.ref<tuple<...>>`.
 static mlir::TupleType unwrapTupleTy(mlir::Type t) {
-  return fir::dyn_cast_ptrEleTy(t).cast<mlir::TupleType>();
+  return mlir::cast<mlir::TupleType>(fir::dyn_cast_ptrEleTy(t));
 }
 
 static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -530,7 +537,7 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value offset) {
   // fir.ref<fir.ref> and fir.ptr<fir.ref> are forbidden. Use
   // fir.llvm_ptr if needed.
-  auto ty = varTy.isa<fir::ReferenceType>()
+  auto ty = mlir::isa<fir::ReferenceType>(varTy)
                 ? mlir::Type(fir::LLVMPointerType::get(varTy))
                 : mlir::Type(builder.getRefType(varTy));
   return builder.create<fir::CoordinateOp>(loc, ty, tupleArg, offset);

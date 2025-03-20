@@ -8,8 +8,8 @@
 ## POINTER_TO_GOT, we should still be able to relax this GOT_LOAD reference to
 ## it.
 # CHECK:      _main:
-# CHECK-NEXT: adrp x8, [[#]] ;
-# CHECK-NEXT: ldr  x8, [x8] ; literal pool symbol address: _foo
+# CHECK-NEXT: adrp x8, [[#]] ; 0x100004000
+# CHECK-NEXT: ldr  x8, [x8]
 # CHECK-NEXT: ret
 
 # CHECK: Idx   Name          Size     VMA              Type

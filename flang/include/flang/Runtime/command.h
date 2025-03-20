@@ -12,7 +12,7 @@
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 // On Windows* OS GetCurrentProcessId returns DWORD aka uint32_t
 typedef std::uint32_t pid_t;
 #else
@@ -55,6 +55,10 @@ std::int32_t RTNAME(GetEnvVariable)(const Descriptor &name,
     const Descriptor *value = nullptr, const Descriptor *length = nullptr,
     bool trim_name = true, const Descriptor *errmsg = nullptr,
     const char *sourceFile = nullptr, int line = 0);
+
+// Calls getcwd()
+std::int32_t RTNAME(GetCwd)(
+    const Descriptor &cwd, const char *sourceFile, int line);
 }
 } // namespace Fortran::runtime
 

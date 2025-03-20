@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
@@ -170,6 +171,8 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("ImplementationFileExtensions",
                    Options.ImplementationFileExtensions);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
+    IO.mapOptional("ExcludeHeaderFilterRegex",
+                   Options.ExcludeHeaderFilterRegex);
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", Options.CheckOptions);
@@ -191,7 +194,8 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
   Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
-  Options.HeaderFilterRegex = "";
+  Options.HeaderFilterRegex = std::nullopt;
+  Options.ExcludeHeaderFilterRegex = std::nullopt;
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;
@@ -231,6 +235,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(ImplementationFileExtensions,
                 Other.ImplementationFileExtensions);
   overrideValue(HeaderFilterRegex, Other.HeaderFilterRegex);
+  overrideValue(ExcludeHeaderFilterRegex, Other.ExcludeHeaderFilterRegex);
   overrideValue(SystemHeaders, Other.SystemHeaders);
   overrideValue(FormatStyle, Other.FormatStyle);
   overrideValue(User, Other.User);
@@ -294,12 +299,11 @@ ConfigOptionsProvider::getRawOptions(llvm::StringRef FileName) {
   if (ConfigOptions.InheritParentConfig.value_or(false)) {
     LLVM_DEBUG(llvm::dbgs()
                << "Getting options for file " << FileName << "...\n");
-    assert(FS && "FS must be set.");
 
-    llvm::SmallString<128> AbsoluteFilePath(FileName);
-
-    if (!FS->makeAbsolute(AbsoluteFilePath)) {
-      addRawFileOptions(AbsoluteFilePath, RawOptions);
+    llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+        getNormalizedAbsolutePath(FileName);
+    if (AbsoluteFilePath) {
+      addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
     }
   }
   RawOptions.emplace_back(ConfigOptions,
@@ -330,36 +334,48 @@ FileOptionsBaseProvider::FileOptionsBaseProvider(
       OverrideOptions(std::move(OverrideOptions)),
       ConfigHandlers(std::move(ConfigHandlers)) {}
 
+llvm::ErrorOr<llvm::SmallString<128>>
+FileOptionsBaseProvider::getNormalizedAbsolutePath(llvm::StringRef Path) {
+  assert(FS && "FS must be set.");
+  llvm::SmallString<128> NormalizedAbsolutePath = {Path};
+  std::error_code Err = FS->makeAbsolute(NormalizedAbsolutePath);
+  if (Err)
+    return Err;
+  llvm::sys::path::remove_dots(NormalizedAbsolutePath, /*remove_dot_dot=*/true);
+  return NormalizedAbsolutePath;
+}
+
 void FileOptionsBaseProvider::addRawFileOptions(
     llvm::StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
   auto CurSize = CurOptions.size();
-
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
-  StringRef Path = llvm::sys::path::parent_path(AbsolutePath);
-  for (StringRef CurrentPath = Path; !CurrentPath.empty();
-       CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
-    std::optional<OptionsSource> Result;
-
-    auto Iter = CachedOptions.find(CurrentPath);
-    if (Iter != CachedOptions.end())
-      Result = Iter->second;
-
-    if (!Result)
-      Result = tryReadConfigFile(CurrentPath);
-
-    if (Result) {
-      // Store cached value for all intermediate directories.
-      while (Path != CurrentPath) {
+  StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
+  auto MemorizedConfigFile =
+      [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
+    const auto Iter = CachedOptions.Memorized.find(CurrentPath);
+    if (Iter != CachedOptions.Memorized.end())
+      return CachedOptions.Storage[Iter->second];
+    std::optional<OptionsSource> OptionsSource = tryReadConfigFile(CurrentPath);
+    if (OptionsSource) {
+      const size_t Index = CachedOptions.Storage.size();
+      CachedOptions.Storage.emplace_back(OptionsSource.value());
+      while (RootPath != CurrentPath) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "Caching configuration for path " << Path << ".\n");
-        if (!CachedOptions.count(Path))
-          CachedOptions[Path] = *Result;
-        Path = llvm::sys::path::parent_path(Path);
+                   << "Caching configuration for path " << RootPath << ".\n");
+        CachedOptions.Memorized[RootPath] = Index;
+        RootPath = llvm::sys::path::parent_path(RootPath);
       }
-      CachedOptions[Path] = *Result;
-
-      CurOptions.push_back(*Result);
+      CachedOptions.Memorized[CurrentPath] = Index;
+      RootPath = llvm::sys::path::parent_path(CurrentPath);
+    }
+    return OptionsSource;
+  };
+  for (StringRef CurrentPath = RootPath; !CurrentPath.empty();
+       CurrentPath = llvm::sys::path::parent_path(CurrentPath)) {
+    if (std::optional<OptionsSource> Result =
+            MemorizedConfigFile(CurrentPath)) {
+      CurOptions.emplace_back(Result.value());
       if (!Result->first.InheritParentConfig.value_or(false))
         break;
     }
@@ -392,16 +408,15 @@ std::vector<OptionsSource>
 FileOptionsProvider::getRawOptions(StringRef FileName) {
   LLVM_DEBUG(llvm::dbgs() << "Getting options for file " << FileName
                           << "...\n");
-  assert(FS && "FS must be set.");
 
-  llvm::SmallString<128> AbsoluteFilePath(FileName);
-
-  if (FS->makeAbsolute(AbsoluteFilePath))
+  llvm::ErrorOr<llvm::SmallString<128>> AbsoluteFilePath =
+      getNormalizedAbsolutePath(FileName);
+  if (!AbsoluteFilePath)
     return {};
 
   std::vector<OptionsSource> RawOptions =
-      DefaultOptionsProvider::getRawOptions(AbsoluteFilePath.str());
-  addRawFileOptions(AbsoluteFilePath, RawOptions);
+      DefaultOptionsProvider::getRawOptions(AbsoluteFilePath->str());
+  addRawFileOptions(AbsoluteFilePath->str(), RawOptions);
   OptionsSource CommandLineOptions(OverrideOptions,
                                    OptionsSourceTypeCheckCommandLineOption);
 

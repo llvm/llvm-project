@@ -19,6 +19,7 @@
 #define AVOID_NATIVE_UINT128_T 0
 #endif
 
+#include "api-attrs.h"
 #include "leading-zero-bit-count.h"
 #include <cstdint>
 #include <type_traits>
@@ -260,7 +261,9 @@ private:
       return LeadingZeroBitCount(high_);
     }
   }
+  RT_VAR_GROUP_BEGIN
   static constexpr std::uint64_t topBit{std::uint64_t{1} << 63};
+  RT_VAR_GROUP_END
 #if FLANG_LITTLE_ENDIAN
   std::uint64_t low_{0}, high_{0};
 #elif FLANG_BIG_ENDIAN

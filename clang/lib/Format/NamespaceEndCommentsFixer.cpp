@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "NamespaceEndCommentsFixer.h"
+#include "clang/Basic/TokenKinds.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Regex.h"
 
 #define DEBUG_TYPE "namespace-end-comments-fixer"
 

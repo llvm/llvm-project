@@ -67,6 +67,8 @@ public:
 
   /// Get the C++ type.
   StringRef getType() const { return type; }
+  /// Get the C++ parameter name.
+  StringRef getName() const { return name; }
   /// Returns true if the parameter has a default value.
   bool hasDefaultValue() const { return !defaultValue.empty(); }
 
@@ -129,8 +131,7 @@ public:
                   ArrayRef<MethodParameter> parameters)
       : MethodSignature(std::forward<RetTypeT>(retType),
                         std::forward<NameT>(name),
-                        SmallVector<MethodParameter>(parameters.begin(),
-                                                     parameters.end())) {}
+                        SmallVector<MethodParameter>(parameters)) {}
   /// Create a method signature with a return type, a method name, and a
   /// variadic list of parameters.
   template <typename RetTypeT, typename NameT, typename... Parameters>
@@ -681,7 +682,7 @@ public:
   Method *addMethod(RetTypeT &&retType, NameT &&name,
                     Method::Properties properties,
                     ArrayRef<MethodParameter> parameters) {
-    // If the class has template parameters, the has to defined inline.
+    // If the class has template parameters, then it has to be defined inline.
     if (!templateParams.empty())
       properties |= Method::Inline;
     return addMethodAndPrune(Method(std::forward<RetTypeT>(retType),

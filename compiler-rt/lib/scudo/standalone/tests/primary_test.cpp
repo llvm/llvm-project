@@ -90,6 +90,7 @@ template <typename SizeClassMapT> struct TestConfig3 {
     static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
     typedef scudo::uptr CompactPtrT;
     static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableContiguousRegions = false;
     static const bool EnableRandomOffset = true;
     static const scudo::uptr MapSizeIncrement = 1UL << 18;
   };
@@ -385,6 +386,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Allocator->getFragmentationInfo(&Str);
+  Allocator->getMemoryGroupFragmentationInfo(&Str);
   Str.output();
 }
 

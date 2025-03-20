@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
@@ -20,7 +18,7 @@
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=RDC %s
 
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -mcode-object-version=5 --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address -fgpu-sanitize \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm-invalid \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=FAIL %s
@@ -54,15 +52,15 @@
 // CHECK-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 // CHECK: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
-// NORDC: {{"[^"]*clang[^"]*".* "-emit-obj".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mlink-builtin-bitcode" ".*hip.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.o]]"
+// NORDC: {{"[^"]*clang[^"]*".* "-emit-obj".* "-fcuda-is-device".* "-mlink-builtin-bitcode" ".*hip.bc".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.o]]"
 // NORDC-NOT: {{"[^"]*lld(\.exe){0,1}".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
 // NORDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
 // RDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
-// RDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mlink-builtin-bitcode" ".*hip.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
+// RDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* "-mlink-builtin-bitcode" ".*hip.bc".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
 // RDC-NOT: {{"[^"]*lld(\.exe){0,1}".*}} "[[OUT]]" {{".*asanrtl.bc" ".*hip.bc"}}
 
-// FAIL: AMDGPU address sanitizer runtime library (asanrtl) is not found. Please install ROCm device library which supports address sanitizer
+// FAIL: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
 // XNACK-DAG: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgcn-amd-amdhsa'
 // XNACK-DAG: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead

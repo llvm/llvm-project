@@ -8,6 +8,7 @@ unittest("ClangReplInterpreterTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Interpreter",
     "//llvm/lib/IR",
+    "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]

@@ -122,6 +122,8 @@ bool getUniqueSectionNames();
 
 bool getUniqueBasicBlockSectionNames();
 
+bool getSeparateNamedSections();
+
 llvm::EABI getEABIVersion();
 
 llvm::DebuggerKind getDebuggerTuningOpt();
@@ -133,6 +135,8 @@ bool getEnableAddrsig();
 bool getEmitCallSiteInfo();
 
 bool getEnableMachineFunctionSplitter();
+
+bool getEnableStaticDataPartitioning();
 
 bool getEnableDebugEntryValues();
 

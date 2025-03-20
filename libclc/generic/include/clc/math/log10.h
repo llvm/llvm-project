@@ -1,5 +1,3 @@
-#undef log10
-
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define __CLC_FUNCTION log10
 

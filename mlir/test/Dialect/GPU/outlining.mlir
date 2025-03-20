@@ -36,12 +36,12 @@ func.func @launch() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 // CHECK-LABEL: gpu.module @launch_kernel
 // CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
-// CHECK-SAME: gpu.known_block_size = array<i32: 20, 24, 28>
-// CHECK-SAME: gpu.known_grid_size = array<i32: 8, 12, 16>
+// CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
 // CHECK-NEXT: = gpu.block_id z
@@ -54,11 +54,40 @@ func.func @launch() {
 // CHECK-NEXT: %[[BDIM:.*]] = gpu.block_dim x
 // CHECK-NEXT: = gpu.block_dim y
 // CHECK-NEXT: = gpu.block_dim z
-// CHECK-NEXT: cf.br ^[[BLOCK:.*]]
-// CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[BID]], %[[BDIM]]) : (index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
+
+// -----
+
+// Verify that we can outline a CFG
+// CHECK-LABEL:  gpu.func @launchCFG_kernel(
+// CHECK: cf.br
+// CHECK: gpu.return
+func.func @launchCFG() {
+  %0 = "op"() : () -> (f32)
+  %1 = "op"() : () -> (memref<?xf32, 1>)
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 20 : index
+  %bDimY = arith.constant 24 : index
+  %bDimZ = arith.constant 28 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY,
+                                       %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY,
+                                        %block_z = %bDimZ) {
+    "use"(%0): (f32) -> ()
+    cf.br ^bb1
+  ^bb1:
+    "some_op"(%bx, %block_x) : (index, index) -> ()
+    %42 = memref.load %1[%tx] : memref<?xf32, 1>
+    gpu.terminator
+  }
+  return
+}
+
 
 // -----
 
@@ -79,8 +108,8 @@ llvm.func @launch_from_llvm_func() {
   // CHECK-NEXT: llvm.return
 
   // CHECK: gpu.func {{.*}} kernel attributes
-  // CHECK-SAME: gpu.known_block_size = array<i32: 1, 1, 1>
-  // CHECK-SAME: gpu.known_grid_size = array<i32: 1, 1, 1>
+  // CHECK-SAME: known_block_size = array<i32: 1, 1, 1>
+  // CHECK-SAME: known_grid_size = array<i32: 1, 1, 1>
   // CHECK: gpu.return
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %dim, %grid_y = %dim,
                                        %grid_z = %dim)
@@ -94,7 +123,7 @@ llvm.func @launch_from_llvm_func() {
   llvm.return
 }
 
-// CHECK-DL-LABLE: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_from_llvm_func_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 
@@ -140,8 +169,8 @@ func.func @multiple_launches() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
-// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel_0 attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
+// CHECK-DL-LABEL: gpu.module @multiple_launches_kernel_0 attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK: gpu.module @multiple_launches_kernel
 // CHECK: func @multiple_launches_kernel
@@ -168,7 +197,7 @@ func.func @extra_constants_not_inlined(%arg0: memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @extra_constants_not_inlined_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @extra_constants_not_inlined_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: func @extra_constants_not_inlined_kernel(%{{.*}}: memref<?xf32>, %{{.*}}: index)
 // CHECK: arith.constant 2
@@ -194,7 +223,7 @@ func.func @extra_constants(%arg0: memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @extra_constants_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @extra_constants_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: func @extra_constants_kernel(
 // CHECK-SAME: %[[KARG0:.*]]: memref<?xf32>
@@ -224,7 +253,7 @@ func.func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @extra_constants_noarg_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @extra_constants_noarg_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: func @extra_constants_noarg_kernel(
 // CHECK-SAME: %[[KARG0:.*]]: memref<?xf32>, %[[KARG1:.*]]: index
@@ -254,7 +283,7 @@ func.func @multiple_uses(%arg0 : memref<?xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @multiple_uses_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @multiple_uses_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 
@@ -283,7 +312,7 @@ func.func @multiple_uses2(%arg0 : memref<*xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @multiple_uses2_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @multiple_uses2_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 
@@ -314,7 +343,7 @@ func.func @recursive_device_function() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @function_call_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @function_call_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK: gpu.module @function_call_kernel {
 // CHECK:   gpu.func @function_call_kernel()
@@ -333,8 +362,8 @@ func.func @recursive_device_function() {
 
 // CHECK-LABEL: @non_constant_launches
 func.func @non_constant_launches(%arg0 : index) {
-  // CHECK-NOT: gpu.known_block_size
-  // CHECK-NOT: gpu.known_grid_size
+  // CHECK-NOT: known_block_size
+  // CHECK-NOT: known_grid_size
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %arg0, %grid_y = %arg0,
                                        %grid_z = %arg0)
              threads(%tx, %ty, %tz) in (%block_x = %arg0, %block_y = %arg0,
@@ -344,7 +373,7 @@ func.func @non_constant_launches(%arg0 : index) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @non_constant_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @non_constant_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK: module attributes {gpu.container_module}
 
@@ -372,7 +401,7 @@ func.func @launch_memory_attributions_0() {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_0_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_0_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // CHECK-LABEL: gpu.module @launch_memory_attributions_0_kernel
 // CHECK-NEXT: gpu.func @launch_memory_attributions_0_kernel
@@ -406,7 +435,7 @@ func.func @launch_memory_attributions_1(%arg0 : memref<*xf32>) {
   return
 }
 
-// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>}
 
 // -----
 // CHECK: module attributes {gpu.container_module}
@@ -455,8 +484,8 @@ func.func @launch_cluster() {
 // CHECK-LABEL: gpu.module @launch_cluster_kernel
 // CHECK-NEXT: gpu.func @launch_cluster_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
-// CHECK-SAME: gpu.known_block_size = array<i32: 20, 24, 28>
-// CHECK-SAME: gpu.known_grid_size = array<i32: 8, 12, 16>
+// CHECK-SAME: known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
 // CHECK-NEXT: = gpu.block_id z
@@ -475,9 +504,129 @@ func.func @launch_cluster() {
 // CHECK-NEXT: %[[CDIM:.*]] = gpu.cluster_dim x
 // CHECK-NEXT: = gpu.cluster_dim y
 // CHECK-NEXT: = gpu.cluster_dim z
-// CHECK-NEXT: cf.br ^[[BLOCK:.*]]
-// CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[CID]], %[[BID]], %[[BDIM]]) : (index, index, index) -> ()
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
 
+// -----
+// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch
+// CHECK-LABEL: func.func @testKernelAttributes()
+// CHECK: gpu.launch_func  @test_module::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+// CHECK: gpu.module @test_module
+// CHECK: gpu.func @test_kernel_func()
+func.func @testKernelAttributes() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  } {kernelModule = @test_module, kernelFunc = @test_kernel_func}
+  return
+}
+
+// -----
+// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch, when kernelModule already exists.
+
+// CHECK-LABEL: gpu.module @existing_module
+// CHECK: gpu.func @test_kernel_func()
+// CHECK: gpu.func @test_kernel_func_0()
+// CHECK-NOT: gpu.module @testExistingModule_kernel
+// CHECK-NOT: gpu.func @testExistingModule_kernel()
+// CHECK: func.func @testExistingModule()
+// CHECK: gpu.launch_func  @existing_module::@test_kernel_func_0 blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+
+gpu.module @existing_module {
+  gpu.func @test_kernel_func() {
+    gpu.return
+  }
+}
+
+func.func @testExistingModule() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  } {kernelModule = @existing_module, kernelFunc = @test_kernel_func}
+  return
+}
+
+// -----
+// This test tests the optional attribute kernelModule for gpu.launch.
+// CHECK-LABEL: func.func @testKernelModuleOnly()
+// CHECK: gpu.launch_func  @test_module::@testKernelModuleOnly_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+// CHECK: gpu.module @test_module
+// CHECK: gpu.func @testKernelModuleOnly_kernel()
+func.func @testKernelModuleOnly() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  } {kernelModule = @test_module}
+  return
+}
+
+// -----
+// This test tests the optional attribute kernelFunc for gpu.launch.
+// CHECK-LABEL: func.func @testKernelFuncOnly()
+// CHECK: gpu.launch_func  @test_kernel_func::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+
+// CHECK: gpu.module @test_kernel_func
+// CHECK: gpu.func @test_kernel_func()
+func.func @testKernelFuncOnly() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  } {kernelFunc = @test_kernel_func}
+  return
+}
+
+// -----
+// This test tests gpu.launch when optional attributes kernelModule and kernelFunc are not specified.
+// CHECK-LABEL: func.func @testNoAttributes()
+// CHECK: gpu.launch_func  @testNoAttributes_kernel::@testNoAttributes_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
+
+// CHECK: gpu.module @testNoAttributes_kernel
+// CHECK: gpu.func @testNoAttributes_kernel()
+func.func @testNoAttributes() {
+  %gDimX = arith.constant 8 : index
+  %gDimY = arith.constant 12 : index
+  %gDimZ = arith.constant 16 : index
+  %bDimX = arith.constant 32 : index
+  %bDimY = arith.constant 16 : index
+  %bDimZ = arith.constant 8 : index
+
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+    "some_op"(%bx, %tx) : (index, index) -> ()
+    gpu.terminator
+  }
+  return
+}

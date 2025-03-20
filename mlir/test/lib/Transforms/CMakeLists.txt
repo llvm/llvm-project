@@ -1,3 +1,8 @@
+set(LLVM_TARGET_DEFINITIONS TestTransformsOps.td)
+mlir_tablegen(TestTransformsOps.h.inc -gen-op-decls)
+mlir_tablegen(TestTransformsOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRTestTransformsOpsIncGen)
+
 set(LLVM_OPTIONAL_SOURCES 
   TestDialectConversion.cpp)
 set(MLIRTestTransformsPDLDep)
@@ -20,12 +25,12 @@ endif()
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestCommutativityUtils.cpp
+  TestCompositePass.cpp
   TestConstantFold.cpp
   TestControlFlowSink.cpp
   TestInlining.cpp
-  TestIntRangeInference.cpp
   TestMakeIsolatedFromAbove.cpp
-  TestTopologicalSort.cpp
+  TestTransformsOps.cpp
   ${MLIRTestTransformsPDLSrc}
 
   EXCLUDE_FROM_LIBMLIR
@@ -35,13 +40,17 @@ add_mlir_library(MLIRTestTransforms
 
   DEPENDS
   ${MLIRTestTransformsPDLDep}
+  MLIRTestTransformsOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRTestDialect
+  )
+mlir_target_link_libraries(MLIRTestTransforms PUBLIC
   MLIRAnalysis
   MLIRFuncDialect
   MLIRInferIntRangeInterface
-  MLIRTestDialect
   MLIRTransforms
+  MLIRTransformDialect
   )
 
 target_include_directories(MLIRTestTransforms

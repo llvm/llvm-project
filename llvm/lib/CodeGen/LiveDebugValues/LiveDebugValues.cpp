@@ -102,14 +102,6 @@ LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
 }
 
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
-  // Except for Wasm, all targets should be only using physical register at this
-  // point. Wasm only use virtual registers throught its pipeline, but its
-  // virtual registers don't participate  in this LiveDebugValues analysis; only
-  // its target indices do.
-  assert(MF.getTarget().getTargetTriple().isWasm() ||
-         MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::NoVRegs));
-
   bool InstrRefBased = MF.useDebugInstrRef();
   // Allow the user to force selection of InstrRef LDV.
   InstrRefBased |= ForceInstrRefLDV;
@@ -120,12 +112,14 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   MachineDominatorTree *DomTree = nullptr;
   if (InstrRefBased) {
     DomTree = &MDT;
-    MDT.calculate(MF);
+    MDT.recalculate(MF);
     TheImpl = &*InstrRefImpl;
   }
 
-  return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
-                               InputDbgValueLimit);
+  return TheImpl->ExtendRanges(
+      MF, DomTree,
+      TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues(),
+      InputBBLimit, InputDbgValueLimit);
 }
 
 bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {

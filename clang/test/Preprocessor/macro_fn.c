@@ -1,11 +1,17 @@
 /* RUN: %clang_cc1 %s -Eonly -std=c89 -pedantic -verify
 */
+// RUN: %clang_cc1 %s -Eonly -std=c89 -pedantic -Wno-gnu-zero-variadic-macro-arguments -verify -DOMIT_VARIADIC_MACRO_ARGS -DVARIADIC_MACRO_ARGS_REMOVE_COMMA
+// RUN: %clang_cc1 %s -Eonly -std=c89 -pedantic -Wno-variadic-macro-arguments-omitted -verify -DOMIT_VARIADIC_MACRO_ARGS
 /* PR3937 */
 #define zero() 0 /* expected-note 2 {{defined here}} */
 #define one(x) 0 /* expected-note 2 {{defined here}} */
 #define two(x, y) 0 /* expected-note 4 {{defined here}} */
 #define zero_dot(...) 0   /* expected-warning {{variadic macros are a C99 feature}} */
-#define one_dot(x, ...) 0 /* expected-warning {{variadic macros are a C99 feature}} expected-note 2{{macro 'one_dot' defined here}} */
+#define one_dot(x, ...) 0 /* expected-warning {{variadic macros are a C99 feature}} */
+
+#ifndef OMIT_VARIADIC_MACRO_ARGS
+/* expected-note@-3 2{{macro 'one_dot' defined here}} */
+#endif
 
 zero()
 zero(1);          /* expected-error {{too many arguments provided to function-like macro invocation}} */
@@ -37,16 +43,24 @@ e(x)
 e()
 
 zero_dot()
-one_dot(x)  /* empty ... argument: expected-warning {{must specify at least one argument for '...' parameter of variadic macro}}  */
-one_dot()   /* empty first argument, elided ...: expected-warning {{must specify at least one argument for '...' parameter of variadic macro}} */
+one_dot(x)  /* empty ... argument */
+one_dot()   /* empty first argument, elided ... */
 
+#ifndef OMIT_VARIADIC_MACRO_ARGS
+/* expected-warning@-4 {{passing no argument for the '...' parameter of a variadic macro is a C23 extension}} */
+/* expected-warning@-4 {{passing no argument for the '...' parameter of a variadic macro is a C23 extension}} */
+#endif
 
 /* Crash with function-like macro test at end of directive. */
 #define E() (i == 0)
 #if E
 #endif
 
-
 #define NSAssert(condition, desc, ...) /* expected-warning {{variadic macros are a C99 feature}} */ \
-    SomeComplicatedStuff((desc), ##__VA_ARGS__) /* expected-warning {{token pasting of ',' and __VA_ARGS__ is a GNU extension}} */
+    SomeComplicatedStuff((desc), ##__VA_ARGS__)
+
+#ifndef VARIADIC_MACRO_ARGS_REMOVE_COMMA
+/* expected-warning@-3 {{token pasting of ',' and __VA_ARGS__ is a GNU extension}} */
+#endif
+
 NSAssert(somecond, somedesc)

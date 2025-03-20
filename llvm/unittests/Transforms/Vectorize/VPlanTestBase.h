@@ -14,6 +14,7 @@
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
+#include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -28,7 +29,7 @@ namespace llvm {
 
 /// Helper class to create a module from an assembly string and VPlans for a
 /// given loop entry block.
-class VPlanTestBase : public testing::Test {
+class VPlanTestIRBase : public testing::Test {
 protected:
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI;
@@ -41,7 +42,7 @@ protected:
   std::unique_ptr<AssumptionCache> AC;
   std::unique_ptr<ScalarEvolution> SE;
 
-  VPlanTestBase()
+  VPlanTestIRBase()
       : TLII(), TLI(TLII),
         DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
            "f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:"
@@ -62,29 +63,36 @@ protected:
     SE.reset(new ScalarEvolution(F, TLI, *AC, *DT, *LI));
   }
 
-  VPlanPtr buildHCFG(BasicBlock *LoopHeader) {
+  /// Build the VPlan for the loop starting from \p LoopHeader.
+  VPlanPtr buildVPlan(BasicBlock *LoopHeader) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
 
-    auto Plan = VPlan::createInitialVPlan(
-        SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE);
-    VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
+    Loop *L = LI->getLoopFor(LoopHeader);
+    PredicatedScalarEvolution PSE(*SE, *L);
+    auto Plan = std::make_unique<VPlan>(L);
+    VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
     HCFGBuilder.buildHierarchicalCFG();
+    VPlanTransforms::introduceTopLevelVectorLoopRegion(
+        *Plan, IntegerType::get(*Ctx, 64), PSE, true, false, L);
     return Plan;
   }
+};
 
-  /// Build the VPlan plain CFG for the loop starting from \p LoopHeader.
-  VPlanPtr buildPlainCFG(BasicBlock *LoopHeader) {
-    Function &F = *LoopHeader->getParent();
-    assert(!verifyFunction(F) && "input function must be valid");
-    doAnalysis(F);
+class VPlanTestBase : public testing::Test {
+protected:
+  LLVMContext C;
+  std::unique_ptr<BasicBlock> ScalarHeader;
+  SmallVector<std::unique_ptr<VPlan>> Plans;
 
-    auto Plan = VPlan::createInitialVPlan(
-        SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE);
-    VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
-    HCFGBuilder.buildPlainCFG();
-    return Plan;
+  VPlanTestBase() : ScalarHeader(BasicBlock::Create(C, "scalar.header")) {
+    BranchInst::Create(&*ScalarHeader, &*ScalarHeader);
+  }
+
+  VPlan &getPlan(VPValue *TC = nullptr) {
+    Plans.push_back(std::make_unique<VPlan>(&*ScalarHeader, TC));
+    return *Plans.back();
   }
 };
 

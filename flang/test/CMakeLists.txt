@@ -11,6 +11,16 @@ llvm_canonicalize_cmake_booleans(
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
 
+# Check if 128-bit float computations can be done via long double
+check_cxx_source_compiles(
+  "#include <cfloat>
+   #if LDBL_MANT_DIG != 113
+   #error LDBL_MANT_DIG != 113
+   #endif
+   int main() { return 0; }
+  "
+  HAVE_LDBL_MANT_DIG_113)
+
 # FIXME In out-of-tree builds, "SHLIBDIR" is undefined and passing it to
 # `configure_lit_site_cfg` leads to a configuration error. This is currently
 # only required by plugins/examples, which are not supported in out-of-tree
@@ -48,24 +58,31 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  flang-new
-  llvm-config
-  FileCheck
-  count
-  not
+  flang
   module_files
   fir-opt
   tco
   bbc
-  llvm-dis
-  llvm-objdump
-  llvm-readobj
-  split-file
-  FortranRuntime
-  Fortran_main
   FortranDecimal
 )
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+if (NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS
+    llvm-config
+    FileCheck
+    count
+    not
+    llvm-dis
+    llvm-objdump
+    llvm-readobj
+    split-file
+  )
+endif ()
+
+if (FLANG_INCLUDE_RUNTIME)
+  list(APPEND FLANG_TEST_DEPENDS flang_rt.runtime)
+endif ()
+
+if (LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -83,14 +100,19 @@ if (LLVM_BUILD_EXAMPLES)
     )
 endif ()
 
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
+endif ()
+
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})
+set_target_properties(flang-test-depends PROPERTIES FOLDER "Flang/Meta")
 
 add_lit_testsuite(check-flang "Running the Flang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS ${FLANG_TEST_PARAMS}
   DEPENDS ${FLANG_TEST_DEPENDS}
 )
-set_target_properties(check-flang PROPERTIES FOLDER "Tests")
+set_target_properties(check-flang PROPERTIES FOLDER "Flang/Meta")
 
 # In case of standalone builds.
 if (FLANG_STANDALONE_BUILD)
@@ -110,3 +132,9 @@ if (DEFINED FLANG_TEST_TARGET_TRIPLE)
                         "to use FLANG_TEST_TARGET_TRIPLE.")
   endif()
 endif()
+
+# Compatibility targets.
+if (FLANG_INCLUDE_RUNTIME)
+  add_custom_target(check-flang-rt)
+  add_dependencies(check-flang-rt check-flang)
+endif ()

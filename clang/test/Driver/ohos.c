@@ -6,8 +6,11 @@
 // RUN:     -resource-dir=%S/Inputs/ohos_native_tree/llvm/lib/clang/x.y.z \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot -fuse-ld=ld -march=armv7-a -mcpu=cortex-a7 -mfloat-abi=soft 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARM-A7-SOFT %s
+// RUN: %clang %s -### -no-canonical-prefixes --target=loongarch64-linux-ohos \
+// RUN:     -resource-dir=%S/Inputs/ohos_native_tree/llvm/lib/clang/x.y.z \
+// RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-LOONGARCH %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
-// CHECK-NOT: "--mrelax-relocations"
 // CHECK-NOT: "-munwind-tables"
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -20,13 +23,17 @@
 // CHECK-NOT: "--build-id"
 // CHECK: "--hash-style=both"
 // CHECK: "-pie"
-// CHECK: "-dynamic-linker" "/lib/ld-musl-arm.so.1"
+// CHECK-ARM: "-dynamic-linker" "/lib/ld-musl-arm.so.1"
+// CHECK-ARM-A7-SOFT: "-dynamic-linker" "/lib/ld-musl-arm.so.1"
+// CHECK-LOONGARCH: "-dynamic-linker" "/lib/ld-musl-loongarch64.so.1"
 // CHECK: Scrt1.o
 // CHECK: crti.o
 // CHECK: clang_rt.crtbegin.o
 // CHECK-ARM: "-L[[SYSROOT]]{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}"
+// CHECK-LOONGARCH: "-L[[SYSROOT]]{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}loongarch64-linux-ohos{{/|\\\\}}"
 // CHECK-ARM-A7-SOFT: "-L[[SYSROOT]]{{/|\\\\}}usr{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}a7_soft"
 // CHECK-ARM: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-LOONGARCH: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}loongarch64-linux-ohos{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK-ARM-A7-SOFT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos/a7_soft{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK: clang_rt.crtend.o
@@ -95,8 +102,8 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
 // CHECK-SAFESTACK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
-// CHECK-SAFESTACK: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}libclang_rt.safestack.a"
 // CHECK-SAFESTACK: "__safestack_init"
+// CHECK-SAFESTACK: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}arm-liteos-ohos{{/|\\\\}}libclang_rt.safestack.a"
 
 // RUN: %clang %s -### --target=arm-liteos \
 // RUN:     -fsanitize=address 2>&1 \
@@ -230,10 +237,20 @@
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm64-linux-ohos -pthread \
-// RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/ohos_native_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-OHOS-PTHREAD %s
 
 // CHECK-OHOS-PTHREAD-NOT: -lpthread
 
+// RUN: %clang -### --target=aarch64-linux-ohos %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MAXPAGESIZE-4KB %s
+// RUN: %clang -### --target=loongarch64-linux-ohos %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MAXPAGESIZE-16KB %s
+// RUN: %clang -### --target=riscv64-linux-ohos %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MAXPAGESIZE-4KB %s
+// RUN: %clang -### --target=x86_64-linux-ohos %s 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MAXPAGESIZE-4KB %s
+
+// CHECK-MAXPAGESIZE-4KB: "-z" "max-page-size=4096"
+// CHECK-MAXPAGESIZE-16KB: "-z" "max-page-size=16384"

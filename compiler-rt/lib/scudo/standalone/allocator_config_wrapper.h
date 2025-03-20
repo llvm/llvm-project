@@ -12,22 +12,7 @@
 #include "condition_variable.h"
 #include "internal_defs.h"
 #include "secondary.h"
-
-namespace {
-
-template <typename T> struct removeConst {
-  using type = T;
-};
-template <typename T> struct removeConst<const T> {
-  using type = T;
-};
-
-// This is only used for SFINAE when detecting if a type is defined.
-template <typename T> struct voidAdaptor {
-  using type = void;
-};
-
-} // namespace
+#include "type_traits.h"
 
 namespace scudo {
 
@@ -36,7 +21,8 @@ namespace scudo {
     static constexpr removeConst<TYPE>::type getValue() { return DEFAULT; }    \
   };                                                                           \
   template <typename Config>                                                   \
-  struct NAME##State<Config, decltype(Config::MEMBER)> {                       \
+  struct NAME##State<                                                          \
+      Config, typename assertSameType<decltype(Config::MEMBER), TYPE>::type> { \
     static constexpr removeConst<TYPE>::type getValue() {                      \
       return Config::MEMBER;                                                   \
     }                                                                          \
@@ -109,6 +95,13 @@ template <typename AllocatorConfig> struct SecondaryConfig {
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)                                 \
   template <typename T>                                                        \
   using NAME = typename AllocatorConfig::Secondary::template NAME<T>;
+
+#define SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)                                \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, NAME)                                 \
+  static constexpr removeConst<TYPE>::type get##NAME() {                       \
+    return NAME##State<typename AllocatorConfig::Secondary>::getValue();       \
+  }
+
 #include "allocator_config.def"
 
   struct CacheConfig {

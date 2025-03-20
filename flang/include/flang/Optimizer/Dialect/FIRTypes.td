@@ -158,26 +158,6 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
   let assemblyFormat = "`<` $eleTy `>`";
 }
 
-def fir_ComplexType : FIR_Type<"Complex", "complex"> {
-  let summary = "Complex type";
-
-  let description = [{
-    Model of a Fortran COMPLEX intrinsic type, including the KIND type
-    parameter. COMPLEX is a floating point type with a real and imaginary
-    member.
-  }];
-
-  let parameters = (ins "KindTy":$fKind);
-  let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-
-    mlir::Type getElementType() const;
-    mlir::Type getEleType(const fir::KindMapping &kindMap) const;
-  }];
-}
-
 def fir_FieldType : FIR_Type<"Field", "field"> {
   let summary = "A field (in a RecordType) argument's type";
 
@@ -223,6 +203,22 @@ def fir_IntegerType : FIR_Type<"Integer", "int"> {
   let description = [{
     Model of a Fortran INTEGER intrinsic type, including the KIND type
     parameter.
+  }];
+
+  let parameters = (ins "KindTy":$fKind);
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    using KindTy = unsigned;
+  }];
+}
+
+def fir_UnsignedType : FIR_Type<"Unsigned", "unsigned"> {
+  let summary = "FIR unsigned type";
+
+  let description = [{
+    Model of a Fortran UNSIGNED extension intrinsic type, including
+    the KIND type parameter.
   }];
 
   let parameters = (ins "KindTy":$fKind);
@@ -313,26 +309,6 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RealType : FIR_Type<"Real", "real"> {
-  let summary = "FIR real type";
-
-  let description = [{
-    Model of a Fortran REAL (and DOUBLE PRECISION) intrinsic type, including the
-    KIND type parameter.
-  }];
-
-  let parameters = (ins "KindTy":$fKind);
-  let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-    // Get MLIR float type with same semantics.
-    mlir::Type getFloatType(const fir::KindMapping &kindMap) const;
-  }];
-
-  let genVerifyDecl = 1;
-}
-
 def fir_RecordType : FIR_Type<"Record", "type"> {
   let summary = "FIR derived type";
 
@@ -369,6 +345,12 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     bool isFinalized() const;
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
+
+    // fir.type is unpacked by default. If the flag is set, the packed fir.type
+    // is generated and the alignment is enforced by explicit padding by i8
+    // array fields.
+    bool isPacked() const;
+    void pack(bool);
 
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
@@ -505,6 +487,8 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
         size = size * static_cast<std::uint64_t>(extent);
       return size;
     }
+
+    mlir::Type getElementType() const { return getEleTy(); }
   }];
 }
 
@@ -559,6 +543,8 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let extraClassDeclaration = [{
     static bool isValidElementType(mlir::Type t);
+
+    mlir::Type getElementType() const { return getEleTy(); }
   }];
 
   let skipDefaultBuilders = 1;
@@ -576,26 +562,39 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
   let genStorageClass = 0;
 }
 
+def fir_DummyScopeType : FIR_Type<"DummyScope", "dscope"> {
+  let summary = "Dummy scope type";
+
+  let description = [{
+    `fir.dscope` is a type returned by fir.dummy_scope operation.
+    It defines a unique identifier for a runtime instance of a subroutine
+    that is used by the [hl]fir.declare operations representing
+    the dummy arguments' declarations.
+  }];
+}
+
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
-        : CPred<"$_self.isa<::fir::BaseBoxType>()">;
+        : CPred<"mlir::isa<::fir::BaseBoxType>($_self)">;
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
-def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
-    AnySignedInteger.predicate, fir_IntegerType.predicate]>, "any integer">;
+def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerOrIndexLike.predicate,
+    AnySignedInteger.predicate, AnyUnsignedInteger.predicate,
+    fir_IntegerType.predicate, fir_UnsignedType.predicate]>, "any integer">;
 def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
-def AnyRealLike : TypeConstraint<Or<[FloatLike.predicate,
-    fir_RealType.predicate]>, "any real">;
+def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 
+def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
+  "any floating point complex type">;
+def AnyFirComplex : Type<AnyFirComplexLike.predicate,
+  "any floating point complex type">;
+
 // Composable types
-// Note that we include both fir_ComplexType and AnyComplex, so we can use both
-// the FIR ComplexType and the MLIR ComplexType (the former is used to represent
-// Fortran complex and the latter for C++ std::complex).
 def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
-    fir_SequenceType.predicate, fir_ComplexType.predicate, AnyComplex.predicate,
+    fir_SequenceType.predicate, AnyFirComplexLike.predicate,
     fir_VectorType.predicate, IsTupleTypePred, fir_CharacterType.predicate]>,
     "any composite">;
 
@@ -625,6 +624,7 @@ def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
 def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate,
     IsBaseBoxTypePred]>, "any reference or box">;
+def AnyRefOrBoxType : Type<AnyRefOrBox.predicate, "any legal ref or box type">;
 
 def AnyShapeLike : TypeConstraint<Or<[fir_ShapeType.predicate,
     fir_ShapeShiftType.predicate]>, "any legal shape type">;
@@ -658,5 +658,12 @@ def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
     IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
+// Returns true iff the type is an array box or a reference to such type.
+def IsArrayBoxPred : CPred<"::fir::getBoxRank($_self) != 0">;
+
+// Any boxed array type (not a reference to a boxed array type).
+def AnyBoxedArray
+    : TypeConstraint<And<[BoxOrClassType.predicate, IsArrayBoxPred]>,
+                     "any boxed array">;
 
 #endif // FIR_DIALECT_FIR_TYPES

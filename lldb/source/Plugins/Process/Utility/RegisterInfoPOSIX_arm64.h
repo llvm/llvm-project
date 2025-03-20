@@ -32,6 +32,8 @@ public:
     eRegsetMaskTLS = 16,
     eRegsetMaskZA = 32,
     eRegsetMaskZT = 64,
+    eRegsetMaskFPMR = 128,
+    eRegsetMaskGCS = 256,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -110,6 +112,10 @@ public:
 
   void AddRegSetSME(bool has_zt);
 
+  void AddRegSetFPMR();
+
+  void AddRegSetGCS();
+
   uint32_t ConfigureVectorLengthSVE(uint32_t sve_vq);
 
   void ConfigureVectorLengthZA(uint32_t za_vq);
@@ -128,6 +134,8 @@ public:
   bool IsPAuthPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
   bool IsMTEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
   bool IsTLSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
+  bool IsFPMRPresent() const { return m_opt_regsets.AnySet(eRegsetMaskFPMR); }
+  bool IsGCSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskGCS); }
 
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
@@ -139,6 +147,8 @@ public:
   bool IsSMEReg(unsigned reg) const;
   bool IsSMERegZA(unsigned reg) const;
   bool IsSMERegZT(unsigned reg) const;
+  bool IsFPMRReg(unsigned reg) const;
+  bool IsGCSReg(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;
@@ -150,6 +160,8 @@ public:
   uint32_t GetMTEOffset() const;
   uint32_t GetTLSOffset() const;
   uint32_t GetSMEOffset() const;
+  uint32_t GetFPMROffset() const;
+  uint32_t GetGCSOffset() const;
 
 private:
   typedef std::map<uint32_t, std::vector<lldb_private::RegisterInfo>>
@@ -181,6 +193,8 @@ private:
   std::vector<uint32_t> m_mte_regnum_collection;
   std::vector<uint32_t> m_tls_regnum_collection;
   std::vector<uint32_t> m_sme_regnum_collection;
+  std::vector<uint32_t> m_fpmr_regnum_collection;
+  std::vector<uint32_t> m_gcs_regnum_collection;
 };
 
 #endif

@@ -1,13 +1,15 @@
 ! RUN: bbc -emit-hlfir -fopenmp --force-byref-reduction %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction %s -o - | FileCheck %s
 
-! CHECK-LABEL:   omp.reduction.declare @ieor_i_32_byref : !fir.ref<i32>
-! CHECK-SAME:    init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>):
-! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i32
+! CHECK-LABEL:   omp.declare_reduction @ieor_byref_i32 : !fir.ref<i32>
+! CHECK-SAME:    alloc {
 ! CHECK:            %[[REF:.*]] = fir.alloca i32
-! CHECK:            fir.store %[[C0_1]] to %[[REF]] : !fir.ref<i32>
 ! CHECK:            omp.yield(%[[REF]] : !fir.ref<i32>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<i32>, %[[ALLOC:.*]]: !fir.ref<i32>):
+! CHECK:            %[[C0_1:.*]] = arith.constant 0 : i32
+! CHECK:            fir.store %[[C0_1]] to %[[ALLOC]] : !fir.ref<i32>
+! CHECK:            omp.yield(%[[ALLOC]] : !fir.ref<i32>)
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[ARG0:.*]]: !fir.ref<i32>, %[[ARG1:.*]]: !fir.ref<i32>):
@@ -22,15 +24,15 @@
 !CHECK-SAME: %[[Y_BOX:.*]]: !fir.box<!fir.array<?xi32>>
 !CHECK: %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFreduction_ieorEx"}
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFreduction_ieorEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_BOX]] {uniq_name = "_QFreduction_ieorEy"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_BOX]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFreduction_ieorEy"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 
 
 !CHECK: omp.parallel
-!CHECK: %[[I_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+!CHECK: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[I_REF:.*]] : !fir.ref<i32>) reduction(byref @ieor_byref_i32 %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>)
+!CHECK-NEXT: omp.loop_nest
 !CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFreduction_ieorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: omp.wsloop byref reduction(@ieor_i_32_byref %[[X_DECL]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) for
-!CHECK: fir.store %{{.*}} to %[[I_DECL]]#1 : !fir.ref<i32>
 !CHECK: %[[PRV_DECL:.+]]:2 = hlfir.declare %[[PRV]] {{.*}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: hlfir.assign %{{.*}} to %[[I_DECL]]#1 : i32, !fir.ref<i32>
 !CHECK: %[[I_32:.*]] = fir.load %[[I_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[I_64:.*]] = fir.convert %[[I_32]] : (i32) -> i64
 !CHECK: %[[Y_I_REF:.*]] = hlfir.designate %[[Y_DECL]]#0 (%[[I_64]])  : (!fir.box<!fir.array<?xi32>>, i64) -> !fir.ref<i32>

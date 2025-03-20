@@ -795,8 +795,8 @@ define void @jt_multiple_jump_tables(ptr %arg, i32 %arg1, ptr %arg2) {
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[PHI]], [[C111]]
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[MUL]](s64)
   ; CHECK-NEXT:   [[C112:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[PTR_ADD1]](p0) :: (load (p0) from %ir.tmp59)
+  ; CHECK-NEXT:   %120:_(p0) = nuw nusw G_PTR_ADD [[PTR_ADD]], [[C112]](s64)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD %120(p0) :: (load (p0) from %ir.tmp59)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   $x1 = COPY [[LOAD]](p0)

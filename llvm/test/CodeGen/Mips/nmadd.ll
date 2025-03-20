@@ -1,15 +1,15 @@
 ; Check whether nmadd/nmsub instructions are properly generated
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r2 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r2 -mattr=+fp64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r2 -mattr=micromips -enable-no-nans-fp-math -asm-show-inst | FileCheck %s -check-prefixes=ALL,CHECK-NM,CHECK-MM
-; RUN: llc < %s -march=mips64el -mcpu=mips64   -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM-64
-; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM-64
-; RUN: llc < %s -march=mips64el -mcpu=mips4    -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM-64
-; RUN: llc < %s -march=mipsel   -mcpu=mips32   -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r6 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM
-; RUN: llc < %s -march=mips64el -mcpu=mips3    -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM-64
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r6 -mattr=micromips -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM
-; RUN: llc < %s -march=mipsel   -mcpu=mips32r3 -mattr=micromips -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r2 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r2 -mattr=+fp64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r2 -mattr=micromips -enable-no-nans-fp-math -asm-show-inst | FileCheck %s -check-prefixes=ALL,CHECK-NM,CHECK-MM
+; RUN: llc < %s -mtriple=mips64el -mcpu=mips64   -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM-64
+; RUN: llc < %s -mtriple=mips64el -mcpu=mips64r2 -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM-64
+; RUN: llc < %s -mtriple=mips64el -mcpu=mips4    -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM-64
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32   -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r6 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM
+; RUN: llc < %s -mtriple=mips64el -mcpu=mips3    -target-abi=n64 -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM-64
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r6 -mattr=micromips -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NOT-NM
+; RUN: llc < %s -mtriple=mipsel   -mcpu=mips32r3 -mattr=micromips -enable-no-nans-fp-math | FileCheck %s -check-prefixes=ALL,CHECK-NM
 
 define float @add1(float %f, float %g, float %h) local_unnamed_addr #0 {
 entry:

@@ -16,10 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "mcplus"
 
@@ -59,7 +56,7 @@ public:
     Regs |= getAliases(RISCV::X27);
   }
 
-  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+  bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
     case ELF::R_RISCV_CALL:
@@ -154,14 +151,14 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -173,20 +170,20 @@ public:
 
     Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   IndirectBranchType analyzeIndirectBranch(
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
       const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
       unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
-      MCInst *&PCRelBaseOut) const override {
+      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
     MemLocInstr = nullptr;
     BaseRegNum = 0;
     IndexRegNum = 0;
     DispValue = 0;
     DispExpr = nullptr;
     PCRelBaseOut = nullptr;
+    FixedEntryLoadInst = nullptr;
 
     // Check for the following long tail call sequence:
     // 1: auipc xi, %pcrel_hi(sym)
@@ -247,7 +244,7 @@ public:
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(RISCVMCExpr::create(
         MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        RISCVMCExpr::VK_RISCV_CALL, *Ctx)));
+        RISCVMCExpr::VK_CALL, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -408,7 +405,7 @@ public:
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                int64_t Addend, MCContext *Ctx, int64_t &Value,
-                               uint64_t RelType) const override {
+                               uint32_t RelType) const override {
     unsigned ImmOpNo = -1U;
 
     for (unsigned Index = 0; Index < MCPlus::getNumPrimeOperands(Inst);
@@ -429,7 +426,7 @@ public:
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                  MCContext &Ctx,
-                                 uint64_t RelType) const override {
+                                 uint32_t RelType) const override {
     switch (RelType) {
     default:
       return Expr;
@@ -437,19 +434,19 @@ public:
     case ELF::R_RISCV_TLS_GOT_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_LO, Ctx);
     case ELF::R_RISCV_HI20:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_HI, Ctx);
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_HI, Ctx);
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_LO, Ctx);
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_LO, Ctx);
     case ELF::R_RISCV_CALL:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL, Ctx);
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL, Ctx);
     case ELF::R_RISCV_CALL_PLT:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL_PLT, Ctx);
+      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL_PLT, Ctx);
     }
   }
 
@@ -474,8 +471,8 @@ public:
     switch (cast<RISCVMCExpr>(ImmExpr)->getKind()) {
     default:
       return false;
-    case RISCVMCExpr::VK_RISCV_CALL:
-    case RISCVMCExpr::VK_RISCV_CALL_PLT:
+    case RISCVMCExpr::VK_CALL:
+    case RISCVMCExpr::VK_CALL_PLT:
       return true;
     }
   }

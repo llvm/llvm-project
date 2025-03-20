@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsMCCodeEmitter.h"
+#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsFixupKinds.h"
 #include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
@@ -91,8 +92,8 @@ static void LowerLargeShift(MCInst& Inst) {
 void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
   // Encoding may be illegal !(rs < rt), but this situation is
   // easily fixed.
-  unsigned RegOp0 = Inst.getOperand(0).getReg();
-  unsigned RegOp1 = Inst.getOperand(1).getReg();
+  MCRegister RegOp0 = Inst.getOperand(0).getReg();
+  MCRegister RegOp1 = Inst.getOperand(1).getReg();
 
   unsigned Reg0 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp0);
   unsigned Reg1 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp1);
@@ -578,23 +579,7 @@ getSImm9AddiuspValue(const MCInst &MI, unsigned OpNo,
 unsigned MipsMCCodeEmitter::
 getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
                const MCSubtargetInfo &STI) const {
-  int64_t Res;
-
-  if (Expr->evaluateAsAbsolute(Res))
-    return Res;
-
   MCExpr::ExprKind Kind = Expr->getKind();
-  if (Kind == MCExpr::Constant) {
-    return cast<MCConstantExpr>(Expr)->getValue();
-  }
-
-  if (Kind == MCExpr::Binary) {
-    unsigned Res =
-        getExprOpValue(cast<MCBinaryExpr>(Expr)->getLHS(), Fixups, STI);
-    Res += getExprOpValue(cast<MCBinaryExpr>(Expr)->getRHS(), Fixups, STI);
-    return Res;
-  }
-
   if (Kind == MCExpr::Target) {
     const MipsMCExpr *MipsExpr = cast<MipsMCExpr>(Expr);
 
@@ -712,8 +697,7 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
     return 0;
   }
 
-  if (Kind == MCExpr::SymbolRef)
-    Ctx.reportError(Expr->getLoc(), "expected an immediate");
+  Ctx.reportError(Expr->getLoc(), "expected an immediate");
   return 0;
 }
 
@@ -724,7 +708,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                   SmallVectorImpl<MCFixup> &Fixups,
                   const MCSubtargetInfo &STI) const {
   if (MO.isReg()) {
-    unsigned Reg = MO.getReg();
+    MCRegister Reg = MO.getReg();
     unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(Reg);
     return RegNo;
   } else if (MO.isImm()) {
@@ -732,9 +716,29 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   } else if (MO.isDFPImm()) {
     return static_cast<unsigned>(bit_cast<double>(MO.getDFPImm()));
   }
-  // MO must be an Expr.
+  // TODO: Set EncoderMethod to "getImmOpValue" for imm Operand so that
+  // getMachineOpValue will not be called for isExpr code paths.
   assert(MO.isExpr());
-  return getExprOpValue(MO.getExpr(),Fixups, STI);
+  return getImmOpValue(MI, MO, Fixups, STI);
+}
+
+unsigned MipsMCCodeEmitter::getImmOpValue(const MCInst &MI, const MCOperand &MO,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  if (MO.isImm())
+    return MO.getImm();
+  assert(MO.isExpr() && "getImmOpValue expects only expressions or immediates");
+  const MCExpr *Expr = MO.getExpr();
+  int64_t Res;
+  if (Expr->evaluateAsAbsolute(Res))
+    return Res;
+  unsigned MIFrm = MipsII::getFormat(MCII.get(MI.getOpcode()).TSFlags);
+  if (!isa<MCTargetExpr>(Expr) && MIFrm == MipsII::FrmI) {
+    Fixups.push_back(MCFixup::create(
+        0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16), Expr->getLoc()));
+    return 0;
+  }
+  return getExprOpValue(Expr, Fixups, STI);
 }
 
 /// Return binary encoding of memory related operand.
@@ -1033,7 +1037,7 @@ MipsMCCodeEmitter::getRegisterListOpValue(const MCInst &MI, unsigned OpNo,
   // placed before memory operand (register + imm).
 
   for (unsigned I = OpNo, E = MI.getNumOperands() - 2; I < E; ++I) {
-    unsigned Reg = MI.getOperand(I).getReg();
+    MCRegister Reg = MI.getOperand(I).getReg();
     unsigned RegNo = Ctx.getRegisterInfo()->getEncodingValue(Reg);
     if (RegNo != 31)
       res++;
@@ -1093,7 +1097,7 @@ MipsMCCodeEmitter::getMovePRegSingleOpValue(const MCInst &MI, unsigned OpNo,
 
   MCOperand Op = MI.getOperand(OpNo);
   assert(Op.isReg() && "Operand of movep is not a register!");
-  switch (Op.getReg()) {
+  switch (Op.getReg().id()) {
   default:
     llvm_unreachable("Unknown register for movep!");
   case Mips::ZERO:  return 0;

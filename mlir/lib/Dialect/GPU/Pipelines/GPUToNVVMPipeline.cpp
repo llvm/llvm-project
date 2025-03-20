@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Config/mlir-config.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
@@ -39,7 +38,6 @@
 
 using namespace mlir;
 
-#if MLIR_ENABLE_CUDA_CONVERSIONS
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -50,7 +48,7 @@ void buildCommonPassPipeline(
   pm.addPass(createConvertNVGPUToNVVMPass());
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(createConvertVectorToSCFPass());
-  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createSCFToControlFlowPass());
   pm.addPass(createConvertNVVMToLLVMPass());
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
@@ -60,6 +58,7 @@ void buildCommonPassPipeline(
   nvvmTargetOptions.chip = options.cubinChip;
   nvvmTargetOptions.features = options.cubinFeatures;
   nvvmTargetOptions.optLevel = options.optLevel;
+  nvvmTargetOptions.cmdOptions = options.cmdOptions;
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
   pm.addPass(createLowerAffinePass());
   pm.addPass(createArithToLLVMConversionPass());
@@ -75,7 +74,6 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToNVVMPipelineOptions &options) {
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   ConvertGpuOpsToNVVMOpsOptions opt;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
@@ -127,5 +125,3 @@ void mlir::gpu::registerGPUToNVVMPipeline() {
       "code.",
       buildLowerToNVVMPassPipeline);
 }
-
-#endif // MLIR_ENABLE_CUDA_CONVERSIONS

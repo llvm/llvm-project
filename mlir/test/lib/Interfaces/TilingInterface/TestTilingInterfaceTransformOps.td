@@ -11,7 +11,7 @@
 
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -46,6 +46,27 @@ def TestFuseAndYieldOp : Op<Transform_Dialect, "test.fuse_and_yield",
     $target ($tile_sizes^)? (`interchange` $tile_interchange^)?
     (`use_forall` $use_forall^)? attr-dict 
     `:` functional-type(operands, results)
+  }];
+}
+
+def TestFuseConsumerOp : Op<Transform_Dialect, "test.fuse_consumer",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Fuses the consumer of the operation pointed to by the target handle
+    using the options provided as attributes.
+  }];
+
+  let arguments =
+    (ins TransformHandleTypeInterface:$target,
+        DefaultValuedAttr<I32Attr, "1">:$num_consumer_to_fuse);
+  let results = (outs TransformHandleTypeInterface:$consumer,
+                      TransformHandleTypeInterface:$fused_consumer);
+
+  let assemblyFormat = [{
+    $target (`num_consumer_to_fuse` `=` $num_consumer_to_fuse^)? 
+    attr-dict `:` functional-type(operands, results)
   }];
 }
 

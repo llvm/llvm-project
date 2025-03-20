@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete
-// RUN: %clang_cc1 -std=c++2a -verify %s "-DNEW=operator new" "-DDELETE=operator delete"
-// RUN: %clang_cc1 -std=c++2a -verify %s "-DNEW=::operator new" "-DDELETE=::operator delete"
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=operator new" "-DDELETE=operator delete"
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 
 constexpr bool alloc_from_user_code() {
   void *p = NEW(sizeof(int)); // expected-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
@@ -11,10 +12,9 @@ static_assert(alloc_from_user_code()); // expected-error {{constant expression}}
 
 namespace std {
   using size_t = decltype(sizeof(0));
-  // FIXME: It would be preferable to point these notes at the location of the call to allocator<...>::[de]allocate instead
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)NEW(sizeof(T) * N); // expected-note 3{{heap allocation}} expected-note {{not deallocated}}
+      return (T*)NEW(sizeof(T) * N);
     }
     constexpr void deallocate(void *p) {
       DELETE(p); // #dealloc expected-note 2{{'std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}}
@@ -58,7 +58,7 @@ constexpr bool mismatched(int alloc_kind, int dealloc_kind) {
     p = new int[1]; // expected-note {{heap allocation}}
     break;
   case 2:
-    p = std::allocator<int>().allocate(1);
+    p = std::allocator<int>().allocate(1); // expected-note 2{{heap allocation}}
     break;
   }
   switch (dealloc_kind) {
@@ -80,8 +80,10 @@ static_assert(mismatched(2, 0)); // expected-error {{constant expression}} expec
 static_assert(mismatched(2, 1)); // expected-error {{constant expression}} expected-note {{in call}}
 static_assert(mismatched(2, 2));
 
-constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{constant expression}} expected-note {{pointer to subobject of heap-allocated}}
-constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}}
+constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{constant expression}} expected-note {{pointer to subobject of heap-allocated}} \
+                                                           // expected-note {{heap allocation performed here}}
+constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}} \
+                                                             // expected-note {{not deallocated}}
 constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} expected-note {{assignment to object outside its lifetime}}
 constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // expected-error {{constant expression}} expected-note {{in call}}
 // expected-note@#dealloc {{'std::allocator<...>::deallocate' used to delete a null pointer}}
@@ -90,9 +92,10 @@ constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&
 // expected-note@-2 {{declared here}}
 
 void *operator new(std::size_t, void *p) { return p; }
-constexpr bool no_placement_new_in_user_code() { // expected-error {{never produces a constant expression}}
+void* operator new[] (std::size_t, void* p) {return p;}
+constexpr bool no_placement_new_in_user_code() { // cxx20-error {{constexpr function never produces a constant expression}}
   int a;
-  new (&a) int(42); // expected-note {{call to placement 'operator new'}}
+  new (&a) int(42); // cxx20-note {{this placement new expression is not supported in constant expressions before C++2c}}
   return a == 42;
 }
 

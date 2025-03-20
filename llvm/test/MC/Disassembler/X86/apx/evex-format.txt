@@ -90,7 +90,7 @@
 ## MRM5m
 
 # ATT:   vscatterpf0dps	(%r16,%zmm0) {%k1}
-# INTEL: vscatterpf0dps	{k1}, zmmword ptr [r16 + zmm0]
+# INTEL: vscatterpf0dps	{k1}, dword ptr [r16 + zmm0]
 0x62,0xfa,0x7d,0x49,0xc6,0x2c,0x00
 
 # ATT:   subq	$127, 123(%r16), %r17
@@ -214,6 +214,16 @@
 # ATT:   sarq	$123, %r16, %r17
 # INTEL: sar	r17, r16, 123
 0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b
+
+## MRMXrCC
+# ATT:   setzuo	%r16b
+# INTEL: setzuo	r16b
+0x62,0xfc,0x7f,0x18,0x40,0xc0
+
+## MRMXmCC
+# ATT:   setzuo	(%r16,%r17)
+# INTEL: setzuo	byte ptr [r16 + r17]
+0x62,0xfc,0x7b,0x18,0x40,0x04,0x08
 
 ## NoCD8
 

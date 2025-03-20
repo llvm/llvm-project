@@ -27,12 +27,13 @@ class ThreadList : public ThreadCollection {
   friend class Process;
 
 public:
-  ThreadList(Process *process);
+  ThreadList(Process &process);
 
   ThreadList(const ThreadList &rhs);
 
   ~ThreadList() override;
 
+  /// Precondition: both thread lists must be belong to the same process.
   const ThreadList &operator=(const ThreadList &rhs);
 
   uint32_t GetSize(bool can_update = true);
@@ -100,8 +101,6 @@ public:
 
   lldb::ThreadSP GetThreadSPForThreadPtr(Thread *thread_ptr);
 
-  lldb::ThreadSP GetBackingThread(const lldb::ThreadSP &real_thread);
-
   bool ShouldStop(Event *event_ptr);
 
   Vote ShouldReportStop(Event *event_ptr);
@@ -114,6 +113,10 @@ public:
   /// If a thread can "resume" without having to resume the target, it
   /// will return false for WillResume, and then the process will not be
   /// restarted.
+  /// Sets *direction to the run direction of the thread(s) that will
+  /// be resumed. If threads that we want to run disagree about the
+  /// direction, we execute forwards and pop any of the thread plans
+  /// that requested reverse execution.
   ///
   /// \return
   ///    \b true instructs the process to resume normally,
@@ -121,7 +124,7 @@ public:
   ///    the process will not actually run.  The thread must then return
   ///    the correct StopInfo when asked.
   ///
-  bool WillResume();
+  bool WillResume(lldb::RunDirection &direction);
 
   void DidResume();
 
@@ -135,6 +138,7 @@ public:
 
   std::recursive_mutex &GetMutex() const override;
 
+  /// Precondition: both thread lists must be belong to the same process.
   void Update(ThreadList &rhs);
 
 protected:
@@ -143,7 +147,7 @@ protected:
   void NotifySelectedThreadChanged(lldb::tid_t tid);
 
   // Classes that inherit from Process can see and modify these
-  Process *m_process; ///< The process that manages this thread list.
+  Process &m_process; ///< The process that manages this thread list.
   uint32_t
       m_stop_id; ///< The process stop ID that this thread list is valid for.
   lldb::tid_t

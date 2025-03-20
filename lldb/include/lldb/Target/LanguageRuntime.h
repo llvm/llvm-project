@@ -14,11 +14,11 @@
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Runtime.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 #include <optional>
@@ -73,11 +73,12 @@ public:
     return nullptr;
   }
 
-  virtual bool GetObjectDescription(Stream &str, ValueObject &object) = 0;
+  virtual llvm::Error GetObjectDescription(Stream &str,
+                                           ValueObject &object) = 0;
 
-  virtual bool GetObjectDescription(Stream &str, Value &value,
-                                    ExecutionContextScope *exe_scope) = 0;
-
+  virtual llvm::Error
+  GetObjectDescription(Stream &str, Value &value,
+                       ExecutionContextScope *exe_scope) = 0;
 
   struct VTableInfo {
     Address addr; /// Address of the vtable's virtual function table
@@ -104,12 +105,16 @@ public:
         "language doesn't support getting vtable information");
   }
 
-  // this call should return true if it could set the name and/or the type
-  virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
-                                        lldb::DynamicValueType use_dynamic,
-                                        TypeAndOrName &class_type_or_name,
-                                        Address &address,
-                                        Value::ValueType &value_type) = 0;
+  /// This call should return true if it could set the name and/or the type
+  /// Sets address to the address of the dynamic type if value_type is set to
+  /// a file or load address. Sets local_buffer to a buffer containing the data
+  /// of the dynamic type if value_type is set to a host address. Callers should
+  /// copy local_buffer over into their own buffer if they want to keep the data
+  /// alive.
+  virtual bool GetDynamicTypeAndAddress(
+      ValueObject &in_value, lldb::DynamicValueType use_dynamic,
+      TypeAndOrName &class_type_or_name, Address &address,
+      Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) = 0;
 
   // This call should return a CompilerType given a generic type name and an
   // ExecutionContextScope in which one can actually fetch any specialization
@@ -169,9 +174,9 @@ public:
     return m_process->GetTarget().GetSearchFilterForModule(nullptr);
   }
 
-  virtual bool GetTypeBitSize(const CompilerType &compiler_type,
-                              uint64_t &size) {
-    return false;
+  virtual std::optional<uint64_t>
+  GetTypeBitSize(const CompilerType &compiler_type) {
+    return {};
   }
 
   virtual void SymbolsDidLoad(const ModuleList &module_list) {}
@@ -195,6 +200,8 @@ public:
   virtual bool GetIRPasses(LLVMUserExpression::IRPasses &custom_passes) {
     return false;
   }
+
+  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
 
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
@@ -239,6 +246,11 @@ public:
   GetRuntimeUnwindPlan(lldb_private::Thread &thread,
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
+
+  /// Language runtime plugins can use this API to report
+  /// language-specific runtime information about this compile unit,
+  /// such as additional language version details or feature flags.
+  virtual StructuredData::ObjectSP GetLanguageSpecificData(SymbolContext sc);
 
 protected:
   // The static GetRuntimeUnwindPlan method above is only implemented in the

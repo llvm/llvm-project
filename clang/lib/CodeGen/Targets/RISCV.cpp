@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -34,6 +35,9 @@ private:
                                       llvm::Type *&Field2Ty,
                                       CharUnits &Field2Off) const;
 
+  bool detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
+                                 llvm::Type *&VLSType) const;
+
 public:
   RISCVABIInfo(CodeGen::CodeGenTypes &CGT, unsigned XLen, unsigned FLen,
                bool EABI)
@@ -45,13 +49,13 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
 
   ABIArgInfo classifyArgumentType(QualType Ty, bool IsFixed, int &ArgGPRsLeft,
-                                  int &ArgFPRsLeft) const;
-  ABIArgInfo classifyReturnType(QualType RetTy) const;
+                                  int &ArgFPRsLeft, unsigned ABIVLen) const;
+  ABIArgInfo classifyReturnType(QualType RetTy, unsigned ABIVLen) const;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
-  ABIArgInfo extendType(QualType Ty) const;
+  ABIArgInfo extendType(QualType Ty, llvm::Type *CoerceTy = nullptr) const;
 
   bool detectFPCCEligibleStruct(QualType Ty, llvm::Type *&Field1Ty,
                                 CharUnits &Field1Off, llvm::Type *&Field2Ty,
@@ -62,14 +66,81 @@ public:
                                                llvm::Type *Field2Ty,
                                                CharUnits Field2Off) const;
 
-  ABIArgInfo coerceVLSVector(QualType Ty) const;
+  ABIArgInfo coerceVLSVector(QualType Ty, unsigned ABIVLen = 0) const;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 } // end anonymous namespace
 
+void RISCVABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                           unsigned Index,
+                                           raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                           raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+
+  SmallVector<StringRef, 8> Attrs;
+  AttrStr.split(Attrs, ';');
+
+  // Only consider the arch string.
+  StringRef ArchStr;
+  for (auto &Attr : Attrs) {
+    if (Attr.starts_with("arch="))
+      ArchStr = Attr;
+  }
+
+  // Extract features string.
+  SmallVector<StringRef, 8> Features;
+  ArchStr.consume_front("arch=");
+  ArchStr.split(Features, ',');
+
+  llvm::stable_sort(Features);
+
+  for (auto Feat : Features) {
+    Feat.consume_front("+");
+    Out << "_" << Feat;
+  }
+}
+
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
+  unsigned ABIVLen;
+  switch (FI.getExtInfo().getCC()) {
+  default:
+    ABIVLen = 0;
+    break;
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CallingConv::CC_RISCVVLSCall_##ABI_VLEN:                                \
+    ABIVLen = ABI_VLEN;                                                        \
+    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+  }
   QualType RetTy = FI.getReturnType();
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classifyReturnType(RetTy);
+    FI.getReturnInfo() = classifyReturnType(RetTy, ABIVLen);
 
   // IsRetIndirect is true if classifyArgumentType indicated the value should
   // be passed indirect, or if the type size is a scalar greater than 2*XLen
@@ -95,8 +166,8 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   int ArgNum = 0;
   for (auto &ArgInfo : FI.arguments()) {
     bool IsFixed = ArgNum < NumFixedArgs;
-    ArgInfo.info =
-        classifyArgumentType(ArgInfo.type, IsFixed, ArgGPRsLeft, ArgFPRsLeft);
+    ArgInfo.info = classifyArgumentType(ArgInfo.type, IsFixed, ArgGPRsLeft,
+                                        ArgFPRsLeft, ABIVLen);
     ArgNum++;
   }
 }
@@ -152,7 +223,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible for
     // the FP calling convention in C++.
@@ -202,7 +273,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
       uint64_t FieldOffInBits = Layout.getFieldOffset(FD->getFieldIndex());
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
-        unsigned BitWidth = FD->getBitWidthValue(getContext());
+        unsigned BitWidth = FD->getBitWidthValue();
         // Allow a bitfield with a type greater than XLen as long as the
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)
@@ -315,40 +386,233 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
   return ABIArgInfo::getCoerceAndExpand(CoerceToType, UnpaddedCoerceToType);
 }
 
+bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
+                                             llvm::Type *&VLSType) const {
+  // No riscv_vls_cc attribute.
+  if (ABIVLen == 0)
+    return false;
+
+  // Legal struct for VLS calling convention should fulfill following rules:
+  // 1. Struct element should be either "homogeneous fixed-length vectors" or "a
+  //    fixed-length vector array".
+  // 2. Number of struct elements or array elements should be greater or equal
+  //    to 1 and less or equal to 8
+  // 3. Total number of vector registers needed should not exceed 8.
+  //
+  // Examples: Assume ABI_VLEN = 128.
+  // These are legal structs:
+  //   a. Structs with 1~8 "same" fixed-length vectors, e.g.
+  //   struct {
+  //     __attribute__((vector_size(16))) int a;
+  //     __attribute__((vector_size(16))) int b;
+  //   }
+  //
+  //   b. Structs with "single" fixed-length vector array with lengh 1~8, e.g.
+  //   struct {
+  //     __attribute__((vector_size(16))) int a[3];
+  //   }
+  // These are illegal structs:
+  //   a. Structs with 9 fixed-length vectors, e.g.
+  //   struct {
+  //     __attribute__((vector_size(16))) int a;
+  //     __attribute__((vector_size(16))) int b;
+  //     __attribute__((vector_size(16))) int c;
+  //     __attribute__((vector_size(16))) int d;
+  //     __attribute__((vector_size(16))) int e;
+  //     __attribute__((vector_size(16))) int f;
+  //     __attribute__((vector_size(16))) int g;
+  //     __attribute__((vector_size(16))) int h;
+  //     __attribute__((vector_size(16))) int i;
+  //   }
+  //
+  //   b. Structs with "multiple" fixed-length vector array, e.g.
+  //   struct {
+  //     __attribute__((vector_size(16))) int a[2];
+  //     __attribute__((vector_size(16))) int b[2];
+  //   }
+  //
+  //   c. Vector registers needed exceeds 8, e.g.
+  //   struct {
+  //     // Registers needed for single fixed-length element:
+  //     // 64 * 8 / ABI_VLEN = 4
+  //     __attribute__((vector_size(64))) int a;
+  //     __attribute__((vector_size(64))) int b;
+  //     __attribute__((vector_size(64))) int c;
+  //     __attribute__((vector_size(64))) int d;
+  //   }
+  //
+  // Struct of 1 fixed-length vector is passed as a scalable vector.
+  // Struct of >1 fixed-length vectors are passed as vector tuple.
+  // Struct of 1 array of fixed-length vectors is passed as a scalable vector.
+  // Otherwise, pass the struct indirectly.
+
+  if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty))) {
+    unsigned NumElts = STy->getStructNumElements();
+    if (NumElts > 8)
+      return false;
+
+    auto *FirstEltTy = STy->getElementType(0);
+    if (!STy->containsHomogeneousTypes())
+      return false;
+
+    // Check structure of fixed-length vectors and turn them into vector tuple
+    // type if legal.
+    if (auto *FixedVecTy = dyn_cast<llvm::FixedVectorType>(FirstEltTy)) {
+      if (NumElts == 1) {
+        // Handle single fixed-length vector.
+        VLSType = llvm::ScalableVectorType::get(
+            FixedVecTy->getElementType(),
+            llvm::divideCeil(FixedVecTy->getNumElements() *
+                                 llvm::RISCV::RVVBitsPerBlock,
+                             ABIVLen));
+        // Check registers needed <= 8.
+        return llvm::divideCeil(
+                   FixedVecTy->getNumElements() *
+                       FixedVecTy->getElementType()->getScalarSizeInBits(),
+                   ABIVLen) <= 8;
+      }
+      // LMUL
+      // = fixed-length vector size / ABIVLen
+      // = 8 * I8EltCount / RVVBitsPerBlock
+      // =>
+      // I8EltCount
+      // = (fixed-length vector size * RVVBitsPerBlock) / (ABIVLen * 8)
+      unsigned I8EltCount = llvm::divideCeil(
+          FixedVecTy->getNumElements() *
+              FixedVecTy->getElementType()->getScalarSizeInBits() *
+              llvm::RISCV::RVVBitsPerBlock,
+          ABIVLen * 8);
+      VLSType = llvm::TargetExtType::get(
+          getVMContext(), "riscv.vector.tuple",
+          llvm::ScalableVectorType::get(llvm::Type::getInt8Ty(getVMContext()),
+                                        I8EltCount),
+          NumElts);
+      // Check registers needed <= 8.
+      return NumElts *
+                 llvm::divideCeil(
+                     FixedVecTy->getNumElements() *
+                         FixedVecTy->getElementType()->getScalarSizeInBits(),
+                     ABIVLen) <=
+             8;
+    }
+
+    // If elements are not fixed-length vectors, it should be an array.
+    if (NumElts != 1)
+      return false;
+
+    // Check array of fixed-length vector and turn it into scalable vector type
+    // if legal.
+    if (auto *ArrTy = dyn_cast<llvm::ArrayType>(FirstEltTy)) {
+      unsigned NumArrElt = ArrTy->getNumElements();
+      if (NumArrElt > 8)
+        return false;
+
+      auto *ArrEltTy = dyn_cast<llvm::FixedVectorType>(ArrTy->getElementType());
+      if (!ArrEltTy)
+        return false;
+
+      // LMUL
+      // = NumArrElt * fixed-length vector size / ABIVLen
+      // = fixed-length vector elt size * ScalVecNumElts / RVVBitsPerBlock
+      // =>
+      // ScalVecNumElts
+      // = (NumArrElt * fixed-length vector size * RVVBitsPerBlock) /
+      //   (ABIVLen * fixed-length vector elt size)
+      // = NumArrElt * num fixed-length vector elt * RVVBitsPerBlock /
+      //   ABIVLen
+      unsigned ScalVecNumElts = llvm::divideCeil(
+          NumArrElt * ArrEltTy->getNumElements() * llvm::RISCV::RVVBitsPerBlock,
+          ABIVLen);
+      VLSType = llvm::ScalableVectorType::get(ArrEltTy->getElementType(),
+                                              ScalVecNumElts);
+      // Check registers needed <= 8.
+      return llvm::divideCeil(
+                 ScalVecNumElts *
+                     ArrEltTy->getElementType()->getScalarSizeInBits(),
+                 llvm::RISCV::RVVBitsPerBlock) <= 8;
+    }
+  }
+  return false;
+}
+
 // Fixed-length RVV vectors are represented as scalable vectors in function
 // args/return and must be coerced from fixed vectors.
-ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
+ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   assert(Ty->isVectorType() && "expected vector type!");
 
   const auto *VT = Ty->castAs<VectorType>();
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
-  auto VScale =
-      getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+  auto VScale = getContext().getTargetInfo().getVScaleRange(
+      getContext().getLangOpts(), false);
 
   unsigned NumElts = VT->getNumElements();
-  llvm::Type *EltType;
-  if (VT->getVectorKind() == VectorKind::RVVFixedLengthMask) {
+  llvm::Type *EltType = llvm::Type::getInt1Ty(getVMContext());
+  switch (VT->getVectorKind()) {
+  case VectorKind::RVVFixedLengthMask_1:
+    break;
+  case VectorKind::RVVFixedLengthMask_2:
+    NumElts *= 2;
+    break;
+  case VectorKind::RVVFixedLengthMask_4:
+    NumElts *= 4;
+    break;
+  case VectorKind::RVVFixedLengthMask:
     NumElts *= 8;
-    EltType = llvm::Type::getInt1Ty(getVMContext());
-  } else {
-    assert(VT->getVectorKind() == VectorKind::RVVFixedLengthData &&
+    break;
+  default:
+    assert((VT->getVectorKind() == VectorKind::Generic ||
+            VT->getVectorKind() == VectorKind::RVVFixedLengthData) &&
            "Unexpected vector kind");
     EltType = CGT.ConvertType(VT->getElementType());
   }
 
-  // The MinNumElts is simplified from equation:
-  // NumElts / VScale =
-  //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
-  //    * (RVVBitsPerBlock / EltSize)
-  llvm::ScalableVectorType *ResType =
-      llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
+  llvm::ScalableVectorType *ResType;
+
+  if (ABIVLen == 0) {
+    // The MinNumElts is simplified from equation:
+    // NumElts / VScale =
+    //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
+    //    * (RVVBitsPerBlock / EltSize)
+    ResType = llvm::ScalableVectorType::get(EltType, NumElts / VScale->first);
+  } else {
+    // Check registers needed <= 8.
+    if ((EltType->getScalarSizeInBits() * NumElts / ABIVLen) > 8)
+      return getNaturalAlignIndirect(
+          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
+
+    // Generic vector
+    // The number of elements needs to be at least 1.
+    ResType = llvm::ScalableVectorType::get(
+        EltType,
+        llvm::divideCeil(NumElts * llvm::RISCV::RVVBitsPerBlock, ABIVLen));
+
+    // If the corresponding extension is not supported, just make it an i8
+    // vector with same LMUL.
+    const TargetInfo &TI = getContext().getTargetInfo();
+    if ((EltType->isHalfTy() && !TI.hasFeature("zvfhmin")) ||
+        (EltType->isBFloatTy() && !TI.hasFeature("zvfbfmin")) ||
+        (EltType->isFloatTy() && !TI.hasFeature("zve32f")) ||
+        (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
+        (EltType->isIntegerTy(64) && !TI.hasFeature("zve64x")) ||
+        EltType->isIntegerTy(128)) {
+      // The number of elements needs to be at least 1.
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getInt8Ty(getVMContext()),
+          llvm::divideCeil(EltType->getScalarSizeInBits() * NumElts *
+                               llvm::RISCV::RVVBitsPerBlock,
+                           8 * ABIVLen));
+    }
+  }
+
   return ABIArgInfo::getDirect(ResType);
 }
 
 ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
                                               int &ArgGPRsLeft,
-                                              int &ArgFPRsLeft) const {
+                                              int &ArgFPRsLeft,
+                                              unsigned ABIVLen) const {
   assert(ArgGPRsLeft <= NumArgGPRs && "Arg GPR tracking underflow");
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
@@ -357,15 +621,17 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
     if (ArgGPRsLeft)
       ArgGPRsLeft -= 1;
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                           CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Ignore empty structs/unions.
-  if (isEmptyRecord(getContext(), Ty, true))
-    return ABIArgInfo::getIgnore();
-
   uint64_t Size = getContext().getTypeSize(Ty);
+
+  // Ignore empty structs/unions whose size is zero. According to the calling
+  // convention empty structs/unions are required to be sized types in C++.
+  if (isEmptyRecord(getContext(), Ty, true) && Size == 0)
+    return ABIArgInfo::getIgnore();
 
   // Pass floating point values via FPRs if possible.
   if (IsFixed && Ty->isFloatingType() && !Ty->isComplexType() &&
@@ -403,6 +669,12 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     }
   }
 
+  if (IsFixed && Ty->isStructureOrClassType()) {
+    llvm::Type *VLSType = nullptr;
+    if (detectVLSCCEligibleStruct(Ty, ABIVLen, VLSType))
+      return ABIArgInfo::getDirect(VLSType);
+  }
+
   uint64_t NeededAlign = getContext().getTypeAlign(Ty);
   // Determine the number of GPRs needed to pass the current argument
   // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
@@ -429,31 +701,39 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
 
     // All integral types are promoted to XLen width
     if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
-      return extendType(Ty);
+      return extendType(Ty, CGT.ConvertType(Ty));
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>()) {
       if (EIT->getNumBits() < XLen)
-        return extendType(Ty);
+        return extendType(Ty, CGT.ConvertType(Ty));
       if (EIT->getNumBits() > 128 ||
           (!getContext().getTargetInfo().hasInt128Type() &&
            EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+        return getNaturalAlignIndirect(
+            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+            /*ByVal=*/false);
     }
 
-    ABIArgInfo Info = ABIArgInfo::getDirect();
-
-    // If it is tuple type, it can't be flattened.
-    if (llvm::StructType *STy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty)))
-      Info.setCanBeFlattened(!STy->containsHomogeneousScalableVectorTypes());
-
-    return Info;
+    return ABIArgInfo::getDirect();
   }
 
-  if (const VectorType *VT = Ty->getAs<VectorType>())
+  // TODO: _BitInt is not handled yet in VLS calling convention since _BitInt
+  // ABI is also not merged yet in RISC-V:
+  // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/pull/419
+  if (const VectorType *VT = Ty->getAs<VectorType>();
+      VT && !VT->getElementType()->isBitIntType()) {
     if (VT->getVectorKind() == VectorKind::RVVFixedLengthData ||
-        VT->getVectorKind() == VectorKind::RVVFixedLengthMask)
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_1 ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_2 ||
+        VT->getVectorKind() == VectorKind::RVVFixedLengthMask_4)
       return coerceVLSVector(Ty);
+    if (VT->getVectorKind() == VectorKind::Generic && ABIVLen != 0)
+      // Generic vector without riscv_vls_cc should fall through and pass by
+      // reference.
+      return coerceVLSVector(Ty, ABIVLen);
+  }
 
   // Aggregates which are <= 2*XLen will be passed in registers if possible,
   // so coerce to integers.
@@ -473,10 +753,13 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
           llvm::IntegerType::get(getVMContext(), XLen), 2));
     }
   }
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(
+      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/false);
 }
 
-ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {
+ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy,
+                                            unsigned ABIVLen) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
@@ -485,19 +768,17 @@ ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {
 
   // The rules for return and argument types are the same, so defer to
   // classifyArgumentType.
-  return classifyArgumentType(RetTy, /*IsFixed=*/true, ArgGPRsLeft,
-                              ArgFPRsLeft);
+  return classifyArgumentType(RetTy, /*IsFixed=*/true, ArgGPRsLeft, ArgFPRsLeft,
+                              ABIVLen);
 }
 
-Address RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                QualType Ty) const {
+RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                               QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    return Address(CGF.Builder.CreateLoad(VAListAddr),
-                   CGF.ConvertTypeForMem(Ty), SlotSize);
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Slot.asRValue();
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 
@@ -511,16 +792,16 @@ Address RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // Arguments bigger than 2*Xlen bytes are passed indirectly.
   bool IsIndirect = TInfo.Width > 2 * SlotSize;
 
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo,
-                          SlotSize, /*AllowHigherAlign=*/true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo, SlotSize,
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
-ABIArgInfo RISCVABIInfo::extendType(QualType Ty) const {
+ABIArgInfo RISCVABIInfo::extendType(QualType Ty, llvm::Type *CoerceTy) const {
   int TySize = getContext().getTypeSize(Ty);
   // RV64 ABI requires unsigned 32 bit integers to be sign extended.
   if (XLen == 64 && Ty->isUnsignedIntegerOrEnumerationType() && TySize == 32)
-    return ABIArgInfo::getSignExtend(Ty);
-  return ABIArgInfo::getExtend(Ty);
+    return ABIArgInfo::getSignExtend(Ty, CoerceTy);
+  return ABIArgInfo::getExtend(Ty, CoerceTy);
 }
 
 namespace {
@@ -539,6 +820,11 @@ public:
     const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD) return;
 
+    auto *Fn = cast<llvm::Function>(GV);
+
+    if (CGM.getCodeGenOpts().CFProtectionReturn)
+      Fn->addFnAttr("hw-shadow-stack");
+
     const auto *Attr = FD->getAttr<RISCVInterruptAttr>();
     if (!Attr)
       return;
@@ -547,9 +833,13 @@ public:
     switch (Attr->getInterrupt()) {
     case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
     case RISCVInterruptAttr::machine: Kind = "machine"; break;
+    case RISCVInterruptAttr::qcinest:
+      Kind = "qci-nest";
+      break;
+    case RISCVInterruptAttr::qcinonest:
+      Kind = "qci-nonest";
+      break;
     }
-
-    auto *Fn = cast<llvm::Function>(GV);
 
     Fn->addFnAttr("interrupt", Kind);
   }

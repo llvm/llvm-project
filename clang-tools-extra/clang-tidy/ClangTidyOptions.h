@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorOr.h"
@@ -82,6 +83,10 @@ struct ClangTidyOptions {
   /// Output warnings from headers matching this filter. Warnings from
   /// main files will always be displayed.
   std::optional<std::string> HeaderFilterRegex;
+
+  /// \brief Exclude warnings from headers matching this filter, even if they
+  /// match \c HeaderFilterRegex.
+  std::optional<std::string> ExcludeHeaderFilterRegex;
 
   /// Output warnings from system headers matching \c HeaderFilterRegex.
   std::optional<bool> SystemHeaders;
@@ -233,11 +238,17 @@ protected:
   void addRawFileOptions(llvm::StringRef AbsolutePath,
                          std::vector<OptionsSource> &CurOptions);
 
+  llvm::ErrorOr<llvm::SmallString<128>>
+  getNormalizedAbsolutePath(llvm::StringRef AbsolutePath);
+
   /// Try to read configuration files from \p Directory using registered
   /// \c ConfigHandlers.
   std::optional<OptionsSource> tryReadConfigFile(llvm::StringRef Directory);
 
-  llvm::StringMap<OptionsSource> CachedOptions;
+  struct OptionsCache {
+    llvm::StringMap<size_t> Memorized;
+    llvm::SmallVector<OptionsSource, 4U> Storage;
+  } CachedOptions;
   ClangTidyOptions OverrideOptions;
   ConfigFileHandlers ConfigHandlers;
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;

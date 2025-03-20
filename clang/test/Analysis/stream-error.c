@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN: -analyzer-checker=core \
-// RUN: -analyzer-checker=alpha.unix.Stream \
+// RUN: -analyzer-checker=unix.Stream \
+// RUN: -analyzer-config unix.Stream:Pedantic=true \
 // RUN: -analyzer-checker=debug.StreamTester \
 // RUN: -analyzer-checker=debug.ExprInspection
 
@@ -95,7 +96,7 @@ void error_fread(void) {
     }
   }
   fclose(F);
-  Ret = fread(Buf, 1, 10, F); // expected-warning {{Stream might be already closed}}
+  Ret = fread(Buf, 1, 10, F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fwrite(void) {
@@ -112,7 +113,7 @@ void error_fwrite(void) {
     fwrite(0, 1, 10, F);            // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  Ret = fwrite(0, 1, 10, F); // expected-warning {{Stream might be already closed}}
+  Ret = fwrite(0, 1, 10, F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fgetc(void) {
@@ -134,7 +135,7 @@ void error_fgetc(void) {
     }
   }
   fclose(F);
-  fgetc(F); // expected-warning {{Stream might be already closed}}
+  fgetc(F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fgets(void) {
@@ -157,7 +158,7 @@ void error_fgets(void) {
     }
   }
   fclose(F);
-  fgets(Buf, sizeof(Buf), F);         // expected-warning {{Stream might be already closed}}
+  fgets(Buf, sizeof(Buf), F);         // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fputc(int fd) {
@@ -175,7 +176,7 @@ void error_fputc(int fd) {
     fputc('Y', F);                               // no-warning
   }
   fclose(F);
-  fputc('A', F); // expected-warning {{Stream might be already closed}}
+  fputc('A', F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fputs(void) {
@@ -193,7 +194,7 @@ void error_fputs(void) {
     fputs("QWD", F);                 // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  fputs("ABC", F); // expected-warning {{Stream might be already closed}}
+  fputs("ABC", F); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fprintf(void) {
@@ -210,7 +211,7 @@ void error_fprintf(void) {
     fprintf(F, "bbb");              // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  fprintf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+  fprintf(F, "ccc"); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_fscanf(int *A) {
@@ -235,7 +236,7 @@ void error_fscanf(int *A) {
     }
   }
   fclose(F);
-  fscanf(F, "ccc"); // expected-warning {{Stream might be already closed}}
+  fscanf(F, "ccc"); // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_ungetc(int TestIndeterminate) {
@@ -255,7 +256,7 @@ void error_ungetc(int TestIndeterminate) {
     ungetc('X', F);                          // expected-warning {{might be 'indeterminate'}}
   }
   fclose(F);
-  ungetc('A', F);                            // expected-warning {{Stream might be already closed}}
+  ungetc('A', F);                            // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_getdelim(char *P, size_t Sz) {
@@ -277,7 +278,7 @@ void error_getdelim(char *P, size_t Sz) {
     }
   }
   fclose(F);
-  getdelim(&P, &Sz, '\n', F);         // expected-warning {{Stream might be already closed}}
+  getdelim(&P, &Sz, '\n', F);         // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void error_getline(char *P, size_t Sz) {
@@ -299,7 +300,7 @@ void error_getline(char *P, size_t Sz) {
     }
   }
   fclose(F);
-  getline(&P, &Sz, F);                // expected-warning {{Stream might be already closed}}
+  getline(&P, &Sz, F);                // expected-warning {{Use of a stream that might be already closed}}
 }
 
 void write_after_eof_is_allowed(void) {
@@ -365,27 +366,22 @@ void error_fseek(void) {
     return;
   int rc = fseek(F, 1, SEEK_SET);
   if (rc) {
+    clang_analyzer_eval(rc == -1);     // expected-warning {{TRUE}}
     int IsFEof = feof(F), IsFError = ferror(F);
-    // Get feof or ferror or no error.
-    clang_analyzer_eval(IsFEof || IsFError);
-    // expected-warning@-1 {{FALSE}}
-    // expected-warning@-2 {{TRUE}}
-    clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
+    // Get ferror or no error.
+    clang_analyzer_eval(IsFError);     // expected-warning {{FALSE}} \
+                                       // expected-warning {{TRUE}}
+    clang_analyzer_eval(IsFEof);       // expected-warning {{FALSE}}
     // Error flags should not change.
-    if (IsFEof)
-      clang_analyzer_eval(feof(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(feof(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));      // expected-warning {{FALSE}}
     if (IsFError)
-      clang_analyzer_eval(ferror(F)); // expected-warning {{TRUE}}
-    else
-      clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+      clang_analyzer_eval(ferror(F));  // expected-warning {{TRUE}}
   } else {
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));      // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F));    // expected-warning {{FALSE}}
     // Error flags should not change.
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));      // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F));    // expected-warning {{FALSE}}
   }
   fclose(F);
 }
@@ -396,15 +392,13 @@ void error_fseeko(void) {
     return;
   int rc = fseeko(F, 1, SEEK_SET);
   if (rc) {
-    int IsFEof = feof(F), IsFError = ferror(F);
-    // Get feof or ferror or no error.
-    clang_analyzer_eval(IsFEof || IsFError);
-    // expected-warning@-1 {{FALSE}}
-    // expected-warning@-2 {{TRUE}}
-    clang_analyzer_eval(IsFEof && IsFError); // expected-warning {{FALSE}}
+    // Get ferror or no error.
+    clang_analyzer_eval(ferror(F));  // expected-warning {{FALSE}} \
+                                     // expected-warning {{TRUE}}
+    clang_analyzer_eval(feof(F));    // expected-warning {{FALSE}}
   } else {
-    clang_analyzer_eval(feof(F));   // expected-warning {{FALSE}}
-    clang_analyzer_eval(ferror(F)); // expected-warning {{FALSE}}
+    clang_analyzer_eval(feof(F));    // expected-warning {{FALSE}}
+    clang_analyzer_eval(ferror(F));  // expected-warning {{FALSE}}
   }
   fclose(F);
 }
@@ -414,7 +408,7 @@ void error_fseek_0(void) {
   if (!F)
     return;
   int rc = fseek(F, 0, SEEK_SET);
-  if (rc) {
+  if (rc == -1) {
     int IsFEof = feof(F), IsFError = ferror(F);
     // Get ferror or no error, but not feof.
     clang_analyzer_eval(IsFError);

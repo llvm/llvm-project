@@ -28,6 +28,7 @@
 #endif // MLIR_ENABLE_CUDA_CUSPARSE
 
 #ifdef _WIN32
+#include <malloc.h>
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
 #else
 #define MLIR_CUDA_WRAPPERS_EXPORT __attribute__((visibility("default")))
@@ -236,11 +237,18 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
-mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/, bool /*isHostShared*/) {
+mgpuMemAlloc(uint64_t sizeBytes, CUstream stream, bool isHostShared) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
-  if (sizeBytes != 0)
-    CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
+  if (sizeBytes == 0)
+    return reinterpret_cast<void *>(ptr);
+
+  if (isHostShared) {
+    CUDA_REPORT_IF_ERROR(
+        cuMemAllocManaged(&ptr, sizeBytes, CU_MEM_ATTACH_GLOBAL));
+    return reinterpret_cast<void *>(ptr);
+  }
+  CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
   return reinterpret_cast<void *>(ptr);
 }
 
@@ -287,7 +295,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
                           int64_t elementSizeBytes) {
   // Only densely packed tensors are currently supported.
+#ifdef _WIN32
+  int64_t *denseStrides = (int64_t *)_alloca(rank * sizeof(int64_t));
+#else
   int64_t *denseStrides = (int64_t *)alloca(rank * sizeof(int64_t));
+#endif // _WIN32
   int64_t *sizes = descriptor->sizes;
   for (int64_t i = rank - 1, runningStride = 1; i >= 0; i--) {
     denseStrides[i] = runningStride;

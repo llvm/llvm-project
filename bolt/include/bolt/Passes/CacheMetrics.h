@@ -13,7 +13,6 @@
 #ifndef BOLT_PASSES_CACHEMETRICS_H
 #define BOLT_PASSES_CACHEMETRICS_H
 
-#include <cstdint>
 #include <vector>
 
 namespace llvm {

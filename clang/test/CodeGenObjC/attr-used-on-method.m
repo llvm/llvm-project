@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.10 %s -emit-llvm -o - | FileCheck %s
 
 // CHECK: @llvm.used =
 // CHECK-SAME: @"\01-[X m]"

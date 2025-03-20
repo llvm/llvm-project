@@ -7,17 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
-
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/WindowsError.h"
-
+#include <future>
 #include <sstream>
 
 #if defined(LLVM_ON_UNIX)
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#if defined(__MVS__)
+#include "llvm/Support/BLAKE3.h"
+#include <sys/shm.h>
+#endif
 #include <unistd.h>
 #endif
 
@@ -59,6 +64,21 @@ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
     SharedMemoryName = SharedMemoryNameStream.str();
   }
 
+#if defined(__MVS__)
+  ArrayRef<uint8_t> Data(
+      reinterpret_cast<const uint8_t *>(SharedMemoryName.c_str()),
+      SharedMemoryName.size());
+  auto HashedName = BLAKE3::hash<sizeof(key_t)>(Data);
+  key_t Key = *reinterpret_cast<key_t *>(HashedName.data());
+  int SharedMemoryId =
+      shmget(Key, Size, IPC_CREAT | IPC_EXCL | __IPC_SHAREAS | 0700);
+  if (SharedMemoryId < 0)
+    return errorCodeToError(errnoAsErrorCode());
+
+  void *Addr = shmat(SharedMemoryId, nullptr, 0);
+  if (Addr == reinterpret_cast<void *>(-1))
+    return errorCodeToError(errnoAsErrorCode());
+#else
   int SharedMemoryFile =
       shm_open(SharedMemoryName.c_str(), O_RDWR | O_CREAT | O_EXCL, 0700);
   if (SharedMemoryFile < 0)
@@ -73,6 +93,7 @@ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
     return errorCodeToError(errnoAsErrorCode());
 
   close(SharedMemoryFile);
+#endif
 
 #elif defined(_WIN32)
 
@@ -131,6 +152,9 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
 #if defined(LLVM_ON_UNIX)
 
+#if defined(__MVS__)
+      // TODO Is it possible to change the protection level?
+#else
     int NativeProt = 0;
     if ((Segment.RAG.Prot & MemProt::Read) == MemProt::Read)
       NativeProt |= PROT_READ;
@@ -141,6 +165,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
     if (mprotect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt))
       return errorCodeToError(errnoAsErrorCode());
+#endif
 
 #elif defined(_WIN32)
 
@@ -158,15 +183,24 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
   }
 
   // Run finalization actions and get deinitlization action list.
-  auto DeinitializeActions = shared::runFinalizeActions(FR.Actions);
-  if (!DeinitializeActions) {
-    return DeinitializeActions.takeError();
+  std::vector<shared::WrapperFunctionCall> DeinitializeActions;
+  {
+    std::promise<MSVCPExpected<std::vector<shared::WrapperFunctionCall>>> P;
+    auto F = P.get_future();
+    shared::runFinalizeActions(
+        FR.Actions, [&](Expected<std::vector<shared::WrapperFunctionCall>> R) {
+          P.set_value(std::move(R));
+        });
+    if (auto DeinitializeActionsOrErr = F.get())
+      DeinitializeActions = std::move(*DeinitializeActionsOrErr);
+    else
+      return DeinitializeActionsOrErr.takeError();
   }
 
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     Allocations[MinAddr].DeinitializationActions =
-        std::move(*DeinitializeActions);
+        std::move(DeinitializeActions);
     Reservations[Reservation.toPtr<void *>()].Allocations.push_back(MinAddr);
   }
 
@@ -187,10 +221,11 @@ Error ExecutorSharedMemoryMapperService::deinitialize(
     std::lock_guard<std::mutex> Lock(Mutex);
 
     for (auto Base : llvm::reverse(Bases)) {
-      if (Error Err = shared::runDeallocActions(
-              Allocations[Base].DeinitializationActions)) {
-        AllErr = joinErrors(std::move(AllErr), std::move(Err));
-      }
+      shared::runDeallocActions(
+          Allocations[Base].DeinitializationActions, [&](Error Err) {
+            if (Err)
+              AllErr = joinErrors(std::move(AllErr), std::move(Err));
+          });
 
       // Remove the allocation from the allocation list of its reservation
       for (auto &Reservation : Reservations) {
@@ -239,8 +274,15 @@ Error ExecutorSharedMemoryMapperService::release(
 
 #if defined(LLVM_ON_UNIX)
 
+#if defined(__MVS__)
+    (void)Size;
+
+    if (shmdt(Base.toPtr<void *>()) < 0)
+      Err = joinErrors(std::move(Err), errorCodeToError(errnoAsErrorCode()));
+#else
     if (munmap(Base.toPtr<void *>(), Size) != 0)
       Err = joinErrors(std::move(Err), errorCodeToError(errnoAsErrorCode()));
+#endif
 
 #elif defined(_WIN32)
     (void)Size;

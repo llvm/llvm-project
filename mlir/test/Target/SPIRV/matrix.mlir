@@ -4,7 +4,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @matrix_access_chain
   spirv.func @matrix_access_chain(%arg0 : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, %arg1 : i32) -> !spirv.ptr<vector<3xf32>, Function> "None" {
     // CHECK: {{%.*}} = spirv.AccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>
-    %0 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>,Function>, i32
+    %0 = spirv.AccessChain %arg0[%arg1] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, i32 -> !spirv.ptr<vector<3xf32>, Function>
     spirv.ReturnValue %0 : !spirv.ptr<vector<3xf32>, Function>
   }
 
@@ -36,6 +36,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.ReturnValue %result : !spirv.matrix<2 x vector<3xf32>>
   }
 
+  // CHECK-LABEL: @matrix_times_vector_1
+  spirv.func @matrix_times_vector_1(%arg0: !spirv.matrix<3 x vector<4xf32>>, %arg1: vector<3xf32>) -> vector<4xf32> "None" {
+    // CHECK: {{%.*}} = spirv.MatrixTimesVector {{%.*}}, {{%.*}} : !spirv.matrix<3 x vector<4xf32>>, vector<3xf32> -> vector<4xf32>
+    %result = spirv.MatrixTimesVector %arg0, %arg1 : !spirv.matrix<3 x vector<4xf32>>, vector<3xf32> -> vector<4xf32>
+    spirv.ReturnValue %result : vector<4xf32>
+  }
+
+  // CHECK-LABEL: @vector_times_matrix_1
+  spirv.func @vector_times_matrix_1(%arg0: vector<3xf32>, %arg1: !spirv.matrix<4 x vector<3xf32>>) -> vector<4xf32> "None" {
+    // CHECK: {{%.*}} = spirv.VectorTimesMatrix {{%.*}}, {{%.*}} : vector<3xf32>, !spirv.matrix<4 x vector<3xf32>> -> vector<4xf32>
+    %result = spirv.VectorTimesMatrix %arg0, %arg1 : vector<3xf32>, !spirv.matrix<4 x vector<3xf32>> -> vector<4xf32>
+    spirv.ReturnValue %result : vector<4xf32>
+  }
+  
   // CHECK-LABEL: @matrix_times_matrix_1
   spirv.func @matrix_times_matrix_1(%arg0: !spirv.matrix<3 x vector<3xf32>>, %arg1: !spirv.matrix<3 x vector<3xf32>>) -> !spirv.matrix<3 x vector<3xf32>> "None"{
     // CHECK: {{%.*}} = spirv.MatrixTimesMatrix {{%.*}}, {{%.*}} : !spirv.matrix<3 x vector<3xf32>>, !spirv.matrix<3 x vector<3xf32>> -> !spirv.matrix<3 x vector<3xf32>>

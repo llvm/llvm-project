@@ -66,14 +66,8 @@
    don't. */
 #define HAVE_DECL_STRERROR_S 0
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#define HAVE_DLFCN_H 1
-
 /* Define if dlopen() is available on this platform. */
 #define HAVE_DLOPEN 1
-
-/* Define if dladdr() is available on this platform. */
-#define HAVE_DLADDR 1
 
 /* Define to 1 if we can register EH frames on this platform. */
 /* HAVE_REGISTER_FRAME defined in Bazel*/
@@ -83,15 +77,6 @@
 
 /* Define if __unw_add_dynamic_fde() is available on this platform. */
 /* HAVE_UNW_ADD_DYNAMIC_FDE defined in Bazel */
-
-/* Define to 1 if you have the <errno.h> header file. */
-#define HAVE_ERRNO_H 1
-
-/* Define to 1 if you have the <fcntl.h> header file. */
-#define HAVE_FCNTL_H 1
-
-/* Define to 1 if you have the <fenv.h> header file. */
-#define HAVE_FENV_H 1
 
 /* Define if libffi is available on this platform. */
 /* #undef HAVE_FFI_CALL */
@@ -110,9 +95,6 @@
 
 /* Define to 1 if you have the `getpagesize' function. */
 #define HAVE_GETPAGESIZE 1
-
-/* Define to 1 if you have the `getrlimit' function. */
-#define HAVE_GETRLIMIT 1
 
 /* Define to 1 if you have the `getrusage' function. */
 #define HAVE_GETRUSAGE 1
@@ -140,9 +122,6 @@
 
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #define HAVE_PTHREAD_SETNAME_NP 1
-
-/* Define to 1 if you have the <link.h> header file. */
-/* HAVE_LINK_H defined in Bazel */
 
 /* Define to 1 if you have the <mach/mach.h> header file. */
 /* HAVE_MACH_MACH_H defined in Bazel */
@@ -180,14 +159,8 @@
 /* Define to 1 if you have the `setenv' function. */
 /* HAVE_SETENV defined in Bazel */
 
-/* Define to 1 if you have the `setrlimit' function. */
-#define HAVE_SETRLIMIT 1
-
 /* Define to 1 if you have the `sigaltstack' function. */
 #define HAVE_SIGALTSTACK 1
-
-/* Define to 1 if you have the <signal.h> header file. */
-#define HAVE_SIGNAL_H 1
 
 /* Define to 1 if you have the `strerror_r' function. */
 /* HAVE_STRERROR_R defined in Bazel */
@@ -195,38 +168,14 @@
 /* Define to 1 if you have the `sysconf' function. */
 #define HAVE_SYSCONF 1
 
-/* Define to 1 if you have the <sys/ioctl.h> header file. */
-#define HAVE_SYS_IOCTL_H 1
-
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #define HAVE_SYS_MMAN_H 1
-
-/* Define to 1 if you have the <sys/param.h> header file. */
-#define HAVE_SYS_PARAM_H 1
-
-/* Define to 1 if you have the <sys/resource.h> header file. */
-#define HAVE_SYS_RESOURCE_H 1
-
-/* Define to 1 if you have the <sys/stat.h> header file. */
-#define HAVE_SYS_STAT_H 1
-
-/* Define to 1 if you have the <sys/time.h> header file. */
-#define HAVE_SYS_TIME_H 1
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 /* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
 
 /* Define to 1 if stat struct has st_mtim member. */
 /* HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC defined in Bazel */
-
-/* Define to 1 if you have the <sys/types.h> header file. */
-#define HAVE_SYS_TYPES_H 1
-
-/* Define if the setupterm() function is supported this platform. */
-/* LLVM_ENABLE_TERMINFO defined in Bazel */
-
-/* Define to 1 if you have the <termios.h> header file. */
-#define HAVE_TERMIOS_H 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
 /* HAVE_UNISTD_H defined in Bazel */
@@ -306,6 +255,9 @@
 /* Whether tools show host and target info when invoked with --version */
 #define LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO 1
 
+/* Whether tools show optional build config flags when invoked with --version */
+#define LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG 1
+
 /* Define if libxml2 is supported on this platform. */
 /* #undef LLVM_ENABLE_LIBXML2 */
 
@@ -343,6 +295,8 @@
 #define LLVM_SUPPORT_XCODE_SIGNPOSTS 0
 
 /* HAVE_PROC_PID_RUSAGE defined in Bazel */
+
+/* HAVE_GETAUXVAL defined in Bazel */
 
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration

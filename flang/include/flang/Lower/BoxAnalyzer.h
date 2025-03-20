@@ -97,7 +97,7 @@ struct ScalarDynamicDerived : ScalarSym {
       : ScalarSym{sym}, lens{std::move(lens)} {}
 
 private:
-  llvm::SmallVector<Fortran::lower::SomeExpr> lens;
+  llvm::SmallVector<Fortran::lower::SomeExpr, 1> lens;
 };
 
 struct LBoundsAndShape {
@@ -403,7 +403,8 @@ public:
                 continue;
               }
             } else if (subs.ubound().isStar()) {
-              assert(Fortran::semantics::IsNamedConstant(sym) &&
+              assert((Fortran::semantics::IsNamedConstant(sym) ||
+                      Fortran::semantics::IsCUDAShared(sym)) &&
                      "expect implied shape constant");
               shapes.push_back(fir::SequenceType::getUnknownExtent());
               continue;

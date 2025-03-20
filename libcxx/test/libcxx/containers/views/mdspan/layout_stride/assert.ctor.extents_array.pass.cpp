@@ -41,8 +41,8 @@ int main(int, char**) {
   // the extents are representable but the product with strides is not, so we can't use it for layout_stride
   TEST_LIBCPP_ASSERT_FAILURE(
       ([=] {
-        std::layout_stride::mapping<std::extents<char, D, 5>> m(
-            std::extents<char, D, 5>(20), std::array<int, 2>{20, 1});
+        std::layout_stride::mapping<std::extents<signed char, D, 5>> m(
+            std::extents<signed char, D, 5>(20), std::array<int, 2>{20, 1});
       }()),
       "layout_stride::mapping ctor: required span size is not representable as index_type.");
 

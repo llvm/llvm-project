@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonSubtarget.h"
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
@@ -54,10 +53,6 @@ static cl::opt<bool>
 static cl::opt<bool>
     DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
                           cl::desc("Disable Hexagon MI Scheduling"));
-
-static cl::opt<bool> EnableSubregLiveness(
-    "hexagon-subreg-liveness", cl::Hidden, cl::init(true),
-    cl::desc("Enable subregister liveness tracking for Hexagon"));
 
 static cl::opt<bool> OverrideLongCalls(
     "hexagon-long-calls", cl::Hidden,
@@ -366,11 +361,13 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
           } else if (MO.isDef() && MO.getReg().isPhysical()) {
             for (MCRegAliasIterator AI(MO.getReg(), &TRI, true); AI.isValid();
                  ++AI) {
-              if (LastVRegUse.count(*AI) &&
-                  LastVRegUse[*AI] != &DAG->SUnits[su])
-                // %r0 = ...
-                DAG->addEdge(&DAG->SUnits[su], SDep(LastVRegUse[*AI], SDep::Barrier));
-              LastVRegUse.erase(*AI);
+              if (auto It = LastVRegUse.find(*AI); It != LastVRegUse.end()) {
+                if (It->second != &DAG->SUnits[su])
+                  // %r0 = ...
+                  DAG->addEdge(&DAG->SUnits[su],
+                               SDep(It->second, SDep::Barrier));
+                LastVRegUse.erase(It);
+              }
             }
           }
         }
@@ -437,9 +434,9 @@ bool HexagonSubtarget::useAA() const {
 
 /// Perform target specific adjustments to the latency of a schedule
 /// dependency.
-void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
-                                             SUnit *Dst, int DstOpIdx,
-                                             SDep &Dep) const {
+void HexagonSubtarget::adjustSchedDependency(
+    SUnit *Src, int SrcOpIdx, SUnit *Dst, int DstOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
   if (!Src->isInstr() || !Dst->isInstr())
     return;
 
@@ -497,7 +494,7 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, int SrcOpIdx,
         break;
       }
     }
-    Dep.setLatency(DLatency ? *DLatency : 0);
+    Dep.setLatency(DLatency.value_or(0));
   }
 
   // Try to schedule uses near definitions to generate .cur.
@@ -691,7 +688,7 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       restoreLatency(Src, DstBest);
   }
 
-  // Attempt to find another opprotunity for zero latency in a different
+  // Attempt to find another opportunity for zero latency in a different
   // dependence.
   if (SrcBest && DstBest)
     // If there is an edge from SrcBest to DstBst, then try to change that
@@ -726,9 +723,7 @@ unsigned HexagonSubtarget::getL1PrefetchDistance() const {
   return 32;
 }
 
-bool HexagonSubtarget::enableSubRegLiveness() const {
-  return EnableSubregLiveness;
-}
+bool HexagonSubtarget::enableSubRegLiveness() const { return true; }
 
 Intrinsic::ID HexagonSubtarget::getIntrinsicId(unsigned Opc) const {
   struct Scalar {

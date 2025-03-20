@@ -19,6 +19,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
@@ -48,8 +49,15 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.starts_with("_R"))
     return Mangled::eManglingSchemeRustV0;
 
-  if (name.starts_with("_D"))
-    return Mangled::eManglingSchemeD;
+  if (name.starts_with("_D")) {
+    // A dlang mangled name begins with `_D`, followed by a numeric length. One
+    // known exception is the symbol `_Dmain`.
+    // See `SymbolName` and `LName` in
+    // https://dlang.org/spec/abi.html#name_mangling
+    llvm::StringRef buf = name.drop_front(2);
+    if (!buf.empty() && (llvm::isDigit(buf.front()) || name == "_Dmain"))
+      return Mangled::eManglingSchemeD;
+  }
 
   if (name.starts_with("_Z"))
     return Mangled::eManglingSchemeItanium;
@@ -71,8 +79,10 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   // Swift 4.2 used "$S" and "_$S".
   // Swift 5 and onward uses "$s" and "_$s".
   // Swift also uses "@__swiftmacro_" as a prefix for mangling filenames.
+  // Embedded Swift introduced "$e" and  "_$e" as Swift mangling prefixes.
   if (name.starts_with("$S") || name.starts_with("_$S") ||
       name.starts_with("$s") || name.starts_with("_$s") ||
+      name.starts_with("$e") || name.starts_with("_$e") ||
       name.starts_with("@__swiftmacro_"))
     return Mangled::eManglingSchemeSwift;
 
@@ -260,56 +270,59 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
 ConstString Mangled::GetDemangledName() const {
-  // Check to make sure we have a valid mangled name and that we haven't
-  // already decoded our mangled name.
-  if (m_mangled && m_demangled.IsNull()) {
-    // Don't bother running anything that isn't mangled
-    const char *mangled_name = m_mangled.GetCString();
-    ManglingScheme mangling_scheme =
-        GetManglingScheme(m_mangled.GetStringRef());
-    if (mangling_scheme != eManglingSchemeNone &&
-        !m_mangled.GetMangledCounterpart(m_demangled)) {
-      // We didn't already mangle this name, demangle it and if all goes well
-      // add it to our map.
-      char *demangled_name = nullptr;
-      switch (mangling_scheme) {
-      case eManglingSchemeMSVC:
-        demangled_name = GetMSVCDemangledStr(mangled_name);
-        break;
-      case eManglingSchemeItanium: {
-        demangled_name = GetItaniumDemangledStr(mangled_name);
-        break;
-      }
-      case eManglingSchemeRustV0:
-        demangled_name = GetRustV0DemangledStr(m_mangled);
-        break;
-      case eManglingSchemeD:
-        demangled_name = GetDLangDemangledStr(m_mangled);
-        break;
-      case eManglingSchemeSwift:
-        // Demangling a swift name requires the swift compiler. This is
-        // explicitly unsupported on llvm.org.
-        break;
-      case eManglingSchemeNone:
-        llvm_unreachable("eManglingSchemeNone was handled already");
-      }
-      if (demangled_name) {
-        m_demangled.SetStringWithMangledCounterpart(
-            llvm::StringRef(demangled_name), m_mangled);
-        free(demangled_name);
-      }
-    }
-    if (m_demangled.IsNull()) {
-      // Set the demangled string to the empty string to indicate we tried to
-      // parse it once and failed.
-      m_demangled.SetCString("");
-    }
+  if (!m_mangled)
+    return m_demangled;
+
+  // Re-use previously demangled names.
+  if (!m_demangled.IsNull())
+    return m_demangled;
+
+  if (m_mangled.GetMangledCounterpart(m_demangled) && !m_demangled.IsNull())
+    return m_demangled;
+
+  // We didn't already mangle this name, demangle it and if all goes well
+  // add it to our map.
+  char *demangled_name = nullptr;
+  switch (GetManglingScheme(m_mangled.GetStringRef())) {
+  case eManglingSchemeMSVC:
+    demangled_name = GetMSVCDemangledStr(m_mangled);
+    break;
+  case eManglingSchemeItanium: {
+    demangled_name = GetItaniumDemangledStr(m_mangled.GetCString());
+    break;
+  }
+  case eManglingSchemeRustV0:
+    demangled_name = GetRustV0DemangledStr(m_mangled);
+    break;
+  case eManglingSchemeD:
+    demangled_name = GetDLangDemangledStr(m_mangled);
+    break;
+  case eManglingSchemeSwift:
+    // Demangling a swift name requires the swift compiler. This is
+    // explicitly unsupported on llvm.org.
+    break;
+  case eManglingSchemeNone:
+    // Don't bother demangling anything that isn't mangled.
+    break;
+  }
+
+  if (demangled_name) {
+    m_demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
+    free(demangled_name);
+  }
+
+  if (m_demangled.IsNull()) {
+    // Set the demangled string to the empty string to indicate we tried to
+    // parse it once and failed.
+    m_demangled.SetCString("");
   }
 
   return m_demangled;
 }
 
 ConstString Mangled::GetDisplayDemangledName() const {
+  if (Language *lang = Language::FindPlugin(GuessLanguage()))
+    return lang->GetDisplayDemangledName(*this);
   return GetDemangledName();
 }
 

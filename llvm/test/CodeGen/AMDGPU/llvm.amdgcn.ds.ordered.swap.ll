@@ -41,7 +41,7 @@ if-true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if-true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if-true ], [ poison, %entry ]
   %r = bitcast i32 %v to float
   ret float %r
 }

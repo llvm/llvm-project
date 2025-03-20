@@ -146,11 +146,6 @@ private:
   /// virtual registers and offsets.
   ValueToVRegInfo VMap;
 
-  // N.b. it's not completely obvious that this will be sufficient for every
-  // LLVM IR construct (with "invoke" being the obvious candidate to mess up our
-  // lives.
-  DenseMap<const BasicBlock *, MachineBasicBlock *> BBToMBB;
-
   // One BasicBlock can be translated to multiple MachineBasicBlocks.  For such
   // BasicBlocks translated to multiple MachineBasicBlocks, MachinePreds retains
   // a mapping between the edges arriving at the BasicBlock to the corresponding
@@ -243,8 +238,12 @@ private:
   bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
 
-  // Translate @llvm.experimental.vector.interleave2 and
-  // @llvm.experimental.vector.deinterleave2 intrinsics for fixed-width vector
+  /// Translate an LLVM trap intrinsic (trap, debugtrap, ubsantrap).
+  bool translateTrap(const CallInst &U, MachineIRBuilder &MIRBuilder,
+                     unsigned Opcode);
+
+  // Translate @llvm.vector.interleave2 and
+  // @llvm.vector.deinterleave2 intrinsics for fixed-width vector
   // types into vector shuffles.
   bool translateVectorInterleave2Intrinsic(const CallInst &CI,
                                            MachineIRBuilder &MIRBuilder);
@@ -547,8 +546,10 @@ private:
   bool translateVAArg(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateInsertElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateInsertVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateExtractElement(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateExtractVector(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateShuffleVector(const User &U, MachineIRBuilder &MIRBuilder);
 

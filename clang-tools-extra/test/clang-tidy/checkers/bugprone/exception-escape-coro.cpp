@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++20 %s bugprone-exception-escape %t -- \
-// RUN:     -- -fexceptions
+// RUN:     -- -fexceptions -Wno-error=return-type
 
 namespace std {
 

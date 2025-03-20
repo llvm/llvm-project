@@ -77,8 +77,8 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                   std::string &Info) {
   if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
-      ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
-       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
+      ((MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 10) ||
+       (MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 11))) {
     Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
            "point instructions";
     return true;
@@ -111,7 +111,7 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
   bool ListContainsPC = false, ListContainsLR = false;
   for (unsigned OI = 4, OE = MI.getNumOperands(); OI < OE; ++OI) {
     assert(MI.getOperand(OI).isReg() && "expected register");
-    switch (MI.getOperand(OI).getReg()) {
+    switch (MI.getOperand(OI).getReg().id()) {
     default:
       break;
     case ARM::LR:
@@ -359,10 +359,9 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createARMELFStreamer(
-      Ctx, std::move(MAB), std::move(OW), std::move(Emitter), false,
+      Ctx, std::move(MAB), std::move(OW), std::move(Emitter),
       (T.getArch() == Triple::thumb || T.getArch() == Triple::thumbeb),
       T.isAndroid());
 }
@@ -370,10 +369,9 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
 static MCStreamer *
 createARMMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&MAB,
                        std::unique_ptr<MCObjectWriter> &&OW,
-                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
-                       bool DWARFMustBeAtTheEnd) {
+                       std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createMachOStreamer(Ctx, std::move(MAB), std::move(OW),
-                             std::move(Emitter), false, DWARFMustBeAtTheEnd);
+                             std::move(Emitter), false);
 }
 
 static MCInstPrinter *createARMMCInstPrinter(const Triple &T,

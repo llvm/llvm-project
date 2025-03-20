@@ -19,15 +19,16 @@ entry:
 define amdgpu_kernel void @caller(i32 %x) {
 entry:
   %res = call i32 @callee(i32 %x)
-  store volatile i32 %res, ptr addrspace(1) undef
+  store volatile i32 %res, ptr addrspace(1) poison
   ret void
 }
 
 ; CHECK-LABEL: @alias_caller(
 ; CHECK-NOT: call
+; CHECK: {{^[}]}}
 define amdgpu_kernel void @alias_caller(i32 %x) {
 entry:
   %res = call i32 @c_alias(i32 %x)
-  store volatile i32 %res, ptr addrspace(1) undef
+  store volatile i32 %res, ptr addrspace(1) poison
   ret void
 }

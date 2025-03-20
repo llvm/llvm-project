@@ -1,12 +1,14 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-  omp.reduction.declare @add_reduction_i_32 : !llvm.ptr init {
-  ^bb0(%arg0: !llvm.ptr):
-    %0 = llvm.mlir.constant(0 : i32) : i32
+  omp.declare_reduction @add_reduction_i_32 : !llvm.ptr alloc {
     %1 = llvm.mlir.constant(1 : i64) : i64
     %2 = llvm.alloca %1 x i32 : (i64) -> !llvm.ptr
-    llvm.store %0, %2 : i32, !llvm.ptr
     omp.yield(%2 : !llvm.ptr)
+  } init {
+  ^bb0(%arg0: !llvm.ptr, %alloc: !llvm.ptr):
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    llvm.store %0, %alloc : i32, !llvm.ptr
+    omp.yield(%alloc : !llvm.ptr)
   } combiner {
   ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     %0 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -20,7 +22,7 @@
   llvm.func @main()  {
     %0 = llvm.mlir.constant(-1 : i32) : i32
     %1 = llvm.mlir.addressof @i : !llvm.ptr
-    omp.parallel byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr) {
+    omp.parallel reduction(byref @add_reduction_i_32 %1 -> %arg0 : !llvm.ptr) {
       llvm.store %0, %arg0 : i32, !llvm.ptr
       omp.terminator
     }
@@ -42,8 +44,8 @@
 // Private reduction variable and its initialization.
 // CHECK: %tid.addr.local = alloca i32
 // CHECK: %[[PRIVATE:.+]] = alloca i32
-// CHECK: store i32 0, ptr %[[PRIVATE]]
 // CHECK: store ptr %[[PRIVATE]], ptr %[[PRIV_PTR:.+]],
+// CHECK: store i32 0, ptr %[[PRIVATE]]
 
 // Call to the reduction function.
 // CHECK: call i32 @__kmpc_reduce

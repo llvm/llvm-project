@@ -3,6 +3,9 @@
 # RUN: cp %t %t3
 # RUN: not llvm-strip --no-strip-all -R .symtab %t3 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR2 -DINPUT=%t3
 
+# RUN: yaml2obj -DTYPE=SHT_CREL %s -o %t.crel
+# RUN: not llvm-objcopy -R .symtab %t.crel %t2.crel 2>&1 >/dev/null | FileCheck %s --check-prefix=ERR1 -DINPUT=%t.crel
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -17,7 +20,7 @@ Sections:
     AddressAlign:    0x0000000000000010
     Content:         "0000000000000000"
   - Name:            .rel.text
-    Type:            SHT_REL
+    Type:            [[TYPE=SHT_REL]]
     Link:            .symtab
     Info:            .text
     Relocations:
@@ -39,6 +42,12 @@ Symbols:
 # RUN: cp %t %t5
 # RUN: llvm-strip --no-strip-all --allow-broken-links -R .symtab %t5
 # RUN: llvm-readobj --sections %t5 | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.symtab
+
+# RUN: llvm-objcopy --allow-broken-links -R .symtab %t.crel %t4.crel
+# RUN: llvm-readobj --sections %t4.crel | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.symtab
+# RUN: cp %t.crel %t5.crel
+# RUN: llvm-strip --no-strip-all --allow-broken-links -R .symtab %t5.crel
+# RUN: llvm-readobj --sections %t5.crel | FileCheck %s --check-prefix=SECTIONS --implicit-check-not=.symtab
 
 # SECTIONS:        Name: .rel.text
 # SECTIONS:        Link

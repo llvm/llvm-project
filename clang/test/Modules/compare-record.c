@@ -226,17 +226,17 @@ struct CompareBitfieldWidthExpression {
 #else
 struct CompareMatchingBitfields compareMatchingBitfields;
 struct CompareBitfieldPresence1 compareBitfieldPresence1;
-// expected-error@first.h:* {{'CompareBitfieldPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found bitfield 'bitfieldPresence1'}}
-// expected-note@second.h:* {{but in 'Second' found non-bitfield 'bitfieldPresence1'}}
+// expected-error@first.h:* {{'CompareBitfieldPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found bit-field 'bitfieldPresence1'}}
+// expected-note@second.h:* {{but in 'Second' found non-bit-field 'bitfieldPresence1'}}
 struct CompareBitfieldPresence2 compareBitfieldPresence2;
-// expected-error@first.h:* {{'CompareBitfieldPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found non-bitfield 'bitfieldPresence2'}}
-// expected-note@second.h:* {{but in 'Second' found bitfield 'bitfieldPresence2'}}
+// expected-error@first.h:* {{'CompareBitfieldPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found non-bit-field 'bitfieldPresence2'}}
+// expected-note@second.h:* {{but in 'Second' found bit-field 'bitfieldPresence2'}}
 struct CompareBitfieldWidth compareBitfieldWidth;
-// expected-error@first.h:* {{'CompareBitfieldWidth' has different definitions in different modules; first difference is definition in module 'First.Hidden' found bitfield 'bitfieldWidth' with one width expression}}
-// expected-note@second.h:* {{but in 'Second' found bitfield 'bitfieldWidth' with different width expression}}
+// expected-error@first.h:* {{'CompareBitfieldWidth' has different definitions in different modules; first difference is definition in module 'First.Hidden' found bit-field 'bitfieldWidth' with one width expression}}
+// expected-note@second.h:* {{but in 'Second' found bit-field 'bitfieldWidth' with different width expression}}
 struct CompareBitfieldWidthExpression compareBitfieldWidthExpression;
-// expected-error@first.h:* {{'CompareBitfieldWidthExpression' has different definitions in different modules; first difference is definition in module 'First.Hidden' found bitfield 'bitfieldWidthExpression' with one width expression}}
-// expected-note@second.h:* {{but in 'Second' found bitfield 'bitfieldWidthExpression' with different width expressio}}
+// expected-error@first.h:* {{'CompareBitfieldWidthExpression' has different definitions in different modules; first difference is definition in module 'First.Hidden' found bit-field 'bitfieldWidthExpression' with one width expression}}
+// expected-note@second.h:* {{but in 'Second' found bit-field 'bitfieldWidthExpression' with different width expressio}}
 #endif
 
 #if defined(FIRST)

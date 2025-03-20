@@ -52,8 +52,8 @@ public:
     /// Context-sensitive version of a keyword attribute.
     AS_ContextSensitiveKeyword,
 
-    /// <vardecl> : <semantic>
-    AS_HLSLSemantic,
+    /// <vardecl> : <annotation>
+    AS_HLSLAnnotation,
 
     /// The attibute has no source code manifestation and is only created
     /// implicitly.
@@ -61,11 +61,17 @@ public:
   };
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,
-#include "clang/Sema/AttrParsedAttrList.inc"
+#include "clang/Basic/AttrParsedAttrList.inc"
 #undef PARSED_ATTR
     NoSemaHandlerAttribute,
     IgnoredAttribute,
     UnknownAttribute,
+  };
+  enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, GSL, RISCV };
+  enum class AttrArgsInfo {
+    None,
+    Optional,
+    Required,
   };
 
 private:
@@ -120,7 +126,7 @@ public:
     }
     static Form Pragma() { return AS_Pragma; }
     static Form ContextSensitiveKeyword() { return AS_ContextSensitiveKeyword; }
-    static Form HLSLSemantic() { return AS_HLSLSemantic; }
+    static Form HLSLAnnotation() { return AS_HLSLAnnotation; }
     static Form Implicit() { return AS_Implicit; }
 
   private:
@@ -239,6 +245,8 @@ public:
 
   static Kind getParsedKind(const IdentifierInfo *Name,
                             const IdentifierInfo *Scope, Syntax SyntaxUsed);
+
+  static AttrArgsInfo getCXX11AttrArgsInfo(const IdentifierInfo *Name);
 
 private:
   /// Get an index into the attribute spelling list

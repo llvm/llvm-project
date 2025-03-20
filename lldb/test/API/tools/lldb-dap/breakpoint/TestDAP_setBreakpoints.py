@@ -20,7 +20,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
-    @skipIfRemote
     def test_source_map(self):
         """
         This test simulates building two files in a folder, and then moving
@@ -28,7 +27,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         with the corresponding source maps to have breakpoints and frames
         working.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
 
         other_basename = "other-copy.c"
         other_path = self.getBuildArtifact(other_basename)
@@ -99,10 +98,9 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(frames[1]["source"]["path"], new_main_path)
 
     @skipIfWindows
-    @skipIfRemote
     def test_set_and_clear(self):
         """Tests setting and clearing source file and line breakpoints.
-        This packet is a bit tricky on the debug adaptor side since there
+        This packet is a bit tricky on the debug adapter side since there
         is no "clearBreakpoints" packet. Source file and line breakpoints
         are set by sending a "setBreakpoints" packet with a source file
         specified and zero or more source lines. If breakpoints have been
@@ -118,7 +116,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         third_line = line_number("main.cpp", "break 14")
         lines = [first_line, third_line, second_line]
 
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
@@ -127,20 +125,18 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Set 3 breakpoints and verify that they got set correctly
         response = self.dap_server.request_setBreakpoints(self.main_path, lines)
         line_to_id = {}
-        if response:
-            breakpoints = response["body"]["breakpoints"]
-            self.assertEqual(
-                len(breakpoints),
-                len(lines),
-                "expect %u source breakpoints" % (len(lines)),
-            )
-            for breakpoint, index in zip(breakpoints, range(len(lines))):
-                line = breakpoint["line"]
-                self.assertTrue(line, lines[index])
-                # Store the "id" of the breakpoint that was set for later
-                line_to_id[line] = breakpoint["id"]
-                self.assertIn(line, lines, "line expected in lines array")
-                self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
+        breakpoints = response["body"]["breakpoints"]
+        self.assertEqual(
+            len(breakpoints),
+            len(lines),
+            "expect %u source breakpoints" % (len(lines)),
+        )
+        for index, breakpoint in enumerate(breakpoints):
+            line = breakpoint["line"]
+            self.assertEqual(line, lines[index])
+            # Store the "id" of the breakpoint that was set for later
+            line_to_id[line] = breakpoint["id"]
+            self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
 
         # There is no breakpoint delete packet, clients just send another
         # setBreakpoints packet with the same source file with fewer lines.
@@ -153,75 +149,66 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         # Set 2 breakpoints and verify that the previous breakpoints that were
         # set above are still set.
         response = self.dap_server.request_setBreakpoints(self.main_path, lines)
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+        breakpoints = response["body"]["breakpoints"]
+        self.assertEqual(
+            len(breakpoints),
+            len(lines),
+            "expect %u source breakpoints" % (len(lines)),
+        )
+        for index, breakpoint in enumerate(breakpoints):
+            line = breakpoint["line"]
+            self.assertEqual(line, lines[index])
+            # Verify the same breakpoints are still set within LLDB by
+            # making sure the breakpoint ID didn't change
             self.assertEqual(
-                len(breakpoints),
-                len(lines),
-                "expect %u source breakpoints" % (len(lines)),
+                line_to_id[line],
+                breakpoint["id"],
+                "verify previous breakpoints stayed the same",
             )
-            for breakpoint, index in zip(breakpoints, range(len(lines))):
-                line = breakpoint["line"]
-                self.assertTrue(line, lines[index])
-                # Verify the same breakpoints are still set within LLDB by
-                # making sure the breakpoint ID didn't change
-                self.assertEqual(
-                    line_to_id[line],
-                    breakpoint["id"],
-                    "verify previous breakpoints stayed the same",
-                )
-                self.assertIn(line, lines, "line expected in lines array")
-                self.assertTrue(
-                    breakpoint["verified"], "expect breakpoint still verified"
-                )
+            self.assertTrue(breakpoint["verified"], "expect breakpoint still verified")
 
         # Now get the full list of breakpoints set in the target and verify
         # we have only 2 breakpoints set. The response above could have told
         # us about 2 breakpoints, but we want to make sure we don't have the
         # third one still set in the target
         response = self.dap_server.request_testGetTargetBreakpoints()
-        if response:
-            breakpoints = response["body"]["breakpoints"]
+        breakpoints = response["body"]["breakpoints"]
+        self.assertEqual(
+            len(breakpoints),
+            len(lines),
+            "expect %u source breakpoints" % (len(lines)),
+        )
+        for breakpoint in breakpoints:
+            line = breakpoint["line"]
+            # Verify the same breakpoints are still set within LLDB by
+            # making sure the breakpoint ID didn't change
             self.assertEqual(
-                len(breakpoints),
-                len(lines),
-                "expect %u source breakpoints" % (len(lines)),
+                line_to_id[line],
+                breakpoint["id"],
+                "verify previous breakpoints stayed the same",
             )
-            for breakpoint in breakpoints:
-                line = breakpoint["line"]
-                # Verify the same breakpoints are still set within LLDB by
-                # making sure the breakpoint ID didn't change
-                self.assertEqual(
-                    line_to_id[line],
-                    breakpoint["id"],
-                    "verify previous breakpoints stayed the same",
-                )
-                self.assertIn(line, lines, "line expected in lines array")
-                self.assertTrue(
-                    breakpoint["verified"], "expect breakpoint still verified"
-                )
+            self.assertIn(line, lines, "line expected in lines array")
+            self.assertTrue(breakpoint["verified"], "expect breakpoint still verified")
 
         # Now clear all breakpoints for the source file by passing down an
         # empty lines array
         lines = []
         response = self.dap_server.request_setBreakpoints(self.main_path, lines)
-        if response:
-            breakpoints = response["body"]["breakpoints"]
-            self.assertEqual(
-                len(breakpoints),
-                len(lines),
-                "expect %u source breakpoints" % (len(lines)),
-            )
+        breakpoints = response["body"]["breakpoints"]
+        self.assertEqual(
+            len(breakpoints),
+            len(lines),
+            "expect %u source breakpoints" % (len(lines)),
+        )
 
         # Verify with the target that all breakpoints have been cleared
         response = self.dap_server.request_testGetTargetBreakpoints()
-        if response:
-            breakpoints = response["body"]["breakpoints"]
-            self.assertEqual(
-                len(breakpoints),
-                len(lines),
-                "expect %u source breakpoints" % (len(lines)),
-            )
+        breakpoints = response["body"]["breakpoints"]
+        self.assertEqual(
+            len(breakpoints),
+            len(lines),
+            "expect %u source breakpoints" % (len(lines)),
+        )
 
         # Now set a breakpoint again in the same source file and verify it
         # was added.
@@ -261,7 +248,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
                 )
 
     @skipIfWindows
-    @skipIfRemote
     def test_clear_breakpoints_unset_breakpoints(self):
         """Test clearing breakpoints like test_set_and_clear, but clear
         breakpoints by omitting the breakpoints array instead of sending an
@@ -271,7 +257,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
             line_number("main.cpp", "break 13"),
         ]
 
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
@@ -284,12 +270,11 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoints), len(lines), "expect %u source breakpoints" % (len(lines))
         )
-        for breakpoint, index in zip(breakpoints, range(len(lines))):
+        for index, breakpoint in enumerate(breakpoints):
             line = breakpoint["line"]
-            self.assertTrue(line, lines[index])
+            self.assertEqual(line, lines[index])
             # Store the "id" of the breakpoint that was set for later
             line_to_id[line] = breakpoint["id"]
-            self.assertIn(line, lines, "line expected in lines array")
             self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
 
         # Now clear all breakpoints for the source file by not setting the
@@ -305,7 +290,6 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(len(breakpoints), 0, "expect no source breakpoints")
 
     @skipIfWindows
-    @skipIfRemote
     def test_functionality(self):
         """Tests hitting breakpoints and the functionality of a single
         breakpoint, like 'conditions' and 'hitCondition' settings."""
@@ -360,3 +344,49 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         i = int(self.dap_server.get_local_variable_value("i"))
         self.assertEqual(i, 7, "i != 7 showing post hitCondition hits every time")
+
+    @skipIfWindows
+    def test_column_breakpoints(self):
+        """Test setting multiple breakpoints in the same line at different columns."""
+        loop_line = line_number("main.cpp", "// break loop")
+
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        # Set two breakpoints on the loop line at different columns.
+        columns = [13, 39]
+        response = self.dap_server.request_setBreakpoints(
+            self.main_path, [loop_line, loop_line], list({"column": c} for c in columns)
+        )
+
+        # Verify the breakpoints were set correctly
+        breakpoints = response["body"]["breakpoints"]
+        breakpoint_ids = []
+        self.assertEqual(
+            len(breakpoints),
+            len(columns),
+            "expect %u source breakpoints" % (len(columns)),
+        )
+        for index, breakpoint in enumerate(breakpoints):
+            self.assertEqual(breakpoint["line"], loop_line)
+            self.assertEqual(breakpoint["column"], columns[index])
+            self.assertTrue(breakpoint["verified"], "expect breakpoint verified")
+            breakpoint_ids.append(breakpoint["id"])
+
+        # Continue to the first breakpoint,
+        self.continue_to_breakpoints([breakpoint_ids[0]])
+
+        # We should have stopped right before the call to `twelve`.
+        # Step into and check we are inside `twelve`.
+        self.stepIn()
+        func_name = self.get_stackFrames()[0]["name"]
+        self.assertEqual(func_name, "twelve(int)")
+
+        # Continue to the second breakpoint.
+        self.continue_to_breakpoints([breakpoint_ids[1]])
+
+        # We should have stopped right before the call to `fourteen`.
+        # Step into and check we are inside `fourteen`.
+        self.stepIn()
+        func_name = self.get_stackFrames()[0]["name"]
+        self.assertEqual(func_name, "a::fourteen(int)")

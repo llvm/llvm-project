@@ -44,7 +44,6 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "avxintrin.h"
     textual header "avx2intrin.h"
     textual header "avx512fintrin.h"
-    textual header "avx512erintrin.h"
     textual header "fmaintrin.h"
 
     header "x86intrin.h"
@@ -66,6 +65,8 @@ module _Builtin_intrinsics [system] [extern_c] {
 
     textual header "__wmmintrin_aes.h"
     textual header "__wmmintrin_pclmul.h"
+
+    textual header "mm3dnow.h"
 
     explicit module mm_malloc {
       requires !freestanding
@@ -121,10 +122,6 @@ module _Builtin_intrinsics [system] [extern_c] {
 
     explicit module popcnt {
       header "popcntintrin.h"
-    }
-
-    explicit module mm3dnow {
-      header "mm3dnow.h"
     }
 
     explicit module aes_pclmul {
@@ -203,6 +200,11 @@ module _Builtin_stdarg [system] {
     export *
   }
 
+  explicit module header_macro {
+    header "__stdarg_header_macro.h"
+    export *
+  }
+
   explicit module va_arg {
     header "__stdarg_va_arg.h"
     export *
@@ -232,6 +234,10 @@ module _Builtin_stdbool [system] {
 module _Builtin_stddef [system] {
   textual header "stddef.h"
 
+  explicit module header_macro {
+    header "__stddef_header_macro.h"
+    export *
+  }
   // __stddef_max_align_t.h is always in this module, even if
   // -fbuiltin-headers-in-system-modules is passed.
   explicit module max_align_t {

@@ -1,14 +1,12 @@
 ; RUN: opt %s -passes='require<profile-summary>,function(select-optimize)' -o - -S \
 ; RUN: | FileCheck %s
-; RUN: opt %s --try-experimental-debuginfo-iterators -passes='require<profile-summary>,function(select-optimize)' -o - -S \
-; RUN: | FileCheck %s
 
 ;; Check that the dbg.value is moved into the start of the end-block of the
 ;; inserted if-block.
 
 ; CHECK: select.end:
 ; CHECK-NEXT: %[[PHI:.*]] = phi i32
-; CHECK-NEXT: dbg.value(metadata i32 %[[PHI]],
+; CHECK-NEXT: #dbg_value(i32 %[[PHI]],
 
 source_filename = "test.ll"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

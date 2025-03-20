@@ -73,18 +73,17 @@ public:
   }
 
   bool SetDefaultValue(uint64_t value) {
-    if (value >= m_min_value && value <= m_max_value) {
-      m_default_value = value;
-      return true;
-    }
-    return false;
+    assert(value >= m_min_value && value <= m_max_value &&
+           "disallowed default value");
+    m_default_value = value;
+    return true;
   }
 
-  void SetMinimumValue(int64_t v) { m_min_value = v; }
+  void SetMinimumValue(uint64_t v) { m_min_value = v; }
 
   uint64_t GetMinimumValue() const { return m_min_value; }
 
-  void SetMaximumValue(int64_t v) { m_max_value = v; }
+  void SetMaximumValue(uint64_t v) { m_max_value = v; }
 
   uint64_t GetMaximumValue() const { return m_max_value; }
 

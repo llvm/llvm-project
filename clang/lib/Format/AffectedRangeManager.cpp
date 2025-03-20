@@ -13,6 +13,7 @@
 
 #include "AffectedRangeManager.h"
 
+#include "FormatToken.h"
 #include "TokenAnnotator.h"
 
 namespace clang {
@@ -20,8 +21,8 @@ namespace format {
 
 bool AffectedRangeManager::computeAffectedLines(
     SmallVectorImpl<AnnotatedLine *> &Lines) {
-  SmallVectorImpl<AnnotatedLine *>::iterator I = Lines.begin();
-  SmallVectorImpl<AnnotatedLine *>::iterator E = Lines.end();
+  ArrayRef<AnnotatedLine *>::iterator I = Lines.begin();
+  ArrayRef<AnnotatedLine *>::iterator E = Lines.end();
   bool SomeLineAffected = false;
   const AnnotatedLine *PreviousLine = nullptr;
   while (I != E) {
@@ -33,7 +34,7 @@ bool AffectedRangeManager::computeAffectedLines(
     // if any token within the directive is affected.
     if (Line->InPPDirective) {
       FormatToken *Last = Line->Last;
-      SmallVectorImpl<AnnotatedLine *>::iterator PPEnd = I + 1;
+      const auto *PPEnd = I + 1;
       while (PPEnd != E && !(*PPEnd)->First->HasUnescapedNewline) {
         Last = (*PPEnd)->Last;
         ++PPEnd;
@@ -88,8 +89,8 @@ bool AffectedRangeManager::affectsLeadingEmptyLines(const FormatToken &Tok) {
 }
 
 void AffectedRangeManager::markAllAsAffected(
-    SmallVectorImpl<AnnotatedLine *>::iterator I,
-    SmallVectorImpl<AnnotatedLine *>::iterator E) {
+    ArrayRef<AnnotatedLine *>::iterator I,
+    ArrayRef<AnnotatedLine *>::iterator E) {
   while (I != E) {
     (*I)->Affected = true;
     markAllAsAffected((*I)->Children.begin(), (*I)->Children.end());

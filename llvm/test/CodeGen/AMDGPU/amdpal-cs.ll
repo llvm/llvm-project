@@ -8,11 +8,12 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .cs:
-; GCN-NEXT:         .entry_point:    cs_amdpal
+; GCN-NEXT:         .entry_point:    _amdgpu_cs
+; GCN-NEXT:         .entry_point_symbol:    cs_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
-; GCN-NEXT:       0x2e12 (COMPUTE_PGM_RSRC1):
-; GCN-NEXT:       0x2e13 (COMPUTE_PGM_RSRC2):
+; GCN-NEXT:       '0x2e12 (COMPUTE_PGM_RSRC1)':
+; GCN-NEXT:       '0x2e13 (COMPUTE_PGM_RSRC2)':
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 define amdgpu_cs half @cs_amdpal(half %arg0) {

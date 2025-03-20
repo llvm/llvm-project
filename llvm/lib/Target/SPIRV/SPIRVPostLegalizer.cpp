@@ -19,11 +19,12 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Target/TargetIntrinsicInfo.h"
+#include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
 
@@ -52,12 +53,6 @@ extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
 } // namespace llvm
-
-static bool isMetaInstrGET(unsigned Opcode) {
-  return Opcode == SPIRV::GET_ID || Opcode == SPIRV::GET_fID ||
-         Opcode == SPIRV::GET_pID || Opcode == SPIRV::GET_vID ||
-         Opcode == SPIRV::GET_vfID;
-}
 
 static bool mayBeInserted(unsigned Opcode) {
   switch (Opcode) {
@@ -100,10 +95,7 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (!ResType) {
             // There was no "assign type" actions, let's fix this now
             ResType = ScalarType;
-            MRI.setRegClass(ResVReg, &SPIRV::IDRegClass);
-            MRI.setType(ResVReg,
-                        LLT::scalar(GR->getScalarOrVectorBitWidth(ResType)));
-            GR->assignSPIRVTypeToVReg(ResType, ResVReg, *GR->CurMF);
+            setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
           }
         }
       } else if (mayBeInserted(Opcode) && I.getNumDefs() == 1 &&
@@ -112,40 +104,56 @@ static void processNewInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // registers, we must decorate them as if they were introduced in a
         // non-automatic way
         Register ResVReg = I.getOperand(0).getReg();
-        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(ResVReg);
         // Check if the register defined by the instruction is newly generated
         // or already processed
-        if (!ResVType) {
-          // Set type of the defined register
-          ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
-          // Check if we have type defined for operands of the new instruction
-          if (!ResVType)
-            continue;
-          // Set type & class
-          MRI.setRegClass(ResVReg, &SPIRV::IDRegClass);
-          MRI.setType(ResVReg,
-                      LLT::scalar(GR->getScalarOrVectorBitWidth(ResVType)));
-          GR->assignSPIRVTypeToVReg(ResVType, ResVReg, *GR->CurMF);
-        }
+        if (MRI.getRegClassOrNull(ResVReg))
+          continue;
+        assert(GR->getSPIRVTypeForVReg(ResVReg) == nullptr);
+        // Check if we have type defined for operands of the new instruction
+        SPIRVType *ResVType = GR->getSPIRVTypeForVReg(I.getOperand(1).getReg());
+        if (!ResVType)
+          continue;
+        // Set type & class
+        setRegClassType(ResVReg, ResVType, GR, &MRI, *GR->CurMF, true);
         // If this is a simple operation that is to be reduced by TableGen
         // definition we must apply some of pre-legalizer rules here
         if (isTypeFoldingSupported(Opcode)) {
-          // Check if the instruction newly generated or already processed
-          MachineInstr *NextMI = I.getNextNode();
-          if (NextMI && isMetaInstrGET(NextMI->getOpcode()))
-            continue;
-          // Restore usual instructions pattern for the newly inserted
-          // instruction
-          MRI.setRegClass(ResVReg, MRI.getType(ResVReg).isVector()
-                                       ? &SPIRV::IDRegClass
-                                       : &SPIRV::ANYIDRegClass);
-          MRI.setType(ResVReg, LLT::scalar(32));
           insertAssignInstr(ResVReg, nullptr, ResVType, GR, MIB, MRI);
           processInstr(I, MIB, MRI, GR);
         }
       }
     }
   }
+}
+
+// Do a preorder traversal of the CFG starting from the BB |Start|.
+// point. Calls |op| on each basic block encountered during the traversal.
+void visit(MachineFunction &MF, MachineBasicBlock &Start,
+           std::function<void(MachineBasicBlock *)> op) {
+  std::stack<MachineBasicBlock *> ToVisit;
+  SmallPtrSet<MachineBasicBlock *, 8> Seen;
+
+  ToVisit.push(&Start);
+  Seen.insert(ToVisit.top());
+  while (ToVisit.size() != 0) {
+    MachineBasicBlock *MBB = ToVisit.top();
+    ToVisit.pop();
+
+    op(MBB);
+
+    for (auto Succ : MBB->successors()) {
+      if (Seen.contains(Succ))
+        continue;
+      ToVisit.push(Succ);
+      Seen.insert(Succ);
+    }
+  }
+}
+
+// Do a preorder traversal of the CFG starting from the given function's entry
+// point. Calls |op| on each basic block encountered during the traversal.
+void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
+  visit(MF, *MF.begin(), op);
 }
 
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {

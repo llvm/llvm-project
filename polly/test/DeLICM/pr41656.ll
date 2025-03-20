@@ -1,10 +1,10 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-print-delicm -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>,scop(print<polly-delicm>)' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; llvm.org/PR41656
 ;
 ; This test case has an InvalidContext such that part of the predecessors
 ; of for.body.us.i lie within the invalid context. This causes a
-; consistency check withing the invalid context of PR41656 to fail.
+; consistency check within the invalid context of PR41656 to fail.
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

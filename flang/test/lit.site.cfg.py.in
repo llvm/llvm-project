@@ -1,6 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 import sys
+import lit.util
 
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
@@ -10,22 +11,26 @@ config.llvm_target_triple_env = "@LLVM_TARGET_TRIPLE_ENV@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
-config.flang_src_dir = "@FLANG_SOURCE_DIR@"
 config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
 config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
-config.flang_lib_dir = "@CMAKE_BINARY_DIR@/lib"
 config.flang_test_triple = "@FLANG_TEST_TARGET_TRIPLE@"
 config.flang_examples = @LLVM_BUILD_EXAMPLES@
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
-config.cc = "@CMAKE_C_COMPILER@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.targets_to_build = "@TARGETS_TO_BUILD@"
 config.default_sysroot = "@DEFAULT_SYSROOT@"
+config.have_openmp_rtl = ("@LLVM_TOOL_OPENMP_BUILD@" == "TRUE") or ("openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"))
+if "openmp" in "@LLVM_ENABLE_RUNTIMES@".lower().split(";"):
+    config.openmp_module_dir = "@CMAKE_BINARY_DIR@/runtimes/runtimes-bins/openmp/runtime/src"
+else:
+    config.openmp_module_dir = None
 config.flang_runtime_f128_math_lib = "@FLANG_RUNTIME_F128_MATH_LIB@"
+config.have_ldbl_mant_dig_113 = "@HAVE_LDBL_MANT_DIG_113@"
+config.flang_include_runtime = lit.util.pythonize_bool("@FLANG_INCLUDE_RUNTIME@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

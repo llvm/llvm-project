@@ -8,22 +8,25 @@
 
 #include "src/stdio/ungetc.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, ungetc, (int c, ::FILE *stream)) {
   int ret;
-  rpc::Client::Port port = rpc::client.open<RPC_UNGETC>();
+  rpc::Client::Port port = rpc::client.open<LIBC_UNGETC>();
   port.send_and_recv(
-      [=](rpc::Buffer *buffer) {
+      [=](rpc::Buffer *buffer, uint32_t) {
         buffer->data[0] = c;
         buffer->data[1] = file::from_stream(stream);
       },
-      [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
+      [&](rpc::Buffer *buffer, uint32_t) {
+        ret = static_cast<int>(buffer->data[0]);
+      });
   port.close();
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

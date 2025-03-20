@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: availability-filesystem-missing
 // UNSUPPORTED: no-filesystem
-// ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../../src
+// ADDITIONAL_COMPILE_FLAGS: -I %{libcxx-dir}/src
 
 // This test relies on calling functions from the libcxx internal headers
 // of <filesystem>; the Windows implementation uses different

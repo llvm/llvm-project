@@ -13,7 +13,6 @@ import json
 
 class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_terminated_event(self):
         """
         Terminated Event
@@ -44,7 +43,7 @@ class TestDAP_terminatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         self.continue_to_exit()
 
-        statistics = self.dap_server.wait_for_terminated()["statistics"]
+        statistics = self.dap_server.wait_for_terminated()["body"]["$__lldb_statistics"]
         self.assertGreater(statistics["totalDebugInfoByteSize"], 0)
         self.assertGreater(statistics["totalDebugInfoEnabled"], 0)
         self.assertGreater(statistics["totalModuleCountHasDebugInfo"], 0)

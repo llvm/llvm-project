@@ -9,6 +9,7 @@
 # CHECK-NEXT: [    10] .
 # CHECK-NEXT: [    18] (./. ..
 # CHECK-NEXT: [    21] .
+# CHECK-EMPTY:
 # CHECK-NEXT: Hex dump of section '.b':
 # CHECK-NEXT: warning: '[[FILE]]': LLVM was not built with LLVM_ENABLE_ZSTD or did not find zstd at build time
 # CHECK-NEXT: 0x00000000 02000000 00000000 01000000 00000000 ................

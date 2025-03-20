@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands   < %s | FileCheck %s -check-prefix=constisle
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -mips16-constant-islands < %s | FileCheck %s -check-prefix=constisle
 
 @i = common global i32 0, align 4
 @b = common global i32 0, align 4

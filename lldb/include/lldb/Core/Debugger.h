@@ -40,6 +40,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -78,18 +79,9 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
 public:
-  /// Broadcaster event bits definitions.
-  enum {
-    eBroadcastBitProgress = (1 << 0),
-    eBroadcastBitWarning = (1 << 1),
-    eBroadcastBitError = (1 << 2),
-    eBroadcastSymbolChange = (1 << 3),
-    eBroadcastBitProgressCategory = (1 << 4),
-  };
-
   using DebuggerList = std::vector<lldb::DebuggerSP>;
 
-  static ConstString GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
   /// Get the public broadcaster for this debugger.
   Broadcaster &GetBroadcaster() { return m_broadcaster; }
@@ -140,20 +132,15 @@ public:
   void SetAsyncExecution(bool async);
 
   lldb::FileSP GetInputFileSP() { return m_input_file_sp; }
-
-  lldb::StreamFileSP GetOutputStreamSP() { return m_output_stream_sp; }
-
-  lldb::StreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
-
   File &GetInputFile() { return *m_input_file_sp; }
 
-  File &GetOutputFile() { return m_output_stream_sp->GetFile(); }
+  lldb::FileSP GetOutputFileSP() {
+    return m_output_stream_sp->GetUnlockedFileSP();
+  }
 
-  File &GetErrorFile() { return m_error_stream_sp->GetFile(); }
-
-  StreamFile &GetOutputStream() { return *m_output_stream_sp; }
-
-  StreamFile &GetErrorStream() { return *m_error_stream_sp; }
+  lldb::FileSP GetErrorFileSP() {
+    return m_error_stream_sp->GetUnlockedFileSP();
+  }
 
   repro::DataRecorder *GetInputRecorder();
 
@@ -169,9 +156,9 @@ public:
 
   void RestoreInputTerminalState();
 
-  lldb::StreamSP GetAsyncOutputStream();
+  lldb::StreamUP GetAsyncOutputStream();
 
-  lldb::StreamSP GetAsyncErrorStream();
+  lldb::StreamUP GetAsyncErrorStream();
 
   CommandInterpreter &GetCommandInterpreter() {
     assert(m_command_interpreter_up.get());
@@ -214,8 +201,8 @@ public:
   // If any of the streams are not set, set them to the in/out/err stream of
   // the top most input reader to ensure they at least have something
   void AdoptTopIOHandlerFilesIfInvalid(lldb::FileSP &in,
-                                       lldb::StreamFileSP &out,
-                                       lldb::StreamFileSP &err);
+                                       lldb::LockableStreamFileSP &out,
+                                       lldb::LockableStreamFileSP &err);
 
   /// Run the given IO handler and return immediately.
   void RunIOHandlerAsync(const lldb::IOHandlerSP &reader_sp,
@@ -287,6 +274,10 @@ public:
   uint64_t GetTerminalWidth() const;
 
   bool SetTerminalWidth(uint64_t term_width);
+
+  uint64_t GetTerminalHeight() const;
+
+  bool SetTerminalHeight(uint64_t term_height);
 
   llvm::StringRef GetPrompt() const;
 
@@ -371,6 +362,10 @@ public:
   bool GetNotifyVoid() const;
 
   const std::string &GetInstanceName() { return m_instance_name; }
+
+  bool GetShowInlineDiagnostics() const;
+
+  bool SetShowInlineDiagnostics(bool);
 
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
@@ -568,9 +563,24 @@ public:
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);
 
+  /// DEPRECATED: We used to only support one Destroy callback. Now that we
+  /// support Add and Remove, you should only remove callbacks that you added.
+  /// Use Add and Remove instead.
+  ///
+  /// Clear all previously added callbacks and only add the given one.
   void
   SetDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
                      void *baton);
+
+  /// Add a callback for when the debugger is destroyed. Return a token, which
+  /// can be used to remove said callback. Multiple callbacks can be added by
+  /// calling this function multiple times, and will be invoked in FIFO order.
+  lldb::callback_token_t
+  AddDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
+                     void *baton);
+
+  /// Remove the specified callback. Return true if successful.
+  bool RemoveDestroyCallback(lldb::callback_token_t token);
 
   /// Manually start the global event handler thread. It is useful to plugins
   /// that directly use the \a lldb_private namespace and want to use the
@@ -628,16 +638,23 @@ protected:
   ReportProgress(uint64_t progress_id, std::string title, std::string details,
                  uint64_t completed, uint64_t total,
                  std::optional<lldb::user_id_t> debugger_id,
-                 uint32_t progress_category_bit = eBroadcastBitProgress);
+                 uint32_t progress_category_bit = lldb::eBroadcastBitProgress);
 
-  static void ReportDiagnosticImpl(DiagnosticEventData::Type type,
-                                   std::string message,
+  static void ReportDiagnosticImpl(lldb::Severity severity, std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
                                    std::once_flag *once);
 
   void HandleDestroyCallback();
 
   void PrintProgress(const ProgressEventData &data);
+
+  /// Except for Debugger and IOHandler, GetOutputStreamSP and GetErrorStreamSP
+  /// should not be used directly. Use GetAsyncOutputStream and
+  /// GetAsyncErrorStream instead.
+  /// @{
+  lldb::LockableStreamFileSP GetOutputStreamSP() { return m_output_stream_sp; }
+  lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
+  /// @}
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
@@ -679,8 +696,9 @@ protected:
 
   // these should never be NULL
   lldb::FileSP m_input_file_sp;
-  lldb::StreamFileSP m_output_stream_sp;
-  lldb::StreamFileSP m_error_stream_sp;
+  lldb::LockableStreamFileSP m_output_stream_sp;
+  lldb::LockableStreamFileSP m_error_stream_sp;
+  LockableStreamFile::Mutex m_output_mutex;
 
   /// Used for shadowing the input file when capturing a reproducer.
   repro::DataRecorder *m_input_recorder;
@@ -731,8 +749,19 @@ protected:
   lldb::TargetSP m_dummy_target_sp;
   Diagnostics::CallbackID m_diagnostics_callback_id;
 
-  lldb_private::DebuggerDestroyCallback m_destroy_callback = nullptr;
-  void *m_destroy_callback_baton = nullptr;
+  std::mutex m_destroy_callback_mutex;
+  lldb::callback_token_t m_destroy_callback_next_token = 0;
+  struct DestroyCallbackInfo {
+    DestroyCallbackInfo() {}
+    DestroyCallbackInfo(lldb::callback_token_t token,
+                        lldb_private::DebuggerDestroyCallback callback,
+                        void *baton)
+        : token(token), callback(callback), baton(baton) {}
+    lldb::callback_token_t token;
+    lldb_private::DebuggerDestroyCallback callback;
+    void *baton;
+  };
+  llvm::SmallVector<DestroyCallbackInfo, 2> m_destroy_callbacks;
 
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests
   std::mutex m_interrupt_mutex;

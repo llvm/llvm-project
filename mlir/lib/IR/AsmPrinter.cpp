@@ -43,6 +43,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
@@ -72,7 +73,8 @@ OpAsmParser::~OpAsmParser() = default;
 MLIRContext *AsmParser::getContext() const { return getBuilder().getContext(); }
 
 /// Parse a type list.
-/// This is out-of-line to work-around https://github.com/llvm/llvm-project/issues/62918
+/// This is out-of-line to work-around
+/// https://github.com/llvm/llvm-project/issues/62918
 ParseResult AsmParser::parseTypeList(SmallVectorImpl<Type> &result) {
   return parseCommaSeparatedList(
       [&]() { return parseType(result.emplace_back()); });
@@ -123,7 +125,9 @@ void OpAsmPrinter::printFunctionalType(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
-#include "mlir/IR/OpAsmInterface.cpp.inc"
+#include "mlir/IR/OpAsmAttrInterface.cpp.inc"
+#include "mlir/IR/OpAsmOpInterface.cpp.inc"
+#include "mlir/IR/OpAsmTypeInterface.cpp.inc"
 
 LogicalResult
 OpAsmDialectInterface::parseResource(AsmParsedResourceEntry &entry) const {
@@ -179,7 +183,7 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> printLocalScopeOpt{
       "mlir-print-local-scope", llvm::cl::init(false),
       llvm::cl::desc("Print with local scope and inline information (eliding "
-                     "aliases for attributes, types, and locations")};
+                     "aliases for attributes, types, and locations)")};
 
   llvm::cl::opt<bool> skipRegionsOpt{
       "mlir-print-skip-regions", llvm::cl::init(false),
@@ -189,6 +193,15 @@ struct AsmPrinterOptions {
       "mlir-print-value-users", llvm::cl::init(false),
       llvm::cl::desc(
           "Print users of operation results and block arguments as a comment")};
+
+  llvm::cl::opt<bool> printUniqueSSAIDs{
+      "mlir-print-unique-ssa-ids", llvm::cl::init(false),
+      llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
+                     "and naming conflicts across all regions")};
+
+  llvm::cl::opt<bool> useNameLocAsPrefix{
+      "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
+      llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
 };
 } // namespace
 
@@ -206,12 +219,16 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false) {
+      printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
+      useNameLocAsPrefix(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
   if (clOptions->elideElementsAttrIfLarger.getNumOccurrences())
     elementsAttrElementLimit = clOptions->elideElementsAttrIfLarger;
+  if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences())
+    elementsAttrHexElementLimit =
+        clOptions->printElementsAttrWithHexIfLarger.getValue();
   if (clOptions->elideResourceStringsIfLarger.getNumOccurrences())
     resourceStringCharLimit = clOptions->elideResourceStringsIfLarger;
   printDebugInfoFlag = clOptions->printDebugInfoOpt;
@@ -221,6 +238,8 @@ OpPrintingFlags::OpPrintingFlags()
   printLocalScope = clOptions->printLocalScopeOpt;
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
+  printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
+  useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -230,6 +249,12 @@ OpPrintingFlags::OpPrintingFlags()
 OpPrintingFlags &
 OpPrintingFlags::elideLargeElementsAttrs(int64_t largeElementLimit) {
   elementsAttrElementLimit = largeElementLimit;
+  return *this;
+}
+
+OpPrintingFlags &
+OpPrintingFlags::printLargeElementsAttrWithHex(int64_t largeElementLimit) {
+  elementsAttrHexElementLimit = largeElementLimit;
   return *this;
 }
 
@@ -261,22 +286,29 @@ OpPrintingFlags &OpPrintingFlags::skipRegions(bool skip) {
 }
 
 /// Do not verify the operation when using custom operation printers.
-OpPrintingFlags &OpPrintingFlags::assumeVerified() {
-  assumeVerifiedFlag = true;
+OpPrintingFlags &OpPrintingFlags::assumeVerified(bool enable) {
+  assumeVerifiedFlag = enable;
   return *this;
 }
 
 /// Use local scope when printing the operation. This allows for using the
 /// printer in a more localized and thread-safe setting, but may not necessarily
 /// be identical of what the IR will look like when dumping the full module.
-OpPrintingFlags &OpPrintingFlags::useLocalScope() {
-  printLocalScope = true;
+OpPrintingFlags &OpPrintingFlags::useLocalScope(bool enable) {
+  printLocalScope = enable;
   return *this;
 }
 
 /// Print users of values as comments.
-OpPrintingFlags &OpPrintingFlags::printValueUsers() {
-  printValueUsersFlag = true;
+OpPrintingFlags &OpPrintingFlags::printValueUsers(bool enable) {
+  printValueUsersFlag = enable;
+  return *this;
+}
+
+/// Print unique SSA ID numbers for values, block arguments and naming conflicts
+/// across all regions
+OpPrintingFlags &OpPrintingFlags::printUniqueSSAIDs(bool enable) {
+  printUniqueSSAIDsFlag = enable;
   return *this;
 }
 
@@ -287,9 +319,27 @@ bool OpPrintingFlags::shouldElideElementsAttr(ElementsAttr attr) const {
          !llvm::isa<SplatElementsAttr>(attr);
 }
 
+/// Return if the given ElementsAttr should be printed as hex string.
+bool OpPrintingFlags::shouldPrintElementsAttrWithHex(ElementsAttr attr) const {
+  // -1 is used to disable hex printing.
+  return (elementsAttrHexElementLimit != -1) &&
+         (elementsAttrHexElementLimit < int64_t(attr.getNumElements())) &&
+         !llvm::isa<SplatElementsAttr>(attr);
+}
+
+OpPrintingFlags &OpPrintingFlags::printNameLocAsPrefix(bool enable) {
+  useNameLocAsPrefix = enable;
+  return *this;
+}
+
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
+}
+
+/// Return the size limit for printing large ElementsAttr as hex string.
+int64_t OpPrintingFlags::getLargeElementsAttrHexLimit() const {
+  return elementsAttrHexElementLimit;
 }
 
 /// Return the size limit for printing large ElementsAttr.
@@ -328,21 +378,14 @@ bool OpPrintingFlags::shouldPrintValueUsers() const {
   return printValueUsersFlag;
 }
 
-/// Returns true if an ElementsAttr with the given number of elements should be
-/// printed with hex.
-static bool shouldPrintElementsAttrWithHex(int64_t numElements) {
-  // Check to see if a command line option was provided for the limit.
-  if (clOptions.isConstructed()) {
-    if (clOptions->printElementsAttrWithHexIfLarger.getNumOccurrences()) {
-      // -1 is used to disable hex printing.
-      if (clOptions->printElementsAttrWithHexIfLarger == -1)
-        return false;
-      return numElements > clOptions->printElementsAttrWithHexIfLarger;
-    }
-  }
+/// Return if the printer should use unique IDs.
+bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
+  return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
+}
 
-  // Otherwise, default to printing with hex if the number of elements is >100.
-  return numElements > 100;
+/// Return if the printer should use NameLocs as prefixes when printing SSA IDs.
+bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
+  return useNameLocAsPrefix;
 }
 
 //===----------------------------------------------------------------------===//
@@ -509,8 +552,11 @@ public:
   /// Print this alias to the given stream.
   void print(raw_ostream &os) const {
     os << (isType ? "!" : "#") << name;
-    if (suffixIndex)
+    if (suffixIndex) {
+      if (isdigit(name.back()))
+        os << '_';
       os << suffixIndex;
+    }
   }
 
   /// Returns true if this is a type alias.
@@ -528,6 +574,10 @@ private:
   bool isType : 1;
   /// A flag indicating whether this alias may be deferred or not.
   bool isDeferrable : 1;
+
+public:
+  /// Used to avoid printing incomplete aliases for recursive types.
+  bool isPrinted = false;
 };
 
 /// This class represents a utility that initializes the set of attribute and
@@ -567,9 +617,8 @@ private:
   struct InProgressAliasInfo {
     InProgressAliasInfo()
         : aliasDepth(0), isType(false), canBeDeferred(false) {}
-    InProgressAliasInfo(StringRef alias, bool isType, bool canBeDeferred)
-        : alias(alias), aliasDepth(1), isType(isType),
-          canBeDeferred(canBeDeferred) {}
+    InProgressAliasInfo(StringRef alias)
+        : alias(alias), aliasDepth(1), isType(false), canBeDeferred(false) {}
 
     bool operator<(const InProgressAliasInfo &rhs) const {
       // Order first by depth, then by attr/type kind, and then by name.
@@ -612,6 +661,12 @@ private:
   /// generated, the provided alias mapping and reverse mapping are updated.
   template <typename T>
   void generateAlias(T symbol, InProgressAliasInfo &alias, bool canBeDeferred);
+
+  /// Uniques the given alias name within the printer by generating name index
+  /// used as alias name suffix.
+  static unsigned
+  uniqueAliasNameIndex(StringRef alias, llvm::StringMap<unsigned> &nameCounts,
+                       llvm::StringSet<llvm::BumpPtrAllocator &> &usedAliases);
 
   /// Given a collection of aliases and symbols, initialize a mapping from a
   /// symbol to a given alias.
@@ -979,13 +1034,16 @@ private:
 /// the string needs to be modified in any way, the provided buffer is used to
 /// store the new copy,
 static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
-                                    StringRef allowedPunctChars = "$._-",
-                                    bool allowTrailingDigit = true) {
+                                    StringRef allowedPunctChars = "$._-") {
   assert(!name.empty() && "Shouldn't have an empty name here");
+
+  auto validChar = [&](char ch) {
+    return llvm::isAlnum(ch) || allowedPunctChars.contains(ch);
+  };
 
   auto copyNameToBuffer = [&] {
     for (char ch : name) {
-      if (llvm::isAlnum(ch) || allowedPunctChars.contains(ch))
+      if (validChar(ch))
         buffer.push_back(ch);
       else if (ch == ' ')
         buffer.push_back('_');
@@ -997,23 +1055,15 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
   // Check to see if this name is valid. If it starts with a digit, then it
   // could conflict with the autogenerated numeric ID's, so add an underscore
   // prefix to avoid problems.
-  if (isdigit(name[0])) {
+  if (isdigit(name[0]) || (!validChar(name[0]) && name[0] != ' ')) {
     buffer.push_back('_');
     copyNameToBuffer();
-    return buffer;
-  }
-
-  // If the name ends with a trailing digit, add a '_' to avoid potential
-  // conflicts with autogenerated ID's.
-  if (!allowTrailingDigit && isdigit(name.back())) {
-    copyNameToBuffer();
-    buffer.push_back('_');
     return buffer;
   }
 
   // Check to see that the name consists of only valid identifier characters.
   for (char ch : name) {
-    if (!llvm::isAlnum(ch) && !allowedPunctChars.contains(ch)) {
+    if (!validChar(ch)) {
       copyNameToBuffer();
       return buffer;
     }
@@ -1021,6 +1071,36 @@ static StringRef sanitizeIdentifier(StringRef name, SmallString<16> &buffer,
 
   // If there are no invalid characters, return the original name.
   return name;
+}
+
+unsigned AliasInitializer::uniqueAliasNameIndex(
+    StringRef alias, llvm::StringMap<unsigned> &nameCounts,
+    llvm::StringSet<llvm::BumpPtrAllocator &> &usedAliases) {
+  if (!usedAliases.count(alias)) {
+    usedAliases.insert(alias);
+    // 0 is not printed in SymbolAlias.
+    return 0;
+  }
+  // Otherwise, we had a conflict - probe until we find a unique name.
+  SmallString<64> probeAlias(alias);
+  // alias with trailing digit will be printed as _N
+  if (isdigit(alias.back()))
+    probeAlias.push_back('_');
+  // nameCounts start from 1 because 0 is not printed in SymbolAlias.
+  if (nameCounts[probeAlias] == 0)
+    nameCounts[probeAlias] = 1;
+  // This is guaranteed to terminate (and usually in a single iteration)
+  // because it generates new names by incrementing nameCounts.
+  while (true) {
+    unsigned nameIndex = nameCounts[probeAlias]++;
+    probeAlias += llvm::utostr(nameIndex);
+    if (!usedAliases.count(probeAlias)) {
+      usedAliases.insert(probeAlias);
+      return nameIndex;
+    }
+    // Reset probeAlias to the original alias for the next iteration.
+    probeAlias.resize(alias.size() + isdigit(alias.back()) ? 1 : 0);
+  }
 }
 
 /// Given a collection of aliases and symbols, initialize a mapping from a
@@ -1034,12 +1114,17 @@ void AliasInitializer::initializeAliases(
     return lhs.second < rhs.second;
   });
 
+  // This keeps track of all of the non-numeric names that are in flight,
+  // allowing us to check for duplicates.
+  llvm::BumpPtrAllocator usedAliasAllocator;
+  llvm::StringSet<llvm::BumpPtrAllocator &> usedAliases(usedAliasAllocator);
+
   llvm::StringMap<unsigned> nameCounts;
   for (auto &[symbol, aliasInfo] : unprocessedAliases) {
     if (!aliasInfo.alias)
       continue;
     StringRef alias = *aliasInfo.alias;
-    unsigned nameIndex = nameCounts[alias]++;
+    unsigned nameIndex = uniqueAliasNameIndex(alias, nameCounts, usedAliases);
     symbolToAlias.insert(
         {symbol, SymbolAlias(alias, nameIndex, aliasInfo.isType,
                              aliasInfo.canBeDeferred)});
@@ -1075,6 +1160,8 @@ std::pair<size_t, size_t> AliasInitializer::visitImpl(
 
   // Try to generate an alias for this value.
   generateAlias(value, it->second, canBeDeferred);
+  it->second.isType = std::is_base_of_v<Type, T>;
+  it->second.canBeDeferred = canBeDeferred;
 
   // Print the value, capturing any nested elements that require aliases.
   SmallVector<size_t> childAliases;
@@ -1113,15 +1200,30 @@ template <typename T>
 void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
                                      bool canBeDeferred) {
   SmallString<32> nameBuffer;
-  for (const auto &interface : interfaces) {
-    OpAsmDialectInterface::AliasResult result =
-        interface.getAlias(symbol, aliasOS);
-    if (result == OpAsmDialectInterface::AliasResult::NoAlias)
-      continue;
-    nameBuffer = std::move(aliasBuffer);
-    assert(!nameBuffer.empty() && "expected valid alias name");
-    if (result == OpAsmDialectInterface::AliasResult::FinalAlias)
-      break;
+
+  OpAsmDialectInterface::AliasResult symbolInterfaceResult =
+      OpAsmDialectInterface::AliasResult::NoAlias;
+  using InterfaceT = std::conditional_t<std::is_base_of_v<Attribute, T>,
+                                        OpAsmAttrInterface, OpAsmTypeInterface>;
+  if (auto symbolInterface = dyn_cast<InterfaceT>(symbol)) {
+    symbolInterfaceResult = symbolInterface.getAlias(aliasOS);
+    if (symbolInterfaceResult != OpAsmDialectInterface::AliasResult::NoAlias) {
+      nameBuffer = std::move(aliasBuffer);
+      assert(!nameBuffer.empty() && "expected valid alias name");
+    }
+  }
+
+  if (symbolInterfaceResult != OpAsmDialectInterface::AliasResult::FinalAlias) {
+    for (const auto &interface : interfaces) {
+      OpAsmDialectInterface::AliasResult result =
+          interface.getAlias(symbol, aliasOS);
+      if (result == OpAsmDialectInterface::AliasResult::NoAlias)
+        continue;
+      nameBuffer = std::move(aliasBuffer);
+      assert(!nameBuffer.empty() && "expected valid alias name");
+      if (result == OpAsmDialectInterface::AliasResult::FinalAlias)
+        break;
+    }
   }
 
   if (nameBuffer.empty())
@@ -1129,11 +1231,9 @@ void AliasInitializer::generateAlias(T symbol, InProgressAliasInfo &alias,
 
   SmallString<16> tempBuffer;
   StringRef name =
-      sanitizeIdentifier(nameBuffer, tempBuffer, /*allowedPunctChars=*/"$_-",
-                         /*allowTrailingDigit=*/false);
+      sanitizeIdentifier(nameBuffer, tempBuffer, /*allowedPunctChars=*/"$_-");
   name = name.copy(aliasAllocator);
-  alias = InProgressAliasInfo(name, /*isType=*/std::is_base_of_v<Type, T>,
-                              canBeDeferred);
+  alias = InProgressAliasInfo(name);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1201,6 +1301,8 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   const auto *it = attrTypeToAlias.find(ty.getAsOpaquePointer());
   if (it == attrTypeToAlias.end())
     return failure();
+  if (!it->second.isPrinted)
+    return failure();
 
   it->second.print(os);
   return success();
@@ -1217,12 +1319,9 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
     p.getStream() << " = ";
 
     if (alias.isTypeAlias()) {
-      // TODO: Support nested aliases in mutable types.
       Type type = Type::getFromOpaquePointer(opaqueSymbol);
-      if (type.hasTrait<TypeTrait::IsMutable>())
-        p.getStream() << type;
-      else
-        p.printTypeImpl(type);
+      p.printTypeImpl(type);
+      alias.isPrinted = true;
     } else {
       // TODO: Support nested aliases in mutable attributes.
       Attribute attr = Attribute::getFromOpaquePointer(opaqueSymbol);
@@ -1364,8 +1463,14 @@ SSANameState::SSANameState(Operation *op, const OpPrintingFlags &printerFlags)
   while (!nameContext.empty()) {
     Region *region;
     UsedNamesScopeTy *parentScope;
-    std::tie(region, nextValueID, nextArgumentID, nextConflictID, parentScope) =
-        nameContext.pop_back_val();
+
+    if (printerFlags.shouldPrintUniqueSSAIDs())
+      // To print unique SSA IDs, ignore saved ID counts from parent regions
+      std::tie(region, std::ignore, std::ignore, std::ignore, parentScope) =
+          nameContext.pop_back_val();
+    else
+      std::tie(region, nextValueID, nextArgumentID, nextConflictID,
+               parentScope) = nameContext.pop_back_val();
 
     // When we switch from one subtree to another, pop the scopes(needless)
     // until the parent scope.
@@ -1476,11 +1581,25 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   }
 }
 
+namespace {
+/// Try to get value name from value's location, fallback to `name`.
+StringRef maybeGetValueNameFromLoc(Value value, StringRef name) {
+  if (auto maybeNameLoc = value.getLoc()->findInstanceOf<NameLoc>())
+    return maybeNameLoc.getName();
+  return name;
+}
+} // namespace
+
 void SSANameState::numberValuesInRegion(Region &region) {
+  // Indicates whether OpAsmOpInterface set a name.
+  bool opAsmOpInterfaceUsed = false;
   auto setBlockArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
     assert(llvm::cast<BlockArgument>(arg).getOwner()->getParent() == &region &&
            "arg not defined in current region");
+    opAsmOpInterfaceUsed = true;
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      name = maybeGetValueNameFromLoc(arg, name);
     setValueName(arg, name);
   };
 
@@ -1488,6 +1607,15 @@ void SSANameState::numberValuesInRegion(Region &region) {
     if (Operation *op = region.getParentOp()) {
       if (auto asmInterface = dyn_cast<OpAsmOpInterface>(op))
         asmInterface.getAsmBlockArgumentNames(region, setBlockArgNameFn);
+      // If the OpAsmOpInterface didn't set a name, get name from the type.
+      if (!opAsmOpInterfaceUsed) {
+        for (BlockArgument arg : region.getArguments()) {
+          if (auto interface = dyn_cast<OpAsmTypeInterface>(arg.getType())) {
+            interface.getAsmName(
+                [&](StringRef name) { setBlockArgNameFn(arg, name); });
+          }
+        }
+      }
     }
   }
 
@@ -1523,7 +1651,10 @@ void SSANameState::numberValuesInBlock(Block &block) {
       specialNameBuffer.resize(strlen("arg"));
       specialName << nextArgumentID++;
     }
-    setValueName(arg, specialName.str());
+    StringRef specialNameStr = specialName.str();
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      specialNameStr = maybeGetValueNameFromLoc(arg, specialNameStr);
+    setValueName(arg, specialNameStr);
   }
 
   // Number the operations in this block.
@@ -1534,9 +1665,14 @@ void SSANameState::numberValuesInBlock(Block &block) {
 void SSANameState::numberValuesInOp(Operation &op) {
   // Function used to set the special result names for the operation.
   SmallVector<int, 2> resultGroups(/*Size=*/1, /*Value=*/0);
+  // Indicates whether OpAsmOpInterface set a name.
+  bool opAsmOpInterfaceUsed = false;
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
     assert(result.getDefiningOp() == &op && "result not defined by 'op'");
+    opAsmOpInterfaceUsed = true;
+    if (LLVM_UNLIKELY(printerFlags.shouldUseNameLocAsPrefix()))
+      name = maybeGetValueNameFromLoc(result, name);
     setValueName(result, name);
 
     // Record the result number for groups not anchored at 0.
@@ -1564,6 +1700,21 @@ void SSANameState::numberValuesInOp(Operation &op) {
       asmInterface.getAsmBlockNames(setBlockNameFn);
       asmInterface.getAsmResultNames(setResultNameFn);
     }
+    if (!opAsmOpInterfaceUsed) {
+      // If the OpAsmOpInterface didn't set a name, and all results have
+      // OpAsmTypeInterface, get names from types.
+      bool allHaveOpAsmTypeInterface =
+          llvm::all_of(op.getResultTypes(), [&](Type type) {
+            return isa<OpAsmTypeInterface>(type);
+          });
+      if (allHaveOpAsmTypeInterface) {
+        for (OpResult result : op.getResults()) {
+          auto interface = cast<OpAsmTypeInterface>(result.getType());
+          interface.getAsmName(
+              [&](StringRef name) { setResultNameFn(result, name); });
+        }
+      }
+    }
   }
 
   unsigned numResults = op.getNumResults();
@@ -1576,6 +1727,12 @@ void SSANameState::numberValuesInOp(Operation &op) {
     return;
   }
   Value resultBegin = op.getResult(0);
+
+  if (printerFlags.shouldUseNameLocAsPrefix() && !valueIDs.count(resultBegin)) {
+    if (auto nameLoc = resultBegin.getLoc()->findInstanceOf<NameLoc>()) {
+      setValueName(resultBegin, nameLoc.getName());
+    }
+  }
 
   // If the first result wasn't numbered, give it a default number.
   if (valueIDs.try_emplace(resultBegin, nextValueID).second)
@@ -1979,12 +2136,23 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         else
           os << "unknown";
       })
-      .Case<FileLineColLoc>([&](FileLineColLoc loc) {
+      .Case<FileLineColRange>([&](FileLineColRange loc) {
         if (pretty)
           os << loc.getFilename().getValue();
         else
           printEscapedString(loc.getFilename());
-        os << ':' << loc.getLine() << ':' << loc.getColumn();
+        if (loc.getEndColumn() == loc.getStartColumn() &&
+            loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn();
+          return;
+        }
+        if (loc.getStartLine() == loc.getEndLine()) {
+          os << ':' << loc.getStartLine() << ':' << loc.getStartColumn()
+             << " to :" << loc.getEndColumn();
+          return;
+        }
+        os << ':' << loc.getStartLine() << ':' << loc.getStartColumn() << " to "
+           << loc.getEndLine() << ':' << loc.getEndColumn();
       })
       .Case<NameLoc>([&](NameLoc loc) {
         printEscapedString(loc.getName());
@@ -2034,12 +2202,18 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
             [&](Location loc) { printLocationInternal(loc, pretty); },
             [&]() { os << ", "; });
         os << ']';
+      })
+      .Default([&](LocationAttr loc) {
+        // Assumes that this is a dialect-specific attribute and prints it
+        // directly.
+        printAttribute(loc);
       });
 }
 
 /// Print a floating point value in a way that the parser will be able to
 /// round-trip losslessly.
-static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
+static void printFloatValue(const APFloat &apValue, raw_ostream &os,
+                            bool *printedHex = nullptr) {
   // We would like to output the FP constant value in exponential notation,
   // but we cannot do this if doing so will lose precision.  Check here to
   // make sure that we only output it in exponential format if we can parse
@@ -2080,6 +2254,8 @@ static void printFloatValue(const APFloat &apValue, raw_ostream &os) {
 
   // Print special values in hexadecimal format. The sign bit should be included
   // in the literal.
+  if (printedHex)
+    *printedHex = true;
   SmallVector<char, 16> str;
   APInt apInt = apValue.bitcastToAPInt();
   apInt.toString(str, /*Radix=*/16, /*Signed=*/false,
@@ -2095,13 +2271,6 @@ void AsmPrinter::Impl::printLocation(LocationAttr loc, bool allowAlias) {
   if (!allowAlias || failed(printAlias(loc)))
     printLocationInternal(loc, /*pretty=*/false, /*isTopLevel=*/true);
   os << ')';
-}
-
-void AsmPrinter::Impl::printResourceHandle(
-    const AsmDialectResourceHandle &resource) {
-  auto *interface = cast<OpAsmDialectInterface>(resource.getDialect());
-  os << interface->getResourceKey(resource);
-  state.getDialectResources()[resource.getDialect()].insert(resource);
 }
 
 /// Returns true if the given dialect symbol data is simple enough to print in
@@ -2188,6 +2357,13 @@ static void printElidedElementsAttr(raw_ostream &os) {
   os << R"(dense_resource<__elided__>)";
 }
 
+void AsmPrinter::Impl::printResourceHandle(
+    const AsmDialectResourceHandle &resource) {
+  auto *interface = cast<OpAsmDialectInterface>(resource.getDialect());
+  ::printKeywordOrString(interface->getResourceKey(resource), os);
+  state.getDialectResources()[resource.getDialect()].insert(resource);
+}
+
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
   return state.getAliasState().getAlias(attr, os);
 }
@@ -2253,10 +2429,12 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
       return;
 
   } else if (auto floatAttr = llvm::dyn_cast<FloatAttr>(attr)) {
-    printFloatValue(floatAttr.getValue(), os);
+    bool printedHex = false;
+    printFloatValue(floatAttr.getValue(), os, &printedHex);
 
     // FloatAttr elides the type if F64.
-    if (typeElision == AttrTypeElision::May && floatAttr.getType().isF64())
+    if (typeElision == AttrTypeElision::May && floatAttr.getType().isF64() &&
+        !printedHex)
       return;
 
   } else if (auto strAttr = llvm::dyn_cast<StringAttr>(attr)) {
@@ -2435,9 +2613,7 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
   auto elementType = type.getElementType();
 
   // Check to see if we should format this attribute as a hex string.
-  auto numElements = type.getNumElements();
-  if (!attr.isSplat() && allowHex &&
-      shouldPrintElementsAttrWithHex(numElements)) {
+  if (allowHex && printerFlags.shouldPrintElementsAttrWithHex(attr)) {
     ArrayRef<char> rawData = attr.getRawData();
     if (llvm::endianness::native == llvm::endianness::big) {
       // Convert endianess in big-endian(BE) machines. `rawData` is BE in BE
@@ -2545,11 +2721,17 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
                            opaqueTy.getTypeData());
       })
       .Case<IndexType>([&](Type) { os << "index"; })
+      .Case<Float4E2M1FNType>([&](Type) { os << "f4E2M1FN"; })
+      .Case<Float6E2M3FNType>([&](Type) { os << "f6E2M3FN"; })
+      .Case<Float6E3M2FNType>([&](Type) { os << "f6E3M2FN"; })
       .Case<Float8E5M2Type>([&](Type) { os << "f8E5M2"; })
+      .Case<Float8E4M3Type>([&](Type) { os << "f8E4M3"; })
       .Case<Float8E4M3FNType>([&](Type) { os << "f8E4M3FN"; })
       .Case<Float8E5M2FNUZType>([&](Type) { os << "f8E5M2FNUZ"; })
       .Case<Float8E4M3FNUZType>([&](Type) { os << "f8E4M3FNUZ"; })
       .Case<Float8E4M3B11FNUZType>([&](Type) { os << "f8E4M3B11FNUZ"; })
+      .Case<Float8E3M4Type>([&](Type) { os << "f8E3M4"; })
+      .Case<Float8E8M0FNUType>([&](Type) { os << "f8E8M0FNU"; })
       .Case<BFloat16Type>([&](Type) { os << "bf16"; })
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<FloatTF32Type>([&](Type) { os << "tf32"; })
@@ -3276,41 +3458,41 @@ void OperationPrinter::printResourceFileMetadata(
     auto printFn = [&](StringRef key, ResourceBuilder::ValueFn valueFn) {
       checkAddMetadataDict();
 
-      auto printFormatting = [&]() {
-        // Emit the top-level resource entry if we haven't yet.
-        if (!std::exchange(hadResource, true)) {
-          if (needResourceComma)
-            os << "," << newLine;
-          os << "  " << dictName << "_resources: {" << newLine;
-        }
-        // Emit the parent resource entry if we haven't yet.
-        if (!std::exchange(hadEntry, true)) {
-          if (needEntryComma)
-            os << "," << newLine;
-          os << "    " << name << ": {" << newLine;
-        } else {
-          os << "," << newLine;
-        }
-      };
-
+      std::string resourceStr;
+      auto printResourceStr = [&](raw_ostream &os) { os << resourceStr; };
       std::optional<uint64_t> charLimit =
           printerFlags.getLargeResourceStringLimit();
       if (charLimit.has_value()) {
-        std::string resourceStr;
         llvm::raw_string_ostream ss(resourceStr);
         valueFn(ss);
 
-        // Only print entry if it's string is small enough
+        // Only print entry if its string is small enough.
         if (resourceStr.size() > charLimit.value())
           return;
 
-        printFormatting();
-        os << "      " << key << ": " << resourceStr;
-      } else {
-        printFormatting();
-        os << "      " << key << ": ";
-        valueFn(os);
+        // Don't recompute resourceStr when valueFn is called below.
+        valueFn = printResourceStr;
       }
+
+      // Emit the top-level resource entry if we haven't yet.
+      if (!std::exchange(hadResource, true)) {
+        if (needResourceComma)
+          os << "," << newLine;
+        os << "  " << dictName << "_resources: {" << newLine;
+      }
+      // Emit the parent resource entry if we haven't yet.
+      if (!std::exchange(hadEntry, true)) {
+        if (needEntryComma)
+          os << "," << newLine;
+        os << "    " << name << ": {" << newLine;
+      } else {
+        os << "," << newLine;
+      }
+      os << "      ";
+      ::printKeywordOrString(key, os);
+      os << ": ";
+      // Call printResourceStr or original valueFn, depending on charLimit.
+      valueFn(os);
     };
     ResourceBuilder entryBuilder(printFn);
     provider.buildResources(op, providerArgs..., entryBuilder);
@@ -3930,6 +4112,11 @@ void Operation::dump() {
   llvm::errs() << "\n";
 }
 
+void Operation::dumpPretty() {
+  print(llvm::errs(), OpPrintingFlags().useLocalScope().assumeVerified());
+  llvm::errs() << "\n";
+}
+
 void Block::print(raw_ostream &os) {
   Operation *parentOp = getParentOp();
   if (!parentOp) {
@@ -3962,6 +4149,11 @@ void Block::printAsOperand(raw_ostream &os, bool printType) {
 void Block::printAsOperand(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
   printer.printBlockName(this);
+}
+
+raw_ostream &mlir::operator<<(raw_ostream &os, Block &block) {
+  block.print(os);
+  return os;
 }
 
 //===--------------------------------------------------------------------===//

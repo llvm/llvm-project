@@ -1,6 +1,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Config/config.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
@@ -58,12 +59,6 @@ struct CompilerInstance {
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
     MPM.addPass(ModuleInlinerPass(IP, InliningAdvisorMode::Default,
                                   ThinOrFullLTOPhase::None));
-  }
-
-  ~CompilerInstance() {
-    // Reset the static variable that tracks if the plugin has been registered.
-    // This is needed to allow the test to run multiple times.
-    PluginInlineOrderAnalysis::unregister();
   }
 
   std::string Output;

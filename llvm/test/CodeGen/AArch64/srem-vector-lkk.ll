@@ -245,6 +245,7 @@ define <4 x i32> @fold_srem_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: fold_srem_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #26215 // =0x6667
+; CHECK-NEXT:    movi v3.4s, #10
 ; CHECK-NEXT:    movk w8, #26214, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
@@ -252,8 +253,7 @@ define <4 x i32> @fold_srem_v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    sshr v2.4s, v1.4s, #2
 ; CHECK-NEXT:    usra v2.4s, v1.4s, #31
-; CHECK-NEXT:    movi v1.4s, #10
-; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
+; CHECK-NEXT:    mls v0.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    ret
   %1 = srem <4 x i32> %x, <i32 10, i32 10, i32 10, i32 10>
   ret <4 x i32> %1
@@ -263,16 +263,14 @@ define <2 x i32> @fold_srem_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: fold_srem_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #26215 // =0x6667
-; CHECK-NEXT:    movi v3.2s, #10
+; CHECK-NEXT:    movi v2.2s, #10
 ; CHECK-NEXT:    movk w8, #26214, lsl #16
 ; CHECK-NEXT:    dup v1.2s, w8
 ; CHECK-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v2.2d, v1.2d, #63
 ; CHECK-NEXT:    sshr v1.2d, v1.2d, #34
-; CHECK-NEXT:    xtn v2.2s, v2.2d
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    mls v0.2s, v1.2s, v3.2s
+; CHECK-NEXT:    usra v1.2s, v1.2s, #31
+; CHECK-NEXT:    mls v0.2s, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
   %1 = srem <2 x i32> %x, <i32 10, i32 10>
   ret <2 x i32> %1

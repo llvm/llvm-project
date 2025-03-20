@@ -64,7 +64,7 @@ define i32 @test3(i32 %c) nounwind {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[C]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i32 [[C]], 3
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END8:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br i1 true, label [[IF_THEN4:%.*]], label [[IF_END6:%.*]]
@@ -102,9 +102,9 @@ if.end8:
 define i32 @test4(i32 %c) nounwind {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 1, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB]]
-; CHECK-NEXT:    i32 4, label [[SW_BB]]
+; CHECK-NEXT:      i32 1, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB]]
+; CHECK-NEXT:      i32 4, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -207,8 +207,8 @@ define i1 @test7(i32 %c) nounwind {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 6, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 7, label [[SW_BB]]
+; CHECK-NEXT:      i32 6, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 7, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true
@@ -790,8 +790,8 @@ define i32 @test18(i8 %a) {
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    switch i8 [[A]], label [[DISPATCH]] [
-; CHECK-NEXT:    i8 93, label [[TARGET93:%.*]]
-; CHECK-NEXT:    i8 -111, label [[DISPATCH]]
+; CHECK-NEXT:      i8 93, label [[TARGET93:%.*]]
+; CHECK-NEXT:      i8 -111, label [[DISPATCH]]
 ; CHECK-NEXT:    ]
 ; CHECK:       target93:
 ; CHECK-NEXT:    ret i32 93
@@ -817,8 +817,8 @@ define i8 @test19(i8 %a) {
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    switch i8 [[A]], label [[DISPATCH]] [
-; CHECK-NEXT:    i8 93, label [[TARGET93:%.*]]
-; CHECK-NEXT:    i8 -111, label [[DISPATCH]]
+; CHECK-NEXT:      i8 93, label [[TARGET93:%.*]]
+; CHECK-NEXT:      i8 -111, label [[DISPATCH]]
 ; CHECK-NEXT:    ]
 ; CHECK:       target93:
 ; CHECK-NEXT:    ret i8 96
@@ -846,8 +846,8 @@ define i1 @test20(i64 %a) {
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    switch i64 [[A]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 0, label [[EXIT2:%.*]]
-; CHECK-NEXT:    i64 -2147483647, label [[EXIT2]]
+; CHECK-NEXT:      i64 0, label [[EXIT2:%.*]]
+; CHECK-NEXT:      i64 -2147483647, label [[EXIT2]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[B]], 0
@@ -937,7 +937,7 @@ entry:
 define i1 @ctlz_with_range_metadata(i16 %x) {
 ; CHECK-LABEL: @ctlz_with_range_metadata(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[CTLZ]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[CTLZ]] to i8
 ; CHECK-NEXT:    ret i1 true
 ;
   %ctlz = call i16 @llvm.ctlz.i16(i16 %x, i1 false), !range !{i16 0, i16 8}
@@ -949,7 +949,7 @@ define i1 @ctlz_with_range_metadata(i16 %x) {
 define i1 @abs_with_range_metadata(i16 %x) {
 ; CHECK-LABEL: @abs_with_range_metadata(
 ; CHECK-NEXT:    [[ABS:%.*]] = call i16 @llvm.abs.i16(i16 [[X:%.*]], i1 false), !range [[RNG5]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[ABS]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[ABS]] to i8
 ; CHECK-NEXT:    ret i1 true
 ;
   %abs = call i16 @llvm.abs.i16(i16 %x, i1 false), !range !{i16 0, i16 8}
@@ -989,11 +989,11 @@ define i1 @ctlz_nofold(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTLZ]], 9
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign uge i16 [[CTLZ]], 9
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[CTLZ2:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X]], i1 false)
-; CHECK-NEXT:    [[RES2:%.*]] = icmp ult i16 [[CTLZ2]], 7
+; CHECK-NEXT:    [[RES2:%.*]] = icmp samesign ult i16 [[CTLZ2]], 7
 ; CHECK-NEXT:    ret i1 [[RES2]]
 ;
   %cmp = icmp ult i16 %x, 256
@@ -1038,7 +1038,7 @@ define i1 @cttz_nofold1(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 true)
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 7
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign uge i16 [[CTTZ]], 7
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -1061,7 +1061,7 @@ define i1 @cttz_nofold2(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X]], i1 false)
-; CHECK-NEXT:    [[RES:%.*]] = icmp uge i16 [[CTTZ]], 8
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign uge i16 [[CTTZ]], 8
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -1106,7 +1106,7 @@ define i1 @ctpop_nofold(i16 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i16 [[CTPOP]], 7
+; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ule i16 [[CTPOP]], 7
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 true
@@ -1121,6 +1121,70 @@ if:
 
 else:
   ret i1 true
+}
+
+define i1 @icmp_eq_range_attr(i8 range(i8 1, 0) %i) {
+; CHECK-LABEL: @icmp_eq_range_attr(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_eq_range_attr(i8 range(i8 -1, 1) %i) {
+; CHECK-LABEL: @neg_icmp_eq_range_attr(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+declare range(i8 1, 0) i8 @returns_non_zero_range_helper()
+declare range(i8 -1, 1) i8 @returns_contain_zero_range_helper()
+
+define i1 @icmp_eq_range_return() {
+; CHECK-LABEL: @icmp_eq_range_return(
+; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_non_zero_range_helper()
+; CHECK-NEXT:    ret i1 false
+;
+  %i = call i8 @returns_non_zero_range_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_eq_range_return() {
+; CHECK-LABEL: @neg_icmp_eq_range_return(
+; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_contain_zero_range_helper()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i = call i8 @returns_contain_zero_range_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+declare i8 @returns_i8_helper()
+
+define i1 @icmp_eq_range_call() {
+; CHECK-LABEL: @icmp_eq_range_call(
+; CHECK-NEXT:    [[I:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
+; CHECK-NEXT:    ret i1 false
+;
+  %i = call range(i8 1, 0) i8 @returns_i8_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_eq_range_call() {
+; CHECK-LABEL: @neg_icmp_eq_range_call(
+; CHECK-NEXT:    [[I:%.*]] = call range(i8 0, 11) i8 @returns_i8_helper()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i = call range(i8 0, 11) i8 @returns_i8_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
 }
 
 declare i16 @llvm.ctlz.i16(i16, i1)

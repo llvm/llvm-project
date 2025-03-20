@@ -18,10 +18,10 @@
 #define WARNING_GADGET(name) GADGET(name)
 #endif
 
-/// A `WARNING_GADGET` subset, where the code pattern of each gadget
-/// corresponds uses of a (possibly hardened) contatiner (e.g., `std::span`).
-#ifndef WARNING_CONTAINER_GADGET
-#define WARNING_CONTAINER_GADGET(name) WARNING_GADGET(name)
+/// A `WARNING_GADGET` subset, each of which may be enable/disable separately
+/// with different flags
+#ifndef WARNING_OPTIONAL_GADGET
+#define WARNING_OPTIONAL_GADGET(name) WARNING_GADGET(name)
 #endif
 
 /// Safe gadgets correspond to code patterns that aren't unsafe but need to be
@@ -36,8 +36,10 @@ WARNING_GADGET(Decrement)
 WARNING_GADGET(ArraySubscript)
 WARNING_GADGET(PointerArithmetic)
 WARNING_GADGET(UnsafeBufferUsageAttr)
+WARNING_GADGET(UnsafeBufferUsageCtorAttr)
 WARNING_GADGET(DataInvocation)
-WARNING_CONTAINER_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`
+WARNING_OPTIONAL_GADGET(UnsafeLibcFunctionCall)
+WARNING_OPTIONAL_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`
 FIXABLE_GADGET(ULCArraySubscript)          // `DRE[any]` in an Unspecified Lvalue Context
 FIXABLE_GADGET(DerefSimplePtrArithFixable)
 FIXABLE_GADGET(PointerDereference)
@@ -51,5 +53,5 @@ FIXABLE_GADGET(PointerInit)
 
 #undef FIXABLE_GADGET
 #undef WARNING_GADGET
-#undef WARNING_CONTAINER_GADGET
+#undef WARNING_OPTIONAL_GADGET
 #undef GADGET

@@ -7,7 +7,8 @@ from lldbgdbserverutils import *
 import xml.etree.ElementTree as ET
 
 
-@skipIfWindows
+@skipIfRemote
+@skipIf(hostoslist=["windows"])
 class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def setUp(self):
         super().setUp()
@@ -64,7 +65,7 @@ class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
                 "read packet: $qXfer:features:read:target.xml:0,200000#00",
                 {
                     "direction": "send",
-                    "regex": re.compile("^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
+                    "regex": re.compile(r"^\$l(.+)#[0-9a-fA-F]{2}$", flags=re.DOTALL),
                     "capture": {1: "target_xml"},
                 },
             ],

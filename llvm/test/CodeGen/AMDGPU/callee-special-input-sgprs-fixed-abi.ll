@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5]
@@ -28,8 +30,8 @@ define hidden void @use_queue_ptr() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_queue_ptr:
-; GCN: s_swappc_b64 s[30:31], s[4:5]
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: s_swappc_b64 s[30:31], s[10:11]
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 define amdgpu_kernel void @kern_indirect_use_queue_ptr(i32) #1 {
   call void @use_queue_ptr()
   ret void
@@ -196,11 +198,12 @@ define hidden void @use_workgroup_id_yz() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_x:
 ; GCN-NOT: s6
-; GCN: s_mov_b32 s12, s6
-; GCN: s_mov_b32 s32, 0
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, use_workgroup_id_x@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, use_workgroup_id_x@rel32@hi+12
+; GCN-NOT: s6
+; GCN: s_mov_b32 s12, s6
+; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 
@@ -348,7 +351,7 @@ define hidden void @func_indirect_use_workgroup_id_z() #1 {
 ; GCN: ; use s12
 define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
-  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
 }
@@ -359,7 +362,7 @@ define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
 ; GCN: ; use s13
 define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
-  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
 }
@@ -370,7 +373,7 @@ define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
 ; GCN: ; use s14
 define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %arg0, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
   call void asm sideeffect "; use $0", "s"(i32 %val)
   ret void
 }
@@ -468,7 +471,7 @@ define hidden void @use_every_sgpr_input() #1 {
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
@@ -487,13 +490,13 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; We have to pass the kernarg segment, but there are no kernel
 ; arguments so null is passed.
 ; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input_no_kernargs:
-; GCN: s_mov_b64 s[10:11], s[6:7]
+; GCN: s_mov_b64 s[10:11], s[8:9]
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 
 ; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
 ; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
-; GCN: .amdhsa_user_sgpr_queue_ptr 0
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
 ; GCN: .amdhsa_user_sgpr_flat_scratch_init 1

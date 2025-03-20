@@ -19,6 +19,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -320,7 +321,7 @@ void PassCrashReproducerGenerator::prepareReproducerFor(Pass *pass,
     passOS << ")";
 
   impl->activeContexts.push_back(std::make_unique<RecoveryReproducerContext>(
-      passOS.str(), op, impl->streamFactory, impl->pmFlagVerifyPasses));
+      passStr, op, impl->streamFactory, impl->pmFlagVerifyPasses));
 }
 void PassCrashReproducerGenerator::prepareReproducerFor(
     iterator_range<PassManager::pass_iterator> passes, Operation *op) {
@@ -330,7 +331,7 @@ void PassCrashReproducerGenerator::prepareReproducerFor(
       passes, passOS, [&](Pass &pass) { pass.printAsTextualPipeline(passOS); });
 
   impl->activeContexts.push_back(std::make_unique<RecoveryReproducerContext>(
-      passOS.str(), op, impl->streamFactory, impl->pmFlagVerifyPasses));
+      passStr, op, impl->streamFactory, impl->pmFlagVerifyPasses));
 }
 
 void PassCrashReproducerGenerator::removeLastReproducerFor(Pass *pass,
@@ -413,6 +414,15 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
+  // Notify the context to disable the use of thread-local storage while the
+  // pass manager is running in a crash recovery context thread. Re-enable the
+  // thread local storage upon function exit. This is required to persist any
+  // attribute storage allocated during passes beyond the lifetime of the
+  // recovery context thread.
+  MLIRContext *ctx = getContext();
+  ctx->disableThreadLocalStorage();
+  auto guard =
+      llvm::make_scope_exit([ctx]() { ctx->enableThreadLocalStorage(); });
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 ; CHECK: vmem
 ; CHECK: vmem
 ; CHECK-NOT:  r{{[0-9]*}} = add(r30,#-256)

@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AmbiguousSmartptrResetCallCheck.h"
 #include "AvoidConstParamsInDecls.h"
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
@@ -22,6 +23,7 @@
 #include "DeleteNullPointerCheck.h"
 #include "DuplicateIncludeCheck.h"
 #include "ElseAfterReturnCheck.h"
+#include "EnumInitialValueCheck.h"
 #include "FunctionCognitiveComplexityCheck.h"
 #include "FunctionSizeCheck.h"
 #include "IdentifierLengthCheck.h"
@@ -31,6 +33,7 @@
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MakeMemberFunctionConstCheck.h"
+#include "MathMissingParenthesesCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
@@ -66,6 +69,8 @@ namespace readability {
 class ReadabilityModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AmbiguousSmartptrResetCallCheck>(
+        "readability-ambiguous-smartptr-reset-call");
     CheckFactories.registerCheck<AvoidConstParamsInDecls>(
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<AvoidNestedConditionalOperatorCheck>(
@@ -92,6 +97,8 @@ public:
         "readability-duplicate-include");
     CheckFactories.registerCheck<ElseAfterReturnCheck>(
         "readability-else-after-return");
+    CheckFactories.registerCheck<EnumInitialValueCheck>(
+        "readability-enum-initial-value");
     CheckFactories.registerCheck<FunctionCognitiveComplexityCheck>(
         "readability-function-cognitive-complexity");
     CheckFactories.registerCheck<FunctionSizeCheck>(
@@ -102,6 +109,8 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
+    CheckFactories.registerCheck<MathMissingParenthesesCheck>(
+        "readability-math-missing-parentheses");
     CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
         "readability-redundant-inline-specifier");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(

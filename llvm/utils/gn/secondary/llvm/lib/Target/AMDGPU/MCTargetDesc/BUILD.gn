@@ -94,6 +94,10 @@ static_library("MCTargetDesc") {
     "//llvm/lib/Target/AMDGPU/TargetInfo",
     "//llvm/lib/Target/AMDGPU/Utils",
     "//llvm/lib/TargetParser",
+
+    # AMDGPUMCExpr.cpp includes GCNSubtarget.h which after 490e348e679
+    # includes the generated AMDGPUGenRegisterBank.inc file :/
+    "//llvm/lib/Target/AMDGPU/:AMDGPUGenRegisterBank",
   ]
   include_dirs = [ ".." ]
   sources = [
@@ -104,6 +108,7 @@ static_library("MCTargetDesc") {
     "AMDGPUMCAsmInfo.cpp",
     "AMDGPUMCCodeEmitter.cpp",
     "AMDGPUMCExpr.cpp",
+    "AMDGPUMCKernelDescriptor.cpp",
     "AMDGPUMCTargetDesc.cpp",
     "AMDGPUTargetStreamer.cpp",
     "R600InstPrinter.cpp",

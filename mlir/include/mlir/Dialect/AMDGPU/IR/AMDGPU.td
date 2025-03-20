@@ -9,8 +9,11 @@
 #ifndef AMDGPU
 #define AMDGPU
 
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/Properties.td"
 include "mlir/IR/OpBase.td"
 
 def AMDGPU_Dialect : Dialect {
@@ -25,27 +28,50 @@ def AMDGPU_Dialect : Dialect {
 
 
   let dependentDialects = [
+    "ROCDL::ROCDLDialect",
     "arith::ArithDialect",
     "gpu::GPUDialect"
   ];
   let useDefaultAttributePrinterParser = 1;
+}
 
-  let extraClassDeclaration = [{
-    /// Return true if the given MemRefType has an integer address
-    /// space that matches the ROCDL shared memory address space or
-    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
-    static bool hasSharedMemoryAddressSpace(MemRefType type);
+//===----------------------------------------------------------------------===//
+// AMDGPU general attribute definitions
+//===----------------------------------------------------------------------===//
 
-    /// Return true if the given Attribute has an integer address
-    /// space that matches the ROCDL shared memory address space or
-    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
-    static bool isSharedMemoryAddressSpace(Attribute type);
+def AMDGPU_AddressSpace : I32EnumAttr<"AddressSpace",
+    "AMDGPU-specific address spaces",
+    [
+      I32EnumAttrCase<"FatRawBuffer",        0, "fat_raw_buffer">,
+      I32EnumAttrCase<"BufferRsrc",          1, "buffer_rsrc">,
+      I32EnumAttrCase<"FatStructuredBuffer", 2, "fat_structured_buffer">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
 
-    /// Defines the MemRef memory space attribute numeric value that indicates
-    /// a memref is located in shared memory. This should correspond to the
-    /// value used in ROCDL.
-    static constexpr unsigned kSharedMemoryAddressSpace = 3;
+def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
+    "address_space"> {
+  let description = [{
+    AMDGPU-specific memory spaces that may not have exact analogues on other
+    GPU targets or backends.
+
+    - `fat_raw_buffer` is the memory space used when a memref is stored as
+    as a "buffer fat pointer" - that is, a buffer resource (that is set up to
+    use raw byte-level indexing) along with its offset. The AMDGPU backend
+    implements `ptr addrspace(7)` to represent these fat pointers so that
+    buffer resources (which allow advanced features like bounds checking or
+    cache swizzling) can be used like ordinary LLVM pointers or memrefs.
+    See also the `fat_raw_buffer_cast` operation
+    - `buffer_rsrc` is the memory space for `ptr addrspace(8)`, representing a
+    buffer resource. It should not be used for memrefs, since it does not support
+    indexing
+    - `fat_structured_buffer` represents `ptr addrspace(9)`, a buffer resource
+    that carries both an index and offset field, which are used for complex
+    structured indexing that is primarily seen in graphics applications. This
+    is also incompatible with the simple indexing model supported by memref.
   }];
+  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -57,8 +83,8 @@ class AMDGPU_Op<string mnemonic, list<Trait> traits = []> :
 
 def AMDGPU_ExtPackedFp8Op :
     AMDGPU_Op<"ext_packed_fp8", [Pure]>,
-    Arguments<(ins AnyTypeOf<[F8E5M2FNUZ, F8E4M3FNUZ,
-        VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2FNUZ, F8E4M3FNUZ]>]>:$source,
+    Arguments<(ins AnyTypeOf<[F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN,
+        VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN]>]>:$source,
       ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$index)>,
     Results<(outs F32:$res)> {
   let summary = "Extend one of a vector of packed fp8 values to a float";
@@ -84,8 +110,8 @@ def AMDGPU_PackedTrunc2xFp8Op :
     Arguments<(ins F32:$sourceA,
       Optional<F32>:$sourceB,
       ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<1>]>:$wordIndex,
-      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>>:$existing)>,
-    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>:$res)> {
+      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ, F8E4M3FN, F8E5M2]>>:$existing)>,
+    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ, F8E4M3FN, F8E5M2]>:$res)> {
   let summary = "Round two floats into a packed vector of 8-bit floats";
   let description = [{
     Round the inputs `sourceA` and `sourceB` (which is undefined if not
@@ -111,8 +137,8 @@ def AMDGPU_PackedStochRoundFp8Op :
     Arguments<(ins F32:$source,
       I32:$stochiasticParam,
       ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<3>]>:$storeIndex,
-      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>>:$existing)>,
-    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ]>:$res)> {
+      Optional<FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ, F8E4M3FN, F8E5M2]>>:$existing)>,
+    Results<(outs FixedVectorOfLengthAndType<[4], [F8E4M3FNUZ, F8E5M2FNUZ, F8E4M3FN, F8E5M2]>:$res)> {
   let summary = "Round float stochiastically into a packed vector of 8-bit floats";
   let description = [{
     Round the input `source`, adding in `stochiasticParam`, and place it into
@@ -134,6 +160,69 @@ def AMDGPU_PackedStochRoundFp8Op :
   let hasVerifier = 1;
 }
 
+def AMDGPU_FatRawBufferCastOp :
+    AMDGPU_Op<"fat_raw_buffer_cast",
+      [Pure,
+       DeclareOpInterfaceMethods<InferTypeOpInterface>,
+       ViewLikeOpInterface, AttrSizedOperandSegments]>,
+    Arguments<(ins AnyMemRef:$source,
+      Optional<I32>:$validBytes,
+      Optional<I<14>>:$cacheSwizzleStride,
+      DefaultValuedProp<BoolProp, "true">:$boundsCheck,
+      UnitProp:$resetOffset)>,
+    Results<(outs AnyMemRef:$result)> {
+  let summary = "Create a raw buffer fat pointer that matches `memref`";
+  let description = [{
+    Wraps the memory pointed to by `source` as a raw buffer fat pointer, or,
+    in LLVM terms, a `ptr addrspace(7)`, returning a memref that has the same
+    sizes and layout but the `#amdgpu.address_space<fat_raw_buffer>`
+    address space.
+
+    This memref can be used with standard memref operations like `memref.load`,
+    `memref.store`, and `memref.atomicrmw`, which will be lowered to the relevant
+    buffer intrinsics. (`vector.masked_load/store` will work once there's backend
+    support for lowering them, and then this document will be updated)
+
+    If `validBytes` is given, it is the number of bytes that will be valid as
+    an offset to `out`. If it is not provided, this will be inferred from
+    the size of the memref during lowering. This size is
+    max_{d = 0 upto rank(source)} (sizes[d] * strides[d]) * sizeof(element type).
+
+    The flags of the buffer descriptor will be set up to enable raw usage -
+    for example, stride = 0, add_tid = 0, and so on. The `boundsCheck`
+    property determines if bounds checking is enabled or not (on architectures
+    where this can be controlled - that is, on RDNA chips).
+
+    If `cacheSwizzleStride` is provided, L1 cache swizzling will be enabled
+    on architectures that support it. This swizzling, unlike the main swizzling
+    mode (whose usage makes a buffer non-raw) does not affect index calculation,
+    but does affect cache behavior. Mixing access between cache-swizzled raw
+    buffers and other forms of memory access, like ordinary pointer loads or
+    unswizzled buffer pointers can cause incorrect behavior and must be avoided.
+
+    This operation preserves the sizes, strides, and offset of the input
+    memref - they'll be added in by `memref.load` later. However, if
+    `resetOffset` is set, that offset will be added to the base pointer.
+    If the value of the memref's offset is not uniform (independent of the lane/thread ID),
+    this will lead to substantially decreased performance due to the need for
+    a waterfall loop on the base address of the buffer resource.
+  }];
+
+  let extraClassDeclaration = [{
+    Value getViewSource() { return getSource(); }
+  }];
+
+  let assemblyFormat = [{
+    $source oilist (`validBytes` `(` $validBytes `)`
+      | `cacheSwizzleStride` `(` $cacheSwizzleStride `)`
+      | `boundsCheck` `(` $boundsCheck `)`
+      | `resetOffset` $resetOffset )
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
+  let hasVerifier = 1;
+}
+
 /// Raw buffer load
 def AMDGPU_RawBufferLoadOp :
     AMDGPU_Op<"raw_buffer_load", [AllElementTypesMatch<["value", "memref"]>,
@@ -143,11 +232,7 @@ def AMDGPU_RawBufferLoadOp :
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
                    Optional<I32>:$sgprOffset)>,
-    Results<(outs AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value)> {
+    Results<(outs AnyType:$value)> {
 
   let summary = "Raw Buffer load, exposing GCN features";
   let description = [{
@@ -193,11 +278,7 @@ def AMDGPU_RawBufferLoadOp :
 def AMDGPU_RawBufferStoreOp :
     AMDGPU_Op<"raw_buffer_store", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins AnyTypeOf<[BF16, F16, F32, I32, I8, F8E5M2FNUZ, F8E4M3FNUZ,
-                              VectorOfLengthAndType<[2, 4], [F32, I32]>,
-                              VectorOfLengthAndType<[2, 4, 8], [F16, BF16]>,
-                              VectorOfLengthAndType<[2, 4, 8, 16],
-                                [I8, F8E5M2FNUZ, F8E4M3FNUZ]>]>:$value,
+    Arguments<(ins AnyType:$value,
                    Arg<AnyMemRef, "buffer to store to", [MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
@@ -238,7 +319,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
       AttrSizedOperandSegments,
       AllTypesMatch<["src", "cmp", "value"]>,
       AllElementTypesMatch<["value", "memref"]>]>,
-    Arguments<(ins AnyTypeOf<[I32, I64, F32, F64]>:$src,
+    Arguments<(ins AnyType:$src,
                    AnyType:$cmp,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
@@ -278,7 +359,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 def AMDGPU_RawBufferAtomicFaddOp :
     AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins F32:$value,
+    Arguments<(ins AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
@@ -427,6 +508,61 @@ def AMDGPU_RawBufferAtomicUminOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_DPPPerm : I32EnumAttr<"DPPPerm",
+    "The possible permutations for a DPP operation",
+    [
+      I32EnumAttrCase<"quad_perm",  0>,
+      I32EnumAttrCase<"row_shl",    1>,
+      I32EnumAttrCase<"row_shr",    2>,
+      I32EnumAttrCase<"row_ror",    3>,
+      I32EnumAttrCase<"wave_shl",   4>,
+      I32EnumAttrCase<"wave_shr",   5>,
+      I32EnumAttrCase<"wave_ror",   6>,
+      I32EnumAttrCase<"wave_rol",   7>,
+      I32EnumAttrCase<"row_mirror", 8>,
+      I32EnumAttrCase<"row_half_mirror", 9>,
+      I32EnumAttrCase<"row_bcast_15", 10>,
+      I32EnumAttrCase<"row_bcast_31", 11>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,
+  "dpp_perm">;
+
+def AMDGPU_DPPOp : AMDGPU_Op<"dpp", [SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
+  Arguments<(ins AnyType:$old,
+                  AnyType:$src,
+                  AMDGPU_DPPPermAttr:$kind,
+                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
+                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
+                  DefaultValuedAttr<I32Attr, "0xf">:$bank_mask,
+                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
+  let summary = "AMDGPU DPP operation";
+  let description = [{
+    This operation represents DPP functionality in a GPU program.
+     DPP provides the following operations:
+    - Full crossbar in a group of four (`quad_perm`)
+    - Wavefront shift left by one lane (`wave_shl`)
+    - Wavefront shift right by one lane (`wave_shr`)
+    - Wavefront rotate right by one lane (`wave_ror`)
+    - Wavefront rotate left by one lane (`wave_rol`)
+    - Row shift left by 1–15 lanes (`row_shl`)
+    - Row shift right by 1–15 lanes (`row_shr`)
+    - Row rotate right by 1–15 lanes (`row_ror`)
+    - Reverse within a row (`row_mirror`)
+    - Reverse within a half-row (`row_half_mirror`)
+    - Broadcast the 15th lane of each row to the next row (`row_bcast`)
+    - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
@@ -448,6 +584,46 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     breakpoints set on variables) when debugging.
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
+    "The possible options for scheduling barriers",
+    [
+      I32BitEnumAttrCaseNone<"none">,
+      I32BitEnumAttrCaseBit<"non_mem_non_sideffect", 0>,
+      I32BitEnumAttrCaseBit<"valu", 1>,
+      I32BitEnumAttrCaseBit<"salu", 2>,
+      I32BitEnumAttrCaseBit<"mfma_wmma",  3>,
+      I32BitEnumAttrCaseBit<"all_vmem",  4>,
+      I32BitEnumAttrCaseBit<"vmem_read",  5>,
+      I32BitEnumAttrCaseBit<"vmem_write", 6>,
+      I32BitEnumAttrCaseBit<"all_ds", 7>,
+      I32BitEnumAttrCaseBit<"ds_read", 8>,
+      I32BitEnumAttrCaseBit<"ds_write", 9>,
+      I32BitEnumAttrCaseBit<"transcendental", 10>
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::amdgpu";
+}
+
+def AMDGPU_SchedBarrierOpOptAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_SchedBarrierOpOpt,
+  "sched_barrier_opt">{
+   let assemblyFormat = "`<` $value `>`";
+}
+
+def AMDGPU_SchedBarrierOp :
+  AMDGPU_Op<"sched_barrier">,
+  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  {
+  let summary = "Barrier that limits the backend scheduler of instruction movement";
+  let description = [{
+    `amdgpu.sched_barrier` serves as a barrier that could be
+    configured to restrict movements of instructions through it as
+    defined by sched_barrier_opts.
+  }];
+  let assemblyFormat = [{
+    `allow` `=` $opts attr-dict
+  }];
 }
 
 def AMDGPU_MFMAPermB : I32EnumAttr<"MFMAPermB",
@@ -475,15 +651,20 @@ def MFMAInTypes : AnyTypeOf<[F32, F64, I32, I64,
                              VectorOfLengthAndType<[4], [F16]>,
                              VectorOfLengthAndType<[2, 4], [BF16]>,
                              VectorOfLengthAndType<[4, 8], [I8]>,
-                             VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ]>]>;
+                             VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN]>]>;
 def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
 // wmma
-def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[16], [F16, BF16, I8, SI8, UI8]>]>;
+def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<
+                             [4, 8, 16],
+                             [F16, BF16,
+                              I8, SI8, UI8,
+                              I<4>, SI<4>, UI<4>,
+                              F8E4M3FN, F8E5M2]>]>;
 def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
-                              VectorOfLengthAndType<[8, 16], [F16, BF16]>]>;
+                              VectorOfLengthAndType<[4, 8, 16], [F16, BF16]>]>;
 
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
@@ -531,7 +712,7 @@ def AMDGPU_MFMAOp :
     order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
 
     The negateA, negateB, and negateC flags are only supported for double-precision
-    operations on gfx940+.
+    operations on gfx94x.
   }];
   let assemblyFormat = [{
     $sourceA `*` $sourceB `+` $destC
@@ -544,8 +725,7 @@ def AMDGPU_MFMAOp :
 
 def AMDGPU_WMMAOp :
     AMDGPU_Op<"wmma", [AllTypesMatch<["destC", "destD"]>,
-                       AllTypesMatch<["sourceA", "sourceB"]>,
-                        Pure]>,
+                       Pure]>,
     Arguments<(ins
                    WMMAInTypes:$sourceA,
                    WMMAInTypes:$sourceB,
@@ -558,13 +738,17 @@ def AMDGPU_WMMAOp :
   let summary = "MLIR wrapper for RDNA3 wmma instructions";
   let description = [{
     The `amdgpu.wmma` op is an MLIR wrapper around intrinsics
-    for various `wmma` instructions in the RDNA3 architecture, which perform
-    a 16x16 matrix multiplication for different data types.
+    for various `wmma` instructions in the RDNA3 or RDNA4 architecture, which
+    perform a 16x16 * 16x16 matrix multiplication for different data types.
+    Note that in gfx12/RDNA4, there is also a 16x32 * 32x16 instruction for 4-bit
+    integer inputs.
 
-    When emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16 (or 16xbf16) vector
-    containing only 8 valid values:
+    On gfx11/RDNA3, emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16
+    (or 16xbf16) vector containing only 8 valid values:
       - If `subwordOffset` is 0, then the output is stored at indices 0, 2, 4, ..., 14.
       - If `subwordOffset` is 1, then the output is stored at indices 1, 3, 5, ..., 15.
+    On gfx12/RDNA4, the result is instead returned as a vector<8 x f16/bf16> where
+    all values are valid and the `subwordOffset` must be `0`, as it cannot be used.
 
     `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
 

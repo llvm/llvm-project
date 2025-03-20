@@ -205,9 +205,10 @@ bool InstallAPIVisitor::VisitObjCCategoryDecl(const ObjCCategoryDecl *D) {
   const ObjCInterfaceDecl *InterfaceD = D->getClassInterface();
   const StringRef InterfaceName = InterfaceD->getName();
 
-  auto [Category, FA] = Ctx.Slice->addObjCCategory(InterfaceName, CategoryName,
-                                                   Avail, D, *Access);
-  recordObjCInstanceVariables(D->getASTContext(), Category, InterfaceName,
+  ObjCCategoryRecord *CategoryRecord =
+      Ctx.Slice->addObjCCategory(InterfaceName, CategoryName, Avail, D, *Access)
+          .first;
+  recordObjCInstanceVariables(D->getASTContext(), CategoryRecord, InterfaceName,
                               D->ivars());
   return true;
 }
@@ -217,7 +218,7 @@ bool InstallAPIVisitor::VisitVarDecl(const VarDecl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  // Skip variables in records. They are handled seperately for C++.
+  // Skip variables in records. They are handled separately for C++.
   if (D->getDeclContext()->isRecord())
     return true;
 
@@ -254,7 +255,7 @@ bool InstallAPIVisitor::VisitFunctionDecl(const FunctionDecl *D) {
       return true;
 
     // Skip methods in CXX RecordDecls.
-    for (auto P : D->getASTContext().getParents(*M)) {
+    for (const DynTypedNode &P : D->getASTContext().getParents(*M)) {
       if (P.get<CXXRecordDecl>())
         return true;
     }
@@ -446,16 +447,16 @@ InstallAPIVisitor::getMangledCXXVTableName(const CXXRecordDecl *D) const {
   return getBackendMangledName(Name);
 }
 
-std::string
-InstallAPIVisitor::getMangledCXXThunk(const GlobalDecl &D,
-                                      const ThunkInfo &Thunk) const {
+std::string InstallAPIVisitor::getMangledCXXThunk(
+    const GlobalDecl &D, const ThunkInfo &Thunk, bool ElideOverrideInfo) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
   const auto *Method = cast<CXXMethodDecl>(D.getDecl());
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(Method))
-    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk.This, NameStream);
+    MC->mangleCXXDtorThunk(Dtor, D.getDtorType(), Thunk, ElideOverrideInfo,
+                           NameStream);
   else
-    MC->mangleThunk(Method, Thunk, NameStream);
+    MC->mangleThunk(Method, Thunk, ElideOverrideInfo, NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -499,7 +500,8 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
             return;
 
           for (const auto &Thunk : *Thunks) {
-            const std::string Name = getMangledCXXThunk(GD, Thunk);
+            const std::string Name =
+                getMangledCXXThunk(GD, Thunk, /*ElideOverrideInfo=*/true);
             auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
                                                  GlobalRecord::Kind::Function,
                                                  Avail, GD.getDecl(), Access);
@@ -681,7 +683,7 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     std::string Name = getMangledName(M);
     auto [GR, FA] = Ctx.Slice->addGlobal(Name, RecordLinkage::Exported,
-                                         GlobalRecord::Kind::Function, Avail, D,
+                                         GlobalRecord::Kind::Function, Avail, M,
                                          *Access, getFlags(WeakDef));
     Ctx.Verifier->verify(GR, FA);
   }

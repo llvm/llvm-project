@@ -47,10 +47,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
 // CHECK-NEXT:      %[[V17:.*]] = arith.cmpi sge, %[[V16]], %[[V4]] : i32
 // CHECK-NEXT:      %[[V18:.*]] = fir.if %[[V17]] -> (i32) {
 // CHECK-NEXT:        %[[ISFIRST:.*]] = fir.load %[[V0]] : !fir.ref<i32>
-// CHECK-NEXT:        %[[DIMS:.*]]:3 = fir.box_dims %[[V1]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK-NEXT:        %[[SUB:.*]] = arith.subi %[[DIMS]]#0, %c1 : index
-// CHECK-NEXT:        %[[ADD:.*]] = arith.addi %[[V14]], %[[SUB]] : index
-// CHECK-NEXT:        %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[ADD]]) : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK-NEXT:        %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[V14]]) : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK-NEXT:        %[[V20:.*]] = fir.load %[[V19]] : !fir.ref<i32>
 // CHECK-NEXT:        %[[V21:.*]] = arith.cmpi sgt, %[[V20]], %arg4 : i32
 // CHECK-NEXT:        %[[ISFIRSTL:.*]] = fir.convert %[[ISFIRST]] : (i32) -> i1
@@ -71,13 +68,7 @@ func.func @_QPtest(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "array"}
 // CHECK-NEXT:      }
 // CHECK-NEXT:      fir.result %[[V18]] : i32
 // CHECK-NEXT:    }
-// CHECK-NEXT:    %[[BD:.*]]:3 = fir.box_dims %[[V2]]#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-// CHECK-NEXT:    fir.do_loop %arg3 = %c1 to %[[BD]]#1 step %c1 unordered {
-// CHECK-NEXT:      %[[V13:.*]] = hlfir.designate %[[RES]] (%arg3)  : (!fir.ref<!fir.array<1xi32>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:      %[[V14:.*]] = fir.load %[[V13]] : !fir.ref<i32>
-// CHECK-NEXT:      %[[V15:.*]] = hlfir.designate %[[V2]]#0 (%arg3)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// CHECK-NEXT:      hlfir.assign %[[V14]] to %[[V15]] : i32, !fir.ref<i32>
-// CHECK-NEXT:    }
+// CHECK-NEXT:    hlfir.assign %[[RES]] to %[[V2]]#0 : !fir.ref<!fir.array<1xi32>>, !fir.box<!fir.array<?xi32>>
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
 
@@ -114,10 +105,7 @@ func.func @_QPtest_float(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 // CHECK-NEXT:     %[[V17:.*]] = arith.cmpf oge, %[[V16]], %[[V4:.*]] : f32
 // CHECK-NEXT:     %[[V18:.*]] = fir.if %[[V17]] -> (f32) {
 // CHECK-NEXT:       %[[ISFIRST:.*]] = fir.load %[[V0:.*]] : !fir.ref<i32>
-// CHECK-NEXT:       %[[DIMS:.*]]:3 = fir.box_dims %2#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
-// CHECK-NEXT:       %[[SUB:.*]] = arith.subi %[[DIMS]]#0, %c1 : index
-// CHECK-NEXT:       %[[ADD:.*]] = arith.addi %[[V14]], %[[SUB]] : index
-// CHECK-NEXT:       %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[ADD]]) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// CHECK-NEXT:       %[[V19:.*]] = hlfir.designate %[[V1]]#0 (%[[V14]]) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK-NEXT:       %[[V20:.*]] = fir.load %[[V19]] : !fir.ref<f32>
 // CHECK-NEXT:       %[[NEW_MIN:.*]] = arith.cmpf ogt, %[[V20]], %arg4 fastmath<contract> : f32
 // CHECK-NEXT:       %[[CONDRED:.*]] = arith.cmpf une, %arg4, %arg4 fastmath<contract> : f32

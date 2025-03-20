@@ -204,7 +204,7 @@ Value OperationFolder::getOrCreateConstant(Block *block, Dialect *dialect,
   // Find an insertion point for the constant.
   auto *insertRegion = getInsertionRegion(interfaces, block);
   auto &entry = insertRegion->front();
-  rewriter.setInsertionPoint(&entry, entry.begin());
+  rewriter.setInsertionPointToStart(&entry);
 
   // Get the constant map for the insertion region of this operation.
   // Use erased location since the op is being built at the front of block.
@@ -242,7 +242,7 @@ OperationFolder::processFoldResults(Operation *op,
   // insertion region.
   auto *insertRegion = getInsertionRegion(interfaces, op->getBlock());
   auto &entry = insertRegion->front();
-  rewriter.setInsertionPoint(&entry, entry.begin());
+  rewriter.setInsertionPointToStart(&entry);
 
   // Get the constant map for the insertion region of this operation.
   auto &uniquedConstants = foldScopes[insertRegion];
@@ -260,7 +260,7 @@ OperationFolder::processFoldResults(Operation *op,
 
     // Check to see if there is a canonicalized version of this constant.
     auto res = op->getResult(i);
-    Attribute attrRepl = foldResults[i].get<Attribute>();
+    Attribute attrRepl = cast<Attribute>(foldResults[i]);
     if (auto *constOp =
             tryGetOrCreateConstant(uniquedConstants, dialect, attrRepl,
                                    res.getType(), erasedFoldedLocation)) {

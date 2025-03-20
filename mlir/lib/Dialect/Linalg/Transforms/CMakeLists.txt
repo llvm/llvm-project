@@ -2,7 +2,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   AllInterfaces.cpp
   BubbleUpExtractSlice.cpp
   BufferizableOpInterfaceImpl.cpp
-  Bufferize.cpp
   ConstantFold.cpp
   ConvertToDestinationStyle.cpp
   ConvertConv2DToImg2Col.cpp
@@ -14,6 +13,8 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   ElementwiseToLinalg.cpp
   EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
+  FoldAddIntoDest.cpp
+  FoldIntoElementwise.cpp
   FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   Generalization.cpp
@@ -22,10 +23,14 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
+  TransposeMatmul.cpp
   MeshShardingInterfaceImpl.cpp
   NamedOpConversions.cpp
+  BlockPackMatmul.cpp
+  PackAndUnpackPatterns.cpp
   Padding.cpp
   Promotion.cpp
+  RuntimeOpVerification.cpp
   Specialize.cpp
   Split.cpp
   SplitReduction.cpp
@@ -35,7 +40,9 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   TilingInterfaceImpl.cpp
   Transforms.cpp
   TransposeConv2D.cpp
+  DecomposeGenericByUnfoldingPermutation.cpp
   Vectorization.cpp
+  WinogradConv2D.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
@@ -45,44 +52,36 @@ add_mlir_dialect_library(MLIRLinalgTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
-  MLIRAffineTransforms
   MLIRAffineUtils
   MLIRAnalysis
   MLIRArithDialect
   MLIRArithTransforms
   MLIRArithUtils
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRComplexDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRFuncDialect
-  MLIRFuncToLLVM
   MLIRFuncTransforms
+  MLIRIndexDialect
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRMeshDialect
   MLIRMeshTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect
   MLIRSCFTransforms
-  MLIRSCFUtils
   MLIRPass
-  MLIRShardingInterface
   MLIRSubsetOpInterface
   MLIRSparseTensorDialect
   MLIRTensorDialect
   MLIRTensorTilingInterfaceImpl
-  MLIRTensorTransforms
   MLIRTransforms
   MLIRTransformUtils
   MLIRValueBoundsOpInterface
   MLIRVectorDialect
   MLIRVectorTransforms
   MLIRVectorUtils
-  MLIRX86VectorTransforms
   MLIRVectorToSCF
 )

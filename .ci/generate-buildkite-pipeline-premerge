@@ -52,147 +52,7 @@ modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
 echo "Directories modified:" >&2
 echo "$modified_dirs" >&2
 
-function compute-projects-to-test() {
-  projects=${@}
-  for project in ${projects}; do
-    echo "${project}"
-    case ${project} in
-    lld)
-      for p in bolt cross-project-tests; do
-        echo $p
-      done
-    ;;
-    llvm)
-      for p in bolt clang clang-tools-extra flang lld lldb mlir polly; do
-        echo $p
-      done
-    ;;
-    clang)
-      for p in clang-tools-extra compiler-rt flang lldb cross-project-tests; do
-        echo $p
-      done
-    ;;
-    clang-tools-extra)
-      echo libc
-    ;;
-    mlir)
-      echo flang
-    ;;
-    *)
-      # Nothing to do
-    ;;
-    esac
-  done
-}
-
-function add-dependencies() {
-  projects=${@}
-  for project in ${projects}; do
-    echo "${project}"
-    case ${project} in
-    bolt)
-      for p in lld llvm; do
-        echo $p
-      done
-    ;;
-    cross-project-tests)
-      for p in lld clang; do
-        echo $p
-      done
-    ;;
-    clang-tools-extra)
-      for p in llvm clang; do
-        echo $p
-      done
-    ;;
-    compiler-rt|libc|openmp)
-      echo clang lld
-    ;;
-    flang|lldb)
-      for p in llvm clang; do
-        echo $p
-      done
-    ;;
-    lld|mlir|polly)
-      echo llvm
-    ;;
-    *)
-      # Nothing to do
-    ;;
-    esac
-  done
-}
-
-function exclude-linux() {
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    cross-project-tests) ;; # tests failing
-    lldb)                ;; # tests failing
-    openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
-    *)
-      echo "${project}"
-    ;;
-    esac
-  done
-}
-
-function exclude-windows() {
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    cross-project-tests) ;; # tests failing
-    compiler-rt)         ;; # tests taking too long
-    openmp)              ;; # TODO: having trouble with the Perl installation
-    libc)                ;; # no Windows support
-    lldb)                ;; # tests failing
-    bolt)                ;; # tests are not supported yet
-    *)
-      echo "${project}"
-    ;;
-    esac
-  done
-}
-
-# Prints only projects that are both present in $modified_dirs and the passed
-# list.
-function keep-modified-projects() {
-  projects=${@}
-  for project in ${projects}; do
-    if echo "$modified_dirs" | grep -q -E "^${project}$"; then
-      echo "${project}"
-    fi
-  done
-}
-
-function check-targets() {
-  projects=${@}
-  for project in ${projects}; do
-    case ${project} in
-    clang-tools-extra)
-      echo "check-clang-tools"
-    ;;
-    compiler-rt)
-      echo "check-all"
-    ;;
-    cross-project-tests)
-      echo "check-cross-project"
-    ;;
-    lldb)
-      echo "check-all" # TODO: check-lldb may not include all the LLDB tests?
-    ;;
-    pstl)
-      echo "check-all"
-    ;;
-    libclc)
-      echo "check-all"
-    ;;
-    *)
-      echo "check-${project}"
-    ;;
-    esac
-  done
-}
+. ./.ci/compute-projects.sh
 
 # Project specific pipelines.
 
@@ -200,17 +60,6 @@ function check-targets() {
 if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cmake)$"; then
   cat <<EOF
 - trigger: "libcxx-ci"
-  build:
-    message: "${buildMessage}"
-    commit: "${BUILDKITE_COMMIT}"
-    branch: "${BUILDKITE_BRANCH}"
-EOF
-fi
-
-# If clang changed.
-if echo "$modified_dirs" | grep -q -E "^(clang)$"; then
-  cat <<EOF
-- trigger: "clang-ci"
   build:
     message: "${buildMessage}"
     commit: "${BUILDKITE_COMMIT}"
@@ -227,11 +76,15 @@ fi
 all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
 modified_projects="$(keep-modified-projects ${all_projects})"
 
-linux_projects_to_test=$(exclude-linux $(compute-projects-to-test ${modified_projects}))
+linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
 linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
 linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
 
-windows_projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
+linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
+linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
+linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
+
+windows_projects_to_test=$(exclude-windows $(compute-projects-to-test 1 ${modified_projects}))
 windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
 windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
 
@@ -242,7 +95,7 @@ if [[ "${linux_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/test-results.*.xml'
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -255,7 +108,7 @@ if [[ "${linux_projects}" != "" ]]; then
     CC: 'clang'
     CXX: 'clang++'
   commands:
-  - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})"'
+  - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"'
 EOF
 fi
 
@@ -265,7 +118,7 @@ if [[ "${windows_projects}" != "" ]]; then
   artifact_paths:
   - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/test-results.xml'
+  - 'build/test-results.*.xml'
   agents: ${WINDOWS_AGENTS}
   retry:
     automatic:
@@ -275,9 +128,8 @@ if [[ "${windows_projects}" != "" ]]; then
         limit: 2
   timeout_in_minutes: 150
   env:
-    CC: 'cl'
-    CXX: 'cl'
-    LD: 'link'
+    MAX_PARALLEL_COMPILE_JOBS: '16'
+    MAX_PARALLEL_LINK_JOBS: '4'
   commands:
   - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
   - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'

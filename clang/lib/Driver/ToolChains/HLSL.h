@@ -29,6 +29,19 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY MetalConverter : public Tool {
+public:
+  MetalConverter(const ToolChain &TC)
+      : Tool("hlsl::MetalConverter", "metal-shaderconverter", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 } // namespace hlsl
 } // namespace tools
 
@@ -51,9 +64,15 @@ public:
                 Action::OffloadKind DeviceOffloadKind) const override;
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
   bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
+  bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
+  bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
+
+  // Set default DWARF version to 4 for DXIL uses version 4.
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
 
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
+  mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
 };
 
 } // end namespace toolchains

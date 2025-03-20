@@ -113,7 +113,8 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
-                                 TypeRange valueTypes, ArrayRef<bool> scalables,
+                                 ArrayRef<bool> scalableFlags,
+                                 TypeRange valueTypes,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
@@ -126,7 +127,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
   unsigned dynamicValIdx = 0;
   unsigned scalableIndexIdx = 0;
   llvm::interleaveComma(integers, printer, [&](int64_t integer) {
-    if (!scalables.empty() && scalables[scalableIndexIdx])
+    if (!scalableFlags.empty() && scalableFlags[scalableIndexIdx])
       printer << "[";
     if (ShapedType::isDynamic(integer)) {
       printer << values[dynamicValIdx];
@@ -136,7 +137,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
     } else {
       printer << integer;
     }
-    if (!scalables.empty() && scalables[scalableIndexIdx])
+    if (!scalableFlags.empty() && scalableFlags[scalableIndexIdx])
       printer << "]";
 
     scalableIndexIdx++;
@@ -148,7 +149,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalables,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
     SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
 
   SmallVector<int64_t, 4> integerVals;
@@ -183,7 +184,7 @@ ParseResult mlir::parseDynamicIndexList(
     return parser.emitError(parser.getNameLoc())
            << "expected SSA value or integer";
   integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
-  scalables = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
+  scalableFlags = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
   return success();
 }
 

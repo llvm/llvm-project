@@ -49,6 +49,11 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
   return m_file->getRawStream(stream_type).value_or(llvm::ArrayRef<uint8_t>());
 }
 
+std::optional<llvm::ArrayRef<uint8_t>>
+MinidumpParser::GetRawStream(StreamType stream_type) {
+  return m_file->getRawStream(stream_type);
+}
+
 UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
   auto cv_record =
       GetData().slice(module->CvRecord.RVA, module->CvRecord.DataSize);
@@ -417,19 +422,13 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
   return filtered_modules;
 }
 
-const minidump::ExceptionStream *MinidumpParser::GetExceptionStream() {
-  auto ExpectedStream = GetMinidumpFile().getExceptionStream();
-  if (ExpectedStream)
-    return &*ExpectedStream;
-
-  LLDB_LOG_ERROR(GetLog(LLDBLog::Process), ExpectedStream.takeError(),
-                 "Failed to read minidump exception stream: {0}");
-  return nullptr;
+llvm::iterator_range<ExceptionStreamsIterator>
+MinidumpParser::GetExceptionStreams() {
+  return GetMinidumpFile().getExceptionStreams();
 }
 
 std::optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
-  llvm::ArrayRef<uint8_t> data64 = GetStream(StreamType::Memory64List);
   Log *log = GetLog(LLDBLog::Modules);
 
   auto ExpectedMemory = GetMinidumpFile().getMemoryList();
@@ -457,33 +456,17 @@ MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
     }
   }
 
-  // Some Minidumps have a Memory64ListStream that captures all the heap memory
-  // (full-memory Minidumps).  We can't exactly use the same loop as above,
-  // because the Minidump uses slightly different data structures to describe
-  // those
-
-  if (!data64.empty()) {
-    llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
-    uint64_t base_rva;
-    std::tie(memory64_list, base_rva) =
-        MinidumpMemoryDescriptor64::ParseMemory64List(data64);
-
-    if (memory64_list.empty())
-      return std::nullopt;
-
-    for (const auto &memory_desc64 : memory64_list) {
-      const lldb::addr_t range_start = memory_desc64.start_of_memory_range;
-      const size_t range_size = memory_desc64.data_size;
-
-      if (base_rva + range_size > GetData().size())
-        return std::nullopt;
-
-      if (range_start <= addr && addr < range_start + range_size) {
-        return minidump::Range(range_start,
-                               GetData().slice(base_rva, range_size));
+  if (!GetStream(StreamType::Memory64List).empty()) {
+    llvm::Error err = llvm::Error::success();
+    for (const auto &memory_desc :  GetMinidumpFile().getMemory64List(err)) {
+      if (memory_desc.first.StartOfMemoryRange <= addr 
+          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize) {
+        return minidump::Range(memory_desc.first.StartOfMemoryRange, memory_desc.second);
       }
-      base_rva += range_size;
     }
+
+    if (err)
+      LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
   }
 
   return std::nullopt;
@@ -510,6 +493,11 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
 
   const size_t overlap = std::min(size, range->range_ref.size() - offset);
   return range->range_ref.slice(offset, overlap);
+}
+
+llvm::iterator_range<FallibleMemory64Iterator> MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
+  llvm::ErrorAsOutParameter ErrAsOutParam(&err);
+  return m_file->getMemory64List(err);
 }
 
 static bool
@@ -553,53 +541,44 @@ static bool
 CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
                                  std::vector<MemoryRegionInfo> &regions) {
   Log *log = GetLog(LLDBLog::Modules);
+  // Cache the expected memory32 into an optional
+  // because it is possible to just have a memory64 list
   auto ExpectedMemory = parser.GetMinidumpFile().getMemoryList();
   if (!ExpectedMemory) {
     LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
                    "Failed to read memory list: {0}");
-    return false;
+  } else {
+    for (const MemoryDescriptor &memory_desc : *ExpectedMemory) {
+      if (memory_desc.Memory.DataSize == 0)
+        continue;
+      MemoryRegionInfo region;
+      region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
+      region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
+      region.SetReadable(MemoryRegionInfo::eYes);
+      region.SetMapped(MemoryRegionInfo::eYes);
+      regions.push_back(region);
+    }
   }
-  regions.reserve(ExpectedMemory->size());
-  for (const MemoryDescriptor &memory_desc : *ExpectedMemory) {
-    if (memory_desc.Memory.DataSize == 0)
-      continue;
-    MemoryRegionInfo region;
-    region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
-    region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
-    region.SetReadable(MemoryRegionInfo::eYes);
-    region.SetMapped(MemoryRegionInfo::eYes);
-    regions.push_back(region);
+
+  if (!parser.GetStream(StreamType::Memory64List).empty()) {
+    llvm::Error err = llvm::Error::success();
+    for (const auto &memory_desc : parser.GetMemory64Iterator(err)) {
+      if (memory_desc.first.DataSize == 0)
+        continue;
+      MemoryRegionInfo region;
+      region.GetRange().SetRangeBase(memory_desc.first.StartOfMemoryRange);
+      region.GetRange().SetByteSize(memory_desc.first.DataSize);
+      region.SetReadable(MemoryRegionInfo::eYes);
+      region.SetMapped(MemoryRegionInfo::eYes);
+      regions.push_back(region);
+    }
+
+    if (err) {
+      LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
+      return false;
+    }
   }
-  regions.shrink_to_fit();
-  return !regions.empty();
-}
 
-static bool
-CreateRegionsCacheFromMemory64List(MinidumpParser &parser,
-                                   std::vector<MemoryRegionInfo> &regions) {
-  llvm::ArrayRef<uint8_t> data =
-      parser.GetStream(StreamType::Memory64List);
-  if (data.empty())
-    return false;
-  llvm::ArrayRef<MinidumpMemoryDescriptor64> memory64_list;
-  uint64_t base_rva;
-  std::tie(memory64_list, base_rva) =
-      MinidumpMemoryDescriptor64::ParseMemory64List(data);
-
-  if (memory64_list.empty())
-    return false;
-
-  regions.reserve(memory64_list.size());
-  for (const auto &memory_desc : memory64_list) {
-    if (memory_desc.data_size == 0)
-      continue;
-    MemoryRegionInfo region;
-    region.GetRange().SetRangeBase(memory_desc.start_of_memory_range);
-    region.GetRange().SetByteSize(memory_desc.data_size);
-    region.SetReadable(MemoryRegionInfo::eYes);
-    region.SetMapped(MemoryRegionInfo::eYes);
-    regions.push_back(region);
-  }
   regions.shrink_to_fit();
   return !regions.empty();
 }
@@ -620,9 +599,7 @@ std::pair<MemoryRegionInfos, bool> MinidumpParser::BuildMemoryRegions() {
     return return_sorted(true);
   if (CreateRegionsCacheFromMemoryInfoList(*this, result))
     return return_sorted(true);
-  if (CreateRegionsCacheFromMemoryList(*this, result))
-    return return_sorted(false);
-  CreateRegionsCacheFromMemory64List(*this, result);
+  CreateRegionsCacheFromMemoryList(*this, result);
   return return_sorted(false);
 }
 
@@ -679,6 +656,7 @@ MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
     ENUM_TO_CSTR(FacebookAbortReason);
     ENUM_TO_CSTR(FacebookThreadName);
     ENUM_TO_CSTR(FacebookLogcat);
+    ENUM_TO_CSTR(LLDBGenerated);
   }
   return "unknown stream type";
 }

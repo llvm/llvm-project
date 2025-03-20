@@ -59,6 +59,7 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
     llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
 };
 
 const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
@@ -74,27 +75,35 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
     llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     // SYCL address space values for this map are dummy
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_device
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_global_host
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_local
-    llvm::AMDGPUAS::FLAT_ADDRESS, // sycl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_sptr
-    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr32_uptr
-    llvm::AMDGPUAS::FLAT_ADDRESS, // ptr64
-    llvm::AMDGPUAS::FLAT_ADDRESS, // hlsl_groupshared
-
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_device
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_host
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_local
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_private
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
+    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
+    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
 };
 } // namespace targets
 } // namespace clang
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsAMDGPU.def"
-};
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAMDGPU.def"
+});
 
 const char *const AMDGPUTargetInfo::GCCRegNames[] = {
   "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8",
@@ -187,9 +196,15 @@ bool AMDGPUTargetInfo::initFeatureMap(
     return false;
 
   // TODO: Should move this logic into TargetParser
-  std::string ErrorMsg;
-  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg)) {
-    Diags.Report(diag::err_invalid_feature_combination) << ErrorMsg;
+  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  switch (HasError.first) {
+  default:
+    break;
+  case llvm::AMDGPU::INVALID_FEATURE_COMBINATION:
+    Diags.Report(diag::err_invalid_feature_combination) << HasError.second;
+    return false;
+  case llvm::AMDGPU::UNSUPPORTED_TARGET_FEATURE:
+    Diags.Report(diag::err_opt_not_valid_on_target) << HasError.second;
     return false;
   }
 
@@ -232,8 +247,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   HasLegalHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32 ? 32 : 64;
-  AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
+  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -254,15 +268,17 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   TargetInfo::adjust(Diags, Opts);
   // ToDo: There are still a few places using default address space as private
-  // address space in OpenCL, which needs to be cleaned up, then Opts.OpenCL
-  // can be removed from the following line.
-  setAddressSpaceMap(/*DefaultIsPrivate=*/Opts.OpenCL ||
+  // address space in OpenCL, which needs to be cleaned up, then the references
+  // to OpenCL can be removed from the following line.
+  setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
                      !isAMDGCN(getTriple()));
+
+  AtomicOpts = AtomicOptions(Opts);
 }
 
-ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::AMDGPU::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+AMDGPUTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -315,7 +331,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   }
 
-  if (AllowAMDGPUUnsafeFPAtomics)
+  if (Opts.AtomicIgnoreDenormalMode)
     Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
@@ -331,9 +347,12 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize));
-  // ToDo: deprecate this macro for naming consistency.
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize));
+  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize),
+                      "compile-time-constant access to the wavefront size will "
+                      "be removed in a future release");
+  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize),
+                      "compile-time-constant access to the wavefront size will "
+                      "be removed in a future release");
   Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 

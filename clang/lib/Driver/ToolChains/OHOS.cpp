@@ -32,7 +32,8 @@ using namespace clang::driver::tools::arm;
 using tools::addMultilibFlag;
 using tools::addPathIfExists;
 
-static bool findOHOSMuslMultilibs(const Multilib::flags_list &Flags,
+static bool findOHOSMuslMultilibs(const Driver &D,
+                                  const Multilib::flags_list &Flags,
                                   DetectedMultilibs &Result) {
   MultilibSet Multilibs;
   Multilibs.push_back(Multilib());
@@ -50,7 +51,7 @@ static bool findOHOSMuslMultilibs(const Multilib::flags_list &Flags,
       Multilib("/a7_hard_neon-vfpv4", {}, {},
                {"-mcpu=cortex-a7", "-mfloat-abi=hard", "-mfpu=neon-vfpv4"}));
 
-  if (Multilibs.select(Flags, Result.SelectedMultilibs)) {
+  if (Multilibs.select(D, Flags, Result.SelectedMultilibs)) {
     Result.Multilibs = Multilibs;
     return true;
   }
@@ -81,7 +82,7 @@ static bool findOHOSMultilibs(const Driver &D,
   addMultilibFlag((ARMFloatABI == tools::arm::FloatABI::Hard),
                   "-mfloat-abi=hard", Flags);
 
-  return findOHOSMuslMultilibs(Flags, Result);
+  return findOHOSMuslMultilibs(D, Flags, Result);
 }
 
 std::string OHOS::getMultiarchTriple(const llvm::Triple &T) const {
@@ -110,6 +111,8 @@ std::string OHOS::getMultiarchTriple(const llvm::Triple &T) const {
     return "x86_64-linux-ohos";
   case llvm::Triple::aarch64:
     return "aarch64-linux-ohos";
+  case llvm::Triple::loongarch64:
+    return "loongarch64-linux-ohos";
   }
   return T.str();
 }
@@ -367,7 +370,9 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-z");
   CmdArgs.push_back("relro");
   CmdArgs.push_back("-z");
-  CmdArgs.push_back("max-page-size=4096");
+  CmdArgs.push_back(getArch() == llvm::Triple::loongarch64
+                        ? "max-page-size=16384"
+                        : "max-page-size=4096");
   // .gnu.hash section is not compatible with the MIPS target
   if (getArch() != llvm::Triple::mipsel)
     CmdArgs.push_back("--hash-style=both");

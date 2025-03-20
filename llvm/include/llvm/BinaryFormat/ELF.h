@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace ELF {
@@ -126,9 +127,11 @@ enum {
 // Versioning
 enum { EV_NONE = 0, EV_CURRENT = 1 };
 
-// Machine architectures
-// See current registered ELF machine architectures at:
-//    http://www.uxsglobal.com/developers/gabi/latest/ch4.eheader.html
+// Machine architectures.
+// At the time of writing, the list of registered machine architectures is
+// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
+// Please refer to https://groups.google.com/g/generic-abi for any further
+// updates.
 enum {
   EM_NONE = 0,           // No machine
   EM_M32 = 1,            // AT&T WE 32100
@@ -616,6 +619,7 @@ enum {
   EF_HEXAGON_MACH_V5 = 0x00000004,   // Hexagon V5
   EF_HEXAGON_MACH_V55 = 0x00000005,  // Hexagon V55
   EF_HEXAGON_MACH_V60 = 0x00000060,  // Hexagon V60
+  EF_HEXAGON_MACH_V61 = 0x00000061,  // Hexagon V61
   EF_HEXAGON_MACH_V62 = 0x00000062,  // Hexagon V62
   EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
   EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
@@ -626,6 +630,12 @@ enum {
   EF_HEXAGON_MACH_V71 = 0x00000071,  // Hexagon V71
   EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
   EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
+  EF_HEXAGON_MACH_V75 = 0x00000075,  // Hexagon V75
+  EF_HEXAGON_MACH_V77 = 0x00000077,  // Hexagon V77
+  EF_HEXAGON_MACH_V79 = 0x00000079,  // Hexagon V79
+  EF_HEXAGON_MACH_V81 = 0x00000081,  // Hexagon V81
+  EF_HEXAGON_MACH_V83 = 0x00000083,  // Hexagon V83
+  EF_HEXAGON_MACH_V85 = 0x00000085,  // Hexagon V85
   EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
 
   // Highest ISA version flags
@@ -637,6 +647,7 @@ enum {
   EF_HEXAGON_ISA_V5 = 0x00000040,   // Hexagon V5 ISA
   EF_HEXAGON_ISA_V55 = 0x00000050,  // Hexagon V55 ISA
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V61 = 0x00000061,  // Hexagon V61 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
   EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
@@ -646,6 +657,11 @@ enum {
   EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
   EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
   EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
+  EF_HEXAGON_ISA_V77 = 0x00000077,  // Hexagon V77 ISA
+  EF_HEXAGON_ISA_V79 = 0x00000079,  // Hexagon V79 ISA
+  EF_HEXAGON_ISA_V81 = 0x00000081,  // Hexagon V81 ISA
+  EF_HEXAGON_ISA_V83 = 0x00000083,  // Hexagon V83 ISA
+  EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 };
 
@@ -683,6 +699,9 @@ enum : unsigned {
 // ELF Relocation types for RISC-V
 enum {
 #include "ELFRelocs/RISCV.def"
+#define ELF_RISCV_NONSTANDARD_RELOC(_vendor, name, value) name = value,
+#include "ELFRelocs/RISCV_nonstandard.def"
+#undef ELF_RISCV_NONSTANDARD_RELOC
 };
 
 enum {
@@ -694,6 +713,27 @@ enum {
 // ELF Relocation types for S390/zSeries
 enum {
 #include "ELFRelocs/SystemZ.def"
+};
+
+// SPARC Specific e_flags
+enum : unsigned {
+  // ELF extension mask.
+  // All values are available for EM_SPARC32PLUS & EM_SPARCV9 objects, except
+  // EF_SPARC_32PLUS which is a EM_SPARC32PLUS-only flag.
+  //
+  // Note that those features are not mutually exclusive (one can set more than
+  // one flag in this group).
+  EF_SPARC_EXT_MASK = 0xffff00,
+  EF_SPARC_32PLUS = 0x000100,
+  EF_SPARC_SUN_US1 = 0x000200,
+  EF_SPARC_HAL_R1 = 0x000400,
+  EF_SPARC_SUN_US3 = 0x000800,
+
+  // Memory model selection mask for EM_SPARCV9 objects.
+  EF_SPARCV9_MM = 0x3,
+  EF_SPARCV9_TSO = 0x0,
+  EF_SPARCV9_PSO = 0x1,
+  EF_SPARCV9_RMO = 0x2,
 };
 
 // ELF Relocation type for Sparc.
@@ -742,65 +782,70 @@ enum : unsigned {
 
   // AMDGCN-based processors.
   // clang-format off
-  EF_AMDGPU_MACH_AMDGCN_GFX600        = 0x020,
-  EF_AMDGPU_MACH_AMDGCN_GFX601        = 0x021,
-  EF_AMDGPU_MACH_AMDGCN_GFX700        = 0x022,
-  EF_AMDGPU_MACH_AMDGCN_GFX701        = 0x023,
-  EF_AMDGPU_MACH_AMDGCN_GFX702        = 0x024,
-  EF_AMDGPU_MACH_AMDGCN_GFX703        = 0x025,
-  EF_AMDGPU_MACH_AMDGCN_GFX704        = 0x026,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27 = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_GFX801        = 0x028,
-  EF_AMDGPU_MACH_AMDGCN_GFX802        = 0x029,
-  EF_AMDGPU_MACH_AMDGCN_GFX803        = 0x02a,
-  EF_AMDGPU_MACH_AMDGCN_GFX810        = 0x02b,
-  EF_AMDGPU_MACH_AMDGCN_GFX900        = 0x02c,
-  EF_AMDGPU_MACH_AMDGCN_GFX902        = 0x02d,
-  EF_AMDGPU_MACH_AMDGCN_GFX904        = 0x02e,
-  EF_AMDGPU_MACH_AMDGCN_GFX906        = 0x02f,
-  EF_AMDGPU_MACH_AMDGCN_GFX908        = 0x030,
-  EF_AMDGPU_MACH_AMDGCN_GFX909        = 0x031,
-  EF_AMDGPU_MACH_AMDGCN_GFX90C        = 0x032,
-  EF_AMDGPU_MACH_AMDGCN_GFX1010       = 0x033,
-  EF_AMDGPU_MACH_AMDGCN_GFX1011       = 0x034,
-  EF_AMDGPU_MACH_AMDGCN_GFX1012       = 0x035,
-  EF_AMDGPU_MACH_AMDGCN_GFX1030       = 0x036,
-  EF_AMDGPU_MACH_AMDGCN_GFX1031       = 0x037,
-  EF_AMDGPU_MACH_AMDGCN_GFX1032       = 0x038,
-  EF_AMDGPU_MACH_AMDGCN_GFX1033       = 0x039,
-  EF_AMDGPU_MACH_AMDGCN_GFX602        = 0x03a,
-  EF_AMDGPU_MACH_AMDGCN_GFX705        = 0x03b,
-  EF_AMDGPU_MACH_AMDGCN_GFX805        = 0x03c,
-  EF_AMDGPU_MACH_AMDGCN_GFX1035       = 0x03d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1034       = 0x03e,
-  EF_AMDGPU_MACH_AMDGCN_GFX90A        = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940        = 0x040,
-  EF_AMDGPU_MACH_AMDGCN_GFX1100       = 0x041,
-  EF_AMDGPU_MACH_AMDGCN_GFX1013       = 0x042,
-  EF_AMDGPU_MACH_AMDGCN_GFX1150       = 0x043,
-  EF_AMDGPU_MACH_AMDGCN_GFX1103       = 0x044,
-  EF_AMDGPU_MACH_AMDGCN_GFX1036       = 0x045,
-  EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x046,
-  EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_GFX1200       = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49 = 0x049,
-  EF_AMDGPU_MACH_AMDGCN_GFX1151       = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941        = 0x04b,
-  EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F = 0x04f,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50 = 0x050,
-  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC      = 0x051,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC   = 0x052,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC   = 0x053,
-  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC     = 0x054,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X55 = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_GFX600          = 0x020,
+  EF_AMDGPU_MACH_AMDGCN_GFX601          = 0x021,
+  EF_AMDGPU_MACH_AMDGCN_GFX700          = 0x022,
+  EF_AMDGPU_MACH_AMDGCN_GFX701          = 0x023,
+  EF_AMDGPU_MACH_AMDGCN_GFX702          = 0x024,
+  EF_AMDGPU_MACH_AMDGCN_GFX703          = 0x025,
+  EF_AMDGPU_MACH_AMDGCN_GFX704          = 0x026,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27   = 0x027,
+  EF_AMDGPU_MACH_AMDGCN_GFX801          = 0x028,
+  EF_AMDGPU_MACH_AMDGCN_GFX802          = 0x029,
+  EF_AMDGPU_MACH_AMDGCN_GFX803          = 0x02a,
+  EF_AMDGPU_MACH_AMDGCN_GFX810          = 0x02b,
+  EF_AMDGPU_MACH_AMDGCN_GFX900          = 0x02c,
+  EF_AMDGPU_MACH_AMDGCN_GFX902          = 0x02d,
+  EF_AMDGPU_MACH_AMDGCN_GFX904          = 0x02e,
+  EF_AMDGPU_MACH_AMDGCN_GFX906          = 0x02f,
+  EF_AMDGPU_MACH_AMDGCN_GFX908          = 0x030,
+  EF_AMDGPU_MACH_AMDGCN_GFX909          = 0x031,
+  EF_AMDGPU_MACH_AMDGCN_GFX90C          = 0x032,
+  EF_AMDGPU_MACH_AMDGCN_GFX1010         = 0x033,
+  EF_AMDGPU_MACH_AMDGCN_GFX1011         = 0x034,
+  EF_AMDGPU_MACH_AMDGCN_GFX1012         = 0x035,
+  EF_AMDGPU_MACH_AMDGCN_GFX1030         = 0x036,
+  EF_AMDGPU_MACH_AMDGCN_GFX1031         = 0x037,
+  EF_AMDGPU_MACH_AMDGCN_GFX1032         = 0x038,
+  EF_AMDGPU_MACH_AMDGCN_GFX1033         = 0x039,
+  EF_AMDGPU_MACH_AMDGCN_GFX602          = 0x03a,
+  EF_AMDGPU_MACH_AMDGCN_GFX705          = 0x03b,
+  EF_AMDGPU_MACH_AMDGCN_GFX805          = 0x03c,
+  EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
+  EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40   = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
+  EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
+  EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
+  EF_AMDGPU_MACH_AMDGCN_GFX1103         = 0x044,
+  EF_AMDGPU_MACH_AMDGCN_GFX1036         = 0x045,
+  EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
+  EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
+  EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_GFX950          = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
+  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC   = 0x054,
+  EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_GFX1153         = 0x058,
+  EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC  = 0x05f,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1078,7 +1123,10 @@ enum : unsigned {
   SHT_SYMTAB_SHNDX = 18,  // Indices for SHN_XINDEX entries.
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_RELR = 19, // Relocation entries; only offsets.
+  // TODO: Experimental CREL relocations. LLVM will change the value and
+  // break compatibility in the future.
+  SHT_CREL = 0x40000014,
   SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
@@ -1100,6 +1148,7 @@ enum : unsigned {
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
   SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
+  SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1119,6 +1168,8 @@ enum : unsigned {
   SHT_ARM_ATTRIBUTES = 0x70000003U,
   SHT_ARM_DEBUGOVERLAY = 0x70000004U,
   SHT_ARM_OVERLAYSECTION = 0x70000005U,
+  // Support for AArch64 build attributes
+  SHT_AARCH64_ATTRIBUTES = 0x70000003U,
   // Special aarch64-specific section for MTE support, as described in:
   // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#section-types
   SHT_AARCH64_AUTH_RELR = 0x70000004U,
@@ -1140,6 +1191,8 @@ enum : unsigned {
   SHT_RISCV_ATTRIBUTES = 0x70000003U,
 
   SHT_CSKY_ATTRIBUTES = 0x70000001U,
+
+  SHT_HEXAGON_ATTRIBUTES = 0x70000003U,
 
   SHT_HIPROC = 0x7fffffff, // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000, // Lowest type reserved for applications.
@@ -1246,8 +1299,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -1419,6 +1475,14 @@ struct Elf64_Rela {
   void setSymbolAndType(Elf64_Word s, Elf64_Word t) {
     r_info = ((Elf64_Xword)s << 32) + (t & 0xffffffffL);
   }
+};
+
+// In-memory representation of CREL. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel {
+  std::conditional_t<Is64, uint64_t, uint32_t> r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
 };
 
 // Relocation entry without explicit addend or info (relative relocations only).
@@ -1682,6 +1746,8 @@ enum : unsigned {
   NT_ARM_SSVE = 0x40b,
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
+  NT_ARM_FPMR = 0x40e,
+  NT_ARM_GCS = 0x410,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,
@@ -1710,11 +1776,6 @@ enum {
   NT_ANDROID_TYPE_MEMTAG = 4,
 };
 
-// ARM note types.
-enum {
-  NT_ARM_TYPE_PAUTH_ABI_TAG = 1,
-};
-
 // Memory tagging values used in NT_ANDROID_TYPE_MEMTAG notes.
 enum {
   // Enumeration to determine the tagging mode. In Android-land, 'SYNC' means
@@ -1738,7 +1799,9 @@ enum : unsigned {
   GNU_PROPERTY_STACK_SIZE = 1,
   GNU_PROPERTY_NO_COPY_ON_PROTECTED = 2,
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
+  GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+  GNU_PROPERTY_RISCV_FEATURE_1_AND = 0xc0000000,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
   GNU_PROPERTY_X86_FEATURE_2_NEEDED = GNU_PROPERTY_X86_UINT32_OR_LO + 1,
@@ -1754,6 +1817,31 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_BTI = 1 << 0,
   GNU_PROPERTY_AARCH64_FEATURE_1_PAC = 1 << 1,
   GNU_PROPERTY_AARCH64_FEATURE_1_GCS = 1 << 2,
+};
+
+// aarch64 PAuth platforms.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_INVALID = 0x0,
+  AARCH64_PAUTH_PLATFORM_BAREMETAL = 0x1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX = 0x10000002,
+};
+
+// Bit positions of version flags for AARCH64_PAUTH_PLATFORM_LLVM_LINUX.
+enum : unsigned {
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS = 0,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS = 1,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS = 2,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS = 3,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR = 4,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR = 5,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI = 6,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINIADDRDISC = 7,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT = 8,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOTOS = 9,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_TYPEINFOVPTRDISCR = 10,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR = 11,
+  AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST =
+      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_FPTRTYPEDISCR,
 };
 
 // x86 processor feature bits.
@@ -1776,6 +1864,13 @@ enum : unsigned {
   GNU_PROPERTY_X86_ISA_1_V2 = 1 << 1,
   GNU_PROPERTY_X86_ISA_1_V3 = 1 << 2,
   GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
+};
+
+// RISC-V processor feature bits.
+enum : unsigned {
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED = 1 << 0,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS = 1 << 1,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG = 1 << 2,
 };
 
 // FreeBSD note types.
@@ -1915,11 +2010,20 @@ enum {
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
 
+constexpr unsigned CREL_HDR_ADDEND = 4;
+
 /// Convert an architecture name into ELF's e_machine value.
 uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a lowercase string identifier into an OSABI value.
+uint8_t convertNameToOSABI(StringRef Name);
+
+// Convert an OSABI value into a string that identifies the OS- or ABI-
+// specific ELF extension.
+StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

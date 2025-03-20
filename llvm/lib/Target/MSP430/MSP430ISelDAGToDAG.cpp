@@ -14,16 +14,11 @@
 #include "MSP430TargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -91,12 +86,10 @@ namespace {
 namespace {
   class MSP430DAGToDAGISel : public SelectionDAGISel {
   public:
-    static char ID;
-
     MSP430DAGToDAGISel() = delete;
 
     MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel)
-        : SelectionDAGISel(ID, TM, OptLevel) {}
+        : SelectionDAGISel(TM, OptLevel) {}
 
   private:
     bool MatchAddress(SDValue N, MSP430ISelAddressMode &AM);
@@ -119,18 +112,26 @@ namespace {
 
     bool SelectAddr(SDValue Addr, SDValue &Base, SDValue &Disp);
   };
+
+  class MSP430DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+  public:
+    static char ID;
+    MSP430DAGToDAGISelLegacy(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel)
+        : SelectionDAGISelLegacy(
+              ID, std::make_unique<MSP430DAGToDAGISel>(TM, OptLevel)) {}
+  };
 }  // end anonymous namespace
 
-char MSP430DAGToDAGISel::ID;
+char MSP430DAGToDAGISelLegacy::ID;
 
-INITIALIZE_PASS(MSP430DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(MSP430DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// createMSP430ISelDag - This pass converts a legalized DAG into a
 /// MSP430-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createMSP430ISelDag(MSP430TargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {
-    return new MSP430DAGToDAGISel(TM, OptLevel);
+  return new MSP430DAGToDAGISelLegacy(TM, OptLevel);
 }
 
 /// MatchWrapper - Try to match MSP430ISD::Wrapper node into an addressing mode.
@@ -277,7 +278,7 @@ bool MSP430DAGToDAGISel::SelectAddr(SDValue N,
     Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, 0,
                                          0/*AM.SymbolFlags*/);
   else
-    Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(N), MVT::i16);
+    Disp = CurDAG->getSignedTargetConstant(AM.Disp, SDLoc(N), MVT::i16);
 
   return true;
 }

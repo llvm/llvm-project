@@ -436,7 +436,7 @@ void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
 void IRPromoter::ExtendSources() {
   IRBuilder<> Builder{Ctx};
 
-  auto InsertZExt = [&](Value *V, Instruction *InsertPt) {
+  auto InsertZExt = [&](Value *V, BasicBlock::iterator InsertPt) {
     assert(V->getType() != ExtTy && "zext already extends to i32");
     LLVM_DEBUG(dbgs() << "IR Promotion: Inserting ZExt for " << *V << "\n");
     Builder.SetInsertPoint(InsertPt);
@@ -448,7 +448,7 @@ void IRPromoter::ExtendSources() {
       if (isa<Argument>(V))
         I->moveBefore(InsertPt);
       else
-        I->moveAfter(InsertPt);
+        I->moveAfter(&*InsertPt);
       NewInsts.insert(I);
     }
 
@@ -460,10 +460,10 @@ void IRPromoter::ExtendSources() {
   for (auto *V : Sources) {
     LLVM_DEBUG(dbgs() << " - " << *V << "\n");
     if (auto *I = dyn_cast<Instruction>(V))
-      InsertZExt(I, I);
+      InsertZExt(I, I->getIterator());
     else if (auto *Arg = dyn_cast<Argument>(V)) {
       BasicBlock &BB = Arg->getParent()->front();
-      InsertZExt(Arg, &*BB.getFirstInsertionPt());
+      InsertZExt(Arg, BB.getFirstInsertionPt());
     } else {
       llvm_unreachable("unhandled source that needs extending");
     }
@@ -552,7 +552,7 @@ void IRPromoter::TruncateSinks() {
         Value *Arg = Call->getArgOperand(i);
         Type *Ty = TruncTysMap[Call][i];
         if (Instruction *Trunc = InsertTrunc(Arg, Ty)) {
-          Trunc->moveBefore(Call);
+          Trunc->moveBefore(Call->getIterator());
           Call->setArgOperand(i, Trunc);
         }
       }
@@ -563,7 +563,7 @@ void IRPromoter::TruncateSinks() {
     if (auto *Switch = dyn_cast<SwitchInst>(I)) {
       Type *Ty = TruncTysMap[Switch][0];
       if (Instruction *Trunc = InsertTrunc(Switch->getCondition(), Ty)) {
-        Trunc->moveBefore(Switch);
+        Trunc->moveBefore(Switch->getIterator());
         Switch->setCondition(Trunc);
       }
       continue;
@@ -583,7 +583,7 @@ void IRPromoter::TruncateSinks() {
     for (unsigned i = 0; i < I->getNumOperands(); ++i) {
       Type *Ty = TruncTysMap[I][i];
       if (Instruction *Trunc = InsertTrunc(I->getOperand(i), Ty)) {
-        Trunc->moveBefore(I);
+        Trunc->moveBefore(I->getIterator());
         I->setOperand(i, Trunc);
       }
     }
@@ -643,7 +643,7 @@ void IRPromoter::ConvertTruncs() {
     ConstantInt *Mask =
         ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
-    if (SrcTy != ExtTy)
+    if (SrcTy->getBitWidth() > ExtTy->getBitWidth())
       Masked = Builder.CreateTrunc(Masked, ExtTy);
 
     if (auto *I = dyn_cast<Instruction>(Masked))
@@ -665,8 +665,8 @@ void IRPromoter::Mutate() {
     } else if (auto *Switch = dyn_cast<SwitchInst>(I))
       TruncTysMap[I].push_back(Switch->getCondition()->getType());
     else {
-      for (unsigned i = 0; i < I->getNumOperands(); ++i)
-        TruncTysMap[I].push_back(I->getOperand(i)->getType());
+      for (const Value *Op : I->operands())
+        TruncTysMap[I].push_back(Op->getType());
     }
   }
   for (auto *V : Visited) {
@@ -834,11 +834,10 @@ bool TypePromotionImpl::TryToPromote(Value *V, unsigned PromotedWidth,
     // the tree has already been explored.
     // TODO: This could limit the transform, ie if we try to promote something
     // from an i8 and fail first, before trying an i16.
-    if (AllVisited.count(V))
+    if (!AllVisited.insert(V).second)
       return false;
 
     CurrentVisited.insert(V);
-    AllVisited.insert(V);
 
     // Calls can be both sources and sinks.
     if (isSink(V))
@@ -924,12 +923,12 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   SafeToPromote.clear();
   SafeWrap.clear();
   bool MadeChange = false;
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const TargetSubtargetInfo *SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
-  Ctx = &F.getParent()->getContext();
+  Ctx = &F.getContext();
 
   // Return the preferred integer width of the instruction, or zero if we
   // shouldn't try.

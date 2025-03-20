@@ -18,7 +18,6 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Support/LogicalResult.h"
 #include <optional>
 
 namespace mlir {
@@ -107,11 +106,14 @@ public:
 
   /// Add the specified values as a dim or symbol var depending on its nature,
   /// if it already doesn't exist in the system. `val` has to be either a
-  /// terminal symbol or a loop IV, i.e., it cannot be the result affine.apply
-  /// of any symbols or loop IVs. The variable is added to the end of the
-  /// existing dims or symbols. Additional information on the variable is
-  /// extracted from the IR and added to the constraint system.
-  void addInductionVarOrTerminalSymbol(Value val);
+  /// terminal symbol or a loop IV, i.e., it cannot be the result of an
+  /// affine.apply of any symbols or loop IVs. Return failure if the addition
+  /// wasn't possible due to the above conditions not being met. This method can
+  /// also fail if the addition of the domain of an affine IV fails. The
+  /// variable is added to the end of the existing dims or symbols. Additional
+  /// information on the variable is extracted from the IR and added to the
+  /// constraint system.
+  LogicalResult addInductionVarOrTerminalSymbol(Value val);
 
   /// Adds slice lower bounds represented by lower bounds in `lbMaps` and upper
   /// bounds in `ubMaps` to each variable in the constraint system which has
@@ -154,6 +156,14 @@ public:
 /// represented as a FlatAffineValueConstraints with separation of dimension
 /// variables into domain and  range. The variables are stored as:
 /// [domainVars, rangeVars, symbolVars, localVars, constant].
+///
+/// Deprecated: use IntegerRelation and store SSA Values in the PresburgerSpace
+/// of the relation using PresburgerSpace::identifiers. Note that
+/// FlatAffineRelation::numDomainDims and FlatAffineRelation::numRangeDims are
+/// independent of numDomain and numRange of the relation's space. In
+/// particular, operations such as FlatAffineRelation::compose do not ensure
+/// consistency between numDomainDims/numRangeDims and numDomain/numRange which
+/// may lead to unexpected behaviour.
 class FlatAffineRelation : public FlatAffineValueConstraints {
 public:
   FlatAffineRelation(unsigned numReservedInequalities,
@@ -251,9 +261,10 @@ protected:
 /// For AffineValueMap, the domain and symbols have Value set corresponding to
 /// the Value in `map`. Returns failure if the AffineMap could not be flattened
 /// (i.e., semi-affine is not yet handled).
-LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
+LogicalResult getRelationFromMap(AffineMap &map,
+                                 presburger::IntegerRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
-                                 FlatAffineRelation &rel);
+                                 presburger::IntegerRelation &rel);
 
 } // namespace affine
 } // namespace mlir

@@ -15,10 +15,16 @@
 
 namespace lld::macho {
 class Symbol;
+class Defined;
 
 void markAddrSigSymbols();
 void markSymAsAddrSig(Symbol *s);
 void foldIdenticalSections(bool onlyCfStrings);
+
+// Given a symbol that was folded into a thunk, return the symbol pointing to
+// the actual body of the function. We expose this function to allow getting the
+// main function body for a symbol that was folded via a thunk.
+Defined *getBodyForThunkFoldedSym(Defined *foldedSym);
 
 } // namespace lld::macho
 

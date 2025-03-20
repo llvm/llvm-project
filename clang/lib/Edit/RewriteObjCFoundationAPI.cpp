@@ -1000,6 +1000,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_LValueToRValue:
     case CK_NoOp:
     case CK_UserDefinedConversion:
+    case CK_HLSLArrayRValue:
       break;
 
     case CK_IntegralCast: {
@@ -1084,6 +1085,8 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
       llvm_unreachable("OpenCL-specific cast in Objective-C?");
 
     case CK_HLSLVectorTruncation:
+    case CK_HLSLElementwiseCast:
+    case CK_HLSLAggregateSplatCast:
       llvm_unreachable("HLSL-specific cast in Objective-C?");
       break;
 

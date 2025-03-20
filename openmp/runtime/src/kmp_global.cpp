@@ -242,11 +242,6 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     // of public intel extension schedules
 };
 
-#if KMP_OS_LINUX
-enum clock_function_type __kmp_clock_function;
-int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
-
 #if KMP_MIC_SUPPORTED
 enum mic_type __kmp_mic_type = non_mic;
 #endif
@@ -492,10 +487,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN_CACHE_INTERNODE
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN_CACHE_INTERNODE
-kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
-KMP_ALIGN_CACHE_INTERNODE
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #else
 KMP_ALIGN_CACHE
 
@@ -512,10 +503,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN(128)
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN(128)
-kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
-KMP_ALIGN(128)
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #endif
 
 /* ----------------------------------------------- */
@@ -567,8 +554,7 @@ int *__kmp_nesting_nth_level;
 int __kmp_tdg_dot = 0;
 kmp_int32 __kmp_max_tdgs = 100;
 kmp_tdg_info_t **__kmp_global_tdgs = NULL;
-kmp_int32 __kmp_curr_tdg_idx =
-    0; // Id of the current TDG being recorded or executed
+kmp_tdg_info_t *__kmp_curr_tdg = NULL; // Current TDG being recorded or executed
 kmp_int32 __kmp_num_tdg = 0;
 kmp_int32 __kmp_successors_size = 10; // Initial succesor size list for
                                       // recording

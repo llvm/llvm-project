@@ -30,7 +30,7 @@
 // was not consciously intended, and therefore it might have been unreachable.
 //
 // This checker uses eval::Call for modeling pure functions (functions without
-// side effets), for which their `Summary' is a precise model. This avoids
+// side effects), for which their `Summary' is a precise model. This avoids
 // unnecessary invalidation passes. Conflicts with other checkers are unlikely
 // because if the function has no other effects, other checkers would probably
 // never want to improve upon the modeling done by this checker.
@@ -672,7 +672,7 @@ class StdLibraryFunctionsChecker
     StringRef getNote() const { return Note; }
   };
 
-  using ArgTypes = std::vector<std::optional<QualType>>;
+  using ArgTypes = ArrayRef<std::optional<QualType>>;
   using RetType = std::optional<QualType>;
 
   // A placeholder type, we use it whenever we do not care about the concrete
@@ -1401,7 +1401,10 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
         ErrnoNote =
             llvm::formatv("After calling '{0}' {1}", FunctionName, ErrnoNote);
     } else {
-      CaseNote = llvm::formatv(Case.getNote().str().c_str(), FunctionName);
+      // Disable formatv() validation as the case note may not always have the
+      // {0} placeholder for function name.
+      CaseNote =
+          llvm::formatv(false, Case.getNote().str().c_str(), FunctionName);
     }
     const SVal RV = Call.getReturnValue();
 
@@ -1640,7 +1643,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   public:
     GetMaxValue(BasicValueFactory &BVF) : BVF(BVF) {}
     std::optional<RangeInt> operator()(QualType Ty) {
-      return BVF.getMaxValue(Ty).getLimitedValue();
+      return BVF.getMaxValue(Ty)->getLimitedValue();
     }
     std::optional<RangeInt> operator()(std::optional<QualType> Ty) {
       if (Ty) {
@@ -1684,11 +1687,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const QualType SizePtrTy = getPointerTy(SizeTy);
   const QualType SizePtrRestrictTy = getRestrictTy(SizePtrTy);
 
-  const RangeInt IntMax = BVF.getMaxValue(IntTy).getLimitedValue();
+  const RangeInt IntMax = BVF.getMaxValue(IntTy)->getLimitedValue();
   const RangeInt UnsignedIntMax =
-      BVF.getMaxValue(UnsignedIntTy).getLimitedValue();
-  const RangeInt LongMax = BVF.getMaxValue(LongTy).getLimitedValue();
-  const RangeInt SizeMax = BVF.getMaxValue(SizeTy).getLimitedValue();
+      BVF.getMaxValue(UnsignedIntTy)->getLimitedValue();
+  const RangeInt LongMax = BVF.getMaxValue(LongTy)->getLimitedValue();
+  const RangeInt SizeMax = BVF.getMaxValue(SizeTy)->getLimitedValue();
 
   // Set UCharRangeMax to min of int or uchar maximum value.
   // The C standard states that the arguments of functions like isalpha must
@@ -1697,7 +1700,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   // to be true for commonly used and well tested instruction set
   // architectures, but not for others.
   const RangeInt UCharRangeMax =
-      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue(), IntMax);
+      std::min(BVF.getMaxValue(ACtx.UnsignedCharTy)->getLimitedValue(), IntMax);
 
   // Get platform dependent values of some macros.
   // Try our best to parse this from the Preprocessor, otherwise fallback to a
@@ -1746,7 +1749,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     }
     // Add the same summary for different names with the Signature explicitly
     // given.
-    void operator()(std::vector<StringRef> Names, Signature Sign, Summary Sum) {
+    void operator()(ArrayRef<StringRef> Names, Signature Sign, Summary Sum) {
       for (StringRef Name : Names)
         operator()(Name, Sign, Sum);
     }
@@ -1794,7 +1797,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   auto IsNull = [&](ArgNo ArgN) {
     return std::make_shared<NotNullConstraint>(ArgN, false);
   };
-  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N, ArgNo SizeArg2N) {
+  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N,
+                           std::optional<ArgNo> SizeArg2N = std::nullopt) {
     return std::make_shared<NotNullBufferConstraint>(ArgN, SizeArg1N,
                                                      SizeArg2N);
   };
@@ -3362,7 +3366,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(3)))
+            .ArgConstraint(NotNullBuffer(ArgNo(3), ArgNo(4)))
             .ArgConstraint(
                 BufferSize(/*Buffer=*/ArgNo(3), /*BufSize=*/ArgNo(4)))
             .ArgConstraint(
@@ -3701,7 +3705,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
 
   // Functions for testing.
   if (AddTestFunctions) {
-    const RangeInt IntMin = BVF.getMinValue(IntTy).getLimitedValue();
+    const RangeInt IntMin = BVF.getMinValue(IntTy)->getLimitedValue();
 
     addToFunctionSummaryMap(
         "__not_null", Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),

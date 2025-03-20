@@ -20,8 +20,8 @@ define <vscale x 16 x i8> @ld1r_stack() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    adrp x8, :got:g8
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g8]
 ; CHECK-NEXT:    ldrb w8, [x8]
 ; CHECK-NEXT:    strb w8, [sp, #12]
@@ -33,8 +33,8 @@ define <vscale x 16 x i8> @ld1r_stack() {
   store volatile i8 %valp2, ptr %valp
   %valp3 = getelementptr i8, ptr %valp, i32 2
   %val = load i8, ptr %valp3
-  %1 = insertelement <vscale x 16 x i8> undef, i8 %val, i32 0
-  %2 = shufflevector <vscale x 16 x i8> %1, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %1 = insertelement <vscale x 16 x i8> poison, i8 %val, i32 0
+  %2 = shufflevector <vscale x 16 x i8> %1, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %2
 }
 
@@ -45,8 +45,8 @@ define <vscale x 16 x i8> @ld1rb(ptr %valp) {
 ; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
-  %ins = insertelement <vscale x 16 x i8> undef, i8 %val, i32 0
-  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %ins = insertelement <vscale x 16 x i8> poison, i8 %val, i32 0
+  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %shf
 }
 
@@ -58,8 +58,8 @@ define <vscale x 16 x i8> @ld1rb_gep(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i8, ptr %valp, i32 63
   %val = load i8, ptr %valp2
-  %ins = insertelement <vscale x 16 x i8> undef, i8 %val, i32 0
-  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %ins = insertelement <vscale x 16 x i8> poison, i8 %val, i32 0
+  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %shf
 }
 
@@ -72,8 +72,8 @@ define <vscale x 16 x i8> @ld1rb_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i8, ptr %valp, i32 64
   %val = load i8, ptr %valp2
-  %ins = insertelement <vscale x 16 x i8> undef, i8 %val, i32 0
-  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %ins = insertelement <vscale x 16 x i8> poison, i8 %val, i32 0
+  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %shf
 }
 
@@ -86,8 +86,8 @@ define <vscale x 16 x i8> @ld1rb_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i8, ptr %valp, i32 -1
   %val = load i8, ptr %valp2
-  %ins = insertelement <vscale x 16 x i8> undef, i8 %val, i32 0
-  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %ins = insertelement <vscale x 16 x i8> poison, i8 %val, i32 0
+  %shf = shufflevector <vscale x 16 x i8> %ins, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
   ret <vscale x 16 x i8> %shf
 }
 
@@ -99,8 +99,8 @@ define <vscale x 8 x i16> @ld1rb_i8_i16_zext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
   %ext = zext i8 %val to i16
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %ext, i32 0
-  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %ext, i32 0
+  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %shf
 }
 
@@ -112,8 +112,8 @@ define <vscale x 8 x i16> @ld1rb_i8_i16_sext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
   %ext = sext i8 %val to i16
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %ext, i32 0
-  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %ext, i32 0
+  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %shf
 }
 
@@ -125,8 +125,8 @@ define <vscale x 4 x i32> @ld1rb_i8_i32_zext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
   %ext = zext i8 %val to i32
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %ext, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %ext, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -138,8 +138,8 @@ define <vscale x 4 x i32> @ld1rb_i8_i32_sext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
   %ext = sext i8 %val to i32
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %ext, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %ext, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -151,8 +151,8 @@ define <vscale x 2 x i64> @ld1rb_i8_i64_zext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
   %ext = zext i8 %val to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -164,8 +164,8 @@ define <vscale x 2 x i64> @ld1rb_i8_i64_sext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
   %ext = sext i8 %val to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -176,8 +176,8 @@ define <vscale x 8 x i16> @ld1rh(ptr %valp) {
 ; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %val, i32 0
-  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %val, i32 0
+  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %shf
 }
 
@@ -189,8 +189,8 @@ define <vscale x 8 x i16> @ld1rh_gep(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i16, ptr %valp, i32 63
   %val = load i16, ptr %valp2
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %val, i32 0
-  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %val, i32 0
+  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %shf
 }
 
@@ -203,8 +203,8 @@ define <vscale x 8 x i16> @ld1rh_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i16, ptr %valp, i32 64
   %val = load i16, ptr %valp2
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %val, i32 0
-  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %val, i32 0
+  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %shf
 }
 
@@ -217,8 +217,8 @@ define <vscale x 8 x i16> @ld1rh_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i16, ptr %valp, i32 -1
   %val = load i16, ptr %valp2
-  %ins = insertelement <vscale x 8 x i16> undef, i16 %val, i32 0
-  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x i16> poison, i16 %val, i32 0
+  %shf = shufflevector <vscale x 8 x i16> %ins, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x i16> %shf
 }
 
@@ -230,8 +230,8 @@ define <vscale x 4 x i32> @ld1rh_i16_i32_zext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
   %ext = zext i16 %val to i32
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %ext, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %ext, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -243,8 +243,8 @@ define <vscale x 4 x i32> @ld1rh_i16_i32_sext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
   %ext = sext i16 %val to i32
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %ext, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %ext, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -256,8 +256,8 @@ define <vscale x 2 x i64> @ld1rh_i16_i64_zext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
   %ext = zext i16 %val to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -269,8 +269,8 @@ define <vscale x 2 x i64> @ld1rh_i16_i64_sext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
   %ext = sext i16 %val to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -281,8 +281,8 @@ define <vscale x 4 x i32> @ld1rw(ptr %valp) {
 ; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %valp
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %val, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -294,8 +294,8 @@ define <vscale x 4 x i32> @ld1rw_gep(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i32, ptr %valp, i32 63
   %val = load i32, ptr %valp2
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %val, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -308,8 +308,8 @@ define <vscale x 4 x i32> @ld1rw_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i32, ptr %valp, i32 64
   %val = load i32, ptr %valp2
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %val, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -322,8 +322,8 @@ define <vscale x 4 x i32> @ld1rw_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i32, ptr %valp, i32 -1
   %val = load i32, ptr %valp2
-  %ins = insertelement <vscale x 4 x i32> undef, i32 %val, i32 0
-  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+  %shf = shufflevector <vscale x 4 x i32> %ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x i32> %shf
 }
 
@@ -335,8 +335,8 @@ define <vscale x 2 x i64> @ld1rw_i32_i64_zext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %valp
   %ext = zext i32 %val to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -348,8 +348,8 @@ define <vscale x 2 x i64> @ld1rw_i32_i64_sext(ptr %valp) {
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %valp
   %ext = sext i32 %val to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -360,8 +360,8 @@ define <vscale x 2 x i64> @ld1rd(ptr %valp) {
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %valp
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %val, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %val, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -373,8 +373,8 @@ define <vscale x 2 x i64> @ld1rd_gep(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i64, ptr %valp, i32 63
   %val = load i64, ptr %valp2
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %val, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %val, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -387,8 +387,8 @@ define <vscale x 2 x i64> @ld1rd_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i64, ptr %valp, i32 64
   %val = load i64, ptr %valp2
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %val, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %val, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -401,8 +401,8 @@ define <vscale x 2 x i64> @ld1rd_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i64, ptr %valp, i32 -1
   %val = load i64, ptr %valp2
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %val, i32 0
-  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %val, i32 0
+  %shf = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %shf
 }
 
@@ -419,8 +419,8 @@ define <vscale x 8 x half> @ld1rh_half(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, h0
 ; CHECK-NO-LD1R-NEXT:    ret
   %val = load half, ptr %valp
-  %ins = insertelement <vscale x 8 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x half> %shf
 }
 
@@ -431,8 +431,8 @@ define <vscale x 8 x half> @ld1rh_half_neoverse(ptr %valp) #1 {
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    ret
   %val = load half, ptr %valp
-  %ins = insertelement <vscale x 8 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x half> %shf
 }
 
@@ -450,8 +450,8 @@ define <vscale x 8 x half> @ld1rh_half_gep(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 63
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 8 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x half> %shf
 }
 
@@ -470,8 +470,8 @@ define <vscale x 8 x half> @ld1rh_half_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 64
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 8 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x half> %shf
 }
 
@@ -490,8 +490,8 @@ define <vscale x 8 x half> @ld1rh_half_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 -1
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 8 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
+  %ins = insertelement <vscale x 8 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 8 x half> %ins, <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
   ret <vscale x 8 x half> %shf
 }
 
@@ -508,8 +508,8 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, h0
 ; CHECK-NO-LD1R-NEXT:    ret
   %val = load half, ptr %valp
-  %ins = insertelement <vscale x 4 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x half> %shf
 }
 
@@ -527,8 +527,8 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4_gep(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 63
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 4 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x half> %shf
 }
 
@@ -547,8 +547,8 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4_gep_out_of_range_up(ptr %valp) 
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 64
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 4 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x half> %shf
 }
 
@@ -567,8 +567,8 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4_gep_out_of_range_down(ptr %valp
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 -1
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 4 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x half> %shf
 }
 
@@ -585,8 +585,8 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, h0
 ; CHECK-NO-LD1R-NEXT:    ret
   %val = load half, ptr %valp
-  %ins = insertelement <vscale x 2 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x half> %shf
 }
 
@@ -604,8 +604,8 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2_gep(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 63
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 2 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x half> %shf
 }
 
@@ -624,8 +624,8 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2_gep_out_of_range_up(ptr %valp) 
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 64
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 2 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x half> %shf
 }
 
@@ -644,8 +644,8 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2_gep_out_of_range_down(ptr %valp
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr half, ptr %valp, i32 -1
   %val = load half, ptr %valp2
-  %ins = insertelement <vscale x 2 x half> undef, half %val, i32 0
-  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x half> poison, half %val, i32 0
+  %shf = shufflevector <vscale x 2 x half> %ins, <vscale x 2 x half> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x half> %shf
 }
 
@@ -662,8 +662,8 @@ define <vscale x 4 x float> @ld1rw_float(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, s0
 ; CHECK-NO-LD1R-NEXT:    ret
   %val = load float, ptr %valp
-  %ins = insertelement <vscale x 4 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x float> %shf
 }
 
@@ -681,8 +681,8 @@ define <vscale x 4 x float> @ld1rw_float_gep(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr float, ptr %valp, i32 63
   %val = load float, ptr %valp2
-  %ins = insertelement <vscale x 4 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x float> %shf
 }
 
@@ -701,8 +701,8 @@ define <vscale x 4 x float> @ld1rw_float_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr float, ptr %valp, i32 64
   %val = load float, ptr %valp2
-  %ins = insertelement <vscale x 4 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x float> %shf
 }
 
@@ -721,8 +721,8 @@ define <vscale x 4 x float> @ld1rw_float_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr float, ptr %valp, i32 -1
   %val = load float, ptr %valp2
-  %ins = insertelement <vscale x 4 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
+  %ins = insertelement <vscale x 4 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 4 x float> %ins, <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
   ret <vscale x 4 x float> %shf
 }
 
@@ -739,8 +739,8 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, s0
 ; CHECK-NO-LD1R-NEXT:    ret
   %val = load float, ptr %valp
-  %ins = insertelement <vscale x 2 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x float> %shf
 }
 
@@ -758,8 +758,8 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2_gep(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr float, ptr %valp, i32 63
   %val = load float, ptr %valp2
-  %ins = insertelement <vscale x 2 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x float> %shf
 }
 
@@ -778,8 +778,8 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2_gep_out_of_range_up(ptr %valp
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr float, ptr %valp, i32 64
   %val = load float, ptr %valp2
-  %ins = insertelement <vscale x 2 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x float> %shf
 }
 
@@ -798,8 +798,8 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2_gep_out_of_range_down(ptr %va
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr float, ptr %valp, i32 -1
   %val = load float, ptr %valp2
-  %ins = insertelement <vscale x 2 x float> undef, float %val, i32 0
-  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x float> poison, float %val, i32 0
+  %shf = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x float> %shf
 }
 
@@ -816,8 +816,8 @@ define <vscale x 2 x double> @ld1rd_double(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    mov z0.d, d0
 ; CHECK-NO-LD1R-NEXT:    ret
   %val = load double, ptr %valp
-  %ins = insertelement <vscale x 2 x double> undef, double %val, i32 0
-  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x double> poison, double %val, i32 0
+  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %shf
 }
 
@@ -835,8 +835,8 @@ define <vscale x 2 x double> @ld1rd_double_gep(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr double, ptr %valp, i32 63
   %val = load double, ptr %valp2
-  %ins = insertelement <vscale x 2 x double> undef, double %val, i32 0
-  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x double> poison, double %val, i32 0
+  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %shf
 }
 
@@ -855,8 +855,8 @@ define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_up(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr double, ptr %valp, i32 64
   %val = load double, ptr %valp2
-  %ins = insertelement <vscale x 2 x double> undef, double %val, i32 0
-  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x double> poison, double %val, i32 0
+  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %shf
 }
 
@@ -875,8 +875,8 @@ define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_down(ptr %valp) {
 ; CHECK-NO-LD1R-NEXT:    ret
   %valp2 = getelementptr double, ptr %valp, i32 -1
   %val = load double, ptr %valp2
-  %ins = insertelement <vscale x 2 x double> undef, double %val, i32 0
-  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x double> poison, double %val, i32 0
+  %shf = shufflevector <vscale x 2 x double> %ins, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x double> %shf
 }
 
@@ -887,7 +887,7 @@ define <vscale x 2 x double> @dupq_ld1rqd_f64(ptr %a) {
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <2 x double>, ptr %a
-  %2 = tail call fast <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %1, i64 0)
+  %2 = tail call fast <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> poison, <2 x double> %1, i64 0)
   %3 = tail call fast <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %2, i64 0)
   ret <vscale x 2 x double> %3
 }
@@ -899,7 +899,7 @@ define <vscale x 4 x float> @dupq_ld1rqw_f32(ptr %a) {
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <4 x float>, ptr %a
-  %2 = tail call fast <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %1, i64 0)
+  %2 = tail call fast <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %1, i64 0)
   %3 = tail call fast <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %2, i64 0)
   ret <vscale x 4 x float> %3
 }
@@ -911,7 +911,7 @@ define <vscale x 8 x half> @dupq_ld1rqh_f16(ptr %a) {
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x half>, ptr %a
-  %2 = tail call fast <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %1, i64 0)
+  %2 = tail call fast <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %1, i64 0)
   %3 = tail call fast <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %2, i64 0)
   ret <vscale x 8 x half> %3
 }
@@ -923,7 +923,7 @@ define <vscale x 8 x bfloat> @dupq_ld1rqh_bf16(ptr %a) #0 {
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x bfloat>, ptr %a
-  %2 = tail call fast <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %1, i64 0)
+  %2 = tail call fast <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> %1, i64 0)
   %3 = tail call fast <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %2, i64 0)
   ret <vscale x 8 x bfloat> %3
 }
@@ -935,7 +935,7 @@ define <vscale x 2 x i64> @dupq_ld1rqd_i64(ptr %a) #0 {
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <2 x i64>, ptr %a
-  %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> %1, i64 0)
+  %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> %1, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2, i64 0)
   ret <vscale x 2 x i64> %3
 }
@@ -947,7 +947,7 @@ define <vscale x 4 x i32> @dupq_ld1rqw_i32(ptr %a) #0 {
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <4 x i32>, ptr %a
-  %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> %1, i64 0)
+  %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> %1, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2, i64 0)
   ret <vscale x 4 x i32> %3
 }
@@ -959,7 +959,7 @@ define <vscale x 8 x i16> @dupq_ld1rqw_i16(ptr %a) #0 {
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x i16>, ptr %a
-  %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> %1, i64 0)
+  %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison, <8 x i16> %1, i64 0)
   %3 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %2, i64 0)
   ret <vscale x 8 x i16> %3
 }
@@ -971,7 +971,7 @@ define <vscale x 16 x i8> @dupq_ld1rqw_i8(ptr %a) #0 {
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <16 x i8>, ptr %a
-  %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %1, i64 0)
+  %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> %1, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2, i64 0)
   ret <vscale x 16 x i8> %3
 }
@@ -981,7 +981,7 @@ define <vscale x 16 x i8> @dupq_ld1rqw_i8(ptr %a) #0 {
 ; Tests for dup:
 ;
 ; Positive tests:
-; * dup with passthru=undef or passthrue=zero.
+; * dup with passthru=poison or passthru=zero.
 ; * sign/zero extending.
 ; * unpacked types.
 ;
@@ -996,7 +996,7 @@ define <vscale x 16 x i8> @dup_ld1rb_i8_passthruundef_nxv16i8(<vscale x 16 x i1>
 ; CHECK-NEXT:    ld1rb { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
-    %res = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> %pg, i8 %ld)
+    %res = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i1> %pg, i8 %ld)
     ret <vscale x 16 x i8> %res
 }
 define <vscale x 8 x i16> @dup_ld1rh_i16_passthruundef_nxv8i16(<vscale x 8 x i1> %pg, ptr %addr) {
@@ -1005,7 +1005,7 @@ define <vscale x 8 x i16> @dup_ld1rh_i16_passthruundef_nxv8i16(<vscale x 8 x i1>
 ; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
     %ld = load i16, ptr %addr
-    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 %ld)
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, i16 %ld)
     ret <vscale x 8 x i16> %res
 }
 define <vscale x 8 x i16> @dup_ld1rh_i8_passthruundef_nxv8i16_sext(<vscale x 8 x i1> %pg, ptr %addr) {
@@ -1015,7 +1015,7 @@ define <vscale x 8 x i16> @dup_ld1rh_i8_passthruundef_nxv8i16_sext(<vscale x 8 x
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
     %ext = sext i8 %ld to i16
-    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 %ext)
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, i16 %ext)
     ret <vscale x 8 x i16> %res
 }
 define <vscale x 8 x i16> @dup_ld1rh_i8_passthruundef_nxv8i16_zext(<vscale x 8 x i1> %pg, ptr %addr) {
@@ -1025,7 +1025,7 @@ define <vscale x 8 x i16> @dup_ld1rh_i8_passthruundef_nxv8i16_zext(<vscale x 8 x
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
     %ext = zext i8 %ld to i16
-    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> %pg, i16 %ext)
+    %res = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> poison, <vscale x 8 x i1> %pg, i16 %ext)
     ret <vscale x 8 x i16> %res
 }
 define <vscale x 4 x i32> @dup_ld1rs_i32_passthruundef_nxv4i32(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1034,7 +1034,7 @@ define <vscale x 4 x i32> @dup_ld1rs_i32_passthruundef_nxv4i32(<vscale x 4 x i1>
 ; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
     %ld = load i32, ptr %addr
-    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ld)
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, i32 %ld)
     ret <vscale x 4 x i32> %res
 }
 define <vscale x 4 x i32> @dup_ld1rs_i8_passthruundef_nxv4i32_sext(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1044,7 +1044,7 @@ define <vscale x 4 x i32> @dup_ld1rs_i8_passthruundef_nxv4i32_sext(<vscale x 4 x
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
     %ext = sext i8 %ld to i32
-    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, i32 %ext)
     ret <vscale x 4 x i32> %res
 }
 define <vscale x 4 x i32> @dup_ld1rs_i8_passthruundef_nxv4i32_zext(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1054,7 +1054,7 @@ define <vscale x 4 x i32> @dup_ld1rs_i8_passthruundef_nxv4i32_zext(<vscale x 4 x
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
     %ext = zext i8 %ld to i32
-    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, i32 %ext)
     ret <vscale x 4 x i32> %res
 }
 define <vscale x 4 x i32> @dup_ld1rs_i16_passthruundef_nxv4i32_sext(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1064,7 +1064,7 @@ define <vscale x 4 x i32> @dup_ld1rs_i16_passthruundef_nxv4i32_sext(<vscale x 4 
 ; CHECK-NEXT:    ret
     %ld = load i16, ptr %addr
     %ext = sext i16 %ld to i32
-    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, i32 %ext)
     ret <vscale x 4 x i32> %res
 }
 define <vscale x 4 x i32> @dup_ld1rs_i16_passthruundef_nxv4i32_zext(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1074,7 +1074,7 @@ define <vscale x 4 x i32> @dup_ld1rs_i16_passthruundef_nxv4i32_zext(<vscale x 4 
 ; CHECK-NEXT:    ret
     %ld = load i16, ptr %addr
     %ext = zext i16 %ld to i32
-    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> %pg, i32 %ext)
+    %res = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> %pg, i32 %ext)
     ret <vscale x 4 x i32> %res
 }
 define <vscale x 2 x i64> @dup_ld1rd_i64_passthruundef_nxv2i64(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1083,7 +1083,7 @@ define <vscale x 2 x i64> @dup_ld1rd_i64_passthruundef_nxv2i64(<vscale x 2 x i1>
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
     %ld = load i64, ptr %addr
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ld)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ld)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 2 x i64> @dup_ld1rs_i8_passthruundef_nxv2i64_sext(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1093,7 +1093,7 @@ define <vscale x 2 x i64> @dup_ld1rs_i8_passthruundef_nxv2i64_sext(<vscale x 2 x
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
     %ext = sext i8 %ld to i64
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 2 x i64> @dup_ld1rs_i8_passthruundef_nxv2i64_zext(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1103,7 +1103,7 @@ define <vscale x 2 x i64> @dup_ld1rs_i8_passthruundef_nxv2i64_zext(<vscale x 2 x
 ; CHECK-NEXT:    ret
     %ld = load i8, ptr %addr
     %ext = zext i8 %ld to i64
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 2 x i64> @dup_ld1rs_i16_passthruundef_nxv2i64_sext(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1113,7 +1113,7 @@ define <vscale x 2 x i64> @dup_ld1rs_i16_passthruundef_nxv2i64_sext(<vscale x 2 
 ; CHECK-NEXT:    ret
     %ld = load i16, ptr %addr
     %ext = sext i16 %ld to i64
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 2 x i64> @dup_ld1rs_i16_passthruundef_nxv2i64_zext(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1123,7 +1123,7 @@ define <vscale x 2 x i64> @dup_ld1rs_i16_passthruundef_nxv2i64_zext(<vscale x 2 
 ; CHECK-NEXT:    ret
     %ld = load i16, ptr %addr
     %ext = zext i16 %ld to i64
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 2 x i64> @dup_ld1rs_i32_passthruundef_nxv2i64_sext(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1133,7 +1133,7 @@ define <vscale x 2 x i64> @dup_ld1rs_i32_passthruundef_nxv2i64_sext(<vscale x 2 
 ; CHECK-NEXT:    ret
     %ld = load i32, ptr %addr
     %ext = sext i32 %ld to i64
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 2 x i64> @dup_ld1rs_i32_passthruundef_nxv2i64_zext(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1143,7 +1143,7 @@ define <vscale x 2 x i64> @dup_ld1rs_i32_passthruundef_nxv2i64_zext(<vscale x 2 
 ; CHECK-NEXT:    ret
     %ld = load i32, ptr %addr
     %ext = zext i32 %ld to i64
-    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+    %res = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
     ret <vscale x 2 x i64> %res
 }
 define <vscale x 8 x half> @dup_ld1rh_half_passthruundef_nxv8f16(<vscale x 8 x i1> %pg, ptr %addr) {
@@ -1158,7 +1158,7 @@ define <vscale x 8 x half> @dup_ld1rh_half_passthruundef_nxv8f16(<vscale x 8 x i
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NO-LD1R-NEXT:    ret
     %ld = load half, ptr %addr
-    %res = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> %pg, half %ld)
+    %res = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> poison, <vscale x 8 x i1> %pg, half %ld)
     ret <vscale x 8 x half> %res
 }
 define <vscale x 4 x float> @dup_ld1rs_float_passthruundef_nxv4f32(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1173,7 +1173,7 @@ define <vscale x 4 x float> @dup_ld1rs_float_passthruundef_nxv4f32(<vscale x 4 x
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, p0/m, s0
 ; CHECK-NO-LD1R-NEXT:    ret
     %ld = load float, ptr %addr
-    %res = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> %pg, float %ld)
+    %res = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x i1> %pg, float %ld)
     ret <vscale x 4 x float> %res
 }
 define <vscale x 2 x double> @dup_ld1rd_double_passthruundef_nxv2f64(<vscale x 2 x i1> %pg, ptr %addr) {
@@ -1188,7 +1188,7 @@ define <vscale x 2 x double> @dup_ld1rd_double_passthruundef_nxv2f64(<vscale x 2
 ; CHECK-NO-LD1R-NEXT:    mov z0.d, p0/m, d0
 ; CHECK-NO-LD1R-NEXT:    ret
     %ld = load double, ptr %addr
-    %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> %pg, double %ld)
+    %res = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> poison, <vscale x 2 x i1> %pg, double %ld)
     ret <vscale x 2 x double> %res
 }
 define <vscale x 4 x half> @dup_ld1rh_half_passthruundef_nxv4f16(<vscale x 4 x i1> %pg, ptr %addr) {
@@ -1203,7 +1203,7 @@ define <vscale x 4 x half> @dup_ld1rh_half_passthruundef_nxv4f16(<vscale x 4 x i
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h0
 ; CHECK-NO-LD1R-NEXT:    ret
     %ld = load half, ptr %addr
-    %res = call <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x i1> %pg, half %ld)
+    %res = call <vscale x 4 x half> @llvm.aarch64.sve.dup.nxv4f16(<vscale x 4 x half> poison, <vscale x 4 x i1> %pg, half %ld)
     ret <vscale x 4 x half> %res
 }
 define <vscale x 16 x i8> @dup_ld1rb_i8_passthruzero_nxv16i8(<vscale x 16 x i1> %pg, ptr %addr) {
@@ -1417,13 +1417,13 @@ define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %dup = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %dup = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   store <vscale x 2 x i64> %dup, ptr %out
   ret ptr %ptr
 }
@@ -1433,15 +1433,14 @@ define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 define ptr @avoid_preindex_load_dup(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
-  %dup = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> %pg, i64 %ext)
+  %dup = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> poison, <vscale x 2 x i1> %pg, i64 %ext)
   store <vscale x 2 x i64> %dup, ptr %out
   ret ptr %ptr
 }
@@ -1450,10 +1449,9 @@ define ptr @avoid_preindex_load_dup(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 define ptr @avoid_preindex_load_dup_passthru_zero(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup_passthru_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1467,10 +1465,9 @@ define ptr @avoid_preindex_load_dup_passthru_zero(ptr %src, <vscale x 2 x i1> %p
 define ptr @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: preindex_load_dup_passthru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ldrsb x8, [x0, #1]!
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
-; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1485,17 +1482,16 @@ define ptr @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, ptr %src, <
 define ptr @preidx8sext64_instead_of_ld1r(ptr %src, ptr %out, ptr %dst) {
 ; CHECK-LABEL: preidx8sext64_instead_of_ld1r:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldrsb x8, [x0, #1]!
 ; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
   %ext = sext i8 %tmp to i64
-  %ins = insertelement <vscale x 2 x i64> undef, i64 %ext, i32 0
-  %dup = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %ins = insertelement <vscale x 2 x i64> poison, i64 %ext, i32 0
+  %dup = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   store <vscale x 2 x i64> %dup, ptr %out
   store i64 %ext, ptr %dst
   ret ptr %ptr

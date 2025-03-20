@@ -115,14 +115,17 @@ PathDiagnostic::PathDiagnostic(
     StringRef CheckerName, const Decl *declWithIssue, StringRef bugtype,
     StringRef verboseDesc, StringRef shortDesc, StringRef category,
     PathDiagnosticLocation LocationToUnique, const Decl *DeclToUnique,
+    const Decl *AnalysisEntryPoint,
     std::unique_ptr<FilesToLineNumsMap> ExecutedLines)
     : CheckerName(CheckerName), DeclWithIssue(declWithIssue),
       BugType(StripTrailingDots(bugtype)),
       VerboseDesc(StripTrailingDots(verboseDesc)),
       ShortDesc(StripTrailingDots(shortDesc)),
       Category(StripTrailingDots(category)), UniqueingLoc(LocationToUnique),
-      UniqueingDecl(DeclToUnique), ExecutedLines(std::move(ExecutedLines)),
-      path(pathImpl) {}
+      UniqueingDecl(DeclToUnique), AnalysisEntryPoint(AnalysisEntryPoint),
+      ExecutedLines(std::move(ExecutedLines)), path(pathImpl) {
+  assert(AnalysisEntryPoint);
+}
 
 void PathDiagnosticConsumer::anchor() {}
 
@@ -481,10 +484,10 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
   // source code, so find an enclosing statement and use its location.
   if (!L.isValid()) {
     AnalysisDeclContext *ADC;
-    if (LAC.is<const LocationContext*>())
-      ADC = LAC.get<const LocationContext*>()->getAnalysisDeclContext();
+    if (auto *LC = dyn_cast<const LocationContext *>(LAC))
+      ADC = LC->getAnalysisDeclContext();
     else
-      ADC = LAC.get<AnalysisDeclContext*>();
+      ADC = cast<AnalysisDeclContext *>(LAC);
 
     ParentMap &PM = ADC->getParentMap();
 

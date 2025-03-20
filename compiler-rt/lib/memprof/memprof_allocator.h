@@ -46,7 +46,7 @@ struct MemprofMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const;
 };
 
-constexpr uptr kAllocatorSpace = 0x600000000000ULL;
+constexpr uptr kAllocatorSpace = ~(uptr)0;
 constexpr uptr kAllocatorSize = 0x40000000000ULL; // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>

@@ -66,7 +66,7 @@ static llvm::Value *FindEntryInstruction(llvm::Function *function) {
   if (function->empty())
     return nullptr;
 
-  return function->getEntryBlock().getFirstNonPHIOrDbg();
+  return &*function->getEntryBlock().getFirstNonPHIOrDbg();
 }
 
 IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
@@ -86,7 +86,6 @@ static std::string PrintValue(const Value *value, bool truncate = false) {
   if (value) {
     raw_string_ostream rso(s);
     value->print(rso);
-    rso.flush();
     if (truncate)
       s.resize(s.length() - 1);
   }
@@ -97,7 +96,6 @@ static std::string PrintType(const llvm::Type *type, bool truncate = false) {
   std::string s;
   raw_string_ostream rso(s);
   type->print(rso);
-  rso.flush();
   if (truncate)
     s.resize(s.length() - 1);
   return s;
@@ -244,7 +242,6 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     std::string decl_desc_str;
     raw_string_ostream decl_desc_stream(decl_desc_str);
     result_decl->print(decl_desc_stream);
-    decl_desc_stream.flush();
 
     LLDB_LOG(log, "Found result decl: \"{0}\"", decl_desc_str);
   }
@@ -301,16 +298,17 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
-  std::optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
-  if (!bit_size) {
+  auto bit_size_or_err = m_result_type.GetBitSize(target_sp.get());
+  if (!bit_size_or_err) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
 
     LLDB_LOG(log, "Result type has unknown size");
 
     m_error_stream.Printf("Error [IRForTarget]: Size of result type '%s' "
-                          "couldn't be determined\n",
-                          type_desc_stream.GetData());
+                          "couldn't be determined\n%s",
+                          type_desc_stream.GetData(),
+                          llvm::toString(bit_size_or_err.takeError()).c_str());
     return false;
   }
 
@@ -325,7 +323,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
            m_result_name,
-           m_result_type.GetByteSize(target_sp.get()).value_or(0));
+           llvm::expectedToOptional(m_result_type.GetByteSize(target_sp.get()))
+               .value_or(0));
 
   // Construct a new result global and set up its metadata
 
@@ -364,7 +363,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // there's nothing to put into its equivalent persistent variable.
 
     BasicBlock &entry_block(llvm_function.getEntryBlock());
-    Instruction *first_entry_instruction(entry_block.getFirstNonPHIOrDbg());
+    Instruction *first_entry_instruction(&*entry_block.getFirstNonPHIOrDbg());
 
     if (!first_entry_instruction)
       return false;
@@ -381,8 +380,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
     Constant *initializer = result_global->getInitializer();
 
-    StoreInst *synthesized_store =
-        new StoreInst(initializer, new_result_global, first_entry_instruction);
+    StoreInst *synthesized_store = new StoreInst(
+        initializer, new_result_global, first_entry_instruction->getIterator());
 
     LLDB_LOG(log, "Synthesized result store \"{0}\"\n",
              PrintValue(synthesized_store));
@@ -416,9 +415,8 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         "CFStringCreateWithBytes");
 
     bool missing_weak = false;
-    CFStringCreateWithBytes_addr =
-        m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
-                                    missing_weak);
+    CFStringCreateWithBytes_addr = m_execution_unit.FindSymbol(
+        g_CFStringCreateWithBytes_str, missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
       LLDB_LOG(log, "Couldn't find CFStringCreateWithBytes in the target");
 
@@ -517,7 +515,8 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
            m_CFStringCreateWithBytes, CFSCWB_arguments,
            "CFStringCreateWithBytes",
            llvm::cast<Instruction>(
-               m_entry_instruction_finder.GetValue(function)));
+               m_entry_instruction_finder.GetValue(function))
+               ->getIterator());
      });
 
  if (!UnfoldConstant(ns_str, nullptr, CFSCWB_Caller, m_entry_instruction_finder,
@@ -824,7 +823,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
 
   CallInst *srN_call =
       CallInst::Create(m_sel_registerName, _objc_meth_var_name_,
-                       "sel_registerName", selector_load);
+                       "sel_registerName", selector_load->getIterator());
 
   // Replace the load with the call in all users
 
@@ -917,8 +916,9 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   // Now, since the variable is a pointer variable, we will drop in a load of
   // that pointer variable.
 
-  LoadInst *persistent_load = new LoadInst(persistent_global->getValueType(),
-                                           persistent_global, "", alloc);
+  LoadInst *persistent_load =
+      new LoadInst(persistent_global->getValueType(), persistent_global, "",
+                   alloc->getIterator());
 
   LLDB_LOG(log, "Replacing \"{0}\" with \"{1}\"", PrintValue(alloc),
            PrintValue(persistent_load));
@@ -1037,7 +1037,8 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     }
 
     auto *target = m_execution_unit.GetTarget().get();
-    std::optional<uint64_t> value_size = compiler_type.GetByteSize(target);
+    std::optional<uint64_t> value_size =
+        llvm::expectedToOptional(compiler_type.GetByteSize(target));
     if (!value_size)
       return false;
     std::optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign(target);
@@ -1344,8 +1345,10 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
 
                 return new BitCastInst(
                     value_maker.GetValue(function), constant_expr->getType(),
-                    "", llvm::cast<Instruction>(
-                            entry_instruction_finder.GetValue(function)));
+                    "",
+                    llvm::cast<Instruction>(
+                        entry_instruction_finder.GetValue(function))
+                        ->getIterator());
               });
 
           if (!UnfoldConstant(constant_expr, llvm_function, bit_cast_maker,
@@ -1379,7 +1382,8 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
                 return GetElementPtrInst::Create(
                     gep->getSourceElementType(), ptr, indices, "",
                     llvm::cast<Instruction>(
-                        entry_instruction_finder.GetValue(function)));
+                        entry_instruction_finder.GetValue(function))
+                        ->getIterator());
               });
 
           if (!UnfoldConstant(constant_expr, llvm_function,
@@ -1449,7 +1453,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
 
   Argument *argument = &*iter;
 
-  if (argument->getName().equals("this")) {
+  if (argument->getName() == "this") {
     ++iter;
 
     if (iter == llvm_function.arg_end()) {
@@ -1461,7 +1465,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     }
 
     argument = &*iter;
-  } else if (argument->getName().equals("self")) {
+  } else if (argument->getName() == "self") {
     ++iter;
 
     if (iter == llvm_function.arg_end()) {
@@ -1472,7 +1476,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
       return false;
     }
 
-    if (!iter->getName().equals("_cmd")) {
+    if (iter->getName() != "_cmd") {
       m_error_stream.Format("Internal error [IRForTarget]: Wrapper takes '{0}' "
                             "after 'self' argument (should take '_cmd')",
                             iter->getName());
@@ -1493,7 +1497,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     argument = &*iter;
   }
 
-  if (!argument->getName().equals("$__lldb_arg")) {
+  if (argument->getName() != "$__lldb_arg") {
     m_error_stream.Format("Internal error [IRForTarget]: Wrapper takes an "
                           "argument named '{0}' instead of the struct pointer",
                           argument->getName());
@@ -1504,7 +1508,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   LLDB_LOG(log, "Arg: \"{0}\"", PrintValue(argument));
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
-  Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
+  Instruction *FirstEntryInstruction(&*entry_block.getFirstNonPHIOrDbg());
 
   if (!FirstEntryInstruction) {
     m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find the "
@@ -1559,12 +1563,14 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             Type *int8Ty = Type::getInt8Ty(function->getContext());
             ConstantInt *offset_int(
                 ConstantInt::get(offset_type, offset, true));
-            GetElementPtrInst *get_element_ptr = GetElementPtrInst::Create(
-                int8Ty, argument, offset_int, "", entry_instruction);
+            GetElementPtrInst *get_element_ptr =
+                GetElementPtrInst::Create(int8Ty, argument, offset_int, "",
+                                          entry_instruction->getIterator());
 
             if (name == m_result_name && !m_result_is_pointer) {
-              LoadInst *load = new LoadInst(value->getType(), get_element_ptr,
-                                            "", entry_instruction);
+              LoadInst *load =
+                  new LoadInst(value->getType(), get_element_ptr, "",
+                               entry_instruction->getIterator());
 
               return load;
             } else {
@@ -1606,7 +1612,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   m_module = &llvm_module;
-  m_target_data = std::make_unique<DataLayout>(m_module);
+  m_target_data = &m_module->getDataLayout();
   m_intptr_ty = llvm::Type::getIntNTy(m_module->getContext(),
                                       m_target_data->getPointerSizeInBits());
 
@@ -1615,8 +1621,6 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     raw_string_ostream oss(s);
 
     m_module->print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOG(log, "Module as passed in to IRForTarget: \n\"{0}\"", s);
   }
@@ -1662,8 +1666,6 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     raw_string_ostream oss(s);
 
     m_module->print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOG(log, "Module after creating the result variable: \n\"{0}\"", s);
   }
@@ -1761,8 +1763,6 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     raw_string_ostream oss(s);
 
     m_module->print(oss, nullptr);
-
-    oss.flush();
 
     LLDB_LOG(log, "Module after preparing for execution: \n\"{0}\"", s);
   }

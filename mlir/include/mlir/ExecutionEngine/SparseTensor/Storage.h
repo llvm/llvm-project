@@ -143,6 +143,12 @@ public:
   MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETCOORDINATES)
 #undef DECL_GETCOORDINATES
 
+  /// Gets coordinates-overhead storage buffer for the given level.
+#define DECL_GETCOORDINATESBUFFER(INAME, C)                                    \
+  virtual void getCoordinatesBuffer(std::vector<C> **, uint64_t);
+  MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETCOORDINATESBUFFER)
+#undef DECL_GETCOORDINATESBUFFER
+
   /// Gets primary storage.
 #define DECL_GETVALUES(VNAME, V) virtual void getValues(std::vector<V> **);
   MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETVALUES)
@@ -250,6 +256,31 @@ public:
     assert(out && "Received nullptr for out parameter");
     assert(lvl < getLvlRank());
     *out = &coordinates[lvl];
+  }
+  void getCoordinatesBuffer(std::vector<C> **out, uint64_t lvl) final {
+    assert(out && "Received nullptr for out parameter");
+    assert(lvl < getLvlRank());
+    // Note that the sparse tensor support library always stores COO in SoA
+    // format, even when AoS is requested. This is never an issue, since all
+    // actual code/library generation requests "views" into the coordinate
+    // storage for the individual levels, which is trivially provided for
+    // both AoS and SoA (as well as all the other storage formats). The only
+    // exception is when the buffer version of coordinate storage is requested
+    // (currently only for printing). In that case, we do the following
+    // potentially expensive transformation to provide that view. If this
+    // operation becomes more common beyond debugging, we should consider
+    // implementing proper AoS in the support library as well.
+    uint64_t lvlRank = getLvlRank();
+    uint64_t nnz = values.size();
+    crdBuffer.clear();
+    crdBuffer.reserve(nnz * (lvlRank - lvl));
+    for (uint64_t i = 0; i < nnz; i++) {
+      for (uint64_t l = lvl; l < lvlRank; l++) {
+        assert(i < coordinates[l].size());
+        crdBuffer.push_back(coordinates[l][i]);
+      }
+    }
+    *out = &crdBuffer;
   }
   void getValues(std::vector<V> **out) final {
     assert(out && "Received nullptr for out parameter");
@@ -529,10 +560,14 @@ private:
     return -1u;
   }
 
+  // Sparse tensor storage components.
   std::vector<std::vector<P>> positions;
   std::vector<std::vector<C>> coordinates;
   std::vector<V> values;
+
+  // Auxiliary data structures.
   std::vector<uint64_t> lvlCursor;
+  std::vector<C> crdBuffer; // just for AoS view
 };
 
 //===----------------------------------------------------------------------===//

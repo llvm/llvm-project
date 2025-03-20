@@ -22,6 +22,15 @@ include "mlir/IR/BuiltinTypeInterfaces.td"
 // EmitC type definitions
 //===----------------------------------------------------------------------===//
 
+def EmitCType : Type<CPred<"emitc::isSupportedEmitCType($_self)">,
+    "type supported by EmitC">;
+
+def EmitCIntegerType : Type<CPred<"emitc::isSupportedIntegerType($_self)">,
+    "integer type supported by EmitC">;
+
+def EmitCFloatType : Type<CPred<"emitc::isSupportedFloatType($_self)">,
+    "floating-point type supported by EmitC">;
+
 class EmitC_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<EmitC_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
@@ -66,12 +75,30 @@ def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
                         Type elementType) const;
 
     static bool isValidElementType(Type type) {
-      return type.isIntOrIndexOrFloat() ||
-         llvm::isa<PointerType, OpaqueType>(type);
+      return emitc::isSupportedFloatType(type) ||
+         emitc::isIntegerIndexOrOpaqueType(type) ||
+         llvm::isa<PointerType>(type);
     }
   }];
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+def EmitC_LValueType : EmitC_Type<"LValue", "lvalue"> {
+  let summary = "EmitC lvalue type";
+
+  let description = [{
+    Values of this type can be assigned to and their address can be taken.
+  }];
+
+  let parameters = (ins "Type":$valueType);
+  let builders = [
+    TypeBuilderWithInferredContext<(ins "Type":$valueType), [{
+      return $_get(valueType.getContext(), valueType);
+    }]>
+  ];
+  let assemblyFormat = "`<` qualified($valueType) `>`";
+  let genVerifyDecl = 1;
 }
 
 def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
@@ -119,6 +146,43 @@ def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {
     }]>
   ];
   let assemblyFormat = "`<` qualified($pointee) `>`";
+  let genVerifyDecl = 1;
 }
+
+def EmitC_SignedSizeT : EmitC_Type<"SignedSizeT", "ssize_t"> {
+  let summary = "EmitC signed size type";
+  let description = [{
+    Data type representing all values of `emitc.size_t`, plus -1.
+    It corresponds to `ssize_t` found in `<sys/types.h>`.
+    
+    Use of this type causes the code to be non-C99 compliant.
+  }];
+}
+
+def EmitC_PtrDiffT : EmitC_Type<"PtrDiffT", "ptrdiff_t"> {
+  let summary = "EmitC signed pointer diff type";
+  let description = [{
+    Signed data type as wide as platform-specific pointer types.
+    In particular, it is as wide as `emitc.size_t`.
+    It corresponds to `ptrdiff_t` found in `<stddef.h>`.
+  }];
+}
+
+def EmitC_SizeT : EmitC_Type<"SizeT", "size_t"> {
+  let summary = "EmitC unsigned size type";
+  let description = [{
+    Unsigned data type as wide as platform-specific pointer types.
+    It corresponds to `size_t` found in `<stddef.h>`.
+  }];
+}
+
+class EmitC_LValueOf<list<Type> allowedTypes> : 
+  ContainerType<
+    AnyTypeOf<allowedTypes>,
+    CPred<"::llvm::isa<::mlir::emitc::LValueType>($_self)">,
+    "::llvm::cast<::mlir::emitc::LValueType>($_self).getValueType()",
+    "emitc.lvalue",
+    "::mlir::emitc::LValueType"
+  >;
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCTYPES

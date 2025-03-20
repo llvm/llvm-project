@@ -16,9 +16,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaInternal.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -225,7 +223,7 @@ bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
     // atributes.
     return false;
 
-  assert(isStandardAttributeSyntax());
+  assert(isStandardAttributeSyntax() || isAlignas());
 
   // We have historically allowed some type attributes with standard attribute
   // syntax to slide to the decl-specifier-seq, so we have to keep supporting
@@ -312,18 +310,13 @@ bool ParsedAttr::checkAtMostNumArgs(Sema &S, unsigned Num) const {
 }
 
 void clang::takeAndConcatenateAttrs(ParsedAttributes &First,
-                                    ParsedAttributes &Second,
-                                    ParsedAttributes &Result) {
-  // Note that takeAllFrom() puts the attributes at the beginning of the list,
-  // so to obtain the correct ordering, we add `Second`, then `First`.
-  Result.takeAllFrom(Second);
-  Result.takeAllFrom(First);
-  if (First.Range.getBegin().isValid())
-    Result.Range.setBegin(First.Range.getBegin());
-  else
-    Result.Range.setBegin(Second.Range.getBegin());
+                                    ParsedAttributes &&Second) {
+
+  First.takeAllAtEndFrom(Second);
+
+  if (!First.Range.getBegin().isValid())
+    First.Range.setBegin(Second.Range.getBegin());
+
   if (Second.Range.getEnd().isValid())
-    Result.Range.setEnd(Second.Range.getEnd());
-  else
-    Result.Range.setEnd(First.Range.getEnd());
+    First.Range.setEnd(Second.Range.getEnd());
 }

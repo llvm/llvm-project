@@ -12,6 +12,7 @@ static_library("readability") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AmbiguousSmartptrResetCallCheck.cpp",
     "AvoidConstParamsInDecls.cpp",
     "AvoidNestedConditionalOperatorCheck.cpp",
     "AvoidReturnWithVoidValueCheck.cpp",
@@ -25,6 +26,7 @@ static_library("readability") {
     "DeleteNullPointerCheck.cpp",
     "DuplicateIncludeCheck.cpp",
     "ElseAfterReturnCheck.cpp",
+    "EnumInitialValueCheck.cpp",
     "FunctionCognitiveComplexityCheck.cpp",
     "FunctionSizeCheck.cpp",
     "IdentifierLengthCheck.cpp",
@@ -34,6 +36,7 @@ static_library("readability") {
     "IsolateDeclarationCheck.cpp",
     "MagicNumbersCheck.cpp",
     "MakeMemberFunctionConstCheck.cpp",
+    "MathMissingParenthesesCheck.cpp",
     "MisleadingIndentationCheck.cpp",
     "MisplacedArrayIndexCheck.cpp",
     "NamedParameterCheck.cpp",

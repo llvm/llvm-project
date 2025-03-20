@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 # This script is the entrypoint of an Android Emulator Docker container.
 
@@ -45,5 +45,5 @@ fi
 
 # Use exec so that the emulator is PID 1, so that `docker stop` kills the
 # emulator.
-exec emulator @emulator -no-audio -no-window \
+exec emulator @emulator -no-audio -no-window -no-metrics \
     -partition-size "${EMU_PARTITION_SIZE}"

@@ -51,6 +51,9 @@ std::vector<std::string> printAfterPasses();
 // Returns true if we should always print the entire module.
 bool forcePrintModuleIR();
 
+// Returns true if we should print the entire function for loop passes.
+bool forcePrintFuncIR();
+
 // Return true if -filter-passes is empty or contains the pass name.
 bool isPassInPrintList(StringRef PassName);
 bool isFilterPassesEmpty();
@@ -77,25 +80,6 @@ std::error_code cleanUpTempFiles(ArrayRef<std::string> FileName);
 std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat);
-
-/// Used to temporarily set the debug info format of a function, module, or
-/// basic block for the duration of this object's lifetime, after which the
-/// prior state will be restored.
-template <typename T> class ScopedDbgInfoFormatSetter {
-  T &Obj;
-  bool OldState;
-
-public:
-  ScopedDbgInfoFormatSetter(T &Obj, bool NewState)
-      : Obj(Obj), OldState(Obj.IsNewDbgInfoFormat) {
-    Obj.setIsNewDbgInfoFormat(NewState);
-  }
-  ~ScopedDbgInfoFormatSetter() { Obj.setIsNewDbgInfoFormat(OldState); }
-};
-
-template <typename T>
-ScopedDbgInfoFormatSetter(T &Obj, bool NewState)
-    -> ScopedDbgInfoFormatSetter<T>;
 
 } // namespace llvm
 

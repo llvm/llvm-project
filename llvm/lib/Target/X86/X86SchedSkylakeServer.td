@@ -236,10 +236,10 @@ defm : X86WriteRes<WriteFStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTX,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteFStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
 
-defm : X86WriteRes<WriteFMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
+defm : X86WriteRes<WriteFMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
 
 defm : X86WriteRes<WriteFMove,         [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [SKXPort015], 1, [1], 1>;
@@ -311,8 +311,10 @@ defm : SKXWriteResPair<WriteFMAX, [SKXPort01],  4, [1], 1, 6>;
 defm : SKXWriteResPair<WriteFMAY, [SKXPort01],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFMAZ, [SKXPort05],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteDPPD, [SKXPort5,SKXPort015],  9, [1,2], 3, 6>; // Floating point double dot product.
-defm : SKXWriteResPair<WriteDPPS, [SKXPort5,SKXPort015], 13, [1,3], 4, 6>;
-defm : SKXWriteResPair<WriteDPPSY,[SKXPort5,SKXPort015], 13, [1,3], 4, 7>;
+defm : X86WriteRes<WriteDPPS,       [SKXPort5,SKXPort01], 13, [1,3], 4>;
+defm : X86WriteRes<WriteDPPSY,      [SKXPort5,SKXPort01], 13, [1,3], 4>;
+defm : X86WriteRes<WriteDPPSLd,     [SKXPort5,SKXPort01,SKXPort06,SKXPort23], 19, [1,3,1,1], 6>;
+defm : X86WriteRes<WriteDPPSYLd,    [SKXPort5,SKXPort01,SKXPort06,SKXPort23], 20, [1,3,1,1], 6>;
 defm : SKXWriteResPair<WriteFSign,  [SKXPort0],  1>; // Floating point fabs/fchs.
 defm : SKXWriteResPair<WriteFRnd,   [SKXPort01], 8, [2], 2, 6>; // Floating point rounding.
 defm : SKXWriteResPair<WriteFRndY,  [SKXPort01], 8, [2], 2, 7>;
@@ -343,8 +345,8 @@ defm : SKXWriteResPair<WriteFVarBlendZ,[SKXPort015], 2, [2], 2, 7>;
 defm : X86WriteRes<WriteVecLoad,         [SKXPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteVecLoadX,        [SKXPort23], 6, [1], 1>;
 defm : X86WriteRes<WriteVecLoadY,        [SKXPort23], 7, [1], 1>;
-defm : X86WriteRes<WriteVecLoadNT,       [SKXPort23], 6, [1], 1>;
-defm : X86WriteRes<WriteVecLoadNTY,      [SKXPort23], 7, [1], 1>;
+defm : X86WriteRes<WriteVecLoadNT,       [SKXPort23,SKXPort015], 7, [1,1], 2>;
+defm : X86WriteRes<WriteVecLoadNTY,      [SKXPort23,SKXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoad,   [SKXPort23,SKXPort015], 7, [1,1], 2>;
 defm : X86WriteRes<WriteVecMaskedLoadY,  [SKXPort23,SKXPort015], 8, [1,1], 2>;
 defm : X86WriteRes<WriteVecStore,        [SKXPort237,SKXPort4], 1, [1,1], 2>;
@@ -352,10 +354,10 @@ defm : X86WriteRes<WriteVecStoreX,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreY,       [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNT,      [SKXPort237,SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteVecStoreNTY,     [SKXPort237,SKXPort4], 1, [1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [SKXPort23,SKXPort0,SKXPort4], 2, [1,1,1], 3>;
 defm : X86WriteRes<WriteVecMove,         [SKXPort05],  1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [SKXPort015], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [SKXPort015], 1, [1], 1>;
@@ -385,7 +387,7 @@ defm : SKXWriteResPair<WriteShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector shuff
 defm : SKXWriteResPair<WriteShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteShuffleZ, [SKXPort5], 1, [1], 1, 7>;
-defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort5], 1, [1], 1, 5>; // Vector variable shuffles.
+defm : SKXWriteResPair<WriteVarShuffle,  [SKXPort0,SKXPort5], 1, [1,1], 2, 5>; // Vector variable shuffles.
 defm : SKXWriteResPair<WriteVarShuffleX, [SKXPort5], 1, [1], 1, 6>;
 defm : SKXWriteResPair<WriteVarShuffleY, [SKXPort5], 1, [1], 1, 7>;
 defm : SKXWriteResPair<WriteVarShuffleZ, [SKXPort5], 1, [1], 1, 7>;
@@ -600,7 +602,7 @@ defm : SKXWriteResPair<WriteVarShuffle256, [SKXPort5], 3, [1], 1, 7>;  // 256-bi
 def : WriteRes<WriteMicrocoded, [SKXPort0156]> { let Latency = 100; } // def WriteMicrocoded : SchedWrite;
 
 // Fence instructions.
-def : WriteRes<WriteFence,  [SKXPort23, SKXPort4]>;
+def : WriteRes<WriteFence,  [SKXPort23, SKXPort4]> { let NumMicroOps = 2; let ReleaseAtCycles = [1,1]; }
 
 // Load/store MXCSR.
 def : WriteRes<WriteLDMXCSR, [SKXPort0,SKXPort23,SKXPort0156]> { let Latency = 7; let NumMicroOps = 3; let ReleaseAtCycles = [1,1,1]; }
@@ -613,8 +615,8 @@ def : WriteRes<WriteNop, []>;
 // Horizontal add/sub  instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-defm : SKXWriteResPair<WriteFHAdd,  [SKXPort5,SKXPort015], 6, [2,1], 3, 6>;
-defm : SKXWriteResPair<WriteFHAddY, [SKXPort5,SKXPort015], 6, [2,1], 3, 7>;
+defm : SKXWriteResPair<WriteFHAdd,  [SKXPort5,SKXPort01], 6, [2,1], 3, 6>;
+defm : SKXWriteResPair<WriteFHAddY, [SKXPort5,SKXPort01], 6, [2,1], 3, 7>;
 defm : SKXWriteResPair<WritePHAdd,  [SKXPort5,SKXPort05],  3, [2,1], 3, 5>;
 defm : SKXWriteResPair<WritePHAddX, [SKXPort5,SKXPort015], 3, [2,1], 3, 6>;
 defm : SKXWriteResPair<WritePHAddY, [SKXPort5,SKXPort015], 3, [2,1], 3, 7>;
@@ -626,13 +628,13 @@ def SKXWriteResGroup1 : SchedWriteRes<[SKXPort0]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
-                                            "KANDN(B|D|Q|W)rr",
+def: InstRW<[SKXWriteResGroup1], (instregex "KAND(B|D|Q|W)kk",
+                                            "KANDN(B|D|Q|W)kk",
                                             "KMOV(B|D|Q|W)kk",
-                                            "KNOT(B|D|Q|W)rr",
-                                            "KOR(B|D|Q|W)rr",
-                                            "KXNOR(B|D|Q|W)rr",
-                                            "KXOR(B|D|Q|W)rr",
+                                            "KNOT(B|D|Q|W)kk",
+                                            "KOR(B|D|Q|W)kk",
+                                            "KXNOR(B|D|Q|W)kk",
+                                            "KXOR(B|D|Q|W)kk",
                                             "KSET0(B|D|Q|W)", // Same as KXOR
                                             "KSET1(B|D|Q|W)", // Same as KXNOR
                                             "MMX_PADDS(B|W)rr",
@@ -644,10 +646,10 @@ def: InstRW<[SKXWriteResGroup1], (instregex "KAND(B|D|Q|W)rr",
                                             "MMX_P(MAX|MIN)UBrr",
                                             "MMX_PSUBS(B|W)rr",
                                             "MMX_PSUBUS(B|W)rr",
-                                            "VPMOVB2M(Z|Z128|Z256)rr",
-                                            "VPMOVD2M(Z|Z128|Z256)rr",
-                                            "VPMOVQ2M(Z|Z128|Z256)rr",
-                                            "VPMOVW2M(Z|Z128|Z256)rr")>;
+                                            "VPMOVB2M(Z|Z128|Z256)kr",
+                                            "VPMOVD2M(Z|Z128|Z256)kr",
+                                            "VPMOVQ2M(Z|Z128|Z256)kr",
+                                            "VPMOVW2M(Z|Z128|Z256)kr")>;
 
 def SKXWriteResGroup3 : SchedWriteRes<[SKXPort5]> {
   let Latency = 1;
@@ -755,13 +757,6 @@ def SKXWriteResGroup20 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
 }
 def: InstRW<[SKXWriteResGroup20], (instregex "CLFLUSH")>;
 
-def SKXWriteResGroup21 : SchedWriteRes<[SKXPort237,SKXPort0156]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[SKXWriteResGroup21], (instrs SFENCE)>;
-
 def SKXWriteResGroup23 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let Latency = 2;
   let NumMicroOps = 2;
@@ -810,8 +805,8 @@ def SKXWriteResGroup30 : SchedWriteRes<[SKXPort0]> {
   let ReleaseAtCycles = [1];
 }
 def: InstRW<[SKXWriteResGroup30], (instregex "KMOV(B|D|Q|W)rk",
-                                             "KORTEST(B|D|Q|W)rr",
-                                             "KTEST(B|D|Q|W)rr")>;
+                                             "KORTEST(B|D|Q|W)kk",
+                                             "KTEST(B|D|Q|W)kk")>;
 
 def SKXWriteResGroup31 : SchedWriteRes<[SKXPort1]> {
   let Latency = 3;
@@ -837,15 +832,15 @@ def SKXWriteResGroup33 : SchedWriteRes<[SKXPort5]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[SKXWriteResGroup33], (instregex "KADD(B|D|Q|W)rr",
-                                             "KSHIFTL(B|D|Q|W)ri",
-                                             "KSHIFTR(B|D|Q|W)ri",
-                                             "KUNPCK(BW|DQ|WD)rr",
+def: InstRW<[SKXWriteResGroup33], (instregex "KADD(B|D|Q|W)kk",
+                                             "KSHIFTL(B|D|Q|W)ki",
+                                             "KSHIFTR(B|D|Q|W)ki",
+                                             "KUNPCK(BW|DQ|WD)kk",
                                              "VCMPPD(Z|Z128|Z256)rri",
                                              "VCMPPS(Z|Z128|Z256)rri",
                                              "VCMP(SD|SS)Zrr",
-                                             "VFPCLASS(PD|PS)(Z|Z128|Z256)rr",
-                                             "VFPCLASS(SD|SS)Zrr",
+                                             "VFPCLASS(PD|PS)(Z|Z128|Z256)ri",
+                                             "VFPCLASS(SD|SS)Zri",
                                              "VPCMPB(Z|Z128|Z256)rri",
                                              "VPCMPD(Z|Z128|Z256)rri",
                                              "VPCMPEQ(B|D|Q|W)(Z|Z128|Z256)rr",
@@ -876,10 +871,10 @@ def SKXWriteResGroup38 : SchedWriteRes<[SKXPort5,SKXPort01]> {
 }
 def: InstRW<[SKXWriteResGroup38], (instregex "(V?)PH(ADD|SUB)SW(Y?)rr")>;
 
-def SKXWriteResGroup41 : SchedWriteRes<[SKXPort5,SKXPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
+def SKXWriteResGroup41 : SchedWriteRes<[SKXPort5]> {
+  let Latency = 2;
+  let NumMicroOps = 2;
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[SKXWriteResGroup41], (instrs MMX_PACKSSDWrr,
                                           MMX_PACKSSWBrr,
@@ -891,13 +886,6 @@ def SKXWriteResGroup42 : SchedWriteRes<[SKXPort6,SKXPort0156]> {
   let ReleaseAtCycles = [1,2];
 }
 def: InstRW<[SKXWriteResGroup42], (instregex "CLD")>;
-
-def SKXWriteResGroup43 : SchedWriteRes<[SKXPort237,SKXPort0156]> {
-  let Latency = 3;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [1,2];
-}
-def: InstRW<[SKXWriteResGroup43], (instrs MFENCE)>;
 
 def SKXWriteResGroup44 : SchedWriteRes<[SKXPort06,SKXPort0156]> {
   let Latency = 2;
@@ -1334,14 +1322,13 @@ def SKXWriteResGroup95 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup95], (instrs VMOVNTDQAZ128rm,
-                                          VPBLENDDrmi)>;
+def: InstRW<[SKXWriteResGroup95], (instrs VPBLENDDrmi)>;
 def: InstRW<[SKXWriteResGroup95, ReadAfterVecXLd],
                                   (instregex "VBLENDMPDZ128rm(b?)",
                                              "VBLENDMPSZ128rm(b?)",
                                              "VBROADCASTI32X2Z128rm(b?)",
                                              "VBROADCASTSSZ128rm(b?)",
-                                             "VINSERT(F|I)128rm",
+                                             "VINSERT(F|I)128rmi",
                                              "VMOVAPDZ128rm(b?)",
                                              "VMOVAPSZ128rm(b?)",
                                              "VMOVDDUPZ128rm(b?)",
@@ -1497,8 +1484,10 @@ def SKXWriteResGroup113 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort237,SKXPort015
   let ReleaseAtCycles = [1,8,8,2];
 }
 def: InstRW<[SKXWriteResGroup113], (instrs VPSCATTERDQZmr,
+                                           VPSCATTERQDZmr,
                                            VPSCATTERQQZmr,
                                            VSCATTERDPDZmr,
+                                           VSCATTERQPSZmr,
                                            VSCATTERQPDZmr)>;
 
 def SKXWriteResGroup114 : SchedWriteRes<[SKXPort0,SKXPort4,SKXPort5,SKXPort237,SKXPort0156]> {
@@ -1535,37 +1524,36 @@ def SKXWriteResGroup121 : SchedWriteRes<[SKXPort23,SKXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKXWriteResGroup121], (instrs VMOVNTDQAZ256rm,
-                                           VPBLENDDYrmi)>;
+def: InstRW<[SKXWriteResGroup121], (instrs VPBLENDDYrmi)>;
 def: InstRW<[SKXWriteResGroup121, ReadAfterVecYLd],
                                    (instregex "VBLENDMPD(Z|Z256)rm(b?)",
                                               "VBLENDMPS(Z|Z256)rm(b?)",
                                               "VBROADCASTF32X2Z256rm(b?)",
                                               "VBROADCASTF32X2Zrm(b?)",
                                               "VBROADCASTF32X4Z256rm(b?)",
-                                              "VBROADCASTF32X4rm(b?)",
-                                              "VBROADCASTF32X8rm(b?)",
-                                              "VBROADCASTF64X2Z128rm(b?)",
-                                              "VBROADCASTF64X2rm(b?)",
-                                              "VBROADCASTF64X4rm(b?)",
+                                              "VBROADCASTF32X4Zrm(b?)",
+                                              "VBROADCASTF32X8Zrm(b?)",
+                                              "VBROADCASTF64X2Z256rm(b?)",
+                                              "VBROADCASTF64X2Zrm(b?)",
+                                              "VBROADCASTF64X4Zrm(b?)",
                                               "VBROADCASTI32X2Z256rm(b?)",
                                               "VBROADCASTI32X2Zrm(b?)",
                                               "VBROADCASTI32X4Z256rm(b?)",
-                                              "VBROADCASTI32X4rm(b?)",
-                                              "VBROADCASTI32X8rm(b?)",
-                                              "VBROADCASTI64X2Z128rm(b?)",
-                                              "VBROADCASTI64X2rm(b?)",
-                                              "VBROADCASTI64X4rm(b?)",
+                                              "VBROADCASTI32X4Zrm(b?)",
+                                              "VBROADCASTI32X8Zrm(b?)",
+                                              "VBROADCASTI64X2Z256rm(b?)",
+                                              "VBROADCASTI64X2Zrm(b?)",
+                                              "VBROADCASTI64X4Zrm(b?)",
                                               "VBROADCASTSD(Z|Z256)rm(b?)",
                                               "VBROADCASTSS(Z|Z256)rm(b?)",
-                                              "VINSERTF32x4(Z|Z256)rm(b?)",
-                                              "VINSERTF32x8Zrm(b?)",
-                                              "VINSERTF64x2(Z|Z256)rm(b?)",
-                                              "VINSERTF64x4Zrm(b?)",
-                                              "VINSERTI32x4(Z|Z256)rm(b?)",
-                                              "VINSERTI32x8Zrm(b?)",
-                                              "VINSERTI64x2(Z|Z256)rm(b?)",
-                                              "VINSERTI64x4Zrm(b?)",
+                                              "VINSERTF32X4(Z|Z256)rm(b?)",
+                                              "VINSERTF32X8Zrm(b?)",
+                                              "VINSERTF64X2(Z|Z256)rm(b?)",
+                                              "VINSERTF64X4Zrm(b?)",
+                                              "VINSERTI32X4(Z|Z256)rm(b?)",
+                                              "VINSERTI32X8Zrm(b?)",
+                                              "VINSERTI64X2(Z|Z256)rm(b?)",
+                                              "VINSERTI64X4Zrm(b?)",
                                               "VMOVAPD(Z|Z256)rm(b?)",
                                               "VMOVAPS(Z|Z256)rm(b?)",
                                               "VMOVDDUP(Z|Z256)rm(b?)",
@@ -1672,8 +1660,8 @@ def: InstRW<[SKXWriteResGroup136], (instrs VPMOVSXBWYrm,
                                            VPMOVSXWDYrm,
                                            VPMOVZXWDYrm)>;
 def: InstRW<[SKXWriteResGroup136], (instregex "VALIGN(D|Q)Z128rm(b?)i",
-                                              "VFPCLASSSDZrm(b?)",
-                                              "VFPCLASSSSZrm(b?)",
+                                              "VFPCLASSSDZm(b?)i",
+                                              "VFPCLASSSSZm(b?)i",
                                               "(V?)PCMPGTQrm",
                                               "VPERMI2DZ128rm(b?)",
                                               "VPERMI2PDZ128rm(b?)",
@@ -1695,15 +1683,15 @@ def SKXWriteResGroup136_2 : SchedWriteRes<[SKXPort5,SKXPort23]> {
 }
 def: InstRW<[SKXWriteResGroup136_2], (instregex "VCMP(PD|PS)Z128rm(b?)i",
                                                 "VCMP(SD|SS)Zrm",
-                                                "VFPCLASSPDZ128rm(b?)",
-                                                "VFPCLASSPSZ128rm(b?)",
-                                                "VPCMPBZ128rmi(b?)",
-                                                "VPCMPDZ128rmi(b?)",
+                                                "VFPCLASSPDZ128m(b?)i",
+                                                "VFPCLASSPSZ128m(b?)i",
+                                                "VPCMPBZ128rm(b?)i",
+                                                "VPCMPDZ128rm(b?)i",
                                                 "VPCMPEQ(B|D|Q|W)Z128rm(b?)",
                                                 "VPCMPGT(B|D|Q|W)Z128rm(b?)",
-                                                "VPCMPQZ128rmi(b?)",
-                                                "VPCMPU(B|D|Q|W)Z128rmi(b?)",
-                                                "VPCMPWZ128rmi(b?)",
+                                                "VPCMPQZ128rm(b?)i",
+                                                "VPCMPU(B|D|Q|W)Z128rm(b?)i",
+                                                "VPCMPWZ128rm(b?)i",
                                                 "VPTESTMBZ128rm(b?)",
                                                 "VPTESTMDZ128rm(b?)",
                                                 "VPTESTMQZ128rm(b?)",
@@ -1759,10 +1747,10 @@ def SKXWriteResGroup148_2 : SchedWriteRes<[SKXPort5,SKXPort23]> {
 }
 def: InstRW<[SKXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VCMPPS(Z|Z256)rm(b?)i",
-                                                "VFPCLASSPD(Z|Z256)rm(b?)",
-                                                "VFPCLASSPS(Z|Z256)rm(b?)",
-                                                "VPCMPB(Z|Z256)rmi(b?)",
-                                                "VPCMPD(Z|Z256)rmi(b?)",
+                                                "VFPCLASSPD(Z|Z256)m(b?)i",
+                                                "VFPCLASSPS(Z|Z256)m(b?)i",
+                                                "VPCMPB(Z|Z256)rm(b?)i",
+                                                "VPCMPD(Z|Z256)rm(b?)i",
                                                 "VPCMPEQB(Z|Z256)rm(b?)",
                                                 "VPCMPEQD(Z|Z256)rm(b?)",
                                                 "VPCMPEQQ(Z|Z256)rm(b?)",
@@ -1771,10 +1759,10 @@ def: InstRW<[SKXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VPCMPGTD(Z|Z256)rm(b?)",
                                                 "VPCMPGTQ(Z|Z256)rm(b?)",
                                                 "VPCMPGTW(Z|Z256)rm(b?)",
-                                                "VPCMPQ(Z|Z256)rmi(b?)",
-                                                "VPCMPU(B|D|Q|W)Z256rmi(b?)",
-                                                "VPCMPU(B|D|Q|W)Zrmi(b?)",
-                                                "VPCMPW(Z|Z256)rmi(b?)",
+                                                "VPCMPQ(Z|Z256)rm(b?)i",
+                                                "VPCMPU(B|D|Q|W)Z256rm(b?)i",
+                                                "VPCMPU(B|D|Q|W)Zrm(b?)i",
+                                                "VPCMPW(Z|Z256)rm(b?)i",
                                                 "VPTESTM(B|D|Q|W)Z256rm(b?)",
                                                 "VPTESTM(B|D|Q|W)Zrm(b?)",
                                                 "VPTESTNM(B|D|Q|W)Z256rm(b?)",

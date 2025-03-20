@@ -14,13 +14,13 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
 
   constexpr double FINAL_SIGN[2] = {1.0, -1.0};
   constexpr double SIGNED_PI_OVER_2[2] = {0x1.921fb54442d18p0,
@@ -52,20 +52,24 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
       return x;
     // x <= 2^-12;
     if (LIBC_UNLIKELY(x_abs < 0x3980'0000)) {
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
       return fputil::multiply_add(x, -0x1.0p-25f, x);
 #else
       double x_d = static_cast<double>(x);
       return static_cast<float>(fputil::multiply_add(x_d, -0x1.0p-25, x_d));
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
     }
     // Use Taylor polynomial:
     //   atan(x) ~ x * (1 - x^2 / 3 + x^4 / 5 - x^6 / 7 + x^8 / 9 - x^10 / 11).
+    constexpr double ATAN_TAYLOR[6] = {
+        0x1.0000000000000p+0,  -0x1.5555555555555p-2, 0x1.999999999999ap-3,
+        -0x1.2492492492492p-3, 0x1.c71c71c71c71cp-4,  -0x1.745d1745d1746p-4,
+    };
     double x2 = x_d * x_d;
     double x4 = x2 * x2;
-    double c0 = fputil::multiply_add(x2, ATAN_COEFFS[0][1], ATAN_COEFFS[0][0]);
-    double c1 = fputil::multiply_add(x2, ATAN_COEFFS[0][3], ATAN_COEFFS[0][2]);
-    double c2 = fputil::multiply_add(x2, ATAN_COEFFS[0][5], ATAN_COEFFS[0][4]);
+    double c0 = fputil::multiply_add(x2, ATAN_TAYLOR[1], ATAN_TAYLOR[0]);
+    double c1 = fputil::multiply_add(x2, ATAN_TAYLOR[3], ATAN_TAYLOR[2]);
+    double c2 = fputil::multiply_add(x2, ATAN_TAYLOR[5], ATAN_TAYLOR[4]);
     double p = fputil::polyeval(x4, c0, c1, c2);
     double r = fputil::multiply_add(x_d, p, const_term);
     return static_cast<float>(r);
@@ -82,11 +86,6 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   int idx;
 
   if (x_abs > 0x3f80'0000U) {
-    // Exceptional value:
-    if (LIBC_UNLIKELY(x_abs == 0x3ffe'2ec1U)) { // |x| = 0x1.fc5d82p+0
-      return sign.is_pos() ? fputil::round_result_slightly_up(0x1.1ab2fp0f)
-                           : fputil::round_result_slightly_down(-0x1.1ab2fp0f);
-    }
     // |x| > 1, we need to invert x, so we will perform range reduction in
     // double precision.
     x_d = 1.0 / static_cast<double>(x_bits.get_val());
@@ -99,10 +98,9 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
                                       SIGNED_PI_OVER_2[sign.is_neg()]);
   } else {
     // Exceptional value:
-    if (LIBC_UNLIKELY(x_abs == 0x3dbb'6ac7U)) { // |x| = 0x1.76d58ep-4
-      return sign.is_pos()
-                 ? fputil::round_result_slightly_up(0x1.75cb06p-4f)
-                 : fputil::round_result_slightly_down(-0x1.75cb06p-4f);
+    if (LIBC_UNLIKELY(x_abs == 0x3d8d'6b23U)) { // |x| = 0x1.1ad646p-4
+      return sign.is_pos() ? fputil::round_result_slightly_down(0x1.1a6386p-4f)
+                           : fputil::round_result_slightly_up(-0x1.1a6386p-4f);
     }
     // Perform range reduction in single precision.
     float x_f = x_bits.get_val();
@@ -120,4 +118,4 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   return static_cast<float>(r);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

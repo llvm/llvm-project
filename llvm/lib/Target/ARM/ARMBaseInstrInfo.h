@@ -201,28 +201,28 @@ public:
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  unsigned SrcReg, bool KillSrc,
+                  MCRegister SrcReg, bool KillSrc,
                   const ARMSubtarget &Subtarget) const;
   void copyFromCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned DestReg, bool KillSrc,
+                    MCRegister DestReg, bool KillSrc,
                     const ARMSubtarget &Subtarget) const;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -355,12 +355,16 @@ public:
   /// ARM supports the MachineOutliner.
   bool isFunctionSafeToOutlineFrom(MachineFunction &MF,
                                    bool OutlineFromLinkOnceODRs) const override;
-  std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
-      std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  std::optional<std::unique_ptr<outliner::OutlinedFunction>>
+  getOutliningCandidateInfo(
+      const MachineModuleInfo &MMI,
+      std::vector<outliner::Candidate> &RepeatedSequenceLocs,
+      unsigned MinRepeats) const override;
   void mergeOutliningCandidateAttributes(
       Function &F, std::vector<outliner::Candidate> &Candidates) const override;
-  outliner::InstrType getOutliningTypeImpl(MachineBasicBlock::iterator &MIT,
-                                       unsigned Flags) const override;
+  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                                           MachineBasicBlock::iterator &MIT,
+                                           unsigned Flags) const override;
   bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
                               unsigned &Flags) const override;
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -541,19 +545,6 @@ public:
 
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
-
-  unsigned getUndefInitOpcode(unsigned RegClassID) const override {
-    if (RegClassID == ARM::MQPRRegClass.getID())
-      return ARM::PseudoARMInitUndefMQPR;
-    if (RegClassID == ARM::SPRRegClass.getID())
-      return ARM::PseudoARMInitUndefSPR;
-    if (RegClassID == ARM::DPR_VFP2RegClass.getID())
-      return ARM::PseudoARMInitUndefDPR_VFP2;
-    if (RegClassID == ARM::GPRRegClass.getID())
-      return ARM::PseudoARMInitUndefGPR;
-
-    llvm_unreachable("Unexpected register class.");
-  }
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the
@@ -683,6 +674,7 @@ static inline bool isIndirectCall(const MachineInstr &MI) {
   case ARM::BX_CALL:
   case ARM::BMOVPCRX_CALL:
   case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
   case ARM::TAILJMPr:
   case ARM::TAILJMPr4:
   case ARM::tBLXr:
@@ -979,6 +971,34 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
 unsigned getBLXOpcode(const MachineFunction &MF);
 unsigned gettBLXrOpcode(const MachineFunction &MF);
 unsigned getBLXpredOpcode(const MachineFunction &MF);
+
+inline bool isMVEVectorInstruction(const MachineInstr *MI) {
+  // This attempts to remove non-mve instructions (scalar shifts), which
+  // are just DPU CX instruction.
+  switch (MI->getOpcode()) {
+  case ARM::MVE_SQSHL:
+  case ARM::MVE_SRSHR:
+  case ARM::MVE_UQSHL:
+  case ARM::MVE_URSHR:
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL:
+  case ARM::MVE_ASRLr:
+  case ARM::MVE_ASRLi:
+  case ARM::MVE_LSLLr:
+  case ARM::MVE_LSLLi:
+  case ARM::MVE_LSRL:
+  case ARM::MVE_SQRSHRL:
+  case ARM::MVE_SQSHLL:
+  case ARM::MVE_SRSHRL:
+  case ARM::MVE_UQRSHLL:
+  case ARM::MVE_UQSHLL:
+  case ARM::MVE_URSHRL:
+    return false;
+  }
+  const MCInstrDesc &MCID = MI->getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::DomainMask) == ARMII::DomainMVE;
+}
 
 } // end namespace llvm
 

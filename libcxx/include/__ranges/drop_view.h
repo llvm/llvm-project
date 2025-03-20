@@ -15,6 +15,7 @@
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/bind_back.h>
 #include <__fwd/span.h>
 #include <__fwd/string_view.h>
@@ -42,7 +43,6 @@
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -64,7 +64,7 @@ class drop_view : public view_interface<drop_view<_View>> {
   // Note: drop_view<input-range>::begin() is still trivially amortized O(1) because
   // one can't call begin() on it more than once.
   static constexpr bool _UseCache = forward_range<_View> && !(random_access_range<_View> && sized_range<_View>);
-  using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _Cache _LIBCPP_NODEBUG    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
   range_difference_t<_View> __count_               = 0;
   _View __base_                                    = _View();
@@ -204,7 +204,7 @@ struct __passthrough_type<subrange<_Iter, _Sent, _Kind>> {
 };
 
 template <class _Tp>
-using __passthrough_type_t = typename __passthrough_type<_Tp>::type;
+using __passthrough_type_t _LIBCPP_NODEBUG = typename __passthrough_type<_Tp>::type;
 
 struct __fn {
   // [range.drop.overview]: the `empty_view` case.
@@ -266,7 +266,7 @@ struct __fn {
             class _RawRange = remove_cvref_t<_Range>,
             class _Dist     = range_difference_t<_Range>>
     requires (__is_repeat_specialization<_RawRange> && sized_range<_RawRange>)
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
     noexcept(noexcept(views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n)))))
     -> decltype(      views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))))
     { return          views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))); }
@@ -277,7 +277,7 @@ struct __fn {
             class _RawRange = remove_cvref_t<_Range>,
             class _Dist     = range_difference_t<_Range>>
     requires (__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
   constexpr auto operator()(_Range&& __range, _Np&&) const
     noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Range>(__range))))
     -> decltype(      _LIBCPP_AUTO_CAST(std::forward<_Range>(__range)))
@@ -289,14 +289,14 @@ struct __fn {
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np, class _RawRange = remove_cvref_t<_Range>>
   // Note: without specifically excluding the other cases, GCC sees this overload as ambiguous with the other
   // overloads.
-    requires(
-        !(__is_empty_view<_RawRange> ||
+    requires(!(__is_empty_view<_RawRange> ||
 #  if _LIBCPP_STD_VER >= 23
-          __is_repeat_specialization<_RawRange> ||
+               __is_repeat_specialization<_RawRange> ||
 #  endif
-          (__is_subrange_specialization_with_store_size<_RawRange> && sized_range<_RawRange> &&
-           random_access_range<_RawRange>) ||
-          (__is_passthrough_specialization<_RawRange> && sized_range<_RawRange> && random_access_range<_RawRange>)))
+               (__is_subrange_specialization_with_store_size<_RawRange> && sized_range<_RawRange> &&
+                random_access_range<_RawRange>) ||
+               (__is_passthrough_specialization<_RawRange> && sized_range<_RawRange> &&
+                random_access_range<_RawRange>)))
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
       noexcept(noexcept(drop_view(std::forward<_Range>(__range), std::forward<_Np>(__n))))
           -> decltype(drop_view(std::forward<_Range>(__range), std::forward<_Np>(__n))) {
@@ -307,7 +307,7 @@ struct __fn {
     requires constructible_from<decay_t<_Np>, _Np>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const
       noexcept(is_nothrow_constructible_v<decay_t<_Np>, _Np>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };
 

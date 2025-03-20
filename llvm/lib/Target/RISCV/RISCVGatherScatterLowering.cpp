@@ -21,7 +21,6 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -64,8 +63,7 @@ public:
   }
 
 private:
-  bool tryCreateStridedLoadStore(IntrinsicInst *II, Type *DataType, Value *Ptr,
-                                 Value *AlignOp);
+  bool tryCreateStridedLoadStore(IntrinsicInst *II);
 
   std::pair<Value *, Value *> determineBaseAndStride(Instruction *Ptr,
                                                      IRBuilderBase &Builder);
@@ -127,13 +125,13 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
     return matchStridedConstant(StartC);
 
   // Base case, start is a stepvector
-  if (match(Start, m_Intrinsic<Intrinsic::experimental_stepvector>())) {
+  if (match(Start, m_Intrinsic<Intrinsic::stepvector>())) {
     auto *Ty = Start->getType()->getScalarType();
     return std::make_pair(ConstantInt::get(Ty, 0), ConstantInt::get(Ty, 1));
   }
 
   // Not a constant, maybe it's a strided constant with a splat added or
-  // multipled.
+  // multiplied.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
               BO->getOpcode() != Instruction::Or &&
@@ -213,10 +211,6 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     assert(Phi->getIncomingValue(IncrementingBlock) == Inc &&
            "Expected one operand of phi to be Inc");
 
-    // Only proceed if the step is loop invariant.
-    if (!L->isLoopInvariant(Step))
-      return false;
-
     // Step should be a splat.
     Step = getSplatValue(Step);
     if (!Step)
@@ -231,7 +225,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     BasePtr =
         PHINode::Create(Start->getType(), 2, Phi->getName() + ".scalar", Phi->getIterator());
     Inc = BinaryOperator::CreateAdd(BasePtr, Step, Inc->getName() + ".scalar",
-                                    Inc);
+                                    Inc->getIterator());
     BasePtr->addIncoming(Start, Phi->getIncomingBlock(1 - IncrementingBlock));
     BasePtr->addIncoming(Inc, Phi->getIncomingBlock(IncrementingBlock));
 
@@ -300,6 +294,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       BasePtr->getIncomingBlock(StartBlock)->getTerminator());
   Builder.SetCurrentDebugLocation(DebugLoc());
 
+  // TODO: Share this switch with matchStridedStart?
   switch (BO->getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");
@@ -312,16 +307,30 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   }
   case Instruction::Mul: {
     Start = Builder.CreateMul(Start, SplatOp, "start");
-    Step = Builder.CreateMul(Step, SplatOp, "step");
     Stride = Builder.CreateMul(Stride, SplatOp, "stride");
     break;
   }
   case Instruction::Shl: {
     Start = Builder.CreateShl(Start, SplatOp, "start");
-    Step = Builder.CreateShl(Step, SplatOp, "step");
     Stride = Builder.CreateShl(Stride, SplatOp, "stride");
     break;
   }
+  }
+
+  // If the Step was defined inside the loop, adjust it before its definition
+  // instead of in the preheader.
+  if (auto *StepI = dyn_cast<Instruction>(Step); StepI && L->contains(StepI))
+    Builder.SetInsertPoint(*StepI->getInsertionPointAfterDef());
+
+  switch (BO->getOpcode()) {
+  default:
+    break;
+  case Instruction::Mul:
+    Step = Builder.CreateMul(Step, SplatOp, "step");
+    break;
+  case Instruction::Shl:
+    Step = Builder.CreateShl(Step, SplatOp, "step");
+    break;
   }
 
   Inc->setOperand(StepIndex, Step);
@@ -349,8 +358,27 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
   SmallVector<Value *, 2> Ops(GEP->operands());
 
+  // If the base pointer is a vector, check if it's strided.
+  Value *Base = GEP->getPointerOperand();
+  if (auto *BaseInst = dyn_cast<Instruction>(Base);
+      BaseInst && BaseInst->getType()->isVectorTy()) {
+    // If GEP's offset is scalar then we can add it to the base pointer's base.
+    auto IsScalar = [](Value *Idx) { return !Idx->getType()->isVectorTy(); };
+    if (all_of(GEP->indices(), IsScalar)) {
+      auto [BaseBase, Stride] = determineBaseAndStride(BaseInst, Builder);
+      if (BaseBase) {
+        Builder.SetInsertPoint(GEP);
+        SmallVector<Value *> Indices(GEP->indices());
+        Value *OffsetBase =
+            Builder.CreateGEP(GEP->getSourceElementType(), BaseBase, Indices,
+                              GEP->getName() + "offset", GEP->isInBounds());
+        return {OffsetBase, Stride};
+      }
+    }
+  }
+
   // Base pointer needs to be a scalar.
-  Value *ScalarBase = Ops[0];
+  Value *ScalarBase = Base;
   if (ScalarBase->getType()->isVectorTy()) {
     ScalarBase = getSplatValue(ScalarBase);
     if (!ScalarBase)
@@ -465,12 +493,46 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   return P;
 }
 
-bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
-                                                           Type *DataType,
-                                                           Value *Ptr,
-                                                           Value *AlignOp) {
+bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II) {
+  VectorType *DataType;
+  Value *StoreVal = nullptr, *Ptr, *Mask, *EVL = nullptr;
+  MaybeAlign MA;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::masked_gather:
+    DataType = cast<VectorType>(II->getType());
+    Ptr = II->getArgOperand(0);
+    MA = cast<ConstantInt>(II->getArgOperand(1))->getMaybeAlignValue();
+    Mask = II->getArgOperand(2);
+    break;
+  case Intrinsic::vp_gather:
+    DataType = cast<VectorType>(II->getType());
+    Ptr = II->getArgOperand(0);
+    MA = II->getParamAlign(0).value_or(
+        DL->getABITypeAlign(DataType->getElementType()));
+    Mask = II->getArgOperand(1);
+    EVL = II->getArgOperand(2);
+    break;
+  case Intrinsic::masked_scatter:
+    DataType = cast<VectorType>(II->getArgOperand(0)->getType());
+    StoreVal = II->getArgOperand(0);
+    Ptr = II->getArgOperand(1);
+    MA = cast<ConstantInt>(II->getArgOperand(2))->getMaybeAlignValue();
+    Mask = II->getArgOperand(3);
+    break;
+  case Intrinsic::vp_scatter:
+    DataType = cast<VectorType>(II->getArgOperand(0)->getType());
+    StoreVal = II->getArgOperand(0);
+    Ptr = II->getArgOperand(1);
+    MA = II->getParamAlign(1).value_or(
+        DL->getABITypeAlign(DataType->getElementType()));
+    Mask = II->getArgOperand(2);
+    EVL = II->getArgOperand(3);
+    break;
+  default:
+    llvm_unreachable("Unexpected intrinsic");
+  }
+
   // Make sure the operation will be supported by the backend.
-  MaybeAlign MA = cast<ConstantInt>(AlignOp)->getMaybeAlignValue();
   EVT DataTypeVT = TLI->getValueType(*DL, DataType);
   if (!MA || !TLI->isLegalStridedLoadStore(DataTypeVT, *MA))
     return false;
@@ -485,7 +547,7 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
     return false;
 
   LLVMContext &Ctx = PtrI->getContext();
-  IRBuilder<InstSimplifyFolder> Builder(Ctx, *DL);
+  IRBuilder Builder(Ctx, InstSimplifyFolder(*DL));
   Builder.SetInsertPoint(PtrI);
 
   Value *BasePtr, *Stride;
@@ -496,17 +558,27 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
 
   Builder.SetInsertPoint(II);
 
+  if (!EVL)
+    EVL = Builder.CreateElementCount(
+        Builder.getInt32Ty(), cast<VectorType>(DataType)->getElementCount());
+
   CallInst *Call;
-  if (II->getIntrinsicID() == Intrinsic::masked_gather)
+
+  if (!StoreVal) {
     Call = Builder.CreateIntrinsic(
-        Intrinsic::riscv_masked_strided_load,
+        Intrinsic::experimental_vp_strided_load,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(3), BasePtr, Stride, II->getArgOperand(2)});
-  else
+        {BasePtr, Stride, Mask, EVL});
+
+    // Merge llvm.masked.gather's passthru
+    if (II->getIntrinsicID() == Intrinsic::masked_gather)
+      Call = Builder.CreateIntrinsic(Intrinsic::vp_select, {DataType},
+                                     {Mask, Call, II->getArgOperand(3), EVL});
+  } else
     Call = Builder.CreateIntrinsic(
-        Intrinsic::riscv_masked_strided_store,
+        Intrinsic::experimental_vp_strided_store,
         {DataType, BasePtr->getType(), Stride->getType()},
-        {II->getArgOperand(0), BasePtr, Stride, II->getArgOperand(3)});
+        {StoreVal, BasePtr, Stride, Mask, EVL});
 
   Call->takeName(II);
   II->replaceAllUsesWith(Call);
@@ -529,35 +601,36 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
     return false;
 
   TLI = ST->getTargetLowering();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   StridedAddrs.clear();
 
-  SmallVector<IntrinsicInst *, 4> Gathers;
-  SmallVector<IntrinsicInst *, 4> Scatters;
+  SmallVector<IntrinsicInst *, 4> Worklist;
 
   bool Changed = false;
 
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
-        Gathers.push_back(II);
-      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
-        Scatters.push_back(II);
+      if (!II)
+        continue;
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::masked_gather:
+      case Intrinsic::masked_scatter:
+      case Intrinsic::vp_gather:
+      case Intrinsic::vp_scatter:
+        Worklist.push_back(II);
+        break;
+      default:
+        break;
       }
     }
   }
 
   // Rewrite gather/scatter to form strided load/store if possible.
-  for (auto *II : Gathers)
-    Changed |= tryCreateStridedLoadStore(
-        II, II->getType(), II->getArgOperand(0), II->getArgOperand(1));
-  for (auto *II : Scatters)
-    Changed |=
-        tryCreateStridedLoadStore(II, II->getArgOperand(0)->getType(),
-                                  II->getArgOperand(1), II->getArgOperand(2));
+  for (auto *II : Worklist)
+    Changed |= tryCreateStridedLoadStore(II);
 
   // Remove any dead phis.
   while (!MaybeDeadPHIs.empty()) {

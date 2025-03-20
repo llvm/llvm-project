@@ -31,6 +31,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
@@ -102,7 +103,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
       return false;
 
   // Hoist.
-  I->moveBefore(InsertPt);
+  I->moveBefore(InsertPt->getIterator());
   if (MSSAU)
     if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
       MSSAU->moveToPlace(MUD, InsertPt->getParent(),
@@ -663,6 +664,17 @@ Loop::LocRange Loop::getLocRange() const {
   return LocRange();
 }
 
+std::string Loop::getLocStr() const {
+  std::string Result;
+  raw_string_ostream OS(Result);
+  if (const DebugLoc LoopDbgLoc = getStartLoc())
+    LoopDbgLoc.print(OS);
+  else
+    // Just print the module name.
+    OS << getHeader()->getParent()->getParent()->getModuleIdentifier();
+  return Result;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 
@@ -987,6 +999,18 @@ void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
     return;
   }
 
+  if (forcePrintFuncIR()) {
+    // handling -print-loop-func-scope.
+    // -print-module-scope overrides this.
+    OS << Banner << " (loop: ";
+    L.getHeader()->printAsOperand(OS, false);
+    OS << ")\n";
+
+    // printing whole function.
+    OS << *L.getHeader()->getParent();
+    return;
+  }
+
   OS << Banner;
 
   auto *PreHeader = L.getLoopPreheader();
@@ -1032,7 +1056,7 @@ MDNode *llvm::findOptionMDForLoopID(MDNode *LoopID, StringRef Name) {
     if (!S)
       continue;
     // Return the operand node if MDString holds expected metadata.
-    if (Name.equals(S->getString()))
+    if (Name == S->getString())
       return MD;
   }
 
@@ -1103,6 +1127,26 @@ std::optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
 int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
                               int Default) {
   return getOptionalIntLoopAttribute(TheLoop, Name).value_or(Default);
+}
+
+CallBase *llvm::getLoopConvergenceHeart(const Loop *TheLoop) {
+  BasicBlock *H = TheLoop->getHeader();
+  for (Instruction &II : *H) {
+    if (auto *CB = dyn_cast<CallBase>(&II)) {
+      if (!CB->isConvergent())
+        continue;
+      // This is the heart if it uses a token defined outside the loop. The
+      // verifier has already checked that only the loop intrinsic can use such
+      // a token.
+      if (auto *Token = CB->getConvergenceControlToken()) {
+        auto *TokenDef = cast<Instruction>(Token);
+        if (!TheLoop->contains(TokenDef->getParent()))
+          return CB;
+      }
+      return nullptr;
+    }
+  }
+  return nullptr;
 }
 
 bool llvm::isFinite(const Loop *L) {

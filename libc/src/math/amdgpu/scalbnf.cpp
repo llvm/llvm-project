@@ -10,11 +10,12 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, scalbnf, (float x, int y)) {
   return __builtin_amdgcn_ldexpf(x, y);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

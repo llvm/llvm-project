@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
@@ -93,44 +94,46 @@ bool SparcMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind)
 SparcMCExpr::VariantKind SparcMCExpr::parseVariantKind(StringRef name)
 {
   return StringSwitch<SparcMCExpr::VariantKind>(name)
-    .Case("lo",  VK_Sparc_LO)
-    .Case("hi",  VK_Sparc_HI)
-    .Case("h44", VK_Sparc_H44)
-    .Case("m44", VK_Sparc_M44)
-    .Case("l44", VK_Sparc_L44)
-    .Case("hh",  VK_Sparc_HH)
-    .Case("hm",  VK_Sparc_HM)
-    .Case("lm",  VK_Sparc_LM)
-    .Case("pc22",  VK_Sparc_PC22)
-    .Case("pc10",  VK_Sparc_PC10)
-    .Case("got22", VK_Sparc_GOT22)
-    .Case("got10", VK_Sparc_GOT10)
-    .Case("got13", VK_Sparc_GOT13)
-    .Case("r_disp32",   VK_Sparc_R_DISP32)
-    .Case("tgd_hi22",   VK_Sparc_TLS_GD_HI22)
-    .Case("tgd_lo10",   VK_Sparc_TLS_GD_LO10)
-    .Case("tgd_add",    VK_Sparc_TLS_GD_ADD)
-    .Case("tgd_call",   VK_Sparc_TLS_GD_CALL)
-    .Case("tldm_hi22",  VK_Sparc_TLS_LDM_HI22)
-    .Case("tldm_lo10",  VK_Sparc_TLS_LDM_LO10)
-    .Case("tldm_add",   VK_Sparc_TLS_LDM_ADD)
-    .Case("tldm_call",  VK_Sparc_TLS_LDM_CALL)
-    .Case("tldo_hix22", VK_Sparc_TLS_LDO_HIX22)
-    .Case("tldo_lox10", VK_Sparc_TLS_LDO_LOX10)
-    .Case("tldo_add",   VK_Sparc_TLS_LDO_ADD)
-    .Case("tie_hi22",   VK_Sparc_TLS_IE_HI22)
-    .Case("tie_lo10",   VK_Sparc_TLS_IE_LO10)
-    .Case("tie_ld",     VK_Sparc_TLS_IE_LD)
-    .Case("tie_ldx",    VK_Sparc_TLS_IE_LDX)
-    .Case("tie_add",    VK_Sparc_TLS_IE_ADD)
-    .Case("tle_hix22",  VK_Sparc_TLS_LE_HIX22)
-    .Case("tle_lox10",  VK_Sparc_TLS_LE_LOX10)
-    .Case("hix",        VK_Sparc_HIX22)
-    .Case("lox",        VK_Sparc_LOX10)
-    .Case("gdop_hix22", VK_Sparc_GOTDATA_HIX22)
-    .Case("gdop_lox10", VK_Sparc_GOTDATA_LOX10)
-    .Case("gdop",       VK_Sparc_GOTDATA_OP)
-    .Default(VK_Sparc_None);
+      .Case("lo", VK_Sparc_LO)
+      .Case("hi", VK_Sparc_HI)
+      .Case("h44", VK_Sparc_H44)
+      .Case("m44", VK_Sparc_M44)
+      .Case("l44", VK_Sparc_L44)
+      .Case("hh", VK_Sparc_HH)
+      .Case("uhi", VK_Sparc_HH) // Nonstandard GNU extension
+      .Case("hm", VK_Sparc_HM)
+      .Case("ulo", VK_Sparc_HM) // Nonstandard GNU extension
+      .Case("lm", VK_Sparc_LM)
+      .Case("pc22", VK_Sparc_PC22)
+      .Case("pc10", VK_Sparc_PC10)
+      .Case("got22", VK_Sparc_GOT22)
+      .Case("got10", VK_Sparc_GOT10)
+      .Case("got13", VK_Sparc_GOT13)
+      .Case("r_disp32", VK_Sparc_R_DISP32)
+      .Case("tgd_hi22", VK_Sparc_TLS_GD_HI22)
+      .Case("tgd_lo10", VK_Sparc_TLS_GD_LO10)
+      .Case("tgd_add", VK_Sparc_TLS_GD_ADD)
+      .Case("tgd_call", VK_Sparc_TLS_GD_CALL)
+      .Case("tldm_hi22", VK_Sparc_TLS_LDM_HI22)
+      .Case("tldm_lo10", VK_Sparc_TLS_LDM_LO10)
+      .Case("tldm_add", VK_Sparc_TLS_LDM_ADD)
+      .Case("tldm_call", VK_Sparc_TLS_LDM_CALL)
+      .Case("tldo_hix22", VK_Sparc_TLS_LDO_HIX22)
+      .Case("tldo_lox10", VK_Sparc_TLS_LDO_LOX10)
+      .Case("tldo_add", VK_Sparc_TLS_LDO_ADD)
+      .Case("tie_hi22", VK_Sparc_TLS_IE_HI22)
+      .Case("tie_lo10", VK_Sparc_TLS_IE_LO10)
+      .Case("tie_ld", VK_Sparc_TLS_IE_LD)
+      .Case("tie_ldx", VK_Sparc_TLS_IE_LDX)
+      .Case("tie_add", VK_Sparc_TLS_IE_ADD)
+      .Case("tle_hix22", VK_Sparc_TLS_LE_HIX22)
+      .Case("tle_lox10", VK_Sparc_TLS_LE_LOX10)
+      .Case("hix", VK_Sparc_HIX22)
+      .Case("lox", VK_Sparc_LOX10)
+      .Case("gdop_hix22", VK_Sparc_GOTDATA_HIX22)
+      .Case("gdop_lox10", VK_Sparc_GOTDATA_LOX10)
+      .Case("gdop", VK_Sparc_GOTDATA_OP)
+      .Default(VK_Sparc_None);
 }
 
 Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::VariantKind Kind) {
@@ -178,75 +181,13 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::VariantKind Kind) {
   }
 }
 
-bool
-SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                       const MCAsmLayout *Layout,
-                                       const MCFixup *Fixup) const {
-  return getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup);
-}
-
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expr!");
-    break;
-
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-
-}
-
-void SparcMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch(getKind()) {
-  default: return;
-  case VK_Sparc_TLS_GD_CALL:
-  case VK_Sparc_TLS_LDM_CALL: {
-    // The corresponding relocations reference __tls_get_addr, as they call it,
-    // but this is only implicit; we must explicitly add it to our symbol table
-    // to bind it for these uses.
-    MCSymbol *Symbol = Asm.getContext().getOrCreateSymbol("__tls_get_addr");
-    Asm.registerSymbol(*Symbol);
-    auto ELFSymbol = cast<MCSymbolELF>(Symbol);
-    if (!ELFSymbol->isBindingSet())
-      ELFSymbol->setBinding(ELF::STB_GLOBAL);
-    [[fallthrough]];
-  }
-  case VK_Sparc_TLS_GD_HI22:
-  case VK_Sparc_TLS_GD_LO10:
-  case VK_Sparc_TLS_GD_ADD:
-  case VK_Sparc_TLS_LDM_HI22:
-  case VK_Sparc_TLS_LDM_LO10:
-  case VK_Sparc_TLS_LDM_ADD:
-  case VK_Sparc_TLS_LDO_HIX22:
-  case VK_Sparc_TLS_LDO_LOX10:
-  case VK_Sparc_TLS_LDO_ADD:
-  case VK_Sparc_TLS_IE_HI22:
-  case VK_Sparc_TLS_IE_LO10:
-  case VK_Sparc_TLS_IE_LD:
-  case VK_Sparc_TLS_IE_LDX:
-  case VK_Sparc_TLS_IE_ADD:
-  case VK_Sparc_TLS_LE_HIX22:
-  case VK_Sparc_TLS_LE_LOX10: break;
-  }
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
+bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                            const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  return true;
 }
 
 void SparcMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

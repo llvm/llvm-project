@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_REMQUOL_H
 #define LLVM_LIBC_SRC_MATH_REMQUOL_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 long double remquol(long double x, long double y, int *exp);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_REMQUOL_H

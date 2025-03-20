@@ -14,8 +14,8 @@
 @G = external global ptr
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global ptr
-; CHECK: @[[ALIAS_OF_P:[a-zA-Z0-9_$"\\.-]+]] = external global ptr
+; CHECK: @G = external global ptr
+; CHECK: @alias_of_p = external global ptr
 ;.
 define ptr @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
@@ -45,7 +45,7 @@ define ptr @return_noalias(){
 define void @nocapture(ptr %a){
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nocapture
-; CHECK-SAME: (ptr nocapture nofree readnone [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -193,7 +193,7 @@ define ptr @test6() nounwind uwtable ssp {
 ; TUNIT-NEXT:    store i8 97, ptr [[X]], align 1
 ; TUNIT-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 0, i64 1
 ; TUNIT-NEXT:    store i8 0, ptr [[ARRAYIDX1]], align 1
-; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @strdup(ptr noalias nocapture noundef nonnull dereferenceable(2) [[X]]) #[[ATTR2]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noalias ptr @strdup(ptr noalias noundef nonnull captures(none) dereferenceable(2) [[X]]) #[[ATTR2]]
 ; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC: Function Attrs: nounwind ssp uwtable
@@ -203,7 +203,7 @@ define ptr @test6() nounwind uwtable ssp {
 ; CGSCC-NEXT:    store i8 97, ptr [[X]], align 1
 ; CGSCC-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 0, i64 1
 ; CGSCC-NEXT:    store i8 0, ptr [[ARRAYIDX1]], align 1
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @strdup(ptr noalias nocapture noundef nonnull dereferenceable(2) [[X]]) #[[ATTR3]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias ptr @strdup(ptr noalias noundef nonnull captures(none) dereferenceable(2) [[X]]) #[[ATTR3]]
 ; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -308,9 +308,9 @@ define internal void @test9a(ptr %a, ptr %b) {
 define internal void @test9b(ptr %a, ptr %b) {
 ; FIXME: %b should be noalias
 ; CHECK-LABEL: define {{[^@]+}}@test9b
-; CHECK-SAME: (ptr noalias nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
-; CHECK-NEXT:    call void @use_i8(ptr noalias nocapture [[A]])
-; CHECK-NEXT:    call void @use_i8(ptr nocapture [[B]])
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
+; CHECK-NEXT:    call void @use_i8(ptr noalias captures(none) [[A]])
+; CHECK-NEXT:    call void @use_i8(ptr captures(none) [[B]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(ptr %a)
@@ -319,10 +319,10 @@ define internal void @test9b(ptr %a, ptr %b) {
 }
 define internal void @test9c(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@test9c
-; CHECK-SAME: (ptr noalias nocapture [[A:%.*]], ptr nocapture [[B:%.*]], ptr nocapture [[C:%.*]]) {
-; CHECK-NEXT:    call void @use_i8(ptr noalias nocapture [[A]])
-; CHECK-NEXT:    call void @use_i8(ptr nocapture [[B]])
-; CHECK-NEXT:    call void @use_i8(ptr nocapture [[C]])
+; CHECK-SAME: (ptr noalias captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr captures(none) [[C:%.*]]) {
+; CHECK-NEXT:    call void @use_i8(ptr noalias captures(none) [[A]])
+; CHECK-NEXT:    call void @use_i8(ptr captures(none) [[B]])
+; CHECK-NEXT:    call void @use_i8(ptr captures(none) [[C]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(ptr %a)
@@ -332,13 +332,13 @@ define internal void @test9c(ptr %a, ptr %b, ptr %c) {
 }
 define void @test9_helper(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test9_helper
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]]) {
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:    tail call void @test9a()
 ; CHECK-NEXT:    tail call void @test9a()
-; CHECK-NEXT:    tail call void @test9b(ptr noalias nocapture [[A]], ptr nocapture [[B]])
-; CHECK-NEXT:    tail call void @test9b(ptr noalias nocapture [[B]], ptr noalias nocapture [[A]])
-; CHECK-NEXT:    tail call void @test9c(ptr noalias nocapture [[A]], ptr nocapture [[B]], ptr nocapture [[B]])
-; CHECK-NEXT:    tail call void @test9c(ptr noalias nocapture [[B]], ptr noalias nocapture [[A]], ptr noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @test9b(ptr noalias captures(none) [[A]], ptr captures(none) [[B]])
+; CHECK-NEXT:    tail call void @test9b(ptr noalias captures(none) [[B]], ptr noalias captures(none) [[A]])
+; CHECK-NEXT:    tail call void @test9c(ptr noalias captures(none) [[A]], ptr captures(none) [[B]], ptr captures(none) [[B]])
+; CHECK-NEXT:    tail call void @test9c(ptr noalias captures(none) [[B]], ptr noalias captures(none) [[A]], ptr noalias captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @test9a(ptr noalias %a, ptr %b)
@@ -401,10 +401,10 @@ define void @test12_1() {
 ; CHECK-LABEL: define {{[^@]+}}@test12_1() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
-; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
-; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias nocapture [[B]])
-; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias nocapture [[B]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias noundef nonnull align 4 captures(none) dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias noundef nonnull align 4 captures(none) dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias captures(none) [[B]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr noalias captures(none) [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca i8, align 4
@@ -419,10 +419,10 @@ define void @test12_1() {
 define void @test12_2(){
 ; CHECK-LABEL: define {{[^@]+}}@test12_2() {
 ; CHECK-NEXT:    [[A:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    tail call void @use_nocapture(ptr nocapture [[A]])
-; CHECK-NEXT:    tail call void @use_nocapture(ptr nocapture [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr captures(none) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr captures(none) [[A]])
 ; CHECK-NEXT:    tail call void @use(ptr [[A]])
-; CHECK-NEXT:    tail call void @use_nocapture(ptr nocapture [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(ptr captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
 ; FIXME: This should be @use_nocapture(ptr noalias [[A]])
@@ -439,7 +439,7 @@ declare void @two_args(ptr nocapture , ptr nocapture)
 define void @test12_3(){
 ; CHECK-LABEL: define {{[^@]+}}@test12_3() {
 ; CHECK-NEXT:    [[A:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    tail call void @two_args(ptr nocapture [[A]], ptr nocapture [[A]])
+; CHECK-NEXT:    tail call void @two_args(ptr captures(none) [[A]], ptr captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = tail call noalias ptr @malloc(i64 4)
@@ -452,10 +452,10 @@ define void @test12_4(){
 ; CHECK-NEXT:    [[A:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[B:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[A_1:%.*]] = getelementptr i8, ptr [[A]], i64 1
-; CHECK-NEXT:    tail call void @two_args(ptr noalias nocapture [[A]], ptr noalias nocapture [[B]])
-; CHECK-NEXT:    tail call void @two_args(ptr nocapture [[A]], ptr nocapture [[A]])
-; CHECK-NEXT:    tail call void @two_args(ptr nocapture [[A]], ptr nocapture [[A_1]])
-; CHECK-NEXT:    tail call void @two_args(ptr noalias nocapture [[A]], ptr noalias nocapture [[B]])
+; CHECK-NEXT:    tail call void @two_args(ptr noalias captures(none) [[A]], ptr noalias captures(none) [[B]])
+; CHECK-NEXT:    tail call void @two_args(ptr captures(none) [[A]], ptr captures(none) [[A]])
+; CHECK-NEXT:    tail call void @two_args(ptr captures(none) [[A]], ptr captures(none) [[A_1]])
+; CHECK-NEXT:    tail call void @two_args(ptr noalias captures(none) [[A]], ptr noalias captures(none) [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %A = tail call noalias ptr @malloc(i64 4)
@@ -476,8 +476,8 @@ define void @test12_4(){
 ; TEST 13
 define void @use_i8_internal(ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@use_i8_internal
-; CHECK-SAME: (ptr nocapture [[A:%.*]]) {
-; CHECK-NEXT:    call void @use_i8(ptr nocapture [[A]])
+; CHECK-SAME: (ptr captures(none) [[A:%.*]]) {
+; CHECK-NEXT:    call void @use_i8(ptr captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(ptr %a)
@@ -487,7 +487,7 @@ define void @use_i8_internal(ptr %a) {
 define void @test13_use_noalias(){
 ; CHECK-LABEL: define {{[^@]+}}@test13_use_noalias() {
 ; CHECK-NEXT:    [[M1:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    call void @use_i8_internal(ptr noalias nocapture [[M1]])
+; CHECK-NEXT:    call void @use_i8_internal(ptr noalias captures(none) [[M1]])
 ; CHECK-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test13_use_noalias()
@@ -502,8 +502,8 @@ define void @test13_use_noalias(){
 define void @test13_use_alias(){
 ; CHECK-LABEL: define {{[^@]+}}@test13_use_alias() {
 ; CHECK-NEXT:    [[M1:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    call void @use_i8_internal(ptr noalias nocapture [[M1]])
-; CHECK-NEXT:    call void @use_i8_internal(ptr noalias nocapture [[M1]])
+; CHECK-NEXT:    call void @use_i8_internal(ptr noalias captures(none) [[M1]])
+; CHECK-NEXT:    call void @use_i8_internal(ptr noalias captures(none) [[M1]])
 ; CHECK-NEXT:    ret void
 ;
   %m1 = tail call noalias ptr @malloc(i64 4)
@@ -530,7 +530,7 @@ define i32 @i2p(ptr %arg) {
 ; TUNIT-SAME: (ptr nofree readonly [[ARG:%.*]]) #[[ATTR5:[0-9]+]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call i32 @p2i(ptr noalias nofree readnone [[ARG]]) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to ptr
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @ret(ptr nocapture nofree noundef readonly align 4 [[I2P]]) #[[ATTR12:[0-9]+]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @ret(ptr nofree noundef readonly align 4 captures(none) [[I2P]]) #[[ATTR12:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[CALL]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
@@ -538,7 +538,7 @@ define i32 @i2p(ptr %arg) {
 ; CGSCC-SAME: (ptr nofree readonly [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call i32 @p2i(ptr noalias nofree readnone [[ARG]]) #[[ATTR12]]
 ; CGSCC-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to ptr
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @ret(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[I2P]]) #[[ATTR13:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @ret(ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[I2P]]) #[[ATTR13:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
   %c = call i32 @p2i(ptr %arg)
@@ -549,13 +549,13 @@ define i32 @i2p(ptr %arg) {
 define internal i32 @ret(ptr %arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@ret
-; TUNIT-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR6:[0-9]+]] {
 ; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4
 ; TUNIT-NEXT:    ret i32 [[L]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@ret
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[ARG:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[ARG]], align 4
 ; CGSCC-NEXT:    ret i32 [[L]]
 ;
@@ -577,22 +577,22 @@ define internal fastcc double @strtox(ptr %s, ptr %p, i32 %prec) unnamed_addr {
 ; TUNIT-SAME: (ptr [[S:%.*]]) unnamed_addr {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nocapture nofree noundef nonnull align 8 dereferenceable(240) [[F]]) #[[ATTR13:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]]) #[[ATTR13:[0-9]+]]
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @sh_fromstring(ptr noundef nonnull align 8 dereferenceable(240) [[F]], ptr [[S]])
 ; TUNIT-NEXT:    call void @__shlim(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call double @__floatscan(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nocapture nofree noundef nonnull align 8 dereferenceable(240) [[F]])
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]])
 ; TUNIT-NEXT:    ret double [[CALL1]]
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@strtox
 ; CGSCC-SAME: (ptr [[S:%.*]]) unnamed_addr {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nocapture nofree noundef nonnull align 8 dereferenceable(240) [[F]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]]) #[[ATTR14:[0-9]+]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @sh_fromstring(ptr noundef nonnull align 8 dereferenceable(240) [[F]], ptr [[S]])
 ; CGSCC-NEXT:    call void @__shlim(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call double @__floatscan(ptr noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nocapture nofree noundef nonnull align 8 dereferenceable(240) [[F]])
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 144, ptr nofree noundef nonnull align 8 captures(none) dereferenceable(240) [[F]])
 ; CGSCC-NEXT:    ret double [[CALL1]]
 ;
 entry:
@@ -609,7 +609,7 @@ entry:
 ; Function Attrs: nounwind optsize
 define dso_local double @strtod(ptr noalias %s, ptr noalias %p) {
 ; CHECK-LABEL: define {{[^@]+}}@strtod
-; CHECK-SAME: (ptr noalias [[S:%.*]], ptr noalias nocapture nofree readnone [[P:%.*]]) {
+; CHECK-SAME: (ptr noalias [[S:%.*]], ptr noalias nofree readnone captures(none) [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call fastcc double @strtox(ptr [[S]])
 ; CHECK-NEXT:    ret double [[CALL]]
@@ -659,13 +659,13 @@ define void @make_alias(ptr %p) {
 define void @only_store(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@only_store
-; TUNIT-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:    store i32 0, ptr [[P]], align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@only_store
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR10:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    store i32 0, ptr [[P]], align 4
 ; CGSCC-NEXT:    ret void
 ;
@@ -680,7 +680,7 @@ define void @test15_caller(ptr noalias %p, i32 %c) {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14:[0-9]+]]
+; TUNIT-NEXT:    tail call void @only_store(ptr noalias nofree noundef writeonly align 4 captures(none) [[P]]) #[[ATTR14:[0-9]+]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR14]]
@@ -692,7 +692,7 @@ define void @test15_caller(ptr noalias %p, i32 %c) {
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    tail call void @only_store(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15:[0-9]+]]
+; CGSCC-NEXT:    tail call void @only_store(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR15]]
@@ -737,14 +737,14 @@ define internal void @test16_sub(ptr noalias %p, i32 %c1, i32 %c2) {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14]]
+; TUNIT-NEXT:    tail call void @only_store(ptr nofree noundef writeonly align 4 captures(none) [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly align 4 [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; TUNIT:       if.then2:
-; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14]]
+; TUNIT-NEXT:    tail call void @only_store(ptr nofree noundef writeonly align 4 captures(none) [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[IF_END3]]
 ; TUNIT:       if.end3:
 ; TUNIT-NEXT:    ret void
@@ -755,14 +755,14 @@ define internal void @test16_sub(ptr noalias %p, i32 %c1, i32 %c2) {
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    tail call void @only_store(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15]]
+; CGSCC-NEXT:    tail call void @only_store(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    tail call void @make_alias(ptr nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; CGSCC-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; CGSCC:       if.then2:
-; CGSCC-NEXT:    tail call void @only_store(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15]]
+; CGSCC-NEXT:    tail call void @only_store(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    br label [[IF_END3]]
 ; CGSCC:       if.end3:
 ; CGSCC-NEXT:    ret void
@@ -834,7 +834,7 @@ define void @test17_caller(ptr noalias %p, i32 %c) {
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[L3:%.*]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14]]
+; TUNIT-NEXT:    tail call void @only_store(ptr noalias nofree noundef writeonly align 4 captures(none) [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[L3]]
 ; TUNIT:       l3:
 ; TUNIT-NEXT:    ret void
@@ -849,7 +849,7 @@ define void @test17_caller(ptr noalias %p, i32 %c) {
 ; CGSCC-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    br label [[L3:%.*]]
 ; CGSCC:       l2:
-; CGSCC-NEXT:    tail call void @only_store(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15]]
+; CGSCC-NEXT:    tail call void @only_store(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    br label [[L3]]
 ; CGSCC:       l3:
 ; CGSCC-NEXT:    ret void
@@ -907,7 +907,7 @@ define void @test18_caller(ptr noalias %p, i32 %c) {
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    br label [[L2]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR14]]
+; TUNIT-NEXT:    tail call void @only_store(ptr nofree noundef writeonly align 4 captures(none) [[P]]) #[[ATTR14]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
@@ -920,7 +920,7 @@ define void @test18_caller(ptr noalias %p, i32 %c) {
 ; CGSCC-NEXT:    tail call void @make_alias(ptr nofree nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    br label [[L2]]
 ; CGSCC:       l2:
-; CGSCC-NEXT:    tail call void @only_store(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[P]]) #[[ATTR15]]
+; CGSCC-NEXT:    tail call void @only_store(ptr nofree noundef nonnull writeonly align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR15]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:

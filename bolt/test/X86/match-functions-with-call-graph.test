@@ -1,0 +1,103 @@
+## Tests blocks matching by called function names in inferStaleProfile.
+
+# REQUIRES: system-linux
+# RUN: split-file %s %t
+# RUN: %clangxx %cxxflags %t/main.cpp -o %t.exe -Wl,-q -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml --profile-ignore-hash -v=1 \
+# RUN:   --dyno-stats --print-cfg --infer-stale-profile=1 --match-with-call-graph 2>&1 | FileCheck %s
+
+# CHECK: BOLT-INFO: matched 1 functions with call graph
+
+#--- main.cpp
+void foo() {}
+
+void bar() {}
+
+void qux() {
+    foo();
+    bar();
+}
+
+void fred() {
+    foo();
+    qux();
+    bar();
+    bar();
+    foo();
+}
+
+int main() {
+    return 0;
+}
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'match-functions-with-calls-as-anchors.s.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:            main
+    fid:             0
+    hash:            0x0000000000000001
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000001
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+  - name:            _Z3foov
+    fid:             1
+    hash:            0x0000000000000002
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000002
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+
+  - name:            _Z3barv
+    fid:             2
+    hash:            0x0000000000000003
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000003
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+  - name:            _Z3quxv
+    fid:             3
+    hash:            0x0000000000000004
+    exec:            4
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000004
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+        calls:           [ { off : 0, fid : 1, cnt : 0},
+                           { off : 0, fid : 2, cnt : 0} ]
+  - name:            _Z4bazv
+    fid:             4
+    hash:            0x0000000000000005
+    exec:            1
+    nblocks:         6
+    blocks:
+      - bid:             1
+        hash:            0x0000000000000005
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+        calls:           [ { off : 0, fid : 3, cnt : 0},
+                           { off : 0, fid : 1, cnt : 0},
+                           { off : 0, fid : 2, cnt : 0},
+                           { off : 0, fid : 1, cnt : 0},
+                           { off : 0, fid : 2, cnt : 0} ]
+...

@@ -13,9 +13,9 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <queue>
 
 #include <numeric>
+#include <queue>
 
 #define DEBUG_TYPE "taildup"
 
@@ -26,7 +26,7 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> NoThreads;
 
-cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
+static cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
     "tail-duplication",
     cl::desc("duplicate unconditional branches that cross a cache line"),
     cl::init(bolt::TailDuplication::TD_NONE),

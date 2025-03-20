@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-
 // -flto=thin causes a switch to llvm-bc object files.
 // RUN: %clangxx -ccc-print-phases --no-offload-new-driver -nocudainc -nocudalib -c %s -flto=thin 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILE-ACTIONS < %t %s
@@ -9,7 +6,7 @@
 // CHECK-COMPILE-ACTIONS-NOT: lto-bc
 // CHECK-COMPILE-ACTIONS: 12: backend, {11}, lto-bc, (host-cuda)
 
-// RUN: %clangxx -ccc-print-phases --no-offload-new-driver -nocudainc -nocudalib %s -flto=thin 2> %t
+// RUN: %clangxx -ccc-print-phases %if target={{.*-windows-msvc.*}} %{ -fuse-ld=lld %} --no-offload-new-driver -nocudainc -nocudalib %s -flto=thin 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-ACTIONS < %t %s
 //
 // CHECK-COMPILELINK-ACTIONS: 0: input, "{{.*}}thinlto.cu", cuda, (host-cuda)

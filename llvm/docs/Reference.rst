@@ -14,6 +14,7 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
+   CIBestPractices
    CommandGuide/index
    ConvergenceAndUniformity
    ConvergentOperations
@@ -39,6 +40,7 @@ LLVM and API reference documentation.
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
+   MemoryModelRelaxationAnnotations
    MemTagSanitizer
    Security
    SecurityTransparencyReports
@@ -51,6 +53,7 @@ LLVM and API reference documentation.
    TestingGuide
    TransformMetadata
    TypeMetadata
+   UndefinedBehavior
    XRay
    XRayExample
    XRayFDRFormat
@@ -118,6 +121,9 @@ LLVM IR
 :doc:`LLVM Language Reference Manual <LangRef>`
   Defines the LLVM intermediate representation and the assembly form of the
   different nodes.
+
+:doc:`Undefined Behavior (UB) <UndefinedBehavior>`
+  A guide on what UB/undef/poison are and when to use each one.
 
 :doc:`InAlloca`
   Description of the ``inalloca`` argument attribute.
@@ -193,6 +199,9 @@ Additional Topics
 
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
+
+:doc:`MemoryModelRelaxationAnnotations`
+  Target-defined relaxation to LLVM's concurrency model.
 
 :doc:`MemTagSanitizer`
   Security hardening for production code aiming to mitigate memory

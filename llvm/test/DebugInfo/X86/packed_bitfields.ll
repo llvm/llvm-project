@@ -15,7 +15,7 @@
 ; CHECK-NOT: DW_TAG_member
 ; CHECK:      DW_AT_byte_size  {{.*}} (0x01)
 ; CHECK-NEXT: DW_AT_bit_size   {{.*}} (0x06)
-; CHECK-NEXT: DW_AT_bit_offset {{.*}} (0xffffffffffffffff)
+; CHECK-NEXT: DW_AT_bit_offset {{.*}} (-1)
 ; CHECK-NEXT: DW_AT_data_member_location {{.*}} ({{.*}}0x0{{0*}})
 
 ; ModuleID = 'repro.c'

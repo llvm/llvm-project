@@ -24,8 +24,8 @@ public:
   using DefaultABIInfo::DefaultABIInfo;
 
 private:
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   void updateState(const ABIArgInfo &Info, QualType Ty, CCState &State) const {
     if (!State.FreeRegs)
@@ -69,23 +69,26 @@ public:
 
 
 ABIArgInfo ARCABIInfo::getIndirectByRef(QualType Ty, bool HasFreeRegs) const {
-  return HasFreeRegs ? getNaturalAlignIndirectInReg(Ty) :
-                       getNaturalAlignIndirect(Ty, false);
+  return HasFreeRegs ? getNaturalAlignIndirectInReg(Ty)
+                     : getNaturalAlignIndirect(
+                           Ty, getDataLayout().getAllocaAddrSpace(), false);
 }
 
 ABIArgInfo ARCABIInfo::getIndirectByValue(QualType Ty) const {
   // Compute the byval alignment.
   const unsigned MinABIStackAlignInBytes = 4;
   unsigned TypeAlign = getContext().getTypeAlign(Ty) / 8;
-  return ABIArgInfo::getIndirect(CharUnits::fromQuantity(4), /*ByVal=*/true,
-                                 TypeAlign > MinABIStackAlignInBytes);
+  return ABIArgInfo::getIndirect(
+      CharUnits::fromQuantity(4),
+      /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+      /*ByVal=*/true, TypeAlign > MinABIStackAlignInBytes);
 }
 
-Address ARCABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+RValue ARCABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                             QualType Ty, AggValueSlot Slot) const {
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false,
                           getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(4), true);
+                          CharUnits::fromQuantity(4), true, Slot);
 }
 
 ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,

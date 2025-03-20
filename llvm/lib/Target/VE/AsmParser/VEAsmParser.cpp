@@ -10,7 +10,6 @@
 #include "MCTargetDesc/VEMCTargetDesc.h"
 #include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -22,13 +21,11 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <memory>
 
 using namespace llvm;
@@ -51,7 +48,7 @@ class VEAsmParser : public MCTargetAsmParser {
   /// }
 
   // public interface of the MCTargetAsmParser.
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -59,7 +56,7 @@ class VEAsmParser : public MCTargetAsmParser {
   int parseRegisterName(MCRegister (*matchFn)(StringRef));
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
@@ -344,7 +341,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert((Kind == k_Register) && "Invalid access!");
     return Reg.RegNum;
   }
@@ -760,7 +757,7 @@ public:
 
 } // end anonymous namespace
 
-bool VEAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool VEAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                           OperandVector &Operands,
                                           MCStreamer &Out, uint64_t &ErrorInfo,
                                           bool MatchingInlineAsm) {
@@ -965,7 +962,7 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
                                  const FeatureBitset &Features,
                                  unsigned VariantID);
 
-bool VEAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool VEAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                    SMLoc NameLoc, OperandVector &Operands) {
   // If the target architecture uses MnemonicAlias, call it here to parse
   // operands correctly.
@@ -1039,7 +1036,7 @@ bool VEAsmParser::parseLiteralValues(unsigned Size, SMLoc L) {
 }
 
 /// Extract \code @lo32/@hi32/etc \endcode modifier from expression.
-/// Recursively scan the expression and check for VK_VE_HI32/LO32/etc
+/// Recursively scan the expression and check for VK_HI32/LO32/etc
 /// symbol variants.  If all symbols with modifier use the same
 /// variant, return the corresponding VEMCExpr::VariantKind,
 /// and a modified expression using the default symbol variant.
@@ -1048,7 +1045,7 @@ const MCExpr *
 VEAsmParser::extractModifierFromExpr(const MCExpr *E,
                                      VEMCExpr::VariantKind &Variant) {
   MCContext &Context = getParser().getContext();
-  Variant = VEMCExpr::VK_VE_None;
+  Variant = VEMCExpr::VK_None;
 
   switch (E->getKind()) {
   case MCExpr::Target:
@@ -1058,52 +1055,52 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
-    switch (SRE->getKind()) {
-    case MCSymbolRefExpr::VK_None:
-      // Use VK_VE_REFLONG to a symbol without modifiers.
-      Variant = VEMCExpr::VK_VE_REFLONG;
+    switch (getVariantKind(SRE)) {
+    case VEMCExpr::VK_None:
+      // Use VK_REFLONG to a symbol without modifiers.
+      Variant = VEMCExpr::VK_REFLONG;
       break;
-    case MCSymbolRefExpr::VK_VE_HI32:
-      Variant = VEMCExpr::VK_VE_HI32;
+    case VEMCExpr::VK_HI32:
+      Variant = VEMCExpr::VK_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_LO32:
-      Variant = VEMCExpr::VK_VE_LO32;
+    case VEMCExpr::VK_LO32:
+      Variant = VEMCExpr::VK_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_PC_HI32:
-      Variant = VEMCExpr::VK_VE_PC_HI32;
+    case VEMCExpr::VK_PC_HI32:
+      Variant = VEMCExpr::VK_PC_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_PC_LO32:
-      Variant = VEMCExpr::VK_VE_PC_LO32;
+    case VEMCExpr::VK_PC_LO32:
+      Variant = VEMCExpr::VK_PC_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOT_HI32:
-      Variant = VEMCExpr::VK_VE_GOT_HI32;
+    case VEMCExpr::VK_GOT_HI32:
+      Variant = VEMCExpr::VK_GOT_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOT_LO32:
-      Variant = VEMCExpr::VK_VE_GOT_LO32;
+    case VEMCExpr::VK_GOT_LO32:
+      Variant = VEMCExpr::VK_GOT_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOTOFF_HI32:
-      Variant = VEMCExpr::VK_VE_GOTOFF_HI32;
+    case VEMCExpr::VK_GOTOFF_HI32:
+      Variant = VEMCExpr::VK_GOTOFF_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_GOTOFF_LO32:
-      Variant = VEMCExpr::VK_VE_GOTOFF_LO32;
+    case VEMCExpr::VK_GOTOFF_LO32:
+      Variant = VEMCExpr::VK_GOTOFF_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_PLT_HI32:
-      Variant = VEMCExpr::VK_VE_PLT_HI32;
+    case VEMCExpr::VK_PLT_HI32:
+      Variant = VEMCExpr::VK_PLT_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_PLT_LO32:
-      Variant = VEMCExpr::VK_VE_PLT_LO32;
+    case VEMCExpr::VK_PLT_LO32:
+      Variant = VEMCExpr::VK_PLT_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_TLS_GD_HI32:
-      Variant = VEMCExpr::VK_VE_TLS_GD_HI32;
+    case VEMCExpr::VK_TLS_GD_HI32:
+      Variant = VEMCExpr::VK_TLS_GD_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_TLS_GD_LO32:
-      Variant = VEMCExpr::VK_VE_TLS_GD_LO32;
+    case VEMCExpr::VK_TLS_GD_LO32:
+      Variant = VEMCExpr::VK_TLS_GD_LO32;
       break;
-    case MCSymbolRefExpr::VK_VE_TPOFF_HI32:
-      Variant = VEMCExpr::VK_VE_TPOFF_HI32;
+    case VEMCExpr::VK_TPOFF_HI32:
+      Variant = VEMCExpr::VK_TPOFF_HI32;
       break;
-    case MCSymbolRefExpr::VK_VE_TPOFF_LO32:
-      Variant = VEMCExpr::VK_VE_TPOFF_LO32;
+    case VEMCExpr::VK_TPOFF_LO32:
+      Variant = VEMCExpr::VK_TPOFF_LO32;
       break;
     default:
       return nullptr;
@@ -1134,9 +1131,9 @@ VEAsmParser::extractModifierFromExpr(const MCExpr *E,
     if (!RHS)
       RHS = BE->getRHS();
 
-    if (LHSVariant == VEMCExpr::VK_VE_None)
+    if (LHSVariant == VEMCExpr::VK_None)
       Variant = RHSVariant;
-    else if (RHSVariant == VEMCExpr::VK_VE_None)
+    else if (RHSVariant == VEMCExpr::VK_None)
       Variant = LHSVariant;
     else if (LHSVariant == RHSVariant)
       Variant = LHSVariant;

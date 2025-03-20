@@ -32,10 +32,8 @@
 // various tools like dyld and ld64 will treat us specially if they recognize us as being a
 // system library.
 //
-// TODO: We currently don't do that correctly in the CMake build.
-//
-// XRUNX: otool -L "%{lib-dir}/libc++.1.dylib" | grep '/usr/lib/libc++.1.dylib'
-// XRUNX: ! otool -l "%{lib-dir}/libc++.1.dylib" | grep -E "LC_RPATH|@loader_path|@rpath"
+// RUN: otool -L "%{lib-dir}/libc++.1.dylib" | grep '/usr/lib/libc++.1.dylib'
+// RUN: otool -l "%{lib-dir}/libc++.1.dylib" | grep -vE "LC_RPATH|@loader_path|@rpath"
 
 // Make sure the compatibility_version of libc++ is 1.0.0.
 // Failure to respect this can result in applications not being able to find libc++
@@ -45,4 +43,4 @@
 
 // Make sure we use the libdispatch backend for the PSTL.
 //
-// RUN: grep "%{include-dir}/__config_site" -e '#define _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH'
+// RUN: grep "%{include-dir}/__config_site" -e '#define _LIBCPP_PSTL_BACKEND_LIBDISPATCH'

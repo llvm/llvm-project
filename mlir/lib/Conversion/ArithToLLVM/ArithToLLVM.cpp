@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -27,6 +28,50 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+
+/// Operations whose conversion will depend on whether they are passed a
+/// rounding mode attribute or not.
+///
+/// `SourceOp` is the source operation; `TargetOp`, the operation it will lower
+/// to; `AttrConvert` is the attribute conversion to convert the rounding mode
+/// attribute.
+template <typename SourceOp, typename TargetOp, bool Constrained,
+          template <typename, typename> typename AttrConvert =
+              AttrConvertPassThrough>
+struct ConstrainedVectorConvertToLLVMPattern
+    : public VectorConvertToLLVMPattern<SourceOp, TargetOp, AttrConvert> {
+  using VectorConvertToLLVMPattern<SourceOp, TargetOp,
+                                   AttrConvert>::VectorConvertToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (Constrained != static_cast<bool>(op.getRoundingModeAttr()))
+      return failure();
+    return VectorConvertToLLVMPattern<SourceOp, TargetOp,
+                                      AttrConvert>::matchAndRewrite(op, adaptor,
+                                                                    rewriter);
+  }
+};
+
+/// No-op bitcast. Propagate type input arg if converted source and dest types
+/// are the same.
+struct IdentityBitcastLowering final
+    : public OpConversionPattern<arith::BitcastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::BitcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    Value src = adaptor.getIn();
+    Type resultType = getTypeConverter()->convertType(op.getType());
+    if (src.getType() != resultType)
+      return rewriter.notifyMatchFailure(op, "Types are different");
+
+    rewriter.replaceOp(op, src);
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Straightforward Op Lowerings
@@ -112,7 +157,11 @@ using SubIOpLowering =
     VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp,
                                arith::AttrConvertOverflowToLLVM>;
 using TruncFOpLowering =
-    VectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp>;
+    ConstrainedVectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp,
+                                          false>;
+using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
+    arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, true,
+    arith::AttrConverterConstrainedFPToLLVM>;
 using TruncIOpLowering =
     VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp>;
 using UIToFPOpLowering =
@@ -448,7 +497,8 @@ struct ArithToLLVMConversionPass
       options.overrideIndexBitwidth(indexBitwidth);
 
     LLVMTypeConverter converter(&getContext(), options);
-    mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
+    arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -474,6 +524,7 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   void populateConvertToLLVMConversionPatterns(
       ConversionTarget &target, LLVMTypeConverter &typeConverter,
       RewritePatternSet &patterns) const final {
+    arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   }
 };
@@ -491,7 +542,13 @@ void mlir::arith::registerConvertArithToLLVMInterface(
 //===----------------------------------------------------------------------===//
 
 void mlir::arith::populateArithToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+
+  // Set a higher pattern benefit for IdentityBitcastLowering so it will run
+  // before BitcastOpLowering.
+  patterns.add<IdentityBitcastLowering>(converter, patterns.getContext(),
+                                        /*patternBenefit*/ 10);
+
   // clang-format off
   patterns.add<
     AddFOpLowering,
@@ -537,6 +594,7 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     SubFOpLowering,
     SubIOpLowering,
     TruncFOpLowering,
+    ConstrainedTruncFOpLowering,
     TruncIOpLowering,
     UIToFPOpLowering,
     XOrIOpLowering

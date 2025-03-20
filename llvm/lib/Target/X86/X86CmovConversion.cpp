@@ -159,7 +159,7 @@ char X86CmovConverterPass::ID = 0;
 
 void X86CmovConverterPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
-  AU.addRequired<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
 }
 
 bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
@@ -176,7 +176,7 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
                     << "**********\n");
 
   bool Changed = false;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   MRI = &MF.getRegInfo();
   TII = STI.getInstrInfo();
@@ -355,7 +355,7 @@ bool X86CmovConverterPass::collectCmovCandidates(
       FoundNonCMOVInst = true;
       // Check if this instruction define EFLAGS, to determine end of processed
       // range, as there would be no more instructions using current EFLAGS def.
-      if (I.definesRegister(X86::EFLAGS)) {
+      if (I.definesRegister(X86::EFLAGS, /*TRI=*/nullptr)) {
         // Check if current processed CMOV-group should not be skipped and add
         // it as a CMOV-group-candidate.
         if (!SkipGroup)
@@ -406,7 +406,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
   DepthInfo LoopDepth[LoopIterations] = {{0, 0}, {0, 0}};
   enum { PhyRegType = 0, VirRegType = 1, RegTypeNum = 2 };
   /// For each register type maps the register to its last def instruction.
-  DenseMap<unsigned, MachineInstr *> RegDefMaps[RegTypeNum];
+  DenseMap<Register, MachineInstr *> RegDefMaps[RegTypeNum];
   /// Maps register operand to its def instruction, which can be nullptr if it
   /// is unknown (e.g., operand is defined outside the loop).
   DenseMap<MachineOperand *, MachineInstr *> OperandToDefMap;
@@ -416,7 +416,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
 
   SmallPtrSet<MachineInstr *, 4> CmovInstructions;
   for (auto &Group : CmovInstGroups)
-    CmovInstructions.insert(Group.begin(), Group.end());
+    CmovInstructions.insert_range(Group);
 
   //===--------------------------------------------------------------------===//
   // Step 1: Calculate instruction depth and loop depth.
@@ -582,7 +582,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
 }
 
 static bool checkEFLAGSLive(MachineInstr *MI) {
-  if (MI->killsRegister(X86::EFLAGS))
+  if (MI->killsRegister(X86::EFLAGS, /*TRI=*/nullptr))
     return false;
 
   // The EFLAGS operand of MI might be missing a kill marker.
@@ -592,9 +592,9 @@ static bool checkEFLAGSLive(MachineInstr *MI) {
 
   // Scan forward through BB for a use/def of EFLAGS.
   for (auto I = std::next(ItrMI), E = BB->end(); I != E; ++I) {
-    if (I->readsRegister(X86::EFLAGS))
+    if (I->readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
       return true;
-    if (I->definesRegister(X86::EFLAGS))
+    if (I->definesRegister(X86::EFLAGS, /*TRI=*/nullptr))
       return false;
   }
 
@@ -723,7 +723,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   // operand. We also need to potentially do register rewriting here, but it is
   // simpler as the memory operands are always on the false path so we can
   // simply take that input, whatever it is.
-  DenseMap<unsigned, unsigned> FalseBBRegRewriteTable;
+  DenseMap<Register, Register> FalseBBRegRewriteTable;
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd;) {
     auto &MI = *MIIt++;
     // Skip any CMOVs in this group which don't load from memory.
@@ -830,7 +830,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   // That also means that PHI construction must work forward from earlier to
   // later, and that the code must maintain a mapping from earlier PHI's
   // destination registers, and the registers that went into the PHI.
-  DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
+  DenseMap<Register, std::pair<Register, Register>> RegRewriteTable;
 
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd; ++MIIt) {
     Register DestReg = MIIt->getOperand(0).getReg();
@@ -882,14 +882,14 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
 
   // Add new basic blocks to MachineLoopInfo.
   if (MachineLoop *L = MLI->getLoopFor(MBB)) {
-    L->addBasicBlockToLoop(FalseMBB, MLI->getBase());
-    L->addBasicBlockToLoop(SinkMBB, MLI->getBase());
+    L->addBasicBlockToLoop(FalseMBB, *MLI);
+    L->addBasicBlockToLoop(SinkMBB, *MLI);
   }
 }
 
 INITIALIZE_PASS_BEGIN(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(X86CmovConverterPass, DEBUG_TYPE, "X86 cmov Conversion",
                     false, false)
 

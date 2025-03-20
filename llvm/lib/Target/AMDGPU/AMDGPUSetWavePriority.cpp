@@ -19,8 +19,6 @@
 #include "SIInstrInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Allocator.h"
 
 using namespace llvm;
 
@@ -202,12 +200,12 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   }
 
   for (MachineBasicBlock *MBB : PriorityLoweringBlocks) {
-    BuildSetprioMI(
-        *MBB,
-        MBBInfos[MBB].LastVMEMLoad
-            ? std::next(MachineBasicBlock::iterator(MBBInfos[MBB].LastVMEMLoad))
-            : MBB->begin(),
-        LowPriority);
+    MachineInstr *LastVMEMLoad = MBBInfos[MBB].LastVMEMLoad;
+    BuildSetprioMI(*MBB,
+                   LastVMEMLoad
+                       ? std::next(MachineBasicBlock::iterator(LastVMEMLoad))
+                       : MBB->begin(),
+                   LowPriority);
   }
 
   return true;

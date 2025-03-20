@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || !defined(__APPLE__)
@@ -17,12 +18,13 @@
 #endif
 
 #include <arm_acle.h>
-#include <fenv.h>
 #include <stdint.h>
 
+#include "hdr/fenv_macros.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 struct FEnv {
@@ -61,40 +63,40 @@ struct FEnv {
   // __fpcr_flush_to_zero bit in the FPCR register.  This control bit is
   // located in a different place from FE_FLUSHTOZERO status bit relative to
   // the other exceptions.
-  LIBC_INLINE static uint32_t exception_value_from_status(int status) {
-    return (status & FE_INVALID ? EX_INVALID : 0) |
-           (status & FE_DIVBYZERO ? EX_DIVBYZERO : 0) |
-           (status & FE_OVERFLOW ? EX_OVERFLOW : 0) |
-           (status & FE_UNDERFLOW ? EX_UNDERFLOW : 0) |
-           (status & FE_INEXACT ? EX_INEXACT : 0) |
-           (status & FE_FLUSHTOZERO ? EX_FLUSHTOZERO : 0);
+  LIBC_INLINE static uint32_t exception_value_from_status(uint32_t status) {
+    return ((status & FE_INVALID) ? EX_INVALID : 0) |
+           ((status & FE_DIVBYZERO) ? EX_DIVBYZERO : 0) |
+           ((status & FE_OVERFLOW) ? EX_OVERFLOW : 0) |
+           ((status & FE_UNDERFLOW) ? EX_UNDERFLOW : 0) |
+           ((status & FE_INEXACT) ? EX_INEXACT : 0) |
+           ((status & FE_FLUSHTOZERO) ? EX_FLUSHTOZERO : 0);
   }
 
-  LIBC_INLINE static uint32_t exception_value_from_control(int control) {
-    return (control & __fpcr_trap_invalid ? EX_INVALID : 0) |
-           (control & __fpcr_trap_divbyzero ? EX_DIVBYZERO : 0) |
-           (control & __fpcr_trap_overflow ? EX_OVERFLOW : 0) |
-           (control & __fpcr_trap_underflow ? EX_UNDERFLOW : 0) |
-           (control & __fpcr_trap_inexact ? EX_INEXACT : 0) |
-           (control & __fpcr_flush_to_zero ? EX_FLUSHTOZERO : 0);
+  LIBC_INLINE static uint32_t exception_value_from_control(uint32_t control) {
+    return ((control & __fpcr_trap_invalid) ? EX_INVALID : 0) |
+           ((control & __fpcr_trap_divbyzero) ? EX_DIVBYZERO : 0) |
+           ((control & __fpcr_trap_overflow) ? EX_OVERFLOW : 0) |
+           ((control & __fpcr_trap_underflow) ? EX_UNDERFLOW : 0) |
+           ((control & __fpcr_trap_inexact) ? EX_INEXACT : 0) |
+           ((control & __fpcr_flush_to_zero) ? EX_FLUSHTOZERO : 0);
   }
 
-  LIBC_INLINE static int exception_value_to_status(uint32_t excepts) {
-    return (excepts & EX_INVALID ? FE_INVALID : 0) |
-           (excepts & EX_DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (excepts & EX_OVERFLOW ? FE_OVERFLOW : 0) |
-           (excepts & EX_UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (excepts & EX_INEXACT ? FE_INEXACT : 0) |
-           (excepts & EX_FLUSHTOZERO ? FE_FLUSHTOZERO : 0);
+  LIBC_INLINE static uint32_t exception_value_to_status(uint32_t excepts) {
+    return ((excepts & EX_INVALID) ? FE_INVALID : 0) |
+           ((excepts & EX_DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((excepts & EX_OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((excepts & EX_UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((excepts & EX_INEXACT) ? FE_INEXACT : 0) |
+           ((excepts & EX_FLUSHTOZERO) ? FE_FLUSHTOZERO : 0);
   }
 
-  LIBC_INLINE static int exception_value_to_control(uint32_t excepts) {
-    return (excepts & EX_INVALID ? __fpcr_trap_invalid : 0) |
-           (excepts & EX_DIVBYZERO ? __fpcr_trap_divbyzero : 0) |
-           (excepts & EX_OVERFLOW ? __fpcr_trap_overflow : 0) |
-           (excepts & EX_UNDERFLOW ? __fpcr_trap_underflow : 0) |
-           (excepts & EX_INEXACT ? __fpcr_trap_inexact : 0) |
-           (excepts & EX_FLUSHTOZERO ? __fpcr_flush_to_zero : 0);
+  LIBC_INLINE static uint32_t exception_value_to_control(uint32_t excepts) {
+    return ((excepts & EX_INVALID) ? __fpcr_trap_invalid : 0) |
+           ((excepts & EX_DIVBYZERO) ? __fpcr_trap_divbyzero : 0) |
+           ((excepts & EX_OVERFLOW) ? __fpcr_trap_overflow : 0) |
+           ((excepts & EX_UNDERFLOW) ? __fpcr_trap_underflow : 0) |
+           ((excepts & EX_INEXACT) ? __fpcr_trap_inexact : 0) |
+           ((excepts & EX_FLUSHTOZERO) ? __fpcr_flush_to_zero : 0);
   }
 
   LIBC_INLINE static uint32_t get_control_word() { return __arm_rsr("fpcr"); }
@@ -111,34 +113,37 @@ struct FEnv {
 };
 
 LIBC_INLINE int enable_except(int excepts) {
-  uint32_t new_excepts = FEnv::exception_value_from_status(excepts);
+  uint32_t new_excepts =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   uint32_t control_word = FEnv::get_control_word();
   uint32_t old_excepts = FEnv::exception_value_from_control(control_word);
   if (new_excepts != old_excepts) {
     control_word |= FEnv::exception_value_to_control(new_excepts);
     FEnv::set_control_word(control_word);
   }
-  return FEnv::exception_value_to_status(old_excepts);
+  return static_cast<int>(FEnv::exception_value_to_status(old_excepts));
 }
 
 LIBC_INLINE int disable_except(int excepts) {
-  uint32_t disabled_excepts = FEnv::exception_value_from_status(excepts);
+  uint32_t disabled_excepts =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   uint32_t control_word = FEnv::get_control_word();
   uint32_t old_excepts = FEnv::exception_value_from_control(control_word);
   control_word &= ~FEnv::exception_value_to_control(disabled_excepts);
   FEnv::set_control_word(control_word);
-  return FEnv::exception_value_to_status(old_excepts);
+  return static_cast<int>(FEnv::exception_value_to_status(old_excepts));
 }
 
 LIBC_INLINE int get_except() {
   uint32_t control_word = FEnv::get_control_word();
   uint32_t enabled_excepts = FEnv::exception_value_from_control(control_word);
-  return FEnv::exception_value_to_status(enabled_excepts);
+  return static_cast<int>(FEnv::exception_value_to_status(enabled_excepts));
 }
 
 LIBC_INLINE int clear_except(int excepts) {
   uint32_t status_word = FEnv::get_status_word();
-  uint32_t except_value = FEnv::exception_value_from_status(excepts);
+  uint32_t except_value =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   status_word &= ~FEnv::exception_value_to_status(except_value);
   FEnv::set_status_word(status_word);
   return 0;
@@ -146,13 +151,16 @@ LIBC_INLINE int clear_except(int excepts) {
 
 LIBC_INLINE int test_except(int excepts) {
   uint32_t statusWord = FEnv::get_status_word();
-  uint32_t ex_value = FEnv::exception_value_from_status(excepts);
-  return statusWord & FEnv::exception_value_to_status(ex_value);
+  uint32_t ex_value =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
+  return static_cast<int>(statusWord &
+                          FEnv::exception_value_to_status(ex_value));
 }
 
 LIBC_INLINE int set_except(int excepts) {
   uint32_t status_word = FEnv::get_status_word();
-  uint32_t new_exceptions = FEnv::exception_value_from_status(excepts);
+  uint32_t new_exceptions =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   status_word |= FEnv::exception_value_to_status(new_exceptions);
   FEnv::set_status_word(status_word);
   return 0;
@@ -172,7 +180,8 @@ LIBC_INLINE int raise_except(int excepts) {
                          : "s0", "s1" /* s0 and s1 are clobbered */);
   };
 
-  uint32_t to_raise = FEnv::exception_value_from_status(excepts);
+  uint32_t to_raise =
+      FEnv::exception_value_from_status(static_cast<uint32_t>(excepts));
   int result = 0;
 
   if (to_raise & FEnv::EX_INVALID) {
@@ -235,7 +244,7 @@ LIBC_INLINE int get_round() {
 }
 
 LIBC_INLINE int set_round(int mode) {
-  uint16_t bit_value;
+  uint32_t bit_value;
   switch (mode) {
   case FE_TONEAREST:
     bit_value = FEnv::TONEAREST;
@@ -254,7 +263,7 @@ LIBC_INLINE int set_round(int mode) {
   }
 
   uint32_t control_word = FEnv::get_control_word();
-  control_word &= ~(0x3 << FEnv::ROUNDING_CONTROL_BIT_POSITION);
+  control_word &= ~(0x3u << FEnv::ROUNDING_CONTROL_BIT_POSITION);
   control_word |= (bit_value << FEnv::ROUNDING_CONTROL_BIT_POSITION);
   FEnv::set_control_word(control_word);
 
@@ -283,6 +292,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H

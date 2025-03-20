@@ -37,7 +37,8 @@
 
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_INTEL_subgroups %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_subgroups %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_subgroups %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: intel_sub_group_shuffle: the builtin requires the following SPIR-V extension: SPV_INTEL_subgroups
 
@@ -75,9 +76,6 @@
 ; CHECK: SubgroupBlockWriteINTEL
 
 ; CHECK-SPIRV-LABEL: Return
-
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
-target triple = "spir64"
 
 %opencl.image2d_ro_t = type opaque
 %opencl.image2d_wo_t = type opaque

@@ -86,6 +86,11 @@
 # RUN: not %lld --end-lib 2>&1 | FileCheck %s --check-prefix=STRAY
 # STRAY: error: stray --end-lib
 
+# RUN: %lld -dylib --start-lib %t/1.bc %t/2.o --end-lib -all_load -o %t/out
+# RUN: llvm-readobj -s %t/out | FileCheck --check-prefix=ALL-LOAD %s
+# ALL-LOAD-DAG: _foo
+# ALL-LOAD-DAG: _bar
+
 #--- main.s
 .globl _main
 _main:

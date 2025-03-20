@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
@@ -28,31 +28,22 @@ using namespace llvm;
 namespace llvm {
 extern const SubtargetFeatureKV
     AMDGPUFeatureKV[AMDGPU::NumSubtargetFeatures - 1];
-}
+} // namespace llvm
 
 namespace {
 
 using Generation = AMDGPUSubtarget::Generation;
 
-class AMDGPURemoveIncompatibleFunctions : public ModulePass {
+class AMDGPURemoveIncompatibleFunctions {
 public:
-  static char ID;
-
   AMDGPURemoveIncompatibleFunctions(const TargetMachine *TM = nullptr)
-      : ModulePass(ID), TM(TM) {
+      : TM(TM) {
     assert(TM && "No TargetMachine!");
   }
-
-  StringRef getPassName() const override {
-    return "AMDGPU Remove Incompatible Functions";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {}
-
   /// Checks a single function, returns true if the function must be deleted.
   bool checkFunction(Function &F);
 
-  bool runOnModule(Module &M) override {
+  bool run(Module &M) {
     assert(TM->getTargetTriple().isAMDGCN());
 
     SmallVector<Function *, 4> FnsToDelete;
@@ -67,6 +58,28 @@ public:
     }
     return !FnsToDelete.empty();
   }
+
+private:
+  const TargetMachine *TM = nullptr;
+};
+
+class AMDGPURemoveIncompatibleFunctionsLegacy : public ModulePass {
+public:
+  static char ID;
+
+  AMDGPURemoveIncompatibleFunctionsLegacy(const TargetMachine *TM)
+      : ModulePass(ID), TM(TM) {}
+
+  bool runOnModule(Module &M) override {
+    AMDGPURemoveIncompatibleFunctions Pass(TM);
+    return Pass.run(M);
+  }
+
+  StringRef getPassName() const override {
+    return "AMDGPU Remove Incompatible Functions";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {}
 
 private:
   const TargetMachine *TM = nullptr;
@@ -132,6 +145,15 @@ void reportFunctionRemoved(Function &F, unsigned Feature) {
 }
 } // end anonymous namespace
 
+PreservedAnalyses
+AMDGPURemoveIncompatibleFunctionsPass::run(Module &M,
+                                           ModuleAnalysisManager &MAM) {
+  AMDGPURemoveIncompatibleFunctions Impl(TM);
+  if (Impl.run(M))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}
+
 bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   if (F.isDeclaration())
     return false;
@@ -183,12 +205,12 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   return false;
 }
 
-INITIALIZE_PASS(AMDGPURemoveIncompatibleFunctions, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPURemoveIncompatibleFunctionsLegacy, DEBUG_TYPE,
                 "AMDGPU Remove Incompatible Functions", false, false)
 
-char AMDGPURemoveIncompatibleFunctions::ID = 0;
+char AMDGPURemoveIncompatibleFunctionsLegacy::ID = 0;
 
 ModulePass *
 llvm::createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *TM) {
-  return new AMDGPURemoveIncompatibleFunctions(TM);
+  return new AMDGPURemoveIncompatibleFunctionsLegacy(TM);
 }

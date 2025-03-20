@@ -189,6 +189,8 @@ public:
 
   void Visit(const OMPClause *C);
 
+  void Visit(const OpenACCClause *C);
+
   void Visit(const BlockDecl::Capture &C);
 
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
@@ -211,6 +213,9 @@ public:
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
   void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
   void dumpConceptReference(const ConceptReference *R);
+  void dumpTemplateArgument(const TemplateArgument &TA);
+  void dumpBareTemplateName(TemplateName TN);
+  void dumpTemplateName(TemplateName TN, StringRef Label = {});
 
   void dumpDeclRef(const Decl *D, StringRef Label = {});
 
@@ -244,6 +249,7 @@ public:
   void VisitDeclarationTemplateArgument(const TemplateArgument &TA);
   void VisitNullPtrTemplateArgument(const TemplateArgument &TA);
   void VisitIntegralTemplateArgument(const TemplateArgument &TA);
+  void VisitStructuralValueTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateTemplateArgument(const TemplateArgument &TA);
   void VisitTemplateExpansionTemplateArgument(const TemplateArgument &TA);
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
@@ -352,6 +358,7 @@ public:
   void VisitEnumConstantDecl(const EnumConstantDecl *D);
   void VisitIndirectFieldDecl(const IndirectFieldDecl *D);
   void VisitFunctionDecl(const FunctionDecl *D);
+  void VisitCXXDeductionGuideDecl(const CXXDeductionGuideDecl *D);
   void VisitFieldDecl(const FieldDecl *D);
   void VisitVarDecl(const VarDecl *D);
   void VisitBindingDecl(const BindingDecl *D);
@@ -401,7 +408,27 @@ public:
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
   void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
+  void VisitHLSLOutArgExpr(const HLSLOutArgExpr *E);
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
+  void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S);
+  void VisitOpenACCCombinedConstruct(const OpenACCCombinedConstruct *S);
+  void VisitOpenACCDataConstruct(const OpenACCDataConstruct *S);
+  void VisitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct *S);
+  void VisitOpenACCExitDataConstruct(const OpenACCExitDataConstruct *S);
+  void VisitOpenACCHostDataConstruct(const OpenACCHostDataConstruct *S);
+  void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S);
+  void VisitOpenACCInitConstruct(const OpenACCInitConstruct *S);
+  void VisitOpenACCSetConstruct(const OpenACCSetConstruct *S);
+  void VisitOpenACCShutdownConstruct(const OpenACCShutdownConstruct *S);
+  void VisitOpenACCUpdateConstruct(const OpenACCUpdateConstruct *S);
+  void VisitOpenACCAtomicConstruct(const OpenACCAtomicConstruct *S);
+  void VisitOpenACCCacheConstruct(const OpenACCCacheConstruct *S);
+  void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
+  void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
+  void VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D);
+  void VisitEmbedExpr(const EmbedExpr *S);
+  void VisitAtomicExpr(const AtomicExpr *AE);
+  void VisitConvertVectorExpr(const ConvertVectorExpr *S);
 };
 
 } // namespace clang

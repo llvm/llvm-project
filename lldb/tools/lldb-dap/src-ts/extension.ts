@@ -1,46 +1,46 @@
 import * as vscode from "vscode";
-import { LLDBDapOptions } from "./types";
-import { DisposableContext } from "./disposable-context";
-import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
 
-/**
- * This creates the configurations for this project if used as a standalone
- * extension.
- */
-function createDefaultLLDBDapOptions(): LLDBDapOptions {
-  return {
-    debuggerType: "lldb-dap",
-    async createDapExecutableCommand(
-      session: vscode.DebugSession,
-      packageJSONExecutable: vscode.DebugAdapterExecutable | undefined,
-    ): Promise<vscode.DebugAdapterExecutable | undefined> {
-      const path = vscode.workspace
-        .getConfiguration("lldb-dap", session.workspaceFolder)
-        .get<string>("executable-path");
-      if (path) {
-        return new vscode.DebugAdapterExecutable(path, []);
-      }
-      return packageJSONExecutable;
-    },
-  };
-}
+import {
+  LLDBDapDescriptorFactory,
+  isExecutable,
+} from "./debug-adapter-factory";
+import { DisposableContext } from "./disposable-context";
+import { LaunchUriHandler } from "./uri-launch-handler";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
  * using it as as library should use this class as the main entry point.
  */
 export class LLDBDapExtension extends DisposableContext {
-  private lldbDapOptions: LLDBDapOptions;
-
-  constructor(lldbDapOptions: LLDBDapOptions) {
+  constructor() {
     super();
-    this.lldbDapOptions = lldbDapOptions;
-
+    const factory = new LLDBDapDescriptorFactory();
+    this.pushSubscription(factory);
     this.pushSubscription(
       vscode.debug.registerDebugAdapterDescriptorFactory(
-        this.lldbDapOptions.debuggerType,
-        new LLDBDapDescriptorFactory(this.lldbDapOptions),
-      ),
+        "lldb-dap",
+        factory,
+      )
+    );
+    this.pushSubscription(
+      vscode.workspace.onDidChangeConfiguration(async (event) => {
+        if (event.affectsConfiguration("lldb-dap.executable-path")) {
+          const dapPath = vscode.workspace
+            .getConfiguration("lldb-dap")
+            .get<string>("executable-path");
+
+          if (dapPath) {
+            if (await isExecutable(dapPath)) {
+              return;
+            }
+          }
+          LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath || "");
+        }
+      }),
+    );
+
+    this.pushSubscription(
+      vscode.window.registerUriHandler(new LaunchUriHandler())
     );
   }
 }
@@ -49,7 +49,5 @@ export class LLDBDapExtension extends DisposableContext {
  * This is the entry point when initialized by VS Code.
  */
 export function activate(context: vscode.ExtensionContext) {
-  context.subscriptions.push(
-    new LLDBDapExtension(createDefaultLLDBDapOptions()),
-  );
+  context.subscriptions.push(new LLDBDapExtension());
 }

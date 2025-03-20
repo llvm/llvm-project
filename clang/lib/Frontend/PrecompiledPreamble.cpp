@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -290,12 +291,10 @@ private:
 
 class PrecompilePreambleConsumer : public PCHGenerator {
 public:
-  PrecompilePreambleConsumer(PrecompilePreambleAction &Action,
-                             const Preprocessor &PP,
-                             InMemoryModuleCache &ModuleCache,
-                             StringRef isysroot,
+  PrecompilePreambleConsumer(PrecompilePreambleAction &Action, Preprocessor &PP,
+                             ModuleCache &ModCache, StringRef isysroot,
                              std::shared_ptr<PCHBuffer> Buffer)
-      : PCHGenerator(PP, ModuleCache, "", isysroot, std::move(Buffer),
+      : PCHGenerator(PP, ModCache, "", isysroot, std::move(Buffer),
                      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Action(Action) {}
@@ -479,7 +478,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   // Clear out old caches and data.
   Diagnostics.Reset();
-  ProcessWarningOptions(Diagnostics, Clang->getDiagnosticOpts());
+  ProcessWarningOptions(Diagnostics, Clang->getDiagnosticOpts(), *VFS);
 
   VFS =
       createVFSFromCompilerInvocation(Clang->getInvocation(), Diagnostics, VFS);

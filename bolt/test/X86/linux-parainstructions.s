@@ -8,7 +8,7 @@
 
 ## Verify paravirtual bindings to instructions.
 
-# RUN: llvm-bolt %t.exe --print-normalized -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-normalized -o %t.out --keep-nops=0 | FileCheck %s
 
 # CHECK:      BOLT-INFO: Linux kernel binary detected
 # CHECK:      BOLT-INFO: parsed 2 paravirtual patch sites
@@ -48,6 +48,15 @@ _start:
   .quad .L2      # instruction
   .byte 1        # type
   .byte 7        # length
+
+## Linux kernel version
+  .rodata
+  .align 16
+  .globl linux_banner
+  .type  linux_banner, @object
+linux_banner:
+  .string  "Linux version 6.6.61\n"
+  .size  linux_banner, . - linux_banner
 
 ## Fake Linux Kernel sections.
   .section __ksymtab,"a",@progbits

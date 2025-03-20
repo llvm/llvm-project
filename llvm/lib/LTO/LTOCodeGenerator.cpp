@@ -20,7 +20,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/ParallelCG.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/Constants.h"
@@ -110,21 +109,20 @@ cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-cl::opt<std::string> LTOStatsFile(
-    "lto-stats-file",
-    cl::desc("Save statistics to the specified file"),
-    cl::Hidden);
+static cl::opt<std::string>
+    LTOStatsFile("lto-stats-file",
+                 cl::desc("Save statistics to the specified file"), cl::Hidden);
 
-cl::opt<std::string> AIXSystemAssemblerPath(
+static cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-cl::opt<bool>
+static cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-cl::opt<std::string>
+static cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
 } // namespace llvm
@@ -137,10 +135,6 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
 
   Config.CodeModel = std::nullopt;
   Config.StatsFile = LTOStatsFile;
-  Config.PreCodeGenPassesHook = [](legacy::PassManager &PM) {
-    PM.add(createObjCARCContractPass());
-  };
-
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
 }
@@ -389,12 +383,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple();
+  TripleStr = MergedModule->getTargetTriple().str();
+  llvm::Triple Triple(TripleStr);
   if (TripleStr.empty()) {
     TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(TripleStr);
+    MergedModule->setTargetTriple(Triple);
   }
-  llvm::Triple Triple(TripleStr);
 
   // create target machine from info for merged modules
   std::string ErrMsg;
@@ -426,8 +420,8 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
-      std::nullopt, Config.CGOptLevel));
+      Triple(TripleStr), Config.CPU, FeatureStr, Config.Options,
+      Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make
@@ -571,6 +565,9 @@ void LTOCodeGenerator::finishOptimizationRemarks() {
 bool LTOCodeGenerator::optimize() {
   if (!this->determineTarget())
     return false;
+
+  // libLTO parses options late, so re-set them here.
+  Context.setDiscardValueNames(LTODiscardValueNames);
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,

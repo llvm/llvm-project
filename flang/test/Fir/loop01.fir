@@ -1,4 +1,7 @@
 // RUN: fir-opt --split-input-file --cfg-conversion %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cfg-conversion="set-nsw=false" %s | FileCheck %s --check-prefix=NO-NSW
+
+// NO-NSW-NOT: overflow<nsw>
 
 func.func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {
   fir.do_loop %iv = %lb to %ub step %step unordered {
@@ -34,7 +37,7 @@ func.func private @f2() -> i1
 // CHECK:       fir.store %[[VAL_12]] to %[[VAL_4]] : !fir.ref<index>
 // CHECK:       br ^bb5
 // CHECK:     ^bb5:
-// CHECK:       %[[VAL_13:.*]] = arith.addi %[[VAL_8]], %[[VAL_2]] : index
+// CHECK:       %[[VAL_13:.*]] = arith.addi %[[VAL_8]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:       %[[VAL_14:.*]] = arith.constant 1 : index
 // CHECK:       %[[VAL_15:.*]] = arith.subi %[[VAL_9]], %[[VAL_14]] : index
 // CHECK:       br ^bb1(%[[VAL_13]], %[[VAL_15]] : index, index)
@@ -72,7 +75,7 @@ func.func private @f3(i16)
 // CHECK:     cond_br %[[VAL_14]], ^bb2, ^bb3
 // CHECK:   ^bb2:
 // CHECK:     %[[VAL_15:.*]] = fir.call @f2() : () -> i1
-// CHECK:     %[[VAL_16:.*]] = arith.addi %[[VAL_4]], %[[VAL_3]] : index
+// CHECK:     %[[VAL_16:.*]] = arith.addi %[[VAL_4]], %[[VAL_3]] overflow<nsw> : index
 // CHECK:     br ^bb1(%[[VAL_16]], %[[VAL_15]] : index, i1)
 // CHECK:   ^bb3:
 // CHECK:     return
@@ -107,7 +110,7 @@ func.func @x3(%lo : index, %up : index) -> i1 {
 // CHECK:           cond_br %[[VAL_11]], ^bb2, ^bb3
 // CHECK:         ^bb2:
 // CHECK:           %[[VAL_12:.*]] = fir.call @f2() : () -> i1
-// CHECK:           %[[VAL_13:.*]] = arith.addi %[[VAL_7]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_13:.*]] = arith.addi %[[VAL_7]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_15:.*]] = arith.subi %[[VAL_9]], %[[VAL_14]] : index
 // CHECK:           br ^bb1(%[[VAL_13]], %[[VAL_12]], %[[VAL_15]] : index, i1, index)
@@ -152,7 +155,7 @@ func.func private @f4(i32) -> i1
 // CHECK:           cond_br %[[VAL_16]], ^bb2, ^bb3
 // CHECK:         ^bb2:
 // CHECK:           %[[VAL_17:.*]] = fir.call @f2() : () -> i1
-// CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_18:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           br ^bb1(%[[VAL_18]], %[[VAL_6]], %[[VAL_17]] : index, i1, i1)
 // CHECK:         ^bb3:
 // CHECK:           %[[VAL_19:.*]] = arith.andi %[[VAL_6]], %[[VAL_7]] : i1
@@ -188,7 +191,7 @@ func.func @x4(%lo : index, %up : index) -> index {
 // CHECK:         ^bb2:
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_6]] : (index) -> i32
 // CHECK:           %[[VAL_11:.*]] = fir.call @f4(%[[VAL_10]]) : (i32) -> i1
-// CHECK:           %[[VAL_12:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_12:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_14:.*]] = arith.subi %[[VAL_7]], %[[VAL_13]] : index
 // CHECK:           br ^bb1(%[[VAL_12]], %[[VAL_14]] : index, index)
@@ -230,7 +233,7 @@ func.func @y4(%lo : index, %up : index) -> index {
 // CHECK:         ^bb2:
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_4]] : (index) -> i32
 // CHECK:           %[[VAL_16:.*]] = fir.call @f4(%[[VAL_15]]) : (i32) -> i1
-// CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_4]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_17:.*]] = arith.addi %[[VAL_4]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           br ^bb1(%[[VAL_17]], %[[VAL_16]] : index, i1)
 // CHECK:         ^bb3:
 // CHECK:           return %[[VAL_4]] : index
@@ -268,7 +271,7 @@ func.func @x5(%lo : index, %up : index) -> index {
 // CHECK:         ^bb2:
 // CHECK:           %[[VAL_12:.*]] = fir.call @f2() : () -> i1
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i1) -> i16
-// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_7]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_14:.*]] = arith.addi %[[VAL_7]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_16:.*]] = arith.subi %[[VAL_9]], %[[VAL_15]] : index
 // CHECK:           br ^bb1(%[[VAL_14]], %[[VAL_13]], %[[VAL_16]] : index, i16, index)
@@ -319,7 +322,7 @@ func.func @y5(%lo : index, %up : index) -> index {
 // CHECK:         ^bb2:
 // CHECK:           %[[VAL_17:.*]] = fir.call @f2() : () -> i1
 // CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i1) -> i16
-// CHECK:           %[[VAL_19:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] : index
+// CHECK:           %[[VAL_19:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] overflow<nsw> : index
 // CHECK:           br ^bb1(%[[VAL_19]], %[[VAL_17]], %[[VAL_18]] : index, i1, i16)
 // CHECK:         ^bb3:
 // CHECK:           cond_br %[[VAL_6]], ^bb4, ^bb5

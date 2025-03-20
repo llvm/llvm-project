@@ -88,8 +88,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned DSP : 1;
   LLVM_PREFERRED_TYPE(bool)
-  unsigned Unaligned : 1;
-  LLVM_PREFERRED_TYPE(bool)
   unsigned DotProd : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasMatMul : 1;
@@ -157,6 +155,7 @@ public:
   bool isBranchProtectionSupportedArch(StringRef Arch) const override;
   bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                 BranchProtectionInfo &BPI,
+                                const LangOptions &LO,
                                 StringRef &Err) const override;
 
   // FIXME: This should be based on Arch attributes, not CPU names.
@@ -198,7 +197,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
@@ -227,6 +226,10 @@ public:
   bool hasBitIntType() const override { return true; }
 
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(64, 64);
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {
@@ -298,6 +301,17 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY AppleMachOARMTargetInfo
+    : public AppleMachOTargetInfo<ARMleTargetInfo> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+
+public:
+  AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
+};
+
 class LLVM_LIBRARY_VISIBILITY DarwinARMTargetInfo
     : public DarwinTargetInfo<ARMleTargetInfo> {
 protected:
@@ -306,17 +320,6 @@ protected:
 
 public:
   DarwinARMTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-};
-
-// 32-bit RenderScript is armv7 with width and align of 'long' set to 8-bytes
-class LLVM_LIBRARY_VISIBILITY RenderScript32TargetInfo
-    : public ARMleTargetInfo {
-public:
-  RenderScript32TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

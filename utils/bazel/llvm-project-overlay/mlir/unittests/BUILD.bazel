@@ -16,7 +16,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Debug/*.cpp",
-        "Debug/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -35,11 +34,11 @@ cc_test(
     size = "small",
     srcs = glob([
         "IR/*.cpp",
-        "IR/*.h",
     ]),
     deps = [
         "//llvm:Support",
         "//mlir:BytecodeReader",
+        "//mlir:CallOpInterfaces",
         "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:Parser",
@@ -56,7 +55,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Interfaces/*.cpp",
-        "Interfaces/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -81,7 +79,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Support/*.cpp",
-        "Support/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -97,7 +94,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Pass/*.cpp",
-        "Pass/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -117,7 +113,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Rewrite/*.cpp",
-        "Rewrite/*.h",
     ]),
     deps = [
         "//mlir:IR",
@@ -133,7 +128,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/*.cpp",
-        "Dialect/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -144,11 +138,23 @@ cc_test(
 )
 
 cc_test(
+    name = "amdgpu_tests",
+    size = "small",
+    srcs = glob([
+        "Dialect/AMDGPU/*.cpp",
+    ]),
+    deps = [
+        "//mlir:AMDGPUUtils",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
     name = "memref_tests",
     size = "small",
     srcs = glob([
         "Dialect/MemRef/*.cpp",
-        "Dialect/MemRef/*.h",
     ]),
     deps = [
         "//llvm:TestingSupport",
@@ -161,26 +167,10 @@ cc_test(
 )
 
 cc_test(
-    name = "quantops_tests",
-    size = "small",
-    srcs = glob([
-        "Dialect/Quant/*.cpp",
-        "Dialect/Quant/*.h",
-    ]),
-    deps = [
-        "//llvm:TestingSupport",
-        "//mlir:QuantOps",
-        "//mlir:Transforms",
-        "//third-party/unittest:gtest_main",
-    ],
-)
-
-cc_test(
     name = "scf_tests",
     size = "small",
     srcs = glob([
         "Dialect/SCF/*.cpp",
-        "Dialect/SCF/*.h",
     ]),
     deps = [
         "//mlir:ArithDialect",
@@ -199,7 +189,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/SparseTensor/*.cpp",
-        "Dialect/SparseTensor/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -217,7 +206,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/SPIRV/*.cpp",
-        "Dialect/SPIRV/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -237,7 +225,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/Transform/*.cpp",
-        "Dialect/Transform/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -263,7 +250,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Dialect/Utils/*.cpp",
-        "Dialect/Utils/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -316,7 +302,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "TableGen/*.cpp",
-        "TableGen/*.h",
     ]) + [
         "TableGen/EnumsGenTest.cpp.inc",
         "TableGen/EnumsGenTest.h.inc",
@@ -342,7 +327,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Transforms/*.cpp",
-        "Transforms/*.h",
     ]),
     deps = [
         "//mlir:AffineAnalysis",
@@ -362,8 +346,6 @@ cc_test(
     name = "analysis_tests",
     size = "small",
     srcs = glob([
-        "Analysis/*.cpp",
-        "Analysis/*.h",
         "Analysis/*/*.cpp",
         "Analysis/*/*.h",
     ]),
@@ -386,9 +368,6 @@ cc_test(
     size = "small",
     srcs = glob([
         "Bytecode/*.cpp",
-        "Bytecode/*.h",
-        "Bytecode/*/*.cpp",
-        "Bytecode/*/*.h",
     ]),
     deps = [
         "//llvm:Support",
@@ -407,10 +386,7 @@ cc_test(
     name = "conversion_tests",
     size = "small",
     srcs = glob([
-        "Conversion/*.cpp",
-        "Conversion/*.h",
         "Conversion/*/*.cpp",
-        "Conversion/*/*.h",
     ]),
     deps = [
         "//mlir:ArithDialect",

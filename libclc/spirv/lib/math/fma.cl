@@ -1,11 +1,5 @@
 #include <clc/clc.h>
-#include <math/clc_fma.h>
+#include <clc/clcmacro.h>
+#include <clc/internal/math/clc_sw_fma.h>
 
-#define __CLC_BODY <fma.inc>
-#define __FLOAT_ONLY
-#include <clc/math/gentype.inc>
-
-bool __clc_runtime_has_hw_fma32()
-{
-    return false;
-}
+_CLC_DEFINE_TERNARY_BUILTIN(float, fma, __clc_sw_fma, float, float, float)

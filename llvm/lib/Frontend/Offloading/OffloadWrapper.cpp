@@ -50,7 +50,7 @@ StructType *getDeviceImageTy(Module &M) {
 }
 
 PointerType *getDeviceImagePtrTy(Module &M) {
-  return PointerType::getUnqual(getDeviceImageTy(M));
+  return PointerType::getUnqual(M.getContext());
 }
 
 // struct __tgt_bin_desc {
@@ -70,7 +70,7 @@ StructType *getBinDescTy(Module &M) {
 }
 
 PointerType *getBinDescPtrTy(Module &M) {
-  return PointerType::getUnqual(getBinDescTy(M));
+  return PointerType::getUnqual(M.getContext());
 }
 
 /// Creates binary descriptor for the given device images. Binary descriptor
@@ -181,41 +181,13 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
       ConstantInt::get(Type::getInt32Ty(C), ImagesInits.size()), ImagesB,
       EntriesB, EntriesE);
 
-  return new GlobalVariable(M, DescInit->getType(), /*isConstant*/ true,
+  return new GlobalVariable(M, DescInit->getType(), /*isConstant=*/true,
                             GlobalValue::InternalLinkage, DescInit,
                             ".omp_offloading.descriptor" + Suffix);
 }
 
-void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
-                            StringRef Suffix) {
-  LLVMContext &C = M.getContext();
-  auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
-  auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
-                                ".omp_offloading.descriptor_reg" + Suffix, &M);
-  Func->setSection(".text.startup");
-
-  // Get __tgt_register_lib function declaration.
-  auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
-                                      /*isVarArg*/ false);
-  FunctionCallee RegFuncC =
-      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
-
-  // Construct function body
-  IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
-  Builder.CreateCall(RegFuncC, BinDesc);
-  Builder.CreateRetVoid();
-
-  // Add this function to constructors.
-  // Set priority to 1 so that __tgt_register_lib is executed AFTER
-  // __tgt_register_requires (we want to know what requirements have been
-  // asked for before we load a libomptarget plugin so that by the time the
-  // plugin is loaded it can report how many devices there are which can
-  // satisfy these requirements).
-  appendToGlobalCtors(M, Func, /*Priority*/ 1);
-}
-
-void createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
-                              StringRef Suffix) {
+Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
+                                   StringRef Suffix) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func =
@@ -234,9 +206,43 @@ void createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
   Builder.CreateCall(UnRegFuncC, BinDesc);
   Builder.CreateRetVoid();
 
-  // Add this function to global destructors.
-  // Match priority of __tgt_register_lib
-  appendToGlobalDtors(M, Func, /*Priority*/ 1);
+  return Func;
+}
+
+void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
+                            StringRef Suffix) {
+  LLVMContext &C = M.getContext();
+  auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
+  auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
+                                ".omp_offloading.descriptor_reg" + Suffix, &M);
+  Func->setSection(".text.startup");
+
+  // Get __tgt_register_lib function declaration.
+  auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
+                                      /*isVarArg*/ false);
+  FunctionCallee RegFuncC =
+      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
+
+  auto *AtExitTy = FunctionType::get(
+      Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
+  FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
+
+  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix);
+
+  // Construct function body
+  IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
+
+  Builder.CreateCall(RegFuncC, BinDesc);
+
+  // Register the destructors with 'atexit'. This is expected by the CUDA
+  // runtime and ensures that we clean up before dynamic objects are destroyed.
+  // This needs to be done after plugin initialization to ensure that it is
+  // called before the plugin runtime is destroyed.
+  Builder.CreateCall(AtExit, UnregFunc);
+  Builder.CreateRetVoid();
+
+  // Add this function to constructors.
+  appendToGlobalCtors(M, Func, /*Priority=*/101);
 }
 
 // struct fatbin_wrapper {
@@ -261,7 +267,7 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
                                  StringRef Suffix) {
   LLVMContext &C = M.getContext();
   llvm::Type *Int8PtrTy = PointerType::getUnqual(C);
-  llvm::Triple Triple = llvm::Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   // Create the global string containing the fatbinary.
   StringRef FatbinConstantSection =
@@ -311,7 +317,10 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
 /// void __cudaRegisterTest(void **fatbinHandle) {
 ///   for (struct __tgt_offload_entry *entry = &__start_cuda_offloading_entries;
 ///        entry != &__stop_cuda_offloading_entries; ++entry) {
-///     if (!entry->size)
+///     if (entry->Kind != OFK_CUDA)
+///       continue
+///
+///     if (!entry->Size)
 ///       __cudaRegisterFunction(fatbinHandle, entry->addr, entry->name,
 ///                              entry->name, -1, 0, 0, 0, 0, 0);
 ///     else
@@ -348,6 +357,16 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
       IsHIP ? "__hipRegisterVar" : "__cudaRegisterVar", RegVarTy);
 
   // Get the __cudaRegisterSurface function declaration.
+  FunctionType *RegManagedVarTy =
+      FunctionType::get(Type::getVoidTy(C),
+                        {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
+                         getSizeTTy(M), Type::getInt32Ty(C)},
+                        /*isVarArg=*/false);
+  FunctionCallee RegManagedVar = M.getOrInsertFunction(
+      IsHIP ? "__hipRegisterManagedVar" : "__cudaRegisterManagedVar",
+      RegManagedVarTy);
+
+  // Get the __cudaRegisterSurface function declaration.
   FunctionType *RegSurfaceTy =
       FunctionType::get(Type::getVoidTy(C),
                         {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
@@ -375,6 +394,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   // Create the loop to register all the entries.
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", RegGlobalsFn));
   auto *EntryBB = BasicBlock::Create(C, "while.entry", RegGlobalsFn);
+  auto *IfKindBB = BasicBlock::Create(C, "if.kind", RegGlobalsFn);
   auto *IfThenBB = BasicBlock::Create(C, "if.then", RegGlobalsFn);
   auto *IfElseBB = BasicBlock::Create(C, "if.else", RegGlobalsFn);
   auto *SwGlobalBB = BasicBlock::Create(C, "sw.global", RegGlobalsFn);
@@ -390,30 +410,42 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   auto *Entry = Builder.CreatePHI(PointerType::getUnqual(C), 2, "entry");
   auto *AddrPtr =
       Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
-                                {ConstantInt::get(getSizeTTy(M), 0),
-                                 ConstantInt::get(Type::getInt32Ty(C), 0)});
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 4)});
   auto *Addr = Builder.CreateLoad(Int8PtrTy, AddrPtr, "addr");
+  auto *AuxAddrPtr =
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 8)});
+  auto *AuxAddr = Builder.CreateLoad(Int8PtrTy, AuxAddrPtr, "aux_addr");
+  auto *KindPtr =
+      Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 2)});
+  auto *Kind = Builder.CreateLoad(Type::getInt16Ty(C), KindPtr, "kind");
   auto *NamePtr =
       Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
-                                {ConstantInt::get(getSizeTTy(M), 0),
-                                 ConstantInt::get(Type::getInt32Ty(C), 1)});
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 5)});
   auto *Name = Builder.CreateLoad(Int8PtrTy, NamePtr, "name");
   auto *SizePtr =
       Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
-                                {ConstantInt::get(getSizeTTy(M), 0),
-                                 ConstantInt::get(Type::getInt32Ty(C), 2)});
-  auto *Size = Builder.CreateLoad(getSizeTTy(M), SizePtr, "size");
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 6)});
+  auto *Size = Builder.CreateLoad(Type::getInt64Ty(C), SizePtr, "size");
   auto *FlagsPtr =
       Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
-                                {ConstantInt::get(getSizeTTy(M), 0),
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
                                  ConstantInt::get(Type::getInt32Ty(C), 3)});
   auto *Flags = Builder.CreateLoad(Type::getInt32Ty(C), FlagsPtr, "flags");
   auto *DataPtr =
       Builder.CreateInBoundsGEP(offloading::getEntryTy(M), Entry,
-                                {ConstantInt::get(getSizeTTy(M), 0),
-                                 ConstantInt::get(Type::getInt32Ty(C), 4)});
-  auto *Data = Builder.CreateLoad(Type::getInt32Ty(C), DataPtr, "textype");
-  auto *Kind = Builder.CreateAnd(
+                                {ConstantInt::get(Type::getInt32Ty(C), 0),
+                                 ConstantInt::get(Type::getInt32Ty(C), 7)});
+  auto *Data = Builder.CreateTrunc(
+      Builder.CreateLoad(Type::getInt64Ty(C), DataPtr, "data"),
+      Type::getInt32Ty(C));
+  auto *Type = Builder.CreateAnd(
       Flags, ConstantInt::get(Type::getInt32Ty(C), 0x7), "type");
 
   // Extract the flags stored in the bit-field and convert them to C booleans.
@@ -432,8 +464,14 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
                               llvm::offloading::OffloadGlobalNormalized));
   auto *Normalized = Builder.CreateLShr(
       NormalizedBit, ConstantInt::get(Type::getInt32Ty(C), 5), "normalized");
-  auto *FnCond =
-      Builder.CreateICmpEQ(Size, ConstantInt::getNullValue(getSizeTTy(M)));
+  auto *KindCond = Builder.CreateICmpEQ(
+      Kind, ConstantInt::get(Type::getInt16Ty(C),
+                             IsHIP ? object::OffloadKind::OFK_HIP
+                                   : object::OffloadKind::OFK_Cuda));
+  Builder.CreateCondBr(KindCond, IfKindBB, IfEndBB);
+  Builder.SetInsertPoint(IfKindBB);
+  auto *FnCond = Builder.CreateICmpEQ(
+      Size, ConstantInt::getNullValue(Type::getInt64Ty(C)));
   Builder.CreateCondBr(FnCond, IfThenBB, IfElseBB);
 
   // Create kernel registration code.
@@ -448,7 +486,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   Builder.CreateBr(IfEndBB);
   Builder.SetInsertPoint(IfElseBB);
 
-  auto *Switch = Builder.CreateSwitch(Kind, IfEndBB);
+  auto *Switch = Builder.CreateSwitch(Type, IfEndBB);
   // Create global variable registration code.
   Builder.SetInsertPoint(SwGlobalBB);
   Builder.CreateCall(RegVar,
@@ -460,6 +498,8 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create managed variable registration code.
   Builder.SetInsertPoint(SwManagedBB);
+  Builder.CreateCall(RegManagedVar, {RegGlobalsFn->arg_begin(), AuxAddr, Addr,
+                                     Name, Size, Data});
   Builder.CreateBr(IfEndBB);
   Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalManagedEntry),
                   SwManagedBB);
@@ -569,7 +609,7 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 
   // Create the destructor to unregister the image with the runtime. We cannot
   // use a standard global destructor after CUDA 9.2 so this must be called by
-  // `atexit()` intead.
+  // `atexit()` instead.
   IRBuilder<> DtorBuilder(BasicBlock::Create(C, "entry", DtorFunc));
   LoadInst *BinaryHandle = DtorBuilder.CreateAlignedLoad(
       PtrTy, BinaryHandleGlobal,
@@ -578,7 +618,7 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
   DtorBuilder.CreateRetVoid();
 
   // Add this function to constructors.
-  appendToGlobalCtors(M, CtorFunc, /*Priority*/ 1);
+  appendToGlobalCtors(M, CtorFunc, /*Priority=*/101);
 }
 } // namespace
 
@@ -591,7 +631,6 @@ Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
   createRegisterFunction(M, Desc, Suffix);
-  createUnregisterFunction(M, Desc, Suffix);
   return Error::success();
 }
 

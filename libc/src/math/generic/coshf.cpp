@@ -10,14 +10,15 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   xbits.set_sign(Sign::POS);
   x = xbits.get_val();
@@ -52,4 +53,4 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   return static_cast<float>(exp_pm_eval</*is_sinh*/ false>(x));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -428,7 +428,7 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
-//       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (10, -d0 + s0)>
+//       CHECK: #[[MAP:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 10)>
 //       CHECK: func @matmul_sequence_fusion(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -542,3 +542,149 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-DAG:     %[[INSERTSLICE:.+]] = tensor.insert_slice %[[GENERIC2]] into %[[ITERARG0]][%[[IV]], 0]
 //       CHECK:     scf.yield %[[INSERTSLICE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @pad_producer_fusion(%arg0 : tensor<10xf32>) -> tensor<16xf32> {
+  %0 = tensor.empty() : tensor<10xf32>
+  %1 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<10xf32>) outs(%0 : tensor<10xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32):
+      %2 = arith.addf %b0, %b0: f32
+      linalg.yield %2 : f32
+  } -> tensor<10xf32>
+  %cst = arith.constant 0.0 : f32
+  %2 = tensor.pad %1 low[4] high[2] {
+    ^bb0(%arg1 : index):
+      tensor.yield %cst : f32
+  } : tensor<10xf32> to tensor<16xf32>
+  return %2 : tensor<16xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.structured.fuse %pad [8]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-LABEL: func @pad_producer_fusion
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<10xf32>
+//       CHECK:   %[[FOR_RESULT:.+]] = scf.for
+//       CHECK:     %[[IF_RESULT:.+]] = scf.if
+//       CHECK:     else
+//       CHECK:       %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:       %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:           ins(%[[SLICE]] :
+//       CHECK:       %[[PAD:.+]] = tensor.pad %[[GENERIC]]
+//       CHECK:       %[[CAST:.+]] = tensor.cast %[[PAD]]
+//       CHECK:       scf.yield %[[CAST]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[IF_RESULT]]
+//       CHECK:     scf.yield %[[INSERT_SLICE]]
+//       CHECK:   return %[[FOR_RESULT]]
+
+// -----
+
+func.func @imperfect_unpack_producer_fusion(%source: tensor<1x1x288x8x4xf32>, %dest: tensor<1x2x1152xf32>) -> tensor<1x2x1152xf32> {
+  %0 = linalg.unpack %source
+      outer_dims_perm = [0, 1, 2]
+      inner_dims_pos = [1, 2]
+      inner_tiles = [8, 4] into %dest
+      : tensor<1x1x288x8x4xf32> -> tensor<1x2x1152xf32>
+  %1 = tensor.empty() : tensor<1x2x1152xf32>
+  %cst = arith.constant 1.0 : f32
+  %2 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+                                        affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
+                       iterator_types = ["parallel", "parallel", "parallel"]}
+                       ins(%0 : tensor<1x2x1152xf32>)
+                       outs(%1 : tensor<1x2x1152xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %7 = arith.addf %in, %cst : f32
+    linalg.yield %7 : f32
+  } -> tensor<1x2x1152xf32>
+  return %2 : tensor<1x2x1152xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %b = transform.structured.fuse %matmul [0, 1, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func @imperfect_unpack_producer_fusion
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<1x1x288x8x4xf32>
+//  CHECK-SAME:     %[[ARG1:.+]]: tensor<1x2x1152xf32>
+//       CHECK:   %[[FOR_RESULT:.+]] = scf.for{{.*}}iter_args(%[[ITER_ARG:.+]] = {{.*}})
+//       CHECK:     %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//       CHECK:     %[[UNPACK:.+]] = linalg.unpack %[[SLICE]]
+//   CHECK-DAG:     %[[UNPACK_SLICE:.+]] = tensor.extract_slice %[[UNPACK]]
+//   CHECK-DAG:     %[[INIT_SLICE:.+]] = tensor.extract_slice %[[ITER_ARG]]
+//       CHECK:     %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:         ins(%[[UNPACK_SLICE]]
+//  CHECK-SAME:         outs(%[[INIT_SLICE]]
+//       CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[GENERIC]] into %[[ITER_ARG]]
+//       CHECK:     scf.yield %[[INSERT_SLICE]]
+//       CHECK:   return %[[FOR_RESULT]]
+
+// -----
+
+#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2, d1)>
+module {
+  func.func private @tile_one_consumer_using_tile_and_fuse(%arg0: tensor<16x128x48x96xf32>, %arg1: tensor<16x96x48x128xf32>) -> tensor<16x96x48x128xf32> {
+    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%arg0 : tensor<16x128x48x96xf32>) outs(%arg1 : tensor<16x96x48x128xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      linalg.yield %in : f32
+    } -> tensor<16x96x48x128xf32>
+    return %0 : tensor<16x96x48x128xf32>
+  }
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %loops:4 = transform.structured.fuse %generic {tile_sizes = [1, 16, 16, 16], tile_interchange = [0, 1, 2, 3], apply_cleanup = false}
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// CHECK:           func.func private @tile_one_consumer_using_tile_and_fuse(%[[VAL_0:.*]]: tensor<16x128x48x96xf32>, %[[VAL_1:.*]]: tensor<16x96x48x128xf32>) -> tensor<16x96x48x128xf32> {
+// CHECK:             %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:             %[[VAL_3:.*]] = arith.constant 16 : index
+// CHECK:             %[[VAL_4:.*]] = arith.constant 128 : index
+// CHECK:             %[[VAL_5:.*]] = arith.constant 48 : index
+// CHECK:             %[[VAL_6:.*]] = arith.constant 96 : index
+// CHECK:             %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK:             %[[VAL_8:.*]] = scf.for %[[VAL_9:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_7]] iter_args(%[[VAL_10:.*]] = %[[VAL_1]]) -> (tensor<16x96x48x128xf32>) {
+// CHECK:               %[[VAL_11:.*]] = scf.for %[[VAL_12:.*]] = %[[VAL_2]] to %[[VAL_4]] step %[[VAL_3]] iter_args(%[[VAL_13:.*]] = %[[VAL_10]]) -> (tensor<16x96x48x128xf32>) {
+// CHECK:                 %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_2]] to %[[VAL_5]] step %[[VAL_3]] iter_args(%[[VAL_16:.*]] = %[[VAL_13]]) -> (tensor<16x96x48x128xf32>) {
+// CHECK:                   %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_2]] to %[[VAL_6]] step %[[VAL_3]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (tensor<16x96x48x128xf32>) {
+// CHECK:                     %[[VAL_20:.*]] = tensor.extract_slice %[[VAL_0]]{{\[}}%[[VAL_9]], %[[VAL_12]], %[[VAL_15]], %[[VAL_18]]] [1, 16, 16, 16] [1, 1, 1, 1] : tensor<16x128x48x96xf32> to tensor<1x16x16x16xf32>
+// CHECK:                     %[[VAL_21:.*]] = tensor.extract_slice %[[VAL_19]]{{\[}}%[[VAL_9]], %[[VAL_18]], %[[VAL_15]], %[[VAL_12]]] [1, 16, 16, 16] [1, 1, 1, 1] : tensor<16x96x48x128xf32> to tensor<1x16x16x16xf32>
+// CHECK:                     %[[VAL_22:.*]] = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[VAL_20]] : tensor<1x16x16x16xf32>) outs(%[[VAL_21]] : tensor<1x16x16x16xf32>) {
+// CHECK:                     ^bb0(%[[VAL_23:.*]]: f32, %[[VAL_24:.*]]: f32):
+// CHECK:                       linalg.yield %[[VAL_23]] : f32
+// CHECK:                     } -> tensor<1x16x16x16xf32>
+// CHECK:                     %[[VAL_25:.*]] = tensor.insert_slice %[[VAL_26:.*]] into %[[VAL_19]]{{\[}}%[[VAL_9]], %[[VAL_18]], %[[VAL_15]], %[[VAL_12]]] [1, 16, 16, 16] [1, 1, 1, 1] : tensor<1x16x16x16xf32> into tensor<16x96x48x128xf32>
+// CHECK:                     scf.yield %[[VAL_25]] : tensor<16x96x48x128xf32>
+// CHECK:                   }
+// CHECK:                   scf.yield %[[VAL_27:.*]] : tensor<16x96x48x128xf32>
+// CHECK:                 }
+// CHECK:                 scf.yield %[[VAL_28:.*]] : tensor<16x96x48x128xf32>
+// CHECK:               }
+// CHECK:               scf.yield %[[VAL_29:.*]] : tensor<16x96x48x128xf32>
+// CHECK:             }
+// CHECK:             return %[[VAL_30:.*]] : tensor<16x96x48x128xf32>
+// CHECK:           }
+// CHECK:         }
+

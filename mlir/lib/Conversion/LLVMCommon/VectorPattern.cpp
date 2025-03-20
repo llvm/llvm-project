@@ -87,7 +87,7 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
   auto result1DVectorTy = resultTypeInfo.llvm1DVectorTy;
   auto resultNDVectoryTy = resultTypeInfo.llvmNDVectorTy;
   auto loc = op->getLoc();
-  Value desc = rewriter.create<LLVM::UndefOp>(loc, resultNDVectoryTy);
+  Value desc = rewriter.create<LLVM::PoisonOp>(loc, resultNDVectoryTy);
   nDVectorIterate(resultTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
@@ -103,12 +103,11 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
   return success();
 }
 
-LogicalResult
-LLVM::detail::vectorOneToOneRewrite(Operation *op, StringRef targetOp,
-                                    ValueRange operands,
-                                    ArrayRef<NamedAttribute> targetAttrs,
-                                    const LLVMTypeConverter &typeConverter,
-                                    ConversionPatternRewriter &rewriter) {
+LogicalResult LLVM::detail::vectorOneToOneRewrite(
+    Operation *op, StringRef targetOp, ValueRange operands,
+    ArrayRef<NamedAttribute> targetAttrs,
+    const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
+    IntegerOverflowFlags overflowFlags) {
   assert(!operands.empty());
 
   // Cannot convert ops if their operands are not of LLVM type.
@@ -118,14 +117,15 @@ LLVM::detail::vectorOneToOneRewrite(Operation *op, StringRef targetOp,
   auto llvmNDVectorTy = operands[0].getType();
   if (!isa<LLVM::LLVMArrayType>(llvmNDVectorTy))
     return oneToOneRewrite(op, targetOp, operands, targetAttrs, typeConverter,
-                           rewriter);
+                           rewriter, overflowFlags);
 
-  auto callback = [op, targetOp, targetAttrs, &rewriter](Type llvm1DVectorTy,
-                                                         ValueRange operands) {
-    return rewriter
-        .create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                llvm1DVectorTy, targetAttrs)
-        ->getResult(0);
+  auto callback = [op, targetOp, targetAttrs, overflowFlags,
+                   &rewriter](Type llvm1DVectorTy, ValueRange operands) {
+    Operation *newOp =
+        rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp),
+                        operands, llvm1DVectorTy, targetAttrs);
+    LLVM::detail::setNativeProperties(newOp, overflowFlags);
+    return newOp->getResult(0);
   };
 
   return handleMultidimensionalVectors(op, operands, typeConverter, callback,

@@ -37,6 +37,7 @@ if (current_toolchain != host_toolchain) {
       ":lit_site_cfg",
       "//compiler-rt/include($host_toolchain)",
       "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
+      "//compiler-rt/lib/hwasan:hwasan_preinit",
       "//compiler-rt/lib/hwasan:hwasan_shared",
       "//compiler-rt/test:lit_common_configured",
       "//llvm/utils/FileCheck($host_toolchain)",

@@ -58,6 +58,7 @@ add_mlir_library(MLIRFunctionInterfaces
   MLIRFunctionInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRCallInterfaces
   MLIRIR
 )
 
@@ -101,7 +102,20 @@ add_mlir_library(MLIRSubsetOpInterface
   MLIRValueBoundsOpInterface
   )
 
-add_mlir_interface_library(TilingInterface)
+add_mlir_library(MLIRTilingInterface
+  TilingInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRTilingInterfaceIncGen
+  MLIRDialectUtils
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+)
+
 add_mlir_interface_library(VectorInterfaces)
 add_mlir_interface_library(ViewLikeInterface)
 

@@ -265,12 +265,12 @@ gpu.module @test_module {
 
 // CHECK-LABEL: func @gpu_wmma_constant_op
 //       CHECK: %[[CST:.+]] = llvm.mlir.constant(1.000000e+00 : f16) : f16
-//       CHECK: %[[V0:.+]] = llvm.mlir.undef : vector<2xf16>
+//       CHECK: %[[V0:.+]] = llvm.mlir.poison : vector<2xf16>
 //       CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i32) : i32
 //       CHECK: %[[V1:.+]] = llvm.insertelement %[[CST]], %[[V0]][%[[C0]] : i32] : vector<2xf16>
 //       CHECK: %[[C1:.+]] = llvm.mlir.constant(1 : i32) : i32
 //       CHECK: %[[V2:.+]] = llvm.insertelement %[[CST]], %[[V1]][%[[C1]] : i32] : vector<2xf16>
-//       CHECK: %[[M0:.+]] = llvm.mlir.undef : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK: %[[M0:.+]] = llvm.mlir.poison : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[M1:.+]] = llvm.insertvalue %[[V2]], %[[M0]][0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[M2:.+]] = llvm.insertvalue %[[V2]], %[[M1]][1] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[M3:.+]] = llvm.insertvalue %[[V2]], %[[M2]][2] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
@@ -288,7 +288,7 @@ gpu.module @test_module {
 gpu.module @test_module {
 
 // CHECK-LABEL: func @gpu_wmma_elementwise
-//       CHECK: %[[M0:.*]] = llvm.mlir.undef : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK: %[[M0:.*]] = llvm.mlir.poison : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[A0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[B0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[C0:.*]] = llvm.fadd %[[A0]], %[[B0]]  : vector<2xf16>
@@ -306,7 +306,7 @@ gpu.module @test_module {
 //       CHECK: %[[C3:.*]] = llvm.fadd %[[A3]], %[[B3]]  : vector<2xf16>
 //       CHECK: %[[M4:.*]] = llvm.insertvalue %[[C3]], %[[M3]][3] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 
-//       CHECK: %[[M0:.*]] = llvm.mlir.undef : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK: %[[M0:.*]] = llvm.mlir.poison : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[A0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[B0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
 //       CHECK: %[[CMP0:.*]] = llvm.fcmp "ogt" %[[A0]], %[[B0]] : vector<2xf16>

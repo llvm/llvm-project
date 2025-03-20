@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -pre-RA-sched=source < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -pre-RA-sched=source < %s | FileCheck %s
 
 ; All test functions do the same thing - they return the first variable
 ; argument.

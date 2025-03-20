@@ -16,12 +16,17 @@
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()
 
 namespace Fortran::evaluate {
+
+FoldingContext &GetFoldingContextFrom(const Symbol &symbol) {
+  return symbol.owner().context().foldingContext();
+}
 
 bool IsImpliedShape(const Symbol &original) {
   const Symbol &symbol{ResolveAssociations(original)};
@@ -254,7 +259,8 @@ public:
       if (dimension_ < rank) {
         const semantics::ShapeSpec &shapeSpec{object->shape()[dimension_]};
         if (shapeSpec.lbound().isExplicit()) {
-          if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
+          if (const auto &lbound{shapeSpec.lbound().GetExplicit()};
+              lbound && lbound->Rank() == 0) {
             if constexpr (LBOUND_SEMANTICS) {
               bool ok{false};
               auto lbValue{ToInt64(*lbound)};
@@ -266,7 +272,8 @@ public:
               } else if (lbValue.value_or(0) == 1) {
                 // Lower bound is 1, regardless of extent
                 ok = true;
-              } else if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
+              } else if (const auto &ubound{shapeSpec.ubound().GetExplicit()};
+                  ubound && ubound->Rank() == 0) {
                 // If we can't prove that the dimension is nonempty,
                 // we must be conservative.
                 // TODO: simple symbolic math in expression rewriting to
@@ -459,7 +466,7 @@ static MaybeExtentExpr GetNonNegativeExtent(
     } else {
       return ExtentExpr{*uval - *lval + 1};
     }
-  } else if (lbound && ubound &&
+  } else if (lbound && ubound && lbound->Rank() == 0 && ubound->Rank() == 0 &&
       (!invariantOnly ||
           (IsScopeInvariantExpr(*lbound) && IsScopeInvariantExpr(*ubound)))) {
     // Apply effective IDIM (MAX calculation with 0) so thet the
@@ -481,7 +488,7 @@ static MaybeExtentExpr GetAssociatedExtent(
     const Symbol &symbol, int dimension) {
   if (const auto *assoc{symbol.detailsIf<semantics::AssocEntityDetails>()};
       assoc && !assoc->rank()) { // not SELECT RANK case
-    if (auto shape{GetShape(assoc->expr())};
+    if (auto shape{GetShape(GetFoldingContextFrom(symbol), assoc->expr())};
         shape && dimension < static_cast<int>(shape->size())) {
       if (auto &extent{shape->at(dimension)};
           // Don't return a non-constant extent, as the variables that
@@ -517,7 +524,8 @@ MaybeExtentExpr GetExtent(
   }
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (IsImpliedShape(symbol) && details->init()) {
-      if (auto shape{GetShape(symbol, invariantOnly)}) {
+      if (auto shape{
+              GetShape(GetFoldingContextFrom(symbol), symbol, invariantOnly)}) {
         if (dimension < static_cast<int>(shape->size())) {
           return std::move(shape->at(dimension));
         }
@@ -566,13 +574,14 @@ MaybeExtentExpr GetExtent(const Subscript &subscript, const NamedEntity &base,
                 MaybeExtentExpr{triplet.stride()});
           },
           [&](const IndirectSubscriptIntegerExpr &subs) -> MaybeExtentExpr {
-            if (auto shape{GetShape(subs.value())}) {
-              if (GetRank(*shape) > 0) {
-                CHECK(GetRank(*shape) == 1); // vector-valued subscript
-                return std::move(shape->at(0));
-              }
+            if (auto shape{GetShape(
+                    GetFoldingContextFrom(base.GetLastSymbol()), subs.value())};
+                shape && GetRank(*shape) == 1) {
+              // vector-valued subscript
+              return std::move(shape->at(0));
+            } else {
+              return std::nullopt;
             }
-            return std::nullopt;
           },
       },
       subscript.u);
@@ -608,7 +617,8 @@ MaybeExtentExpr GetRawUpperBound(
     int rank{details->shape().Rank()};
     if (dimension < rank) {
       const auto &bound{details->shape()[dimension].ubound().GetExplicit()};
-      if (bound && (!invariantOnly || IsScopeInvariantExpr(*bound))) {
+      if (bound && bound->Rank() == 0 &&
+          (!invariantOnly || IsScopeInvariantExpr(*bound))) {
         return *bound;
       } else if (semantics::IsAssumedSizeArray(symbol) &&
           dimension + 1 == symbol.Rank()) {
@@ -640,7 +650,8 @@ MaybeExtentExpr GetRawUpperBound(FoldingContext &context,
 static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
     const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
-  if (ubound && (!invariantOnly || IsScopeInvariantExpr(*ubound))) {
+  if (ubound && ubound->Rank() == 0 &&
+      (!invariantOnly || IsScopeInvariantExpr(*ubound))) {
     if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
       if (auto cstExtent{ToInt64(
               context ? Fold(*context, std::move(*extent)) : *extent)}) {
@@ -723,6 +734,60 @@ Shape GetUBOUNDs(const NamedEntity &base, bool invariantOnly) {
   return GetUBOUNDs(nullptr, base, invariantOnly);
 }
 
+MaybeExtentExpr GetLCOBOUND(
+    const Symbol &symbol0, int dimension, bool invariantOnly) {
+  const Symbol &symbol{ResolveAssociations(symbol0)};
+  if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+    int corank{object->coshape().Rank()};
+    if (dimension < corank) {
+      const semantics::ShapeSpec &shapeSpec{object->coshape()[dimension]};
+      if (const auto &lcobound{shapeSpec.lbound().GetExplicit()}) {
+        if (lcobound->Rank() == 0 &&
+            (!invariantOnly || IsScopeInvariantExpr(*lcobound))) {
+          return *lcobound;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+MaybeExtentExpr GetUCOBOUND(
+    const Symbol &symbol0, int dimension, bool invariantOnly) {
+  const Symbol &symbol{ResolveAssociations(symbol0)};
+  if (const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+    int corank{object->coshape().Rank()};
+    if (dimension < corank - 1) {
+      const semantics::ShapeSpec &shapeSpec{object->coshape()[dimension]};
+      if (const auto ucobound{shapeSpec.ubound().GetExplicit()}) {
+        if (ucobound->Rank() == 0 &&
+            (!invariantOnly || IsScopeInvariantExpr(*ucobound))) {
+          return *ucobound;
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+Shape GetLCOBOUNDs(const Symbol &symbol, bool invariantOnly) {
+  Shape result;
+  int corank{symbol.Corank()};
+  for (int dim{0}; dim < corank; ++dim) {
+    result.emplace_back(GetLCOBOUND(symbol, dim, invariantOnly));
+  }
+  return result;
+}
+
+Shape GetUCOBOUNDs(const Symbol &symbol, bool invariantOnly) {
+  Shape result;
+  int corank{symbol.Corank()};
+  for (int dim{0}; dim < corank; ++dim) {
+    result.emplace_back(GetUCOBOUND(symbol, dim, invariantOnly));
+  }
+  return result;
+}
+
 auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
   return common::visit(
       common::visitors{
@@ -770,7 +835,7 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
             if (subp.isFunction()) {
               auto resultShape{(*this)(subp.result())};
               if (resultShape && !useResultSymbolShape_) {
-                // Ensure the shape is constant. Otherwise, it may be referring
+                // Ensure the shape is constant. Otherwise, it may be reerring
                 // to symbols that belong to the function's scope and are
                 // meaningless on the caller side without the related call
                 // expression.
@@ -856,23 +921,33 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (auto chars{characteristics::Procedure::FromActuals(
               call.proc(), call.arguments(), *context_)}) {
         std::size_t j{0};
-        std::size_t anyArrayArgRank{0};
+        const ActualArgument *nonOptionalArrayArg{nullptr};
+        int anyArrayArgRank{0};
         for (const auto &arg : call.arguments()) {
           if (arg && arg->Rank() > 0 && j < chars->dummyArguments.size()) {
-            anyArrayArgRank = arg->Rank();
-            if (!chars->dummyArguments[j].IsOptional()) {
-              return (*this)(*arg);
+            if (!anyArrayArgRank) {
+              anyArrayArgRank = arg->Rank();
+            } else if (arg->Rank() != anyArrayArgRank) {
+              return std::nullopt; // error recovery
+            }
+            if (!nonOptionalArrayArg &&
+                !chars->dummyArguments[j].IsOptional()) {
+              nonOptionalArrayArg = &*arg;
             }
           }
           ++j;
         }
         if (anyArrayArgRank) {
-          // All dummy array arguments of the procedure are OPTIONAL.
-          // We cannot take the shape from just any array argument,
-          // because all of them might be OPTIONAL dummy arguments
-          // of the caller. Return unknown shape ranked according
-          // to the last actual array argument.
-          return Shape(anyArrayArgRank, MaybeExtentExpr{});
+          if (nonOptionalArrayArg) {
+            return (*this)(*nonOptionalArrayArg);
+          } else {
+            // All dummy array arguments of the procedure are OPTIONAL.
+            // We cannot take the shape from just any array argument,
+            // because all of them might be OPTIONAL dummy arguments
+            // of the caller. Return unknown shape ranked according
+            // to the last actual array argument.
+            return Shape(anyArrayArgRank, MaybeExtentExpr{});
+          }
         }
       }
     }
@@ -885,8 +960,12 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        return Shape{
-            MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        if (IsAssumedRank(*call.arguments().front())) {
+          return Shape{MaybeExtentExpr{}};
+        } else {
+          return Shape{
+              MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        }
       }
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
@@ -932,6 +1011,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     } else if (intrinsic->name == "cshift" || intrinsic->name == "eoshift") {
       if (!call.arguments().empty()) {
         return (*this)(call.arguments()[0]);
+      }
+    } else if (intrinsic->name == "lcobound" || intrinsic->name == "ucobound") {
+      if (call.arguments().size() == 3 && !call.arguments().at(1).has_value()) {
+        return Shape(1, ExtentExpr{GetCorank(call.arguments().at(0))});
       }
     } else if (intrinsic->name == "matmul") {
       if (call.arguments().size() == 2) {
@@ -1033,7 +1116,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       } else if (context_) {
         if (auto moldTypeAndShape{characteristics::TypeAndShape::Characterize(
                 call.arguments().at(1), *context_)}) {
-          if (GetRank(moldTypeAndShape->shape()) == 0) {
+          if (moldTypeAndShape->Rank() == 0) {
             // SIZE= is absent and MOLD= is scalar: result is scalar
             return ScalarShape();
           } else {
@@ -1072,6 +1155,11 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           }
         }
       }
+    } else if (intrinsic->name == "this_image") {
+      if (call.arguments().size() == 2) {
+        // THIS_IMAGE(coarray, no DIM, [TEAM])
+        return Shape(1, ExtentExpr{GetCorank(call.arguments().at(0))});
+      }
     } else if (intrinsic->name == "transpose") {
       if (call.arguments().size() >= 1) {
         if (auto shape{(*this)(call.arguments().at(0))}) {
@@ -1085,8 +1173,10 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (call.arguments().size() >= 2) {
         return (*this)(call.arguments()[1]); // MASK=
       }
-    } else if (intrinsic->characteristics.value().attrs.test(characteristics::
-                       Procedure::Attr::NullPointer)) { // NULL(MOLD=)
+    } else if (intrinsic->characteristics.value().attrs.test(
+                   characteristics::Procedure::Attr::NullPointer) ||
+        intrinsic->characteristics.value().attrs.test(
+            characteristics::Procedure::Attr::NullAllocatable)) { // NULL(MOLD=)
       return (*this)(call.arguments());
     } else {
       // TODO: shapes of other non-elemental intrinsic results

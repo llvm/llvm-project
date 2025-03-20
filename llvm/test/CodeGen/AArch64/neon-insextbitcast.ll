@@ -163,8 +163,6 @@ entry:
 define double @test_vext_v1i64(<1 x i64> %a) {
 ; CHECK-LABEL: test_vext_v1i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <1 x i64> %a, i32 0

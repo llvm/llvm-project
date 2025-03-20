@@ -27,7 +27,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -269,11 +268,11 @@ Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
       return Name;
     // System libraries from the Windows SDK for Windows 11 contain this symbol.
     // It looks like a CFG guard: we just skip it for now.
-    if (Name.equals("/<XFGHASHMAP>/"))
+    if (Name == "/<XFGHASHMAP>/")
       return Name;
     // Some libraries (e.g., arm64rt.lib) from the Windows WDK
     // (version 10.0.22000.0) contain this undocumented special member.
-    if (Name.equals("/<ECSYMBOLS>/"))
+    if (Name == "/<ECSYMBOLS>/")
       return Name;
     // It's a long name.
     // Get the string table offset.
@@ -708,7 +707,7 @@ void Archive::setFirstRegular(const Child &C) {
 
 Archive::Archive(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_Archive, Source) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
   if (Buffer.starts_with(ThinArchiveMagic)) {
@@ -969,7 +968,7 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   Err = Error::success();
 }
 
-object::Archive::Kind Archive::getDefaultKindForTriple(Triple &T) {
+object::Archive::Kind Archive::getDefaultKindForTriple(const Triple &T) {
   if (T.isOSDarwin())
     return object::Archive::K_DARWIN;
   if (T.isOSAIX())

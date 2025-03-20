@@ -24,7 +24,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
@@ -354,6 +353,8 @@ void AliasSetTracker::addUnknown(Instruction *Inst) {
     default:
       break;
       // FIXME: Add lifetime/invariant intrinsics (See: PR30807).
+    case Intrinsic::allow_runtime_check:
+    case Intrinsic::allow_ubsan_check:
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
     case Intrinsic::sideeffect:

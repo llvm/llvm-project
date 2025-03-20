@@ -18,6 +18,7 @@ subroutine objectpointers(j)
   end type
   type(t1), target, save :: o1
   type(t1), save :: o2
+!ERROR: Local variable 'o3' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%c2'
   type(t1), target :: o3
 !ERROR: An initial data target may not be a reference to an ALLOCATABLE 'x1'
   real, pointer :: p1 => x1
@@ -158,8 +159,10 @@ subroutine notObjects
   real, external :: x1 = 1.
 !ERROR: 'x2' is not a pointer but is initialized like one
   real, external :: x2 => sin
+!ERROR: 'x3' is not a known intrinsic procedure
 !ERROR: 'x3' is not an object that can be initialized
   real, intrinsic :: x3 = 1.
+!ERROR: 'x4' is not a known intrinsic procedure
 !ERROR: 'x4' is not a pointer but is initialized like one
   real, intrinsic :: x4 => cos
 end subroutine

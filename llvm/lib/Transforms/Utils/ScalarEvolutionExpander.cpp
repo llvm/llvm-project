@@ -28,7 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
 #else
 #define SCEV_DEBUG_WITH_TYPE(TYPE, X)
@@ -49,6 +49,8 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
   Exact = false;
   Disjoint = false;
   NNeg = false;
+  SameSign = false;
+  GEPNW = GEPNoWrapFlags::none();
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I)) {
     NUW = OBO->hasNoUnsignedWrap();
     NSW = OBO->hasNoSignedWrap();
@@ -59,6 +61,14 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
     Disjoint = PDI->isDisjoint();
   if (auto *PNI = dyn_cast<PossiblyNonNegInst>(I))
     NNeg = PNI->hasNonNeg();
+  if (auto *TI = dyn_cast<TruncInst>(I)) {
+    NUW = TI->hasNoUnsignedWrap();
+    NSW = TI->hasNoSignedWrap();
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    GEPNW = GEP->getNoWrapFlags();
+  if (auto *ICmp = dyn_cast<ICmpInst>(I))
+    SameSign = ICmp->hasSameSign();
 }
 
 void PoisonFlags::apply(Instruction *I) {
@@ -72,6 +82,14 @@ void PoisonFlags::apply(Instruction *I) {
     PDI->setIsDisjoint(Disjoint);
   if (auto *PNI = dyn_cast<PossiblyNonNegInst>(I))
     PNI->setNonNeg(NNeg);
+  if (isa<TruncInst>(I)) {
+    I->setHasNoUnsignedWrap(NUW);
+    I->setHasNoSignedWrap(NSW);
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    GEP->setNoWrapFlags(GEPNW);
+  if (auto *ICmp = dyn_cast<ICmpInst>(I))
+    ICmp->setSameSign(SameSign);
 }
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
@@ -339,16 +357,19 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
+Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V,
+                                    SCEV::NoWrapFlags Flags) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
   Value *Idx = expand(Offset);
+  GEPNoWrapFlags NW = (Flags & SCEV::FlagNUW) ? GEPNoWrapFlags::noUnsignedWrap()
+                                              : GEPNoWrapFlags::none();
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
     if (Constant *CRHS = dyn_cast<Constant>(Idx))
-      return Builder.CreatePtrAdd(CLHS, CRHS);
+      return Builder.CreatePtrAdd(CLHS, CRHS, "", NW);
 
   // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
   unsigned ScanLimit = 6;
@@ -362,11 +383,15 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
       // generated code.
       if (isa<DbgInfoIntrinsic>(IP))
         ScanLimit++;
-      if (IP->getOpcode() == Instruction::GetElementPtr &&
-          IP->getOperand(0) == V && IP->getOperand(1) == Idx &&
-          cast<GEPOperator>(&*IP)->getSourceElementType() ==
-              Builder.getInt8Ty())
-        return &*IP;
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(IP)) {
+        if (GEP->getPointerOperand() == V &&
+            GEP->getSourceElementType() == Builder.getInt8Ty() &&
+            GEP->getOperand(1) == Idx) {
+          rememberFlags(GEP);
+          GEP->setNoWrapFlags(GEP->getNoWrapFlags() & NW);
+          return &*IP;
+        }
+      }
       if (IP == BlockBegin) break;
     }
   }
@@ -385,7 +410,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Value *V) {
   }
 
   // Emit a GEP.
-  return Builder.CreatePtrAdd(V, Idx, "scevgep");
+  return Builder.CreatePtrAdd(V, Idx, "scevgep", NW);
 }
 
 /// PickMostRelevantLoop - Given two loops pick the one that's most relevant for
@@ -483,6 +508,16 @@ public:
 }
 
 Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
+  // Recognize the canonical representation of an unsimplifed urem.
+  const SCEV *URemLHS = nullptr;
+  const SCEV *URemRHS = nullptr;
+  if (SE.matchURem(S, URemLHS, URemRHS)) {
+    Value *LHS = expand(URemLHS);
+    Value *RHS = expand(URemRHS);
+    return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagAnyWrap,
+                      /*IsSafeToHoist*/ false);
+  }
+
   // Collect all the add operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal, and
   // so that pointer operands are inserted first, which the code below relies on
@@ -522,7 +557,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
-      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum);
+      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Sum, S->getNoWrapFlags());
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expand(SE.getNegativeSCEV(Op));
@@ -646,7 +681,21 @@ Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
   }
 
-  Value *RHS = expand(S->getRHS());
+  const SCEV *RHSExpr = S->getRHS();
+  Value *RHS = expand(RHSExpr);
+  if (SafeUDivMode) {
+    bool GuaranteedNotPoison =
+        ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
+    if (!GuaranteedNotPoison)
+      RHS = Builder.CreateFreeze(RHS);
+
+    // We need an umax if either RHSExpr is not known to be zero, or if it is
+    // not guaranteed to be non-poison. In the later case, the frozen poison may
+    // be 0.
+    if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
+      RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
+                                    {RHS, ConstantInt::get(RHS->getType(), 1)});
+  }
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
@@ -796,7 +845,7 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos,
   }
   for (Instruction *I : llvm::reverse(IVIncs)) {
     fixupInsertPoints(I);
-    I->moveBefore(InsertPos);
+    I->moveBefore(InsertPos->getIterator());
     if (RecomputePoisonFlags)
       FixupPoisonFlags(I);
   }
@@ -1224,7 +1273,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   if (!S->getStart()->isZero()) {
     if (isa<PointerType>(S->getType())) {
       Value *StartV = expand(SE.getPointerBase(S));
-      return expandAddToGEP(SE.removePointerBase(S), StartV);
+      return expandAddToGEP(SE.removePointerBase(S), StartV,
+                            S->getNoWrapFlags(SCEV::FlagNUW));
     }
 
     SmallVector<const SCEV *, 4> NewOps(S->operands());
@@ -1340,11 +1390,14 @@ Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
 Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
+  bool PrevSafeMode = SafeUDivMode;
+  SafeUDivMode |= IsSequential;
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
+    SafeUDivMode = (IsSequential && i != 0) || PrevSafeMode;
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -1359,6 +1412,7 @@ Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
     }
     LHS = Sel;
   }
+  SafeUDivMode = PrevSafeMode;
   return LHS;
 }
 
@@ -1397,7 +1451,7 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   // Expand the code for this SCEV.
   Value *V = expand(SH);
 
-  if (Ty) {
+  if (Ty && Ty != V->getType()) {
     assert(SE.getTypeSizeInBits(Ty) == SE.getTypeSizeInBits(SH->getType()) &&
            "non-trivial casts should be done with the SCEVs directly!");
     V = InsertNoopCastOfTo(V, Ty);
@@ -1413,8 +1467,8 @@ Value *SCEVExpander::FindValueInExprValueMap(
   if (!CanonicalMode && SE.containsAddRecurrence(S))
     return nullptr;
 
-  // If S is a constant, it may be worse to reuse an existing Value.
-  if (isa<SCEVConstant>(S))
+  // If S is a constant or unknown, it may be worse to reuse an existing Value.
+  if (isa<SCEVConstant>(S) || isa<SCEVUnknown>(S))
     return nullptr;
 
   for (Value *V : SE.getSCEVValues(S)) {
@@ -1514,7 +1568,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
   } else {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
       // See if we can re-infer from first principles any of the flags we just
       // dropped.
       if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
@@ -1762,7 +1816,7 @@ bool SCEVExpander::hasRelatedExistingExpansion(const SCEV *S,
 
   // Look for suitable value in simple conditions at the loop exits.
   for (BasicBlock *BB : ExitingBlocks) {
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     Instruction *LHS, *RHS;
 
     if (!match(BB->getTerminator(),
@@ -1893,43 +1947,17 @@ template<typename T> static InstructionCost costAndCollectOperands(
     break;
   }
   case scAddRecExpr: {
-    // In this polynominal, we may have some zero operands, and we shouldn't
-    // really charge for those. So how many non-zero coefficients are there?
-    int NumTerms = llvm::count_if(S->operands(), [](const SCEV *Op) {
-                                    return !Op->isZero();
-                                  });
-
-    assert(NumTerms >= 1 && "Polynominal should have at least one term.");
-    assert(!(*std::prev(S->operands().end()))->isZero() &&
-           "Last operand should not be zero");
-
-    // Ignoring constant term (operand 0), how many of the coefficients are u> 1?
-    int NumNonZeroDegreeNonOneTerms =
-      llvm::count_if(S->operands(), [](const SCEV *Op) {
-                      auto *SConst = dyn_cast<SCEVConstant>(Op);
-                      return !SConst || SConst->getAPInt().ugt(1);
-                    });
-
-    // Much like with normal add expr, the polynominal will require
-    // one less addition than the number of it's terms.
-    InstructionCost AddCost = ArithCost(Instruction::Add, NumTerms - 1,
-                                        /*MinIdx*/ 1, /*MaxIdx*/ 1);
-    // Here, *each* one of those will require a multiplication.
-    InstructionCost MulCost =
-        ArithCost(Instruction::Mul, NumNonZeroDegreeNonOneTerms);
-    Cost = AddCost + MulCost;
-
-    // What is the degree of this polynominal?
-    int PolyDegree = S->getNumOperands() - 1;
-    assert(PolyDegree >= 1 && "Should be at least affine.");
-
-    // The final term will be:
-    //   Op_{PolyDegree} * x ^ {PolyDegree}
-    // Where  x ^ {PolyDegree}  will again require PolyDegree-1 mul operations.
-    // Note that  x ^ {PolyDegree} = x * x ^ {PolyDegree-1}  so charging for
-    // x ^ {PolyDegree}  will give us  x ^ {2} .. x ^ {PolyDegree-1}  for free.
-    // FIXME: this is conservatively correct, but might be overly pessimistic.
-    Cost += MulCost * (PolyDegree - 1);
+    // Addrec expands to a phi and add per recurrence.
+    unsigned NumRecurrences = S->getNumOperands() - 1;
+    Cost += TTI.getCFInstrCost(Instruction::PHI, CostKind) * NumRecurrences;
+    Cost +=
+        TTI.getArithmeticInstrCost(Instruction::Add, S->getType(), CostKind) *
+        NumRecurrences;
+    // AR start is used in phi.
+    Worklist.emplace_back(Instruction::PHI, 0, S->getOperand(0));
+    // Other operands are used in add.
+    for (const SCEV *Op : S->operands().drop_front())
+      Worklist.emplace_back(Instruction::Add, 1, Op);
     break;
   }
   }
@@ -2071,7 +2099,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // FIXME: It is highly suspicious that we're ignoring the predicates here.
   SmallVector<const SCEVPredicate *, 4> Pred;
   const SCEV *ExitCount =
-      SE.getPredicatedBackedgeTakenCount(AR->getLoop(), Pred);
+      SE.getPredicatedSymbolicMaxBackedgeTakenCount(AR->getLoop(), Pred);
 
   assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Invalid loop count");
 
@@ -2129,10 +2157,9 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
       MulV = TruncTripCount;
       OfMul = ConstantInt::getFalse(MulV->getContext());
     } else {
-      auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
-                                             Intrinsic::umul_with_overflow, Ty);
-      CallInst *Mul =
-          Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
+      CallInst *Mul = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow, Ty,
+                                              {AbsStep, TruncTripCount},
+                                              /*FMFSource=*/nullptr, "mul");
       MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
       OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
     }

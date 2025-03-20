@@ -330,12 +330,12 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
   ValueWithRealFlags<Real> result;
+  bool isNegative{IsNegative()};
   if (IsFinite()) {
     Fraction fraction{GetFraction()};
     int expo{Exponent()};
     Fraction one{1};
     Fraction nearest;
-    bool isNegative{IsNegative()};
     if (upward != isNegative) { // upward in magnitude
       auto next{fraction.AddUnsigned(one)};
       if (next.carry) {
@@ -358,8 +358,15 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
         }
       }
     }
-    result.flags = result.value.Normalize(isNegative, expo, nearest);
-  } else {
+    result.value.Normalize(isNegative, expo, nearest);
+  } else if (IsInfinite()) {
+    if (upward == isNegative) {
+      result.value =
+          isNegative ? HUGE().Negate() : HUGE(); // largest mag finite
+    } else {
+      result.value = *this;
+    }
+  } else { // NaN
     result.flags.set(RealFlag::InvalidArgument);
     result.value = *this;
   }
@@ -524,10 +531,16 @@ RealFlags Real<W, P>::Normalize(bool negative, int exponent,
         (rounding.mode == common::RoundingMode::Up && !negative) ||
         (rounding.mode == common::RoundingMode::Down && negative)) {
       word_ = Word{maxExponent}.SHIFTL(significandBits); // Inf
+      if constexpr (!isImplicitMSB) {
+        word_ = word_.IBSET(significandBits - 1);
+      }
     } else {
       // directed rounding: round to largest finite value rather than infinity
       // (x86 does this, not sure whether it's standard behavior)
-      word_ = Word{word_.MASKR(word_.bits - 1)}.IBCLR(significandBits);
+      word_ = Word{word_.MASKR(word_.bits - 1)};
+      if constexpr (isImplicitMSB) {
+        word_ = word_.IBCLR(significandBits);
+      }
     }
     if (negative) {
       word_ = word_.IBSET(bits - 1);
@@ -757,11 +770,13 @@ template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
   } else if (IsInfinite()) {
     return NotANumber();
   } else if (IsZero() || IsSubnormal()) {
-    return TINY(); // mandated by standard
+    return TINY(); // standard & 100% portable
   } else {
     Real result;
     result.Normalize(false, Exponent(), Fraction::MASKR(1));
-    return result.IsZero() ? TINY() : result;
+    // Can the result be less than TINY()?  No, with five commonly
+    // used compilers; yes, with two less commonly used ones.
+    return result.IsZero() || result.IsSubnormal() ? TINY() : result;
   }
 }
 
@@ -788,6 +803,6 @@ template class Real<Integer<16>, 11>;
 template class Real<Integer<16>, 8>;
 template class Real<Integer<32>, 24>;
 template class Real<Integer<64>, 53>;
-template class Real<Integer<80>, 64>;
+template class Real<X87IntegerContainer, 64>;
 template class Real<Integer<128>, 113>;
 } // namespace Fortran::evaluate::value

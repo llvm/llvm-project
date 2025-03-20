@@ -8,6 +8,7 @@
 
 #include "mlir/IR/OperationSupport.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
@@ -225,6 +226,26 @@ TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
 
   std::string str = formatv("{0}", *op).str();
   ASSERT_STREQ(str.c_str(), "\"foo.bar\"() : () -> ()");
+
+  op->destroy();
+}
+
+TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  context.allowUnregisteredDialects();
+  Operation *op = Operation::create(
+      NameLoc::get(StringAttr::get(&context, "my_named_loc")),
+      OperationName("t.op", &context), builder.getIntegerType(16), std::nullopt,
+      std::nullopt, nullptr, std::nullopt, 0);
+
+  std::string str;
+  OpPrintingFlags flags;
+  flags.printNameLocAsPrefix(true);
+  llvm::raw_string_ostream os(str);
+  op->print(os, flags);
+  ASSERT_STREQ(str.c_str(), "%my_named_loc = \"t.op\"() : () -> i16\n");
 
   op->destroy();
 }

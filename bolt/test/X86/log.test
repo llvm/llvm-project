@@ -1,19 +1,19 @@
-# Tests whether llvm-bolt is able to redirect logs when processing a simple
-# input. If this test fails on your changes, please use BinaryContext::outs()
-# to print BOLT logging instead of llvm::outs().
+## Tests whether llvm-bolt is able to redirect logs when processing a simple
+## input. If this test fails on your changes, please use BinaryContext::outs()
+## to print BOLT logging instead of llvm::outs().
 
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.null --data %p/Inputs/blarge.fdata -v=2 \
 RUN:   --reorder-blocks=normal --print-finalized --log-file=%t.log  2>&1 \
 RUN:   | FileCheck --check-prefix=CHECK --allow-empty %s
-RUN: cat %t.log | FileCheck %s --check-prefix=CHECK-LOG
+RUN: FileCheck %s --check-prefix=CHECK-LOG --input-file %t.log
 
 CHECK-NOT: BOLT-INFO
 CHECK-NOT: BOLT-WARNING
 CHECK-NOT: BOLT-ERROR
 
-# Check some usual BOLT output lines are being redirected to the log file
+## Check some usual BOLT output lines are being redirected to the log file
 CHECK-LOG: BOLT-INFO: Target architecture
 CHECK-LOG: BOLT-INFO: BOLT version
 CHECK-LOG: BOLT-INFO: basic block reordering modified layout
-CHECK-LOG:    Binary Function "usqrt"
+CHECK-LOG:    Binary Function "main"

@@ -1,4 +1,5 @@
 #RUN: llc -o - %s -mtriple=s390x-ibm-linux -run-pass=greedy
+#RUN: llc -o - %s -mtriple=s390x-ibm-linux -passes=greedy
 #PR34502. Check HoistSpill works properly after the live range of spilled
 #virtual register is cleared.
 --- |
@@ -157,6 +158,7 @@ registers:
   - { id: 129, class: grx32bit }
   - { id: 130, class: fp64bit }
 frameInfo:
+  adjustsStack:    true
   hasCalls:        true
 body:             |
   bb.0:

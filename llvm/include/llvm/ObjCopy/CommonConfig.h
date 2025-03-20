@@ -151,6 +151,18 @@ public:
   }
 };
 
+enum class AdjustKind { Set, Add, Subtract };
+
+struct AddressUpdate {
+  uint64_t Value = 0;
+  AdjustKind Kind = AdjustKind::Add;
+};
+
+struct SectionPatternAddressUpdate {
+  NameMatcher SectionPattern;
+  AddressUpdate Update;
+};
+
 enum class SymbolFlag {
   Global,
   Local,
@@ -219,6 +231,7 @@ struct CommonConfig {
   SmallVector<NewSectionInfo, 0> AddSection;
   SmallVector<StringRef, 0> DumpSection;
   SmallVector<NewSectionInfo, 0> UpdateSection;
+  SmallVector<SectionPatternAddressUpdate, 0> ChangeSectionAddress;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -233,6 +246,7 @@ struct CommonConfig {
   NameMatcher UnneededSymbolsToRemove;
   NameMatcher SymbolsToWeaken;
   NameMatcher SymbolsToKeepGlobal;
+  NameMatcher SymbolsToSkip;
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
@@ -243,6 +257,9 @@ struct CommonConfig {
 
   // Symbol info specified by --add-symbol option.
   SmallVector<NewSymbolInfo, 0> SymbolsToAdd;
+
+  // Integer options
+  int64_t ChangeSectionLMAValAll = 0;
 
   // Boolean options
   bool DeterministicArchives = true;
@@ -261,6 +278,14 @@ struct CommonConfig {
   bool DecompressDebugSections = false;
 
   DebugCompressionType CompressionType = DebugCompressionType::None;
+
+  SmallVector<std::pair<NameMatcher, llvm::DebugCompressionType>, 0>
+      compressSections;
+
+  // ErrorCallback is used to handle recoverable errors. An Error returned
+  // by the callback aborts the execution and is then returned to the caller.
+  // If the callback is not set, the errors are not issued.
+  std::function<Error(Error)> ErrorCallback;
 };
 
 } // namespace objcopy

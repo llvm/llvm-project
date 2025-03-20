@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -start-before hexagon-packetizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -start-before hexagon-packetizer %s -o - | FileCheck %s
 
 # Check that we don't packetize these two instructions together. It happened
 # earlier because "offset" in the post-increment instruction was taken to be 8.

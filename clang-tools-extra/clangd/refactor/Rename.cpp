@@ -338,7 +338,8 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     for (const auto &Child : DS->getDeclGroup())
       if (const auto *ND = dyn_cast<NamedDecl>(Child))
         if (ND != &RenamedDecl && ND->getDeclName().isIdentifier() &&
-            ND->getName() == Name)
+            ND->getName() == Name &&
+            ND->getIdentifierNamespace() & RenamedDecl.getIdentifierNamespace())
           return ND;
     return nullptr;
   };
@@ -380,7 +381,9 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
     // Also check if there is a name collision with function arguments.
     if (const auto *Function = ScopeParent->get<FunctionDecl>())
       for (const auto *Parameter : Function->parameters())
-        if (Parameter->getName() == NewName)
+        if (Parameter->getName() == NewName &&
+            Parameter->getIdentifierNamespace() &
+                RenamedDecl.getIdentifierNamespace())
           return Parameter;
     return nullptr;
   }
@@ -405,7 +408,9 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
   if (const auto *EnclosingFunction = Parent->get<FunctionDecl>()) {
     // Check for conflicts with other arguments.
     for (const auto *Parameter : EnclosingFunction->parameters())
-      if (Parameter != &RenamedDecl && Parameter->getName() == NewName)
+      if (Parameter != &RenamedDecl && Parameter->getName() == NewName &&
+          Parameter->getIdentifierNamespace() &
+              RenamedDecl.getIdentifierNamespace())
         return Parameter;
     // FIXME: We don't modify all references to function parameters when
     // renaming from forward declaration now, so using a name colliding with
@@ -450,7 +455,8 @@ const NamedDecl *lookupSiblingsWithinContext(ASTContext &Ctx,
   }
   // Lookup may contain the RenameDecl itself, exclude it.
   for (const auto *D : LookupResult)
-    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl())
+    if (D->getCanonicalDecl() != RenamedDecl.getCanonicalDecl() &&
+        D->getIdentifierNamespace() & RenamedDecl.getIdentifierNamespace())
       return D;
   return nullptr;
 }
@@ -748,7 +754,7 @@ std::vector<SymbolRange> collectRenameIdentifierRanges(
 clangd::Range tokenRangeForLoc(ParsedAST &AST, SourceLocation TokLoc,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
-  const auto *Token = AST.getTokens().spelledTokenAt(TokLoc);
+  const auto *Token = AST.getTokens().spelledTokenContaining(TokLoc);
   assert(Token && "rename expects spelled tokens");
   clangd::Range Result;
   Result.start = sourceLocToPosition(SM, Token->location());
@@ -1090,11 +1096,10 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return MainFileRenameEdit.takeError();
 
   llvm::DenseSet<Range> RenamedRanges;
-  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&RenameDecl)) {
+  if (!isa<ObjCMethodDecl>(RenameDecl)) {
     // TODO: Insert the ranges from the ObjCMethodDecl/ObjCMessageExpr selector
     // pieces which are being renamed. This will require us to make changes to
     // locateDeclAt to preserve this AST node.
-  } else {
     RenamedRanges.insert(CurrentIdentifier);
   }
 

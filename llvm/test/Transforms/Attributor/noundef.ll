@@ -39,7 +39,7 @@ define void @caller1() {
 
 define internal void @argument_dead_callback_callee(ptr %c) {
 ; CHECK-LABEL: define {{[^@]+}}@argument_dead_callback_callee
-; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[C:%.*]]) {
+; CHECK-SAME: (ptr noalias nofree readnone align 4294967296 captures(none) [[C:%.*]]) {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    ret void
 ;
@@ -149,6 +149,9 @@ declare !callback !0 void @callback_broker(ptr, ptr)
 !1 = !{i64 0, i64 1, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = !{i64 0, i64 1, i1 false}
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 0, i64 1, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 0, i64 1, i1 false}
 ;.

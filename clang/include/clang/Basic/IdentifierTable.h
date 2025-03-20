@@ -101,8 +101,9 @@ enum class InterestingIdentifier {
   NUM_OBJC_KEYWORDS_AND_NOTABLE_IDENTIFIERS,
 
   NotBuiltin,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/Builtins.inc"
+#undef GET_BUILTIN_ENUMERATORS
   FirstTSBuiltin,
 
   NotInterestingIdentifier = 65534
@@ -738,7 +739,7 @@ public:
     II->Entry = &Entry;
 
     // If this is the 'import' contextual keyword, mark it as such.
-    if (Name.equals("import"))
+    if (Name == "import")
       II->setModulesImport(true);
 
     return *II;
@@ -913,12 +914,13 @@ class alignas(IdentifierInfoAlignment) MultiKeywordSelector
 
 public:
   // Constructor for keyword selectors.
-  MultiKeywordSelector(unsigned nKeys, IdentifierInfo **IIV)
+  MultiKeywordSelector(unsigned nKeys, const IdentifierInfo **IIV)
       : DeclarationNameExtra(nKeys) {
     assert((nKeys > 1) && "not a multi-keyword selector");
 
     // Fill in the trailing keyword array.
-    IdentifierInfo **KeyInfo = reinterpret_cast<IdentifierInfo **>(this + 1);
+    const IdentifierInfo **KeyInfo =
+        reinterpret_cast<const IdentifierInfo **>(this + 1);
     for (unsigned i = 0; i != nKeys; ++i)
       KeyInfo[i] = IIV[i];
   }
@@ -928,7 +930,7 @@ public:
 
   using DeclarationNameExtra::getNumArgs;
 
-  using keyword_iterator = IdentifierInfo *const *;
+  using keyword_iterator = const IdentifierInfo *const *;
 
   keyword_iterator keyword_begin() const {
     return reinterpret_cast<keyword_iterator>(this + 1);
@@ -938,7 +940,7 @@ public:
     return keyword_begin() + getNumArgs();
   }
 
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
+  const IdentifierInfo *getIdentifierInfoForSlot(unsigned i) const {
     assert(i < getNumArgs() && "getIdentifierInfoForSlot(): illegal index");
     return keyword_begin()[i];
   }
@@ -991,10 +993,10 @@ class Selector {
   /// Do not reorder or add any arguments to this template
   /// without thoroughly understanding how tightly coupled these classes are.
   llvm::PointerIntPair<
-      llvm::PointerUnion<IdentifierInfo *, MultiKeywordSelector *>, 2>
+      llvm::PointerUnion<const IdentifierInfo *, MultiKeywordSelector *>, 2>
       InfoPtr;
 
-  Selector(IdentifierInfo *II, unsigned nArgs) {
+  Selector(const IdentifierInfo *II, unsigned nArgs) {
     assert(nArgs < 2 && "nArgs not equal to 0/1");
     InfoPtr.setPointerAndInt(II, nArgs + 1);
   }
@@ -1006,12 +1008,12 @@ class Selector {
     InfoPtr.setPointerAndInt(SI, MultiArg & 0b11);
   }
 
-  IdentifierInfo *getAsIdentifierInfo() const {
-    return InfoPtr.getPointer().dyn_cast<IdentifierInfo *>();
+  const IdentifierInfo *getAsIdentifierInfo() const {
+    return dyn_cast_if_present<const IdentifierInfo *>(InfoPtr.getPointer());
   }
 
   MultiKeywordSelector *getMultiKeywordSelector() const {
-    return InfoPtr.getPointer().get<MultiKeywordSelector *>();
+    return cast<MultiKeywordSelector *>(InfoPtr.getPointer());
   }
 
   unsigned getIdentifierInfoFlag() const {
@@ -1019,7 +1021,7 @@ class Selector {
     // IMPORTANT NOTE: We have to reconstitute this data rather than use the
     // value directly from the PointerIntPair. See the comments in `InfoPtr`
     // for more details.
-    if (InfoPtr.getPointer().is<MultiKeywordSelector *>())
+    if (isa<MultiKeywordSelector *>(InfoPtr.getPointer()))
       new_flags |= MultiArg;
     return new_flags;
   }
@@ -1075,7 +1077,7 @@ public:
   ///
   /// \returns the uniqued identifier for this slot, or NULL if this slot has
   /// no corresponding identifier.
-  IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
+  const IdentifierInfo *getIdentifierInfoForSlot(unsigned argIndex) const;
 
   /// Retrieve the name at a given position in the selector.
   ///
@@ -1132,13 +1134,13 @@ public:
   ///
   /// \p NumArgs indicates whether this is a no argument selector "foo", a
   /// single argument selector "foo:" or multi-argument "foo:bar:".
-  Selector getSelector(unsigned NumArgs, IdentifierInfo **IIV);
+  Selector getSelector(unsigned NumArgs, const IdentifierInfo **IIV);
 
-  Selector getUnarySelector(IdentifierInfo *ID) {
+  Selector getUnarySelector(const IdentifierInfo *ID) {
     return Selector(ID, 1);
   }
 
-  Selector getNullarySelector(IdentifierInfo *ID) {
+  Selector getNullarySelector(const IdentifierInfo *ID) {
     return Selector(ID, 0);
   }
 

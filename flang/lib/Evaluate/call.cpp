@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/call.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran.h"
 
 namespace Fortran::evaluate {
 

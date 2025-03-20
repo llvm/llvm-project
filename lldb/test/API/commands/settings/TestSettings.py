@@ -186,13 +186,13 @@ class SettingsCommandTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         self.runCmd("settings show frame-format")
-        m = re.match('^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
+        m = re.match(r'^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
         self.assertTrue(m, "Bad settings string")
         self.format_string = m.group(1)
 
         # Change the default format to print function.name rather than
         # function.name-with-args
-        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\`${function.name}{${function.pc-offset}}}{ at ${line.file.fullpath}:${line.number}}{, lang=${language}}\n"
+        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\\`${function.name}{${function.pc-offset}}}{ at ${line.file.fullpath}:${line.number}}{, lang=${language}}\n"
         self.runCmd("settings set frame-format %s" % format_string)
 
         # Immediately test the setting.
@@ -528,6 +528,59 @@ class SettingsCommandTestCase(TestBase):
             output, exe=False, startstr="This message should go to standard out."
         )
 
+    @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
+    def test_same_error_output_path(self):
+        """Test that setting target.error and output-path to the same file path for the launched process works."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        # Set the error-path and output-path and verify both are set.
+        self.runCmd(
+            "settings set target.error-path '{0}'".format(
+                lldbutil.append_to_process_working_directory(self, "output.txt")
+            )
+        )
+        self.runCmd(
+            "settings set target.output-path '{0}".format(
+                lldbutil.append_to_process_working_directory(self, "output.txt")
+            )
+        )
+        # And add hooks to restore the original settings during tearDown().
+        self.addTearDownHook(lambda: self.runCmd("settings clear target.output-path"))
+        self.addTearDownHook(lambda: self.runCmd("settings clear target.error-path"))
+
+        self.expect(
+            "settings show target.error-path",
+            SETTING_MSG("target.error-path"),
+            substrs=["target.error-path (file)", 'output.txt"'],
+        )
+
+        self.expect(
+            "settings show target.output-path",
+            SETTING_MSG("target.output-path"),
+            substrs=["target.output-path (file)", 'output.txt"'],
+        )
+
+        self.runCmd(
+            "process launch --working-dir '{0}'".format(
+                self.get_process_working_directory()
+            ),
+            RUN_SUCCEEDED,
+        )
+
+        output = lldbutil.read_file_from_process_wd(self, "output.txt")
+        err_message = "This message should go to standard error."
+        out_message = "This message should go to standard out."
+        # Error msg should get flushed by the output msg
+        self.expect(output, exe=False, substrs=[out_message])
+        self.assertNotIn(
+            err_message,
+            output,
+            "Race condition when both stderr/stdout redirects to the same file",
+        )
+
     def test_print_dictionary_setting(self):
         self.runCmd("settings clear target.env-vars")
         self.runCmd('settings set target.env-vars ["MY_VAR"]=some-value')
@@ -671,7 +724,7 @@ class SettingsCommandTestCase(TestBase):
         )
         self.runCmd("settings set target.run-args 1 2 3")  # Set to known value
         # Set to new value with trailing whitespaces
-        self.runCmd("settings set target.run-args 3 \  \ ")
+        self.runCmd(r"settings set target.run-args 3 \  \ ")
         self.expect(
             "settings show target.run-args",
             SETTING_MSG("target.run-args"),
@@ -793,11 +846,11 @@ class SettingsCommandTestCase(TestBase):
         # Check that settings have their default values after clearing.
         self.expect(
             "settings show target.env-vars",
-            patterns=["^target.env-vars \(dictionary of strings\) =\s*$"],
+            patterns=[r"^target.env-vars \(dictionary of strings\) =\s*$"],
         )
         self.expect(
             "settings show target.run-args",
-            patterns=["^target.run-args \(arguments\) =\s*$"],
+            patterns=[r"^target.run-args \(arguments\) =\s*$"],
         )
         self.expect("settings show auto-confirm", substrs=["false"])
         self.expect("settings show tab-size", substrs=["2"])
@@ -894,7 +947,7 @@ class SettingsCommandTestCase(TestBase):
         # showing & setting an undefined .experimental. setting should generate no errors.
         self.expect(
             "settings show target.experimental.setting-which-does-not-exist",
-            patterns=["^\s$"],
+            patterns=[r"^\s$"],
             error=False,
         )
         self.expect(
@@ -953,7 +1006,7 @@ class SettingsCommandTestCase(TestBase):
 
         # Test OptionValueFileSpec
         self.verify_setting_value_json(
-            "platform.module-cache-directory", self.get_process_working_directory()
+            "platform.module-cache-directory", self.getBuildDir()
         )
 
         # Test OptionValueArray

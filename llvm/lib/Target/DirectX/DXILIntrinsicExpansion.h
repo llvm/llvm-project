@@ -8,7 +8,6 @@
 #ifndef LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H
 #define LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H
 
-#include "DXILResource.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
@@ -18,15 +17,6 @@ namespace llvm {
 class DXILIntrinsicExpansion : public PassInfoMixin<DXILIntrinsicExpansion> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-};
-
-class DXILIntrinsicExpansionLegacy : public ModulePass {
-
-public:
-  bool runOnModule(Module &M) override;
-  DXILIntrinsicExpansionLegacy() : ModulePass(ID) {}
-
-  static char ID; // Pass identification.
 };
 } // namespace llvm
 

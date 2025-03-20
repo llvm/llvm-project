@@ -35,7 +35,7 @@ cl::OptionCategory Cat("yaml2obj Options");
 cl::opt<std::string> Input(cl::Positional, cl::desc("<input file>"),
                            cl::init("-"), cl::cat(Cat));
 
-cl::list<std::string>
+static cl::list<std::string>
     D("D", cl::Prefix,
       cl::desc("Defined the specified macros to their specified "
                "definition. The syntax is <macro>=<definition>"),
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFileOrSTDIN(Input);
+      MemoryBuffer::getFileOrSTDIN(Input, /*IsText=*/true);
   if (!Buf)
     return 1;
 

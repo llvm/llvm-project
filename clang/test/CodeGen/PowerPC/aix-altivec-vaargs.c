@@ -17,7 +17,7 @@ vector double vector_varargs(int count, ...) {
 }
 
 // CHECK:         %arg_list = alloca ptr
-// CHECK:         call void @llvm.va_start(ptr %arg_list)
+// CHECK:         call void @llvm.va_start.p0(ptr %arg_list)
 
 // AIX32:       for.body:
 // AIX32-NEXT:    %argp.cur = load ptr, ptr %arg_list, align 4
@@ -41,4 +41,4 @@ vector double vector_varargs(int count, ...) {
 
 
 // CHECK:      for.end:
-// CHECK:        call void @llvm.va_end(ptr %arg_list)
+// CHECK:        call void @llvm.va_end.p0(ptr %arg_list)

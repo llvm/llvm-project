@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/logf.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -82,7 +82,7 @@ TEST_F(LlvmLibcLogfTest, InFloatRange) {
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
+    if (FPBits(v).is_nan() || FPBits(v).is_inf())
       continue;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log, x,
                                    LIBC_NAMESPACE::logf(x), 0.5);

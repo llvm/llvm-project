@@ -142,6 +142,7 @@ struct SymbolTable {
 
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
   SymbolEntry *getSymbolByIndex(uint32_t Index);
+  void updateSymbols(function_ref<void(SymbolEntry &)> Callable);
   void removeSymbols(
       function_ref<bool(const std::unique_ptr<SymbolEntry> &)> ToRemove);
 };
@@ -340,6 +341,9 @@ struct Object {
   /// The index of the LC_SEGMENT or LC_SEGMENT_64 load command
   /// corresponding to the __TEXT segment.
   std::optional<size_t> TextSegmentCommandIndex;
+  /// The index of the LC_ENCRYPTION_INFO or LC_ENCRYPTION_INFO_64 load command
+  /// if present.
+  std::optional<size_t> EncryptionInfoCommandIndex;
 
   BumpPtrAllocator Alloc;
   StringSaver NewSectionsContents;

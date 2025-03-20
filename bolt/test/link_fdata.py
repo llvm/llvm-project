@@ -19,6 +19,7 @@ parser.add_argument("output")
 parser.add_argument("prefix", nargs="?", default="FDATA", help="Custom FDATA prefix")
 parser.add_argument("--nmtool", default="nm", help="Path to nm tool")
 parser.add_argument("--no-lbr", action="store_true")
+parser.add_argument("--no-redefine", action="store_true")
 
 args = parser.parse_args()
 
@@ -33,9 +34,9 @@ prefix_pat = re.compile(f"^# {args.prefix}: (.*)")
 fdata_pat = re.compile(r"([01].*) (?P<exec>\d+) (?P<mispred>\d+)")
 
 # Pre-aggregated profile:
-# {B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> <count>
-# [<mispred_count>]
-preagg_pat = re.compile(r"(?P<type>[BFf]) (?P<offsets_count>.*)")
+# {T|B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> [<ft_end>]
+# <count> [<mispred_count>]
+preagg_pat = re.compile(r"(?P<type>[TBFf]) (?P<offsets_count>.*)")
 
 # No-LBR profile:
 # <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
@@ -90,6 +91,8 @@ nm_output = subprocess.run(
 symbols = {}
 for symline in nm_output.splitlines():
     symval, _, symname = symline.split(maxsplit=2)
+    if symname in symbols and args.no_redefine:
+        continue
     symbols[symname] = symval
 
 

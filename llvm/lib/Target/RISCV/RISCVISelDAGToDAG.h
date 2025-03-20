@@ -25,13 +25,11 @@ class RISCVDAGToDAGISel : public SelectionDAGISel {
   const RISCVSubtarget *Subtarget = nullptr;
 
 public:
-  static char ID;
-
   RISCVDAGToDAGISel() = delete;
 
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
                              CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
+      : SelectionDAGISel(TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<RISCVSubtarget>();
@@ -48,10 +46,9 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
-                        bool IsINX = false);
-  bool SelectAddrRegImmINX(SDValue Addr, SDValue &Base, SDValue &Offset) {
+                        bool IsRV32Zdinx = false);
+  bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
     return SelectAddrRegImm(Addr, Base, Offset, true);
   }
   bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -79,6 +76,8 @@ public:
     }
     return false;
   }
+
+  bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
@@ -119,8 +118,11 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
+  bool selectInvLogicImm(SDValue N, SDValue &Val);
+
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
+  bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
   bool hasAllHUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 16); }
   bool hasAllWUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 32); }
 
@@ -135,11 +137,12 @@ public:
     return selectVSplatUimm(N, Bits, Val);
   }
   bool selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal);
+  bool selectVSplatSimm5Plus1NoDec(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5Plus1NonZero(SDValue N, SDValue &SplatVal);
   // Matches the splat of a value which can be extended or truncated, such that
   // only the bottom 8 bits are preserved.
   bool selectLow8BitsVSplat(SDValue N, SDValue &SplatVal);
-  bool selectFPImm(SDValue N, SDValue &Imm);
+  bool selectScalarFPAsInt(SDValue N, SDValue &Imm);
 
   bool selectRVVSimm5(SDValue N, unsigned Width, SDValue &Imm);
   template <unsigned Width> bool selectRVVSimm5(SDValue N, SDValue &Imm) {
@@ -152,11 +155,11 @@ public:
                                   SmallVectorImpl<SDValue> &Operands,
                                   bool IsLoad = false, MVT *IndexVT = nullptr);
 
-  void selectVLSEG(SDNode *Node, bool IsMasked, bool IsStrided);
-  void selectVLSEGFF(SDNode *Node, bool IsMasked);
-  void selectVLXSEG(SDNode *Node, bool IsMasked, bool IsOrdered);
-  void selectVSSEG(SDNode *Node, bool IsMasked, bool IsStrided);
-  void selectVSXSEG(SDNode *Node, bool IsMasked, bool IsOrdered);
+  void selectVLSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsStrided);
+  void selectVLSEGFF(SDNode *Node, unsigned NF, bool IsMasked);
+  void selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
+  void selectVSSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsStrided);
+  void selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked, bool IsOrdered);
 
   void selectVSETVLI(SDNode *Node);
 
@@ -195,90 +198,12 @@ private:
   bool performCombineVMergeAndVOps(SDNode *N);
 };
 
-namespace RISCV {
-struct VLSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t FF : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
+class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TargetMachine,
+                                   CodeGenOptLevel OptLevel);
 };
-
-struct VLXSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSXSEGPseudo {
-  uint16_t NF : 4;
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLEPseudo {
-  uint16_t Masked : 1;
-  uint16_t Strided : 1;
-  uint16_t FF : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VSEPseudo {
-  uint16_t Masked :1;
-  uint16_t Strided : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct VLX_VSXPseudo {
-  uint16_t Masked : 1;
-  uint16_t Ordered : 1;
-  uint16_t Log2SEW : 3;
-  uint16_t LMUL : 3;
-  uint16_t IndexLMUL : 3;
-  uint16_t Pseudo;
-};
-
-struct RISCVMaskedPseudoInfo {
-  uint16_t MaskedPseudo;
-  uint16_t UnmaskedPseudo;
-  uint8_t MaskOpIdx;
-  uint8_t MaskAffectsResult : 1;
-};
-
-#define GET_RISCVVSSEGTable_DECL
-#define GET_RISCVVLSEGTable_DECL
-#define GET_RISCVVLXSEGTable_DECL
-#define GET_RISCVVSXSEGTable_DECL
-#define GET_RISCVVLETable_DECL
-#define GET_RISCVVSETable_DECL
-#define GET_RISCVVLXTable_DECL
-#define GET_RISCVVSXTable_DECL
-#define GET_RISCVMaskedPseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
-} // namespace RISCV
 
 } // namespace llvm
 

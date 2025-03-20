@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -21,6 +22,11 @@
 
 using namespace llvm;
 using namespace IRSimilarity;
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
@@ -1306,19 +1312,18 @@ TEST(IRInstructionMapper, CallBrInstIllegal) {
   ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
-// Checks that an debuginfo intrinsics are mapped to be invisible.  Since they
+// Checks that an debuginfo records are mapped to be invisible. Since they
 // do not semantically change the program, they can be recognized as similar.
 TEST(IRInstructionMapper, DebugInfoInvisible) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           then:
-                            %0 = add i32 %a, %b                    
-                            call void @llvm.dbg.value(metadata !0)
-                            %1 = add i32 %a, %b     
+                            %0 = add i32 %a, %b
+                              #dbg_value(i32 0, !0, !0, !0)
+                            %1 = add i32 %a, %b
                             ret i32 0
                           }
 
-                          declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10})";
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
@@ -1914,19 +1919,19 @@ TEST(IRSimilarityCandidate, CheckRegionsDifferentTypes) {
   ASSERT_FALSE(longSimCandCompare(InstrList));
 }
 
-// Check that debug instructions do not impact similarity. They are marked as
+// Check that debug records do not impact similarity. They are marked as
 // invisible.
 TEST(IRSimilarityCandidate, IdenticalWithDebug) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
-                             call void @llvm.dbg.value(metadata !0)
+                               #dbg_value(i32 0, !0, !0, !0)
                              %1 = add i32 %b, %a
                              ret i32 0
                           bb1:
                              %2 = add i32 %a, %b
-                             call void @llvm.dbg.value(metadata !1)
+                               #dbg_value(i32 1, !1, !1, !1)
                              %3 = add i32 %b, %a
                              ret i32 0
                           bb2:
@@ -1935,7 +1940,6 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                              ret i32 0       
                           }
 
-                          declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10}
                           !1 = distinct !{!"test\00", i32 11})";
   LLVMContext Context;

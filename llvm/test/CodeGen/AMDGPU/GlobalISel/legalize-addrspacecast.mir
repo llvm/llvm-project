@@ -509,16 +509,14 @@ body: |
     ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p5)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
-    ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[MV]](p0)
-    ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[COPY2]](p0)
+    ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p0)
     ; GFX9-LABEL: name: test_addrspacecast_p5_fi_to_p0
     ; GFX9: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
     ; GFX9-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64(s64) = S_MOV_B64 $src_private_base
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[S_MOV_B64_]](s64)
     ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p5)
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[UV1]](s32)
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[MV]](p0)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[COPY]](p0)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p0)
     %0:_(p5) = G_FRAME_INDEX %stack.0
     %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
