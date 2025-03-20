@@ -180,23 +180,12 @@ multiclass CXXCompat<
         DefaultIgnore;
 }
 
-multiclass CXX11Compat<string message, bit ext_warn = true>
-    : CXXCompat<message, 11, ext_warn>;
-
-multiclass CXX14Compat<string message, bit ext_warn = true>
-    : CXXCompat<message, 14, ext_warn>;
-
-multiclass CXX17Compat<string message, bit ext_warn = true>
-    : CXXCompat<message, 17, ext_warn>;
-
-multiclass CXX20Compat<string message, bit ext_warn = true>
-    : CXXCompat<message, 20, ext_warn>;
-
-multiclass CXX23Compat<string message, bit ext_warn = true>
-    : CXXCompat<message, 23, ext_warn>;
-
-multiclass CXX26Compat<string message, bit ext_warn = true>
-    : CXXCompat<message, 26, ext_warn, "2c">;
+multiclass CXX11Compat<string message, bit ext_warn = true> : CXXCompat<message, 11, ext_warn>;
+multiclass CXX14Compat<string message, bit ext_warn = true> : CXXCompat<message, 14, ext_warn>;
+multiclass CXX17Compat<string message, bit ext_warn = true> : CXXCompat<message, 17, ext_warn>;
+multiclass CXX20Compat<string message, bit ext_warn = true> : CXXCompat<message, 20, ext_warn>;
+multiclass CXX23Compat<string message, bit ext_warn = true> : CXXCompat<message, 23, ext_warn>;
+multiclass CXX26Compat<string message, bit ext_warn = true> : CXXCompat<message, 26, ext_warn, "2c">;
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
