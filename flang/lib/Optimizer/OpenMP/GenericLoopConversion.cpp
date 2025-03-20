@@ -391,7 +391,7 @@ private:
 ///   `omp.teams` op.
 /// * The reduction operand of the `omp.loop` op is updated to be the **new**
 ///   reduction block argument of the `omp.teams` op.
-class ReductionsMoverConverPattern
+class ReductionsHoistingPattern
     : public mlir::OpConversionPattern<mlir::omp::TeamsOp> {
 public:
   using mlir::OpConversionPattern<mlir::omp::TeamsOp>::OpConversionPattern;
@@ -466,7 +466,7 @@ public:
 
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<ReductionsMoverConverPattern, GenericLoopConversionPattern>(
+    patterns.insert<ReductionsHoistingPattern, GenericLoopConversionPattern>(
         context);
     mlir::ConversionTarget target(*context);
 
@@ -479,7 +479,7 @@ public:
           // legal. Additionally, the op is legal if it does not nest a LoopOp
           // with reductions.
           return !teamsOp.getReductionVars().empty() ||
-                 ReductionsMoverConverPattern::tryToFindNestedLoopWithReduction(
+                 ReductionsHoistingPattern::tryToFindNestedLoopWithReduction(
                      teamsOp) == nullptr;
         });
 
