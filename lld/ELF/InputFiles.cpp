@@ -598,9 +598,19 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   // done in parallel.
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
-  bool hasGnuProperties = false;
   uint64_t size = objSections.size();
   sections.resize(size);
+
+  // check whether gun properties section present
+  bool hasGnuProperties = false;
+  for (size_t i = 0; i != size; ++i) {
+    const Elf_Shdr &sec = objSections[i];
+    hasGnuProperties =
+        check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property"
+            ? true
+            : false;
+  }
+
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
@@ -622,10 +632,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                            .second;
       if (keepGroup) {
         if (!ctx.arg.resolveGroups) {
-          StringRef name = check(obj.getSectionName(sec, shstrtab));
-          if (name == ".note.gnu.property")
-            hasGnuProperties = true;
-          sections[i] = createInputSection(i, sec, name);
+          sections[i] = createInputSection(
+              i, sec, check(obj.getSectionName(sec, shstrtab)));
         }
       } else {
         // Otherwise, discard group members.
