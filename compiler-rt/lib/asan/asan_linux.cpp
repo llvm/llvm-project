@@ -21,7 +21,6 @@
 #  include <pthread.h>
 #  include <stdio.h>
 #  include <sys/mman.h>
-#  include <sys/personality.h>
 #  include <sys/resource.h>
 #  include <sys/syscall.h>
 #  include <sys/time.h>
@@ -40,6 +39,10 @@
 
 #  if SANITIZER_FREEBSD
 #    include <sys/link_elf.h>
+#  endif
+
+#  if SANITIZER_LINUX
+#    include <sys/personality.h>
 #  endif
 
 #  if SANITIZER_SOLARIS
