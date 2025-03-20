@@ -2490,8 +2490,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_dot2add: {
+    // Check number of arguments should be 3
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
+    // Check first two arguments should be vectors of same length
     if (CheckVectorElementCallArgs(&SemaRef, TheCall, TheCall->getNumArgs() - 1))
       return true;
     if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), SemaRef.getASTContext().FloatTy))
