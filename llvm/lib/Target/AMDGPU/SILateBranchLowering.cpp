@@ -170,8 +170,7 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI,
                           *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
   }
 
-  for (unsigned OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx;
-       --OpIdx)
+  for (int OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx; --OpIdx)
     MI.removeOperand(OpIdx);
 
   MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
