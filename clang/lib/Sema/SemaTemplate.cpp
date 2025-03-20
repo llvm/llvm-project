@@ -10635,11 +10635,10 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     return true;
 
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TypenameLoc,
-         getLangOpts().CPlusPlus11 ?
-           diag::compat_cxx11_typename_outside_of_template :
-           diag::compat_pre_cxx11_typename_outside_of_template)
-      << FixItHint::CreateRemoval(TypenameLoc);
+    Diag(TypenameLoc, getLangOpts().CPlusPlus11
+                          ? diag::compat_cxx11_typename_outside_of_template
+                          : diag::compat_pre_cxx11_typename_outside_of_template)
+        << FixItHint::CreateRemoval(TypenameLoc);
 
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   TypeSourceInfo *TSI = nullptr;
@@ -10663,11 +10662,10 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
                         ASTTemplateArgsPtr TemplateArgsIn,
                         SourceLocation RAngleLoc) {
   if (TypenameLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TypenameLoc,
-         getLangOpts().CPlusPlus11 ?
-           diag::compat_cxx11_typename_outside_of_template :
-           diag::compat_pre_cxx11_typename_outside_of_template)
-      << FixItHint::CreateRemoval(TypenameLoc);
+    Diag(TypenameLoc, getLangOpts().CPlusPlus11
+                          ? diag::compat_cxx11_typename_outside_of_template
+                          : diag::compat_pre_cxx11_typename_outside_of_template)
+        << FixItHint::CreateRemoval(TypenameLoc);
 
   // Strangely, non-type results are not ignored by this lookup, so the
   // program is ill-formed if it finds an injected-class-name.

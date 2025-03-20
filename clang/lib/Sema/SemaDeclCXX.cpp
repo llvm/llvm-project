@@ -747,8 +747,9 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   if (!getLangOpts().CPlusPlus17)
     DiagID = diag::compat_pre_cxx17_decomp_decl;
   else if (D.getContext() == DeclaratorContext::Condition)
-    DiagID = getLangOpts().CPlusPlus26 ? diag::compat_cxx26_decomp_decl_cond
-                                       : diag::compat_pre_cxx26_decomp_decl_cond;
+    DiagID = getLangOpts().CPlusPlus26
+                 ? diag::compat_cxx26_decomp_decl_cond
+                 : diag::compat_pre_cxx26_decomp_decl_cond;
   else
     DiagID = diag::compat_cxx17_decomp_decl;
 
@@ -2105,9 +2106,9 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       if (Kind == Sema::CheckConstexprKind::Diagnose) {
         SemaRef.Diag(VD->getLocation(),
                      SemaRef.getLangOpts().CPlusPlus14
-                      ? diag::compat_cxx14_constexpr_local_var
-                      : diag::compat_pre_cxx14_constexpr_local_var)
-          << isa<CXXConstructorDecl>(Dcl);
+                         ? diag::compat_cxx14_constexpr_local_var
+                         : diag::compat_pre_cxx14_constexpr_local_var)
+            << isa<CXXConstructorDecl>(Dcl);
       } else if (!SemaRef.getLangOpts().CPlusPlus14) {
         return false;
       }
@@ -2427,16 +2428,16 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx2aLoc.isValid()) {
     SemaRef.Diag(Cxx2aLoc,
-         SemaRef.getLangOpts().CPlusPlus20
-           ? diag::compat_cxx20_constexpr_body_invalid_stmt
-           : diag::compat_pre_cxx20_constexpr_body_invalid_stmt)
-      << isa<CXXConstructorDecl>(Dcl);
+                 SemaRef.getLangOpts().CPlusPlus20
+                     ? diag::compat_cxx20_constexpr_body_invalid_stmt
+                     : diag::compat_pre_cxx20_constexpr_body_invalid_stmt)
+        << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx1yLoc.isValid()) {
     SemaRef.Diag(Cxx1yLoc,
-         SemaRef.getLangOpts().CPlusPlus14
-           ? diag::compat_cxx14_constexpr_body_invalid_stmt
-           : diag::compat_pre_cxx14_constexpr_body_invalid_stmt)
-      << isa<CXXConstructorDecl>(Dcl);
+                 SemaRef.getLangOpts().CPlusPlus14
+                     ? diag::compat_cxx14_constexpr_body_invalid_stmt
+                     : diag::compat_pre_cxx14_constexpr_body_invalid_stmt)
+        << isa<CXXConstructorDecl>(Dcl);
   }
 
   if (const CXXConstructorDecl *Constructor
