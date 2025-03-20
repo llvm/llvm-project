@@ -2358,7 +2358,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   if (isOrdered()) {
     NewRed = createOrderedReduction(VBuilder, Kind, VecOp, Prev);
   } else {
-    NewRed = createSimpleReduction(VBuilder, VecOp, Kind, getFastMathFlags());
+    NewRed = createSimpleReduction(VBuilder, VecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else

@@ -148,6 +148,10 @@ C23 Feature Support
   better diagnostic behavior for the ``va_start()`` macro in C23 and later.
   This also updates the definition of ``va_start()`` in ``<stdarg.h>`` to use
   the new builtin. Fixes #GH124031.
+- Implemented `WG14 N2819 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2819.pdf>`_
+  which clarified that a compound literal used within a function prototype is
+  treated as if the compound literal were within the body rather than at file
+  scope.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

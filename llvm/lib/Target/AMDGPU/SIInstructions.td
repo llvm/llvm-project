@@ -711,36 +711,42 @@ def : GCNPat<
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
-// Pseudo for the llvm.amdgcn.cs.chain intrinsic.
-// This is essentially a tail call, but it also takes a mask to put in EXEC
-// right before jumping to the callee.
-class SI_CS_CHAIN_TC<
+// Pseudos for the llvm.amdgcn.cs.chain intrinsic.
+multiclass SI_CS_CHAIN_TC<
     ValueType execvt, Predicate wavesizepred,
-    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
-    : SPseudoInstSI <(outs),
-      (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
-  let FixedSize = 0;
-  let isCall = 1;
-  let isTerminator = 1;
-  let isBarrier = 1;
-  let isReturn = 1;
-  let UseNamedOperandTable = 1;
-  let SchedRW = [WriteBranch];
-  let isConvergent = 1;
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret> {
+  let FixedSize = 0,
+      isCall = 1,
+      isTerminator = 1,
+      isBarrier = 1,
+      isReturn = 1,
+      UseNamedOperandTable = 1,
+      SchedRW = [WriteBranch],
+      isConvergent = 1,
+      WaveSizePredicate = wavesizepred in {
+    // This is essentially a tail call, but it also takes a mask to put in EXEC
+    // right before jumping to the callee.
+    def NAME: SPseudoInstSI <(outs),
+        (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)>;
 
-  let WaveSizePredicate = wavesizepred;
+    // Same as above, but it will first try to reallocate the VGPRs, and choose an
+    // EXEC mask and a callee depending on the success of the reallocation attempt.
+    def _DVGPR : SPseudoInstSI <(outs),
+        (ins CCR_SGPR_64:$src0, i64imm:$callee, i32imm:$fpdiff, execrc:$exec,
+             SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)>;
+  } // End FixedSize = 0 etc
 }
 
-def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
-def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
+defm SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+defm SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
 
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
-def : GCNPat<
-  (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
-  (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
->;
+  def : GCNPat<
+    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
+    (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
+  >;
 }
 
 multiclass si_cs_chain_tc_patterns<
@@ -754,6 +760,25 @@ multiclass si_cs_chain_tc_patterns<
 
 defm : si_cs_chain_tc_patterns<i32>;
 defm : si_cs_chain_tc_patterns<i64>;
+
+// Match dynamic VGPR case. This is always indirect since we choose the callee
+// dynamically based on the result of the VGPR reallocation, so make sure to
+// drop the callee info if there is any.
+multiclass si_cs_chain_tc_dvgpr_patterns<
+  ValueType execvt, RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
+  Instruction tc = SI_CS_CHAIN_TC_W32_DVGPR> {
+  foreach callee = [ (i64 0), (tglobaladdr) ] in {
+  def : GCNPat<
+    (AMDGPUtc_return_chain_dvgpr i64:$src0, callee, (i32 timm:$fpdiff),
+                                 execvt:$exec, i32:$numvgprs,
+                                 execvt:$fbexec, i64:$fbcallee),
+    (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
+        SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
+  >;
+  }
+}
+
+defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
 
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
