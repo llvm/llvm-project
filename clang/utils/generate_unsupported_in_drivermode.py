@@ -22,7 +22,6 @@ Logic:
 2) For each unsupported pairing, generate a Lit RUN line, and a CHECK line to parse for expected output. Ex: "error: unknown argument"
 """
 
-import shutil
 import os
 import json
 import subprocess
@@ -30,7 +29,7 @@ from bisect import bisect_left
 from dataclasses import dataclass
 import argparse
 import dataclasses
-from itertools import batched
+import itertools
 
 # Strings defined in Options.td for the various driver flavours. See "OptionVisibility"
 VISIBILITY_CC1AS = "CC1AsOption"
@@ -172,7 +171,7 @@ def get_lit_test_note(test_visibility):
         + " from which it was generated.\n"
         f"{test_prefix}NOTE: Regenerate this Lit test with the following:\n"
         f"{test_prefix}NOTE: python generate_unsupported_in_drivermode.py "
-        + "llvm-project/clang/include/clang/Driver/Options.td --llvm-bin llvm-project/build/bin --llvm-tblgen llvm-tblgen\n\n"
+        "--options-td-dir llvm-project/clang/include/clang/Driver --llvm-include-dir llvm-project/llvm/include --llvm-tblgen llvm-project/build/bin/llvm-tblgen\n\n"
     )
 
 
@@ -188,19 +187,11 @@ def write_lit_test(test_path, test_visibility):
     batch_size = 100
 
     for visibility, driver_data in driver_data_dict.items():
-        is_flang_pair = (
-            visibility == VISIBILITY_FLANG or visibility == VISIBILITY_FC1
-        )
+        is_flang_pair = visibility == VISIBILITY_FLANG or visibility == VISIBILITY_FC1
 
         if (
-            (
-                test_visibility == VISIBILITY_FLANG
-                and visibility != VISIBILITY_FLANG
-            )
-            or (
-                test_visibility == VISIBILITY_FC1
-                and visibility != VISIBILITY_FC1
-            )
+            (test_visibility == VISIBILITY_FLANG and visibility != VISIBILITY_FLANG)
+            or (test_visibility == VISIBILITY_FC1 and visibility != VISIBILITY_FC1)
             or (test_visibility == VISIBILITY_DEFAULT and is_flang_pair)
         ):
             continue
@@ -208,17 +199,20 @@ def write_lit_test(test_path, test_visibility):
         comment_str = EXCLAMATION if is_flang_pair else SLASH_SLASH
 
         unflattened_option_data = list(
-            batched(driver_data.test_option_sequence, batch_size)
+            itertools.batched(driver_data.test_option_sequence, batch_size)
         )
 
         for i, batch in enumerate(unflattened_option_data):
-            # Example run line: "// RUN: not %clang -cc1 -A ...  -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
+            # Example run line: "// RUN: not %clang -cc1 -A ... -x c++ - < /dev/null 2>&1 | FileCheck -check-prefix=CC1OptionCHECK0 %s"
             run_cmd = (
-                f"{comment_str}RUN: not " + driver_data.lit_cmd_prefix
+                f"\n{comment_str}RUN: not " + driver_data.lit_cmd_prefix
             )  # "// RUN: not %clang -cc1 "
 
-            for option_str in batch:
-                run_cmd += option_str + " "  # "-A"
+            # // RUN: <command up to this point> \
+            # // RUN:   --one-option \
+            # // RUN:   -a-different-option \
+            # ...
+            run_cmd += f" \\\n{comment_str}RUN:   ".join(itertools.chain(("",), batch))
 
             run_cmd += (
                 driver_data.lit_cmd_options  # "-x c++"
@@ -283,6 +277,18 @@ parser.add_argument(
 parser.add_argument(
     "--llvm-tblgen",
     help="LLVM TableGen executable. If --llvm-bin is also not specified, the PATH will be searched.",
+)
+parser.add_argument(
+    "--general-test-path",
+    help="File where most driver flavour tests will be written. The typical source tree path will be used by default.",
+)
+parser.add_argument(
+    "--flang-test-path",
+    help="File where flang tests will be written. The typical source tree path will be used by default.",
+)
+parser.add_argument(
+    "--flang-fc1-test-path",
+    help="File where flang -fc1 tests will be written. The typical source tree path will be used by default.",
 )
 args = parser.parse_args()
 
@@ -388,19 +394,10 @@ for option in options_dictionary["!instanceof"]["Option"]:
 
     # Get the correct option prefix
     prefixes = options_dictionary[option]["Prefixes"]
-    prefix = ""
+    prefix = "-"
     if prefixes is not None and len(prefixes) > 0:
         # Assuming the first prefix is the preferred prefix
         prefix = prefixes[0]
-        # When options prefixed with "/" are used with unsupported drivers, misleading output is returned that also
-        # makes parsing more complicated. Instead, given all "/" prefix options accept prefix "-" as well, use "-",
-        # which returns the typical error.
-        # Example:
-        #   clang -cc1 /AI -x c++
-        #     error: error reading '/AI': No such file or directory
-        #   clang -cc1 -AI -x c++
-        #     error: unknown argument: '-AI'
-        prefix = "-" if prefix == "/" else prefix
 
     visibility_set = get_visibility(option)
 
@@ -491,19 +488,47 @@ for skip_pair in skipped_sequence:
 
 # Add the final list of option data to each driver's test list
 for unsupported_pair in unsupported_sequence:
+    # When options prefixed with "/" are used with unsupported drivers, misleading output is returned that also
+    # makes parsing more complicated. Instead, given all "/" prefix options accept prefix "-" as well, use "-",
+    # which returns the typical error.
+    # Example:
+    #   clang -cc1 /AI -x c++
+    #     error: error reading '/AI': No such file or directory
+    #   clang -cc1 -AI -x c++
+    #     error: unknown argument: '-AI'
+    unsupported_pair.prefix = (
+        "-" if unsupported_pair.prefix == "/" else unsupported_pair.prefix
+    )
+
     driver_data_dict[unsupported_pair.driver].test_option_sequence.append(
         unsupported_pair.prefix + unsupported_pair.option_name
     )
 
+args.general_test_path = (
+    "../test/Driver/unsupported_in_drivermode.c"
+    if not args.general_test_path
+    else args.general_test_path
+)
+args.flang_test_path = (
+    "../test/Driver/flang/unsupported_in_flang.f90"
+    if not args.flang_test_path
+    else args.flang_test_path
+)
+args.flang_fc1_test_path = (
+    "../../flang/test/Driver/unsupported_in_flang_fc1.f90"
+    if not args.flang_fc1_test_path
+    else args.flang_fc1_test_path
+)
+
 write_lit_test(
-    "../test/Driver/unsupported_in_drivermode.c",
+    args.general_test_path,
     VISIBILITY_DEFAULT,
 )
 write_lit_test(
-    "../test/Driver/flang/unsupported_in_flang.f90",
+    args.flang_test_path,
     VISIBILITY_FLANG,
 )
 write_lit_test(
-    "../../flang/test/Driver/unsupported_in_flang_fc1.f90",
+    args.flang_fc1_test_path,
     VISIBILITY_FC1,
 )
