@@ -22,19 +22,20 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+static bool isLockGuardDecl(const NamedDecl *Decl) {
+  return Decl->getDeclName().isIdentifier() &&
+         Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
+}
+
 static bool isLockGuard(const QualType &Type) {
   if (const auto *Record = Type->getAs<RecordType>())
-    if (const RecordDecl *Decl = Record->getDecl()) {
-      assert(Decl->getDeclName().isIdentifier() && "Decl is not identifier");
-      return Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
-    }
+    if (const RecordDecl *Decl = Record->getDecl())
+      return isLockGuardDecl(Decl);
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
     if (const TemplateDecl *Decl =
-            TemplateSpecType->getTemplateName().getAsTemplateDecl()) {
-      assert(Decl->getDeclName().isIdentifier() && "Decl is not identifier");
-      return Decl->getName() == "lock_guard" && Decl->isInStdNamespace();
-    }
+            TemplateSpecType->getTemplateName().getAsTemplateDecl())
+      return isLockGuardDecl(Decl);
 
   return false;
 }
@@ -118,47 +119,8 @@ static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
                      TemplateLoc.getLAngleLoc().getLocWithOffset(-1));
 }
 
-namespace {
-
-AST_MATCHER_P(CompoundStmt, hasMultiple, ast_matchers::internal::Matcher<Stmt>,
-              InnerMatcher) {
-  size_t Count = 0;
-
-  for (const Stmt *Stmt : Node.body())
-    if (InnerMatcher.matches(*Stmt, Finder, Builder))
-      Count++;
-
-  return Count > 1;
-}
-
-AST_MATCHER_P(CompoundStmt, hasSingle, ast_matchers::internal::Matcher<Stmt>,
-              InnerMatcher) {
-  size_t Count = 0;
-  ast_matchers::internal::BoundNodesTreeBuilder Result;
-
-  for (const Stmt *Stmt : Node.body()) {
-    ast_matchers::internal::BoundNodesTreeBuilder TB(*Builder);
-    if (InnerMatcher.matches(*Stmt, Finder, &TB)) {
-      Count++;
-      if (Count == 1)
-        Result.addMatch(TB);
-    }
-  }
-
-  if (Count > 1) {
-    Builder->removeBindings(
-        [](const ast_matchers::internal::BoundNodesMap &) { return true; });
-    return false;
-  }
-
-  *Builder = std::move(Result);
-  return true;
-}
-
-const StringRef UseScopedLockMessage =
+const static StringRef UseScopedLockMessage =
     "use 'std::scoped_lock' instead of 'std::lock_guard'";
-
-} // namespace
 
 UseScopedLockCheck::UseScopedLockCheck(StringRef Name,
                                        ClangTidyContext *Context)
@@ -187,14 +149,19 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
         compoundStmt(
             unless(isExpansionInSystemHeader()),
-            hasSingle(declStmt(has(LockVarDecl.bind("lock-decl-single"))))),
+            has(declStmt(has(LockVarDecl)).bind("lock-decl-single")),
+            unless(has(declStmt(unless(equalsBoundNode("lock-decl-single")),
+                                has(LockVarDecl))))),
         this);
   }
 
-  Finder->addMatcher(compoundStmt(unless(isExpansionInSystemHeader()),
-                                  hasMultiple(declStmt(has(LockVarDecl))))
-                         .bind("block-multiple"),
-                     this);
+  Finder->addMatcher(
+      compoundStmt(unless(isExpansionInSystemHeader()),
+                   has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
+                   has(declStmt(unless(equalsBoundNode("lock-decl-multiple")),
+                                has(LockVarDecl))))
+          .bind("block-multiple"),
+      this);
 
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
@@ -222,8 +189,9 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *Decl = Result.Nodes.getNodeAs<VarDecl>("lock-decl-single")) {
-    diagOnSingleLock(Decl, Result);
+  if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("lock-decl-single")) {
+    llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
+    diagOnMultipleLocks({Decls}, Result);
     return;
   }
 
