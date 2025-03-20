@@ -1997,6 +1997,19 @@ APInt llvm::GIConstant::getScalarValue() const {
   return Value;
 }
 
+APInt llvm::GIConstant::getSplatValue() const {
+  assert(Kind == GIConstantKind::ScalableVector &&
+         "Expected scalable constant");
+
+  return Value;
+}
+
+ArrayRef<APInt> llvm::GIConstant::getAsArrayRef() const {
+  assert(Kind == GIConstantKind::FixedVector &&
+         "Expected fixed vector constant");
+  return Values;
+}
+
 std::optional<GIConstant>
 llvm::GIConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
   MachineInstr *Constant = getDefIgnoringCopies(Const, MRI);
@@ -2029,6 +2042,117 @@ llvm::GIConstant::getConstant(Register Const, const MachineRegisterInfo &MRI) {
     return std::nullopt;
 
   return GIConstant(MayBeConstant->Value, GIConstantKind::Scalar);
+}
+
+/// Returns a new constant where add(x) was applied.
+GIConstant llvm::GIConstant::add(const GIConstant &RHS) const {
+  switch (getKind()) {
+  case GIConstantKind::ScalableVector:
+    return GIConstant(Value + RHS.Value, GIConstantKind::ScalableVector);
+  case GIConstantKind::Scalar: {
+    return GIConstant(Value + RHS.Value, GIConstantKind::Scalar);
+  }
+  case GIConstantKind::FixedVector: {
+    SmallVector<APInt> Adds;
+    for (unsigned I = 0, E = Values.size(); I < E; ++I)
+      Adds.push_back(Values[I] + RHS.Values[I]);
+    return GIConstant(Adds);
+  }
+  }
+}
+
+/// Returns a new constant where sub(x) was applied.
+GIConstant llvm::GIConstant::sub(const GIConstant &RHS) const {
+  switch (getKind()) {
+  case GIConstantKind::ScalableVector:
+    return GIConstant(Value - RHS.Value, GIConstantKind::ScalableVector);
+  case GIConstantKind::Scalar: {
+    return GIConstant(Value - RHS.Value, GIConstantKind::Scalar);
+  }
+  case GIConstantKind::FixedVector: {
+    SmallVector<APInt> Subs;
+    for (unsigned I = 0, E = Values.size(); I < E; ++I)
+      Subs.push_back(Values[I] - RHS.Values[I]);
+    return GIConstant(Subs);
+  }
+  }
+}
+
+/// Returns a new constant where mul(x) was applied.
+GIConstant llvm::GIConstant::mul(const GIConstant &RHS) const {
+  switch (getKind()) {
+  case GIConstantKind::ScalableVector:
+    return GIConstant(Value * RHS.Value, GIConstantKind::ScalableVector);
+  case GIConstantKind::Scalar: {
+    return GIConstant(Value * RHS.Value, GIConstantKind::Scalar);
+  }
+  case GIConstantKind::FixedVector: {
+    SmallVector<APInt> Muls;
+    for (unsigned I = 0, E = Values.size(); I < E; ++I)
+      Muls.push_back(Values[I] * RHS.Values[I]);
+    return GIConstant(Muls);
+  }
+  }
+}
+
+bool llvm::GIConstant::isZero() const {
+  switch (Kind) {
+  case GIConstantKind::Scalar:
+    return Value.isZero();
+  case GIConstantKind::ScalableVector:
+    return Value.isZero();
+  case GIConstantKind::FixedVector: {
+    for (const APInt &V : Values)
+      if (!V.isZero())
+        return false;
+    return true;
+  }
+  }
+}
+
+bool llvm::GIConstant::isOne() const {
+  switch (Kind) {
+  case GIConstantKind::Scalar:
+    return Value.isOne();
+  case GIConstantKind::ScalableVector:
+    return Value.isOne();
+  case GIConstantKind::FixedVector: {
+    for (const APInt &V : Values)
+      if (!V.isOne())
+        return false;
+    return true;
+  }
+  }
+}
+
+bool llvm::GIConstant::isTwo() const {
+  switch (Kind) {
+  case GIConstantKind::Scalar:
+    return Value.getLimitedValue() == 2;
+  case GIConstantKind::ScalableVector:
+    return Value.getLimitedValue() == 2;
+  case GIConstantKind::FixedVector: {
+    for (const APInt &V : Values)
+      if (V.getLimitedValue() != 2)
+        return false;
+    return true;
+  }
+  }
+}
+
+bool llvm::GIConstant::isAllOnes() const {
+  switch (Kind) {
+  case GIConstantKind::Scalar:
+    return Value.isAllOnes();
+  case GIConstantKind::ScalableVector:
+    return Value.isAllOnes();
+  case GIConstantKind::FixedVector: {
+    for (const APInt &V : Values)
+      if (!V.isAllOnes())
+        return false;
+    return true;
+  }
+  }
 }
 
 APFloat llvm::GFConstant::getScalarValue() const {
