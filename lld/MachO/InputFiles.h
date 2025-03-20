@@ -292,15 +292,19 @@ public:
   void fetch(const llvm::object::Archive::Symbol &);
   // LLD normally doesn't use Error for error-handling, but the underlying
   // Archive library does, so this is the cleanest way to wrap it.
-  Error fetch(const llvm::object::Archive::Child &, StringRef reason);
+  Error fetch(const llvm::object::Archive::Child &, StringRef reason,
+              bool lazy = false);
   const llvm::object::Archive &getArchive() const { return *file; };
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
 
 private:
+  Expected<InputFile *> childToObjectFile(const llvm::object::Archive::Child &c,
+                                          bool lazy);
   std::unique_ptr<llvm::object::Archive> file;
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
   llvm::DenseSet<uint64_t> seen;
+  llvm::DenseSet<uint64_t> seenLazy;
   // Load all symbols with hidden visibility (-load_hidden).
   bool forceHidden;
 };

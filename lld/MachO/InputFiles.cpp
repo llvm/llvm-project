@@ -2159,8 +2159,33 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
 void ArchiveFile::addLazySymbols() {
   // Avoid calling getMemoryBufferRef() on zero-symbol archive
   // since that crashes.
-  if (file->isEmpty() || file->getNumberOfSymbols() == 0)
+  if (file->isEmpty())
     return;
+
+  if (file->getNumberOfSymbols() == 0) {
+    // No index, treat each child as a lazy object file.
+    Error e = Error::success();
+    for (const object::Archive::Child &c : file->children(e)) {
+      // Check `seen` but don't insert so a future eager load can still happen.
+      if (seen.contains(c.getChildOffset()))
+        continue;
+      if (!seenLazy.insert(c.getChildOffset()).second) {
+        continue;
+      }
+      // First check seen.
+      // Then, write to and check seenLazy
+      // Then, get the file, check for error, and add it to inputs.
+      auto file = childToObjectFile(c, /*lazy=*/true);
+      if (!file)
+        error(toString(this) +
+              ": couldn't process child: " + toString(file.takeError()));
+      inputFiles.insert(*file);
+    }
+    if (e)
+      error(toString(this) +
+            ": Archive::children failed: " + toString(std::move(e)));
+    return;
+  }
 
   Error err = Error::success();
   auto child = file->child_begin(err);
@@ -2191,16 +2216,17 @@ void ArchiveFile::addLazySymbols() {
 
 static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                  uint64_t offsetInArchive, bool forceHidden, bool compatArch) {
+                  uint64_t offsetInArchive, bool forceHidden, bool compatArch,
+                  bool lazy) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
-    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden,
+    return make<ObjFile>(mb, modTime, archiveName, lazy, forceHidden,
                          compatArch);
   case file_magic::bitcode:
-    return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false,
+    return make<BitcodeFile>(mb, archiveName, offsetInArchive, lazy,
                              forceHidden, compatArch);
   default:
     return createStringError(inconvertibleErrorCode(),
@@ -2209,22 +2235,11 @@ loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
   }
 }
 
-Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
+Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason,
+                         bool lazy) {
   if (!seen.insert(c.getChildOffset()).second)
     return Error::success();
-
-  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
-  if (!mb)
-    return mb.takeError();
-
-  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
-  if (!modTime)
-    return modTime.takeError();
-
-  Expected<InputFile *> file =
-      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
-                        forceHidden, compatArch);
-
+  auto file = childToObjectFile(c, /*lazy=*/false);
   if (!file)
     return file.takeError();
 
@@ -2249,6 +2264,23 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
   if (Error e = fetch(c, symCopy.getName()))
     error(toString(this) + ": could not get the member defining symbol " +
           toMachOString(symCopy) + ": " + toString(std::move(e)));
+}
+
+Expected<InputFile *>
+ArchiveFile::childToObjectFile(const llvm::object::Archive::Child &c,
+                               bool lazy) {
+  Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
+  if (!mb)
+    return mb.takeError();
+
+  Expected<TimePoint<std::chrono::seconds>> modTime = c.getLastModified();
+  if (!modTime)
+    return modTime.takeError();
+
+  Expected<InputFile *> file =
+      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
+                        forceHidden, compatArch, lazy);
+  return file;
 }
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
