@@ -1618,12 +1618,12 @@ def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>
 let SubtargetPredicate = isGFX1250Plus in {
   let ReadsModeReg = 0 in {
     let IsPacked = 0 in {
-      defm V_CVT_PK_FP8_F16
-          : VOP3Inst<"v_cvt_pk_fp8_f16",
-                     VOP3_Profile<VOP_I16_V2F16_V2F16, VOP3_OPSEL>>;
-      defm V_CVT_PK_BF8_F16
-          : VOP3Inst<"v_cvt_pk_bf8_f16",
-                     VOP3_Profile<VOP_I16_V2F16_V2F16, VOP3_OPSEL>>;
+      defm V_CVT_PK_FP8_F16 : VOP3Inst<"v_cvt_pk_fp8_f16",
+                                       VOP3_Profile<VOP_I16_V2F16, VOP3_OPSEL>,
+                                       int_amdgcn_cvt_pk_fp8_f16>;
+      defm V_CVT_PK_BF8_F16 : VOP3Inst<"v_cvt_pk_bf8_f16",
+                                       VOP3_Profile<VOP_I16_V2F16, VOP3_OPSEL>,
+                                       int_amdgcn_cvt_pk_bf8_f16>;
     }
     defm V_CVT_SR_PK_F16_F32 : VOP3Inst<"v_cvt_sr_pk_f16_f32", VOP3_Profile<VOP_V2F16_F32_F32_I32>, int_amdgcn_cvt_sr_pk_f16_f32>;
 
@@ -1690,14 +1690,6 @@ let SubtargetPredicate = isGFX1250Plus in {
 
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_e64, f16>;
   def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_e64, f16>;
-
-  // These instructions ignore src1 so set it to 0.
-  def : GCNPat<(int_amdgcn_cvt_pk_fp8_f16(v2f16(VOP3OpSelMods v2f16:$src0,
-                   i32:$src0_modifiers))),
-               (V_CVT_PK_FP8_F16_e64 $src0_modifiers, $src0, 0, (i32 0), 0, 0)>;
-  def : GCNPat<(int_amdgcn_cvt_pk_bf8_f16(v2f16(VOP3OpSelMods v2f16:$src0,
-                   i32:$src0_modifiers))),
-               (V_CVT_PK_BF8_F16_e64 $src0_modifiers, $src0, 0, (i32 0), 0, 0)>;
 } // End SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = HasTensorCvtLutInsts in {
