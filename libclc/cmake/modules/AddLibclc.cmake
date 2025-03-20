@@ -342,7 +342,7 @@ function(add_libclc_builtin_set)
 
   set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
 
-  if( ${ARG_OPT_FLAGS} STREQUAL "" )
+  if( NOT ARG_OPT_FLAGS )
     # Add empty opt target.
     add_custom_target( ${builtins_opt_lib_tgt} ALL )
     add_dependencies( ${builtins_opt_lib_tgt} ${builtins_link_lib_tgt} )
