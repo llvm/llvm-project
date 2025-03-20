@@ -6,6 +6,11 @@
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+// RUN: clang-doc --format=html --output=%t/docs-with-prefix --executor=all-TUs %t/build/compile_commands.json --repository=https://repository.com --repository-line-prefix=L
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE-PREFIX
 
 // JSON-INDEX: async function LoadIndex() {
 // JSON-INDEX-NEXT: return{
@@ -231,6 +236,62 @@
 //      HTML-CIRCLE: <p> Calculates the perimeter of the circle.</p>
 //      HTML-CIRCLE: <div>return</div>
 //      HTML-CIRCLE: <p> double The perimeter of the circle.</p>
+
+//      HTML-SHAPE-PREFIX: <h1>class Shape</h1>
+// HTML-SHAPE-PREFIX-NEXT: <p>
+// HTML-SHAPE-PREFIX-NEXT: Defined at line
+// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h#L8">8</a>
+// HTML-SHAPE-PREFIX-NEXT: of file
+// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
+// HTML-SHAPE-PREFIX-NEXT: </p>
+//      HTML-SHAPE-PREFIX: <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
+//      HTML-SHAPE-PREFIX: <p>public void ~Shape()</p>
+//      HTML-SHAPE-PREFIX: Defined at line 
+// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h#L13">13</a>
+// HTML-SHAPE-PREFIX-NEXT: of file 
+// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
+
+//      HTML-CALC-PREFIX: <h1>class Calculator</h1>
+// HTML-CALC-PREFIX-NEXT: <p>
+// HTML-CALC-PREFIX-NEXT: Defined at line 
+// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./include/Calculator.h#L8">8</a>
+// HTML-CALC-PREFIX-NEXT: of file 
+// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
+// HTML-CALC-PREFIX-NEXT: </p>
+//      HTML-CALC-PREFIX: <h3 id="{{([0-9A-F]{40})}}">add</h3>
+//      HTML-CALC-PREFIX: <p>public int add(int a, int b)</p>
+//      HTML-CALC-PREFIX: Defined at line 
+// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./src/Calculator.cpp#L3">3</a>
+// HTML-CALC-PREFIX-NEXT: of file 
+// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+
+//      HTML-RECTANGLE-PREFIX: <h1>class Rectangle</h1>
+// HTML-RECTANGLE-PREFIX-NEXT: <p>
+// HTML-RECTANGLE-PREFIX-NEXT: Defined at line
+// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./include/Rectangle.h#L10">10</a>
+// HTML-RECTANGLE-PREFIX-NEXT: of file 
+// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./include/Rectangle.h">Rectangle.h</a>
+// HTML-RECTANGLE-PREFIX-NEXT: </p>
+//      HTML-RECTANGLE-PREFIX: <h3 id="{{([0-9A-F]{40})}}">area</h3>
+//      HTML-RECTANGLE-PREFIX: <p>public double area()</p>
+//      HTML-RECTANGLE-PREFIX: Defined at line
+// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#L6">6</a>
+// HTML-RECTANGLE-PREFIX-NEXT: of file 
+// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
+
+//      HTML-CIRCLE-PREFIX: <h1>class Circle</h1>
+// HTML-CIRCLE-PREFIX-NEXT: <p>
+// HTML-CIRCLE-PREFIX-NEXT: Defined at line 
+// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./include/Circle.h#L10">10</a>
+// HTML-CIRCLE-PREFIX-NEXT: of file 
+// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./include/Circle.h">Circle.h</a>
+// HTML-CIRCLE-PREFIX-NEXT: </p>
+//      HTML-CIRCLE-PREFIX: <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
+//      HTML-CIRCLE-PREFIX: <p>public double perimeter()</p>
+//      HTML-CIRCLE-PREFIX: Defined at line 
+// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./src/Circle.cpp#L9">9</a>
+// HTML-CIRCLE-PREFIX-NEXT:  of file 
+// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
 // MD-CALC: # class Calculator
 // MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
