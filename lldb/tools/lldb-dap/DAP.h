@@ -92,10 +92,10 @@ public:
   void Clear();
 
 private:
-  uint64_t NewSpecId();
+  uint64_t NewSpecID();
 
   llvm::DenseMap<uint64_t, lldb::SBLineEntry> line_entries;
-  uint64_t new_id = 0ul;
+  uint64_t new_id = 0;
 };
 
 struct Variables {
@@ -226,7 +226,7 @@ struct DAP {
   // empty; if the previous expression was a variable expression, this string
   // will contain that expression.
   std::string last_nonempty_var_expression;
-  Gotos goto_id_map;
+  Gotos gotos;
 
   /// Creates a new DAP sessions.
   ///
@@ -391,7 +391,7 @@ struct DAP {
   /// Debuggee will continue from stopped state.
   void WillContinue() {
     variables.Clear();
-    goto_id_map.Clear();
+    gotos.Clear();
   }
 
   /// Poll the process to wait for it to reach the eStateStopped state.

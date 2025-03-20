@@ -81,7 +81,7 @@ DAP::DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(default_repl_mode), goto_id_map() {}
+      reverse_request_seq(0), repl_mode(default_repl_mode), gotos() {}
 
 DAP::~DAP() = default;
 
@@ -850,17 +850,17 @@ std::optional<lldb::SBLineEntry> Gotos::GetLineEntry(uint64_t id) const {
 }
 
 uint64_t Gotos::InsertLineEntry(lldb::SBLineEntry line_entry) {
-  const auto spec_id = this->NewSpecId();
+  const auto spec_id = this->NewSpecID();
   line_entries.insert(std::make_pair(spec_id, line_entry));
   return spec_id;
 }
 
 void Gotos::Clear() {
-  new_id = 0UL;
+  new_id = 0;
   line_entries.clear();
 }
 
-uint64_t Gotos::NewSpecId() { return new_id++; }
+uint64_t Gotos::NewSpecID() { return new_id++; }
 
 void Variables::Clear() {
   locals.Clear();

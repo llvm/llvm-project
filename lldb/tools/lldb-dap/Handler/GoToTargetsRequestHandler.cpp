@@ -18,13 +18,13 @@ namespace lldb_dap {
 
 static llvm::SmallVector<lldb::SBLineEntry>
 GetLineValidEntry(DAP &dap, const lldb::SBFileSpec &file_spec, uint32_t line) {
-  // disable breakpoint listeners so they do not send events to the DAP client.
+  // Disable breakpoint listeners so they do not send events to the DAP client.
   lldb::SBListener listener = dap.debugger.GetListener();
   lldb::SBBroadcaster broadcaster = dap.target.GetBroadcaster();
   constexpr auto event_mask = lldb::SBTarget::eBroadcastBitBreakpointChanged;
   listener.StopListeningForEvents(broadcaster, event_mask);
 
-  // create a breakpoint to resolve the line if it is on an empty line.
+  // Create a breakpoint to resolve the line if it is on an empty line.
   lldb::SBBreakpoint goto_bp =
       dap.target.BreakpointCreateByLocation(file_spec, line);
   if (!goto_bp.IsValid())
@@ -142,7 +142,7 @@ void GoToTargetsRequestHandler::operator()(
   } else {
     llvm::json::Array response_targets;
     for (lldb::SBLineEntry &line_entry : goto_locations) {
-      const uint64_t target_id = dap.goto_id_map.InsertLineEntry(line_entry);
+      const uint64_t target_id = dap.gotos.InsertLineEntry(line_entry);
       const uint32_t target_line = line_entry.GetLine();
       auto target = llvm::json::Object();
       target.try_emplace("id", target_id);

@@ -12,7 +12,7 @@
 
 namespace lldb_dap {
 
-/// Creates an \p StoppedEvent with the reason \a goto
+/// Creates an \p StoppedEvent with the reason \a goto.
 static void SendThreadGotoEvent(DAP &dap, lldb::tid_t thread_id) {
   llvm::json::Object event(CreateEventObject("stopped"));
   llvm::json::Object body;
@@ -83,31 +83,27 @@ void GoToRequestHandler::operator()(const llvm::json::Object &request) const {
 
   const auto *goto_arguments = request.getObject("arguments");
   if (goto_arguments == nullptr) {
-    SendError("Arguments is empty");
-    return;
+    return SendError("Arguments is empty");
   }
 
   lldb::SBThread current_thread = dap.GetLLDBThread(*goto_arguments);
   if (!current_thread.IsValid()) {
-    SendError(llvm::formatv("Thread id `{0}` is not valid",
-                            current_thread.GetThreadID()));
-    return;
+    return SendError(llvm::formatv("Thread id `{0}` is not valid",
+                                   current_thread.GetThreadID()));
   }
 
   const auto target_id = GetInteger<uint64_t>(goto_arguments, "targetId");
-  const auto line_entry = dap.goto_id_map.GetLineEntry(target_id.value());
+  const auto line_entry = dap.gotos.GetLineEntry(target_id.value());
   if (!target_id || !line_entry) {
-    SendError(llvm::formatv("Target id `{0}` is not valid",
-                            current_thread.GetThreadID()));
-    return;
+    return SendError(llvm::formatv("Target id `{0}` is not valid",
+                                   current_thread.GetThreadID()));
   }
 
   auto file_spec = line_entry->GetFileSpec();
   const auto error =
       current_thread.JumpToLine(file_spec, line_entry->GetLine());
   if (error.Fail()) {
-    SendError(error.GetCString());
-    return;
+    return SendError(error.GetCString());
   }
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
