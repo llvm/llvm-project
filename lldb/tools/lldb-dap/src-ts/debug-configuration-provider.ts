@@ -25,7 +25,7 @@ export class LLDBDapConfigurationProvider
 {
   constructor(private readonly server: LLDBDapServer) {}
 
-  async resolveDebugConfiguration(
+  async resolveDebugConfigurationWithSubstitutedVariables(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     _token?: vscode.CancellationToken,
