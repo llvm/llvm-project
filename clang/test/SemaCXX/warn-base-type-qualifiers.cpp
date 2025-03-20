@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++11 -Wignored-cv-qualifiers -verify
+// RUN: %clang_cc1 %s -std=c++11 -Wignored-base-class-qualifiers -verify
 
 template <typename T> struct add_const {
   using type = const T;
