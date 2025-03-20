@@ -687,7 +687,7 @@ static bool isFrameStoreOpcode(int Opcode, TypeSize &MemBytes) {
 
 Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  TypeSize Dummy = TypeSize::getFixed(0);
+  TypeSize Dummy = TypeSize::getZero();
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
@@ -702,7 +702,7 @@ Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                  int &FrameIndex) const {
-  TypeSize Dummy = TypeSize::getFixed(0);
+  TypeSize Dummy = TypeSize::getZero();
   if (isFrameLoadOpcode(MI.getOpcode(), Dummy)) {
     if (Register Reg = isLoadFromStackSlot(MI, FrameIndex))
       return Reg;
@@ -720,7 +720,7 @@ Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
 
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  TypeSize Dummy = TypeSize::getFixed(0);
+  TypeSize Dummy = TypeSize::getZero();
   return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
 }
 
@@ -736,7 +736,7 @@ Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 Register X86InstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                 int &FrameIndex) const {
-  TypeSize Dummy = TypeSize::getFixed(0);
+  TypeSize Dummy = TypeSize::getZero();
   if (isFrameStoreOpcode(MI.getOpcode(), Dummy)) {
     if (Register Reg = isStoreToStackSlot(MI, FrameIndex))
       return Reg;

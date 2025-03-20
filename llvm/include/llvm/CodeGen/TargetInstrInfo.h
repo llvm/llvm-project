@@ -295,7 +295,7 @@ public:
   virtual Register isLoadFromStackSlot(const MachineInstr &MI,
                                        int &FrameIndex,
                                        TypeSize &MemBytes) const {
-    MemBytes = TypeSize::getFixed(0);
+    MemBytes = TypeSize::getZero();
     return isLoadFromStackSlot(MI, FrameIndex);
   }
 
@@ -333,7 +333,7 @@ public:
   virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex,
                                       TypeSize &MemBytes) const {
-    MemBytes = TypeSize::getFixed(0);
+    MemBytes = TypeSize::getZero();
     return isStoreToStackSlot(MI, FrameIndex);
   }
 
