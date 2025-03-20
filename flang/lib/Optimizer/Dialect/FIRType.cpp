@@ -1068,7 +1068,7 @@ void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
 
 llvm::LogicalResult fir::ReferenceType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type eleTy) {
+    mlir::Type eleTy, mlir::UnitAttr isVolatile) {
   if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
                 ReferenceType, TypeDescType>(eleTy))
     return emitError() << "cannot build a reference to type: " << eleTy << '\n';

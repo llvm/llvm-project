@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributes.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -363,7 +364,9 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     The type of a reference to an entity in memory.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins
+    "mlir::Type":$eleTy,
+    "mlir::UnitAttr":$isVol);
 
   let skipDefaultBuilders = 1;
 
@@ -371,10 +374,18 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
       return Base::get(elementType.getContext(), elementType);
     }]>,
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, "bool":$isVol)>,
+    // [{
+    //  if (isVol)
+    //    return Base::get(elementType.getContext(), elementType, mlir::UnitAttr::get(elementType.getContext()));
+    //  else
+    //    return Base::get(elementType.getContext(), elementType);
+    //}]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return (bool)getIsVol(); }
   }];
 
   let genVerifyDecl = 1;
