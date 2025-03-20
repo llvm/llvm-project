@@ -819,7 +819,8 @@ mlir::Type hlfir::getVariableElementType(hlfir::Entity variable) {
   } else if (fir::isRecordWithTypeParameters(eleTy)) {
     return fir::BoxType::get(eleTy);
   }
-  return fir::ReferenceType::get(eleTy);
+  const bool isVolatile = fir::isa_volatile_ref_type(variable.getType());
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type hlfir::getEntityElementType(hlfir::Entity entity) {
