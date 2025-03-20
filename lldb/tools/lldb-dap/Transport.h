@@ -20,9 +20,37 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <chrono>
-#include <optional>
+#include <system_error>
 
 namespace lldb_dap {
+
+class EndOfFileError : public llvm::ErrorInfo<EndOfFileError> {
+public:
+  static char ID;
+
+  EndOfFileError() = default;
+
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "End of file reached.";
+  }
+  std::error_code convertToErrorCode() const override {
+    return std::make_error_code(std::errc::timed_out);
+  }
+};
+
+class TimeoutError : public llvm::ErrorInfo<TimeoutError> {
+public:
+  static char ID;
+
+  TimeoutError() = default;
+
+  void log(llvm::raw_ostream &OS) const override {
+    OS << "Operation timed out.";
+  }
+  std::error_code convertToErrorCode() const override {
+    return std::make_error_code(std::errc::timed_out);
+  }
+};
 
 /// A transport class that performs the Debug Adapter Protocol communication
 /// with the client.
@@ -48,8 +76,8 @@ public:
   ///     header is recieved, this will block until the full message is
   ///     read.
   ///
-  /// \returns Returns the next protocol message or nullopt if EOF is reached.
-  llvm::Expected<std::optional<protocol::Message>>
+  /// \returns Returns the next protocol message.
+  llvm::Expected<protocol::Message>
   Read(const std::chrono::microseconds &timeout);
 
   /// Returns the name of this transport client, for example `stdin/stdout` or

@@ -14,6 +14,7 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -690,6 +691,29 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 
 bool DAP::HandleObject(const protocol::Message &M) {
   if (const auto *req = std::get_if<protocol::Request>(&M)) {
+    {
+      std::lock_guard<std::mutex> lock(m_active_request_mutex);
+      m_active_request = req;
+    }
+
+    auto cleanup = llvm::make_scope_exit([&]() {
+      std::scoped_lock<std::mutex> active_request_lock(m_active_request_mutex);
+      m_active_request = nullptr;
+    });
+
+    {
+      std::lock_guard<std::mutex> lock(m_cancelled_requests_mutex);
+      if (m_cancelled_requests.find(req->seq) != m_cancelled_requests.end()) {
+        protocol::Response response;
+        response.request_seq = req->seq;
+        response.command = req->command;
+        response.success = false;
+        response.message = protocol::Response::Message::cancelled;
+        Send(response);
+        return true;
+      }
+    }
+
     // Clear interrupt marker prior to handling the next request.
     if (debugger.InterruptRequested())
       debugger.CancelInterruptRequest();
@@ -798,6 +822,13 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   return ToError(error);
 }
 
+void DAP::ClearCancelRequest(const protocol::CancelArguments &args) {
+  std::lock_guard<std::mutex> cancalled_requests_lock(
+      m_cancelled_requests_mutex);
+  if (args.requestId)
+    m_cancelled_requests.erase(*args.requestId);
+}
+
 template <typename T>
 static std::optional<T> getArgumentsIfRequest(const protocol::Message &pm,
                                               llvm::StringLiteral command) {
@@ -815,58 +846,66 @@ static std::optional<T> getArgumentsIfRequest(const protocol::Message &pm,
 }
 
 llvm::Error DAP::Loop() {
-  std::deque<protocol::Message> queue;
-  std::condition_variable queue_cv;
-  std::mutex queue_mutex;
   std::future<llvm::Error> queue_reader = std::async([&]() -> llvm::Error {
     llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
     auto cleanup = llvm::make_scope_exit([&]() {
       // Ensure we're marked as disconnecting when the reader exits.
       disconnecting = true;
-      queue_cv.notify_all();
+      m_queue_cv.notify_all();
     });
 
     while (!disconnecting) {
-      llvm::Expected<std::optional<protocol::Message>> next =
+      llvm::Expected<protocol::Message> next =
           transport.Read(std::chrono::seconds(1));
       bool timeout = false;
+      bool eof = false;
       if (llvm::Error Err = llvm::handleErrors(
               next.takeError(),
-              [&](std::unique_ptr<llvm::StringError> Err) -> llvm::Error {
-                if (Err->convertToErrorCode() == std::errc::timed_out) {
-                  timeout = true;
-                  return llvm::Error::success();
-                }
-                return llvm::Error(std::move(Err));
+              [&](const EndOfFileError &E) -> llvm::Error {
+                eof = true;
+                return llvm::Error::success();
+              },
+              [&](const TimeoutError &) -> llvm::Error {
+                timeout = true;
+                return llvm::Error::success();
               }))
         return Err;
+
+      if (eof)
+        break;
 
       // If the read timed out, continue to check if we should disconnect.
       if (timeout)
         continue;
 
-      // nullopt is returned on EOF.
-      if (!*next)
-        break;
-
-      {
-        std::lock_guard<std::mutex> lock(queue_mutex);
+      const std::optional<protocol::CancelArguments> cancel_args =
+          getArgumentsIfRequest<protocol::CancelArguments>(*next, "cancel");
+      if (cancel_args) {
+        {
+          std::lock_guard<std::mutex> cancalled_requests_lock(
+              m_cancelled_requests_mutex);
+          if (cancel_args->requestId)
+            m_cancelled_requests.insert(*cancel_args->requestId);
+        }
 
         // If a cancel is requested for the active request, make a best
         // effort attempt to interrupt.
-        if (const auto cancel_args =
-                getArgumentsIfRequest<protocol::CancelArguments>(**next,
-                                                                 "cancel");
-            cancel_args && active_seq == cancel_args->requestId) {
-          DAP_LOG(log, "({0}) interrupting inflight request {1}",
-                  transport.GetClientName(), active_seq);
+        std::lock_guard<std::mutex> active_request_lock(m_active_request_mutex);
+        if (m_active_request &&
+            cancel_args->requestId == m_active_request->seq) {
+          DAP_LOG(log,
+                  "({0}) interrupting inflight request (command={1} seq={2})",
+                  transport.GetClientName(), m_active_request->command,
+                  m_active_request->seq);
           debugger.RequestInterrupt();
-          debugger.GetCommandInterpreter().InterruptCommand();
         }
-
-        queue.push_back(std::move(**next));
       }
-      queue_cv.notify_one();
+
+      {
+        std::lock_guard<std::mutex> queue_lock(m_queue_mutex);
+        m_queue.push_back(std::move(*next));
+      }
+      m_queue_cv.notify_one();
     }
 
     return llvm::Error::success();
@@ -879,50 +918,18 @@ llvm::Error DAP::Loop() {
   });
 
   while (!disconnecting) {
-    protocol::Message next;
-    {
-      std::unique_lock<std::mutex> lock(queue_mutex);
-      queue_cv.wait(lock, [&] { return disconnecting || !queue.empty(); });
+    std::unique_lock<std::mutex> lock(m_queue_mutex);
+    m_queue_cv.wait(lock, [&] { return disconnecting || !m_queue.empty(); });
 
-      if (queue.empty())
-        break;
+    if (m_queue.empty())
+      break;
 
-      next = queue.front();
-      queue.pop_front();
+    protocol::Message next = m_queue.front();
+    m_queue.pop_front();
 
-      if (protocol::Request *req = std::get_if<protocol::Request>(&next)) {
-        active_seq = req->seq;
-
-        // Check if we should preempt this request from a queued cancel.
-        bool cancelled = false;
-        for (const auto &message : queue) {
-          if (const auto args =
-                  getArgumentsIfRequest<protocol::CancelArguments>(message,
-                                                                   "cancel");
-              args && args->requestId == req->seq) {
-            cancelled = true;
-            break;
-          }
-        }
-
-        // Preempt the request and immeidately respond with cancelled.
-        if (cancelled) {
-          protocol::Response response;
-          response.request_seq = req->seq;
-          response.command = req->command;
-          response.success = false;
-          response.message = protocol::Response::Message::cancelled;
-          Send(response);
-          continue;
-        }
-      } else
-        active_seq = 0;
-    }
-
-    if (!HandleObject(next)) {
+    if (!HandleObject(next))
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
-    }
   }
 
   return queue_reader.get();
@@ -1250,8 +1257,8 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
       }
     }
   } else {
-    // This is not under the globals or locals scope, so there are no duplicated
-    // names.
+    // This is not under the globals or locals scope, so there are no
+    // duplicated names.
 
     // We have a named item within an actual variable so we need to find it
     // withing the container variable by name.
