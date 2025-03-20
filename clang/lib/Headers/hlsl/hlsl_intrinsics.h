@@ -328,13 +328,15 @@ reflect(__detail::HLSL_FIXED_VECTOR<float, L> I,
 //===----------------------------------------------------------------------===//
 
 /// \fn T smoothstep(T Min, T Max, T X)
-/// \brief Returns a smooth Hermite interpolation between 0 and 1, if \a X is in the range [\a Min, \a Max].
+/// \brief Returns a smooth Hermite interpolation between 0 and 1, if \a X is in
+/// the range [\a Min, \a Max].
 /// \param Min The minimum range of the x parameter.
 /// \param Max The maximum range of the x parameter.
 /// \param X The specified value to be interpolated.
 ///
-/// The return value is 0.0 if \a X ≤ \a Min and 1.0 if \a X ≥ \a Max. When \a Min < \a X < \a Max, 
-/// the function performs smooth Hermite interpolation between 0 and 1. Result is undefined if Min ≥ Max.
+/// The return value is 0.0 if \a X ≤ \a Min and 1.0 if \a X ≥ \a Max. When \a
+/// Min < \a X < \a Max, the function performs smooth Hermite interpolation
+/// between 0 and 1.
 
 template <typename T>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
@@ -363,8 +365,8 @@ const inline __detail::HLSL_FIXED_VECTOR<half, N> smoothstep(
 template <int N>
 const inline __detail::HLSL_FIXED_VECTOR<float, N>
 smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
-        __detail::HLSL_FIXED_VECTOR<float, N> Max,
-        __detail::HLSL_FIXED_VECTOR<float, N> X) {
+           __detail::HLSL_FIXED_VECTOR<float, N> Max,
+           __detail::HLSL_FIXED_VECTOR<float, N> X) {
   return __detail::smoothstep_vec_impl(Min, Max, X);
 }
 

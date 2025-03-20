@@ -108,36 +108,33 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
     auto *VTyA = ArgTyA->getAs<VectorType>();
-    if (VTyA == nullptr) {
+    if (!(ArgTyA->isScalarType() || VTyA)) {
       SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
+                   diag::err_typecheck_expect_any_scalar_or_vector)
           << ArgTyA
-          << SemaRef.Context.getVectorType(ArgTyA, 2, VectorKind::Generic) << 1
-          << 0 << 0;
+          << 1;
       return true;
     }
 
     ExprResult B = TheCall->getArg(1);
     QualType ArgTyB = B.get()->getType();
     auto *VTyB = ArgTyB->getAs<VectorType>();
-    if (VTyB == nullptr) {
+    if (!(ArgTyB->isScalarType() || VTyB)) {
       SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
+                   diag::err_typecheck_expect_any_scalar_or_vector)
           << ArgTyB
-          << SemaRef.Context.getVectorType(ArgTyB, 2, VectorKind::Generic) << 1
-          << 0 << 0;
+          << 1;
       return true;
     }
 
     ExprResult C = TheCall->getArg(2);
     QualType ArgTyC = C.get()->getType();
     auto *VTyC = ArgTyC->getAs<VectorType>();
-    if (VTyC == nullptr) {
+    if (!(ArgTyC->isScalarType() || VTyC)) {
       SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTyB
-          << SemaRef.Context.getVectorType(ArgTyC, 2, VectorKind::Generic) << 1
-          << 0 << 0;
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgTyC
+          << 1;
       return true;
     }
 
