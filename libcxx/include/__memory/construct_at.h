@@ -17,6 +17,7 @@
 #include <__new/placement_new_delete.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_array.h>
+#include <__type_traits/is_unbounded_array.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -34,15 +35,26 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
-template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
+template <class _Tp,
+          class... _Args,
+          class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...)),
+          __enable_if_t<!is_unbounded_array_v<_Tp>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp* construct_at(_Tp* __location, _Args&&... __args) {
   _LIBCPP_ASSERT_NON_NULL(__location != nullptr, "null pointer given to construct_at");
-  return ::new (static_cast<void*>(__location)) _Tp(std::forward<_Args>(__args)...);
+  if constexpr (is_array_v<_Tp>) {
+    static_assert(sizeof...(_Args) == 0, "construction arguments cannot be passed to construct_at with an array type");
+    return ::new (static_cast<void*>(__location)) _Tp[1]();
+  } else {
+    return ::new (static_cast<void*>(__location)) _Tp(std::forward<_Args>(__args)...);
+  }
 }
 
 #endif
 
-template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
+template <class _Tp,
+          class... _Args,
+          class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...)),
+          __enable_if_t<!is_unbounded_array_v<_Tp>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* __construct_at(_Tp* __location, _Args&&... __args) {
 #if _LIBCPP_STD_VER >= 20
   return std::construct_at(__location, std::forward<_Args>(__args)...);
