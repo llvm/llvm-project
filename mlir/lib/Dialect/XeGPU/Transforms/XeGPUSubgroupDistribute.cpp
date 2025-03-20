@@ -243,10 +243,6 @@ static SGMap getSGMapForDPASOperand(VectorType vectorTy, unsigned operandNum) {
   return getDefaultSgMap(vectorTy);
 }
 
-static SGMap getSupportedSGMapForOp(Operation *op) {
-  return getDefaultSgMap(2);
-}
-
 ///===----------------------------------------------------------------------===///
 /// SGMapPropagation
 ///===----------------------------------------------------------------------===///
@@ -747,77 +743,42 @@ struct MoveFuncBodyToWarpExecuteOnLane0
     : public OpRewritePattern<gpu::GPUFuncOp> {
   using OpRewritePattern<gpu::GPUFuncOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFunc,
+  LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
                                 PatternRewriter &rewriter) const override {
-    // if the function contains warp_execute_on_lane0, return
-    if (llvm::any_of(gpuFunc.getBody().getOps(), [](Operation &op) {
+    /// If the function all ready moved inside a warp_execute_on_lane0, skip.
+    if (llvm::any_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::WarpExecuteOnLane0Op>(op);
         }))
       return failure();
-    // // if the first op is already warp_execute_on_lane0, return
-    // auto &body = gpuFunc.getBody();
-    // auto &entryBlock = body.front();
-    // if (entryBlock.empty())
-    //   return failure();
-    // // llvm::errs() << "entry block: " << entryBlock << "\n";
-    // auto &firstOp = entryBlock.front();
-    // if (isa<gpu::LaneIdOp>(firstOp))
-    //   return failure();
-
-    // llvm::errs() << "First op: " << firstOp << "\n";
-
-    // create a new function with the same signature
-    auto newFunc = rewriter.create<gpu::GPUFuncOp>(
-        gpuFunc.getLoc(), gpuFunc.getName(), gpuFunc.getFunctionType());
-    rewriter.setInsertionPointToEnd(&newFunc.getFunctionBody().front());
+    /// Create a new function with the same signature.
+    auto newGpuFunc = rewriter.create<gpu::GPUFuncOp>(
+        gpuFuncOp.getLoc(), gpuFuncOp.getName(), gpuFuncOp.getFunctionType());
+    /// Create a WarpExecuteOnLane0Op with same arguments and results as the
+    /// original gpuFuncOp.
+    rewriter.setInsertionPointToEnd(&newGpuFunc.getFunctionBody().front());
     auto laneId = rewriter.create<gpu::LaneIdOp>(
-        newFunc.getLoc(), rewriter.getIndexType(),
+        newGpuFunc.getLoc(), rewriter.getIndexType(),
         /** upperBound = **/ mlir::IntegerAttr());
-
-    // rewriter.startOpModification(gpuFunc);
-    // rewriter.setInsertionPoint(&firstOp);
+    auto gpuFuncResultType = gpuFuncOp.getFunctionType().getResults();
     auto warpOp = rewriter.create<gpu::WarpExecuteOnLane0Op>(
-        laneId.getLoc(), newFunc->getResultTypes(), laneId, subgroupSize,
-        newFunc.getArguments(), newFunc.getArgumentTypes());
+        laneId.getLoc(), gpuFuncResultType, laneId, subgroupSize,
+        newGpuFunc.getArguments(), newGpuFunc.getArgumentTypes());
     auto &warpBodyBlock = warpOp.getBodyRegion().front();
+    /// Replace the ReturnOp of the original gpu function with a YieldOp.
     auto origRetunOp =
-        cast<gpu::ReturnOp>(gpuFunc.getBlocks().back().getTerminator());
+        cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
     rewriter.setInsertionPointAfter(origRetunOp);
     rewriter.create<gpu::YieldOp>(origRetunOp.getLoc(),
                                   origRetunOp.getOperands());
-    // erase return op
     rewriter.eraseOp(origRetunOp);
-    // auto returnOp =
-    // cast<gpu::ReturnOp>(gpuFunc.getBlocks().end()->getTerminator());
-    // rewriter.startOpModification(returnOp);
-    // rewriter.replaceOpWithNewOp<gpu::YieldOp>(returnOp,
-    // newFunc.getArguments()); rewriter.finalizeOpModification(returnOp);
-    rewriter.inlineRegionBefore(gpuFunc.getBody(), warpOp.getBodyRegion(),
+    /// Move the original function body to the warp body.
+    rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
                                 warpOp.getBodyRegion().begin());
     rewriter.eraseBlock(&warpBodyBlock);
-    // auto &newWarpBody = warpOp.getBodyRegion();
-    // auto returnOp = cast<gpu::ReturnOp>(newWarpBody.end()->getTerminator());
-    // rewriter.replaceOpWithNewOp<gpu::YieldOp>(returnOp,
-    // returnOp.getOperands());
-    // rewriter.setInsertionPointToEnd(&warpOp.getBodyRegion().front());
-    // add a gpu.yield
-    // rewriter.create<gpu::YieldOp>(warpOp.getLoc(), warpOp.getResults());
-    // rewriter.inlineRegionBefore(gpuFunc.getBody(),
-    // warpOp.getBodyRegion(),
+    /// Insert a new ReturnOp after the WarpExecuteOnLane0Op.
     rewriter.setInsertionPointAfter(warpOp);
-    rewriter.create<gpu::ReturnOp>(newFunc.getLoc(), warpOp.getResults());
-    //                             warpOp.getBodyRegion().begin());
-    // // rewriter.eraseOp(gpuFunc);
-    // // get the function return op
-    // auto returnOp = cast<gpu::ReturnOp>(warpOp.getBody()->getTerminator());
-    // rewriter.replaceOpWithNewOp<gpu::YieldOp>(returnOp,
-    // returnOp.getOperands());
-    // // rewriter.eraseOp(returnOp);
-    // // create a new function return which retuns the result of the warp
-    // rewriter.setInsertionPointAfter(warpOp);
-    // rewriter.create<gpu::ReturnOp>(warpOp.getLoc(), warpOp.getResults());
-    // rewriter.finalizeOpModification(gpuFunc);
-    rewriter.replaceOp(gpuFunc, newFunc);
+    rewriter.create<gpu::ReturnOp>(newGpuFunc.getLoc(), warpOp.getResults());
+    rewriter.replaceOp(gpuFuncOp, newGpuFunc);
     return success();
   }
 };
@@ -855,10 +816,11 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   {
     RewritePatternSet patterns(&getContext());
     patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+    /// We want to avoid ops from hoisted out of the gpu.warp_execute_on_lane0
+    /// region.
     GreedyRewriteConfig config;
+    config.cseConstants = false;
     config.fold = false;
-    // config.cseConstants = false;
-    // config.enableRegionSimplification = GreedySimplifyRegionLevel::Disabled;
     (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 }
