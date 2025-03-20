@@ -60,6 +60,7 @@
 #endif
 
 using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
 namespace {
 #ifdef _WIN32
@@ -68,6 +69,15 @@ const char DEV_NULL[] = "nul";
 const char DEV_NULL[] = "/dev/null";
 #endif
 } // namespace
+
+static Response CancelledResponse(int64_t seq, std::string command) {
+  Response response;
+  response.request_seq = seq;
+  response.command = command;
+  response.success = false;
+  response.message = Response::Message::cancelled;
+  return response;
+}
 
 namespace lldb_dap {
 
@@ -232,7 +242,7 @@ void DAP::StopEventHandlers() {
 void DAP::SendJSON(const llvm::json::Value &json) {
   // FIXME: Instead of parsing the output message from JSON, pass the `Message`
   // as parameter to `SendJSON`.
-  protocol::Message message;
+  Message message;
   llvm::json::Path::Root root;
   if (!fromJSON(json, message, root)) {
     DAP_LOG_ERROR(log, root.getError(), "({1}) encoding failed: {0}",
@@ -242,16 +252,12 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   Send(message);
 }
 
-void DAP::Send(const protocol::Message &message) {
-  if (auto *resp = std::get_if<protocol::Response>(&message);
+void DAP::Send(const Message &message) {
+  if (auto *resp = std::get_if<Response>(&message);
       resp && debugger.InterruptRequested()) {
     // If the debugger was interrupted, convert this response into a 'cancelled'
     // response.
-    protocol::Response cancelled;
-    cancelled.command = resp->command;
-    cancelled.request_seq = resp->request_seq;
-    cancelled.success = false;
-    cancelled.message = protocol::Response::Message::cancelled;
+    Response cancelled = CancelledResponse(resp->request_seq, resp->command);
     if (llvm::Error err = transport.Write(cancelled))
       DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
                     transport.GetClientName());
@@ -689,8 +695,8 @@ void DAP::SetTarget(const lldb::SBTarget target) {
   }
 }
 
-bool DAP::HandleObject(const protocol::Message &M) {
-  if (const auto *req = std::get_if<protocol::Request>(&M)) {
+bool DAP::HandleObject(const Message &M) {
+  if (const auto *req = std::get_if<Request>(&M)) {
     {
       std::lock_guard<std::mutex> lock(m_active_request_mutex);
       m_active_request = req;
@@ -702,14 +708,12 @@ bool DAP::HandleObject(const protocol::Message &M) {
     });
 
     {
+      // If there is a pending cancelled request, preempt the request and mark
+      // it cancelled.
       std::lock_guard<std::mutex> lock(m_cancelled_requests_mutex);
       if (m_cancelled_requests.find(req->seq) != m_cancelled_requests.end()) {
-        protocol::Response response;
-        response.request_seq = req->seq;
-        response.command = req->command;
-        response.success = false;
-        response.message = protocol::Response::Message::cancelled;
-        Send(response);
+        Response cancelled = CancelledResponse(req->seq, req->command);
+        Send(cancelled);
         return true;
       }
     }
@@ -729,7 +733,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
     return false; // Fail
   }
 
-  if (const auto *resp = std::get_if<protocol::Response>(&M)) {
+  if (const auto *resp = std::get_if<Response>(&M)) {
     std::unique_ptr<ResponseHandler> response_handler;
     {
       std::lock_guard<std::mutex> locker(call_mutex);
@@ -750,21 +754,20 @@ bool DAP::HandleObject(const protocol::Message &M) {
     } else {
       llvm::StringRef message = "Unknown error, response failed";
       if (resp->message) {
-        message =
-            std::visit(llvm::makeVisitor(
-                           [](const std::string &message) -> llvm::StringRef {
-                             return message;
-                           },
-                           [](const protocol::Response::Message &message)
-                               -> llvm::StringRef {
-                             switch (message) {
-                             case protocol::Response::Message::cancelled:
-                               return "cancelled";
-                             case protocol::Response::Message::notStopped:
-                               return "notStopped";
-                             }
-                           }),
-                       *resp->message);
+        message = std::visit(
+            llvm::makeVisitor(
+                [](const std::string &message) -> llvm::StringRef {
+                  return message;
+                },
+                [](const Response::Message &message) -> llvm::StringRef {
+                  switch (message) {
+                  case Response::Message::cancelled:
+                    return "cancelled";
+                  case Response::Message::notStopped:
+                    return "notStopped";
+                  }
+                }),
+            *resp->message);
       }
 
       (*response_handler)(llvm::createStringError(
@@ -822,7 +825,7 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   return ToError(error);
 }
 
-void DAP::ClearCancelRequest(const protocol::CancelArguments &args) {
+void DAP::ClearCancelRequest(const CancelArguments &args) {
   std::lock_guard<std::mutex> cancalled_requests_lock(
       m_cancelled_requests_mutex);
   if (args.requestId)
@@ -830,9 +833,9 @@ void DAP::ClearCancelRequest(const protocol::CancelArguments &args) {
 }
 
 template <typename T>
-static std::optional<T> getArgumentsIfRequest(const protocol::Message &pm,
+static std::optional<T> getArgumentsIfRequest(const Message &pm,
                                               llvm::StringLiteral command) {
-  auto *const req = std::get_if<protocol::Request>(&pm);
+  auto *const req = std::get_if<Request>(&pm);
   if (!req || req->command != command)
     return std::nullopt;
 
@@ -855,8 +858,7 @@ llvm::Error DAP::Loop() {
     });
 
     while (!disconnecting) {
-      llvm::Expected<protocol::Message> next =
-          transport.Read(std::chrono::seconds(1));
+      llvm::Expected<Message> next = transport.Read(std::chrono::seconds(1));
       bool timeout = false;
       bool eof = false;
       if (llvm::Error Err = llvm::handleErrors(
@@ -878,8 +880,8 @@ llvm::Error DAP::Loop() {
       if (timeout)
         continue;
 
-      const std::optional<protocol::CancelArguments> cancel_args =
-          getArgumentsIfRequest<protocol::CancelArguments>(*next, "cancel");
+      const std::optional<CancelArguments> cancel_args =
+          getArgumentsIfRequest<CancelArguments>(*next, "cancel");
       if (cancel_args) {
         {
           std::lock_guard<std::mutex> cancalled_requests_lock(
@@ -924,7 +926,7 @@ llvm::Error DAP::Loop() {
     if (m_queue.empty())
       break;
 
-    protocol::Message next = m_queue.front();
+    Message next = m_queue.front();
     m_queue.pop_front();
 
     if (!HandleObject(next))

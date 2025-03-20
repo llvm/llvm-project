@@ -52,7 +52,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         blocking_seq = self.async_blocking_request(duration=1.0)
         # Use a longer timeout to ensure we catch if the request was interrupted
         # properly.
-        pending_seq = self.async_blocking_request(duration=self.timeoutval)
+        pending_seq = self.async_blocking_request(duration=self.timeoutval / 2)
         cancel_seq = self.async_cancel(requestId=pending_seq)
 
         blocking_resp = self.dap_server.recv_packet(filter_type=["response"])
