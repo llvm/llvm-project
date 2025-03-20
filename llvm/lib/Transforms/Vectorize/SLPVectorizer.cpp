@@ -6455,14 +6455,11 @@ void BoUpSLP::reorderTopToBottom() {
             assert(SLPReVec && "Only supported by REVEC.");
             // ShuffleVectorInst does not do reorderOperands (and it should not
             // because ShuffleVectorInst supports only a limited set of
-            // patterns). Only do reorderNodeWithReuses if all of the users are
-            // not ShuffleVectorInst.
-            if (isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
+            // patterns). Only do reorderNodeWithReuses if the user is not
+            // ShuffleVectorInst.
+            if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->hasState() &&
+                isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
               continue;
-            assert((!TE->UserTreeIndex ||
-                    !isa<ShuffleVectorInst>(
-                        TE->UserTreeIndex.UserTE->getMainOp())) &&
-                   "Does not know how to reorder.");
           }
           // Update ordering of the operands with the smaller VF than the given
           // one.
