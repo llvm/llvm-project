@@ -489,7 +489,7 @@ exit:
 
   auto *PN = dyn_cast<PHINode>(&SplitBB->front());
   // PreserveLCSSA: should insert a PHI node in front of SplitBB
-  EXPECT_EQ(nullptr, PN);
+  EXPECT_NE(nullptr, PN);
   // The PHI node should have 2 identical incoming blocks.
   EXPECT_EQ(2u, PN->getNumIncomingValues());
   EXPECT_EQ(PN->getIncomingBlock(0), PN->getIncomingBlock(1));
