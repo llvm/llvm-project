@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: define {{.*}}test_ints{{.*}}(i16 {{.*}} [[VAL:%.*]]){{.*}}
 // CHECK-NOT: bitcast
-// CHECK: ret i16 [[VAL]]
+// CHECK-NEXT: ret i16 [[VAL]]
 int16_t test_int(int16_t p0)
 {
     return asint16(p0);
