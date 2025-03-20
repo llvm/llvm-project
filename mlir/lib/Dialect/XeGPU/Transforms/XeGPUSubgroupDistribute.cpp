@@ -17,9 +17,17 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeRange.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -33,6 +41,9 @@ namespace xegpu {
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
+
+#define DEBUG_TYPE "xegpu-subgroup-distribute"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -647,6 +658,27 @@ void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
+void attachLayoutAttributeToUsers(Value v, Attribute layout) {
+  for (OpOperand &user : v.getUses()) {
+    Operation *owner = user.getOwner();
+    unsigned operandNumber = user.getOperandNumber();
+    /// If the user is a DpasOp, set "sg_map_a", "sg_map_b", or "sg_map_c"
+    /// attribute.
+    if (auto dpasOp = dyn_cast<xegpu::DpasOp>(owner)) {
+      if (operandNumber == 0)
+        dpasOp->setAttr("sg_map_a", layout);
+      else if (operandNumber == 1)
+        dpasOp->setAttr("sg_map_b", layout);
+      else if (operandNumber == 2)
+        dpasOp->setAttr("sg_map_c", layout);
+      continue;
+    }
+    /// For every other user, use a generic attribute name.
+    std::string attrName = "op" + std::to_string(operandNumber);
+    owner->setAttr(attrName, layout);
+  }
+}
+
 static LogicalResult
 attachLayoutAttributes(Operation *top,
                        llvm::function_ref<SGMap(Value)> getPropagatedLayout) {
@@ -664,15 +696,18 @@ attachLayoutAttributes(Operation *top,
     return xegpu::SGMapAttr::get(top->getContext(), wiLayout, wiData);
   };
   /// Attach the layout attributes to the results of the operations.
-  top->walk([&](Operation *op) {
-    /// If no results, skip the operation.
+  auto walkResult = top->walk([&](Operation *op) {
+    /// If no results, move on.
     if (op->getNumResults() == 0)
-      return;
+      return WalkResult::advance();
     if (auto tensorDescTy =
             dyn_cast<xegpu::TensorDescType>(op->getResult(0).getType())) {
       auto sgMapAttr = getSGMapForResult(op->getResult(0));
-      if (!sgMapAttr)
-        op->emitError("Expecting a layout for the result tensor descriptor.");
+      if (!sgMapAttr) {
+        LLVM_DEBUG(DBGS() << "No layout for result of " << *op << "\n");
+        return WalkResult::interrupt();
+      }
+
       /// Clone the op, attach the sg_map to the result tensor descriptor, and
       /// remove the original op.
       OpBuilder builder(op);
@@ -683,7 +718,7 @@ attachLayoutAttributes(Operation *top,
       newOp->getResult(0).setType(newTensorDescTy);
       op->replaceAllUsesWith(newOp->getResults());
       op->erase();
-      return;
+      return WalkResult::advance();
     }
     /// Otherwise simply attach the sg_map to the op itself.
     for (auto [i, r] : llvm::enumerate(op->getResults())) {
@@ -691,11 +726,103 @@ attachLayoutAttributes(Operation *top,
       if (sgMapAttr) {
         auto attrName = "r" + std::to_string(i);
         op->setAttr(attrName, sgMapAttr);
+        /// Attach the layout attribute to the users of the result.
+        attachLayoutAttributeToUsers(r, sgMapAttr);
       }
     }
+    return WalkResult::advance();
   });
+
+  return failure(walkResult.wasInterrupted());
+}
+
+static LogicalResult resolveLayoutConflicts(Operation *top) {
+  /// TODO: Implement the layout conflict resolution.
   return success();
 }
+
+namespace {
+
+struct MoveFuncBodyToWarpExecuteOnLane0
+    : public OpRewritePattern<gpu::GPUFuncOp> {
+  using OpRewritePattern<gpu::GPUFuncOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFunc,
+                                PatternRewriter &rewriter) const override {
+    // if the function contains warp_execute_on_lane0, return
+    if (llvm::any_of(gpuFunc.getBody().getOps(), [](Operation &op) {
+          return isa<gpu::WarpExecuteOnLane0Op>(op);
+        }))
+      return failure();
+    // // if the first op is already warp_execute_on_lane0, return
+    // auto &body = gpuFunc.getBody();
+    // auto &entryBlock = body.front();
+    // if (entryBlock.empty())
+    //   return failure();
+    // // llvm::errs() << "entry block: " << entryBlock << "\n";
+    // auto &firstOp = entryBlock.front();
+    // if (isa<gpu::LaneIdOp>(firstOp))
+    //   return failure();
+
+    // llvm::errs() << "First op: " << firstOp << "\n";
+
+    // create a new function with the same signature
+    auto newFunc = rewriter.create<gpu::GPUFuncOp>(
+        gpuFunc.getLoc(), gpuFunc.getName(), gpuFunc.getFunctionType());
+    rewriter.setInsertionPointToEnd(&newFunc.getFunctionBody().front());
+    auto laneId = rewriter.create<gpu::LaneIdOp>(
+        newFunc.getLoc(), rewriter.getIndexType(),
+        /** upperBound = **/ mlir::IntegerAttr());
+
+    // rewriter.startOpModification(gpuFunc);
+    // rewriter.setInsertionPoint(&firstOp);
+    auto warpOp = rewriter.create<gpu::WarpExecuteOnLane0Op>(
+        laneId.getLoc(), newFunc->getResultTypes(), laneId, subgroupSize,
+        newFunc.getArguments(), newFunc.getArgumentTypes());
+    auto &warpBodyBlock = warpOp.getBodyRegion().front();
+    auto origRetunOp =
+        cast<gpu::ReturnOp>(gpuFunc.getBlocks().back().getTerminator());
+    rewriter.setInsertionPointAfter(origRetunOp);
+    rewriter.create<gpu::YieldOp>(origRetunOp.getLoc(),
+                                  origRetunOp.getOperands());
+    // erase return op
+    rewriter.eraseOp(origRetunOp);
+    // auto returnOp =
+    // cast<gpu::ReturnOp>(gpuFunc.getBlocks().end()->getTerminator());
+    // rewriter.startOpModification(returnOp);
+    // rewriter.replaceOpWithNewOp<gpu::YieldOp>(returnOp,
+    // newFunc.getArguments()); rewriter.finalizeOpModification(returnOp);
+    rewriter.inlineRegionBefore(gpuFunc.getBody(), warpOp.getBodyRegion(),
+                                warpOp.getBodyRegion().begin());
+    rewriter.eraseBlock(&warpBodyBlock);
+    // auto &newWarpBody = warpOp.getBodyRegion();
+    // auto returnOp = cast<gpu::ReturnOp>(newWarpBody.end()->getTerminator());
+    // rewriter.replaceOpWithNewOp<gpu::YieldOp>(returnOp,
+    // returnOp.getOperands());
+    // rewriter.setInsertionPointToEnd(&warpOp.getBodyRegion().front());
+    // add a gpu.yield
+    // rewriter.create<gpu::YieldOp>(warpOp.getLoc(), warpOp.getResults());
+    // rewriter.inlineRegionBefore(gpuFunc.getBody(),
+    // warpOp.getBodyRegion(),
+    rewriter.setInsertionPointAfter(warpOp);
+    rewriter.create<gpu::ReturnOp>(newFunc.getLoc(), warpOp.getResults());
+    //                             warpOp.getBodyRegion().begin());
+    // // rewriter.eraseOp(gpuFunc);
+    // // get the function return op
+    // auto returnOp = cast<gpu::ReturnOp>(warpOp.getBody()->getTerminator());
+    // rewriter.replaceOpWithNewOp<gpu::YieldOp>(returnOp,
+    // returnOp.getOperands());
+    // // rewriter.eraseOp(returnOp);
+    // // create a new function return which retuns the result of the warp
+    // rewriter.setInsertionPointAfter(warpOp);
+    // rewriter.create<gpu::ReturnOp>(warpOp.getLoc(), warpOp.getResults());
+    // rewriter.finalizeOpModification(gpuFunc);
+    rewriter.replaceOp(gpuFunc, newFunc);
+    return success();
+  }
+};
+
+} // namespace
 
 namespace {
 struct XeGPUSubgroupDistributePass final
@@ -721,4 +848,13 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   auto getPropagatedLayout = [&](Value val) { return analyis.getSGMap(val); };
   if (failed(attachLayoutAttributes(getOperation(), getPropagatedLayout)))
     signalPassFailure();
+  if (failed(resolveLayoutConflicts(getOperation())))
+    signalPassFailure();
+  /// Move all operations inside a GPU functions inside
+  /// gpu.warp_execute_on_lane0
+  {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
 }
