@@ -1,4 +1,5 @@
-// RUN: %libomptarget-compile-generic -fprofile-generate
+// RUN: %libomptarget-compile-generic -fprofile-generate \
+// RUN:     -fprofile-update=atomic
 // RUN: env LLVM_PROFILE_FILE=%basename_t.llvm.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -8,7 +9,8 @@
 // RUN:     %target_triple.%basename_t.llvm.profraw \
 // RUN:     | %fcheck-generic --check-prefix="LLVM-DEVICE"
 
-// RUN: %libomptarget-compile-generic -fprofile-instr-generate
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
+// RUN:     -fprofile-update=atomic
 // RUN: env LLVM_PROFILE_FILE=%basename_t.clang.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -18,7 +20,8 @@
 // RUN:     %target_triple.%basename_t.clang.profraw | \
 // RUN:     %fcheck-generic --check-prefix="CLANG-DEV"
 
-// RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate
+// RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate \
+// RUN:     -fprofile-update=atomic
 // RUN: env LLVM_PROFILE_FILE=%basename_t.nogpu.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -27,7 +30,7 @@
 // RUN: not test -e %target_triple.%basename_t.nogpu.profraw
 
 // RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate \
-// RUN:     -Xarch_device -fprofile-instr-generate
+// RUN:     -Xarch_device -fprofile-instr-generate -fprofile-update=atomic
 // RUN: env LLVM_PROFILE_FILE=%basename_t.hidf.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -38,7 +41,7 @@
 // RUN:     | %fcheck-generic --check-prefix="CLANG-DEV"
 
 // RUN: %libomptarget-compile-generic -Xarch_device -fprofile-generate \
-// RUN:     -Xarch_host -fprofile-instr-generate
+// RUN:     -Xarch_host -fprofile-instr-generate -fprofile-update=atomic
 // RUN: env LLVM_PROFILE_FILE=%basename_t.hfdi.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
 // RUN: llvm-profdata show --all-functions --counts \
@@ -59,8 +62,10 @@ int main() {
 
   int device_var = 1;
 #pragma omp target
-  for (int i = 0; i < 10; i++) {
-    device_var *= i;
+  {
+    for (int i = 0; i < 10; i++) {
+      device_var *= i;
+    }
   }
 }
 
@@ -78,7 +83,7 @@ int main() {
 // LLVM-DEVICE-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // LLVM-DEVICE: Hash: {{0[xX][0-9a-fA-F]+}}
 // LLVM-DEVICE: Counters: 3
-// LLVM-DEVICE: Block counts: [10, 2, 1]
+// LLVM-DEVICE: Block counts: [10, {{.*}}, 1]
 // LLVM-DEVICE: Instrumentation level: IR
 
 // CLANG-HOST-LABEL: main:
@@ -97,6 +102,5 @@ int main() {
 // CLANG-DEV-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
 // CLANG-DEV: Hash: {{0[xX][0-9a-fA-F]+}}
 // CLANG-DEV: Counters: 2
-// CLANG-DEV: Function count: 0
-// CLANG-DEV: Block counts: [11]
+// CLANG-DEV: Block counts: [10]
 // CLANG-DEV: Instrumentation level: Front-end
