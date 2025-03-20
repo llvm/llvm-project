@@ -50,7 +50,8 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
     llvm::Value *MemPtr, const MemberPointerType *MPT) {
   ErrorUnsupportedABI(CGF, "calls through member pointers");
 
-  const auto *RD = MPT->getMostRecentCXXRecordDecl();
+  const auto *RD =
+      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
   ThisPtrForCall =
       CGF.getAsNaturalPointerTo(This, CGF.getContext().getRecordType(RD));
   const FunctionProtoType *FPT =
@@ -293,7 +294,7 @@ llvm::Constant *CGCXXABI::getMemberPointerAdjustment(const CastExpr *E) {
     derivedType = E->getType();
 
   const CXXRecordDecl *derivedClass =
-      derivedType->castAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
+    derivedType->castAs<MemberPointerType>()->getClass()->getAsCXXRecordDecl();
 
   return CGM.GetNonVirtualBaseClassOffset(derivedClass,
                                           E->path_begin(),

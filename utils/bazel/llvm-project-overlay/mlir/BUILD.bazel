@@ -11026,6 +11026,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefToLLVM",
         ":OpenMPDialect",
+        ":OpenMPOpsIncGen",
         ":Pass",
     ],
 )
