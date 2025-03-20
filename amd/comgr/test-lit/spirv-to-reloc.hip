@@ -1,6 +1,6 @@
 // REQUIRES: comgr-has-spirv
 
-// COM: Generate a SPIRV file from a HIP kernel
+// COM: Generate a SPIR-V file from a HIP kernel
 // RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
 // RUN:    --no-gpu-bundle-output --offload-device-only -O3 %s -o %t.spv \
 // RUN:    -fno-rounding-math -fvisibility=hidden -O3 -fno-autolink \
