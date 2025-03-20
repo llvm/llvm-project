@@ -119,7 +119,7 @@ void ReExecWithoutASLR() {
     return;
   }
 
-  bool aslr_on = ((old_personality & ADDR_NO_RANDOMIZE) == 0);
+  bool aslr_on = (old_personality & ADDR_NO_RANDOMIZE) == 0;
 
   if (aslr_on) {
     // Disable ASLR if the memory layout was incompatible.
