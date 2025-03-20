@@ -23,6 +23,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/AArch64AttributeParser.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
@@ -235,12 +236,14 @@ static void sanitizePauthSubSection(
   */
   if (pauthSubSection->Content.size() < 2) {
     if (1 == pauthSubSection->Content.size()) {
-      if (1 == pauthSubSection->Content[0].Tag)
+      if (llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM ==
+          pauthSubSection->Content[0].Tag)
         Warn(ctx)
             << &isec
             << ": AArch64 Build Attributes: 'aeabi_pauthabi' subsection "
                "contains only an ID (scheme missing); ignoring subsection";
-      if (2 == pauthSubSection->Content[0].Tag)
+      if (llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA ==
+          pauthSubSection->Content[0].Tag)
         Warn(ctx) << &isec
                   << ": AArch64 Build Attributes: 'aeabi_pauthabi' subsection "
                      "contains only a scheme (ID missing); ignoring subsection";
@@ -278,17 +281,23 @@ static void sanitizeFAndBSubSection(
     // subsection, however, user is allowed to add other, unknown tag. If such
     // tags exists, remove them. (duplicates are not possible)
     fAndBSubSection->Content.erase(
-        std::remove_if(fAndBSubSection->Content.begin(),
-                       fAndBSubSection->Content.end(),
-                       [](const BuildAttributeItem &item) {
-                         return item.Tag != 0 && item.Tag != 1 && item.Tag != 2;
-                       }),
+        std::remove_if(
+            fAndBSubSection->Content.begin(), fAndBSubSection->Content.end(),
+            [](const BuildAttributeItem &item) {
+              return item.Tag !=
+                         llvm::AArch64BuildAttributes::TAG_FEATURE_BTI &&
+                     item.Tag !=
+                         llvm::AArch64BuildAttributes::TAG_FEATURE_PAC &&
+                     item.Tag != llvm::AArch64BuildAttributes::TAG_FEATURE_GCS;
+            }),
         fAndBSubSection->Content.end());
   }
 
-  constexpr unsigned tagBTI = 0, tagPAC = 1, tagGCS = 2;
   // Find missing tags
-  std::set<unsigned> requiredTags = {tagBTI, tagPAC, tagGCS};
+  std::set<unsigned> requiredTags = {
+      llvm::AArch64BuildAttributes::TAG_FEATURE_BTI,
+      llvm::AArch64BuildAttributes::TAG_FEATURE_PAC,
+      llvm::AArch64BuildAttributes::TAG_FEATURE_GCS};
   for (const auto &item : fAndBSubSection->Content)
     requiredTags.erase(item.Tag);
 
@@ -300,9 +309,15 @@ static void sanitizeFAndBSubSection(
   assert(3 == fAndBSubSection->Content.size() && "vector size should be 3");
   std::sort(fAndBSubSection->Content.begin(), fAndBSubSection->Content.end(),
             [](const auto &a, const auto &b) { return a.Tag < b.Tag; });
-  assert(0 == fAndBSubSection->Content[0].Tag && "first tag should be 0");
-  assert(1 == fAndBSubSection->Content[1].Tag && "first tag should be 1");
-  assert(2 == fAndBSubSection->Content[2].Tag && "first tag should be 2");
+  assert(llvm::AArch64BuildAttributes::TAG_FEATURE_PAC ==
+             fAndBSubSection->Content[0].Tag &&
+         "first tag should be 0");
+  assert(llvm::AArch64BuildAttributes::TAG_FEATURE_BTI ==
+             fAndBSubSection->Content[1].Tag &&
+         "first tag should be 1");
+  assert(llvm::AArch64BuildAttributes::TAG_FEATURE_GCS ==
+             fAndBSubSection->Content[2].Tag &&
+         "first tag should be 2");
 }
 
 static std::array<std::optional<llvm::BuildAttributeSubSection>, 2>
