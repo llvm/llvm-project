@@ -94,7 +94,6 @@ __clc_log(float x)
 #endif
 
   uint xi = __clc_as_uint(x);
-  uint ax = xi & EXSIGNBIT_SP32;
 
   // Calculations for |x-1| < 2^-4
   float r = x - 1.0f;
@@ -165,9 +164,9 @@ __clc_log(float x)
   z = near1 ? znear1 : z;
 
   // Corner cases
-  z = ax >= PINFBITPATT_SP32 ? x : z;
-  z = xi != ax ? __clc_as_float(QNANBITPATT_SP32) : z;
-  z = ax == 0 ? __clc_as_float(NINFBITPATT_SP32) : z;
+  z = __clc_isinf(x) ? FLT_PINF : z;
+  z = (__clc_isnan(x) || x < 0.0f) ? FLT_NAN : z;
+  z = x == 0.0f ? FLT_NINF : z;
 
   return z;
 }
@@ -297,9 +296,9 @@ __clc_log(double x)
 
   double ret = is_near ? ret_near : ret_far;
 
-  ret = __clc_isinf(x) ? __clc_as_double(PINFBITPATT_DP64) : ret;
-  ret = (__clc_isnan(x) | (x < 0.0)) ? __clc_as_double(QNANBITPATT_DP64) : ret;
-  ret = x == 0.0 ? __clc_as_double(NINFBITPATT_DP64) : ret;
+  ret = __clc_isinf(x) ? DBL_PINF : ret;
+  ret = (__clc_isnan(x) || x < 0.0) ? DBL_NAN : ret;
+  ret = x == 0.0 ? DBL_NINF : ret;
   return ret;
 }
 
