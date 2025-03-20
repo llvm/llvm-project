@@ -1,6 +1,6 @@
 # REQUIRES: aarch64
 
-.section .note.gnu.property, "a"
+
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 49
 .aeabi_attribute Tag_PAuth_Schema, 19
