@@ -1069,13 +1069,8 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
   telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
-  // Only dispatch telemetry for a non-success case to reduce
-  // chances of slowing down the code.
-  // FIXME: Remove this conditional monitoring as it means we lose the ability
-  // to monitor exit-operations' time for the average case.
-  //if (status != 0)
-  {
     UUID module_uuid;
+    // Need this check because the pointer may not be valid at this point.
     if (TargetSP target_sp = m_target_wp.lock()) {
       helper.SetDebugger(&target_sp->GetDebugger());
       if (ModuleSP mod = target_sp->GetExecutableModule())
@@ -1093,7 +1088,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
       info->module_uuid = module_uuid;
       info->pid = m_pid;
     });
-  }
+
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
            GetPluginName(), status, exit_string);
