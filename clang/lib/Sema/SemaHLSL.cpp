@@ -2493,15 +2493,27 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // Check number of arguments should be 3
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
-    // Check first two arguments should be vectors of same length
-    if (CheckVectorElementCallArgs(&SemaRef, TheCall, TheCall->getNumArgs() - 1))
+
+    // Check first two arguments are vector of length 2 with half data type
+    auto checkHalfVectorOfSize2 = [](clang::QualType PassedType) -> bool {
+      if (const auto *VecTy = PassedType->getAs<VectorType>())
+        return !(VecTy->getNumElements() == 2 &&
+            VecTy->getElementType()->isHalfType());
       return true;
+    };
+    if(CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(0),
+                             SemaRef.getASTContext().HalfTy,
+                             checkHalfVectorOfSize2))
+      return true;
+    if(CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(1),
+                             SemaRef.getASTContext().HalfTy,
+                             checkHalfVectorOfSize2))
+      return true;
+
+    // Check third argument is a float
     if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), SemaRef.getASTContext().FloatTy))
       return true;
-    if (CheckNoDoubleVectors(&SemaRef, TheCall,
-                             TheCall->getNumArgs() - 1,
-                             SemaRef.Context.HalfTy))
-      return true;
+    TheCall->setType(TheCall->getArg(2)->getType());
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh:
