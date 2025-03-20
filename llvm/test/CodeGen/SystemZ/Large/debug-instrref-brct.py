@@ -30,4 +30,3 @@ print("     Return implicit $r2d")
 print("   bb.2:")
 print("     liveins: $r4l")
 print("     Return implicit $r4l")
-    

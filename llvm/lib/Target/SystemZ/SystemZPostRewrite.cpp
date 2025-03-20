@@ -111,7 +111,7 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   bool Src2IsHigh = SystemZ::isHighReg(Src2Reg);
   // A copy instruction that we might create, held here for the purpose of
   // debug instr value tracking.
-  MachineInstr* CopyInst = nullptr;
+  MachineInstr *CopyInst = nullptr;
 
   // In rare cases both sources are the same register (after
   // machine-cse). This must be handled as it may lead to wrong-code (after
@@ -119,8 +119,8 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   // expandCondMove()).
   if (Src1Reg == Src2Reg) {
     CopyInst = BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
-            TII->get(SystemZ::COPY), DestReg)
-        .addReg(Src1Reg, getRegState(Src1MO) & getRegState(Src2MO));
+                       TII->get(SystemZ::COPY), DestReg)
+                   .addReg(Src1Reg, getRegState(Src1MO) & getRegState(Src2MO));
     MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
     MBBI->eraseFromParent();
     return;
@@ -132,15 +132,15 @@ void SystemZPostRewrite::selectSELRMux(MachineBasicBlock &MBB,
   if (DestReg != Src1Reg && DestReg != Src2Reg) {
     if (DestIsHigh != Src1IsHigh) {
       CopyInst = BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
-              TII->get(SystemZ::COPY), DestReg)
-          .addReg(Src1Reg, getRegState(Src1MO));
+                         TII->get(SystemZ::COPY), DestReg)
+                     .addReg(Src1Reg, getRegState(Src1MO));
       Src1MO.setReg(DestReg);
       Src1Reg = DestReg;
       Src1IsHigh = DestIsHigh;
     } else if (DestIsHigh != Src2IsHigh) {
       CopyInst = BuildMI(*MBBI->getParent(), MBBI, MBBI->getDebugLoc(),
-              TII->get(SystemZ::COPY), DestReg)
-          .addReg(Src2Reg, getRegState(Src2MO));
+                         TII->get(SystemZ::COPY), DestReg)
+                     .addReg(Src2Reg, getRegState(Src2MO));
       Src2MO.setReg(DestReg);
       Src2Reg = DestReg;
       Src2IsHigh = DestIsHigh;
@@ -212,8 +212,9 @@ bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
 
   // In MoveMBB, emit an instruction to move SrcReg into DestReg,
   // then fall through to RestMBB.
-  MachineInstr* CopyInst = BuildMI(*MoveMBB, MoveMBB->end(), DL, TII->get(SystemZ::COPY), DestReg)
-      .addReg(MI.getOperand(2).getReg(), getRegState(MI.getOperand(2)));
+  MachineInstr *CopyInst =
+      BuildMI(*MoveMBB, MoveMBB->end(), DL, TII->get(SystemZ::COPY), DestReg)
+          .addReg(MI.getOperand(2).getReg(), getRegState(MI.getOperand(2)));
   // record the debug value substitution for CopyInst
   MBB.getParent()->substituteDebugValuesForInst(*MBBI, *CopyInst, 1);
   MoveMBB->addSuccessor(RestMBB);

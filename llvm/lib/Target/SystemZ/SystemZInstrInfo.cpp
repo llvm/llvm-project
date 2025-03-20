@@ -39,7 +39,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
-//#include "SystemZRegisterInfo.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -349,7 +348,8 @@ Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 Register SystemZInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                      int &FrameIndex) const {
-  // if this is not a simple load from memory, it's not a load from stack slot either.
+  // if this is not a simple load from memory, it's not a load from stack slot
+  // either.
   const MCInstrDesc &MCID = MI.getDesc();
   if (!(MCID.TSFlags & SystemZII::SimpleBDXLoad))
     return 0;
@@ -371,7 +371,8 @@ Register SystemZInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
 
 Register SystemZInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
                                                     int &FrameIndex) const {
-  // if this is not a simple store to memory, it's not a store to stack slot either.
+  // if this is not a simple store to memory, it's not a store to stack slot
+  // either.
   const MCInstrDesc &MCID = MI.getDesc();
   if (!(MCID.TSFlags & SystemZII::SimpleBDXStore))
     return 0;
@@ -2362,27 +2363,10 @@ bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   return false;
 }
 
-std::optional<DestSourcePair> SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
+std::optional<DestSourcePair>
+SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // if MI is a simple single-register copy operation, return operand pair
   if (MI.isMoveReg())
     return DestSourcePair(MI.getOperand(0), MI.getOperand(1));
-  // more complicated cases might be handled here.
-  /*
-  switch (MI.getOpcode()) {
-    // VMHRG would work but then how can i turn a register into a MachineOperand?
-    case (SystemZ::VMRHG): {
-      MCRegister OpReg1 = MI.getOperand(1).getReg();
-      MCRegister OpReg2 = MI.getOperand(2).getReg();
-      // Check if OpReg1 and OpReg2 together can form an FP128 register.
-      MCRegister FirstReg  = (OpReg1.id() < OpReg2.id()) ? OpReg1 : OpReg2;
-      MCRegister SecondReg = (OpReg1.id() < OpReg2.id()) ? OpReg2 : OpReg1;
-      MCRegister FP1 = RI.getMatchingSuperReg(FirstReg, SystemZ::subreg_h64, &SystemZ::FP128BitRegClass);
-      MCRegister FP2 = RI.getMatchingSuperReg(SecondReg, SystemZ::subreg_h64, &SystemZ::FP128BitRegClass);
-      if (FP1 != FP2)
-        return std::nullopt;
-      return DestSourcePair(MI.getOperand(0), MachineOperand(FP1));
-    }
-  }
-    */
   return std::nullopt;
 }
