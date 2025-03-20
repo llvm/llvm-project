@@ -397,7 +397,7 @@ public:
   using mlir::OpConversionPattern<mlir::omp::TeamsOp>::OpConversionPattern;
 
   static mlir::omp::LoopOp
-  tryToFindNestedLoopWithReuctions(mlir::omp::TeamsOp teamsOp) {
+  tryToFindNestedLoopWithReduction(mlir::omp::TeamsOp teamsOp) {
     assert(!teamsOp.getRegion().empty() &&
            teamsOp.getRegion().getBlocks().size() == 1);
 
@@ -422,7 +422,7 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::omp::TeamsOp teamsOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::omp::LoopOp nestedLoopOp = tryToFindNestedLoopWithReuctions(teamsOp);
+    mlir::omp::LoopOp nestedLoopOp = tryToFindNestedLoopWithReduction(teamsOp);
 
     rewriter.modifyOpInPlace(teamsOp, [&]() {
       teamsOp.setReductionMod(nestedLoopOp.getReductionMod());
@@ -479,7 +479,7 @@ public:
           // legal. Additionally, the op is legal if it does not nest a LoopOp
           // with reductions.
           return !teamsOp.getReductionVars().empty() ||
-                 ReductionsMoverConverPattern::tryToFindNestedLoopWithReuctions(
+                 ReductionsMoverConverPattern::tryToFindNestedLoopWithReduction(
                      teamsOp) == nullptr;
         });
 
