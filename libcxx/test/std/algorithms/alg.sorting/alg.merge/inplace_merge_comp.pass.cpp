@@ -161,11 +161,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     std::sort(ia, ia + M, indirect_less());
     std::sort(ia + M, ia + N, indirect_less());
     std::inplace_merge(ia, ia + M, ia + N, indirect_less());
-    if (N > 0) {
-      assert(*ia[0] == 0);
-      assert(*ia[N - 1] == N - 1);
-      assert(std::is_sorted(ia, ia + N, indirect_less()));
-    }
+    assert(*ia[0] == 0);
+    assert(*ia[N - 1] == N - 1);
+    assert(std::is_sorted(ia, ia + N, indirect_less()));
     delete[] ia;
   }
 #endif // TEST_STD_VER >= 11

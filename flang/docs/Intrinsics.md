@@ -1106,3 +1106,34 @@ end program chdir_func
 - **Standard:** GNU extension
 - **Class:** function
 - **Syntax:** `RESULT = IERRNO()`
+
+### Non-Standard Intrinsics: QSORT
+
+#### Description
+
+```
+SUBROUTINE QSORT(ARRAY, LEN, ISIZE, COMPAR)
+  TYPE(*) :: ARRAY(*)
+  INTEGER(4) :: LEN, ISIZE
+  INTERFACE
+    INTEGER(4) FUNCTION COMPAR(A, B)
+      TYPE(*) :: A, B
+    END FUNCTION
+  END INTERFACE
+END SUBROUTINE
+```
+
+Sort `ARRAY` in place in ascending order given the comparison function `COMPAR`.
+The array number of elements is given by `LEN` and the element byte size is given
+by `ISIZE`.
+
+`COMPAR` function takes the addresses of element `A` and `B` and must return:
+- a negative value if `A` < `B`
+- zero if `A` == `B`
+- a positive value otherwise. 
+
+#### Usage and Info
+
+- **Standard:** lib3f (section 3f of old man pages).
+- **Class:** subroutine
+- **Syntax:** `CALL QSORT(ARRAY, LEN, ISIZE, COMPAR)`
