@@ -173,7 +173,7 @@ compound=true
 #endif
   TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  VPlanTransforms::VPInstructionsToVPRecipes(
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 }
 
@@ -203,7 +203,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
 
   TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
-  VPlanTransforms::VPInstructionsToVPRecipes(
+  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();

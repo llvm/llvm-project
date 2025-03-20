@@ -68,12 +68,13 @@ struct VPlanTransforms {
       bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
-  /// widen recipes.
-  static void
-  VPInstructionsToVPRecipes(VPlanPtr &Plan,
-                            function_ref<const InductionDescriptor *(PHINode *)>
-                                GetIntOrFpInductionDescriptor,
-                            ScalarEvolution &SE, const TargetLibraryInfo &TLI);
+  /// widen recipes. Returns false if any VPInstructions could not be converted
+  /// to a wide recipe if needed.
+  static bool tryToConvertVPInstructionsToVPRecipes(
+      VPlanPtr &Plan,
+      function_ref<const InductionDescriptor *(PHINode *)>
+          GetIntOrFpInductionDescriptor,
+      ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
