@@ -488,17 +488,11 @@
 #   error "__cpp_lib_string_view should have the value 202403L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should be defined in c++26"
-#   endif
-#   if __cpp_lib_to_string != 202306L
-#     error "__cpp_lib_to_string should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_to_string
-#     error "__cpp_lib_to_string should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_to_string
+#   error "__cpp_lib_to_string should be defined in c++26"
+# endif
+# if __cpp_lib_to_string != 202306L
+#   error "__cpp_lib_to_string should have the value 202306L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23
