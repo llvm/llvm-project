@@ -956,3 +956,7 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+//SPV_INTEL_subgroup_matrix_multiply_accumulate
+def OpSubgroupMatrixMultiplyAccumulateINTEL:Op<6237, (outs ID:$res), (ins TYPE:$result_type, ID:$dim, ID:$a, ID:$b, ID:$c, variable_ops),
+                  "$res = OpSubgroupMatrixMultiplyAccumulateINTEL $result_type $dim $a $b $c">;

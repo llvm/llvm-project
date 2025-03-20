@@ -237,6 +237,40 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           }
           break;
         }
+        case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumFixedOps == NumOps)
+            break; // No extra operands, so no flags to process
+
+          OS << ' ';
+
+          // Extract the last operand only if it exists
+          if (NumOps > NumFixedOps) {
+            const unsigned Flags = MI->getOperand(NumOps - 1).getImm();
+
+            if (Flags == 0) {
+              printSymbolicOperand<
+                  OperandCategory::MatrixMultiplyAccumulateOperand>(
+                  MI, NumOps - 1, OS);
+            } else {
+              std::string Buffer;
+              for (unsigned Mask = 0x1;
+                   Mask != SPIRV::MatrixMultiplyAccumulate::
+                               MatrixBPackedBFloat16INTEL; // Replace with
+                                                           // actual last flag
+                   Mask <<= 1) {
+                if (Flags & Mask) {
+                  if (!Buffer.empty())
+                    Buffer += '|';
+                  Buffer += getSymbolicOperandMnemonic(
+                      OperandCategory::MatrixMultiplyAccumulateOperand, Mask);
+                }
+              }
+              OS << Buffer;
+            }
+          }
+          break;
+        }
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
