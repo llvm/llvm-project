@@ -747,7 +747,7 @@ Error RISCVISAInfo::checkDependency() {
       {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},
       {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"},
       {"xqciint"}, {"xqcilb"},  {"xqcili"},  {"xqcilia"},
-      {"xqcilo"},  {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}};
+      {"xqcilo"},  {"xqcilsm"}, {"xqcisim"}, {"xqcisls"},{"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 

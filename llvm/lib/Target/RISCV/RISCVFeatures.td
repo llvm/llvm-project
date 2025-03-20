@@ -1422,6 +1422,14 @@ def HasVendorXqcilo
       AssemblerPredicate<(all_of FeatureVendorXqcilo),
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
+def FeatureVendorXqcisync
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Synchronization And Delay Extension">;
+
+def HasVendorXqcisync
+    : Predicate<"Subtarget->hasVendorXqcisync()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcisync),
+                         "'Xqcisync' (Qualcomm uC Synchronization And Delay Extension)">;
+
 def FeatureVendorXqccmp
     : RISCVExperimentalExtension<0, 1,
                                  "Qualcomm 16-bit Push/Pop and Double Moves",

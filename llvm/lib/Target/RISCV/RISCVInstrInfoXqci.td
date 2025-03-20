@@ -446,6 +446,24 @@ class QCIRVInst48EJ<bits<2> func2, string opcodestr>
   let Inst{6-0} = 0b0011111;
 }
 
+class QCIRVInstCSync<bits<6> func1, string opcodestr>
+    : RVInst16<(outs), (ins uimm3:$slist), opcodestr,
+               "$slist", [], InstFormatCB> {
+  bits<3> slist;
+  let Inst{15-10} = func1;
+  let Inst{9-7} = slist{2-0};
+  let Inst{6-0} = 0b0000001;
+}
+
+class QCIRVInstSync<bits<7> func1, string opcodestr>
+    : RVInst<(outs), (ins uimm5:$imm), opcodestr,
+               "$imm", [], InstFormatI> {
+  bits<5> imm;
+  let Inst{31-25} = func1;
+  let Inst{24-20} = imm{4-0};
+  let Inst{19-0} = 0b00000011000000010011;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -778,6 +796,27 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
   }
 } // mayLoad = 0, mayStore = 0, hasSideEffects = 1
 } // Predicates = [HasVendorXqcisim, IsRV32]
+
+let Predicates = [HasVendorXqcisync, IsRV32] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
+  def QC_C_DELAY : RVInst16<(outs), (ins uimm5nonzero:$imm), "qc.c.delay",
+                            "$imm", [], InstFormatCI> {
+    bits<5> imm;
+    let Inst{15-7} = 0b000000000;
+    let Inst{6-2} = imm{4-0};
+    let Inst{1-0} = 0b10;
+  }
+  def QC_C_SYNC : QCIRVInstCSync<0b100000, "qc.c.sync">;
+  def QC_C_SYNCR : QCIRVInstCSync<0b100001, "qc.c.syncr">;
+  def QC_C_SYNCWF: QCIRVInstCSync<0b100100, "qc.c.syncwf">;
+  def QC_C_SYNCWL: QCIRVInstCSync<0b100101, "qc.c.syncwl">;
+  def QC_SYNC: QCIRVInstSync<0b0001000, "qc.sync">;
+  def QC_SYNCR: QCIRVInstSync<0b0010000, "qc.syncr">;
+  def QC_SYNCWF: QCIRVInstSync<0b0100000, "qc.syncwf">;
+  def QC_SYNCWL: QCIRVInstSync<0b1000000, "qc.syncwl">;
+
+} // mayLoad = 0, mayStore = 0, hasSideEffects = 1
+} // Predicates = [HasVendorXqcisync, IsRV32]
 
 } // DecoderNamespace = "Xqci"
 

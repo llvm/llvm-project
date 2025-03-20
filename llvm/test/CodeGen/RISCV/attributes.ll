@@ -426,6 +426,7 @@
 ; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p2"
 ; RV32XQCISIM: attribute 5, "rv32i2p1_zca1p0_xqcisim0p2"
 ; RV32XQCISLS: .attribute 5, "rv32i2p1_xqcisls0p2"
+; RV32XQCISYNC: .attribute 5, "rv32i2p1_zca1p0_xqcisync0p2"
 ; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo1p0"
 ; RV32ZALRSC: .attribute 5, "rv32i2p1_zalrsc1p0"
 ; RV32ZCA: .attribute 5, "rv32i2p1_zca1p0"
