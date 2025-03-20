@@ -2525,7 +2525,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     // truncated to uint32_t), if the target doesn't support 64-bit literals, or
     // the lit modifier is explicitly used, we need to truncate it to the 32
     // LSBs.
-    if (Hi_32(Val) && (!AsmParser->has64BitLiterals() || getModifiers().Lit))
+    if (!AsmParser->has64BitLiterals() || getModifiers().Lit)
       Val = Lo_32(Val);
 
     Inst.addOperand(MCOperand::createImm(Val));
@@ -2552,12 +2552,9 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       // 1) explicitly forced by using lit modifier;
       // 2) the value is a valid 32-bit representation (signed or unsigned),
       // meanwhile not forced by lit64 modifier.
-      if (getModifiers().Lit) {
+      if (getModifiers().Lit ||
+          (!getModifiers().Lit64 && (isInt<32>(Val) || isUInt<32>(Val))))
         Val = static_cast<uint64_t>(Val) << 32;
-      } else if (!getModifiers().Lit64 && (isInt<32>(Val) || isUInt<32>(Val))) {
-        Val = isInt<32>(Val) ? static_cast<int32_t>(Val) : Lo_32(Val);
-        Val = static_cast<uint64_t>(Val) << 32;
-      }
     }
 
     Inst.addOperand(MCOperand::createImm(Val));
