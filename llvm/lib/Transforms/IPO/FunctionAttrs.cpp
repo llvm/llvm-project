@@ -118,17 +118,12 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
                          ModRefInfo MR, AAResults &AAR) {
   // Ignore accesses to known-invariant or local memory.
   MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
-  if (isNoModRef(MR)) {
-    // Mask out errno, can never alias this known-invariant memory location.
-    ME -= ME.errnoMemOnly();
+  if (isNoModRef(MR))
     return;
-  }
 
   const Value *UO = getUnderlyingObjectAggressive(Loc.Ptr);
-  if (isa<AllocaInst>(UO)) {
-    ME -= ME.errnoMemOnly();
+  if (isa<AllocaInst>(UO))
     return;
-  }
   if (isa<Argument>(UO)) {
     ME |= MemoryEffects::argMemOnly(MR);
     return;
@@ -267,20 +262,6 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
 
     // Refine memory effects for the given location.
     addLocAccess(ME, *Loc, MR, AAR);
-
-    // Last attempt if errnomem has not been inferred yet: accesses larger than
-    // integers cannot alias errno.
-    if (ME.getModRef(IRMemLocation::ErrnoMem) != ModRefInfo::NoModRef) {
-      if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
-        auto *Ty = isa<LoadInst>(I)
-                       ? I.getType()
-                       : cast<StoreInst>(I).getValueOperand()->getType();
-        if (!Ty->isPtrOrPtrVectorTy() &&
-            Loc->Size != MemoryLocation::UnknownSize &&
-            Loc->Size.getValue() > sizeof(int))
-          ME = ME.getWithoutLoc(IRMemLocation::ErrnoMem);
-      }
-    }
   }
 
   return {OrigME & ME, RecursiveArgME};
