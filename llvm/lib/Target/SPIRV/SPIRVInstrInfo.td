@@ -956,3 +956,9 @@ def OpAliasScopeDeclINTEL: Op<5912, (outs ID:$res), (ins ID:$AliasDomain, variab
                   "$res = OpAliasScopeDeclINTEL $AliasDomain">;
 def OpAliasScopeListDeclINTEL: Op<5913, (outs ID:$res), (ins variable_ops),
                   "$res = OpAliasScopeListDeclINTEL">;
+
+//SPV_INTEL_blocking_pipes
+def OpReadPipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpReadPipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
+def OpWritePipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpWritePipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;

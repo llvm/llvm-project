@@ -701,7 +701,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2255,6 +2256,64 @@ static bool generateExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
   return buildExtendedBitOpsInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generateBlockingPipesInst(const SPIRV::IncomingCall *Call,
+                                MachineIRBuilder &MIRBuilder,
+                                SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  if (Call->Arguments.size() < 4) {
+    llvm::errs() << "Not enough operands for pipe instruction\n";
+    return false;
+  }
+
+  // Retrieve Packet Size and Packet Alignment.
+  // Here we assume that these operands are immediate constants.
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register packet = Call->Arguments[2];
+  Register packetAlignment = Call->Arguments[3];
+
+  // Get definitions
+  MachineInstr *PacketDefMI = MRI->getUniqueVRegDef(packet);
+  MachineInstr *AlignDefMI = MRI->getUniqueVRegDef(packetAlignment);
+
+  // Get types
+  LLT PacketType = MRI->getType(PacketDefMI->getOperand(0).getReg());
+  LLT AlignType = MRI->getType(AlignDefMI->getOperand(0).getReg());
+
+  // Validate types
+  if (!PacketType.isScalar() || PacketType.getSizeInBits() != 32) {
+    llvm::report_fatal_error("Packet Size must be a 32-bit integer scalar!");
+  }
+
+  if (!AlignType.isScalar() || AlignType.getSizeInBits() != 32) {
+    llvm::report_fatal_error(
+        "Packet Alignment must be a 32-bit integer scalar!");
+  }
+
+  // Get constant values
+  const uint32_t PacketSize = getConstFromIntrinsic(packet, MRI);
+  const uint32_t PacketAlignment = getConstFromIntrinsic(packetAlignment, MRI);
+
+  //  1 <= PacketAlignment <= PacketSize
+  //  PacketSize must be evenly divisible by PacketAlignment.
+  if (PacketAlignment < 1 || PacketAlignment > PacketSize ||
+      (PacketSize % PacketAlignment != 0)) {
+    llvm::errs() << "Invalid packet size and alignment: "
+                 << "PacketSize = " << PacketSize
+                 << ", PacketAlignment = " << PacketAlignment << "\n";
+    return false;
+  }
+
+  auto MIB = MIRBuilder.buildInstr(Opcode);
+
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+  return true;
+}
+
 static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
                                            MachineIRBuilder &MIRBuilder,
                                            SPIRVGlobalRegistry *GR) {
@@ -2847,6 +2906,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+    case SPIRV::BlockingPipes:
+    return generateBlockingPipesInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
