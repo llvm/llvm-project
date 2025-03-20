@@ -3,7 +3,7 @@
 ; RUN: opt < %s -mtriple=x86_64 -mattr=+cf -passes='simplifycfg<hoist-loads-stores-with-cond-faulting>' -simplifycfg-require-and-preserve-domtree=1 -disable-cload-cstore=0 -S | FileCheck %s --check-prefixes=CHECK,LOADSTORE
 ; RUN: opt < %s -mtriple=x86_64 -mattr=+cf -passes='simplifycfg<hoist-loads-stores-with-cond-faulting>' -simplifycfg-require-and-preserve-domtree=1 -disable-cload-cstore=1 -S | FileCheck %s --check-prefixes=CHECK,NONE,STOREONLY
 ; RUN: opt < %s -mtriple=x86_64 -mattr=+cf -passes='simplifycfg<hoist-loads-stores-with-cond-faulting>' -simplifycfg-require-and-preserve-domtree=1 -disable-cload-cstore=2 -S | FileCheck %s --check-prefixes=CHECK,NONE,LOADONLY
-; RUN: opt < %s -mtriple=x86_64 -mattr=+cf -passes='simplifycfg<hoist-loads-stores-with-cond-faulting>' -simplifycfg-require-and-preserve-domtree=1 -disable-cload-cstore=3 -S | FileCheck %s --check-prefixes=NONE,NONEONLY
+; RUN: opt < %s -mtriple=x86_64 -mattr=+cf -passes='simplifycfg<hoist-loads-stores-with-cond-faulting>' -simplifycfg-require-and-preserve-domtree=1 -disable-cload-cstore=3 -S | FileCheck %s --check-prefixes=CHECK,NONE,NONEONLY
 
 ;; Basic case: check masked.load/store is generated for i16/i32/i64.
 define void @basic(i1 %cond, ptr %b, ptr %p, ptr %q) {
@@ -629,21 +629,6 @@ define void @threshold_7(i1 %cond, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, 
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
 ;
-; NONE-LABEL: @threshold_7(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       if.true:
-; NONE-NEXT:    store i32 1, ptr [[P1:%.*]], align 4
-; NONE-NEXT:    store i32 2, ptr [[P2:%.*]], align 4
-; NONE-NEXT:    store i32 3, ptr [[P3:%.*]], align 4
-; NONE-NEXT:    store i32 4, ptr [[P4:%.*]], align 4
-; NONE-NEXT:    store i32 5, ptr [[P5:%.*]], align 4
-; NONE-NEXT:    store i32 6, ptr [[P6:%.*]], align 4
-; NONE-NEXT:    store i32 7, ptr [[P7:%.*]], align 4
-; NONE-NEXT:    br label [[IF_FALSE]]
-; NONE:       if.false:
-; NONE-NEXT:    ret void
-;
 entry:
   br i1 %cond, label %if.true, label %if.false
 
@@ -683,26 +668,6 @@ define i32 @not_cheap_to_hoist(i32 %a, ptr %b, ptr %p, ptr %q, i32 %v0, i32 %v1,
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
-; NONE-LABEL: @not_cheap_to_hoist(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; NONE-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       common.ret:
-; NONE-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[VVVV:%.*]], [[IF_FALSE]] ], [ 0, [[IF_TRUE]] ]
-; NONE-NEXT:    ret i32 [[COMMON_RET_OP]]
-; NONE:       if.false:
-; NONE-NEXT:    store i64 1, ptr [[P:%.*]], align 8
-; NONE-NEXT:    store i16 2, ptr [[Q:%.*]], align 2
-; NONE-NEXT:    [[V:%.*]] = udiv i32 [[A]], 12345
-; NONE-NEXT:    [[VV:%.*]] = mul i32 [[V]], [[V0:%.*]]
-; NONE-NEXT:    [[VVV:%.*]] = mul i32 [[VV]], [[V1:%.*]]
-; NONE-NEXT:    [[VVVV]] = select i1 [[CC:%.*]], i32 [[V2:%.*]], i32 [[VVV]]
-; NONE-NEXT:    br label [[COMMON_RET:%.*]]
-; NONE:       if.true:
-; NONE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; NONE-NEXT:    store i32 [[TMP0]], ptr [[P]], align 4
-; NONE-NEXT:    br label [[COMMON_RET]]
-;
 entry:
   %cond = icmp eq i32 %a, 0
   br i1 %cond, label %if.true, label %if.false
@@ -739,17 +704,6 @@ define void @not_single_predecessor(ptr %p, ptr %q, i32 %a) {
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ;
-; NONE-LABEL: @not_single_predecessor(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; NONE-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
-; NONE:       if.end:
-; NONE-NEXT:    br label [[IF_THEN]]
-; NONE:       if.then:
-; NONE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Q:%.*]], align 4
-; NONE-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; NONE-NEXT:    br label [[IF_END]]
-;
 entry:
   %tobool = icmp ne i32 %a, 0
   br i1 %tobool, label %if.end, label %if.then
@@ -778,20 +732,6 @@ define void @not_supported_type(i8 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
-;
-; NONE-LABEL: @not_supported_type(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    [[COND:%.*]] = icmp eq i8 [[A:%.*]], 0
-; NONE-NEXT:    br i1 [[COND]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       if.false:
-; NONE-NEXT:    store i8 1, ptr [[Q:%.*]], align 1
-; NONE-NEXT:    br label [[IF_END:%.*]]
-; NONE:       if.true:
-; NONE-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B:%.*]], align 1
-; NONE-NEXT:    store i8 [[TMP0]], ptr [[P:%.*]], align 1
-; NONE-NEXT:    br label [[IF_END]]
-; NONE:       if.end:
-; NONE-NEXT:    ret void
 ;
 entry:
   %cond = icmp eq i8 %a, 0
@@ -828,22 +768,6 @@ define void @not_br_terminator(i32 %a, ptr %b, ptr %p, ptr %q) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
-; NONE-LABEL: @not_br_terminator(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    switch i32 [[A:%.*]], label [[IF_END:%.*]] [
-; NONE-NEXT:      i32 1, label [[IF_FALSE:%.*]]
-; NONE-NEXT:      i32 2, label [[IF_TRUE:%.*]]
-; NONE-NEXT:    ]
-; NONE:       if.false:
-; NONE-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
-; NONE-NEXT:    br label [[IF_END]]
-; NONE:       if.true:
-; NONE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; NONE-NEXT:    store i32 [[TMP0]], ptr [[P:%.*]], align 4
-; NONE-NEXT:    br label [[IF_FALSE]]
-; NONE:       if.end:
-; NONE-NEXT:    ret void
-;
 entry:
   switch i32 %a, label %if.end [
   i32 1, label %if.false
@@ -874,15 +798,6 @@ define void @not_atomic(i1 %cond, ptr %p) {
 ; CHECK:       if.true:
 ; CHECK-NEXT:    ret void
 ;
-; NONE-LABEL: @not_atomic(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       if.false:
-; NONE-NEXT:    store atomic i32 1, ptr [[P:%.*]] seq_cst, align 4
-; NONE-NEXT:    br label [[IF_TRUE]]
-; NONE:       if.true:
-; NONE-NEXT:    ret void
-;
 entry:
   br i1 %cond, label %if.true, label %if.false
 
@@ -904,15 +819,6 @@ define void @not_volatile(i1 %cond, ptr %p) {
 ; CHECK-NEXT:    br label [[IF_TRUE]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    ret void
-;
-; NONE-LABEL: @not_volatile(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       if.false:
-; NONE-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
-; NONE-NEXT:    br label [[IF_TRUE]]
-; NONE:       if.true:
-; NONE-NEXT:    ret void
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -936,16 +842,6 @@ define void @not_hoistable_sideeffect(i1 %cond, ptr %p, ptr %q) {
 ; CHECK-NEXT:    br label [[IF_TRUE]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    ret void
-;
-; NONE-LABEL: @not_hoistable_sideeffect(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       if.false:
-; NONE-NEXT:    [[RMW:%.*]] = atomicrmw xchg ptr [[Q:%.*]], double 4.000000e+00 seq_cst, align 8
-; NONE-NEXT:    store i32 1, ptr [[P:%.*]], align 4
-; NONE-NEXT:    br label [[IF_TRUE]]
-; NONE:       if.true:
-; NONE-NEXT:    ret void
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -1042,26 +938,6 @@ define void @not_alloca(ptr %p, ptr %q, i32 %a) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
 ;
-; NONE-LABEL: @not_alloca(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
-; NONE-NEXT:    [[Q_ADDR:%.*]] = alloca ptr, align 8
-; NONE-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
-; NONE-NEXT:    store ptr [[P:%.*]], ptr [[P_ADDR]], align 8
-; NONE-NEXT:    store ptr [[Q:%.*]], ptr [[Q_ADDR]], align 8
-; NONE-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
-; NONE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
-; NONE-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
-; NONE-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; NONE:       if.then:
-; NONE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Q_ADDR]], align 8
-; NONE-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-; NONE-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[P_ADDR]], align 8
-; NONE-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
-; NONE-NEXT:    br label [[IF_END]]
-; NONE:       if.end:
-; NONE-NEXT:    ret void
-;
 entry:
   %p.addr = alloca ptr
   %q.addr = alloca ptr
@@ -1094,15 +970,6 @@ define void @not_maximum_alignment(i1 %cond, ptr %p) {
 ; CHECK-NEXT:    br label [[IF_FALSE]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
-;
-; NONE-LABEL: @not_maximum_alignment(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NONE:       if.true:
-; NONE-NEXT:    store i32 0, ptr [[P:%.*]], align 4294967296
-; NONE-NEXT:    br label [[IF_FALSE]]
-; NONE:       if.false:
-; NONE-NEXT:    ret void
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -1283,21 +1150,6 @@ define i32 @not_multi_successors(i1 %c1, i32 %c2, ptr %p) {
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
-;
-; NONE-LABEL: @not_multi_successors(
-; NONE-NEXT:  entry:
-; NONE-NEXT:    br i1 [[C1:%.*]], label [[ENTRY_IF:%.*]], label [[COMMON_RET:%.*]]
-; NONE:       entry.if:
-; NONE-NEXT:    [[VAL:%.*]] = load i32, ptr [[P:%.*]], align 4
-; NONE-NEXT:    switch i32 [[C2:%.*]], label [[COMMON_RET]] [
-; NONE-NEXT:      i32 0, label [[SW_BB:%.*]]
-; NONE-NEXT:      i32 1, label [[SW_BB]]
-; NONE-NEXT:    ]
-; NONE:       common.ret:
-; NONE-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VAL]], [[ENTRY_IF]] ], [ 0, [[SW_BB]] ]
-; NONE-NEXT:    ret i32 [[COMMON_RET_OP]]
-; NONE:       sw.bb:
-; NONE-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   br i1 %c1, label %entry.if, label %entry.else
