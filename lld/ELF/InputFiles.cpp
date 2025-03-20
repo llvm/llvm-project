@@ -212,7 +212,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 struct KnownAArch64BuildAttrSubsections {
   struct PauthSubSection {
     std::optional<unsigned> tagPlatform = 0;
-    std::optional<unsigned> tagScheme = 0;
+    std::optional<unsigned> tagSchema = 0;
     bool ignore = 1;
   } pauth;
   struct FAndBSubSection {
@@ -234,10 +234,10 @@ static KnownAArch64BuildAttrSubsections extractBuildAttributesSubsections(
   if (std::nullopt == subSections.pauth.tagPlatform)
     subSections.pauth.tagPlatform = 0;
 
-  subSections.pauth.tagScheme = attributes.getAttributeValue(
+  subSections.pauth.tagSchema = attributes.getAttributeValue(
       "aeabi_pauthabi", llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA);
-  if (std::nullopt == subSections.pauth.tagScheme)
-    subSections.pauth.tagScheme = 0;
+  if (std::nullopt == subSections.pauth.tagSchema)
+    subSections.pauth.tagSchema = 0;
 
   subSections.fAndB.tagBTI = attributes.getAttributeValue(
       "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_BTI);
@@ -728,7 +728,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
                 std::make_unique<std::array<uint8_t, 16>>();
             uint64_t values[2] = {
                 static_cast<uint64_t>(*subSections.pauth.tagPlatform),
-                static_cast<uint64_t>(*subSections.pauth.tagScheme)};
+                static_cast<uint64_t>(*subSections.pauth.tagSchema)};
             std::memcpy(this->aarch64PauthAbiCoreInfoStorage->data(), values,
                         sizeof(values));
             this->aarch64PauthAbiCoreInfo =
