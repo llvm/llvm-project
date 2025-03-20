@@ -981,10 +981,12 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   }
   assert(RedRHSExpr != nullptr && "Did not find a valid reduction rhs");
   llvm::Value *RHSValue = EmitScalarExpr(RedRHSExpr);
-  Address XteamRedLocalAddr = RedVarMap.find(RedVarDecl)->second.RedVarAddr;
+  auto It = RedVarMap.find(RedVarDecl);
+  assert(It != RedVarMap.end() && "Variable must be found in reduction map");
+  Address XteamRedLocalAddr = It->second.RedVarAddr;
   // Compute *xteam_red_local_addr + rhs_value
   llvm::Value *RedRHS = nullptr;
-  llvm::Type *RedVarType = ConvertTypeForMem(RedVarDecl->getType());
+  llvm::Type *RedVarType = ConvertTypeForMem(It->second.RedVarExpr->getType());
   if (RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
       RedVarType->isHalfTy() || RedVarType->isBFloatTy()) {
     auto RHSOp = RHSValue->getType()->isIntegerTy()
