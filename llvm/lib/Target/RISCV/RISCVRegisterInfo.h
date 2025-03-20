@@ -61,6 +61,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
 
+  unsigned getCSRFirstUseCost() const override {
+    // The cost will be compared against BlockFrequency where entry has the
+    // value of 1 << 14. A value of 5 will choose to spill or split cold
+    // path instead of using a callee-saved register.
+    return 5;
+  }
+
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
   const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
