@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefixes=X64,X64-FAST
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+slow-shld | FileCheck %s --check-prefixes=X64,X64-SLOW
 
-define  i64 @updateTop10Bits_64bits(i64  %A, i64  %B) {
+define i64 @updateTop10Bits_64bits(i64  %A, i64  %B) {
 ; X64-FAST-LABEL: updateTop10Bits_64bits:
 ; X64-FAST:         # %bb.0:
 ; X64-FAST-NEXT:    movq	%rdi, %rax
@@ -17,39 +17,37 @@ define  i64 @updateTop10Bits_64bits(i64  %A, i64  %B) {
 ; X64-SLOW-NEXT:    shlq    $54, %rsi
 ; X64-SLOW-NEXT:    orq     %rsi, %rax
 ; X64-SLOW-NEXT:    retq
-entry:
   %and = and i64 %A, 18014398509481983
   %shl = shl i64 %B, 54
   %or = or disjoint i64 %shl, %and
   ret i64 %or
 }
 
-define  i32 @updateTop10Bits_32bits(i32  %A, i32  %B) {
+define i32 @updateTop10Bits_32bits(i32  %A, i32  %B) {
 ; X64-FAST-LABEL: updateTop10Bits_32bits:
-; X64-FAST:         # %bb.0:    # %entry
+; X64-FAST:         # %bb.0:    
 ; X64-FAST-NEXT:    movl	%edi, %eax
 ; X64-FAST-NEXT:    shll	$10, %eax
 ; X64-FAST-NEXT:    shrdl	$10, %esi, %eax
 ; X64-FAST-NEXT:    retq
 ;
 ; X64-SLOW-LABEL: updateTop10Bits_32bits:
-; X64-SLOW:         # %bb.0:    # %entry
+; X64-SLOW:         # %bb.0:    
 ; X64-SLOW-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-SLOW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-SLOW-NEXT:    andl	$4194303, %edi    # imm = 0x3FFFFF
 ; X64-SLOW-NEXT:    shll	$22, %esi
 ; X64-SLOW-NEXT:    leal	(%rsi,%rdi), %eax
 ; X64-SLOW-NEXT:    retq
-entry:
   %and = and i32 %A, 4194303
   %shl = shl i32 %B, 22
   %or = or disjoint i32 %shl, %and
   ret i32 %or
 }
 
-define  i16 @updateTop10Bits_16bits(i16  %A, i16  %B) {
+define i16 @updateTop10Bits_16bits(i16  %A, i16  %B) {
 ; X64-FAST-LABEL: updateTop10Bits_16bits:
-; X64-FAST:         # %bb.0:    # %entry
+; X64-FAST:         # %bb.0:    
 ; X64-FAST-NEXT:    movl	%edi, %eax
 ; X64-FAST-NEXT:    shll	$10, %eax
 ; X64-FAST-NEXT:    shrdw	$10, %si, %ax
@@ -57,7 +55,7 @@ define  i16 @updateTop10Bits_16bits(i16  %A, i16  %B) {
 ; X64-FAST-NEXT:    retq
 ;
 ; X64-SLOW-LABEL: updateTop10Bits_16bits:
-; X64-SLOW:         # %bb.0:    # %entry
+; X64-SLOW:         # %bb.0:    
 ; X64-SLOW-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-SLOW-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-SLOW-NEXT:    andl	$63, %edi
@@ -65,24 +63,21 @@ define  i16 @updateTop10Bits_16bits(i16  %A, i16  %B) {
 ; X64-SLOW-NEXT:    leal	(%rsi,%rdi), %eax
 ; X64-SLOW-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-SLOW-NEXT:    retq
-entry:
   %and = and i16 %A, 63
   %shl = shl i16 %B, 6
   %or = or disjoint i16 %shl, %and
   ret i16 %or
 }
 
-define  i8 @updateTop3Bits_8bits(i8  %A, i8  %B) {
+define i8 @updateTop3Bits_8bits(i8  %A, i8  %B) {
 ; X64-LABEL: updateTop3Bits_8bits:                   
-; X64:         # %bb.0:    # %entry
+; X64:         # %bb.0:    
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:	  andb	$7, %dil
 ; X64-NEXT:	  leal    (,%rsi,8), %eax
 ; X64-NEXT:	  orb     %dil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:	retq
-
-entry:
   %and = and i8 %A, 7
   %shl = shl i8 %B, 3
   %or = or disjoint i8 %shl, %and
