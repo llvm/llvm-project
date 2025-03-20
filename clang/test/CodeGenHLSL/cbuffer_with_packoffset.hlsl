@@ -16,7 +16,7 @@ cbuffer CB : register(b1, space3) {
   int2 c : packoffset(c5.z);
 }
 
-// CHECK: @CB.cb.1 = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_1, 92, 88, 80))
+// CHECK: @CB.cb.1 = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_1, 92, 88, 80))
 // CHECK: @x = external addrspace(2) global float, align 4
 // CHECK: @y = external addrspace(2) global <2 x float>, align 8
 
