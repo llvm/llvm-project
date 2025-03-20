@@ -7600,8 +7600,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
         calculateRegisterUsage(getPlanFor(LegacyVF.Width), LegacyVFs, TTI);
     auto RUs = calculateRegisterUsage(BestPlan, VFs, TTI);
 
-    auto GetMaxUsage = [](
-                          SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers) {
+    auto GetMaxUsage = [](SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers) {
       unsigned Max = 0;
       for (auto Pair : MaxLocalUsers)
         if (Pair.second > Max)
