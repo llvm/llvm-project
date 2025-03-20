@@ -471,9 +471,9 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Store:
-  case VPInstruction::ActiveLaneMask:
   case VPInstruction::BranchOnCount:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExtractSubvector:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -481,6 +481,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::WideIVStep:
     return 2;
   case Instruction::Select:
+  case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ReductionStartVector:
     return 3;
@@ -620,7 +621,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                Name);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = VectorType::get(Int1Ty, State.VF);
+    auto PredTy = VectorType::get(
+        Int1Ty, State.VF * cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
+                               ->getZExtValue());
     return Builder.CreateIntrinsic(Intrinsic::get_active_lane_mask,
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
@@ -855,6 +858,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (isa<ExtractElementInst>(Res))
       Res->setName(Name);
     return Res;
+  }
+  case VPInstruction::ExtractSubvector: {
+    Value *Vec = State.get(getOperand(0));
+    assert(State.VF.isVector());
+    auto Idx = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    auto ResTy = VectorType::get(
+        State.TypeAnalysis.inferScalarType(getOperand(0)), State.VF);
+    return Builder.CreateExtractVector(ResTy, Vec, Idx);
   }
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0));
@@ -1199,6 +1210,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastElement:
   case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ExtractSubvector:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1340,6 +1352,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
+    break;
+  case VPInstruction::ExtractSubvector:
+    O << "extract-subvector";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";

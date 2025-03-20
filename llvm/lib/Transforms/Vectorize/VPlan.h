@@ -1003,6 +1003,9 @@ public:
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
     ExtractPenultimateElement,
+    // Extracts a subvector from a vector (first operand) starting at a given
+    // offset (second operand).
+    ExtractSubvector,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -1998,6 +2001,9 @@ public:
   virtual VPValue *getBackedgeValue() {
     return getOperand(1);
   }
+
+  // Update the incoming value from the loop backedge.
+  void setBackedgeValue(VPValue *V) { setOperand(1, V); }
 
   /// Returns the backedge value as a recipe. The backedge value is guaranteed
   /// to be a recipe.
@@ -3350,10 +3356,12 @@ public:
 /// TODO: It would be good to use the existing VPWidenPHIRecipe instead and
 /// remove VPActiveLaneMaskPHIRecipe.
 class VPActiveLaneMaskPHIRecipe : public VPHeaderPHIRecipe {
+  unsigned UnrollPart = 0;
+
 public:
-  VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPDef::VPActiveLaneMaskPHISC, nullptr, StartMask,
-                          DL) {}
+  VPActiveLaneMaskPHIRecipe(VPValue *StartMask, DebugLoc DL, unsigned Part = 0)
+      : VPHeaderPHIRecipe(VPDef::VPActiveLaneMaskPHISC, nullptr, StartMask, DL),
+        UnrollPart(Part) {}
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
@@ -3365,6 +3373,9 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
+
+  unsigned getUnrollPart() { return UnrollPart; }
+  void setUnrollPart(unsigned Part) { UnrollPart = Part; }
 
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;

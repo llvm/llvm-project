@@ -253,6 +253,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
              "unexpected header phi recipe not needing unrolled part");
+      cast<VPActiveLaneMaskPHIRecipe>(Copy)->setUnrollPart(Part);
     }
   }
 }

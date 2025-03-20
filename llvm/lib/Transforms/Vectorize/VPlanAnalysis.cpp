@@ -72,6 +72,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
+  case VPInstruction::ExtractSubvector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
     return inferScalarType(R->getOperand(0));

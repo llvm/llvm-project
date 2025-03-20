@@ -48,6 +48,7 @@ class VPRecipeBuilder;
 struct VFRange;
 
 extern cl::opt<bool> EnableVPlanNativePath;
+extern cl::opt<bool> EnableWideActiveLaneMask;
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 /// VPlan-based builder utility analogous to IRBuilder.
