@@ -109,6 +109,23 @@ int main()
 
 }
 
+namespace GH129620 {
+
+template <class... Ts>
+struct A {
+    constexpr A(Ts...) {}
+};
+
+template <class... Ts>
+using Foo = A<Ts...>;
+
+template <class T>
+using Bar = Foo<T, T>;
+
+Bar a{0, 0};
+
+}
+
 namespace GH129998 {
 
 struct converible_to_one {
