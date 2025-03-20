@@ -248,7 +248,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     Register Dst = MI.getOperand(0).getReg();
     if (Dst &&
         (X86::GR16RegClass.contains(Dst) || X86::GR8RegClass.contains(Dst))) {
-      Register Super = getX86SubSuperRegister(Dst, ST.is64Bit() ? 64 : 32);
+      Register Super = getX86SubSuperRegister(Dst, 64);
       if (MI.definesRegister(Super, /*TRI=*/nullptr))
         IsRedundantNDD = false;
     }

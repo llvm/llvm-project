@@ -6794,12 +6794,14 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
     const TargetRegisterInfo *TRI) const {
 
+  if (OpNum != 0)
+    return 0;
+
   // With the NDD/ZU features, ISel may generate NDD/ZU ops which
   // appear to perform partial writes. We detect these based on flags
   // and register class.
   bool HasNDDPartialWrite = false;
-  if (OpNum == 0 && (Subtarget.hasNDD() || Subtarget.hasZU()) &&
-      X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
+  if (X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
     Register Reg = MI.getOperand(0).getReg();
     if (Reg.isVirtual()) {
       auto &MRI = MI.getParent()->getParent()->getRegInfo();
@@ -6811,8 +6813,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
           X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg);
   }
 
-  if (OpNum != 0 ||
-      !(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
+  if (!(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
     return 0;
 
   // For non-NDD ops, if MI is marked as reading Reg, the partial register
@@ -7259,8 +7260,7 @@ void X86InstrInfo::breakPartialRegDependency(
     // writes, but are not due to the zeroing of the upper part. Here
     // we add an implicit def of the superegister, which prevents
     // CompressEVEX from converting this to a legacy form.
-    Register SuperReg =
-        getX86SubSuperRegister(Reg, Subtarget.is64Bit() ? 64 : 32);
+    Register SuperReg = getX86SubSuperRegister(Reg, 64);
     MachineInstrBuilder BuildMI(*MI.getParent()->getParent(), &MI);
     if (!MI.definesRegister(SuperReg, /*TRI=*/nullptr))
       BuildMI.addReg(SuperReg, RegState::ImplicitDefine);
