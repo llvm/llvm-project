@@ -1073,10 +1073,10 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // chances of slowing down the code.
   // FIXME: Remove this conditional monitoring as it means we lose the ability
   // to monitor exit-operations' time for the average case.
-  if (status != 0) {
+  //if (status != 0)
+  {
     UUID module_uuid;
-    TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
-    if (target_sp) {
+    if (TargetSP target_sp = m_target_wp.lock()) {
       helper.SetDebugger(&target_sp->GetDebugger());
       if (ModuleSP mod = target_sp->GetExecutableModule())
         module_uuid = mod->GetUUID();
