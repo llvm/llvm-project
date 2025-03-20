@@ -114,13 +114,14 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
     CMP = CGF->Builder.CreateIntrinsic(
         CGF->Builder.getInt1Ty(), CGF->CGM.getHLSLRuntime().getAnyIntrinsic(),
         {FCompInst}, nullptr);
-  } else
+  } else {
     CMP = CGF->Builder.CreateFCmpOLT(Op0, FZeroConst);
+  }
 
-  if (CGF->CGM.getTarget().getTriple().isDXIL())
+  if (CGF->CGM.getTarget().getTriple().isDXIL()) {
     LastInstr = CGF->Builder.CreateIntrinsic(
         CGF->VoidTy, llvm::Intrinsic::dx_discard, {CMP}, nullptr);
-  else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
+  } else if (CGF->CGM.getTarget().getTriple().isSPIRV()) {
     BasicBlock *LT0 = CGF->createBasicBlock("lt0", CGF->CurFn);
     BasicBlock *End = CGF->createBasicBlock("end", CGF->CurFn);
 
@@ -128,8 +129,7 @@ static Value *handleHlslClip(const CallExpr *E, CodeGenFunction *CGF) {
 
     CGF->Builder.SetInsertPoint(LT0);
 
-    CGF->Builder.CreateIntrinsic(CGF->VoidTy, llvm::Intrinsic::spv_discard, {},
-                                 nullptr);
+    CGF->Builder.CreateIntrinsic(llvm::Intrinsic::spv_discard, {});
 
     LastInstr = CGF->Builder.CreateBr(End);
 

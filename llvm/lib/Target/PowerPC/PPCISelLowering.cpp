@@ -12429,7 +12429,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //===----------------------------------------------------------------------===//
 
 static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
-  return Builder.CreateIntrinsic(Id, {}, {});
+  return Builder.CreateIntrinsic(Id, {});
 }
 
 // The mappings for emitLeading/TrailingFence is taken from
