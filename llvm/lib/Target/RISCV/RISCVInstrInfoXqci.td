@@ -96,6 +96,21 @@ def simm32 : RISCVOp<XLenVT> {
   }];
 }
 
+// A 32-bit signed immediate where the least significant bit is zero.
+def simm32_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = SImmAsmOperand<32, "Lsb0">;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsr1";
+  let DecoderMethod = "decodeSImmOperandAndLsl1<32>";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedInt<31, 1>(Imm);
+  }];
+  let OperandType = "OPERAND_PCREL";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -336,6 +351,19 @@ class QCIInt_IMM<bits<1> funct1, string opcodestr>
   let Inst{24-20} = imm10{9-5};
 }
 
+class QCISim_NONE<bits<4> imm11_8, string opcodestr>
+    : RVInstI<0b010, OPC_OP_IMM, (outs), (ins), opcodestr, ""> {
+  let rs1 = 0;
+  let rd = 0;
+  let imm12 = {imm11_8, 0b00000000};
+}
+
+class QCISim_RS1<bits<4> imm11_8, string opcodestr>
+    : RVInstI<0b010, OPC_OP_IMM, (outs), (ins GPR:$rs1), opcodestr, "$rs1"> {
+  let rd = 0;
+  let imm12 = {imm11_8, 0b00000000};
+}
+
 class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
                       dag ins, string opcodestr, string argstr>
     : RVInst48<outs, ins, opcodestr, argstr, [], InstFormatOther> {
@@ -399,6 +427,24 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPRNoX0:$rd),
                       (ins GPRNoX0:$rs1, simm26:$imm), opcodestr,
                       "$rd, $rs1, $imm">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class QCIRVInst48EJ<bits<2> func2, string opcodestr>
+    : RVInst48<(outs), (ins simm32_lsb0:$imm31),
+               opcodestr, "$imm31", [], InstFormatOther> {
+  bits<31> imm31;
+
+  let Inst{47-32} = imm31{30-15};
+  let Inst{31} = imm31{11};
+  let Inst{30-25} = imm31{9-4};
+  let Inst{24-20} = 0b00000;
+  let Inst{19-17} = imm31{14-12};
+  let Inst{16-15} = func2;
+  let Inst{14-12} = 0b100;
+  let Inst{11-8} = imm31{3-0};
+  let Inst{7} = imm31{10};
+  let Inst{6-0} = 0b0011111;
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -664,6 +710,13 @@ let Predicates = [HasVendorXqcilo, IsRV32] in {
   def QC_E_SW    : QCIRVInstESStore<0b110, 0b11, "qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
+let Predicates = [HasVendorXqcilb, IsRV32] in {
+  let isCall = 1, Defs = [X1] in
+  def QC_E_JAL   : QCIRVInst48EJ<0b01, "qc.e.jal">;
+  let isBranch = 1, isTerminator = 1, isBarrier = 1 in
+  def QC_E_J     : QCIRVInst48EJ<0b00, "qc.e.j">;
+} // Predicates = [HasVendorXqcilb, IsRV32]
+
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20:$imm20),
@@ -690,6 +743,41 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_E_ANDI  : QCIRVInstEI<0b011, 0b11, "qc.e.andi">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcilia, IsRV32]
+
+let Predicates = [HasVendorXqcisim, IsRV32] in {
+let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
+  def QC_PSYSCALLI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm10:$imm10),
+                             "qc.psyscalli", "$imm10"> {
+    bits<10> imm10;
+
+    let rs1 = 0;
+    let rd = 0;
+    let imm12 = {0b00, imm10};
+  }
+
+  def QC_PPUTCI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm8:$imm8),
+                          "qc.pputci", "$imm8"> {
+    bits<8> imm8;
+
+    let rs1 = 0;
+    let rd = 0;
+    let imm12 = {0b0100, imm8};
+  }
+
+  def QC_PCOREDUMP : QCISim_NONE<0b0110, "qc.pcoredump">;
+  def QC_PPREGS : QCISim_NONE<0b0111, "qc.ppregs">;
+  def QC_PPREG : QCISim_RS1<0b1000, "qc.ppreg">;
+  def QC_PPUTC : QCISim_RS1<0b1001, "qc.pputc">;
+  def QC_PPUTS : QCISim_RS1<0b1010, "qc.pputs">;
+  def QC_PEXIT : QCISim_RS1<0b1011, "qc.pexit">;
+  def QC_PSYSCALL : QCISim_RS1<0b1100, "qc.psyscall">;
+
+  def QC_C_PTRACE : RVInst16CI<0b000, 0b10, (outs), (ins), "qc.c.ptrace", ""> {
+    let rd = 0;
+    let imm = 0;
+  }
+} // mayLoad = 0, mayStore = 0, hasSideEffects = 1
+} // Predicates = [HasVendorXqcisim, IsRV32]
 
 } // DecoderNamespace = "Xqci"
 

@@ -2444,7 +2444,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
                       << "\n");
-    InstructionsToSink.insert((*LRI).begin(), (*LRI).end());
+    InstructionsToSink.insert_range(*LRI);
     ++ScanIdx;
     --LRI;
   }
@@ -2514,7 +2514,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
             dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
         break;
       }
-      InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
+      InstructionsProfitableToSink.insert_range(*LRI);
       --LRI;
       ++Idx;
     }

@@ -591,6 +591,8 @@ def err_decomp_decl_std_tuple_size_not_constant : Error<
   "is not a valid integral constant expression">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
+def err_arg_is_not_destructurable : Error<
+  "type %0 cannot be decomposed">;
 
 def err_std_type_trait_not_class_template : Error<
   "unsupported standard library implementation: "
@@ -5698,6 +5700,8 @@ def warn_func_template_missing : Warning<"instantiation of function %q0 "
   InGroup<UndefinedFuncTemplate>, DefaultIgnore;
 def note_forward_template_decl : Note<
   "forward declaration of template entity is here">;
+def note_unreachable_template_decl
+    : Note<"unreachable declaration of template entity is here">;
 def note_inst_declaration_hint : Note<"add an explicit instantiation "
   "declaration to suppress this warning if %q0 is explicitly instantiated in "
   "another translation unit">;
@@ -7639,9 +7643,13 @@ def warn_arith_conv_mixed_enum_types_cxx20 : Warning<
   "%sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2 is deprecated">,
   InGroup<DeprecatedEnumEnumConversion>;
-def err_conv_mixed_enum_types_cxx26 : Error<
+
+def err_conv_mixed_enum_types: Error <
   "invalid %sub{select_arith_conv_kind}0 "
   "different enumeration types%diff{ ($ and $)|}1,2">;
+def warn_conv_mixed_enum_types_cxx26 : Warning <
+  err_conv_mixed_enum_types.Summary>,
+  InGroup<EnumEnumConversion>, DefaultError;
 
 def warn_arith_conv_mixed_anon_enum_types : Warning<
   warn_arith_conv_mixed_enum_types.Summary>,
@@ -12519,16 +12527,31 @@ def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
   "is not allowed">;
 
-def err_builtin_invalid_arg_type: Error <
-  "%ordinal0 argument must be "
-  "%select{a vector, integer or floating point type|a matrix|"
-  "a pointer to a valid matrix element type|"
-  "a signed integer or floating point type|a vector type|"
-  "a floating point type|"
-  "a vector of integers|"
-  "an unsigned integer|"
-  "an 'int'|"
-  "a vector of floating points}1 (was %2)">;
+// A multi-component builtin type diagnostic. The first component broadly
+// selects a scalar or container type (scalar, vector or matrix). The second
+// component selects integer types and the third component selects
+// floating-point types. Any component can be left empty.
+def err_builtin_invalid_arg_type: Error<
+  "%ordinal0 argument must be a "
+  // First component: scalar or container types
+  "%select{|scalar|vector|matrix|vector of|scalar or vector of}1"
+  // A comma after generic vector/matrix types if there are non-empty second
+  // and third components, to initiate a list.
+  "%plural{[2,3]:%plural{0:|:%plural{0:|:,}2}3|:}1"
+  // A space after a non-empty first component
+  "%plural{0:|: }1"
+  // Second component: integer-like types
+  "%select{|integer|signed integer|unsigned integer|'int'|"
+  "pointer to a valid matrix element}2"
+  // A space after a non-empty second component
+  "%plural{0:|: }2"
+  // An 'or' if non-empty second and third components are combined
+  "%plural{0:|:%plural{0:|:or }2}3"
+  // Third component: floating-point types
+  "%select{|floating-point}3"
+  // A space after a non-empty third component
+  "%plural{0:|: }3"
+  "%plural{[0,3]:type|:types}1 (was %4)">;
 
 def err_builtin_matrix_disabled: Error<
   "matrix types extension is disabled. Pass -fenable-matrix to enable it">;

@@ -20,6 +20,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -269,6 +270,9 @@ protected:
   /// easily cacheable. Instead, use the cover function paramHasAttr.
   CallBase &CandidateCall;
 
+  /// Getter for the cache of ephemeral values.
+  function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache = nullptr;
+
   /// Extension points for handling callsite features.
   // Called before a basic block was analyzed.
   virtual void onBlockStart(const BasicBlock *BB) {}
@@ -462,7 +466,7 @@ protected:
 
   // Custom analysis routines.
   InlineResult analyzeBlock(BasicBlock *BB,
-                            SmallPtrSetImpl<const Value *> &EphValues);
+                            const SmallPtrSetImpl<const Value *> &EphValues);
 
   // Disable several entry points to the visitor so we don't accidentally use
   // them by declaring but not defining them here.
@@ -510,10 +514,12 @@ public:
       function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
-      OptimizationRemarkEmitter *ORE = nullptr)
+      OptimizationRemarkEmitter *ORE = nullptr,
+      function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
+          nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         GetTLI(GetTLI), PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
-        CandidateCall(Call) {}
+        CandidateCall(Call), GetEphValuesCache(GetEphValuesCache) {}
 
   InlineResult analyze();
 
@@ -1126,9 +1132,11 @@ public:
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
-      bool IgnoreThreshold = false)
+      bool IgnoreThreshold = false,
+      function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
+          nullptr)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
-                     ORE),
+                     ORE, GetEphValuesCache),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
                               Params.ComputeFullInlineCost || ORE ||
                               isCostBenefitAnalysisEnabled()),
@@ -2566,7 +2574,7 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
 /// viable, and true if inlining remains viable.
 InlineResult
 CallAnalyzer::analyzeBlock(BasicBlock *BB,
-                           SmallPtrSetImpl<const Value *> &EphValues) {
+                           const SmallPtrSetImpl<const Value *> &EphValues) {
   for (Instruction &I : *BB) {
     // FIXME: Currently, the number of instructions in a function regardless of
     // our ability to simplify them during inline to constants or dead code,
@@ -2781,11 +2789,15 @@ InlineResult CallAnalyzer::analyze() {
   NumConstantOffsetPtrArgs = ConstantOffsetPtrs.size();
   NumAllocaArgs = SROAArgValues.size();
 
-  // FIXME: If a caller has multiple calls to a callee, we end up recomputing
-  // the ephemeral values multiple times (and they're completely determined by
-  // the callee, so this is purely duplicate work).
-  SmallPtrSet<const Value *, 32> EphValues;
-  CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F), EphValues);
+  // Collecting the ephemeral values of `F` can be expensive, so use the
+  // ephemeral values cache if available.
+  SmallPtrSet<const Value *, 32> EphValuesStorage;
+  const SmallPtrSetImpl<const Value *> *EphValues = &EphValuesStorage;
+  if (GetEphValuesCache)
+    EphValues = &GetEphValuesCache(F).ephValues();
+  else
+    CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F),
+                                        EphValuesStorage);
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
@@ -2824,7 +2836,7 @@ InlineResult CallAnalyzer::analyze() {
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
-    InlineResult IR = analyzeBlock(BB, EphValues);
+    InlineResult IR = analyzeBlock(BB, *EphValues);
     if (!IR.isSuccess())
       return IR;
 
@@ -2967,9 +2979,11 @@ InlineCost llvm::getInlineCost(
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
+    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
-                       GetAssumptionCache, GetTLI, GetBFI, PSI, ORE);
+                       GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
+                       GetEphValuesCache);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
@@ -3089,7 +3103,8 @@ InlineCost llvm::getInlineCost(
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
+    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
@@ -3105,7 +3120,9 @@ InlineCost llvm::getInlineCost(
                           << ")\n");
 
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE);
+                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
+                            /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
+                            GetEphValuesCache);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
