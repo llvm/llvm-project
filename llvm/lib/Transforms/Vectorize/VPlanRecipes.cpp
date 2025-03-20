@@ -148,7 +148,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
   case VPScalarCastSC:
-  case VPReverseVectorPointerSC:
+  case VPVectorEndPointerSC:
     return false;
   case VPInstructionSC:
     return mayWriteToMemory();
@@ -2145,7 +2145,7 @@ static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
              : Builder.getInt32Ty();
 }
 
-void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
+void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
@@ -2171,11 +2171,11 @@ void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
-                                         VPSlotTracker &SlotTracker) const {
+void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = reverse-vector-pointer";
+  O << " = vector-end-pointer";
   printFlags(O);
   printOperands(O, SlotTracker);
 }
@@ -2355,7 +2355,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   if (isOrdered()) {
     NewRed = createOrderedReduction(VBuilder, Kind, VecOp, Prev);
   } else {
-    NewRed = createSimpleReduction(VBuilder, VecOp, Kind, getFastMathFlags());
+    NewRed = createSimpleReduction(VBuilder, VecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else
@@ -2370,6 +2370,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   RecurKind RdxKind = getRecurrenceKind();
   Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
+  unsigned Opcode = getOpcode();
+  FastMathFlags FMFs = getFastMathFlags();
 
   // TODO: Support any-of and in-loop reductions.
   assert(
@@ -2383,15 +2385,15 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 
   // Cost = Reduction cost + BinOp cost
   InstructionCost Cost =
-      Ctx.TTI.getArithmeticInstrCost(getOpcode(), ElementTy, Ctx.CostKind);
+      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Cost + Ctx.TTI.getMinMaxReductionCost(
-                      Id, VectorTy, getFastMathFlags(), Ctx.CostKind);
+    return Cost +
+           Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  return Cost + Ctx.TTI.getArithmeticReductionCost(
-                    getOpcode(), VectorTy, getFastMathFlags(), Ctx.CostKind);
+  return Cost + Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
+                                                   Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

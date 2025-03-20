@@ -21019,7 +21019,8 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
     return SDValue();
 
   unsigned MinSignBits = NumSrcEltBits - NumPackedSignBits;
-  if (Flags.hasNoSignedWrap() || MinSignBits < NumSignBits) {
+  if ((Flags.hasNoSignedWrap() && DstSVT != MVT::i32) ||
+      MinSignBits < NumSignBits) {
     PackOpcode = X86ISD::PACKSS;
     return In;
   }
@@ -44726,6 +44727,25 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
       return false;
+    case Intrinsic::x86_avx512_vpermi2var_d_128:
+    case Intrinsic::x86_avx512_vpermi2var_d_256:
+    case Intrinsic::x86_avx512_vpermi2var_d_512:
+    case Intrinsic::x86_avx512_vpermi2var_hi_128:
+    case Intrinsic::x86_avx512_vpermi2var_hi_256:
+    case Intrinsic::x86_avx512_vpermi2var_hi_512:
+    case Intrinsic::x86_avx512_vpermi2var_pd_128:
+    case Intrinsic::x86_avx512_vpermi2var_pd_256:
+    case Intrinsic::x86_avx512_vpermi2var_pd_512:
+    case Intrinsic::x86_avx512_vpermi2var_ps_128:
+    case Intrinsic::x86_avx512_vpermi2var_ps_256:
+    case Intrinsic::x86_avx512_vpermi2var_ps_512:
+    case Intrinsic::x86_avx512_vpermi2var_q_128:
+    case Intrinsic::x86_avx512_vpermi2var_q_256:
+    case Intrinsic::x86_avx512_vpermi2var_q_512:
+    case Intrinsic::x86_avx512_vpermi2var_qi_128:
+    case Intrinsic::x86_avx512_vpermi2var_qi_256:
+    case Intrinsic::x86_avx512_vpermi2var_qi_512:
+      return false;
     }
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
@@ -51328,6 +51348,8 @@ static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
@@ -51459,6 +51481,22 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
         N0->hasOneUse() && N0.getOperand(1)->hasOneUse()) {
       SDValue MaskMul = DAG.getNode(ISD::AND, dl, VT, N0.getOperand(1), N1);
       return DAG.getNode(Opc0, dl, VT, N0.getOperand(0), MaskMul);
+    }
+  }
+
+  // On AVX512 targets, attempt to reverse foldVSelectToSignBitSplatMask.
+  // to make use of predicated selects.
+  // AND(X,SEXT(SETCC())) -> SELECT(SETCC(),X,0)
+  if (DCI.isAfterLegalizeDAG() && VT.isVector()) {
+    SDValue X, Y;
+    EVT CondVT = VT.changeVectorElementType(MVT::i1);
+    if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(CondVT) &&
+        sd_match(N, m_And(m_Value(X),
+                          m_OneUse(m_SExt(m_AllOf(
+                              m_Value(Y), m_SpecificVT(CondVT),
+                              m_SetCC(m_Value(), m_Value(), m_Value()))))))) {
+      return DAG.getSelect(dl, VT, Y, X,
+                           getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl));
     }
   }
 

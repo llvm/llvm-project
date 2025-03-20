@@ -788,9 +788,14 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
       // Copy the packet from m_bytes to packet_str expanding the run-length
       // encoding in the process.
-      std ::string packet_str =
+      auto maybe_packet_str =
           ExpandRLE(m_bytes.substr(content_start, content_end - content_start));
-      packet = StringExtractorGDBRemote(packet_str);
+      if (!maybe_packet_str) {
+        m_bytes.erase(0, total_length);
+        packet.Clear();
+        return GDBRemoteCommunication::PacketType::Invalid;
+      }
+      packet = StringExtractorGDBRemote(*maybe_packet_str);
 
       if (m_bytes[0] == '$' || m_bytes[0] == '%') {
         assert(checksum_idx < m_bytes.size());
@@ -1311,17 +1316,22 @@ void llvm::format_provider<GDBRemoteCommunication::PacketResult>::format(
   }
 }
 
-std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
+std::optional<std::string>
+GDBRemoteCommunication::ExpandRLE(std::string packet) {
   // Reserve enough byte for the most common case (no RLE used).
   std::string decoded;
   decoded.reserve(packet.size());
   for (std::string::const_iterator c = packet.begin(); c != packet.end(); ++c) {
     if (*c == '*') {
+      if (decoded.empty())
+        return std::nullopt;
       // '*' indicates RLE. Next character will give us the repeat count and
       // previous character is what is to be repeated.
       char char_to_repeat = decoded.back();
       // Number of time the previous character is repeated.
-      int repeat_count = *++c + 3 - ' ';
+      if (++c == packet.end())
+        return std::nullopt;
+      int repeat_count = *c + 3 - ' ';
       // We have the char_to_repeat and repeat_count. Now push it in the
       // packet.
       for (int i = 0; i < repeat_count; ++i)
@@ -1329,7 +1339,9 @@ std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
     } else if (*c == 0x7d) {
       // 0x7d is the escape character.  The next character is to be XOR'd with
       // 0x20.
-      char escapee = *++c ^ 0x20;
+      if (++c == packet.end())
+        return std::nullopt;
+      char escapee = *c ^ 0x20;
       decoded.push_back(escapee);
     } else {
       decoded.push_back(*c);
