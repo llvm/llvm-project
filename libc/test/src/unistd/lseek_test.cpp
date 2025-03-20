@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/lseek.h"
 #include "src/unistd/read.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <unistd.h>
 
-TEST(LlvmLibcUniStd, LseekTest) {
+using LlvmLibcUniStd = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcUniStd, LseekTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "testdata/lseek.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
@@ -50,7 +52,7 @@ TEST(LlvmLibcUniStd, LseekTest) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
-TEST(LlvmLibcUniStd, LseekFailsTest) {
+TEST_F(LlvmLibcUniStd, LseekFailsTest) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *FILENAME = "testdata/lseek.test";
