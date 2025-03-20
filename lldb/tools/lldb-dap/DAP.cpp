@@ -256,7 +256,7 @@ void DAP::Send(const Message &message) {
   if (auto *resp = std::get_if<Response>(&message);
       resp && debugger.InterruptRequested()) {
     // If the debugger was interrupted, convert this response into a 'cancelled'
-    // response.
+    // response because we might have a partial result.
     Response cancelled = CancelledResponse(resp->request_seq, resp->command);
     if (llvm::Error err = transport.Write(cancelled))
       DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",

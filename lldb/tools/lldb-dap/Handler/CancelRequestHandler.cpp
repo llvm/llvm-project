@@ -43,7 +43,7 @@ namespace lldb_dap {
 /// The progress that got cancelled still needs to send a `progressEnd` event
 /// back.
 ///
-/// A client should not assume that progress just got cancelled after sending
+/// A client cannot assume that progress just got cancelled after sending
 /// the `cancel` request.
 llvm::Expected<CancelResponseBody>
 CancelRequestHandler::Run(const CancelArguments &arguments) const {

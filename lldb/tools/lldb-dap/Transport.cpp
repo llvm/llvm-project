@@ -35,28 +35,29 @@ ReadFull(IOObject &descriptor, size_t length,
   if (!descriptor.IsValid())
     return createStringError("transport output is closed");
 
-  SelectHelper sh;
+  bool timeout_supported = true;
   // FIXME: SelectHelper does not work with NativeFile on Win32.
 #if _WIN32
-  if (timeout && descriptor.GetFdType() == eFDTypeSocket)
-    sh.SetTimeout(*timeout);
-#else
-  if (timeout)
-    sh.SetTimeout(*timeout);
+  timeout_supported = descriptor.GetFdType() == eFDTypeSocket;
 #endif
-  sh.FDSetRead(descriptor.GetWaitableHandle());
-  Status status = sh.Select();
-  if (status.Fail()) {
-    // Convert timeouts into a specific error.
-    if (status.GetType() == lldb::eErrorTypePOSIX &&
-        status.GetError() == ETIMEDOUT)
-      return make_error<TimeoutError>();
-    return status.takeError();
+
+  if (timeout && timeout_supported) {
+    SelectHelper sh;
+    sh.SetTimeout(*timeout);
+    sh.FDSetRead(descriptor.GetWaitableHandle());
+    Status status = sh.Select();
+    if (status.Fail()) {
+      // Convert timeouts into a specific error.
+      if (status.GetType() == lldb::eErrorTypePOSIX &&
+          status.GetError() == ETIMEDOUT)
+        return make_error<TimeoutError>();
+      return status.takeError();
+    }
   }
 
   std::string data;
   data.resize(length);
-  status = descriptor.Read(data.data(), length);
+  Status status = descriptor.Read(data.data(), length);
   if (status.Fail())
     return status.takeError();
 
