@@ -329,7 +329,7 @@ public:
   }
 
   LIBC_INLINE time_t get_epoch() const {
-    bool out_of_range_flag = true;
+    bool out_of_range_flag = false;
     return mktime_internal(timeptr, &out_of_range_flag);
   }
 

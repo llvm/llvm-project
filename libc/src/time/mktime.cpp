@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
-  bool out_of_range_flag = true;
+  bool out_of_range_flag = false;
   time_t seconds = time_utils::mktime_internal(tm_out, &out_of_range_flag);
 
   // Update the tm structure's year, month, day, etc. from seconds.
