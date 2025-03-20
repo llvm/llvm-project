@@ -385,7 +385,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 28, i32 0)
   %r6 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 32, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true) #0
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true) #0
   ret void
 }
 
@@ -462,7 +462,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %a5, i32 0)
   %r6 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %desc, i32 %a6, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true) #0
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true) #0
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true) #0
   ret void
 }
 
@@ -687,9 +687,10 @@ exit:
 ; GCN: buffer_load_dword v0, v0,
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: ; return to shader part epilog
-define amdgpu_cs float @arg_divergence(i32 inreg %unused, <3 x i32> %arg4) #0 {
+define amdgpu_cs float @arg_divergence(i32 inreg %cmp, <3 x i32> %arg4) #0 {
 main_body:
-  br i1 undef, label %if1, label %endif1
+  %uniform.cond = icmp eq i32 %cmp, 0
+  br i1 %uniform.cond, label %endif1, label %if1
 
 if1:                                              ; preds = %main_body
   store i32 0, ptr addrspace(3) poison, align 4

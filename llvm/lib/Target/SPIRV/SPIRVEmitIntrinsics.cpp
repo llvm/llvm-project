@@ -2016,6 +2016,19 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     processMemAliasingDecoration(LLVMContext::MD_alias_scope);
     processMemAliasingDecoration(LLVMContext::MD_noalias);
   }
+  // MD_fpmath
+  if (MDNode *MD = I->getMetadata(LLVMContext::MD_fpmath)) {
+    const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I->getFunction());
+    bool AllowFPMaxError =
+        STI->canUseExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+    if (!AllowFPMaxError)
+      return;
+
+    setInsertPointAfterDef(B, I);
+    B.CreateIntrinsic(Intrinsic::spv_assign_fpmaxerror_decoration,
+                      {I->getType()},
+                      {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
 }
 
 void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,

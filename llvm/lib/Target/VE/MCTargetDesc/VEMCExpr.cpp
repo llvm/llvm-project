@@ -125,9 +125,9 @@ VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::VariantKind Kind) {
   }
 }
 
-bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                         const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                         const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   Res =

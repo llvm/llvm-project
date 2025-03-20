@@ -644,7 +644,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   LiveRangeEdit::Remat RM(ParentVNI);
   RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
 
-  if (!Edit->canRematerializeAt(RM, OrigVNI, UseIdx, false)) {
+  if (!Edit->canRematerializeAt(RM, OrigVNI, UseIdx)) {
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat for " << UseIdx << '\t' << MI);
     return false;

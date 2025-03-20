@@ -715,10 +715,14 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     MulCandidate *RHSMul = Pair.second;
     LoadInst *BaseLHS = LHSMul->getBaseLoad();
     LoadInst *BaseRHS = RHSMul->getBaseLoad();
-    LoadInst *WideLHS = WideLoads.count(BaseLHS) ?
-      WideLoads[BaseLHS]->getLoad() : CreateWideLoad(LHSMul->VecLd, Ty);
-    LoadInst *WideRHS = WideLoads.count(BaseRHS) ?
-      WideLoads[BaseRHS]->getLoad() : CreateWideLoad(RHSMul->VecLd, Ty);
+    auto LIt = WideLoads.find(BaseLHS);
+    LoadInst *WideLHS = LIt != WideLoads.end()
+                            ? LIt->second->getLoad()
+                            : CreateWideLoad(LHSMul->VecLd, Ty);
+    auto RIt = WideLoads.find(BaseRHS);
+    LoadInst *WideRHS = RIt != WideLoads.end()
+                            ? RIt->second->getLoad()
+                            : CreateWideLoad(RHSMul->VecLd, Ty);
 
     Instruction *InsertAfter = GetInsertPoint(WideLHS, WideRHS);
     InsertAfter = GetInsertPoint(InsertAfter, Acc);

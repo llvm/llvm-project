@@ -654,12 +654,12 @@ uniform.multi.exit.region:
   br i1 %uniform.cond0, label %uniform.if, label %uniform.ret1
 
 uniform.if:
-  %sgpr0 = load volatile i32, ptr addrspace(4) undef
+  %sgpr0 = load volatile i32, ptr addrspace(4) poison
   %uniform.cond1 = icmp slt i32 %sgpr0, 1
   br i1 %uniform.cond1, label %uniform.then, label %uniform.endif
 
 uniform.then:
-  %sgpr1 = load volatile i32, ptr addrspace(4) undef
+  %sgpr1 = load volatile i32, ptr addrspace(4) poison
   %uniform.cond2 = icmp sge i32 %sgpr1, 4
   store volatile i32 33, ptr addrspace(1) poison
   br i1 %uniform.cond2, label %uniform.ret0, label %uniform.endif
@@ -689,7 +689,7 @@ divergent.ret:
 ; IR: UnifiedReturnBlock:
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64
 ; IR-NEXT: ret void
-define amdgpu_kernel void @multi_divergent_unreachable_exit() #0 {
+define amdgpu_kernel void @multi_divergent_unreachable_exit(i32 %switch) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   switch i32 %tmp, label %bb3 [
@@ -704,7 +704,7 @@ bb2:                                              ; preds = %bb
   unreachable
 
 bb3:                                              ; preds = %bb
-  switch i32 undef, label %bb5 [
+  switch i32 %switch, label %bb5 [
     i32 2, label %bb4
   ]
 

@@ -4771,7 +4771,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   if (!MRI.isSSA() && MI.isCopy())
     return verifyCopy(MI, MRI, ErrInfo);
 
-  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()))
+  if (SIInstrInfo::isGenericOpcode(Opcode))
     return true;
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
@@ -5037,14 +5037,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // Verify MIMG / VIMAGE / VSAMPLE
-  if (isImage(MI.getOpcode()) && !MI.mayStore()) {
+  if (isImage(Opcode) && !MI.mayStore()) {
     // Ensure that the return type used is large enough for all the options
     // being used TFE/LWE require an extra result register.
     const MachineOperand *DMask = getNamedOperand(MI, AMDGPU::OpName::dmask);
     if (DMask) {
       uint64_t DMaskImm = DMask->getImm();
-      uint32_t RegCount =
-          isGather4(MI.getOpcode()) ? 4 : llvm::popcount(DMaskImm);
+      uint32_t RegCount = isGather4(Opcode) ? 4 : llvm::popcount(DMaskImm);
       const MachineOperand *TFE = getNamedOperand(MI, AMDGPU::OpName::tfe);
       const MachineOperand *LWE = getNamedOperand(MI, AMDGPU::OpName::lwe);
       const MachineOperand *D16 = getNamedOperand(MI, AMDGPU::OpName::d16);
@@ -5058,7 +5057,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         RegCount += 1;
 
       const uint32_t DstIdx =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+          AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
       const MachineOperand &Dst = MI.getOperand(DstIdx);
       if (Dst.isReg()) {
         const TargetRegisterClass *DstRC = getOpRegClass(MI, DstIdx);
@@ -5463,9 +5462,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
              !(RI.getChannelFromSubReg(Op->getSubReg()) & 1);
     };
 
-    if (MI.getOpcode() == AMDGPU::DS_GWS_INIT ||
-        MI.getOpcode() == AMDGPU::DS_GWS_SEMA_BR ||
-        MI.getOpcode() == AMDGPU::DS_GWS_BARRIER) {
+    if (Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_SEMA_BR ||
+        Opcode == AMDGPU::DS_GWS_BARRIER) {
 
       if (!isAlignedReg(AMDGPU::OpName::data0)) {
         ErrInfo = "Subtarget requires even aligned vector registers "
@@ -5483,8 +5481,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
-      !ST.hasGFX90AInsts()) {
+  if (Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 && !ST.hasGFX90AInsts()) {
     const MachineOperand *Src = getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src->isReg() && RI.isSGPRReg(MRI, Src->getReg())) {
       ErrInfo = "Invalid register class: "

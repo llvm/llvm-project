@@ -2375,17 +2375,17 @@ define void @test_load_store_f64_to_bf16(ptr addrspace(1) %in, ptr addrspace(1) 
 ; GFX11-NEXT:    v_cmp_gt_f64_e64 s1, |v[0:1]|, v[4:5]
 ; GFX11-NEXT:    v_cmp_nlg_f64_e64 s0, |v[0:1]|, v[4:5]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, -1, 1, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    s_or_b32 vcc_lo, s0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_nc_u32_e32 v4, v6, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc_lo
 ; GFX11-NEXT:    v_cmp_u_f64_e32 vcc_lo, v[0:1], v[0:1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_or_b32 v5, 0x80000000, v1, v4
 ; GFX11-NEXT:    v_bfe_u32 v4, v4, 16, 1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add3_u32 v4, v4, v5, 0x7fff
 ; GFX11-NEXT:    v_or_b32_e32 v5, 0x400000, v5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc_lo
 ; GFX11-NEXT:    global_store_d16_hi_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -18822,23 +18822,23 @@ define amdgpu_ps i32 @s_fneg_fabs_bf16(bfloat inreg %a) {
 ; GCN-LABEL: s_fneg_fabs_bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    s_and_b32 s0, s0, 0xffff0000
-; GCN-NEXT:    s_bitset0_b32 s0, 31
-; GCN-NEXT:    s_and_b32 s0, s0, 0xffff0000
-; GCN-NEXT:    s_xor_b32 s0, s0, 0x80000000
-; GCN-NEXT:    s_lshr_b32 s0, s0, 16
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: s_fneg_fabs_bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_mul_f32_e64 v0, 1.0, s0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX7-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GFX7-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff0000
-; GFX7-NEXT:    s_bitset0_b32 s0, 31
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff0000
-; GFX7-NEXT:    s_xor_b32 s0, s0, 0x80000000
-; GFX7-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX7-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_fneg_fabs_bf16:

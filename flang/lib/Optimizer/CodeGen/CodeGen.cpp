@@ -47,6 +47,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -3145,6 +3146,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         }
       }
     }
+
+    if (global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Shared)
+      g.setAddrSpace(mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+
     rewriter.eraseOp(global);
     return mlir::success();
   }

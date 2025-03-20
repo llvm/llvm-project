@@ -422,11 +422,11 @@ static InstructionCost computeSpeculationCost(const User *I,
 /// After this function returns, Cost is increased by the cost of
 /// V plus its non-dominating operands.  If that cost is greater than
 /// Budget, false is returned and Cost is undefined.
-static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
-                                SmallPtrSetImpl<Instruction *> &AggressiveInsts,
-                                InstructionCost &Cost, InstructionCost Budget,
-                                const TargetTransformInfo &TTI,
-                                AssumptionCache *AC, unsigned Depth = 0) {
+static bool dominatesMergePoint(
+    Value *V, BasicBlock *BB, Instruction *InsertPt,
+    SmallPtrSetImpl<Instruction *> &AggressiveInsts, InstructionCost &Cost,
+    InstructionCost Budget, const TargetTransformInfo &TTI, AssumptionCache *AC,
+    SmallPtrSetImpl<Instruction *> &ZeroCostInstructions, unsigned Depth = 0) {
   // It is possible to hit a zero-cost cycle (phi/gep instructions for example),
   // so limit the recursion depth.
   // TODO: While this recursion limit does prevent pathological behavior, it
@@ -464,7 +464,17 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
   if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
     return false;
 
-  Cost += computeSpeculationCost(I, TTI);
+  // Overflow arithmetic instruction plus extract value are usually generated
+  // when a division is being replaced. But, in this case, the zero check may
+  // still be kept in the code. In that case it would be worth to hoist these
+  // two instruction out of the basic block. Let's treat this pattern as one
+  // single cheap instruction here!
+  WithOverflowInst *OverflowInst;
+  if (match(I, m_ExtractValue<1>(m_OneUse(m_WithOverflowInst(OverflowInst))))) {
+    ZeroCostInstructions.insert(OverflowInst);
+    Cost += 1;
+  } else if (!ZeroCostInstructions.contains(I))
+    Cost += computeSpeculationCost(I, TTI);
 
   // Allow exactly one instruction to be speculated regardless of its cost
   // (as long as it is safe to do so).
@@ -481,7 +491,7 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
   // not take us over the cost threshold.
   for (Use &Op : I->operands())
     if (!dominatesMergePoint(Op, BB, InsertPt, AggressiveInsts, Cost, Budget,
-                             TTI, AC, Depth + 1))
+                             TTI, AC, ZeroCostInstructions, Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts.insert(I);
@@ -1758,19 +1768,21 @@ static void hoistConditionalLoadsStores(
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
   // Not handle volatile or atomic.
+  bool IsStore = false;
   if (auto *L = dyn_cast<LoadInst>(I)) {
     if (!L->isSimple())
       return false;
   } else if (auto *S = dyn_cast<StoreInst>(I)) {
     if (!S->isSimple())
       return false;
+    IsStore = true;
   } else
     return false;
 
   // llvm.masked.load/store use i32 for alignment while load/store use i64.
   // That's why we have the alignment limitation.
   // FIXME: Update the prototype of the intrinsics?
-  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
+  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I), IsStore) &&
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
@@ -2434,7 +2446,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
                       << "\n");
-    InstructionsToSink.insert((*LRI).begin(), (*LRI).end());
+    InstructionsToSink.insert_range(*LRI);
     ++ScanIdx;
     --LRI;
   }
@@ -2504,7 +2516,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
             dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
         break;
       }
-      InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
+      InstructionsProfitableToSink.insert_range(*LRI);
       --LRI;
       ++Idx;
     }
@@ -3725,6 +3737,7 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // instructions.  While we are at it, keep track of the instructions
   // that need to be moved to the dominating block.
   SmallPtrSet<Instruction *, 4> AggressiveInsts;
+  SmallPtrSet<Instruction *, 2> ZeroCostInstructions;
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
@@ -3742,9 +3755,11 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     }
 
     if (!dominatesMergePoint(PN->getIncomingValue(0), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC) ||
+                             AggressiveInsts, Cost, Budget, TTI, AC,
+                             ZeroCostInstructions) ||
         !dominatesMergePoint(PN->getIncomingValue(1), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC))
+                             AggressiveInsts, Cost, Budget, TTI, AC,
+                             ZeroCostInstructions))
       return Changed;
   }
 
@@ -7542,10 +7557,10 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   // SwitchSuccWrapper.
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
-    PhiPredIVs[Phi] =
-        SmallDenseMap<BasicBlock *, Value *, 8>(Phi->getNumIncomingValues());
+    auto &IVs =
+        PhiPredIVs.try_emplace(Phi, Phi->getNumIncomingValues()).first->second;
     for (auto &IV : Phi->incoming_values())
-      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
+      IVs.insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
   // Build a set such that if the SwitchSuccWrapper exists in the set and

@@ -353,6 +353,12 @@ ANALYZER_OPTION(bool, DisplayCTUProgress, "display-ctu-progress",
                 "the analyzer's progress related to ctu.",
                 false)
 
+ANALYZER_OPTION(
+    StringRef, DumpEntryPointStatsToCSV, "dump-entry-point-stats-to-csv",
+    "If provided, the analyzer will dump statistics per entry point "
+    "into the specified CSV file.",
+    "")
+
 ANALYZER_OPTION(bool, ShouldTrackConditions, "track-conditions",
                 "Whether to track conditions that are a control dependency of "
                 "an already tracked variable.",

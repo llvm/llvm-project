@@ -53,8 +53,8 @@ public:
     OS << X86ATTInstPrinter::getRegisterName(Reg);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override {
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override {
     return false;
   }
   // Register values should be inlined as they are not valid .set expressions.
@@ -66,9 +66,6 @@ public:
   }
   void visitUsedExpr(MCStreamer &Streamer) const override {}
   MCFragment *findAssociatedFragment() const override { return nullptr; }
-
-  // There are no TLS X86MCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
