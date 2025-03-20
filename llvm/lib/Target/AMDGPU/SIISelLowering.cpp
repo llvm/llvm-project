@@ -10102,7 +10102,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
-    assert(!AMDGPU::isGFX12Plus(*Subtarget));
+    assert(Subtarget->hasLDSBufferLoad());
     unsigned Opc;
     bool HasVIndex =
         IntrinsicID == Intrinsic::amdgcn_struct_buffer_load_lds ||

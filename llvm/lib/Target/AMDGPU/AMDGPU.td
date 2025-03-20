@@ -1269,6 +1269,12 @@ def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32
   "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
 >;
 
+def FeatureLDSBufferLoad : SubtargetFeature<"lds-buffer-load-insts",
+  "HasLDSBufferLoad",
+  "true",
+  "The platform has buffer_load lds instructions"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1290,7 +1296,7 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
-  FeatureVmemWriteVgprInOrder
+  FeatureVmemWriteVgprInOrder, FeatureLDSBufferLoad
   ]
 >;
 
@@ -1304,7 +1310,7 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureImageInsts, FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-  FeatureVmemWriteVgprInOrder
+  FeatureVmemWriteVgprInOrder, FeatureLDSBufferLoad
   ]
 >;
 
@@ -1320,7 +1326,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
-   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder
+   FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureLDSBufferLoad
   ]
 >;
 
@@ -1339,7 +1345,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
-   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureLDSBufferLoad
   ]
 >;
 
@@ -1363,7 +1369,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureVmemWriteVgprInOrder
+   FeatureVmemWriteVgprInOrder, FeatureLDSBufferLoad
   ]
 >;
 
