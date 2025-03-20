@@ -855,6 +855,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   {
     RewritePatternSet patterns(&getContext());
     patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    GreedyRewriteConfig config;
+    config.fold = false;
+    // config.cseConstants = false;
+    // config.enableRegionSimplification = GreedySimplifyRegionLevel::Disabled;
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
   }
 }
