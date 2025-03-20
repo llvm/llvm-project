@@ -155,17 +155,17 @@ class DefaultWarnNoWerror {
 }
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
-// C++ compatibility warnings
+// C++ compatibility warnings.
 multiclass CXXCompat<
     string message,
-    bit default_ignore,
     int std_ver,
+    bit ext_warn = true,
     string std_ver_override = ""#std_ver> {
     // 'X is a C++YZ extension'.
     def compat_pre_cxx#std_ver#_#NAME :
         Diagnostic<!strconcat(message, " a C++", std_ver_override,  " extension"),
                    CLASS_EXTENSION,
-                   !if(default_ignore, SEV_Ignored, SEV_Warning)>,
+                   !if(ext_warn, SEV_Warning, SEV_Ignored)>,
         InGroup<!cast<DiagGroup>("CXX"#std_ver)>;
 
     // 'X is incompatible with C++98' (if std_ver == 11).
@@ -180,23 +180,23 @@ multiclass CXXCompat<
         DefaultIgnore;
 }
 
-multiclass CXX11Compat<string message, bit default_ignore = false>
-    : CXXCompat<message, default_ignore, 11>;
+multiclass CXX11Compat<string message, bit ext_warn = true>
+    : CXXCompat<message, 11, ext_warn>;
 
-multiclass CXX14Compat<string message, bit default_ignore = false>
-    : CXXCompat<message, default_ignore, 14>;
+multiclass CXX14Compat<string message, bit ext_warn = true>
+    : CXXCompat<message, 14, ext_warn>;
 
-multiclass CXX17Compat<string message, bit default_ignore = false>
-    : CXXCompat<message, default_ignore, 17>;
+multiclass CXX17Compat<string message, bit ext_warn = true>
+    : CXXCompat<message, 17, ext_warn>;
 
-multiclass CXX20Compat<string message, bit default_ignore = false>
-    : CXXCompat<message, default_ignore, 20>;
+multiclass CXX20Compat<string message, bit ext_warn = true>
+    : CXXCompat<message, 20, ext_warn>;
 
-multiclass CXX23Compat<string message, bit default_ignore = false>
-    : CXXCompat<message, default_ignore, 23>;
+multiclass CXX23Compat<string message, bit ext_warn = true>
+    : CXXCompat<message, 23, ext_warn>;
 
-multiclass CXX26Compat<string message, bit default_ignore = false>
-    : CXXCompat<message, default_ignore, 26, "2c">;
+multiclass CXX26Compat<string message, bit ext_warn = true>
+    : CXXCompat<message, 26, ext_warn, "2c">;
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
