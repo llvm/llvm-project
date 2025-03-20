@@ -633,9 +633,8 @@ BitVector SIRegisterInfo::AlwaysReservedRegs;
 
 BitVector SIRegisterInfo::getAlwaysReservedRegs() const {
   // Already been calculated, so do not compute again.
-  if (AlwaysReservedRegs.size() == getNumRegs()) {
+  if (AlwaysReservedRegs.size() == getNumRegs())
     return AlwaysReservedRegs;
-  }
 
   BitVector Reserved(getNumRegs());
   Reserved.set(AMDGPU::MODE);
