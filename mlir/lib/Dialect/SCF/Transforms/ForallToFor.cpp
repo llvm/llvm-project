@@ -40,12 +40,15 @@ mlir::scf::forallToForLoop(RewriterBase &rewriter, scf::ForallOp forallOp,
   SmallVector<Value> ivs = llvm::map_to_vector(
       loopNest.loops, [](scf::ForOp loop) { return loop.getInductionVar(); });
 
+  SmallVector<Value> replacementVals = ivs;
+  for (Value shared : forallOp.getOutputs())
+    replacementVals.push_back(shared);
   Block *innermostBlock = loopNest.loops.back().getBody();
   rewriter.eraseOp(forallOp.getBody()->getTerminator());
   rewriter.inlineBlockBefore(forallOp.getBody(), innermostBlock,
                              innermostBlock->getTerminator()->getIterator(),
-                             ivs);
-  rewriter.eraseOp(forallOp);
+                             replacementVals);
+  rewriter.replaceOp(forallOp, forallOp.getOutputs());
 
   if (results) {
     llvm::move(loopNest.loops, std::back_inserter(*results));
