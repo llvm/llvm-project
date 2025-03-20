@@ -1072,16 +1072,25 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
       AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
       /*NumberOfArgumentsMustMatch=*/false);
 
+  static auto IsNonDeducedArgument = [&](const DeducedTemplateArgument &TA) {
+    // The following cases indicate the template argument is non-deducible:
+    //   1. The result is null. E.g. When it comes from a default template
+    //   argument that doesn't appear in the alias declaration.
+    //   2. The template parameter is a pack and that cannot be deduced from
+    //   the arguments within the alias declaration.
+    // Non-deducible template parameters will persist in the transformed
+    // deduction guide.
+    return TA.isNull() || (TA.getKind() == TemplateArgument::Pack &&
+                           TA.pack_size() == 1 && TA.pack_begin()->isNull());
+  };
+
   SmallVector<TemplateArgument> DeducedArgs;
   SmallVector<unsigned> NonDeducedTemplateParamsInFIndex;
   // !!NOTE: DeduceResults respects the sequence of template parameters of
   // the deduction guide f.
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    bool NonDeduced =
-        D.isNull() || (D.getKind() == TemplateArgument::Pack &&
-                       D.pack_size() == 1 && D.pack_begin()->isNull());
-    if (!NonDeduced)
+    if (!IsNonDeducedArgument(D))
       DeducedArgs.push_back(D);
     else
       NonDeducedTemplateParamsInFIndex.push_back(Index);
@@ -1145,10 +1154,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    bool NonDeduced =
-        D.isNull() || (D.getKind() == TemplateArgument::Pack &&
-                       D.pack_size() == 1 && D.pack_begin()->isNull());
-    if (NonDeduced) {
+    if (IsNonDeducedArgument(D)) {
       // 2): Non-deduced template parameters would be substituted later.
       continue;
     }

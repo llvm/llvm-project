@@ -1487,7 +1487,7 @@ namespace {
         return TA;
       if (SemaRef.ArgumentPackSubstitutionIndex != -1)
         return getPackSubstitutedTemplateArgument(SemaRef, TA);
-      assert(TA.pack_size() == 1 &&
+      assert(TA.pack_size() == 1 && TA.pack_begin()->isPackExpansion() &&
              "unexpected pack arguments in template rewrite");
       TemplateArgument Arg = *TA.pack_begin();
       if (Arg.isPackExpansion())
@@ -1667,6 +1667,23 @@ namespace {
         break;
       }
       return inherited::TransformTemplateArgument(Input, Output, Uneval);
+    }
+
+    std::optional<unsigned> ComputeSizeOfPackExprWithoutSubstitution(
+        ArrayRef<TemplateArgument> PackArgs) {
+      // Don't do this when rewriting template parameters for CTAD:
+      //   1) The heuristic needs the unpacked Subst* nodes to figure out the
+      //   expanded size, but this never applies since Subst* nodes are not
+      //   created in rewrite scenarios.
+      //
+      //   2) The heuristic substitutes into the pattern with pack expansion
+      //   suppressed, which does not meet the requirements for argument
+      //   rewriting when template arguments include a non-pack matching against
+      //   a pack, particularly when rewriting an alias CTAD.
+      if (TemplateArgs.isRewrite())
+        return std::nullopt;
+
+      return inherited::ComputeSizeOfPackExprWithoutSubstitution(PackArgs);
     }
 
     template<typename Fn>
