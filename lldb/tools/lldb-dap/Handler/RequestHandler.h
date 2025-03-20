@@ -121,11 +121,14 @@ class RequestHandler : public BaseRequestHandler {
       llvm::raw_string_ostream OS(parse_failure);
       root.printErrorContext(request.arguments, OS);
 
-      protocol::ErrorMessage error;
-      error.format = parse_failure;
+      protocol::ErrorMessage error_message;
+      error_message.format = parse_failure;
+
+      protocol::ErrorResponseBody body;
+      body.error = error_message;
 
       response.success = false;
-      response.body = std::move(error);
+      response.body = std::move(body);
 
       dap.Send(response);
       return;
@@ -133,19 +136,22 @@ class RequestHandler : public BaseRequestHandler {
 
     llvm::Expected<Body> body = Run(arguments);
     if (auto Err = body.takeError()) {
-      protocol::ErrorMessage error;
+      protocol::ErrorMessage error_message;
+      error_message.sendTelemetry = false;
       if (llvm::Error unhandled = llvm::handleErrors(
               std::move(Err), [&](const DAPError &E) -> llvm::Error {
-                error.format = E.getMessage();
-                error.showUser = E.getShowUser();
-                error.id = E.convertToErrorCode().value();
+                error_message.format = E.getMessage();
+                error_message.showUser = E.getShowUser();
+                error_message.id = E.convertToErrorCode().value();
                 // TODO: We could add url/urlLabel to the error message for more
                 // information for users.
                 return llvm::Error::success();
               }))
-        error.format = llvm::toString(std::move(unhandled));
+        error_message.format = llvm::toString(std::move(unhandled));
+      protocol::ErrorResponseBody body;
+      body.error = error_message;
       response.success = false;
-      response.body = std::move(error);
+      response.body = std::move(body);
     } else {
       response.success = true;
       if constexpr (!std::is_same_v<Body, std::monostate>)
