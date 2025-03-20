@@ -453,12 +453,13 @@ void MarkLive<ELFT, TrackWhyLive>::mark() {
       resolveReloc(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
-      enqueue(isec, /*offset=*/0, /*sym=*/nullptr, {&sec, "dependent section"});
+      enqueue(isec, /*offset=*/0, /*sym=*/nullptr,
+              {&sec, "depended on by section"});
 
     // Mark the next group member.
     if (sec.nextInSectionGroup)
       enqueue(sec.nextInSectionGroup, /*offset=*/0, /*sym=*/nullptr,
-              {&sec, "next in section group"});
+              {&sec, "in section group with"});
   }
 }
 
@@ -478,7 +479,7 @@ void MarkLive<ELFT, TrackWhyLive>::moveToMain() {
       if (auto *d = dyn_cast<Defined>(s))
         if ((d->type == STT_GNU_IFUNC || d->type == STT_TLS) && d->section &&
             d->section->isLive())
-          markSymbol(s, {});
+          markSymbol(s, /*reason=*/{});
 
   for (InputSectionBase *sec : ctx.inputSections) {
     if (!sec->isLive() || !isValidCIdentifier(sec->name))
