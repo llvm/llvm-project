@@ -320,9 +320,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
-  bool UsesWholeWave = false;
-
   unsigned ScratchReservedForDynamicVGPRs = 0;
+  bool UsesWholeWave = false;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
