@@ -122,5 +122,13 @@ void test() {
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(std::move(value())) must have the same error_type as this expected}}
     }
   }
+  
+  // Test nodiscard
+  {
+    const std::expected<int, int> f1(std::unexpected<int>(1));
+    
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    f1.and_then([](int&){ return 1; });
+  }
 }
 // clang-format on
