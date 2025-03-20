@@ -625,6 +625,8 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     case JumpTable::JTT_X86_64_ABS:
       Value = *getPointerAtAddress(EntryAddress);
       break;
+    default:
+      llvm_unreachable("Unhandled jump table type");
     }
 
     // __builtin_unreachable() case.
