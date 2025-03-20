@@ -594,12 +594,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   if (NextJTAddress)
     UpperBound = std::min(NextJTAddress, UpperBound);
 
-  LLVM_DEBUG({
-    using JTT = JumpTable::JumpTableType;
-    dbgs() << formatv("BOLT-DEBUG: analyzeJumpTable @{0:x} in {1}, JTT={2}\n",
-                      Address, BF.getPrintName(),
-                      Type == JTT::JTT_PIC ? "PIC" : "Normal");
-  });
+  LLVM_DEBUG(
+      dbgs() << formatv("BOLT-DEBUG: analyzeJumpTable @{0:x} in {1}, JTT={2}\n",
+                        Address, BF, JumpTable::getTypeStr(Type)));
   const uint64_t EntrySize = getJumpTableEntrySize(Type);
   for (uint64_t EntryAddress = Address; EntryAddress <= UpperBound - EntrySize;
        EntryAddress += EntrySize) {
@@ -621,10 +618,17 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       }
     }
 
-    const uint64_t Value =
-        (Type == JumpTable::JTT_PIC)
-            ? Address + *getSignedValueAtAddress(EntryAddress, EntrySize)
-            : *getPointerAtAddress(EntryAddress);
+    uint64_t Value = 0;
+    switch (Type) {
+    case JumpTable::JTT_X86_64_PIC4:
+      Value = Address + *getSignedValueAtAddress(EntryAddress, EntrySize);
+      break;
+    case JumpTable::JTT_X86_64_ABS:
+      Value = *getPointerAtAddress(EntryAddress);
+      break;
+    default:
+      llvm_unreachable("Unhandled jump table type");
+    }
 
     // __builtin_unreachable() case.
     if (Value == UnreachableAddress) {
@@ -679,7 +683,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
   // Trim direct/normal jump table to exclude trailing unreachable entries that
   // can collide with a function address.
-  if (Type == JumpTable::JTT_NORMAL && EntriesAsAddress &&
+  if (Type == JumpTable::JTT_X86_64_ABS && EntriesAsAddress &&
       TrimmedSize != EntriesAsAddress->size() &&
       getBinaryFunctionAtAddress(UnreachableAddress))
     EntriesAsAddress->resize(TrimmedSize);
