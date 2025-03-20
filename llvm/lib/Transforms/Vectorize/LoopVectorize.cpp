@@ -356,6 +356,10 @@ cl::opt<bool> llvm::EnableVPlanNativePath(
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
 
+cl::opt<bool> llvm::EnableWideActiveLaneMask(
+    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+    cl::desc("Enable use of wide get active lane mask instructions"));
+
 cl::opt<bool>
     llvm::VerifyEachVPlan("vplan-verify-each",
 #ifdef EXPENSIVE_CHECKS
@@ -7328,7 +7332,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
                              BestVPlan, BestVF, VScale);
   }
-  VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
+  VPlanTransforms::optimizeForVFAndUF(
+      BestVPlan, BestVF, BestUF, PSE,
+      ILV.Cost->getTailFoldingStyle() ==
+          TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
