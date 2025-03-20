@@ -83,6 +83,12 @@ async function getDAPExecutable(
   // Check if the executable was provided in the launch configuration.
   const launchConfigPath = configuration["debugAdapterExecutable"];
   if (typeof launchConfigPath === "string" && launchConfigPath.length !== 0) {
+    if (!(await isExecutable(launchConfigPath))) {
+      throw new ErrorWithNotification(
+        `Debug adapter path "${launchConfigPath}" is not a valid file. The path comes from your launch configuration.`,
+        new ConfigureButton(),
+      );
+    }
     return launchConfigPath;
   }
 
@@ -90,12 +96,24 @@ async function getDAPExecutable(
   const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
   const configPath = config.get<string>("executable-path");
   if (configPath && configPath.length !== 0) {
+    if (!(await isExecutable(configPath))) {
+      throw new ErrorWithNotification(
+        `Debug adapter path "${configPath}" is not a valid file. The path comes from your settings.`,
+        new OpenSettingsButton("lldb-dap.executable-path"),
+      );
+    }
     return configPath;
   }
 
   // Try finding the lldb-dap binary.
   const foundPath = await findDAPExecutable();
   if (foundPath) {
+    if (!(await isExecutable(foundPath))) {
+      throw new ErrorWithNotification(
+        `Found a potential debug adapter on your system at "${configPath}", but it is not a valid file.`,
+        new OpenSettingsButton("lldb-dap.executable-path"),
+      );
+    }
     return foundPath;
   }
 
@@ -160,18 +178,6 @@ export async function createDebugAdapterExecutable(
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
   const dapPath = await getDAPExecutable(workspaceFolder, configuration);
-
-  if (!(await isExecutable(dapPath))) {
-    let message = `Debug adapter path "${dapPath}" is not a valid file.`;
-    let buttons: (OpenSettingsButton | ConfigureButton)[] = [
-      new OpenSettingsButton("lldb-dap.executable-path"),
-    ];
-    if ("debugAdapterPath" in configuration) {
-      message += " The path comes from your launch configuration.";
-      buttons = [new ConfigureButton()];
-    }
-    throw new ErrorWithNotification(message, ...buttons);
-  }
 
   const dbgOptions = {
     env: {
