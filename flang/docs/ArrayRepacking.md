@@ -145,6 +145,7 @@ So it does not seem practical/reasonable to enable the array repacking by defaul
 3. Provide consistent behavior of the temporary arrays with relation to `-fstack-arrays` (that forces all temporary arrays to be allocated on the stack).
 4. Produce correct debug information to substitute the original array with the copy array when accessing values in the debugger.
 5. Document potential correctness issues that array repacking may cause in multithreaded/offload execution.
+6. Document the expected changes of the programs behavior, such as applying `LOC` and `IS_CONTIGUOUS` intrinsic functions to the repacked arrays (one cannot expect the same results as if these intrinsics were applied to the original arrays).
 
 ## Proposed design
 
@@ -346,6 +347,8 @@ The copy creation is also restricted for `ASYNCHRONOUS` and `VOLATILE` arguments
 
 It does not make sense to generate the new operations for `CONTIGUOUS` arguments and for arguments with statically known element size that exceeds the `max-element-size` threshold.
 
+The `fir.pack_array`'s copy-in action cannot be skipped for `INTENT(OUT)` dummy argument of a derived type that requires finalization on entry to the subprogram, as long as the finalization subroutines may access the value of the dummy argument. In this case `fir.pack_array` operation cannot have `no_copy` attribute, so that it creates a contiguous temporary matching the value of the original array, and then the temporary is finalized before execution of the subprogram's body begins.
+
 #### Optional behavior
 
 In case of the `whole` continuity mode or with 1-D array, Flang can propagate this information to `hlfir.declare` - this may improve optimizations down the road. This can be done iff the repacking has no dynamic constraints and/or heuristics. For example:
@@ -400,7 +403,24 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 
 ### Runtime
 
-[TBD] define the runtime APIs.
+The goal of packing a non-contiguous array into a contiguous temporary is to allow data cache efficient accesses to the elements of the array. With this in mind, the copy of elements of derived types may be done without following the regular Fortran assign semantics for the allocatable components that may imply memory allocations and the data copies for those components. Making just a shallow copy of the original array can therefore be faster than the corresponding deep copy using Fortran `Assign` runtime.
+
+The following API is proposed in flang-rt:
+
+```C++
+void RTDECL(ShallowCopyDirect)(
+    const Descriptor &result,
+    const Descriptor &source,
+    const char *sourceFile = nullptr,
+    int line = 0);
+```
+
+It copies values from `source` array into the pre-allocated `result` array. The semantics is different from the `Assign` runtime for derived types, because it does not perform the recursive assign actions for the components of derived types. For example, ALLOCATABLE component descriptors are copied without creating a new allocation and copying the data (essentially, they are treated as POINTER components).
+
+The arrays must be conforming, i.e. they must have:
+  * Same rank.
+  * Same extents.
+  * Same size and type of elements (including the type parameters).
 
 ### Optimization passes
 

@@ -1208,7 +1208,6 @@ cc_library(
     ]),
     deps = [
         ":BinaryFormat",
-        ":CodeGen",
         ":Core",
         ":Object",
         ":ProfileData",
@@ -5115,6 +5114,11 @@ llvm_driver_cc_binary(
     name = "llvm-ml",
     stamp = 0,
     deps = [":llvm-ml-lib"],
+)
+
+binary_alias(
+    name = "llvm-ml64",
+    binary = ":llvm-ml",
 )
 
 cc_binary(

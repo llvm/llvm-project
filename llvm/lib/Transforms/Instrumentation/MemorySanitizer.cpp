@@ -207,6 +207,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <tuple>
 
@@ -3273,6 +3274,64 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  /// Handle x86 SSE single-precision to half-precision conversion.
+  ///
+  /// e.g.,
+  ///      <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a0, i32 0)
+  ///      <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
+  /// Note: if the output has more elements, they are zero-initialized (and
+  /// therefore the shadow will also be initialized).
+  ///
+  /// This differs from handleSSEVectorConvertIntrinsic() because it
+  /// propagates uninitialized shadow (instead of checking the shadow).
+  void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+    Value *Src = I.getArgOperand(0);
+    assert(Src->getType()->isVectorTy());
+    [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
+    assert(RoundingMode->getType()->isIntegerTy());
+
+    // The return type might have more elements than the input.
+    // Temporarily shrink the return type's number of elements.
+    VectorType *ShadowType = cast<VectorType>(getShadowTy(&I));
+    if (ShadowType->getElementCount() ==
+        cast<VectorType>(Src->getType())->getElementCount() * 2)
+      ShadowType = VectorType::getHalfElementsVectorType(ShadowType);
+
+    assert(ShadowType->getElementCount() ==
+           cast<VectorType>(Src->getType())->getElementCount());
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *Shadow =
+        IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)), ShadowType);
+
+    // The return type might have more elements than the input.
+    // Extend the return type back to its original width if necessary.
+    Value *FullShadow = getCleanShadow(&I);
+
+    if (Shadow->getType() == FullShadow->getType()) {
+      FullShadow = Shadow;
+    } else {
+      SmallVector<int, 8> ShadowMask(
+          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+      std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
+
+      // Append zeros
+      FullShadow =
+          IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
+    }
+
+    setShadow(&I, FullShadow);
+    setOriginForNaryOp(I);
+  }
+
   // Instrument x86 SSE vector convert intrinsic.
   //
   // This function instruments intrinsics like cvtsi2ss:
@@ -4073,10 +4132,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     CallInst *CI =
         IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
-    // The intrinsic may require floating-point but shadows can be arbitrary
-    // bit patterns, of which some would be interpreted as "invalid"
-    // floating-point values (NaN etc.); we assume the intrinsic will happily
-    // copy them.
+    // The AVX masked load intrinsics do not have integer variants. We use the
+    // floating-point variants, which will happily copy the shadows even if
+    // they are interpreted as "invalid" floating-point values (NaN etc.).
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
 
     if (!MS.TrackOrigins)
@@ -4240,6 +4298,78 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     setShadow(&I, Shadow);
     setOriginForNaryOp(I);
+  }
+
+  // Handle Arm NEON vector load intrinsics (vld*).
+  //
+  // The WithLane instructions (ld[234]lane) are similar to:
+  //     call {<4 x i32>, <4 x i32>, <4 x i32>}
+  //          @llvm.aarch64.neon.ld3lane.v4i32.p0
+  //              (<4 x i32> %L1, <4 x i32> %L2, <4 x i32> %L3, i64 %lane, ptr
+  //              %A)
+  //
+  // The non-WithLane instructions (ld[234], ld1x[234], ld[234]r) are similar
+  // to:
+  //     call {<8 x i8>, <8 x i8>} @llvm.aarch64.neon.ld2.v8i8.p0(ptr %A)
+  void handleNEONVectorLoad(IntrinsicInst &I, bool WithLane) {
+    unsigned int numArgs = I.arg_size();
+
+    // Return type is a struct of vectors of integers or floating-point
+    assert(I.getType()->isStructTy());
+    [[maybe_unused]] StructType *RetTy = cast<StructType>(I.getType());
+    assert(RetTy->getNumElements() > 0);
+    assert(RetTy->getElementType(0)->isIntOrIntVectorTy() ||
+           RetTy->getElementType(0)->isFPOrFPVectorTy());
+    for (unsigned int i = 0; i < RetTy->getNumElements(); i++)
+      assert(RetTy->getElementType(i) == RetTy->getElementType(0));
+
+    if (WithLane) {
+      // 2, 3 or 4 vectors, plus lane number, plus input pointer
+      assert(4 <= numArgs && numArgs <= 6);
+
+      // Return type is a struct of the input vectors
+      assert(RetTy->getNumElements() + 2 == numArgs);
+      for (unsigned int i = 0; i < RetTy->getNumElements(); i++)
+        assert(I.getArgOperand(i)->getType() == RetTy->getElementType(0));
+    } else {
+      assert(numArgs == 1);
+    }
+
+    IRBuilder<> IRB(&I);
+
+    SmallVector<Value *, 6> ShadowArgs;
+    if (WithLane) {
+      for (unsigned int i = 0; i < numArgs - 2; i++)
+        ShadowArgs.push_back(getShadow(I.getArgOperand(i)));
+
+      // Lane number, passed verbatim
+      Value *LaneNumber = I.getArgOperand(numArgs - 2);
+      ShadowArgs.push_back(LaneNumber);
+
+      // TODO: blend shadow of lane number into output shadow?
+      insertShadowCheck(LaneNumber, &I);
+    }
+
+    Value *Src = I.getArgOperand(numArgs - 1);
+    assert(Src->getType()->isPointerTy() && "Source is not a pointer!");
+
+    Type *SrcShadowTy = getShadowTy(Src);
+    auto [SrcShadowPtr, SrcOriginPtr] =
+        getShadowOriginPtr(Src, IRB, SrcShadowTy, Align(1), /*isStore*/ false);
+    ShadowArgs.push_back(SrcShadowPtr);
+
+    // The NEON vector load instructions handled by this function all have
+    // integer variants. It is easier to use those rather than trying to cast
+    // a struct of vectors of floats into a struct of vectors of integers.
+    CallInst *CI =
+        IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
+    setShadow(&I, CI);
+
+    if (!MS.TrackOrigins)
+      return;
+
+    Value *PtrSrcOrigin = IRB.CreateLoad(MS.OriginTy, SrcOriginPtr);
+    setOrigin(&I, PtrSrcOrigin);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
@@ -4868,6 +4998,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    case Intrinsic::x86_vcvtps2ph_128:
+    case Intrinsic::x86_vcvtps2ph_256: {
+      handleSSEVectorConvertIntrinsicByProp(I);
+      break;
+    }
+
     case Intrinsic::fshl:
     case Intrinsic::fshr:
       handleFunnelShift(I);
@@ -4945,6 +5081,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_uaddlv:
       handleVectorReduceIntrinsic(I, /*AllowShadowCast=*/true);
       break;
+
+    case Intrinsic::aarch64_neon_ld1x2:
+    case Intrinsic::aarch64_neon_ld1x3:
+    case Intrinsic::aarch64_neon_ld1x4:
+    case Intrinsic::aarch64_neon_ld2:
+    case Intrinsic::aarch64_neon_ld3:
+    case Intrinsic::aarch64_neon_ld4:
+    case Intrinsic::aarch64_neon_ld2r:
+    case Intrinsic::aarch64_neon_ld3r:
+    case Intrinsic::aarch64_neon_ld4r: {
+      handleNEONVectorLoad(I, /*WithLane=*/false);
+      break;
+    }
+
+    case Intrinsic::aarch64_neon_ld2lane:
+    case Intrinsic::aarch64_neon_ld3lane:
+    case Intrinsic::aarch64_neon_ld4lane: {
+      handleNEONVectorLoad(I, /*WithLane=*/true);
+      break;
+    }
 
     // Saturating extract narrow
     case Intrinsic::aarch64_neon_sqxtn:

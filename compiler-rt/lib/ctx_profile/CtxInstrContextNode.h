@@ -120,8 +120,16 @@ public:
 class ProfileWriter {
 public:
   virtual void startContextSection() = 0;
-  virtual void writeContextual(const ctx_profile::ContextNode &RootNode) = 0;
+  virtual void writeContextual(const ctx_profile::ContextNode &RootNode,
+                               const ctx_profile::ContextNode *Unhandled,
+                               uint64_t TotalRootEntryCount) = 0;
   virtual void endContextSection() = 0;
+
+  virtual void startFlatSection() = 0;
+  virtual void writeFlat(ctx_profile::GUID Guid, const uint64_t *Buffer,
+                         size_t BufferSize) = 0;
+  virtual void endFlatSection() = 0;
+
   virtual ~ProfileWriter() = default;
 };
 } // namespace ctx_profile

@@ -57,7 +57,7 @@ namespace cwg1423 { // cwg1423: 11
 
 // cwg1425: na abi
 
-namespace cwg1432 { // cwg1432: 16
+namespace cwg1432 { // cwg1432: 16 open 2022-11-11
 #if __cplusplus >= 201103L
   namespace class_template_partial_spec {
     template<typename T> T declval();

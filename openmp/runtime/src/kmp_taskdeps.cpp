@@ -233,10 +233,10 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
   if (task_sink->is_taskgraph &&
       __kmp_tdg_is_recording(task_sink->tdg->tdg_status)) {
     kmp_node_info_t *source_info =
-        &task_sink->tdg->record_map[task_source->td_task_id];
+        &task_sink->tdg->record_map[task_source->td_tdg_task_id];
     bool exists = false;
     for (int i = 0; i < source_info->nsuccessors; i++) {
-      if (source_info->successors[i] == task_sink->td_task_id) {
+      if (source_info->successors[i] == task_sink->td_tdg_task_id) {
         exists = true;
         break;
       }
@@ -251,11 +251,12 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
         __kmp_free(old_succ_ids);
       }
 
-      source_info->successors[source_info->nsuccessors] = task_sink->td_task_id;
+      source_info->successors[source_info->nsuccessors] =
+          task_sink->td_tdg_task_id;
       source_info->nsuccessors++;
 
       kmp_node_info_t *sink_info =
-          &(task_sink->tdg->record_map[task_sink->td_task_id]);
+          &(task_sink->tdg->record_map[task_sink->td_tdg_task_id]);
       sink_info->npredecessors++;
     }
   }
@@ -727,8 +728,8 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
       }
       __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
-    tdg->record_map[new_taskdata->td_task_id].task = new_task;
-    tdg->record_map[new_taskdata->td_task_id].parent_task =
+    tdg->record_map[new_taskdata->td_tdg_task_id].task = new_task;
+    tdg->record_map[new_taskdata->td_tdg_task_id].parent_task =
         new_taskdata->td_parent;
     KMP_ATOMIC_INC(&tdg->num_tasks);
   }

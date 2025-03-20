@@ -400,9 +400,10 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       Last = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
            VI != VE; ++VI) {
+        auto &LVM = LastValueMap[VI->first];
         PrevItValueMap[VI->second] =
-            const_cast<Value *>(It == 1 ? VI->first : LastValueMap[VI->first]);
-        LastValueMap[VI->first] = VI->second;
+            const_cast<Value *>(It == 1 ? VI->first : LVM);
+        LVM = VI->second;
       }
 
       NewBlocks.push_back(New);
@@ -579,9 +580,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Merge adjacent basic blocks, if possible.
   SmallPtrSet<BasicBlock *, 16> MergeBlocks;
-  MergeBlocks.insert(ForeBlocksLast.begin(), ForeBlocksLast.end());
-  MergeBlocks.insert(SubLoopBlocksLast.begin(), SubLoopBlocksLast.end());
-  MergeBlocks.insert(AftBlocksLast.begin(), AftBlocksLast.end());
+  MergeBlocks.insert_range(ForeBlocksLast);
+  MergeBlocks.insert_range(SubLoopBlocksLast);
+  MergeBlocks.insert_range(AftBlocksLast);
 
   MergeBlockSuccessorsIntoGivenBlocks(MergeBlocks, L, &DTU, LI);
 

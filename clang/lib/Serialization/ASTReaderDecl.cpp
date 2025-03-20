@@ -4309,12 +4309,13 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
 void ASTReader::PassInterestingDeclsToConsumer() {
   assert(Consumer);
 
-  if (PassingDeclsToConsumer)
+  if (!CanPassDeclsToConsumer)
     return;
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(PassingDeclsToConsumer, true);
+  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                             /*NewValue=*/false);
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.

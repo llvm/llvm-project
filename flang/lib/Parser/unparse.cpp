@@ -2465,37 +2465,6 @@ public:
     }
   }
   void Unparse(const OmpObjectList &x) { Walk(x.v, ","); }
-  void Unparse(const OmpSimpleStandaloneDirective &x) {
-    switch (x.v) {
-    case llvm::omp::Directive::OMPD_barrier:
-      Word("BARRIER ");
-      break;
-    case llvm::omp::Directive::OMPD_scan:
-      Word("SCAN ");
-      break;
-    case llvm::omp::Directive::OMPD_taskwait:
-      Word("TASKWAIT ");
-      break;
-    case llvm::omp::Directive::OMPD_taskyield:
-      Word("TASKYIELD ");
-      break;
-    case llvm::omp::Directive::OMPD_target_enter_data:
-      Word("TARGET ENTER DATA ");
-      break;
-    case llvm::omp::Directive::OMPD_target_exit_data:
-      Word("TARGET EXIT DATA ");
-      break;
-    case llvm::omp::Directive::OMPD_target_update:
-      Word("TARGET UPDATE ");
-      break;
-    case llvm::omp::Directive::OMPD_ordered:
-      Word("ORDERED ");
-      break;
-    default:
-      // Nothing to be done
-      break;
-    }
-  }
   void Unparse(const OmpBlockDirective &x) {
     switch (x.v) {
     case llvm::omp::Directive::OMPD_masked:
@@ -2721,11 +2690,15 @@ public:
     Walk(std::get<std::list<ActualArgSpec>>(x.t));
     Put(")");
   }
-  void Unparse(const OmpInitializerExpr &x) {
-    Word("OMP_PRIV = ");
-    Walk(x.v);
+  void Unparse(const OmpInitializerClause &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, "=");
+    } else {
+      Walk(x.u);
+    }
   }
-  void Unparse(const OmpInitializerClause &x) { Walk(x.u); }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
@@ -2920,8 +2893,7 @@ public:
   void Unparse(const OpenMPSimpleStandaloneConstruct &x) {
     BeginOpenMP();
     Word("!$OMP ");
-    Walk(std::get<OmpSimpleStandaloneDirective>(x.t));
-    Walk(std::get<OmpClauseList>(x.t));
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }

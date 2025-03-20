@@ -125,6 +125,8 @@ public:
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
 
+  bool preferAlternateOpcodeVectorization() const { return false; }
+
   bool preferEpilogueVectorization() const {
     // Epilogue vectorization is usually unprofitable - tail folding or
     // a smaller VF would have been better.  This a blunt hammer - we
@@ -209,7 +211,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
 
   InstructionCost
