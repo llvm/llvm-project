@@ -33,10 +33,9 @@ if (current_toolchain == host_toolchain) {
     "asan_interface.inc",
     "asan_interface_internal.h",
     "asan_internal.h",
-    "asan_linux.cpp",
     "asan_mac.cpp",
-    "asan_malloc_linux.cpp",
     "asan_malloc_mac.cpp",
+    "asan_malloc_unix.cpp",
     "asan_malloc_win.cpp",
     "asan_mapping.h",
     "asan_memory_profile.cpp",
@@ -58,6 +57,7 @@ if (current_toolchain == host_toolchain) {
     "asan_suppressions.h",
     "asan_thread.cpp",
     "asan_thread.h",
+    "asan_unix.cpp",
     "asan_win.cpp",
   ]
   if (current_os != "mac" && current_os != "win") {
