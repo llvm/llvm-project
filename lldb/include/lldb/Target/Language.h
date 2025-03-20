@@ -268,10 +268,11 @@ public:
   // the reference has never been assigned
   virtual bool IsUninitializedReference(ValueObject &valobj);
 
-  virtual bool GetFunctionDisplayName(const SymbolContext *sc,
-                                      const ExecutionContext *exe_ctx,
-                                      FunctionNameRepresentation representation,
-                                      Stream &s);
+  virtual bool
+  GetFunctionDisplayName(const SymbolContext *sc,
+                         const ExecutionContext *exe_ctx,
+                         FunctionNameRepresentation representation, Stream &s,
+                         const FormatEntity::Entry::HighlightSettings &);
 
   virtual ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
