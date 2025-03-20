@@ -738,6 +738,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
             this->andFeatures |= (*subSections.fAndB.tagBTI) << 0;
             this->andFeatures |= (*subSections.fAndB.tagPAC) << 1;
             this->andFeatures |= (*subSections.fAndB.tagGCS) << 2;
+          } else {
+            Warn(ctx) << &isec
+                      << ": object file conatains both `.note.gnu.property` "
+                         "and `.ARM.attributes` subsections. `.ARM.attributes` "
+                         "subsection ignored.";
           }
         }
         sections[i] = &InputSection::discarded;
