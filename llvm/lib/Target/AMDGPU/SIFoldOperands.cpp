@@ -1430,12 +1430,7 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
     if (!PredI || !PredI->isCompare())
       return false;
 
-    unsigned CmpOpc = PredI->getOpcode();
-
-    // Check if the comparison instruction is one of the expected ones.
-    const auto *CmpOpcI = find_if(
-        CmpOpcodes, [CmpOpc](unsigned Opcode) { return Opcode == CmpOpc; });
-    if (CmpOpcI == CmpOpcodes.end())
+    if (!is_contained(CmpOpcodes, PredI->getOpcode()))
       return false;
 
     // Check if the immediate value of the source operand matches the immediate
