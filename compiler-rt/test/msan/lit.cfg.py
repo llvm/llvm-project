@@ -17,7 +17,9 @@ clang_msan_cflags = (
         "-fno-optimize-sibling-calls",
     ]
     + [config.target_cflags]
-    + config.debug_info_flags
+    + ["--sysroot", config.cmake_sysroot]
+    if config.cmake_sysroot and config.host_os == "Linux"
+    else [] + config.debug_info_flags
 )
 # Some Msan tests leverage backtrace() which requires libexecinfo on FreeBSD.
 if config.host_os == "FreeBSD":
