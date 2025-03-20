@@ -22,15 +22,12 @@
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z20test_smoothstep_halfDhDhDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[MIN:%.*]], half noundef nofpclass(nan inf) [[MAX:%.*]], half noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[X]], [[MIN]]
-// SPVCHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[MAX]], [[MIN]]
-// SPVCHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn half [[SUB_I]], [[SUB1_I]]
-// SPVCHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn half @llvm.spv.saturate.f16(half [[DIV_I]])
-// SPVCHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_SATURATE_I]], 0xH4000
-// SPVCHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 0xH4200, [[MUL_I]]
-// SPVCHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
-// SPVCHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[TMP0]], [[SUB2_I]]
-// SPVCHECK-NEXT:    ret half [[MUL4_I]]
+// SPVCHECK-NEXT:    [[CONV_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn half [[MIN]] to double
+// SPVCHECK-NEXT:    [[CONV1_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn half [[MAX]] to double
+// SPVCHECK-NEXT:    [[CONV2_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn half [[X]] to double
+// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn double @llvm.spv.smoothstep.f64(double [[CONV_I]], double [[CONV1_I]], double [[CONV2_I]])
+// SPVCHECK-NEXT:    [[CONV3_I:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[SPV_SMOOTHSTEP_I]] to half
+// SPVCHECK-NEXT:    ret half [[CONV3_I]]
 //
 half test_smoothstep_half(half Min, half Max, half X) { return smoothstep(Min, Max, X); }
 
@@ -113,15 +110,12 @@ half4 test_smoothstep_half4(half4 Min, half4 Max, half4 X) { return smoothstep(M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z21test_smoothstep_floatfff(
 // SPVCHECK-SAME: float noundef nofpclass(nan inf) [[MIN:%.*]], float noundef nofpclass(nan inf) [[MAX:%.*]], float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[X]], [[MIN]]
-// SPVCHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MAX]], [[MIN]]
-// SPVCHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn float [[SUB_I]], [[SUB1_I]]
-// SPVCHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn float @llvm.spv.saturate.f32(float [[DIV_I]])
-// SPVCHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[HLSL_SATURATE_I]], 2.000000e+00
-// SPVCHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn float 3.000000e+00, [[MUL_I]]
-// SPVCHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
-// SPVCHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn float [[TMP0]], [[SUB2_I]]
-// SPVCHECK-NEXT:    ret float [[MUL4_I]]
+// SPVCHECK-NEXT:    [[CONV_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[MIN]] to double
+// SPVCHECK-NEXT:    [[CONV1_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[MAX]] to double
+// SPVCHECK-NEXT:    [[CONV2_I:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[X]] to double
+// SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn double @llvm.spv.smoothstep.f64(double [[CONV_I]], double [[CONV1_I]], double [[CONV2_I]])
+// SPVCHECK-NEXT:    [[CONV3_I:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[SPV_SMOOTHSTEP_I]] to float
+// SPVCHECK-NEXT:    ret float [[CONV3_I]]
 //
 float test_smoothstep_float(float Min, float Max, float X) { return smoothstep(Min, Max, X); }
 
