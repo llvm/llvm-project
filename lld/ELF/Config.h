@@ -123,7 +123,7 @@ enum class SortSectionPolicy {
 enum class Target2Policy { Abs, Rel, GotRel };
 
 // For tracking ARM Float Argument PCS
-enum class ARMVFPArgKind {Default, Base, VFP, ToolChain};
+enum class ARMVFPArgKind { Default, Base, VFP, ToolChain };
 
 // For -z noseparate-code, -z separate-code and -z separate-loadable-segments.
 enum class SeparateSegmentKind { None, Code, Loadable };
