@@ -859,13 +859,12 @@ public:
                                 SourceLocation Sigil);
 
   /// Build a new member pointer type given the pointee type and the
-  /// qualifier it refers into.
+  /// class type it refers into.
   ///
   /// By default, performs semantic analysis when building the member pointer
   /// type. Subclasses may override this routine to provide different behavior.
-  QualType RebuildMemberPointerType(QualType PointeeType,
-                                    NestedNameSpecifier *Qualifier,
-                                    CXXRecordDecl *Cls, SourceLocation Sigil);
+  QualType RebuildMemberPointerType(QualType PointeeType, QualType ClassType,
+                                    SourceLocation Sigil);
 
   QualType RebuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
                                     SourceLocation ProtocolLAngleLoc,
@@ -5608,30 +5607,31 @@ TreeTransform<Derived>::TransformMemberPointerType(TypeLocBuilder &TLB,
   if (PointeeType.isNull())
     return QualType();
 
+  TypeSourceInfo* OldClsTInfo = TL.getClassTInfo();
+  TypeSourceInfo *NewClsTInfo = nullptr;
+  if (OldClsTInfo) {
+    NewClsTInfo = getDerived().TransformType(OldClsTInfo);
+    if (!NewClsTInfo)
+      return QualType();
+  }
+
   const MemberPointerType *T = TL.getTypePtr();
-
-  NestedNameSpecifierLoc OldQualifierLoc = TL.getQualifierLoc();
-  NestedNameSpecifierLoc NewQualifierLoc =
-      getDerived().TransformNestedNameSpecifierLoc(OldQualifierLoc);
-  if (!NewQualifierLoc)
-    return QualType();
-
-  CXXRecordDecl *OldCls = T->getMostRecentCXXRecordDecl(), *NewCls = nullptr;
-  if (OldCls) {
-    NewCls = cast_or_null<CXXRecordDecl>(
-        getDerived().TransformDecl(TL.getStarLoc(), OldCls));
-    if (!NewCls)
+  QualType OldClsType = QualType(T->getClass(), 0);
+  QualType NewClsType;
+  if (NewClsTInfo)
+    NewClsType = NewClsTInfo->getType();
+  else {
+    NewClsType = getDerived().TransformType(OldClsType);
+    if (NewClsType.isNull())
       return QualType();
   }
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() || PointeeType != T->getPointeeType() ||
-      NewQualifierLoc.getNestedNameSpecifier() !=
-          OldQualifierLoc.getNestedNameSpecifier() ||
-      NewCls != OldCls) {
-    Result = getDerived().RebuildMemberPointerType(
-        PointeeType, NewQualifierLoc.getNestedNameSpecifier(), NewCls,
-        TL.getStarLoc());
+  if (getDerived().AlwaysRebuild() ||
+      PointeeType != T->getPointeeType() ||
+      NewClsType != OldClsType) {
+    Result = getDerived().RebuildMemberPointerType(PointeeType, NewClsType,
+                                                   TL.getStarLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -5646,7 +5646,7 @@ TreeTransform<Derived>::TransformMemberPointerType(TypeLocBuilder &TLB,
 
   MemberPointerTypeLoc NewTL = TLB.push<MemberPointerTypeLoc>(Result);
   NewTL.setSigilLoc(TL.getSigilLoc());
-  NewTL.setQualifierLoc(NewQualifierLoc);
+  NewTL.setClassTInfo(NewClsTInfo);
 
   return Result;
 }
@@ -17040,11 +17040,12 @@ TreeTransform<Derived>::RebuildReferenceType(QualType ReferentType,
                                     Sigil, getDerived().getBaseEntity());
 }
 
-template <typename Derived>
-QualType TreeTransform<Derived>::RebuildMemberPointerType(
-    QualType PointeeType, NestedNameSpecifier *Qualifier, CXXRecordDecl *Cls,
-    SourceLocation Sigil) {
-  return SemaRef.BuildMemberPointerType(PointeeType, Qualifier, Cls, Sigil,
+template<typename Derived>
+QualType
+TreeTransform<Derived>::RebuildMemberPointerType(QualType PointeeType,
+                                                 QualType ClassType,
+                                                 SourceLocation Sigil) {
+  return SemaRef.BuildMemberPointerType(PointeeType, ClassType, Sigil,
                                         getDerived().getBaseEntity());
 }
 
