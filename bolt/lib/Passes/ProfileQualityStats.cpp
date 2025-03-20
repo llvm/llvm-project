@@ -157,8 +157,10 @@ void printCFGContinuityStats(raw_ostream &OS,
     FractionECUnreachables.push_back(FractionECUnreachable);
   }
 
-  if (FractionECUnreachables.empty())
+  if (FractionECUnreachables.empty()) {
+    OS << "function CFG discontinuity 0.00%; ";
     return;
+  }
 
   llvm::sort(FractionECUnreachables);
   const int Rank = int(FractionECUnreachables.size() *
@@ -251,8 +253,10 @@ void printCallGraphFlowConservationStats(
     }
   }
 
-  if (CallGraphGaps.empty())
+  if (CallGraphGaps.empty()) {
+    OS << "call graph flow conservation gap 0.00%; ";
     return;
+  }
 
   llvm::sort(CallGraphGaps);
   const int Rank =
@@ -340,8 +344,11 @@ void printCFGFlowConservationStats(raw_ostream &OS,
     }
   }
 
-  if (CFGGapsWeightedAvg.empty())
+  if (CFGGapsWeightedAvg.empty()) {
+    OS << "CFG flow conservation gap 0.00% (weighted) 0.00% (worst)\n";
     return;
+  }
+
   llvm::sort(CFGGapsWeightedAvg);
   const int RankWA = int(CFGGapsWeightedAvg.size() *
                          opts::PercentileForProfileQualityCheck / 100);
