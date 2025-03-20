@@ -9,7 +9,7 @@ int test_for_bug_25609() {
     bar();
   for (int i = 0;  // expected-note {{Loop condition is true.  Entering loop body}}                    
                    // expected-note@-1 {{Loop condition is false. Execution continues on line 16}}
-       ++i,        // expected-note {{Value assigned to 'p_a'}} 
+       ++i,        // expected-note {{Value assigned to 'p_a' (invalidation as part of widen-loops made this symbolic here)}}
        i < flag_a;
        ++i) {}
                                       
@@ -23,7 +23,7 @@ int while_analyzer_output() {
   flag_b = 100;
   int num = 10;
   while (flag_b-- > 0) { // expected-note {{Loop condition is true.  Entering loop body}} 
-                         // expected-note@-1 {{Value assigned to 'num'}} 
+                         // expected-note@-1 {{Value assigned to 'num' (invalidation as part of widen-loops made this symbolic here)}}
                          // expected-note@-2 {{Loop condition is false. Execution continues on line 30}}
     num = flag_b;
   }
@@ -45,7 +45,7 @@ int do_while_analyzer_output() {
   do {   // expected-note {{Loop condition is true. Execution continues on line 47}} 
          // expected-note@-1 {{Loop condition is false.  Exiting loop}}
     num--;
-  } while (flag_c-- > 0); //expected-note {{Value assigned to 'num'}}
+  } while (flag_c-- > 0); //expected-note {{Value assigned to 'num' (invalidation as part of widen-loops made this symbolic here)}}
   int local = 0;
   if (num == 0)       // expected-note {{Assuming 'num' is equal to 0}} 
                       // expected-note@-1 {{Taking true branch}}
@@ -59,7 +59,7 @@ int test_for_loop() {
   int num = 10;
   for (int i = 0;    // expected-note {{Loop condition is true.  Entering loop body}} 
                      // expected-note@-1 {{Loop condition is false. Execution continues on line 67}}
-       new int(10),  // expected-note {{Value assigned to 'num'}}
+       new int(10),  // expected-note {{Value assigned to 'num' (invalidation as part of widen-loops made this symbolic here)}}
        i < flag_d;
        ++i) {         
     ++num;
@@ -73,7 +73,7 @@ int test_for_loop() {
 
 int test_for_range_loop() {
   int arr[10] = {0};
-  for(auto x : arr) { // expected-note {{Assigning value}} 
+  for(auto x : arr) { // expected-note {{Assigning value (invalidation as part of widen-loops made this symbolic here)}}
     ++x;
   }
   if (arr[0] == 0)   // expected-note {{Assuming the condition is true}} 
