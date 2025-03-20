@@ -1,17 +1,6 @@
 import * as child_process from "node:child_process";
+import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
-
-function areArraysEqual<T>(lhs: T[], rhs: T[]): boolean {
-  if (lhs.length !== rhs.length) {
-    return false;
-  }
-  for (let i = 0; i < lhs.length; i++) {
-    if (lhs[i] !== rhs[i]) {
-      return false;
-    }
-  }
-  return true;
-}
 
 /**
  * Represents a running lldb-dap process that is accepting connections (i.e. in "server mode").
@@ -96,7 +85,7 @@ export class LLDBDapServer implements vscode.Disposable {
       return true;
     }
 
-    if (areArraysEqual(this.serverProcess.spawnargs, [dapPath, ...args])) {
+    if (isDeepStrictEqual(this.serverProcess.spawnargs, [dapPath, ...args])) {
       return true;
     }
 
