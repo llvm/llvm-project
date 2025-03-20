@@ -663,7 +663,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
     // values.
     PHIContents.clear();
     for (auto &PHI : NeededPHIs)
-      PHIContents.insert(PHI.getValues().begin(), PHI.getValues().end());
+      PHIContents.insert_range(PHI.getValues());
   }
 
   // Is this instruction required by a later PHI that doesn't match this PHI?
@@ -705,7 +705,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
 
     NeededPHIs.reserve(NeededPHIs.size());
     NeededPHIs.insert(PHI);
-    PHIContents.insert(PHI.getValues().begin(), PHI.getValues().end());
+    PHIContents.insert_range(PHI.getValues());
   }
 
   if (isMemoryInst(NewInsts[0]))

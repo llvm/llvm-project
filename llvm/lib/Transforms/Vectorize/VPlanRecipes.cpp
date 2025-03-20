@@ -148,7 +148,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
   case VPScalarCastSC:
-  case VPReverseVectorPointerSC:
+  case VPVectorEndPointerSC:
     return false;
   case VPInstructionSC:
     return mayWriteToMemory();
@@ -2145,7 +2145,7 @@ static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
              : Builder.getInt32Ty();
 }
 
-void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
+void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
   unsigned CurrentPart = getUnrollPart(*this);
@@ -2171,11 +2171,11 @@ void VPReverseVectorPointerRecipe::execute(VPTransformState &State) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPReverseVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
-                                         VPSlotTracker &SlotTracker) const {
+void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = reverse-vector-pointer";
+  O << " = vector-end-pointer";
   printFlags(O);
   printOperands(O, SlotTracker);
 }
@@ -2311,7 +2311,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   if (IsOrdered) {
     if (State.VF.isVector())
       NewRed =
-          createOrderedReduction(State.Builder, RdxDesc, NewVecOp, PrevInChain);
+          createOrderedReduction(State.Builder, Kind, NewVecOp, PrevInChain);
     else
       NewRed = State.Builder.CreateBinOp(
           (Instruction::BinaryOps)RdxDesc.getOpcode(), PrevInChain, NewVecOp);
@@ -2356,9 +2356,9 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
 
   Value *NewRed;
   if (isOrdered()) {
-    NewRed = createOrderedReduction(VBuilder, RdxDesc, VecOp, Prev);
+    NewRed = createOrderedReduction(VBuilder, Kind, VecOp, Prev);
   } else {
-    NewRed = createSimpleReduction(VBuilder, VecOp, RdxDesc);
+    NewRed = createSimpleReduction(VBuilder, VecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else

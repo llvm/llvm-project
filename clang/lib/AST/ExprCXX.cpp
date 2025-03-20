@@ -1854,23 +1854,42 @@ bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
 
 TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                              ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc, bool Value)
+                             SourceLocation RParenLoc,
+                             std::variant<bool, APValue> Value)
     : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   assert(Kind <= TT_Last && "invalid enum value!");
+
   TypeTraitExprBits.Kind = Kind;
   assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
          "TypeTraitExprBits.Kind overflow!");
-  TypeTraitExprBits.Value = Value;
+
+  TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
+  if (TypeTraitExprBits.IsBooleanTypeTrait)
+    TypeTraitExprBits.Value = std::get<bool>(Value);
+  else
+    ::new (getTrailingObjects<APValue>())
+        APValue(std::get<APValue>(std::move(Value)));
+
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
          "TypeTraitExprBits.NumArgs overflow!");
-
   auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
   for (unsigned I = 0, N = Args.size(); I != N; ++I)
     ToArgs[I] = Args[I];
 
   setDependence(computeDependence(this));
+
+  assert((TypeTraitExprBits.IsBooleanTypeTrait || isValueDependent() ||
+          getAPValue().isInt() || getAPValue().isAbsent()) &&
+         "Only int values are supported by clang");
+}
+
+TypeTraitExpr::TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool)
+    : Expr(TypeTraitExprClass, Empty) {
+  TypeTraitExprBits.IsBooleanTypeTrait = IsStoredAsBool;
+  if (!IsStoredAsBool)
+    ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
@@ -1879,14 +1898,26 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
                                      ArrayRef<TypeSourceInfo *> Args,
                                      SourceLocation RParenLoc,
                                      bool Value) {
-  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(Args.size()));
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(0, Args.size()));
+  return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
+}
+
+TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
+                                     SourceLocation Loc, TypeTrait Kind,
+                                     ArrayRef<TypeSourceInfo *> Args,
+                                     SourceLocation RParenLoc, APValue Value) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
 }
 
 TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
+                                                 bool IsStoredAsBool,
                                                  unsigned NumArgs) {
-  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(NumArgs));
-  return new (Mem) TypeTraitExpr(EmptyShell());
+  void *Mem = C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(
+      IsStoredAsBool ? 0 : 1, NumArgs));
+  return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,
