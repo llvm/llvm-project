@@ -912,18 +912,19 @@ TEST(RootSignature, ParseRootConstant) {
     auto RS = C.getRootSignature();
     ASSERT_TRUE(RS.has_value());
     ASSERT_EQ(RS->getVersion(), 2u);
-    ASSERT_EQ(RS->getNumParameters(), 1);
+    ASSERT_EQ(RS->getNumParameters(), 1u);
     ASSERT_EQ(RS->getRootParametersOffset(), 24u);
     ASSERT_EQ(RS->getNumStaticSamplers(), 0u);
     ASSERT_EQ(RS->getStaticSamplersOffset(), 44u);
     ASSERT_EQ(RS->getFlags(), 17u);
 
-    object::DirectX::RootParameter *RootParam = RS->beginParams();
-    ASSERT_EQ((uint32_t)RootParam->Header.ParameterType, 1u);
-    ASSERT_EQ((uint32_t)RootParam->Header.ShaderVisibility, 2u);
-    ASSERT_EQ(RootParam->Constants.ShaderRegister, 15u);
-    ASSERT_EQ(RootParam->Constants.RegisterSpace, 14u);
-    ASSERT_EQ(RootParam->Constants.Num32BitValues, 16u);
+    for (auto const &RootParam : RS->getParameters()) {
+      ASSERT_EQ((uint32_t)RootParam.Header.ParameterType, 1u);
+      ASSERT_EQ((uint32_t)RootParam.Header.ShaderVisibility, 2u);
+      ASSERT_EQ(RootParam.Constants.ShaderRegister, 15u);
+      ASSERT_EQ(RootParam.Constants.RegisterSpace, 14u);
+      ASSERT_EQ(RootParam.Constants.Num32BitValues, 16u);
+    }
   }
   {
     // ParameterType has been set to an invalid value

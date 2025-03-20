@@ -19,7 +19,6 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
 #include <cstdint>
@@ -88,16 +87,17 @@ struct RootParameterYamlDesc {
   uint32_t Offset;
 
   RootParameterYamlDesc() = default;
-  RootParameterYamlDesc(object::DirectX::RootParameter *Parameter) {
-    Type = Parameter->Header.ParameterType;
-    Visibility = Parameter->Header.ShaderVisibility;
-    Offset = Parameter->Header.ParameterOffset;
-    switch (Parameter->Header.ParameterType) {
+  RootParameterYamlDesc(const object::DirectX::RootParameter &Parameter) {
+
+    Type = Parameter.Header.ParameterType;
+    Visibility = Parameter.Header.ShaderVisibility;
+    Offset = Parameter.Header.ParameterOffset;
+    switch (Parameter.Header.ParameterType) {
 
     case dxbc::RootParameterType::Constants32Bit: {
-      Constants.Num32BitValues = Parameter->Constants.Num32BitValues;
-      Constants.RegisterSpace = Parameter->Constants.RegisterSpace;
-      Constants.ShaderRegister = Parameter->Constants.ShaderRegister;
+      Constants.Num32BitValues = Parameter.Constants.Num32BitValues;
+      Constants.RegisterSpace = Parameter.Constants.RegisterSpace;
+      Constants.ShaderRegister = Parameter.Constants.ShaderRegister;
     } break;
     case dxbc::RootParameterType::Empty:
       llvm_unreachable("Invalid Root Parameter Type. It should be verified "
@@ -112,7 +112,7 @@ struct RootParameterYamlDesc {
 
 struct RootSignatureYamlDesc {
   RootSignatureYamlDesc() = default;
-  RootSignatureYamlDesc(object::DirectX::RootSignature Data);
+  RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
 
   uint32_t Version;
   uint32_t NumStaticSamplers;

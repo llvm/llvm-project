@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
-#include <cstddef>
 #include <cstdint>
+#include <limits>
 
 namespace llvm {
 
