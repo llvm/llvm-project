@@ -156,7 +156,7 @@ class DefaultWarnNoWerror {
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
 // C++ compatibility warnings
-multiclass CXXCompatWarn<
+multiclass CXXCompat<
     string message,
     bit default_ignore,
     int std_ver,
@@ -180,23 +180,23 @@ multiclass CXXCompatWarn<
         DefaultIgnore;
 }
 
-multiclass CXX11CompatWarn<string message, bit default_ignore = false>
-    : CXXCompatWarn<message, default_ignore, 11>;
+multiclass CXX11Compat<string message, bit default_ignore = false>
+    : CXXCompat<message, default_ignore, 11>;
 
-multiclass CXX14CompatWarn<string message, bit default_ignore = false>
-    : CXXCompatWarn<message, default_ignore, 14>;
+multiclass CXX14Compat<string message, bit default_ignore = false>
+    : CXXCompat<message, default_ignore, 14>;
 
-multiclass CXX17CompatWarn<string message, bit default_ignore = false>
-    : CXXCompatWarn<message, default_ignore, 17>;
+multiclass CXX17Compat<string message, bit default_ignore = false>
+    : CXXCompat<message, default_ignore, 17>;
 
-multiclass CXX20CompatWarn<string message, bit default_ignore = false>
-    : CXXCompatWarn<message, default_ignore, 20>;
+multiclass CXX20Compat<string message, bit default_ignore = false>
+    : CXXCompat<message, default_ignore, 20>;
 
-multiclass CXX23CompatWarn<string message, bit default_ignore = false>
-    : CXXCompatWarn<message, default_ignore, 23>;
+multiclass CXX23Compat<string message, bit default_ignore = false>
+    : CXXCompat<message, default_ignore, 23>;
 
-multiclass CXX26CompatWarn<string message, bit default_ignore = false>
-    : CXXCompatWarn<message, default_ignore, 26, "2c">;
+multiclass CXX26Compat<string message, bit default_ignore = false>
+    : CXXCompat<message, default_ignore, 26, "2c">;
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"

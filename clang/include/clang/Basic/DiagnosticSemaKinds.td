@@ -13,55 +13,55 @@
 let Component = "Sema" in {
 let CategoryName = "Semantic Issue" in {
 // C++11 compatibility with C++98.
-defm nonclass_type_friend : CXX11CompatWarn<"non-class friend type %0 is">;
-defm static_data_member_in_union : CXX11CompatWarn<"static data member %0 in union is">;
-defm templ_default_in_function_templ : CXX11CompatWarn<
+defm nonclass_type_friend : CXX11Compat<"non-class friend type %0 is">;
+defm static_data_member_in_union : CXX11Compat<"static data member %0 in union is">;
+defm templ_default_in_function_templ : CXX11Compat<
   "default template arguments for a function template are">;
-defm template_arg_extra_parens : CXX11CompatWarn<
+defm template_arg_extra_parens : CXX11Compat<
   "parentheses around address non-type template argument are">;
-defm typename_outside_of_template : CXX11CompatWarn<"'typename' outside of a template is">;
+defm typename_outside_of_template : CXX11Compat<"'typename' outside of a template is">;
 
 // C++14 compatibility with C++11 and earlier.
-defm constexpr_type_definition : CXX14CompatWarn<
+defm constexpr_type_definition : CXX14Compat<
   "type definition in a constexpr %select{function|constructor}0 is">;
-defm constexpr_local_var : CXX14CompatWarn<
+defm constexpr_local_var : CXX14Compat<
   "variable declaration in a constexpr %select{function|constructor}0 is">;
-defm constexpr_body_multiple_return : CXX14CompatWarn<
+defm constexpr_body_multiple_return : CXX14Compat<
   "multiple return statements in constexpr function is">;
-defm variable_template : CXX14CompatWarn<"variable templates are">;
+defm variable_template : CXX14Compat<"variable templates are">;
 
 // C++17 compatibility with C++14 and earlier.
-defm decomp_decl : CXX17CompatWarn<"decomposition declarations are">;
-defm inline_variable : CXX17CompatWarn<"inline variables are">;
+defm decomp_decl : CXX17Compat<"decomposition declarations are">;
+defm inline_variable : CXX17Compat<"inline variables are">;
 
 // C++20 compatibility with C++17 and earlier.
-defm decomp_decl_spec : CXX20CompatWarn<
+defm decomp_decl_spec : CXX20Compat<
   "decomposition declaration declared "
   "%plural{1:'%1'|:with '%1' specifiers}0 is">;
-defm constexpr_local_var_no_init : CXX20CompatWarn<
+defm constexpr_local_var_no_init : CXX20Compat<
   "uninitialized variable in a constexpr %select{function|constructor}0 is">;
-defm constexpr_function_try_block : CXX20CompatWarn<
+defm constexpr_function_try_block : CXX20Compat<
   "function try block in constexpr %select{function|constructor}0 is">;
-defm constexpr_union_ctor_no_init : CXX20CompatWarn<
+defm constexpr_union_ctor_no_init : CXX20Compat<
   "constexpr union constructor that does not initialize any member is">;
-defm constexpr_ctor_missing_init : CXX20CompatWarn<
+defm constexpr_ctor_missing_init : CXX20Compat<
   "constexpr constructor that does not initialize all members is">;
-defm adl_only_template_id : CXX20CompatWarn<
+defm adl_only_template_id : CXX20Compat<
   "use of function template name with no prior declaration in function call "
   "with explicit template arguments is">;
 
 // C++23 compatibility with C++20 and earlier.
-defm constexpr_static_var : CXX23CompatWarn<
+defm constexpr_static_var : CXX23Compat<
   "definition of a %select{static|thread_local}1 variable "
   "in a constexpr %select{function|constructor}0 "
   "is">;
 
 // C++26 compatibility with C++23 and earlier.
-defm decomp_decl_cond : CXX26CompatWarn<"structured binding declaration in a condition is">;
+defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
-  defm constexpr_body_invalid_stmt : CXXCompatWarn<
+  defm constexpr_body_invalid_stmt : CXXCompat<
     "use of this statement in a constexpr %select{function|constructor}0 is",
     /*default_ignore=*/false,
     std>;
