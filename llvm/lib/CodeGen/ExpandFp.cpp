@@ -107,6 +107,8 @@ private:
         One(ConstantInt::get(ExTy, 1)), Signbit(Signbit) {};
 
   Value *createRcp(Value *V, const Twine &Name) const {
+    // Leave it to later optimizations to turn this into an rcp
+    // instruction if available.
     return B.CreateFDiv(ConstantFP::get(ComputeFpTy, 1.0), V, Name);
   }
 
@@ -341,36 +343,8 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y,
 }
 } // namespace
 
-/// Return true if \p Op either is a constant or a selection
-/// instruction with constant operands.
-static bool isConstOrConstSelectOp(Value *Op) {
-  if (isa<Constant>(Op))
-    return true;
-
-  auto *S = dyn_cast<SelectInst>(Op);
-  if (!S)
-    return false;
-
-  return isa<Constant>(S->getTrueValue()) && isa<Constant>(S->getFalseValue());
-}
-
-/// Returns true if \p I should not be expanded because
-/// it will be eliminated during ISel.
-static bool shouldSkipExpandFRem(BinaryOperator &I) {
-  // This condition should be sufficient for DAGCombiner::visitFREM to
-  // eliminate the instruction.
-  return isConstOrConstSelectOp(I.getOperand(0)) &&
-         isConstOrConstSelectOp(I.getOperand(1));
-}
-
 static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
-  if (shouldSkipExpandFRem(I)) {
-    LLVM_DEBUG(
-        dbgs() << "Skipping 'frem' instruction that should be removed by "
-                  "DAGCombiner.\n");
-    return false;
-  }
 
   Type *ReturnTy = I.getType();
   assert(ReturnTy->isFPOrFPVectorTy());
