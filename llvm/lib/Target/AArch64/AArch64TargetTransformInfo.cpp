@@ -4258,20 +4258,29 @@ static bool shouldUnrollLoopWithInstruction(Instruction &I,
   return true;
 }
 
-static bool shouldUnrollSmallMultiExitLoop(Loop *L, ScalarEvolution &SE,
-                                           AArch64TTIImpl &TTI) {
-  // Small search loops with multiple exits can be highly beneficial to unroll.
-  // We only care about loops with exactly two exiting blocks, although each
-  // block could jump to the same exit block.
-  SmallVector<BasicBlock *> Blocks(L->getBlocks());
-  if (Blocks.size() != 2 || L->getExitingBlock())
-    return false;
+static InstructionCost getSizeOfLoop(Loop *L, AArch64TTIImpl &TTI) {
+  // Estimate the size of the loop.
+  InstructionCost Size = 0;
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (!shouldUnrollLoopWithInstruction(I, TTI))
+        return InstructionCost::getInvalid();
 
-  if (any_of(Blocks, [](BasicBlock *BB) {
-        return !isa<BranchInst>(BB->getTerminator());
-      }))
-    return false;
+      SmallVector<const Value *, 4> Operands(I.operand_values());
+      InstructionCost Cost =
+          TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
+      // This can happen with intrinsics that don't currently have a cost model
+      // or for some operations that require SVE.
+      if (!Cost.isValid())
+        return InstructionCost::getInvalid();
+      Size += *Cost.getValue();
+    }
+  }
+  return Size;
+}
 
+static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
+                                      AArch64TTIImpl &TTI) {
   // Only consider loops with unknown trip counts for which we can determine
   // a symbolic expression. Multi-exit loops with small known trip counts will
   // likely be unrolled anyway.
@@ -4285,25 +4294,27 @@ static bool shouldUnrollSmallMultiExitLoop(Loop *L, ScalarEvolution &SE,
   if (MaxTC > 0 && MaxTC <= 32)
     return false;
 
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return false;
+
   // Estimate the size of the loop.
-  int64_t Size = 0;
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      if (!shouldUnrollLoopWithInstruction(I, TTI))
-        return false;
+  InstructionCost Size = getSizeOfLoop(L, TTI);
+  if (!Size.isValid())
+    return false;
 
-      SmallVector<const Value *, 4> Operands(I.operand_values());
-      InstructionCost Cost =
-          TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
-      // This can happen with intrinsics that don't currently have a cost model
-      // or for some operations that require SVE.
-      if (!Cost.isValid())
-        return false;
-      Size += *Cost.getValue();
-    }
-  }
+  // Small search loops with multiple exits can be highly beneficial to unroll.
+  // We only care about loops with exactly two exiting blocks, although each
+  // block could jump to the same exit block.
+  SmallVector<BasicBlock *> Blocks(L->getBlocks());
+  if (Blocks.size() != 2)
+    return false;
 
-  return Size < 6;
+  if (any_of(Blocks, [](BasicBlock *BB) {
+        return !isa<BranchInst>(BB->getTerminator());
+      }))
+    return false;
+
+  return *Size.getValue() < 6;
 }
 
 /// For Apple CPUs, we want to runtime-unroll loops to make better use if the
@@ -4339,24 +4350,9 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
     }
   }
 
-  // Small search loops with multiple exits can be highly beneficial to unroll.
-  if (!L->getExitBlock()) {
-    if (L->getNumBlocks() == 2 && Size < 6 &&
-        all_of(
-            L->getBlocks(),
-            [](BasicBlock *BB) {
-              return isa<BranchInst>(BB->getTerminator());
-            })) {
-      UP.RuntimeUnrollMultiExit = true;
-      UP.Runtime = true;
-      // Limit unroll count.
-      UP.DefaultUnrollRuntimeCount = 4;
-      // Allow slightly more costly trip-count expansion to catch search loops
-      // with pointer inductions.
-      UP.SCEVExpansionBudget = 5;
-    }
+  // This is handled by common code.
+  if (!L->getExitBlock())
     return;
-  }
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
     return;
@@ -4466,12 +4462,15 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.PartialOptSizeThreshold = 0;
 
   // Apply subtarget-specific unrolling preferences.
+  unsigned SmallMultiExitLoopUnrollFactor = SmallMultiExitLoopUF;
   switch (ST->getProcFamily()) {
   case AArch64Subtarget::AppleA14:
   case AArch64Subtarget::AppleA15:
   case AArch64Subtarget::AppleA16:
   case AArch64Subtarget::AppleM4:
     getAppleRuntimeUnrollPreferences(L, SE, UP, *this);
+    if (!SmallMultiExitLoopUF.getNumOccurrences())
+      SmallMultiExitLoopUnrollFactor = 4;
     break;
   case AArch64Subtarget::Falkor:
     if (EnableFalkorHWPFUnrollFix)
@@ -4481,14 +4480,16 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     break;
   }
 
-  if (SmallMultiExitLoopUF && shouldUnrollSmallMultiExitLoop(L, SE, *this)) {
+  if (!L->getExitBlock() && SmallMultiExitLoopUnrollFactor &&
+      shouldUnrollMultiExitLoop(L, SE, *this)) {
     UP.RuntimeUnrollMultiExit = true;
     UP.Runtime = true;
     // Limit unroll count.
-    UP.DefaultUnrollRuntimeCount = SmallMultiExitLoopUF;
+    UP.DefaultUnrollRuntimeCount = SmallMultiExitLoopUnrollFactor;
     // Allow slightly more costly trip-count expansion to catch search loops
     // with pointer inductions.
     UP.SCEVExpansionBudget = 5;
+    return;
   }
 
   // Scan the loop: don't unroll loops with calls as this could prevent
