@@ -202,7 +202,7 @@ bool JTFootprintReduction::tryOptimizePIC(BinaryContext &BC,
 
   JumpTable->OutputEntrySize = 4;
   // DePICify
-  JumpTable->Type = JumpTable::JTT_NORMAL;
+  JumpTable->Type = JumpTable::JTT_X86_64_ABS;
 
   BB.replaceInstruction(Inst, NewFrag.begin(), NewFrag.end());
   return true;

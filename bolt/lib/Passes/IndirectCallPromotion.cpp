@@ -246,7 +246,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
 
   if (const JumpTable *JT = BF.getJumpTable(Inst)) {
     // Don't support PIC jump tables for now
-    if (!opts::ICPJumpTablesByTarget && JT->Type == JumpTable::JTT_PIC)
+    if (!opts::ICPJumpTablesByTarget && JT->Type == JumpTable::JTT_X86_64_PIC4)
       return Targets;
     const Location From(BF.getSymbol());
     const std::pair<size_t, size_t> Range =
@@ -256,7 +256,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     const JumpTable::JumpInfo *JI =
         JT->Counts.empty() ? &DefaultJI : &JT->Counts[Range.first];
     const size_t JIAdj = JT->Counts.empty() ? 0 : 1;
-    assert(JT->Type == JumpTable::JTT_PIC ||
+    assert(JT->Type == JumpTable::JTT_X86_64_PIC4 ||
            JT->EntrySize == BC.AsmInfo->getCodePointerSize());
     for (size_t I = Range.first; I < Range.second; ++I, JI += JIAdj) {
       MCSymbol *Entry = JT->Entries[I];

@@ -496,7 +496,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
     const MemoryContentsType MemType = analyzeMemoryAt(Address, BF);
     if (MemType == MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE && IsPCRel) {
       const MCSymbol *Symbol =
-          getOrCreateJumpTable(BF, Address, JumpTable::JTT_PIC);
+          getOrCreateJumpTable(BF, Address, JumpTable::JTT_X86_64_PIC4);
 
       return std::make_pair(Symbol, 0);
     }
@@ -540,10 +540,10 @@ MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
 
   // Start with checking for PIC jump table. We expect non-PIC jump tables
   // to have high 32 bits set to 0.
-  if (analyzeJumpTable(Address, JumpTable::JTT_PIC, BF))
+  if (analyzeJumpTable(Address, JumpTable::JTT_X86_64_PIC4, BF))
     return MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE;
 
-  if (analyzeJumpTable(Address, JumpTable::JTT_NORMAL, BF))
+  if (analyzeJumpTable(Address, JumpTable::JTT_X86_64_ABS, BF))
     return MemoryContentsType::POSSIBLE_JUMP_TABLE;
 
   return MemoryContentsType::UNKNOWN;
@@ -594,12 +594,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   if (NextJTAddress)
     UpperBound = std::min(NextJTAddress, UpperBound);
 
-  LLVM_DEBUG({
-    using JTT = JumpTable::JumpTableType;
-    dbgs() << formatv("BOLT-DEBUG: analyzeJumpTable @{0:x} in {1}, JTT={2}\n",
-                      Address, BF.getPrintName(),
-                      Type == JTT::JTT_PIC ? "PIC" : "Normal");
-  });
+  LLVM_DEBUG(
+      dbgs() << formatv("BOLT-DEBUG: analyzeJumpTable @{0:x} in {1}, JTT={2}\n",
+                        Address, BF, JumpTable::getTypeStr(Type)));
   const uint64_t EntrySize = getJumpTableEntrySize(Type);
   for (uint64_t EntryAddress = Address; EntryAddress <= UpperBound - EntrySize;
        EntryAddress += EntrySize) {
@@ -607,13 +604,13 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                       << " -> ");
     // Check if there's a proper relocation against the jump table entry.
     if (HasRelocations) {
-      if (Type == JumpTable::JTT_PIC &&
+      if (Type == JumpTable::JTT_X86_64_PIC4 &&
           !DataPCRelocations.count(EntryAddress)) {
         LLVM_DEBUG(
             dbgs() << "FAIL: JTT_PIC table, no relocation for this address\n");
         break;
       }
-      if (Type == JumpTable::JTT_NORMAL && !getRelocationAt(EntryAddress)) {
+      if (Type == JumpTable::JTT_X86_64_ABS && !getRelocationAt(EntryAddress)) {
         LLVM_DEBUG(
             dbgs()
             << "FAIL: JTT_NORMAL table, no relocation for this address\n");
@@ -621,10 +618,17 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       }
     }
 
-    const uint64_t Value =
-        (Type == JumpTable::JTT_PIC)
-            ? Address + *getSignedValueAtAddress(EntryAddress, EntrySize)
-            : *getPointerAtAddress(EntryAddress);
+    uint64_t Value = 0;
+    switch (Type) {
+    case JumpTable::JTT_X86_64_PIC4:
+      Value = Address + *getSignedValueAtAddress(EntryAddress, EntrySize);
+      break;
+    case JumpTable::JTT_X86_64_ABS:
+      Value = *getPointerAtAddress(EntryAddress);
+      break;
+    default:
+      llvm_unreachable("Unhandled jump table type");
+    }
 
     // __builtin_unreachable() case.
     if (Value == UnreachableAddress) {
@@ -679,7 +683,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
   // Trim direct/normal jump table to exclude trailing unreachable entries that
   // can collide with a function address.
-  if (Type == JumpTable::JTT_NORMAL && EntriesAsAddress &&
+  if (Type == JumpTable::JTT_X86_64_ABS && EntriesAsAddress &&
       TrimmedSize != EntriesAsAddress->size() &&
       getBinaryFunctionAtAddress(UnreachableAddress))
     EntriesAsAddress->resize(TrimmedSize);
@@ -736,7 +740,7 @@ void BinaryContext::populateJumpTables() {
 
     // In strict mode, erase PC-relative relocation record. Later we check that
     // all such records are erased and thus have been accounted for.
-    if (opts::StrictMode && JT->Type == JumpTable::JTT_PIC) {
+    if (opts::StrictMode && JT->Type == JumpTable::JTT_X86_64_PIC4) {
       for (uint64_t Address = JT->getAddress();
            Address < JT->getAddress() + JT->getSize();
            Address += JT->EntrySize) {

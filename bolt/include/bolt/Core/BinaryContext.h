@@ -435,7 +435,18 @@ public:
 
   /// Return size of an entry for the given jump table \p Type.
   uint64_t getJumpTableEntrySize(JumpTable::JumpTableType Type) const {
-    return Type == JumpTable::JTT_PIC ? 4 : AsmInfo->getCodePointerSize();
+    switch (Type) {
+    case JumpTable::JTT_X86_64_PIC4:
+      return 4;
+    case JumpTable::JTT_X86_64_ABS:
+      return AsmInfo->getCodePointerSize();
+    case JumpTable::JTT_AARCH64_REL1:
+      return 1;
+    case JumpTable::JTT_AARCH64_REL2:
+      return 2;
+    case JumpTable::JTT_AARCH64_REL4:
+      return 4;
+    }
   }
 
   /// Return JumpTable containing a given \p Address.

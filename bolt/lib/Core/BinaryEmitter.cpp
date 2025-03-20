@@ -850,7 +850,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
       }
       LastLabel = LI->second;
     }
-    if (JT.Type == JumpTable::JTT_NORMAL) {
+    if (JT.Type == JumpTable::JTT_X86_64_ABS) {
       Streamer.emitSymbolValue(Entry, JT.OutputEntrySize);
     } else { // JTT_PIC
       const MCSymbolRefExpr *JTExpr =
