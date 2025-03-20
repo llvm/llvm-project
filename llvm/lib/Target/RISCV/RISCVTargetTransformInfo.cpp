@@ -1995,6 +1995,12 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      Op1Info, Op2Info, I);
 
+  // Select might be expanded to move and branch without Zicond.
+  if (TLI->InstructionOpcodeToISD(Opcode) == ISD::SELECT &&
+      !ValTy->isVectorTy() && !ST->hasStdExtZicond() &&
+      !ST->hasVendorXVentanaCondOps())
+    return 2;
+
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      Op1Info, Op2Info, I);
