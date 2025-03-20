@@ -121,6 +121,7 @@ class ProfileWriter {
 public:
   virtual void startContextSection() = 0;
   virtual void writeContextual(const ctx_profile::ContextNode &RootNode,
+                               const ctx_profile::ContextNode *Unhandled,
                                uint64_t TotalRootEntryCount) = 0;
   virtual void endContextSection() = 0;
 

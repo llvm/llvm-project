@@ -1874,11 +1874,9 @@ Sema::AccessResult Sema::CheckAddressOfMemberAccess(Expr *OvlExpr,
 }
 
 Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
-                                              QualType Base,
-                                              QualType Derived,
+                                              QualType Base, QualType Derived,
                                               const CXXBasePath &Path,
-                                              unsigned DiagID,
-                                              bool ForceCheck,
+                                              unsigned DiagID, bool ForceCheck,
                                               bool ForceUnprivileged) {
   if (!ForceCheck && !getLangOpts().AccessControl)
     return AR_accessible;
@@ -1886,21 +1884,20 @@ Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
   if (Path.Access == AS_public)
     return AR_accessible;
 
-  CXXRecordDecl *BaseD, *DerivedD;
-  BaseD = cast<CXXRecordDecl>(Base->castAs<RecordType>()->getDecl());
-  DerivedD = cast<CXXRecordDecl>(Derived->castAs<RecordType>()->getDecl());
-
-  AccessTarget Entity(Context, AccessTarget::Base, BaseD, DerivedD,
-                      Path.Access);
+  AccessTarget Entity(Context, AccessTarget::Base, Base->getAsCXXRecordDecl(),
+                      Derived->getAsCXXRecordDecl(), Path.Access);
   if (DiagID)
     Entity.setDiag(DiagID) << Derived << Base;
 
   if (ForceUnprivileged) {
-    switch (CheckEffectiveAccess(*this, EffectiveContext(),
-                                 AccessLoc, Entity)) {
-    case ::AR_accessible: return Sema::AR_accessible;
-    case ::AR_inaccessible: return Sema::AR_inaccessible;
-    case ::AR_dependent: return Sema::AR_dependent;
+    switch (
+        CheckEffectiveAccess(*this, EffectiveContext(), AccessLoc, Entity)) {
+    case ::AR_accessible:
+      return Sema::AR_accessible;
+    case ::AR_inaccessible:
+      return Sema::AR_inaccessible;
+    case ::AR_dependent:
+      return Sema::AR_dependent;
     }
     llvm_unreachable("unexpected result from CheckEffectiveAccess");
   }

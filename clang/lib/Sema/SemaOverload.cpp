@@ -1897,7 +1897,8 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       auto ToMPT = CanTo.castAs<MemberPointerType>();
       auto FromMPT = CanFrom.castAs<MemberPointerType>();
       // A function pointer conversion cannot change the class of the function.
-      if (ToMPT->getClass() != FromMPT->getClass())
+      if (!declaresSameEntity(ToMPT->getMostRecentCXXRecordDecl(),
+                              FromMPT->getMostRecentCXXRecordDecl()))
         return false;
       CanTo = ToMPT->getPointeeType();
       CanFrom = FromMPT->getPointeeType();
@@ -3290,7 +3291,8 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
   if (FromType->isMemberPointerType() && ToType->isMemberPointerType()) {
     const auto *FromMember = FromType->castAs<MemberPointerType>(),
                *ToMember = ToType->castAs<MemberPointerType>();
-    if (!Context.hasSameType(FromMember->getClass(), ToMember->getClass())) {
+    if (!declaresSameEntity(FromMember->getMostRecentCXXRecordDecl(),
+                            ToMember->getMostRecentCXXRecordDecl())) {
       PDiag << ft_different_class << QualType(ToMember->getClass(), 0)
             << QualType(FromMember->getClass(), 0);
       return;
@@ -3546,64 +3548,79 @@ bool Sema::IsMemberPointerConversion(Expr *From, QualType FromType,
   return false;
 }
 
-bool Sema::CheckMemberPointerConversion(Expr *From, QualType ToType,
-                                        CastKind &Kind,
-                                        CXXCastPath &BasePath,
-                                        bool IgnoreBaseAccess) {
-  QualType FromType = From->getType();
+Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
+    QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
+    CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
+    bool IgnoreBaseAccess, MemberPointerConversionDirection Direction) {
   const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
   if (!FromPtrType) {
     // This must be a null pointer to member pointer conversion
-    assert(From->isNullPointerConstant(Context,
-                                       Expr::NPC_ValueDependentIsNull) &&
-           "Expr must be null pointer constant!");
     Kind = CK_NullToMemberPointer;
-    return false;
+    return MemberPointerConversionResult::Success;
   }
 
-  const MemberPointerType *ToPtrType = ToType->getAs<MemberPointerType>();
-  assert(ToPtrType && "No member pointer cast has a target type "
-                      "that is not a member pointer.");
+  // Lock down the inheritance model right now in MS ABI, whether or not the
+  // pointee types are the same.
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    (void)isCompleteType(CheckLoc, FromType);
+    (void)isCompleteType(CheckLoc, QualType(ToPtrType, 0));
+  }
 
-  QualType FromClass = QualType(FromPtrType->getClass(), 0);
-  QualType ToClass   = QualType(ToPtrType->getClass(), 0);
+  // T == T, modulo cv
+  if (Direction == MemberPointerConversionDirection::Upcast &&
+      !Context.hasSameUnqualifiedType(FromPtrType->getPointeeType(),
+                                      ToPtrType->getPointeeType()))
+    return MemberPointerConversionResult::DifferentPointee;
 
-  // FIXME: What about dependent types?
-  assert(FromClass->isRecordType() && "Pointer into non-class.");
-  assert(ToClass->isRecordType() && "Pointer into non-class.");
+  QualType FromClass = QualType(FromPtrType->getClass(), 0),
+           ToClass = QualType(ToPtrType->getClass(), 0);
+
+  QualType Base = FromClass, Derived = ToClass;
+  if (Direction == MemberPointerConversionDirection::Upcast)
+    std::swap(Base, Derived);
 
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/true);
-  bool DerivationOkay =
-      IsDerivedFrom(From->getBeginLoc(), ToClass, FromClass, Paths);
-  assert(DerivationOkay &&
-         "Should not have been called if derivation isn't OK.");
-  (void)DerivationOkay;
+  if (!IsDerivedFrom(OpRange.getBegin(), Derived, Base, Paths))
+    return MemberPointerConversionResult::NotDerived;
 
-  if (Paths.isAmbiguous(Context.getCanonicalType(FromClass).
-                                  getUnqualifiedType())) {
-    std::string PathDisplayStr = getAmbiguousPathsDisplayString(Paths);
-    Diag(From->getExprLoc(), diag::err_ambiguous_memptr_conv)
-      << 0 << FromClass << ToClass << PathDisplayStr << From->getSourceRange();
-    return true;
+  if (Paths.isAmbiguous(Base->getCanonicalTypeUnqualified())) {
+    Diag(CheckLoc, diag::err_ambiguous_memptr_conv)
+        << int(Direction) << FromClass << ToClass
+        << getAmbiguousPathsDisplayString(Paths) << OpRange;
+    return MemberPointerConversionResult::Ambiguous;
   }
 
   if (const RecordType *VBase = Paths.getDetectedVirtual()) {
-    Diag(From->getExprLoc(), diag::err_memptr_conv_via_virtual)
-      << FromClass << ToClass << QualType(VBase, 0)
-      << From->getSourceRange();
-    return true;
+    Diag(CheckLoc, diag::err_memptr_conv_via_virtual)
+        << FromClass << ToClass << QualType(VBase, 0) << OpRange;
+    return MemberPointerConversionResult::Virtual;
   }
-
-  if (!IgnoreBaseAccess)
-    CheckBaseClassAccess(From->getExprLoc(), FromClass, ToClass,
-                         Paths.front(),
-                         diag::err_downcast_from_inaccessible_base);
 
   // Must be a base to derived member conversion.
   BuildBasePathArray(Paths, BasePath);
-  Kind = CK_BaseToDerivedMemberPointer;
-  return false;
+  Kind = Direction == MemberPointerConversionDirection::Upcast
+             ? CK_DerivedToBaseMemberPointer
+             : CK_BaseToDerivedMemberPointer;
+
+  if (!IgnoreBaseAccess)
+    switch (CheckBaseClassAccess(
+        CheckLoc, Base, Derived, Paths.front(),
+        Direction == MemberPointerConversionDirection::Upcast
+            ? diag::err_upcast_to_inaccessible_base
+            : diag::err_downcast_from_inaccessible_base)) {
+    case Sema::AR_accessible:
+    case Sema::AR_delayed:
+    case Sema::AR_dependent:
+      // Optimistically assume that the delayed and dependent cases
+      // will work out.
+      break;
+
+    case Sema::AR_inaccessible:
+      return MemberPointerConversionResult::Inaccessible;
+    }
+
+  return MemberPointerConversionResult::Success;
 }
 
 /// Determine whether the lifetime conversion between the two given
@@ -4876,14 +4893,10 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
     const auto *ToMemPointer1 = ToType1->castAs<MemberPointerType>();
     const auto *FromMemPointer2 = FromType2->castAs<MemberPointerType>();
     const auto *ToMemPointer2 = ToType2->castAs<MemberPointerType>();
-    const Type *FromPointeeType1 = FromMemPointer1->getClass();
-    const Type *ToPointeeType1 = ToMemPointer1->getClass();
-    const Type *FromPointeeType2 = FromMemPointer2->getClass();
-    const Type *ToPointeeType2 = ToMemPointer2->getClass();
-    QualType FromPointee1 = QualType(FromPointeeType1, 0).getUnqualifiedType();
-    QualType ToPointee1 = QualType(ToPointeeType1, 0).getUnqualifiedType();
-    QualType FromPointee2 = QualType(FromPointeeType2, 0).getUnqualifiedType();
-    QualType ToPointee2 = QualType(ToPointeeType2, 0).getUnqualifiedType();
+    CXXRecordDecl *FromPointee1 = FromMemPointer1->getMostRecentCXXRecordDecl();
+    CXXRecordDecl *ToPointee1 = ToMemPointer1->getMostRecentCXXRecordDecl();
+    CXXRecordDecl *FromPointee2 = FromMemPointer2->getMostRecentCXXRecordDecl();
+    CXXRecordDecl *ToPointee2 = ToMemPointer2->getMostRecentCXXRecordDecl();
     // conversion of A::* to B::* is better than conversion of A::* to C::*,
     if (FromPointee1 == FromPointee2 && ToPointee1 != ToPointee2) {
       if (S.IsDerivedFrom(Loc, ToPointee1, ToPointee2))
@@ -8857,20 +8870,18 @@ static void AddBuiltinAssignmentOperatorCandidates(Sema &S,
 /// if any, found in visible type conversion functions found in ArgExpr's type.
 static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
     Qualifiers VRQuals;
-    const RecordType *TyRec;
+    CXXRecordDecl *ClassDecl;
     if (const MemberPointerType *RHSMPType =
-        ArgExpr->getType()->getAs<MemberPointerType>())
-      TyRec = RHSMPType->getClass()->getAs<RecordType>();
+            ArgExpr->getType()->getAs<MemberPointerType>())
+      ClassDecl = RHSMPType->getMostRecentCXXRecordDecl();
     else
-      TyRec = ArgExpr->getType()->getAs<RecordType>();
-    if (!TyRec) {
+      ClassDecl = ArgExpr->getType()->getAsCXXRecordDecl();
+    if (!ClassDecl) {
       // Just to be safe, assume the worst case.
       VRQuals.addVolatile();
       VRQuals.addRestrict();
       return VRQuals;
     }
-
-    CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
     if (!ClassDecl->hasDefinition())
       return VRQuals;
 
@@ -9863,9 +9874,10 @@ public:
         continue;
       for (QualType MemPtrTy : CandidateTypes[1].member_pointer_types()) {
         const MemberPointerType *mptr = cast<MemberPointerType>(MemPtrTy);
-        QualType C2 = QualType(mptr->getClass(), 0);
-        C2 = C2.getUnqualifiedType();
-        if (C1 != C2 && !S.IsDerivedFrom(CandidateSet.getLocation(), C1, C2))
+        CXXRecordDecl *D1 = C1->getAsCXXRecordDecl(),
+                      *D2 = mptr->getMostRecentCXXRecordDecl();
+        if (!declaresSameEntity(D1, D2) &&
+            !S.IsDerivedFrom(CandidateSet.getLocation(), D1, D2))
           break;
         QualType ParamTypes[2] = {PtrTy, MemPtrTy};
         // build CV12 T&
