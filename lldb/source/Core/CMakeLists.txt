@@ -71,8 +71,6 @@ add_lldb_library(lldbCore
     lldbUtility
     lldbValueObject
     lldbVersion
-    lldbPluginCPlusPlusLanguage
-    lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
 
   CLANG_LIBS
