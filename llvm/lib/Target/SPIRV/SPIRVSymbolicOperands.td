@@ -513,6 +513,7 @@ defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composi
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
 defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
+defm FPGADSPControlINTEL : CapabilityOperand<5908, 0, 0, [SPV_INTEL_fpga_dsp_control], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1264,6 +1265,7 @@ defm FunctionFloatingPointModeINTEL : DecorationOperand<6080, 0, 0, [], [Functio
 defm AliasScopeINTEL : DecorationOperand<5914, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm NoAliasINTEL : DecorationOperand<5915, 0, 0, [], [MemoryAccessAliasingINTEL]>;
 defm FPMaxErrorDecorationINTEL : DecorationOperand<6170, 0, 0, [], [FPMaxErrorINTEL]>;
+defm MathOpDSPModeINTEL : DecorationOperand<5909, 0, 0, [], [FPGADSPControlINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define BuiltIn enum values and at the same time
