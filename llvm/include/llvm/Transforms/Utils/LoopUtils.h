@@ -411,8 +411,7 @@ Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                              RecurKind RdxKind);
 /// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
-Value *createSimpleReduction(VectorBuilder &VB, Value *Src, RecurKind RdxKind,
-                             FastMathFlags FMFs);
+Value *createSimpleReduction(VectorBuilder &VB, Value *Src, RecurKind RdxKind);
 
 /// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
