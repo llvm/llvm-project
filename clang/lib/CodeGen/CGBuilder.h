@@ -64,21 +64,27 @@ class CGBuilderTy : public CGBuilderBaseTy {
   Address createConstGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
                              const llvm::Twine &Name) {
     const llvm::DataLayout &DL = BB->getDataLayout();
-    llvm::GetElementPtrInst *GEP;
+    llvm::Value *V;
     if (IsInBounds)
-      GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
-          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
-          Name));
+      V = CreateConstInBoundsGEP2_32(Addr.getElementType(),
+                                     emitRawPointerFromAddress(Addr), Idx0,
+                                     Idx1, Name);
     else
-      GEP = cast<llvm::GetElementPtrInst>(CreateConstGEP2_32(
-          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
-          Name));
+      V = CreateConstGEP2_32(Addr.getElementType(),
+                             emitRawPointerFromAddress(Addr), Idx0, Idx1, Name);
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
         /*isSigned=*/true);
-    if (!GEP->accumulateConstantOffset(DL, Offset))
-      llvm_unreachable("offset of GEP with constants is always computable");
-    return Address(GEP, GEP->getResultElementType(),
+    llvm::Type *ElementTy = nullptr;
+    if (auto *GEP = dyn_cast<llvm::GEPOperator>(V)) {
+      if (!GEP->accumulateConstantOffset(DL, Offset))
+        llvm_unreachable("offset of GEP with constants is always computable");
+      ElementTy = GEP->getResultElementType();
+    } else {
+      ElementTy = llvm::GetElementPtrInst::getIndexedType(Addr.getElementType(),
+                                                          {Idx0, Idx1});
+    }
+    return Address(V, ElementTy,
                    Addr.getAlignment().alignmentAtOffset(
                        CharUnits::fromQuantity(Offset.getSExtValue())),
                    IsInBounds ? Addr.isKnownNonNull() : NotKnownNonNull);
@@ -219,21 +225,17 @@ public:
   /// true.
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index,
-                          const llvm::Twine &Name = "",
-                          bool IsBaseConstantNull = false) {
+                          const llvm::Twine &Name = "") {
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
     const llvm::DataLayout &DL = BB->getDataLayout();
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
-    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::noUnsignedWrap();
-    if (!IsBaseConstantNull)
-      NWFlags |= llvm::GEPNoWrapFlags::inBounds();
-    return Address(
-        CreateConstGEP2_32(Addr.getElementType(), Addr.getBasePointer(), 0,
-                           Index, Name, NWFlags),
-        ElTy->getElementType(Index),
-        Addr.getAlignment().alignmentAtOffset(Offset), Addr.isKnownNonNull());
+    return Address(CreateStructGEP(Addr.getElementType(), Addr.getBasePointer(),
+                                   Index, Name),
+                   ElTy->getElementType(Index),
+                   Addr.getAlignment().alignmentAtOffset(Offset),
+                   Addr.isKnownNonNull());
   }
 
   /// Given
