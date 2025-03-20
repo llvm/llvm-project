@@ -4316,7 +4316,8 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer, false);
+  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                             /*NewValue=*/false);
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.
