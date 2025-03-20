@@ -841,10 +841,7 @@ namespace {
 /// Example of unsupported opcode is SDIV that can potentially cause UB if the
 /// "shuffled out" lane would result in division by zero.
 bool isValidForAlternation(unsigned Opcode) {
-  if (Instruction::isIntDivRem(Opcode))
-    return false;
-
-  return true;
+  return !Instruction::isIntDivRem(Opcode);
 }
 
 /// Helper class that determines VL can use the same opcode.
@@ -1008,11 +1005,11 @@ class BinOpSameOpcodeHelper {
            ::isValidForAlternation(I->getOpcode());
   }
   bool initializeAltOp(Instruction *I) {
-    if (!AltOp.I) {
-      if (!isValidForAlternation(I))
-        return false;
-      AltOp.I = I;
-    }
+    if (AltOp.I)
+      return true;
+    if (!isValidForAlternation(I))
+      return false;
+    AltOp.I = I;
     return true;
   }
 
@@ -1022,7 +1019,8 @@ public:
     assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
   }
   bool add(Instruction *I) {
-    assert(isa<BinaryOperator>(I));
+    assert(isa<BinaryOperator>(I) &&
+           "BinOpSameOpcodeHelper only accepts BinaryOperator.");
     unsigned Opcode = I->getOpcode();
     MaskType OpcodeInMaskForm;
     // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
@@ -12694,7 +12692,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // operand might differ from what is retrieved from UniqueValues[Idx].
       Value *Op1 = E->getOperand(0)[Idx];
       Value *Op2;
-      SmallVector<const Value *, 2> Operands({Op1});
+      SmallVector<const Value *, 2> Operands(1, Op1);
       if (isa<UnaryOperator>(UniqueValues[Idx])) {
         Op2 = Op1;
       } else {
