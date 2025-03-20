@@ -9,6 +9,14 @@
 // We don't know how to vectorize algorithms on GCC
 // XFAIL: gcc
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
+// We don't vectorize algorithms before C++14
+// XFAIL: c++03, c++11
+
+// We don't vectorize algorithms on AIX right now.
+// XFAIL: target={{.+}}-aix{{.*}}
+
 // This test ensures that we enable the vectorization of algorithms on the expected
 // platforms.
 
