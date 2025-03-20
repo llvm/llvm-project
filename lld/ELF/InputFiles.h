@@ -239,7 +239,6 @@ protected:
 public:
   // Name of source file obtained from STT_FILE, if present.
   StringRef sourceFile;
-  std::unique_ptr<std::string> sourceFileStorage;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
