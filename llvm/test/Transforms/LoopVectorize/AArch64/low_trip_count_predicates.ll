@@ -18,7 +18,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; DEBUG-LABEL: LV: Checking a loop in 'trip_count_too_small'
 ; DEBUG: LV: Found a loop with a very small trip count. This loop is worth vectorizing only if no scalar iteration overheads are incurred.
-; DEBUG: LV: Not vectorizing: The trip count is below the minial threshold value..
+; DEBUG: LV: Not vectorizing: Runtime SCEV check is required with -Os/-Oz.
 
 ; DEBUG-LABEL: LV: Checking a loop in 'too_many_runtime_checks'
 ; DEBUG: LV: Found trip count: 0
@@ -477,7 +477,7 @@ while.end:
 define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK-LABEL: define i32 @tc4(
 ; CHECK-SAME: ptr noundef readonly captures(none) [[TMP:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 16
 ; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 32
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 48
@@ -485,107 +485,109 @@ define i32 @tc4(ptr noundef readonly captures(none) %tmp) vscale_range(1,16) {
 ; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 80
 ; CHECK-NEXT:    [[ARRAYIDX46:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 96
 ; CHECK-NEXT:    [[ARRAYIDX49:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP]], i64 112
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[ADD89_LCSSA:%.*]] = phi i32 [ [[ADD89:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    ret i32 [[ADD89_LCSSA]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_0179:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ADD89]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 0, 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[TMP]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX2]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP10]], [[TMP8]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX11]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP7]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX14]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[ADD17:%.*]] = add i32 [[TMP11]], [[TMP2]]
-; CHECK-NEXT:    [[SUB24:%.*]] = sub i32 [[TMP2]], [[TMP11]]
-; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[ADD17]], [[ADD]]
-; CHECK-NEXT:    [[SUB26:%.*]] = sub i32 [[ADD]], [[ADD17]]
-; CHECK-NEXT:    [[ADD27:%.*]] = add i32 [[SUB24]], [[SUB]]
-; CHECK-NEXT:    [[SUB28:%.*]] = sub i32 [[SUB]], [[SUB24]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP9]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[WIDE_LOAD3]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sub <4 x i32> [[WIDE_LOAD2]], [[WIDE_LOAD3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP11]], [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sub <4 x i32> [[TMP5]], [[TMP11]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i32> [[TMP12]], [[TMP6]]
+; CHECK-NEXT:    [[TMP16:%.*]] = sub <4 x i32> [[TMP6]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX30]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP17]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX33]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP19]], align 4
-; CHECK-NEXT:    [[ADD36:%.*]] = add i32 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[SUB44:%.*]] = sub i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP19]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = add <4 x i32> [[WIDE_LOAD5]], [[WIDE_LOAD4]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sub <4 x i32> [[WIDE_LOAD4]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX46]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP23]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [4 x i32], ptr [[ARRAYIDX49]], i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP25]], align 4
-; CHECK-NEXT:    [[ADD52:%.*]] = add i32 [[TMP12]], [[TMP6]]
-; CHECK-NEXT:    [[SUB60:%.*]] = sub i32 [[TMP6]], [[TMP12]]
-; CHECK-NEXT:    [[ADD61:%.*]] = add i32 [[ADD52]], [[ADD36]]
-; CHECK-NEXT:    [[SUB62:%.*]] = sub i32 [[ADD36]], [[ADD52]]
-; CHECK-NEXT:    [[ADD63:%.*]] = add i32 [[SUB60]], [[SUB44]]
-; CHECK-NEXT:    [[SUB64:%.*]] = sub i32 [[SUB44]], [[SUB60]]
-; CHECK-NEXT:    [[ADD65:%.*]] = add i32 [[ADD61]], [[ADD25]]
-; CHECK-NEXT:    [[SHR_I173:%.*]] = lshr i32 [[ADD65]], 15
-; CHECK-NEXT:    [[AND_I174:%.*]] = and i32 [[SHR_I173]], 65537
-; CHECK-NEXT:    [[MUL_I175:%.*]] = mul nuw i32 [[AND_I174]], 65535
-; CHECK-NEXT:    [[ADD_I176:%.*]] = add i32 [[MUL_I175]], [[ADD65]]
-; CHECK-NEXT:    [[XOR_I177:%.*]] = xor i32 [[ADD_I176]], [[MUL_I175]]
-; CHECK-NEXT:    [[SUB66:%.*]] = sub i32 [[ADD25]], [[ADD61]]
-; CHECK-NEXT:    [[SHR_I168:%.*]] = lshr i32 [[SUB66]], 15
-; CHECK-NEXT:    [[AND_I169:%.*]] = and i32 [[SHR_I168]], 65537
-; CHECK-NEXT:    [[MUL_I170:%.*]] = mul nuw i32 [[AND_I169]], 65535
-; CHECK-NEXT:    [[ADD_I171:%.*]] = add i32 [[MUL_I170]], [[SUB66]]
-; CHECK-NEXT:    [[XOR_I172:%.*]] = xor i32 [[ADD_I171]], [[MUL_I170]]
-; CHECK-NEXT:    [[ADD69:%.*]] = add i32 [[ADD63]], [[ADD27]]
-; CHECK-NEXT:    [[SHR_I163:%.*]] = lshr i32 [[ADD69]], 15
-; CHECK-NEXT:    [[AND_I164:%.*]] = and i32 [[SHR_I163]], 65537
-; CHECK-NEXT:    [[MUL_I165:%.*]] = mul nuw i32 [[AND_I164]], 65535
-; CHECK-NEXT:    [[ADD_I166:%.*]] = add i32 [[MUL_I165]], [[ADD69]]
-; CHECK-NEXT:    [[XOR_I167:%.*]] = xor i32 [[ADD_I166]], [[MUL_I165]]
-; CHECK-NEXT:    [[SUB71:%.*]] = sub i32 [[ADD27]], [[ADD63]]
-; CHECK-NEXT:    [[SHR_I158:%.*]] = lshr i32 [[SUB71]], 15
-; CHECK-NEXT:    [[AND_I159:%.*]] = and i32 [[SHR_I158]], 65537
-; CHECK-NEXT:    [[MUL_I160:%.*]] = mul nuw i32 [[AND_I159]], 65535
-; CHECK-NEXT:    [[ADD_I161:%.*]] = add i32 [[MUL_I160]], [[SUB71]]
-; CHECK-NEXT:    [[XOR_I162:%.*]] = xor i32 [[ADD_I161]], [[MUL_I160]]
-; CHECK-NEXT:    [[ADD75:%.*]] = add i32 [[SUB62]], [[SUB26]]
-; CHECK-NEXT:    [[SHR_I153:%.*]] = lshr i32 [[ADD75]], 15
-; CHECK-NEXT:    [[AND_I154:%.*]] = and i32 [[SHR_I153]], 65537
-; CHECK-NEXT:    [[MUL_I155:%.*]] = mul nuw i32 [[AND_I154]], 65535
-; CHECK-NEXT:    [[ADD_I156:%.*]] = add i32 [[MUL_I155]], [[ADD75]]
-; CHECK-NEXT:    [[XOR_I157:%.*]] = xor i32 [[ADD_I156]], [[MUL_I155]]
-; CHECK-NEXT:    [[SUB77:%.*]] = sub i32 [[SUB26]], [[SUB62]]
-; CHECK-NEXT:    [[SHR_I148:%.*]] = lshr i32 [[SUB77]], 15
-; CHECK-NEXT:    [[AND_I149:%.*]] = and i32 [[SHR_I148]], 65537
-; CHECK-NEXT:    [[MUL_I150:%.*]] = mul nuw i32 [[AND_I149]], 65535
-; CHECK-NEXT:    [[ADD_I151:%.*]] = add i32 [[MUL_I150]], [[SUB77]]
-; CHECK-NEXT:    [[XOR_I152:%.*]] = xor i32 [[ADD_I151]], [[MUL_I150]]
-; CHECK-NEXT:    [[ADD81:%.*]] = add i32 [[SUB64]], [[SUB28]]
-; CHECK-NEXT:    [[SHR_I143:%.*]] = lshr i32 [[ADD81]], 15
-; CHECK-NEXT:    [[AND_I144:%.*]] = and i32 [[SHR_I143]], 65537
-; CHECK-NEXT:    [[MUL_I145:%.*]] = mul nuw i32 [[AND_I144]], 65535
-; CHECK-NEXT:    [[ADD_I146:%.*]] = add i32 [[MUL_I145]], [[ADD81]]
-; CHECK-NEXT:    [[XOR_I147:%.*]] = xor i32 [[ADD_I146]], [[MUL_I145]]
-; CHECK-NEXT:    [[SUB83:%.*]] = sub i32 [[SUB28]], [[SUB64]]
-; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i32 [[SUB83]], 15
-; CHECK-NEXT:    [[AND_I:%.*]] = and i32 [[SHR_I]], 65537
-; CHECK-NEXT:    [[MUL_I:%.*]] = mul nuw i32 [[AND_I]], 65535
-; CHECK-NEXT:    [[ADD_I:%.*]] = add i32 [[MUL_I]], [[SUB83]]
-; CHECK-NEXT:    [[XOR_I:%.*]] = xor i32 [[ADD_I]], [[MUL_I]]
-; CHECK-NEXT:    [[ADD73:%.*]] = add i32 [[XOR_I147]], [[XOR_I]]
-; CHECK-NEXT:    [[ADD68:%.*]] = add i32 [[ADD73]], [[XOR_I152]]
-; CHECK-NEXT:    [[ADD74:%.*]] = add i32 [[ADD68]], [[XOR_I157]]
-; CHECK-NEXT:    [[ADD79:%.*]] = add i32 [[ADD74]], [[XOR_I172]]
-; CHECK-NEXT:    [[ADD80:%.*]] = add i32 [[ADD79]], [[XOR_I177]]
-; CHECK-NEXT:    [[ADD85:%.*]] = add i32 [[ADD80]], [[XOR_I162]]
-; CHECK-NEXT:    [[ADD86:%.*]] = add i32 [[ADD85]], [[XOR_I167]]
-; CHECK-NEXT:    [[CONV87:%.*]] = and i32 [[ADD86]], 65535
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD86]], 16
-; CHECK-NEXT:    [[ADD88:%.*]] = add i32 [[SHR]], [[SUM_0179]]
-; CHECK-NEXT:    [[ADD89]] = add i32 [[ADD88]], [[CONV87]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP25]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP26]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = add <4 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD6]]
+; CHECK-NEXT:    [[TMP28:%.*]] = sub <4 x i32> [[WIDE_LOAD6]], [[WIDE_LOAD7]]
+; CHECK-NEXT:    [[TMP29:%.*]] = add <4 x i32> [[TMP27]], [[TMP21]]
+; CHECK-NEXT:    [[TMP30:%.*]] = sub <4 x i32> [[TMP21]], [[TMP27]]
+; CHECK-NEXT:    [[TMP31:%.*]] = add <4 x i32> [[TMP28]], [[TMP22]]
+; CHECK-NEXT:    [[TMP32:%.*]] = sub <4 x i32> [[TMP22]], [[TMP28]]
+; CHECK-NEXT:    [[TMP33:%.*]] = add <4 x i32> [[TMP29]], [[TMP13]]
+; CHECK-NEXT:    [[TMP34:%.*]] = lshr <4 x i32> [[TMP33]], splat (i32 15)
+; CHECK-NEXT:    [[TMP35:%.*]] = and <4 x i32> [[TMP34]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP36:%.*]] = mul nuw <4 x i32> [[TMP35]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP37:%.*]] = add <4 x i32> [[TMP36]], [[TMP33]]
+; CHECK-NEXT:    [[TMP38:%.*]] = xor <4 x i32> [[TMP37]], [[TMP36]]
+; CHECK-NEXT:    [[TMP39:%.*]] = sub <4 x i32> [[TMP13]], [[TMP29]]
+; CHECK-NEXT:    [[TMP40:%.*]] = lshr <4 x i32> [[TMP39]], splat (i32 15)
+; CHECK-NEXT:    [[TMP41:%.*]] = and <4 x i32> [[TMP40]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP42:%.*]] = mul nuw <4 x i32> [[TMP41]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP43:%.*]] = add <4 x i32> [[TMP42]], [[TMP39]]
+; CHECK-NEXT:    [[TMP44:%.*]] = xor <4 x i32> [[TMP43]], [[TMP42]]
+; CHECK-NEXT:    [[TMP45:%.*]] = add <4 x i32> [[TMP31]], [[TMP15]]
+; CHECK-NEXT:    [[TMP46:%.*]] = lshr <4 x i32> [[TMP45]], splat (i32 15)
+; CHECK-NEXT:    [[TMP47:%.*]] = and <4 x i32> [[TMP46]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP48:%.*]] = mul nuw <4 x i32> [[TMP47]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP49:%.*]] = add <4 x i32> [[TMP48]], [[TMP45]]
+; CHECK-NEXT:    [[TMP50:%.*]] = xor <4 x i32> [[TMP49]], [[TMP48]]
+; CHECK-NEXT:    [[TMP51:%.*]] = sub <4 x i32> [[TMP15]], [[TMP31]]
+; CHECK-NEXT:    [[TMP52:%.*]] = lshr <4 x i32> [[TMP51]], splat (i32 15)
+; CHECK-NEXT:    [[TMP53:%.*]] = and <4 x i32> [[TMP52]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP54:%.*]] = mul nuw <4 x i32> [[TMP53]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP55:%.*]] = add <4 x i32> [[TMP54]], [[TMP51]]
+; CHECK-NEXT:    [[TMP56:%.*]] = xor <4 x i32> [[TMP55]], [[TMP54]]
+; CHECK-NEXT:    [[TMP57:%.*]] = add <4 x i32> [[TMP30]], [[TMP14]]
+; CHECK-NEXT:    [[TMP58:%.*]] = lshr <4 x i32> [[TMP57]], splat (i32 15)
+; CHECK-NEXT:    [[TMP59:%.*]] = and <4 x i32> [[TMP58]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP60:%.*]] = mul nuw <4 x i32> [[TMP59]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP61:%.*]] = add <4 x i32> [[TMP60]], [[TMP57]]
+; CHECK-NEXT:    [[TMP62:%.*]] = xor <4 x i32> [[TMP61]], [[TMP60]]
+; CHECK-NEXT:    [[TMP63:%.*]] = sub <4 x i32> [[TMP14]], [[TMP30]]
+; CHECK-NEXT:    [[TMP64:%.*]] = lshr <4 x i32> [[TMP63]], splat (i32 15)
+; CHECK-NEXT:    [[TMP65:%.*]] = and <4 x i32> [[TMP64]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP66:%.*]] = mul nuw <4 x i32> [[TMP65]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP67:%.*]] = add <4 x i32> [[TMP66]], [[TMP63]]
+; CHECK-NEXT:    [[TMP68:%.*]] = xor <4 x i32> [[TMP67]], [[TMP66]]
+; CHECK-NEXT:    [[TMP69:%.*]] = add <4 x i32> [[TMP32]], [[TMP16]]
+; CHECK-NEXT:    [[TMP70:%.*]] = lshr <4 x i32> [[TMP69]], splat (i32 15)
+; CHECK-NEXT:    [[TMP71:%.*]] = and <4 x i32> [[TMP70]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP72:%.*]] = mul nuw <4 x i32> [[TMP71]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP73:%.*]] = add <4 x i32> [[TMP72]], [[TMP69]]
+; CHECK-NEXT:    [[TMP74:%.*]] = xor <4 x i32> [[TMP73]], [[TMP72]]
+; CHECK-NEXT:    [[TMP75:%.*]] = sub <4 x i32> [[TMP16]], [[TMP32]]
+; CHECK-NEXT:    [[TMP76:%.*]] = lshr <4 x i32> [[TMP75]], splat (i32 15)
+; CHECK-NEXT:    [[TMP77:%.*]] = and <4 x i32> [[TMP76]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP78:%.*]] = mul nuw <4 x i32> [[TMP77]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP79:%.*]] = add <4 x i32> [[TMP78]], [[TMP75]]
+; CHECK-NEXT:    [[TMP80:%.*]] = xor <4 x i32> [[TMP79]], [[TMP78]]
+; CHECK-NEXT:    [[TMP81:%.*]] = add <4 x i32> [[TMP74]], [[TMP80]]
+; CHECK-NEXT:    [[TMP82:%.*]] = add <4 x i32> [[TMP81]], [[TMP68]]
+; CHECK-NEXT:    [[TMP83:%.*]] = add <4 x i32> [[TMP82]], [[TMP62]]
+; CHECK-NEXT:    [[TMP84:%.*]] = add <4 x i32> [[TMP83]], [[TMP44]]
+; CHECK-NEXT:    [[TMP85:%.*]] = add <4 x i32> [[TMP84]], [[TMP38]]
+; CHECK-NEXT:    [[TMP86:%.*]] = add <4 x i32> [[TMP85]], [[TMP56]]
+; CHECK-NEXT:    [[TMP87:%.*]] = add <4 x i32> [[TMP86]], [[TMP50]]
+; CHECK-NEXT:    [[TMP88:%.*]] = and <4 x i32> [[TMP87]], splat (i32 65535)
+; CHECK-NEXT:    [[TMP89:%.*]] = lshr <4 x i32> [[TMP87]], splat (i32 16)
+; CHECK-NEXT:    [[TMP90:%.*]] = add <4 x i32> [[TMP89]], zeroinitializer
+; CHECK-NEXT:    [[TMP91:%.*]] = add <4 x i32> [[TMP90]], [[TMP88]]
+; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add nuw i64 0, 4
+; CHECK-NEXT:    [[TMP92:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP91]])
+; CHECK-NEXT:    ret i32 [[TMP92]]
 ;
 entry:
   %arrayidx2 = getelementptr inbounds nuw i8, ptr %tmp, i64 16
