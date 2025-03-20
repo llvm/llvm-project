@@ -182,8 +182,12 @@ constexpr void run_tests() {
   }
   test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
+#if TEST_STD_VER < 26
   if (!std::is_constant_evaluated())
+#endif
+  {
     test_mid(std::ranges::inplace_merge, in, mid);
+  }
   test(std::ranges::make_heap, in);
   test(std::ranges::push_heap, in);
   test(std::ranges::pop_heap, in);

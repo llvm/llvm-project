@@ -440,7 +440,7 @@ bool SanitizerBinaryMetadata::runOn(Instruction &I, MetadataInfoSet &MIS,
 
   // Attach MD_pcsections to instruction.
   if (!InstMetadata.empty()) {
-    MIS.insert(InstMetadata.begin(), InstMetadata.end());
+    MIS.insert_range(InstMetadata);
     SmallVector<MDBuilder::PCSection, 1> Sections;
     for (const auto &MI : InstMetadata)
       Sections.push_back({getSectionName(MI->SectionSuffix), {}});
