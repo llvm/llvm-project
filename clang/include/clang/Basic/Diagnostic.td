@@ -155,6 +155,49 @@ class DefaultWarnNoWerror {
 }
 class DefaultRemark { Severity DefaultSeverity = SEV_Remark; }
 
+// C++ compatibility warnings
+multiclass CXXCompatWarn<
+    string message,
+    bit default_ignore,
+    int std_ver,
+    string std_ver_override = ""#std_ver> {
+    // 'X is a C++YZ extension'.
+    def compat_pre_cxx#std_ver#_#NAME :
+        Diagnostic<!strconcat(message, " a C++", std_ver_override,  " extension"),
+                   CLASS_EXTENSION,
+                   !if(default_ignore, SEV_Ignored, SEV_Warning)>,
+        InGroup<!cast<DiagGroup>("CXX"#std_ver)>;
+
+    // 'X is incompatible with C++98' (if std_ver == 11).
+    // 'X is incompatible with C++ standards before C++YZ' (otherwise).
+    def compat_cxx#std_ver#_#NAME :
+        Warning<!if(!eq(std_ver, 11),
+                    !strconcat(message, " incompatible with C++98"),
+                    !strconcat(message, " incompatible with C++ standards before C++", std_ver_override))>,
+        InGroup<!cast<DiagGroup>(!if(!eq(std_ver, 11),
+                                     "CXX98Compat",
+                                     "CXXPre"#std_ver#"Compat"))>,
+        DefaultIgnore;
+}
+
+multiclass CXX11CompatWarn<string message, bit default_ignore = false>
+    : CXXCompatWarn<message, default_ignore, 11>;
+
+multiclass CXX14CompatWarn<string message, bit default_ignore = false>
+    : CXXCompatWarn<message, default_ignore, 14>;
+
+multiclass CXX17CompatWarn<string message, bit default_ignore = false>
+    : CXXCompatWarn<message, default_ignore, 17>;
+
+multiclass CXX20CompatWarn<string message, bit default_ignore = false>
+    : CXXCompatWarn<message, default_ignore, 20>;
+
+multiclass CXX23CompatWarn<string message, bit default_ignore = false>
+    : CXXCompatWarn<message, default_ignore, 23>;
+
+multiclass CXX26CompatWarn<string message, bit default_ignore = false>
+    : CXXCompatWarn<message, default_ignore, 26, "2c">;
+
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"
 include "DiagnosticCommentKinds.td"
