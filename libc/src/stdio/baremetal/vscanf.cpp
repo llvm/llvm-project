@@ -12,27 +12,12 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/scanf_core/reader.h"
+#include "src/stdio/baremetal/scanf_internal.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-namespace {
-
-struct StreamReader : scanf_core::Reader<StreamReader> {
-  LIBC_INLINE char getc() {
-    char buf[1];
-    auto result = read_from_stdin(buf, sizeof(buf));
-    if (result <= 0)
-      return EOF;
-    return buf[0];
-  }
-  LIBC_INLINE void ungetc(int) {}
-};
-
-} // namespace
 
 LLVM_LIBC_FUNCTION(int, vscanf,
                    (const char *__restrict format, va_list vlist)) {
@@ -41,7 +26,7 @@ LLVM_LIBC_FUNCTION(int, vscanf,
                                  // destruction automatically.
   va_end(vlist);
 
-  StreamReader reader;
+  scanf_core::StdinReader reader;
   int retval = scanf_core::scanf_main(&reader, format, args);
   // This is done to avoid including stdio.h in the internals. On most systems
   // EOF is -1, so this will be transformed into just "return retval".
