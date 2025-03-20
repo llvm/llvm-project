@@ -102,6 +102,51 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
   }
 }
 
+#if 0
+struct XXX {
+  struct BBValueInfo {
+    Value *LiveInValue = nullptr;
+    Value *LiveOutValue = nullptr;
+  };
+
+  DominatorTree &DT;
+  PredIteratorCache &PredCache;
+  Type *ValTy;
+  DenseMap<BasicBlock *, BBValueInfo> BBInfos;
+
+  Value *computeLiveInValue(BasicBlock *BB) {
+    return computeLiveInValueImpl(BB, BBInfos[BB]);
+  }
+
+  Value *computeLiveOutValue(BasicBlock *BB) {
+    auto &BBInfo = BBInfos[BB];
+    return BBInfo.LiveOutValue ? BBInfo.LiveOutValue
+                               : computeLiveInValueImpl(BB, BBInfo);
+  }
+
+  void clear() { BBInfos.clear(); }
+
+private:
+  Value *computeLiveInValueImpl(BasicBlock *BB, BBValueInfo &BBInfo);
+};
+
+Value *XXX::computeLiveInValueImpl(BasicBlock *BB, BBValueInfo &BBInfo) {
+  if (BBInfo.LiveInValue)
+    return BBInfo.LiveInValue;
+
+  Value *V = DT.isReachableFromEntry(BB) && !PredCache.get(BB).empty()
+                  ? computeLiveOutValue(DT.getNode(BB)->getIDom()->getBlock())
+                  : UndefValue::get(ValTy);
+
+  // The call to ComputeValue can insert new entries into the map:
+  // assume BBInfos shouldn't grow due to [1] above and BBInfo reference is
+  // valid.
+  assert(&BBInfo == &BBInfos[BB] && "Map shouldn't grow!");
+  BBInfo.LiveInValue = V;
+  return V;
+};
+#endif
+
 struct BBValueInfo {
   Value *LiveInValue = nullptr;
   Value *LiveOutValue = nullptr;
@@ -140,7 +185,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     IDF.calculate(IDFBlocks);
 
     // Reserve sufficient buckets to prevent map growth. [1]
-    BBInfos.init(LiveInBlocks.size() + DefBlocks.size());
+    BBInfos.reserve(LiveInBlocks.size() + DefBlocks.size());
 
     for (auto [BB, V] : R.Defines)
       BBInfos[BB].LiveOutValue = V;
@@ -156,26 +201,44 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
     // IsLiveOut indicates whether we are computing live-out values (true) or
     // live-in values (false).
-    std::function<Value *(BasicBlock *, bool)> ComputeValue =
-        [&](BasicBlock *BB, bool IsLiveOut) -> Value * {
-      auto &BBInfo = BBInfos[BB];
+    auto ComputeValue = [&](BasicBlock *BB, bool IsLiveOut) -> Value * {
 
-      if (IsLiveOut && BBInfo.LiveOutValue)
-        return BBInfo.LiveOutValue;
+      auto *BBInfo = &BBInfos[BB];      
 
-      if (BBInfo.LiveInValue)
-        return BBInfo.LiveInValue;
+      if (IsLiveOut && BBInfo->LiveOutValue)
+        return BBInfo->LiveOutValue;
 
-      Value *V = DT->isReachableFromEntry(BB) && !PredCache.get(BB).empty()
-                     ? ComputeValue(DT->getNode(BB)->getIDom()->getBlock(),
-                                    /*IsLiveOut=*/true)
-                     : UndefValue::get(R.Ty);
+      if (BBInfo->LiveInValue)
+        return BBInfo->LiveInValue;
 
-      // The call to ComputeValue can insert new entries into the map:
-      // assume BBInfos shouldn't grow due to [1] above and BBInfo reference is
-      // valid.
-      assert(&BBInfo == &BBInfos[BB] && "Map shouldn't grow!");
-      BBInfo.LiveInValue = V;
+      SmallVector<BBValueInfo *, 4> Stack = {BBInfo};
+      Value *V = nullptr;
+      
+      while (DT->isReachableFromEntry(BB) && !PredCache.get(BB).empty() &&
+             (BB = DT->getNode(BB)->getIDom()->getBlock())) {
+        BBInfo = &BBInfos[BB];
+
+        if (BBInfo->LiveOutValue) {
+          V = BBInfo->LiveOutValue;
+          break;
+        }
+
+        if (BBInfo->LiveInValue) {
+          V = BBInfo->LiveInValue;
+          break;
+        }
+
+        Stack.emplace_back(BBInfo);
+      }
+
+      if (!V)
+        V = UndefValue::get(R.Ty);
+
+      for (auto *BBInfo : Stack)
+        // Loop above can insert new entries into the BBInfos map: assume the
+        // map shouldn't grow due to [1] and BBInfo references are valid.
+        BBInfo->LiveInValue = V;
+
       return V;
     };
 
