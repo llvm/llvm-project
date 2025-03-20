@@ -675,7 +675,7 @@ struct BooleanStateWithSetVector : public BooleanState {
   /// "Clamp" this state with \p RHS.
   BooleanStateWithSetVector &operator^=(const BooleanStateWithSetVector &RHS) {
     BooleanState::operator^=(RHS);
-    Set.insert(RHS.Set.begin(), RHS.Set.end());
+    Set.insert_range(RHS.Set);
     return *this;
   }
 

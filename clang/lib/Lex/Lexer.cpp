@@ -3187,28 +3187,12 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
     ConditionalStack.pop_back();
   }
 
-  // C99 5.1.1.2p2: If the file is non-empty and didn't end in a newline, issue
-  // a pedwarn.
-  if (CurPtr != BufferStart && (CurPtr[-1] != '\n' && CurPtr[-1] != '\r')) {
-    DiagnosticsEngine &Diags = PP->getDiagnostics();
-    SourceLocation EndLoc = getSourceLocation(BufferEnd);
-    unsigned DiagID = diag::warn_no_newline_eof;
-
-    if (LangOpts.CPlusPlus11) {
-      // C++11 [lex.phases] 2.2 p2
-      // Prefer the C++98 pedantic compatibility warning over the generic,
-      // non-extension, user-requested "missing newline at EOF" warning.
-      if (!Diags.isIgnored(diag::warn_cxx98_compat_no_newline_eof, EndLoc))
-        DiagID = diag::warn_cxx98_compat_no_newline_eof;
-    } else {
-      // This is conforming in C2y, but is an extension in earlier language
-      // modes.
-      if (!LangOpts.C2y)
-        DiagID = diag::ext_no_newline_eof;
-    }
-
-    Diag(BufferEnd, DiagID) << FixItHint::CreateInsertion(EndLoc, "\n");
-  }
+  // Before C++11 and C2y, a file not ending with a newline was UB. Both
+  // standards changed this behavior (as a DR or equivalent), but we still have
+  // an opt-in diagnostic to warn about it.
+  if (CurPtr != BufferStart && (CurPtr[-1] != '\n' && CurPtr[-1] != '\r'))
+    Diag(BufferEnd, diag::warn_no_newline_eof)
+        << FixItHint::CreateInsertion(getSourceLocation(BufferEnd), "\n");
 
   BufferPtr = CurPtr;
 

@@ -2115,10 +2115,12 @@ const Init *IsAOpInit::Fold() const {
       return IntInit::get(getRecordKeeper(), 1);
 
     if (isa<RecordRecTy>(CheckType)) {
-      // If the target type is not a subclass of the expression type, or if
-      // the expression has fully resolved to a record, we know that it can't
-      // be of the required type.
-      if (!CheckType->typeIsConvertibleTo(TI->getType()) || isa<DefInit>(Expr))
+      // If the target type is not a subclass of the expression type once the
+      // expression has been made concrete, or if the expression has fully
+      // resolved to a record, we know that it can't be of the required type.
+      if ((!CheckType->typeIsConvertibleTo(TI->getType()) &&
+           Expr->isConcrete()) ||
+          isa<DefInit>(Expr))
         return IntInit::get(getRecordKeeper(), 0);
     } else {
       // We treat non-record types as not castable.

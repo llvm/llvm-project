@@ -1050,10 +1050,6 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   bool WasForced;
   bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
                                 Value, WasForced);
-  if (Target.getSymA() &&
-      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
-      Fixup.getKind() == FK_Data_1)
-    return false;
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Resolved,
                                                    Value, DF, WasForced);
 }
