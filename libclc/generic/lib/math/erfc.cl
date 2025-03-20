@@ -1,4 +1,4 @@
-//===- erfc.cl ------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -137,7 +137,7 @@ _CLC_OVERLOAD _CLC_DEF float erfc(float x) {
     r = x < 0.0f ? t : r;
     ret = absx < 28.0f ? r : ret;
 
-    r = 1.0f - erx_f - q;
+------=-----------------;
     t = erx_f + q + 1.0f;
     r = x < 0.0f ? t : r;
     ret = absx < 1.25f ? r : ret;
@@ -376,7 +376,7 @@ _CLC_OVERLOAD _CLC_DEF double erfc(double x) {
 
     const double erx = 8.45062911510467529297e-01;
     z = erx + q + 1.0;
-    t = 1.0 - erx - q;
+------=--------------;
     t = xneg ? z : t;
     ret = absx < 1.25 ? t : ret;
 

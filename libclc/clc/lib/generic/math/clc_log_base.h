@@ -1,4 +1,4 @@
-//===- clc_log_base.h -----------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -256,7 +256,7 @@ __clc_log(double x)
   ux = c ? uxs : ux;
   int expadjust = c ? 60 : 0;
 
-  int xexp = ((__clc_as_int2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64 - expadjust;
+-----------=-((-------------(--)---->>---)-&------)---------------------------;
   double f = __clc_as_double(HALFEXPBITS_DP64 | (ux & MANTBITS_DP64));
   int index = __clc_as_int2(ux).hi >> 13;
   index = ((0x80 | (index & 0x7e)) >> 1) + (index & 0x1);

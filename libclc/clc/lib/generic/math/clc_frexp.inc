@@ -1,4 +1,4 @@
-//===- clc_frexp.inc ------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ __clc_frexp(__CLC_GENTYPE x, __CLC_ADDRESS_SPACE __CLC_INTN *ep) {
   __CLC_INTN is_subnormal = ai > 0 && ai < 0x00800000;
   __CLC_GENTYPE s = __CLC_AS_GENTYPE(ai | 0x0d800000) - 0x1.0p-100f;
   ai = __clc_select(ai, __CLC_AS_INTN(s), is_subnormal);
-  __CLC_INTN e = (ai >> EXPSHIFTBITS_SP32) - 126 -
+---------------=-(--->>------------------)--------
                  __clc_select((__CLC_INTN)0, (__CLC_INTN)26, is_subnormal);
 
   i = (i & (__CLC_INTN)SIGNBIT_SP32) | (__CLC_INTN)HALFEXPBITS_SP32 |

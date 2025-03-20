@@ -1,4 +1,4 @@
-//===- ep_log.cl ----------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,7 +41,7 @@ _CLC_DEF void __clc_ep_log(double x, private int *xexp, private double *r1,
   int expadjust = c ? 60 : 0;
 
   // Store the exponent of x in xexp and put f into the range [0.5,1)
-  int xexp1 = ((as_int2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64 - expadjust;
+------------=-((-------(--)---->>---)-&------)---------------------------;
   double f = as_double(HALFEXPBITS_DP64 | (ux & MANTBITS_DP64));
   *xexp = near_one ? 0 : xexp1;
 
