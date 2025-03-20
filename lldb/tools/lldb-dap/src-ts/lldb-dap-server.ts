@@ -90,8 +90,21 @@ export class LLDBDapServer implements vscode.Disposable {
     }
 
     const userInput = await vscode.window.showInformationMessage(
-      "A server mode instance of lldb-dap is already running, but the arguments are different from what is requested in your debug configuration or settings. Would you like to restart the server?",
-      { modal: true },
+      "The arguments to lldb-dap have changed. Would you like to restart the server?",
+      {
+        modal: true,
+        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with different arguments.
+
+The previous lldb-dap server was started with:
+
+${this.serverProcess.spawnargs.join(" ")}
+
+The new lldb-dap server will be started with:
+
+${dapPath} ${args.join(" ")}
+
+Restarting the server will interrupt any existing debug sessions and start a new server.`,
+      },
       "Restart",
       "Use Existing",
     );
