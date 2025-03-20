@@ -653,21 +653,19 @@ private:
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
 
-  /// Emit call to llvm.dbg.def for a variable definition.
+  /// Emit call to llvm.dbg.declare for a variable definition.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.def, or nullptr otherwise.
-  llvm::DILocalVariable *EmitDef(const VarDecl *decl, llvm::Value *AI,
-                                 std::optional<unsigned> ArgNo,
-                                 CGBuilderTy &Builder,
-                                 const bool UsePointerValue = false);
+  llvm::DILocalVariable *EmitDeclareForHeterogeneousDwarf(
+      const VarDecl *decl, llvm::Value *AI, std::optional<unsigned> ArgNo,
+      CGBuilderTy &Builder, const bool UsePointerValue = false);
 
-  /// Emit call to llvm.dbg.def for a structured binding definition.
+  /// Emit call to llvm.dbg.declare for a structured binding definition.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.def, or nullptr otherwise.
-  llvm::DILocalVariable *EmitDef(const BindingDecl *decl, llvm::Value *AI,
-                                 std::optional<unsigned> ArgNo,
-                                 CGBuilderTy &Builder,
-                                 const bool UsePointerValue = false);
+  llvm::DILocalVariable *EmitDeclareForHeterogeneousDwarf(
+      const BindingDecl *decl, llvm::Value *AI, std::optional<unsigned> ArgNo,
+      CGBuilderTy &Builder, const bool UsePointerValue = false);
 
   /// Emit call to llvm.dbg.declare for a binding declaration.
   /// Returns a pointer to the DILocalVariable associated with the
@@ -812,20 +810,7 @@ private:
   /// anonymous decl and create static variables for them. The first
   /// time this is called it needs to be on a union and then from
   /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariable *CollectAnonRecordDeclsForHeterogeneousDwarfDIExpr(
-      const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
-      StringRef LinkageName, llvm::dwarf::MemorySpace MS,
-      llvm::GlobalVariable *Var, llvm::DIScope *DContext);
-
-  /// Return a global variable that represents one of the collection of global
-  /// variables created for an anonmyous union (-gheterogeneous-dwarf).
-  ///
-  /// Recursively collect all of the member fields of a global
-  /// anonymous decl and create static variables for them. The first
-  /// time this is called it needs to be on a union and then from
-  /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariableExpression *
-  CollectAnonRecordDeclsForHeterogeneousDwarfDIExpression(
+  llvm::DIGlobalVariableExpression *CollectAnonRecordDeclsForHeterogeneousDwarf(
       const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
       StringRef LinkageName, llvm::dwarf::MemorySpace MS,
       llvm::GlobalVariable *Var, llvm::DIScope *DContext);

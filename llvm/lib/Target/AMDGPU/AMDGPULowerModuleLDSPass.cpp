@@ -1359,19 +1359,13 @@ private:
           CurrentOffset += Padding;
         }
 
-        if (isHeterogeneousDebug(M)) {
-          Fragment2VarInfo[FGV->getDbgDef()] =
-              DIExprVarInfo{FGV, CurrentOffset};
-        } else {
-          SmallVector<DIGlobalVariableExpression *, 1> OriginalGVEs;
-          FGV->getDebugInfo(OriginalGVEs);
-          for (const auto *OriginalGVE : OriginalGVEs) {
-            if (auto NewElementsRef =
-                    OriginalGVE->getExpression()->getNewElementsRef()) {
-              DIExpressionVarInfos.push_back({FGV,
-                                              OriginalGVE->getRawVariable(),
-                                              *NewElementsRef, CurrentOffset});
-            }
+        SmallVector<DIGlobalVariableExpression *, 1> OriginalGVEs;
+        FGV->getDebugInfo(OriginalGVEs);
+        for (const auto *OriginalGVE : OriginalGVEs) {
+          if (auto NewElementsRef =
+                  OriginalGVE->getExpression()->getNewElementsRef()) {
+            DIExpressionVarInfos.push_back({FGV, OriginalGVE->getRawVariable(),
+                                            *NewElementsRef, CurrentOffset});
           }
         }
 
@@ -1397,73 +1391,34 @@ private:
         false);
     SGV->setAlignment(StructAlign);
 
-    if (isHeterogeneousDebug(M)) {
-      DIBuilder DBuilder(M);
-
-      DIFragment *DbgVarFragment = DBuilder.createFragment();
-      SGV->setDbgDef(DbgVarFragment);
-
-      if (NamedMDNode *RN = M.getNamedMetadata("llvm.dbg.retainedNodes")) {
-        for (MDNode *O : RN->operands()) {
-          auto *L = dyn_cast<DILifetime>(O);
-          if (!L)
-            continue;
-
-          if (L->argObjects().empty())
-            continue;
-
-          // FIXME(KZHURAVL): Handle more than one arg object?
-          auto *F = dyn_cast<DIFragment>(*L->argObjectsBegin());
-          if (!F)
-            continue;
-
-          auto FragmentIterator = Fragment2VarInfo.find(F);
-          if (FragmentIterator == Fragment2VarInfo.end())
-            continue;
-
-          DIExprBuilder ExprBuilder(Ctx);
-          ExprBuilder.append<DIOp::Arg>(0, SGV->getType());
-          ExprBuilder.append<DIOp::Deref>(
-              FragmentIterator->second.Var->getValueType());
-          ExprBuilder.append<DIOp::Constant>(
-              ConstantInt::get(Type::getInt32Ty(Ctx), FragmentIterator->second.Offset));
-          ExprBuilder.append<DIOp::ByteOffset>(
-              FragmentIterator->second.Var->getValueType());
-
-          L->setLocation(ExprBuilder.intoExpr());
-          L->replaceOperandWith(2, DbgVarFragment);
+    for (auto VarInfo : DIExpressionVarInfos) {
+      DIExprBuilder ExprBuilder(Ctx);
+      for (auto Op : VarInfo.Expr) {
+        if (auto *ArgOp = std::get_if<DIOp::Arg>(&Op)) {
+          assert(ArgOp->getIndex() == 0u &&
+                 "DIOp-based DIExpression in DIGlobalVariableExpression must "
+                 "have only one argument");
+          Type *ArgTy = SGV->getType();
+          assert(isa<PointerType>(ArgTy));
+          Type *ResultTy = VarInfo.Var->getType();
+          assert(isa<PointerType>(ResultTy));
+          assert(ArgTy->getPointerAddressSpace() ==
+                 ResultTy->getPointerAddressSpace());
+          unsigned PointerSizeInBits =
+              DL.getPointerSizeInBits(ArgTy->getPointerAddressSpace());
+          auto *IntTy = IntegerType::get(Ctx, PointerSizeInBits);
+          ConstantData *C = ConstantInt::get(IntTy, VarInfo.Offset, true);
+          ExprBuilder.append<DIOp::Arg>(0u, ArgTy);
+          ExprBuilder.append<DIOp::Reinterpret>(IntTy);
+          ExprBuilder.append<DIOp::Constant>(C);
+          ExprBuilder.append<DIOp::Add>();
+          ExprBuilder.append<DIOp::Reinterpret>(ResultTy);
+        } else {
+          ExprBuilder.append(Op);
         }
       }
-    } else {
-      for (auto VarInfo : DIExpressionVarInfos) {
-        DIExprBuilder ExprBuilder(Ctx);
-        for (auto Op : VarInfo.Expr) {
-          if (auto *ArgOp = std::get_if<DIOp::Arg>(&Op)) {
-            assert(ArgOp->getIndex() == 0u &&
-                   "DIOp-based DIExpression in DIGlobalVariableExpression must "
-                   "have only one argument");
-            Type *ArgTy = SGV->getType();
-            assert(isa<PointerType>(ArgTy));
-            Type *ResultTy = VarInfo.Var->getType();
-            assert(isa<PointerType>(ResultTy));
-            assert(ArgTy->getPointerAddressSpace() ==
-                   ResultTy->getPointerAddressSpace());
-            unsigned PointerSizeInBits =
-                DL.getPointerSizeInBits(ArgTy->getPointerAddressSpace());
-            auto *IntTy = IntegerType::get(Ctx, PointerSizeInBits);
-            ConstantData *C = ConstantInt::get(IntTy, VarInfo.Offset, true);
-            ExprBuilder.append<DIOp::Arg>(0u, ArgTy);
-            ExprBuilder.append<DIOp::Reinterpret>(IntTy);
-            ExprBuilder.append<DIOp::Constant>(C);
-            ExprBuilder.append<DIOp::Add>();
-            ExprBuilder.append<DIOp::Reinterpret>(ResultTy);
-          } else {
-            ExprBuilder.append(Op);
-          }
-        }
-        SGV->addDebugInfo(DIGlobalVariableExpression::get(
-            Ctx, VarInfo.DIVar, ExprBuilder.intoExpression()));
-      }
+      SGV->addDebugInfo(DIGlobalVariableExpression::get(
+          Ctx, VarInfo.DIVar, ExprBuilder.intoExpression()));
     }
 
     DenseMap<GlobalVariable *, Constant *> Map;

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -42,59 +41,6 @@ using namespace llvm;
 #define DEBUG_TYPE "clone-function"
 
 namespace {
-class LifetimeMaterializer final : public ValueMaterializer {
-  ValueToValueMapTy &VMap;
-  SmallSet<Metadata *, 16> GlobalFragments;
-
-  Metadata *mapToMetadata(const Metadata *Key, Metadata *Val) {
-    VMap.MD()[Key].reset(Val);
-    return Val;
-  }
-
-  Metadata *mapLifetime(Metadata *M) {
-    if (std::optional<Metadata *> Mapped = VMap.getMappedMD(M))
-      return *Mapped;
-    if (isa<DIFragment>(M) && !GlobalFragments.contains(M)) {
-      M = mapToMetadata(
-          M, MDNode::replaceWithDistinct(cast<DIFragment>(M)->clone()));
-    }
-    return M;
-  };
-
-public:
-  LifetimeMaterializer(ValueToValueMapTy &VMap, const Function *Func)
-      : VMap(VMap) {
-    // FIXME: This is inefficient, and has to be repeated for each call to
-    // CloneFunction. Caching this information, maybe as a "kind" on the
-    // fragment, is one possible solution.
-    unsigned KindID = Func->getContext().getMDKindID("dbg.def");
-    SmallVector<MDNode *> MDs;
-    for (const GlobalVariable &GV : Func->getParent()->globals()) {
-      GV.getMetadata(KindID, MDs);
-      GlobalFragments.insert(MDs.begin(), MDs.end());
-    }
-  }
-
-  Value *materialize(Value *V) override {
-    if (!isa<MetadataAsValue>(V))
-      return nullptr;
-    const auto *MDV = cast<MetadataAsValue>(V);
-    const Metadata *MD = MDV->getMetadata();
-    if (!isa<DILifetime>(MD))
-      return nullptr;
-    const auto *LT = cast<DILifetime>(MD);
-    SmallVector<Metadata *> ArgObjects;
-    for (auto *AO : LT->argObjects())
-      ArgObjects.push_back(mapLifetime(AO));
-    return VMap[V] = MetadataAsValue::get(
-               V->getContext(),
-               mapToMetadata(
-                   LT, DILifetime::getDistinct(V->getContext(),
-                                               mapLifetime(LT->getObject()),
-                                               LT->getLocation(), ArgObjects)));
-  }
-};
-
 void collectDebugInfoFromInstructions(const Function &F,
                                       DebugInfoFinder &DIFinder) {
   const Module *M = F.getParent();
@@ -379,10 +325,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     if (Visited.insert(MappedUnit).second)
       NMD->addOperand(MappedUnit);
   }
-  // FIXME: Does cloning a function semantically require any updates to
-  // llvm.retainedNodes ? Even when the cloned function "overrides" a global
-  // variable location, it doesn't imply that the global computed lifetime (if
-  // any) is still valid in the new module?
 }
 
 /// Return a copy of the specified function and add it to that function's
@@ -438,18 +380,16 @@ struct PruningFunctionCloner {
   const char *NameSuffix;
   ClonedCodeInfo *CodeInfo;
   bool HostFuncIsStrictFP;
-  ValueMaterializer *Materializer;
 
   Instruction *cloneInstruction(BasicBlock::const_iterator II);
 
 public:
   PruningFunctionCloner(Function *newFunc, const Function *oldFunc,
                         ValueToValueMapTy &valueMap, bool moduleLevelChanges,
-                        const char *nameSuffix, ClonedCodeInfo *codeInfo,
-                        ValueMaterializer *materializer)
+                        const char *nameSuffix, ClonedCodeInfo *codeInfo)
       : NewFunc(newFunc), OldFunc(oldFunc), VMap(valueMap),
         ModuleLevelChanges(moduleLevelChanges), NameSuffix(nameSuffix),
-        CodeInfo(codeInfo), Materializer(materializer) {
+        CodeInfo(codeInfo) {
     HostFuncIsStrictFP =
         newFunc->getAttributes().hasFnAttr(Attribute::StrictFP);
   }
@@ -609,8 +549,7 @@ void PruningFunctionCloner::CloneBlock(
     // debug intrinsic processing because they may contain use-before-defs.
     if (!isa<PHINode>(NewInst) && !isa<DbgVariableIntrinsic>(NewInst)) {
       RemapInstruction(NewInst, VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                       nullptr, Materializer);
+                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges);
 
       // Eagerly constant fold the newly cloned instruction. If successful, add
       // a mapping to the new value. Non-constant operands may be incomplete at
@@ -739,8 +678,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   assert(NameSuffix && "NameSuffix cannot be null!");
 
   ValueMapTypeRemapper *TypeMapper = nullptr;
-  LifetimeMaterializer LTMaterializer(VMap, OldFunc);
-  ValueMaterializer *Materializer = &LTMaterializer;
+  ValueMaterializer *Materializer = nullptr;
 
 #ifndef NDEBUG
   // If the cloning starts at the beginning of the function, verify that
@@ -751,7 +689,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 #endif
 
   PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, ModuleLevelChanges,
-                            NameSuffix, CodeInfo, Materializer);
+                            NameSuffix, CodeInfo);
   const BasicBlock *StartingBB;
   if (StartingInst)
     StartingBB = StartingInst->getParent();

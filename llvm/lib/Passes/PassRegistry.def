@@ -76,7 +76,6 @@ MODULE_PASS("function-import", FunctionImportPass())
 MODULE_PASS("global-merge-func", GlobalMergeFuncPass())
 MODULE_PASS("globalopt", GlobalOptPass())
 MODULE_PASS("globalsplit", GlobalSplitPass())
-MODULE_PASS("heterogeneous-debug-verify", HeterogeneousDebugVerify(TM->getOptLevel()))
 MODULE_PASS("hipstdpar-interpose-alloc", HipStdParAllocationInterpositionPass())
 MODULE_PASS("hipstdpar-select-accelerator-code",
             HipStdParAcceleratorCodeSelectionPass())

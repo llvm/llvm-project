@@ -84,9 +84,6 @@ protected:
   /// variable.  Variables are listed in order of appearance.
   DbgValueHistoryMap DbgValues;
 
-  /// History of DBG_DEF and DBG_KILL instructions for each lifetime.
-  DbgDefKillHistoryMap DbgDefKills;
-
   /// Mapping of inlined labels and DBG_LABEL machine instruction.
   DbgLabelInstrMap DbgLabels;
 

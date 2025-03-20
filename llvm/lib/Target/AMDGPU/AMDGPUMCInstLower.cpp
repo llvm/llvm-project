@@ -241,8 +241,6 @@ const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
-  case TargetOpcode::DBG_DEF:
-  case TargetOpcode::DBG_KILL:
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
   }

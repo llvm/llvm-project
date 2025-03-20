@@ -27,7 +27,6 @@ using namespace llvm::dwarf;
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes, DICompileUnit *CU)
     : M(m), VMContext(M.getContext()), CUNode(CU), DeclareFn(nullptr),
       ValueFn(nullptr), LabelFn(nullptr), AssignFn(nullptr),
-      DefFn(nullptr), KillFn(nullptr),
       AllowUnresolvedNodes(AllowUnresolvedNodes) {
   if (CUNode) {
     if (const auto &ETs = CUNode->getEnumTypes())
@@ -1230,102 +1229,4 @@ void DIBuilder::replaceArrays(DICompositeType *&T, DINodeArray Elements,
     trackIfUnresolved(Elements.get());
   if (TParams)
     trackIfUnresolved(TParams.get());
-}
-
-DILifetime *DIBuilder::createBoundedLifetime(DIObject *Obj, DIExpr *Loc,
-                                      ArrayRef<Metadata *> Args) {
-  return DILifetime::getDistinct(VMContext, Obj, Loc, Args);
-}
-
-void DIBuilder::createComputedLifetime(DIObject *Obj, DIExpr *Loc,
-                                       ArrayRef<Metadata *> Args) {
-  DILifetime *Lifetime = DILifetime::getDistinct(VMContext, Obj, Loc, Args);
-
-  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.retainedNodes");
-  NMD->addOperand(Lifetime);
-  trackIfUnresolved(Lifetime);
-}
-
-static Function *getDefIntrin(Module &M) {
-  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_def);
-}
-
-Instruction *DIBuilder::insertDefImpl(DILifetime *Lifetime,
-                                      llvm::Value *Referrer,
-                                      const DILocation *DL,
-                                      InsertPosition InsertPt) {
-  assert(Lifetime && "Empty or invalid Lifetime passed to dbg.def");
-  assert(Referrer && "Empty or invalid Referrer passed to dbg.def");
-  assert(DL && "Empty or invalid DL passed to dbg.def");
-
-  if (!DefFn)
-    DefFn = getDefIntrin(M);
-
-  trackIfUnresolved(Lifetime);
-
-  // Ideally, the intrinsic would be able to handle any type of
-  // pointer. However, SelectionDAGBuilder::visitIntrinsicCall (for dbg_def) and
-  // InstEmitter::EmitDbgDefKill expect the intrinsic to refer directly to the
-  // alloca / argument and have problems handling addrspacecasts
-  Referrer = Referrer->stripPointerCasts();
-
-  Value *Args[] = {MetadataAsValue::get(VMContext, Lifetime),
-                   getDbgIntrinsicValueImpl(VMContext, Referrer)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(DefFn, Args);
-}
-
-Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
-                                  const DILocation *DL,
-                                  BasicBlock *InsertAtEnd) {
-  // If this block already has a terminator then insert this intrinsic before
-  // the terminator. Otherwise, put it at the end of the block.
-  Instruction *InsertBefore = InsertAtEnd->getTerminator();
-  return insertDefImpl(Lifetime, Referrer, DL,
-                       InsertBefore ? InsertBefore->getIterator()
-                                    : InsertAtEnd->end());
-}
-
-Instruction *DIBuilder::insertDef(DILifetime *Lifetime, llvm::Value *Referrer,
-                                  const DILocation *DL,
-                                  InsertPosition InsertPt) {
-  return insertDefImpl(Lifetime, Referrer, DL, InsertPt);
-}
-
-static Function *getKillIntrin(Module &M) {
-  return Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_kill);
-}
-
-Instruction *DIBuilder::insertKillImpl(DILifetime *Lifetime,
-                                       const DILocation *DL,
-                                       InsertPosition InsertPt) {
-  assert(Lifetime && "Empty or invalid Lifetime passed to dbg.kill");
-  assert(DL && "Empty or invalid DL passed to dbg.kill");
-
-  if (!KillFn)
-    KillFn = getKillIntrin(M);
-
-  trackIfUnresolved(Lifetime);
-  Value *Args[] = {MetadataAsValue::get(VMContext, Lifetime)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(KillFn, Args);
-}
-
-Instruction *DIBuilder::insertKill(DILifetime *Lifetime, const DILocation *DL,
-                                   BasicBlock *InsertAtEnd) {
-  // If this block already has a terminator then insert this intrinsic before
-  // the terminator. Otherwise, put it at the end of the block.
-  Instruction *InsertBefore = InsertAtEnd->getTerminator();
-  return insertKillImpl(Lifetime, DL,
-                        InsertBefore ? InsertBefore->getIterator()
-                                     : InsertAtEnd->end());
-}
-
-Instruction *DIBuilder::insertKill(DILifetime *Lifetime, const DILocation *DL,
-                                   InsertPosition InsertPt) {
-  return insertKillImpl(Lifetime, DL, InsertPt);
 }

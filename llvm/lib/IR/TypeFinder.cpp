@@ -214,14 +214,6 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
         Op);
   };
 
-  // The operations in a DIExpr are not exposed as operands, so handle such
-  // nodes specifically here.
-  if (const auto *E = dyn_cast<DIExpr>(V)) {
-    for (const auto &Op : E->builder())
-      incorporateDIOp(Op);
-    return;
-  }
-
   if (const auto *E = dyn_cast<DIExpression>(V)) {
     if (auto Elems = E->getNewElementsRef()) {
       for (const auto &Op : *Elems)

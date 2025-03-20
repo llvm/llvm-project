@@ -33,11 +33,6 @@
 // CHECK-DISABLED: "-cc1"
 // CHECK-DISABLED: "-gheterogeneous-dwarf=disabled"
 
-// Check that -gheterogeneous-dwarf= works for diexpr
-// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpr %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPR %s
-// CHECK-DIEXPR: "-cc1"
-// CHECK-DIEXPR: "-gheterogeneous-dwarf=diexpr"
-
 // Check that -gheterogeneous-dwarf= works for diexpression
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpression %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPRESSION %s
 // CHECK-DIEXPRESSION: "-cc1"
@@ -46,3 +41,7 @@
 // Check that -gheterogeneous-dwarf= fails for unknown option
 // RUN: not %clang -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=unknown %s 2>&1 | FileCheck -check-prefix=CHECK-UNKNOWN %s
 // CHECK-UNKNOWN: error: invalid value
+
+// Specifically, check for failure with previously-valid value diexpr
+// RUN: not %clang -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpr %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPR %s
+// CHECK-DIEXPR: error: invalid value

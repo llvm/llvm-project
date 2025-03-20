@@ -1314,20 +1314,6 @@ def DBG_LABEL : StandardPseudoInstruction {
   let hasSideEffects = false;
   let isMeta = true;
 }
-def DBG_DEF : StandardPseudoInstruction {
-  let OutOperandList = (outs);
-  let InOperandList = (ins variable_ops);
-  let AsmString = "DBG_DEF";
-  let hasSideEffects = false;
-  let isMeta = true;
-}
-def DBG_KILL : StandardPseudoInstruction {
-  let OutOperandList = (outs);
-  let InOperandList = (ins unknown:$lifetime);
-  let AsmString = "DBG_KILL";
-  let hasSideEffects = false;
-  let isMeta = true;
-}
 def REG_SEQUENCE : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$supersrc, variable_ops);

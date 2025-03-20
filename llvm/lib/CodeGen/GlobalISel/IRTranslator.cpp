@@ -2266,37 +2266,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::dbg_def:
-  case Intrinsic::dbg_kill: {
-    const DbgDefKillIntrinsic &DDKI = cast<DbgDefKillIntrinsic>(CI);
-    const bool IsDef = ID == Intrinsic::dbg_def;
-    auto MIB = MIRBuilder.buildInstrNoInsert(IsDef ? TargetOpcode::DBG_DEF
-                                                   : TargetOpcode::DBG_KILL);
-    MIB.addMetadata(DDKI.getLifetime());
-    if (IsDef) {
-      const Value *Referrer = cast<DbgDefInst>(DDKI).getReferrer();
-      assert(Referrer);
-      if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
-        MIB.addCImm(CI);
-      } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
-        MIB.addFPImm(CFP);
-      } else if (auto *AI = dyn_cast<AllocaInst>(Referrer)) {
-        MIB.addFrameIndex(getOrCreateFrameIndex(*AI));
-        DILifetime *Lifetime = cast<DbgDefInst>(DDKI).getLifetime();
-        // The translation from an alloca (semantically a pointer) to a frame
-        // index (semantically the stack slot itself) removes one level of
-        // indirection, which needs to be reflected in the expression.
-        Lifetime->setLocation(
-            Lifetime->getLocation()
-                ->builder()
-                .removeReferrerIndirection(AI->getAllocatedType())
-                .intoExpr());
-      } else {
-        MIB.addReg(getOrCreateVReg(*Referrer));
-      }
-    }
-    MIRBuilder.insertInstr(MIB);
-    return true;
-  }
+  case Intrinsic::dbg_kill:
+    report_fatal_error("unsupported DIExpr-based metadata");
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
   case Intrinsic::sadd_with_overflow:

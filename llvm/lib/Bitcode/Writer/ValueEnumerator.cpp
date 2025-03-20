@@ -760,11 +760,6 @@ const MDNode *ValueEnumerator::enumerateMetadataImpl(unsigned F, const Metadata 
         Op);
   };
 
-  if (auto *E = dyn_cast<DIExpr>(MD)) {
-    for (const auto &Op : E->builder())
-      enumerateDIOp(Op);
-  }
-
   if (auto *E = dyn_cast<DIExpression>(MD)) {
     if (auto Elems = E->getNewElementsRef()) {
       for (const auto &Op : *Elems)

@@ -33,11 +33,6 @@ public:
   /// values to the stack.
   unsigned getStackWidth(const MachineFunction &MF) const;
 
-  DIExprBuilder::Iterator insertFrameLocation(const MachineFunction &MF,
-                                              DIExprBuilder &Builder,
-                                              DIExprBuilder::Iterator BI,
-                                              Type *ResultType) const override;
-
   DIExpression *lowerFIArgToFPArg(const MachineFunction &MF,
                                   const DIExpression *Expr, uint64_t ArgIndex,
                                   StackOffset Offset) const override;

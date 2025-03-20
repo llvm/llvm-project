@@ -36,7 +36,6 @@ public:
 // Factory functions for LiveDebugValues implementations.
 extern LDVImpl *makeVarLocBasedLiveDebugValues();
 extern LDVImpl *makeInstrRefBasedLiveDebugValues();
-extern LDVImpl *makeHeterogeneousLiveDebugValues();
 
 extern bool debuginfoShouldUseDebugInstrRef(const Triple &T);
 

@@ -543,24 +543,6 @@ TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
 #undef TEST_REPLACE
 }
 
-TEST(IsHeterogeneousDebugTest, V3Module) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C, R"(
-    !llvm.module.flags = !{!0}
-    !0 = !{i32 2, !"Debug Info Version", i32 3}
-)");
-  EXPECT_FALSE(isHeterogeneousDebug(*M));
-}
-
-TEST(IsHeterogeneousDebugTest, V4Module) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C, R"(
-    !llvm.module.flags = !{!0}
-    !0 = !{i32 2, !"Debug Info Version", i32 4}
-)");
-  EXPECT_TRUE(isHeterogeneousDebug(*M));
-}
-
 TEST(AssignmentTrackingTest, Utils) {
   // Test the assignment tracking utils defined in DebugInfo.h namespace at {}.
   // This includes:

@@ -351,9 +351,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
-  /// The Debug Info Version of the module being verified.
-  std::optional<unsigned> DebugInfoVersion;
-
   /// Stores the count of how many objects were passed to llvm.localescape for a
   /// given function and the largest index passed to llvm.localrecover.
   DenseMap<Function *, std::pair<unsigned, unsigned>> FrameEscapeInfo;
@@ -384,10 +381,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   // Keeps track of duplicate function argument debug info.
   SmallVector<const DILocalVariable *, 16> DebugFnArgs;
 
-  // Track which bounded DILifetimes we have seen defs for, so we can diagnose
-  // repeated defs.
-  SmallPtrSet<const DILifetime *, 32> DefinedDebugLifetimes;
-
   TBAAVerifier TBAAVerifyHelper;
   ConvergenceVerifier ConvergenceVerifyHelper;
 
@@ -401,20 +394,6 @@ public:
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
         SawFrameEscape(false), TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
-    if (NamedMDNode *ModFlags = M.getModuleFlagsMetadata()) {
-      auto OpIt = find_if(ModFlags->operands(), [](const MDNode *Flag) {
-        if (Flag->getNumOperands() < 3)
-          return false;
-        if (MDString *K = dyn_cast_or_null<MDString>(Flag->getOperand(1)))
-          return K->getString() == "Debug Info Version";
-        return false;
-      });
-      if (OpIt != ModFlags->op_end()) {
-        const MDOperand &ValOp = (*OpIt)->getOperand(2);
-        if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(ValOp))
-          DebugInfoVersion = CI->getZExtValue();
-      }
-    }
   }
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
@@ -619,7 +598,6 @@ private:
   void visitVPIntrinsic(VPIntrinsic &VPI);
   void visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII);
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
-  void visitDbgDefKillIntrinsic(StringRef Kind, DbgDefKillIntrinsic &DDI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
   void visitFenceInst(FenceInst &FI);
@@ -1057,15 +1035,11 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   // upgrading them and we want to reserve the namespace for future uses.
   if (NMD.getName().starts_with("llvm.dbg."))
     CheckDI(NMD.getName() == "llvm.dbg.cu" ||
-                 NMD.getName() == "llvm.dbg.retainedNodes",
-             "unrecognized named metadata node in the llvm.dbg namespace",
-             &NMD);
+                NMD.getName() == "llvm.dbg.retainedNodes",
+            "unrecognized named metadata node in the llvm.dbg namespace", &NMD);
   for (const MDNode *MD : NMD.operands()) {
     if (NMD.getName() == "llvm.dbg.cu")
       CheckDI(MD && isa<DICompileUnit>(MD), "invalid compile unit", &NMD, MD);
-    if (NMD.getName() == "llvm.dbg.retainedNodes")
-      CheckDI(MD && isa<DILifetime>(MD), "invalid module retained node", &NMD,
-               MD);
 
     if (!MD)
       continue;
@@ -1082,24 +1056,6 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
 
   Check(&MD.getContext() == &Context,
         "MDNode context does not match Module context!", &MD);
-
-  if (DebugInfoVersion) {
-    unsigned V = *DebugInfoVersion;
-    switch (MD.getMetadataID()) {
-    default:
-      break;
-    case Metadata::DIExpressionKind:
-      CheckDI(V == DEBUG_METADATA_VERSION,
-              "MDNode incompatible with Debug Info Version", &MD, V);
-      break;
-    case Metadata::DIExprKind:
-    case Metadata::DIFragmentKind:
-    case Metadata::DILifetimeKind:
-      CheckDI(V == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
-              "MDNode incompatible with Debug Info Version", &MD, V);
-      break;
-    }
-  }
 
   switch (MD.getMetadataID()) {
   default:
@@ -1508,11 +1464,10 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   if (auto *Array = N.getRawRetainedTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid retained type list", &N, Array);
     for (Metadata *Op : N.getRetainedTypes()->operands()) {
-      CheckDI(Op && (isa<DIType>(Op) ||
-                     (isa<DISubprogram>(Op) &&
-                      !cast<DISubprogram>(Op)->isDefinition()) ||
-                     isa<DILifetime>(Op)),
-              "invalid retained type", &N, Op);
+      CheckDI(
+          Op && (isa<DIType>(Op) || (isa<DISubprogram>(Op) &&
+                                     !cast<DISubprogram>(Op)->isDefinition())),
+          "invalid retained type", &N, Op);
     }
   }
   if (auto *Array = N.getRawGlobalVariables()) {
@@ -1559,8 +1514,8 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                  isa<DILifetime>(Op) || isa<DIImportedEntity>(Op) ),
-              "invalid retained nodes, expected DILocalVariable, DILabel, "
+                     isa<DIImportedEntity>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel or "
               "DIImportedEntity",
               &N, Node, Op);
     }
@@ -1742,10 +1697,7 @@ void Verifier::visitDIExpression(const DIExpression &N) {
   CheckDI(N.isValid(), "invalid expression", &N);
 }
 
-void Verifier::visitDIExpr(const DIExpr &N) {
-  // TODO: Strictly limit where DIExpr may occur, forbidding it anywhere except
-  // as the `location:` parameter to DILifetime.
-}
+void Verifier::visitDIExpr(const DIExpr &N) {}
 
 void Verifier::visitDIGlobalVariableExpression(
     const DIGlobalVariableExpression &GVE) {
@@ -1777,32 +1729,7 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
           N.getRawEntity());
 }
 
-void Verifier::visitDILifetime(const DILifetime &N) {
-  // TODO: Validate that the the reachable lifetime graph contains no cycles.
-  auto *Obj = N.getRawObject();
-  CheckDI(Obj, "missing object", &N);
-  CheckDI(isa<DIObject>(Obj), "object must be a DIObject", &N, Obj);
-  auto *Loc = N.getRawLocation();
-  CheckDI(Loc, "missing location expression", &N);
-  CheckDI(isa<DIExpr>(Loc), "location expression must be a DIExpr", &N, Loc);
-  unsigned NumArgs = 0;
-  SmallDenseSet<Metadata *> RawArgObjectOperands;
-  for (const MDOperand &Operand : N.rawArgObjects()) {
-    Metadata *A = Operand.get();
-    CheckDI(A, "missing argObject", &N);
-    // FIXME: This should also permit DICode, once that is implemented
-    CheckDI(isa<DIObject>(A), "each argObject must be a DIObject", &N, A);
-    NumArgs++;
-  }
-  for (DIOp::Variant Op : cast<DIExpr>(Loc)->builder()) {
-    if (auto *A = std::get_if<DIOp::Arg>(&Op)) {
-      CheckDI(A->getIndex() < NumArgs,
-              "debug location expression cannot reference an out-of-bounds "
-              "argObjects index",
-              &N);
-    }
-  }
-}
+void Verifier::visitDILifetime(const DILifetime &N) {}
 
 void Verifier::visitComdat(const Comdat &C) {
   // In COFF the Module is invalid if the GlobalValue has private linkage.
@@ -5674,11 +5601,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::dbg_label: // llvm.dbg.label
     visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(Call));
     break;
-  case Intrinsic::dbg_def: // llvm.dbg.def
-    visitDbgDefKillIntrinsic("def", cast<DbgDefKillIntrinsic>(Call));
-    break;
+  case Intrinsic::dbg_def:  // llvm.dbg.def
   case Intrinsic::dbg_kill: // llvm.dbg.kill
-    visitDbgDefKillIntrinsic("kill", cast<DbgDefKillIntrinsic>(Call));
     break;
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
@@ -7046,10 +6970,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 }
 
 void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
-  if (DebugInfoVersion)
-    CheckDI(*DebugInfoVersion == DEBUG_METADATA_VERSION,
-            "debug intrinsic incompatible with Debug Info Version", &DII,
-            *DebugInfoVersion);
   auto *MD = DII.getRawLocation();
   CheckDI(isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
               (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands()),
@@ -7217,24 +7137,6 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
 
   auto MSpace = V.getDWARFMemorySpace();
   CheckDI(MSpace <= dwarf::DW_MSPACE_LLVM_hi_user, "invalid memory space", &V);
-}
-
-void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,
-                                        DbgDefKillIntrinsic &DDI) {
-  if (DebugInfoVersion)
-    CheckDI(*DebugInfoVersion == DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF,
-            "debug intrinsic incompatible with Debug Info Version", &DDI,
-            *DebugInfoVersion);
-  CheckDI(isa<DILifetime>(DDI.getRawLifetime()),
-          "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
-          DDI.getRawLifetime());
-  if (DbgDefInst *D = dyn_cast<DbgDefInst>(&DDI)) {
-    CheckDI(isa<ValueAsMetadata>(D->getRawReferrer()),
-            "invalid llvm.dbg.def intrinsic referrer", D, D->getRawReferrer());
-    CheckDI(DefinedDebugLifetimes.insert(D->getLifetime()).second,
-            "invalid llvm.dbg.def refers to an already-defined lifetime",
-            D->getLifetime());
-  }
 }
 
 void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {

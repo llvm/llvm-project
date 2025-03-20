@@ -1,4 +1,5 @@
 ; RUN: opt -S -strip-debug < %s | FileCheck %s
+; RUN: opt -S -strip-debug < %s.bc | FileCheck %s
 
 ; Confirm we don't leave around any of the heterogeneous debug-info when
 ; explicitly stripping debug info via e.g. opt -strip-debug
