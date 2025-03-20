@@ -35,8 +35,7 @@ class GDBRemoteCommunicationServerLLGS
 public:
   // Constructors and Destructors
   GDBRemoteCommunicationServerLLGS(
-      MainLoop &mainloop,
-      NativeProcessProtocol::Manager &process_manager);
+      MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager);
 
   void SetLaunchInfo(const ProcessLaunchInfo &info);
 
@@ -86,6 +85,12 @@ public:
 
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
+  using ProcessCreatedCallback = std::function<void(NativeProcessProtocol *)>;
+
+  void SetProcessCreatedCallback(ProcessCreatedCallback callback) {
+    m_process_created_callback = callback;
+  }
+
   struct DebuggedProcess {
     enum class Flag {
       vkilled = (1u << 0),
@@ -123,6 +128,8 @@ protected:
   std::deque<std::string> m_stop_notification_queue;
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
+
+  ProcessCreatedCallback m_process_created_callback = nullptr;
 
   // Typically we would use a SmallVector for this data but in this context we
   // don't know how much data we're recieving so we would have to heap allocate

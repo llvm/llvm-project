@@ -18,6 +18,7 @@
 #endif
 
 #include "LLDBServerUtilities.h"
+#include "Plugins/PluginInterface/LLDBServerNativeProcess.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
@@ -89,7 +90,37 @@ public:
   }
 };
 #endif
-}
+
+class LLDBServerNativeProcessImpl : public LLDBServerNativeProcess {
+  NativeProcessProtocol *m_native_process = nullptr;
+
+public:
+  LLDBServerNativeProcessImpl(NativeProcessProtocol *native_process)
+      : m_native_process(native_process) {}
+
+  ~LLDBServerNativeProcessImpl() override {}
+  /// Set a breakpoint in the native process.
+  ///
+  /// When the breakpoints gets hit, lldb-server will call
+  /// LLDBServerPlugin::BreakpointWasHit with this address. This will allow
+  /// LLDBServerPlugin plugins to synchronously handle a breakpoint hit in the
+  /// native process.
+  lldb::user_id_t SetBreakpoint(lldb::addr_t address) override {
+    return LLDB_INVALID_BREAK_ID;
+  }
+
+  Status RegisterSignalCatcher(int signo) override {
+    return Status::FromErrorString("unimplemented");
+  }
+
+  Status HaltProcess() override { return m_native_process->Halt(); }
+  Status ContinueProcess() override {
+    ResumeActionList resume_actions;
+    return m_native_process->Resume(resume_actions);
+  }
+};
+
+} // namespace
 
 #ifndef _WIN32
 // Watch for signals
@@ -132,9 +163,8 @@ void handle_attach(GDBRemoteCommunicationServerLLGS &gdb_server,
   const long int pid = strtol(attach_target.c_str(), &end_p, 10);
 
   // We'll call it a match if the entire argument is consumed.
-  if (end_p &&
-      static_cast<size_t>(end_p - attach_target.c_str()) ==
-          attach_target.size())
+  if (end_p && static_cast<size_t>(end_p - attach_target.c_str()) ==
+                   attach_target.size())
     handle_attach_to_pid(gdb_server, static_cast<lldb::pid_t>(pid));
   else
     handle_attach_to_process_name(gdb_server, attach_target);
@@ -452,7 +482,11 @@ int main_gdbserver(int argc, char *argv[]) {
 
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
-
+  gdb_server.SetProcessCreatedCallback([](NativeProcessProtocol *process) {
+    assert(process);
+    LLDBServerNativeProcess::SetNativeProcess(
+        new LLDBServerNativeProcessImpl(process));
+  });
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {
     host_and_port = Inputs.front();
@@ -475,8 +509,8 @@ int main_gdbserver(int argc, char *argv[]) {
   printf("%s-%s\n", LLGS_PROGRAM_NAME, LLGS_VERSION_STR);
 
   ConnectToRemote(mainloop, gdb_server, reverse_connect, host_and_port,
-                  progname, subcommand, named_pipe_path.c_str(),
-                  unnamed_pipe, connection_fd);
+                  progname, subcommand, named_pipe_path.c_str(), unnamed_pipe,
+                  connection_fd);
 
   if (!gdb_server.IsConnected()) {
     fprintf(stderr, "no connection information provided, unable to run\n");
