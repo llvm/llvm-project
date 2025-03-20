@@ -45,6 +45,14 @@ distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return length_vec_impl(X - Y);
 }
 
+constexpr float dot2add_impl(half2 a, half2 b, float c) {
+#if defined(__DIRECTX__)
+  return __builtin_hlsl_dot2add(a, b, c);
+#else
+  return dot(a, b) + c;
+#endif
+}
+
 template <typename T> constexpr T reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
 }
