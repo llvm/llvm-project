@@ -1799,7 +1799,7 @@ typedef enum amd_comgr_action_kind_s {
    * For each successful compilation, add a relocatable object to @p result
    *
    * We accomplish this by first translating the .spv files to .bc via the
-   * SPIR-V translator. We then extract any SPIR-V flags from the embedded
+   * SPIR-V translator. We then extract any relevant -cc1 flags from the embedded
    * @llvm.cmdline variable. Finally, we compile the bitcode to a reloctable,
    * appending any extracted flags.
    *
