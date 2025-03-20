@@ -1343,8 +1343,12 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 
     if (UserMI.isPHI() && PHISeen.insert(&UserMI).second) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
-      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
+      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg())) {
+        // If UserMI has a PHI cycle, don't analyze it.
+        if (PhiUse.getParent() == &UserMI)
+          continue;
         Worklist.insert(&PhiUse);
+      }
       continue;
     }
 
