@@ -58,6 +58,11 @@ class StaticDataSplitter : public MachineFunctionPass {
   // .data.rel.ro} sections.
   bool inStaticDataSection(const GlobalVariable *GV, const TargetMachine &TM);
 
+  // Returns the constant if the operand refers to a global variable or constant
+  // that gets lowered to static data sections. Otherwise, return nullptr.
+  const Constant *getConstant(const MachineOperand &Op,
+                              const TargetMachine &TM);
+
   // Use profiles to partition static data.
   bool partitionStaticDataWithProfiles(MachineFunction &MF);
 
@@ -84,6 +89,8 @@ public:
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<StaticDataProfileInfoWrapperPass>();
+    // This pass does not modify the CFG.
+    AU.setPreservesCFG();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -110,6 +117,20 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   updateStatsWithProfiles(MF);
   return Changed;
+}
+
+const Constant *StaticDataSplitter::getConstant(const MachineOperand &Op,
+                                                const TargetMachine &TM) {
+  if (!Op.isGlobal())
+    return nullptr;
+
+  // Find global variables with local linkage.
+  const GlobalVariable *GV = getLocalLinkageGlobalVariable(Op.getGlobal());
+  // Skip 'llvm.'-prefixed global variables conservatively because they are
+  // often handled specially, and skip those not in static data sections.
+  if (!GV || GV->getName().starts_with("llvm.") || !inStaticDataSection(GV, TM))
+    return nullptr;
+  return GV;
 }
 
 bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
@@ -148,17 +169,8 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 
           if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
             ++NumChangedJumpTables;
-        } else {
-          // Find global variables with local linkage.
-          const GlobalVariable *GV =
-              getLocalLinkageGlobalVariable(Op.getGlobal());
-          // Skip 'special' global variables conservatively because they are
-          // often handled specially, and skip those not in static data
-          // sections.
-          if (!GV || GV->getName().starts_with("llvm.") ||
-              !inStaticDataSection(GV, TM))
-            continue;
-          SDPI->addConstantProfileCount(GV, Count);
+        } else if (const Constant *C = getConstant(Op, TM)) {
+          SDPI->addConstantProfileCount(C, Count);
         }
       }
     }
@@ -203,20 +215,11 @@ void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
 
 void StaticDataSplitter::annotateStaticDataWithoutProfiles(
     const MachineFunction &MF) {
-  for (const auto &MBB : MF) {
-    for (const MachineInstr &I : MBB) {
-      for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isGlobal())
-          continue;
-        const GlobalVariable *GV =
-            getLocalLinkageGlobalVariable(Op.getGlobal());
-        if (!GV || GV->getName().starts_with("llvm.") ||
-            !inStaticDataSection(GV, MF.getTarget()))
-          continue;
-        SDPI->addConstantProfileCount(GV, std::nullopt);
-      }
-    }
-  }
+  for (const auto &MBB : MF)
+    for (const MachineInstr &I : MBB)
+      for (const MachineOperand &Op : I.operands())
+        if (const Constant *C = getConstant(Op, MF.getTarget()))
+          SDPI->addConstantProfileCount(C, std::nullopt);
 }
 
 void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
