@@ -1348,12 +1348,6 @@ public:
                                     unsigned DiagID, bool ForceCheck = false,
                                     bool ForceUnprivileged = false);
 
-  AccessResult CheckBaseClassAccess(
-      SourceLocation AccessLoc, CXXRecordDecl *Base, CXXRecordDecl *Derived,
-      const CXXBasePath &Path, unsigned DiagID,
-      llvm::function_ref<void(PartialDiagnostic &PD)> SetupPDiag,
-      bool ForceCheck = false, bool ForceUnprivileged = false);
-
   /// Checks access to all the declarations in the given result set.
   void CheckLookupAccess(const LookupResult &R);
 
@@ -14885,9 +14879,8 @@ public:
   ///
   /// \returns a member pointer type, if successful, or a NULL type if there was
   /// an error.
-  QualType BuildMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
-                                  CXXRecordDecl *Cls, SourceLocation Loc,
-                                  DeclarationName Entity);
+  QualType BuildMemberPointerType(QualType T, QualType Class,
+                                  SourceLocation Loc, DeclarationName Entity);
 
   /// Build a block pointer type.
   ///

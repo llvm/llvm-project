@@ -2127,19 +2127,9 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
               /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
           Result != TemplateDeductionResult::Success)
         return Result;
-      const Type *QP = MPP->getQualifier()->getAsType(),
-                 *QA = MPA->getQualifier()->getAsType();
-      CXXRecordDecl *ClsP = MPP->getMostRecentCXXRecordDecl(),
-                    *ClsA = MPA->getMostRecentCXXRecordDecl();
-      // FIXME: Don't drop the rest of the prefixes here.
-      QualType P = !ClsP || declaresSameEntity(QP->getAsCXXRecordDecl(), ClsP)
-                       ? QualType(QP, 0)
-                       : S.Context.getTypeDeclType(ClsP);
-      QualType A = !ClsA || declaresSameEntity(QA->getAsCXXRecordDecl(), ClsA)
-                       ? QualType(QA, 0)
-                       : S.Context.getTypeDeclType(ClsA);
       return DeduceTemplateArgumentsByTypeMatch(
-          S, TemplateParams, P, A, Info, Deduced, SubTDF,
+          S, TemplateParams, QualType(MPP->getClass(), 0),
+          QualType(MPA->getClass(), 0), Info, Deduced, SubTDF,
           degradeCallPartialOrderingKind(POK),
           /*DeducedFromArrayBound=*/false, HasDeducedAnyParam);
     }
@@ -4221,8 +4211,8 @@ static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
       if (!R.HasFormOfMemberPointer)
         return {};
 
-      return S.Context.getMemberPointerType(
-          Fn->getType(), /*Qualifier=*/nullptr, Method->getParent());
+      return S.Context.getMemberPointerType(Fn->getType(),
+               S.Context.getTypeDeclType(Method->getParent()).getTypePtr());
     }
 
   if (!R.IsAddressOfOperand) return Fn->getType();
@@ -6843,8 +6833,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     const MemberPointerType *MemPtr = cast<MemberPointerType>(T.getTypePtr());
     MarkUsedTemplateParameters(Ctx, MemPtr->getPointeeType(), OnlyDeduced,
                                Depth, Used);
-    MarkUsedTemplateParameters(Ctx,
-                               QualType(MemPtr->getQualifier()->getAsType(), 0),
+    MarkUsedTemplateParameters(Ctx, QualType(MemPtr->getClass(), 0),
                                OnlyDeduced, Depth, Used);
     break;
   }

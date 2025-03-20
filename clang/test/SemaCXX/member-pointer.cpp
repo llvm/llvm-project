@@ -48,7 +48,7 @@ void f() {
 
   // Conversion to member of base.
   pdi1 = pdid; // expected-error {{assigning to 'int A::*' from incompatible type 'int D::*'}}
-
+  
   // Comparisons
   int (A::*pf2)(int, int);
   int (D::*pf3)(int, int) = 0;
@@ -107,7 +107,7 @@ void h() {
   int i = phm->*pi;
   (void)&(hm.*pi);
   (void)&(phm->*pi);
-  (void)&((&hm)->*pi);
+  (void)&((&hm)->*pi); 
 
   void (HasMembers::*pf)() = &HasMembers::f;
   (hm.*pf)();
@@ -205,7 +205,7 @@ namespace rdar8358512 {
 
     static void stat();
     static void stat(int);
-
+    
     template <typename T> struct Test0 {
       void test() {
         bind(&nonstat); // expected-error {{no matching function for call}}
@@ -296,7 +296,7 @@ namespace PR9973 {
     { call(u); } // expected-note{{in instantiation of}}
   };
 
-  template<class R, class T>
+  template<class R, class T> 
   dm<R, T> mem_fn(R T::*) ;
 
   struct test
@@ -324,12 +324,3 @@ namespace test8 {
              .**(int A::**) 0; // expected-warning {{indirection of non-volatile null pointer will be deleted}} expected-note {{consider}}
   }
 }
-
-namespace test9 {
-  struct FOO BAR;
-  // expected-error@-1 {{variable has incomplete type 'struct FOO'}}
-  // expected-note@-2 {{forward declaration of 'test9::FOO'}}
-  // expected-note@-3 {{'BAR' declared here}}
-  struct C { int BAR::*mp; };
-  // expected-error@-1 {{'BAR' is not a class, namespace, or enumeration}}
-} // namespace test9
