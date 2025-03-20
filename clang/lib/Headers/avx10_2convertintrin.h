@@ -643,7 +643,7 @@ _mm256_maskz_cvtbiasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///    converted elements from \a __B using biases from \a __A; higher order
 ///    elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
+_mm_cvts_biasph_bf8(__m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
@@ -682,7 +682,7 @@ _mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
 ///    converted elements from \a __B, using biases from \a __A; higher order
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    from \a __W is taken instead.
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtbiassph_bf8(__m128i
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvts_biasph_bf8(__m128i
 		__W, __mmask8 __U, __m128i __A, __m128h __B) { return
 	(__m128i)__builtin_ia32_vcvtbiasph2bf8s_128_mask( (__v16qi)__A,
 			(__v8hf)__B, (__v16qi)(__m128i)__W, (__mmask8)__U); }
@@ -720,7 +720,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtbiassph_bf8(__m128i
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtbiassph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
+_mm_maskz_cvts_biasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask8)__U);
@@ -751,7 +751,7 @@ _mm_maskz_cvtbiassph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///    A 128-bit vector of [16 x bf8]. Elements correspond to the
 ///    converted elements from \a __B using biases from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
+_mm256_cvts_biasph_bf8(__m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_undefined_si128(),
       (__mmask16)-1);
@@ -790,7 +790,7 @@ _mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
 ///    A 128-bit vector of [16 x bf8]. Elements correspond to the converted
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element from \a __W is taken instead.
-static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
+static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasph_bf8(
     __m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)__W, (__mmask16)__U);
@@ -828,7 +828,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_bf8(
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtbiassph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
+_mm256_maskz_cvts_biasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask16)__U);
@@ -1075,7 +1075,7 @@ _mm256_maskz_cvtbiasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
 ///    converted elements from \a __B using biases from \a __A; higher order
 ///    elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
+_mm_cvts_biasph_hf8(__m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }
@@ -1115,7 +1115,7 @@ _mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtbiassph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
+_mm_mask_cvts_biasph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)__W, (__mmask8)__U);
 }
@@ -1153,7 +1153,7 @@ _mm_mask_cvtbiassph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 ///    elements are zeroed. If corresponding mask bit is not set, then element
 ///    is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtbiassph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
+_mm_maskz_cvts_biasph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask8)__U);
@@ -1183,7 +1183,7 @@ _mm_maskz_cvtbiassph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///    A 128-bit vector of [16 x hf8]. Elements correspond to the
 ///    converted elements from \a __B using biases from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
+_mm256_cvts_biasph_hf8(__m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_undefined_si128(),
       (__mmask16)-1);
@@ -1222,7 +1222,7 @@ _mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
 ///    A 128-bit vector of [16 x hf8]. Elements correspond to the converted
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element from \a __W is taken instead.
-static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
+static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasph_hf8(
     __m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)__W, (__mmask16)__U);
@@ -1260,7 +1260,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiassph_hf8(
 ///    elements from \a __B, using biases from \a __A. If corresponding mask bit
 ///    is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtbiassph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
+_mm256_maskz_cvts_biasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2hf8s_256_mask(
       (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
       (__mmask16)__U);
