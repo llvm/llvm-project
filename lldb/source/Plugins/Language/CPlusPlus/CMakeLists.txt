@@ -2,6 +2,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   BlockPointer.cpp
   Coroutines.cpp
   CPlusPlusLanguage.cpp
+  CPlusPlusLanguageMethod.cpp
   CPlusPlusNameParser.cpp
   CxxStringTypes.cpp
   GenericBitset.cpp
