@@ -4,7 +4,7 @@
 ; CHECK-SPIRV-DAG: %[[#TyInt32:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#TyInt16:]] = OpTypeInt 16 0
 ; CHECK-SPIRV-DAG: %[[#TyHalf:]] = OpTypeFloat 16
-; CHECK-SPIRV-DAG: %[[#vec4_float_16:]] = OpTypeVector %[[#float_16]] 4
+; CHECK-SPIRV-DAG: %[[#vec4_float_16:]] = OpTypeVector %[[#TyHalf]] 4
 ; CHECK-SPIRV-DAG: %[[#Arg32:]] = OpFunctionParameter %[[#TyInt32]]
 ; CHECK-SPIRV-DAG: %[[#Arg16:]] = OpUConvert %[[#TyInt16]] %[[#Arg32]]
 ; CHECK-SPIRV-DAG: %[[#ValHalf:]] = OpBitcast %[[#TyHalf]] %[[#Arg16:]]

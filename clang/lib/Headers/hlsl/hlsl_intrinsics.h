@@ -84,9 +84,9 @@ void asuint(double4, out uint4, out uint4);
 // asint16 builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn int16_t asint16(T Val)
-/// \brief Interprets the bit pattern of x as an 16-bit integer.
-/// \param Val The input value.
+/// \fn int16_t asint16(T X)
+/// \brief Interprets the bit pattern of \a X as an 16-bit integer.
+/// \param X The input value.
 #ifdef __HLSL_ENABLE_16_BIT
 
 template <typename T, int N>
