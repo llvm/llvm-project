@@ -401,7 +401,8 @@ template void explain_binary_operation_one_output_error(
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<long double> &, float16, double, RoundingMode);
 #endif
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float128> &, float128, double, RoundingMode);
 #endif
@@ -629,7 +630,8 @@ template bool
 compare_binary_operation_one_output(Operation, const BinaryInput<long double> &,
                                     float16, double, RoundingMode);
 #endif
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    defined(LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE)
 template bool compare_binary_operation_one_output(Operation,
                                                   const BinaryInput<float128> &,
                                                   float128, double,

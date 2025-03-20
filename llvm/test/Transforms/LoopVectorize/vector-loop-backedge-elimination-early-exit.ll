@@ -7,11 +7,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; Check if the vector loop condition can be simplified to true for a given
 ; VF/IC combination.
-define i8 @test_early_exit_max_tc_less_than_16(ptr %A, i64 %N) nosync nofree {
+define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosync nofree {
 ; VF8UF1-LABEL: define i8 @test_early_exit_max_tc_less_than_16(
-; VF8UF1-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; VF8UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VF8UF1-NEXT:  [[ENTRY:.*]]:
-; VF8UF1-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 32) ]
 ; VF8UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -51,9 +50,8 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr %A, i64 %N) nosync nofree {
 ; VF8UF1-NEXT:    ret i8 [[RES]]
 ;
 ; VF8UF2-LABEL: define i8 @test_early_exit_max_tc_less_than_16(
-; VF8UF2-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; VF8UF2-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VF8UF2-NEXT:  [[ENTRY:.*]]:
-; VF8UF2-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 32) ]
 ; VF8UF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -93,9 +91,8 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr %A, i64 %N) nosync nofree {
 ; VF8UF2-NEXT:    ret i8 [[RES]]
 ;
 ; VF16UF1-LABEL: define i8 @test_early_exit_max_tc_less_than_16(
-; VF16UF1-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; VF16UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VF16UF1-NEXT:  [[ENTRY:.*]]:
-; VF16UF1-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 32) ]
 ; VF16UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -135,7 +132,6 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr %A, i64 %N) nosync nofree {
 ; VF16UF1-NEXT:    ret i8 [[RES]]
 ;
 entry:
-  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %A, i64 32) ]
   br label %loop.header
 
 loop.header:
@@ -155,11 +151,10 @@ exit:
   ret i8 %res
 }
 
-define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr %A, i64 %N) nosync nofree {
+define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr dereferenceable(16) %A) nosync nofree {
 ; VF8UF1-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
-; VF8UF1-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; VF8UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
 ; VF8UF1-NEXT:  [[ENTRY:.*]]:
-; VF8UF1-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 32) ]
 ; VF8UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF1:       [[VECTOR_PH]]:
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -203,9 +198,8 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr %A, i64
 ; VF8UF1-NEXT:    ret i64 [[RES]]
 ;
 ; VF8UF2-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
-; VF8UF2-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; VF8UF2-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
 ; VF8UF2-NEXT:  [[ENTRY:.*]]:
-; VF8UF2-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 32) ]
 ; VF8UF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -250,9 +244,8 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr %A, i64
 ; VF8UF2-NEXT:    ret i64 [[RES]]
 ;
 ; VF16UF1-LABEL: define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(
-; VF16UF1-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; VF16UF1-SAME: ptr dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
 ; VF16UF1-NEXT:  [[ENTRY:.*]]:
-; VF16UF1-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 32) ]
 ; VF16UF1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -296,7 +289,6 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr %A, i64
 ; VF16UF1-NEXT:    ret i64 [[RES]]
 ;
 entry:
-  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %A, i64 32) ]
   br label %loop.header
 
 loop.header:

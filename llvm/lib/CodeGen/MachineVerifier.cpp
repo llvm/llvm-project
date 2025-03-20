@@ -1070,7 +1070,7 @@ bool MachineVerifier::verifyGIntrinsicSideEffects(const MachineInstr *MI) {
                        Opcode == TargetOpcode::G_INTRINSIC_CONVERGENT;
   unsigned IntrID = cast<GIntrinsic>(MI)->getIntrinsicID();
   if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
-    AttributeList Attrs = Intrinsic::getAttributes(
+    AttributeSet Attrs = Intrinsic::getFnAttributes(
         MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
     bool DeclHasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
     if (NoSideEffects && DeclHasSideEffects) {
@@ -1094,9 +1094,9 @@ bool MachineVerifier::verifyGIntrinsicConvergence(const MachineInstr *MI) {
                        Opcode == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
   unsigned IntrID = cast<GIntrinsic>(MI)->getIntrinsicID();
   if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
-    AttributeList Attrs = Intrinsic::getAttributes(
+    AttributeSet Attrs = Intrinsic::getFnAttributes(
         MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
-    bool DeclIsConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+    bool DeclIsConvergent = Attrs.hasAttribute(Attribute::Convergent);
     if (NotConvergent && DeclIsConvergent) {
       report(Twine(TII->getName(Opcode), " used with a convergent intrinsic"),
              MI);
