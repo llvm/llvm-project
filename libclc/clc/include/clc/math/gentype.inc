@@ -29,6 +29,10 @@
 #define __CLC_UINTN __CLC_XCONCAT(uint, __CLC_VECSIZE)
 #define __CLC_ULONGN __CLC_XCONCAT(ulong, __CLC_VECSIZE)
 
+#define __CLC_AS_HALFN __CLC_XCONCAT(__clc_as_, __CLC_HALFN)
+#define __CLC_AS_FLOATN __CLC_XCONCAT(__clc_as_, __CLC_FLOATN)
+#define __CLC_AS_DOUBLEN __CLC_XCONCAT(__clc_as_, __CLC_DOUBLEN)
+
 #define __CLC_AS_CHARN __CLC_XCONCAT(__clc_as_, __CLC_CHARN)
 #define __CLC_AS_SHORTN __CLC_XCONCAT(__clc_as_, __CLC_SHORTN)
 #define __CLC_AS_INTN __CLC_XCONCAT(__clc_as_, __CLC_INTN)
@@ -277,6 +281,10 @@
 #undef __CLC_AS_SHORTN
 #undef __CLC_AS_INTN
 #undef __CLC_AS_LONGN
+
+#undef __CLC_AS_HALFN
+#undef __CLC_AS_FLOATN
+#undef __CLC_AS_DOUBLEN
 
 #undef __CLC_AS_UCHARN
 #undef __CLC_AS_USHORTN
