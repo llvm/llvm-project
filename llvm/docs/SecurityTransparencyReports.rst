@@ -172,10 +172,12 @@ publishing security advisories for those issues at
 https://github.com/llvm/llvm-security-repo/security/advisories/.
 
 1. “Unexpected behavior when using LTO and branch-protection together” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=58
+   Details are available at https://issuetracker.google.com/issues/42410051
+   archive: https://github.com/llvm/llvm-project/issues/132185
 2. “Security weakness in PCS for CMSE”
    (`CVE-2024-0151 <https://nvd.nist.gov/vuln/detail/CVE-2024-0151>`_) |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=68
+   Details are available at https://issuetracker.google.com/issues/42410062
+   archive: https://github.com/llvm/llvm-project/issues/132186
 3. “CMSE secure state may leak from stack to floating-point registers”
    (`CVE-2024-7883 <https://www.cve.org/cverecord?id=CVE-2024-7883>`_) |br|
    Details are available at
@@ -185,9 +187,11 @@ Supply chain security related issues and project services-related issues
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. “GitHub User Involved in xz backdoor may have attempted to change to clang in order to help hide the exploit” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=71
+   Details are available at https://issuetracker.google.com/issues/42410066
+   archive: https://github.com/llvm/llvm-project/issues/132187
 2. “llvmbot account suspended due to supicious login” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=72
+   Details are available at https://issuetracker.google.com/issues/42410067
+   archive: https://github.com/llvm/llvm-project/issues/132243
 3. “.git Exposure” |br|
    GHSA-mr8r-vvrc-w6rq |br|
    The .git directory was accessible via web browsers under apt.llvm.org, a site
@@ -224,23 +228,32 @@ Issues deemed to not require coordinated action before disclosing publicly
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. “Clang Address Sanitizer gives False Negative for Array Out of Bounds Compiled with Optimization” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=57
+   Details are available at https://issuetracker.google.com/issues/42410050
+   archive: https://github.com/llvm/llvm-project/issues/132191
 2. “Found exposed .svn folder” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=59
+   Details are available at https://issuetracker.google.com/issues/42410052
+   archive: https://github.com/llvm/llvm-project/issues/132192
 3. “Arbitrary code execution when combining SafeStack \+ dynamic stack allocations \+ \_\_builtin\_setjmp/longjmp” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=60
+   Details are available at https://issuetracker.google.com/issues/42410054
+   archive: https://github.com/llvm/llvm-project/issues/132220
 4. “RISC-V: Constants are allocated in writeable .sdata section” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=61
+   Details are available at https://issuetracker.google.com/issues/42410055
+   archive: https://github.com/llvm/llvm-project/issues/132223
 5. “Manifest File with Out-of-Date Dependencies with CVEs” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=62
+   Details are available at https://issuetracker.google.com/issues/42410056
+   archive: https://github.com/llvm/llvm-project/issues/132225
 6. “Non-const derived ctor should fail compilation when having a consteval base ctor” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=67
+   Details are available at https://issuetracker.google.com/issues/42410061
+   archive: https://github.com/llvm/llvm-project/issues/132226
 7. “Wrong assembly code generation. Branching to the corrupted "LR".” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=69
+   Details are available at https://issuetracker.google.com/issues/42410063
+   archive: https://github.com/llvm/llvm-project/issues/132229
 8. “Security bug report” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=70
+   Details are available at https://issuetracker.google.com/issues/42410065
+   archive: https://github.com/llvm/llvm-project/issues/132233
 9. “Using ASan with setuid binaries can lead to arbitrary file write and elevation of privileges” |br|
-   Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=73
+   Details are available at https://issuetracker.google.com/issues/42410068
+   archive: https://github.com/llvm/llvm-project/issues/132235
 10. “Interesting bugs for bool variable in clang projects and aarch64 modes outputting inaccurate results.” |br|
     GHSA-w7qc-292v-5xh6 |br|
     The issue reported is on a source code example having undefined behaviour
