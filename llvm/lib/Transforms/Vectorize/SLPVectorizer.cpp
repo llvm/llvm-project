@@ -2809,44 +2809,6 @@ public:
       for (OperandDataVec &Ops : OpsVec)
         Ops.resize(NumLanes);
       for (unsigned Lane : seq<unsigned>(NumLanes)) {
-<<<<<<< HEAD
-        assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
-               "Expected instruction or poison value");
-        // Our tree has just 3 nodes: the root and two operands.
-        // It is therefore trivial to get the APO. We only need to check the
-        // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or RHS
-        // operand. The LHS operand of both add and sub is never attached to an
-        // inversese operation in the linearized form, therefore its APO is
-        // false. The RHS is true only if VL[Lane] is an inverse operation.
-
-        // Since operand reordering is performed on groups of commutative
-        // operations or alternating sequences (e.g., +, -), we can safely tell
-        // the inverse operations by checking commutativity.
-        if (isa<PoisonValue>(VL[Lane])) {
-          for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
-            if (OpIdx == 0) {
-              if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
-                OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
-                continue;
-              }
-              if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
-                OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
-                continue;
-              }
-            }
-            OpsVec[OpIdx][Lane] = {
-                PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
-                false};
-          }
-          continue;
-        }
-        auto [SelectedOp, Ops] =
-            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
-        bool IsInverseOperation = !isCommutative(SelectedOp);
-        for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
-          bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {Ops[OpIdx], APO, false};
-=======
         Value *V = VL[Lane];
         assert((isa<Instruction>(V) || isa<PoisonValue>(V)) &&
                "Expected instruction or poison value");
@@ -2872,12 +2834,12 @@ public:
         // Since operand reordering is performed on groups of commutative
         // operations or alternating sequences (e.g., +, -), we can safely tell
         // the inverse operations by checking commutativity.
-        bool IsInverseOperation = !isCommutative(cast<Instruction>(V));
+        auto [SelectedOp, Ops] =
+            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
+        bool IsInverseOperation = !isCommutative(SelectedOp);
         for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {cast<Instruction>(V)->getOperand(OpIdx), APO,
-                                 false};
->>>>>>> upstream/main
+          OpsVec[OpIdx][Lane] = {Ops[OpIdx], APO, false};
         }
       }
     }
