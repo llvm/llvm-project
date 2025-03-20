@@ -1915,7 +1915,9 @@ void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
 }
 
 void ArrayConstructorContext::Add(const parser::Expr &expr) {
-  auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer1{
+      exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer2{exprAnalyzer_.AllowWholeAssumedSizeArray(false)};
   Push(exprAnalyzer_.Analyze(expr));
 }
 
@@ -2263,14 +2265,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         } else if (IsNullAllocatable(&*value) && IsAllocatable(*symbol)) {
           result.Add(*symbol, Expr<SomeType>{NullPointer{}});
           continue;
-        } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
-            pointer && pureContext) { // C1594(4)
-          if (const Symbol *
-              visible{semantics::FindExternallyVisibleObject(
-                  *value, *pureContext)}) {
-            Say(expr.source,
-                "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
-                visible->name(), symbol->name(), pointer->name());
+        } else if (auto *derived{evaluate::GetDerivedTypeSpec(
+                       evaluate::DynamicType::From(*symbol))}) {
+          if (auto iter{FindPointerPotentialComponent(*derived)};
+              iter && pureContext) { // F'2023 C15104(4)
+            if (const Symbol *
+                visible{semantics::FindExternallyVisibleObject(
+                    *value, *pureContext)}) {
+              Say(expr.source,
+                  "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  visible->name(), symbol->name(),
+                  iter.BuildResultDesignatorName());
+            } else if (ExtractCoarrayRef(*value)) {
+              Say(expr.source,
+                  "A coindexed object may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  symbol->name(), iter.BuildResultDesignatorName());
+            }
           }
         }
         // Make implicit conversion explicit to allow folding of the structure
@@ -3260,7 +3270,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
       const auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
       if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
         semantics::Scope &scope{context_.FindScope(name->source)};
-        semantics::DerivedTypeSpec dtSpec{name->source, symbol.GetUltimate()};
+        semantics::DerivedTypeSpec dtSpec{name->source, symbol};
         if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
