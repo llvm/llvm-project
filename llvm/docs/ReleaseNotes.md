@@ -105,6 +105,8 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* Changing the default code model from `small` to `medium` for 64-bit.
+
 Changes to the MIPS Backend
 ---------------------------
 
