@@ -1112,7 +1112,7 @@ private:
     if (obj.attrs.test(Attrs::Value))
       isValueAttr = true; // TODO: do we want an mlir::Attribute as well?
     if (obj.attrs.test(Attrs::Volatile)) {
-      TODO(loc, "VOLATILE in procedure interface");
+      // TODO(loc, "VOLATILE in procedure interface");
       addMLIRAttr(fir::getVolatileAttrName());
     }
     // obj.attrs.test(Attrs::Asynchronous) does not impact the way the argument
