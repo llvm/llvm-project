@@ -84,6 +84,10 @@ public:
                                SmallVectorImpl<MCFixup> &Fixups,
                                const MCSubtargetInfo &STI) const;
 
+  uint64_t getImmOpValueSlist(const MCInst &MI, unsigned OpNo,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
+
   uint64_t getImmOpValueAsr1(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
@@ -402,6 +406,36 @@ RISCVMCCodeEmitter::getImmOpValueMinus1(const MCInst &MI, unsigned OpNo,
 
   llvm_unreachable("Unhandled expression!");
   return 0;
+}
+
+uint64_t
+RISCVMCCodeEmitter::getImmOpValueSlist(const MCInst &MI, unsigned OpNo,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm() && "Slist operand must be immediate");
+
+  uint64_t Res = MO.getImm();
+  switch (Res) {
+  case 0:
+    return 0;
+  case 1:
+    return 1;
+  case 2:
+    return 2;
+  case 4:
+    return 3;
+  case 8:
+    return 4;
+  case 16:
+    return 5;
+  case 15:
+    return 6;
+  case 31:
+    return 7;
+  default:
+    llvm_unreachable("Unhandled Slist value!");
+  }
 }
 
 uint64_t
