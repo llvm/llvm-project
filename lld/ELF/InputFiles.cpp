@@ -222,7 +222,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 // Content[1].
 static void sanitizePauthSubSection(
     Ctx &ctx, std::optional<llvm::BuildAttributeSubSection> &pauthSubSection,
-    InputSection isec) {
+    const InputSection &isec) {
   /*
     Incomplete data: ignore
   */
