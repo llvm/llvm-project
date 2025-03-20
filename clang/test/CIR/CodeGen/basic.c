@@ -13,19 +13,25 @@ int f1(int i) {
 }
 
 //      CIR: module
-// CIR-NEXT: cir.func @f1(%arg0: !cir.int<s, 32> loc({{.*}})) -> !cir.int<s, 32>
-// CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init] {alignment = 4 : i64}
-// CIR-NEXT:   cir.store %arg0, %[[I_PTR]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
-// CIR-NEXT:   %[[I_IGNORED:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CIR-NEXT:   cir.return %[[I]] : !cir.int<s, 32>
+// CIR-NEXT: cir.func @f1(%arg0: !s32i loc({{.*}})) -> !s32i
+// CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR-NEXT:   cir.store %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[I_IGNORED:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.return %[[R]] : !s32i
 
-//      LLVM: define i32 @f1(i32 %[[I:.*]])
+//      LLVM: define i32 @f1(i32 %[[IP:.*]])
 // LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   store i32 %[[I]], ptr %[[I_PTR]], align 4
+// LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   store i32 %[[IP]], ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I_IGNORED:.*]] = load i32, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
-// LLVM-NEXT:   ret i32 %[[I]]
+// LLVM-NEXT:   store i32 %[[I]], ptr %[[RV]], align 4
+// LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
+// LLVM-NEXT:   ret i32 %[[R]]
 
 //      OGCG: define{{.*}} i32 @f1(i32 noundef %[[I:.*]])
 // OGCG-NEXT: entry:
@@ -37,12 +43,18 @@ int f1(int i) {
 
 int f2(void) { return 3; }
 
-//      CIR: cir.func @f2() -> !cir.int<s, 32>
-// CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !cir.int<s, 32>
-// CIR-NEXT:   cir.return %[[THREE]] : !cir.int<s, 32>
+//      CIR: cir.func @f2() -> !s32i
+// CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR-NEXT:   cir.store %[[THREE]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load %0 : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f2()
-// LLVM-NEXT:   ret i32 3
+// LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   store i32 3, ptr %[[RV]], align 4
+// LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
+// LLVM-NEXT:   ret i32 %[[R]]
 
 //      OGCG: define{{.*}} i32 @f2()
 // OGCG-NEXT: entry:
@@ -53,18 +65,24 @@ int f3(void) {
   return i;
 }
 
-//      CIR: cir.func @f3() -> !cir.int<s, 32>
-// CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init] {alignment = 4 : i64}
-// CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !cir.int<s, 32>
-// CIR-NEXT:   cir.store %[[THREE]], %[[I_PTR]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
-// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
-// CIR-NEXT:   cir.return %[[I]] : !cir.int<s, 32>
+//      CIR: cir.func @f3() -> !s32i
+// CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CIR-NEXT:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR-NEXT:   cir.store %[[THREE]], %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store %[[I]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define i32 @f3()
+// LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   store i32 3, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
-// LLVM-NEXT:   ret i32 %[[I]]
+// LLVM-NEXT:   store i32 %[[I]], ptr %[[RV]], align 4
+// LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
+// LLVM-NEXT:   ret i32 %[[R]]
 
 //      OGCG: define{{.*}} i32 @f3
 // OGCG-NEXT: entry:
