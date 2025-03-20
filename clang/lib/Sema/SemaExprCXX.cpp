@@ -4666,17 +4666,28 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Pointer_Member: {
     CastKind Kind;
     CXXCastPath BasePath;
-    if (CheckMemberPointerConversion(From, ToType, Kind, BasePath, CStyle))
+    switch (CheckMemberPointerConversion(
+        From->getType(), ToType->castAs<MemberPointerType>(), Kind, BasePath,
+        From->getExprLoc(), From->getSourceRange(), CStyle,
+        MemberPointerConversionDirection::Downcast)) {
+    case MemberPointerConversionResult::Success:
+      assert(Kind != CK_NullToMemberPointer ||
+             From->isNullPointerConstant(Context,
+                                         Expr::NPC_ValueDependentIsNull) &&
+                 "Expr must be null pointer constant!");
+      break;
+    case MemberPointerConversionResult::Inaccessible:
+      break;
+    case MemberPointerConversionResult::DifferentPointee:
+      llvm_unreachable("unexpected result");
+    case MemberPointerConversionResult::NotDerived:
+      llvm_unreachable("Should not have been called if derivation isn't OK.");
+    case MemberPointerConversionResult::Ambiguous:
+    case MemberPointerConversionResult::Virtual:
       return ExprError();
+    }
     if (CheckExceptionSpecCompatibility(From, ToType))
       return ExprError();
-
-    // We may not have been able to figure out what this member pointer resolved
-    // to up until this exact point.  Attempt to lock-in it's inheritance model.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-      (void)isCompleteType(From->getExprLoc(), From->getType());
-      (void)isCompleteType(From->getExprLoc(), ToType);
-    }
 
     From =
         ImpCastExprToType(From, ToType, Kind, VK_PRValue, &BasePath, CCK).get();
