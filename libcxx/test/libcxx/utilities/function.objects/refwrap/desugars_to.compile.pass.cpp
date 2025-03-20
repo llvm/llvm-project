@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 // <functional>
 
 // reference_wrapper
