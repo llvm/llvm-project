@@ -134,7 +134,7 @@ C2y Feature Support
   ``-pedantic`` will no longer diagnose this in either C or C++ modes. This
   feature was adopted as applying to obsolete versions of C in WG14 and as a
   defect report in WG21 (CWG787).
-- Implemented `WG14 N3353 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3353.htm>_`
+- Implemented `WG14 N3353 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3353.htm>`_
   which adds the new ``0o`` and ``0O`` ocal literal prefixes and deprecates
   octal literals other than ``0`` which do not start with the new prefix. This
   feature is exposed in earlier language modes and in C++ as an extension. The
