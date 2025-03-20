@@ -24,6 +24,12 @@ void Positive() {
   }
 
   {
+    std::lock_guard<std::mutex> l1(m), l2(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:40: note: additional 'std::lock_guard' declared here
+  }
+
+  {
     std::lock_guard<std::mutex> l1(m), l2(m), l3(m);
     std::lock_guard<std::mutex> l4(m);
     // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
