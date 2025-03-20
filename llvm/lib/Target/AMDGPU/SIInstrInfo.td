@@ -58,6 +58,7 @@ def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.G
 //===----------------------------------------------------------------------===//
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
+def AMDGPUsupr : SDNode<"AMDGPUISD::SUPR", SDTFPUnaryOp>;
 
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
@@ -1097,6 +1098,7 @@ def SCSrc_i1 : RegisterOperand<SReg_1_XEXEC> {
 // "off" depending on en operand.
 // ===----------------------------------------------------------------------===//
 
+// TODO-GFX13 use Staging register classes?
 def ExpSrc0 : RegisterOperand<VGPR_32> {
   let PrintMethod = "printExpSrc0";
   let ParserMatchClass = VReg32OrOffClass;
@@ -1215,6 +1217,8 @@ def omod0 : DefaultOperand<omod, 0>;
 // before a mandatory operand.
 def Clamp : NamedBitOperand<"clamp">;
 def Clamp0 : DefaultOperand<Clamp, 0>;
+def SUPR : NamedBitOperand<"supr">;
+def SUPR0 : DefaultOperand<SUPR, 0>;
 def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : CustomOperand<i32, 1>;
@@ -1779,23 +1783,23 @@ class getNumSrcArgs<ValueType Src0, ValueType Src1, ValueType Src2> {
 class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
-                    VOPDstOperand_VGPR_32);
-  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
-                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
-                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
-                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192>,
-                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
-                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
-                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
-                              !eq(VT.Size, 32)   : VOPDstOperand_VGPR_32,
+                    VOPDstOperand<VGPR_32_STAGING>);
+  RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024_STAGING>,
+                              !eq(VT.Size, 512)  : VOPDstOperand<VReg_512_STAGING>,
+                              !eq(VT.Size, 256)  : VOPDstOperand<VReg_256_STAGING>,
+                              !eq(VT.Size, 192)  : VOPDstOperand<VReg_192_STAGING>,
+                              !eq(VT.Size, 128)  : VOPDstOperand<VReg_128_STAGING>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96_STAGING>,
+                              !eq(VT.Size, 64)   : VOPDstOperand<VReg_64_STAGING>,
+                              !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32_STAGING>,
                               !eq(VT.Size, 16)   : op16,
                               1                  : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
-  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand_VGPR_32,
-                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
-                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
+  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32_STAGING>,
+                          !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128_STAGING>,
+                            !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64_STAGING>,
                               !if(!eq(VT.Size, 16), VOPDstOperand_VGPR_32_Lo128,
                               VOPDstS64orS32)))); // else VT == i1
 }
@@ -1805,7 +1809,7 @@ class getVALUDstForVT_fake16<ValueType VT> {
 class getSDWADstForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 1),
                             SDWAVopcDst, // VOPC
-                            VOPDstOperand_VGPR_32); // VOP1/2 32-bit dst
+                            VOPDstOperand<VGPR_32_STAGING>); // VOP1/2 32-bit dst
 }
 
 // Returns the register class to use for source 0 of VOP[12C]
@@ -1866,17 +1870,17 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
   RegisterOperand ret =
-  !cond(!eq(VT.Size, 576) : RegisterOperand<VReg_576>,
-        !eq(VT.Size, 512) : RegisterOperand<VReg_512>,
-        !eq(VT.Size, 288) : RegisterOperand<VReg_288>,
-        !eq(VT.Size, 256) : RegisterOperand<VReg_256>,
-        !eq(VT.Size, 224) : RegisterOperand<VReg_224>,
-        !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
-        !eq(VT.Size, 160) : RegisterOperand<VReg_160>,
-        !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
-        !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
-        !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
-        !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+  !cond(!eq(VT.Size, 576) : VGPRSrc_576,
+        !eq(VT.Size, 512) : VGPRSrc_512,
+        !eq(VT.Size, 288) : VGPRSrc_288,
+        !eq(VT.Size, 256) : VGPRSrc_256,
+        !eq(VT.Size, 224) : VGPRSrc_224,
+        !eq(VT.Size, 192) : VGPRSrc_192,
+        !eq(VT.Size, 160) : VGPRSrc_160,
+        !eq(VT.Size, 128) : VGPRSrc_128,
+        !eq(VT.Size, 96)  : VGPRSrc_96,
+        !eq(VT.Size, 64)  : VGPRSrc_64,
+        !eq(VT.Size, 48)  : VGPRSrc_64,
         !eq(VT.Size, 16)  : !if(IsTrue16,
                                 !if(IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
                                 VGPRSrc_32),
@@ -2823,6 +2827,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit HasOpSel = IsPacked;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
+  field bit HasSUPR = 0;
 
   field bit HasModifiers = !or(isModifierType<Src0VT>.ret,
                                isModifierType<Src1VT>.ret,

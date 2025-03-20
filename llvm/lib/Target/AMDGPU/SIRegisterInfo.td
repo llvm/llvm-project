@@ -1078,7 +1078,7 @@ defm VReg_128 : VRegClass_STAGING<4, Reg128Types.types, (add VGPR_128)>;
 defm VReg_160 : VRegClass_STAGING<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], (add VGPR_160)>;
 
 defm VReg_192 : VRegClass_STAGING<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;
-defm VReg_224 : VRegClass<7, [v7i32, v7f32], (add VGPR_224)>;
+defm VReg_224 : VRegClass_STAGING<7, [v7i32, v7f32], (add VGPR_224)>;
 defm VReg_256 : VRegClass_STAGING<8, [v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16], (add VGPR_256)>;
 defm VReg_288 : VRegClass_STAGING<9, [v9i32, v9f32, v18i16, v18f16, v18bf16], (add VGPR_288)>;
 defm VReg_320 : VRegClass<10, [v10i32, v10f32], (add VGPR_320)>;
@@ -1493,11 +1493,11 @@ def VRegSrc_1024 : SrcReg9<VReg_1024_STAGING, "OPW1024">;
 def VRegOrLdsSrc_32 : SrcReg9<VRegOrLds_32, "OPW32">;
 
 // True 16 Operands
-def VRegSrc_16 : RegisterOperand<VGPR_16> {
+def VRegSrc_16 : RegisterOperand<VGPR_16_STAGING> {
   let DecoderMethod = "decodeOperand_VGPR_16";
   let EncoderMethod = "getMachineOpValueT16";
 }
-def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
+def VRegSrc_fake16: SrcReg9<VGPR_32_STAGING, "OPW16"> {
   let EncoderMethod = "getMachineOpValueT16";
 }
 //===----------------------------------------------------------------------===//
@@ -1505,31 +1505,22 @@ def VRegSrc_fake16: SrcReg9<VGPR_32, "OPW16"> {
 //===----------------------------------------------------------------------===//
 
 // An 8-bit RegisterOperand wrapper for a VGPR
-def VGPRSrc_32 : RegisterOperand<VGPR_32_STAGING> {
-  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+class VGPRSrc<RegisterClass regClass> : RegisterOperand<!cast<RegisterClass>(regClass#_STAGING)> {
+  let DecoderMethod = "Decode" # regClass # "RegisterClass";
 }
-def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
-  let DecoderMethod = "DecodeVGPR_32RegisterClass";
-}
-def VGPRSrc_64 : RegisterOperand<VReg_64_STAGING> {
-  let DecoderMethod = "DecodeVReg_64RegisterClass";
-}
+def VGPRSrc_32 : VGPRSrc<VGPR_32>;
 
-def VGPRSrc_96 : RegisterOperand<VReg_96_STAGING> {
-  let DecoderMethod = "DecodeVReg_96RegisterClass";
-}
-
-def VGPRSrc_128 : RegisterOperand<VReg_128_STAGING> {
-  let DecoderMethod = "DecodeVReg_128RegisterClass";
-}
-
-def VGPRSrc_192 : RegisterOperand<VReg_192_STAGING> {
-  let DecoderMethod = "DecodeVReg_192RegisterClass";
+foreach size = ["64", "96", "128", "160", "192", "224", "256", "288", "512", "576"] in {
+  def VGPRSrc_#size : VGPRSrc<!cast<RegisterClass>("VReg_"#size)>;
 }
 
 def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
   let EncoderMethod = "getMachineOpValueT16Lo128";
+}
+
+def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_STAGING_Lo128> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }
 
 // True 16 operands.

@@ -321,10 +321,8 @@ def CPolBit {
   int SCAL = 9;
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
-
-def VOPDstOperand_VGPR_32 : VOPDstOperand <VGPR_32_STAGING> {
-  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
+  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
 }
 
 def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {
@@ -342,7 +340,7 @@ def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_STAGING_Lo128> {
 }
 
 // Source-encoded destination operand for instructions like v_swap_b16.
-def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+def VOPSrcEncodedDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_STAGING_Lo128> {
   let EncoderMethod = VSrcT_b16_Lo128.EncoderMethod;
   let DecoderMethod = VSrcT_b16_Lo128.DecoderMethod;
 }

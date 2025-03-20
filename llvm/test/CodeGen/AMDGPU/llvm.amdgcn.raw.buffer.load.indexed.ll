@@ -77,7 +77,8 @@ main_body:
 define amdgpu_ps <4 x float> @buffer_load_ofs_imm(i32 inreg %arg, i32 %arg1) {
 ; GFX13-LABEL: buffer_load_ofs_imm:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    buffer_load_b128 v[0:3], v0, s0, null offen offset:60
+; GFX13-NEXT:    v_add_nc_u32_e32 v0, 60, v0
+; GFX13-NEXT:    buffer_load_b128 v[0:3], v0, s0, null offen
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:
@@ -198,13 +199,20 @@ entry:
 define amdgpu_ps void @buffer_load_x1_offen_merged_and(i32 inreg %rsrc, i32 %a) {
 ; GFX13-LABEL: buffer_load_x1_offen_merged_and:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    buffer_load_b128 v[2:5], v0, s0, null offen offset:4
-; GFX13-NEXT:    buffer_load_b64 v[0:1], v0, s0, null offen offset:28
-; GFX13-NEXT:    s_wait_loadcnt 0x1
-; GFX13-NEXT:    export mrt0 v2, v3, v4, v5 done
+; GFX13-NEXT:    v_dual_add_nc_u32 v1, 4, v0 :: v_dual_add_nc_u32 v2, 8, v0
+; GFX13-NEXT:    v_dual_add_nc_u32 v3, 12, v0 :: v_dual_add_nc_u32 v4, 16, v0
+; GFX13-NEXT:    v_dual_add_nc_u32 v5, 28, v0 :: v_dual_add_nc_u32 v0, 32, v0
+; GFX13-NEXT:    s_clause 0x5
+; GFX13-NEXT:    buffer_load_b32 v1, v1, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v2, v2, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v3, v3, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v4, v4, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v5, v5, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s0, null offen
+; GFX13-NEXT:    s_wait_loadcnt 0x2
+; GFX13-NEXT:    export mrt0 v1, v2, v3, v4 done
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX13-NEXT:    export mrt0 v5, v0, v0, v0 done
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -280,14 +288,20 @@ main_body:
 define amdgpu_ps void @buffer_load_x1_offen_merged_glc_slc(i32 inreg %rsrc, i32 %a) {
 ; GFX13-LABEL: buffer_load_x1_offen_merged_glc_slc:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    buffer_load_b64 v[2:3], v0, s0, null offen offset:4
-; GFX13-NEXT:    buffer_load_b64 v[4:5], v0, s0, null offen offset:12 th:TH_LOAD_NT
-; GFX13-NEXT:    buffer_load_b64 v[0:1], v0, s0, null offen offset:28 th:TH_LOAD_LU
-; GFX13-NEXT:    s_wait_loadcnt 0x1
-; GFX13-NEXT:    export mrt0 v2, v3, v4, v5 done
+; GFX13-NEXT:    v_dual_add_nc_u32 v1, 4, v0 :: v_dual_add_nc_u32 v2, 8, v0
+; GFX13-NEXT:    v_dual_add_nc_u32 v3, 12, v0 :: v_dual_add_nc_u32 v4, 16, v0
+; GFX13-NEXT:    v_dual_add_nc_u32 v5, 28, v0 :: v_dual_add_nc_u32 v0, 32, v0
+; GFX13-NEXT:    s_clause 0x5
+; GFX13-NEXT:    buffer_load_b32 v1, v1, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v2, v2, s0, null offen
+; GFX13-NEXT:    buffer_load_b32 v3, v3, s0, null offen th:TH_LOAD_NT
+; GFX13-NEXT:    buffer_load_b32 v4, v4, s0, null offen th:TH_LOAD_NT
+; GFX13-NEXT:    buffer_load_b32 v5, v5, s0, null offen th:TH_LOAD_LU
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s0, null offen th:TH_LOAD_LU
+; GFX13-NEXT:    s_wait_loadcnt 0x2
+; GFX13-NEXT:    export mrt0 v1, v2, v3, v4 done
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    export mrt0 v0, v1, v0, v0 done
+; GFX13-NEXT:    export mrt0 v5, v0, v0, v0 done
 ; GFX13-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -310,7 +324,10 @@ main_body:
 define amdgpu_ps void @buffer_load_x2_offen_merged_and(i32 inreg %rsrc, i32 %a) {
 ; GFX13-LABEL: buffer_load_x2_offen_merged_and:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    buffer_load_b128 v[0:3], v0, s0, null offen offset:4
+; GFX13-NEXT:    v_dual_add_nc_u32 v1, 4, v0 :: v_dual_add_nc_u32 v2, 12, v0
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    buffer_load_b64 v[0:1], v1, s0, null offen
+; GFX13-NEXT:    buffer_load_b64 v[2:3], v2, s0, null offen
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX13-NEXT:    s_endpgm
@@ -328,13 +345,24 @@ main_body:
 }
 
 define amdgpu_ps void @buffer_load_x2_offen_merged_or(i32 inreg %rsrc, i32 %inp) {
-; GFX13-LABEL: buffer_load_x2_offen_merged_or:
-; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GFX13-NEXT:    buffer_load_b128 v[0:3], v0, s0, null offen offset:4
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    export mrt0 v0, v1, v2, v3 done
-; GFX13-NEXT:    s_endpgm
+; GFX13-SDAG-LABEL: buffer_load_x2_offen_merged_or:
+; GFX13-SDAG:       ; %bb.0: ; %main_body
+; GFX13-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX13-SDAG-NEXT:    buffer_load_b128 v[0:3], v0, s0, null offen offset:4
+; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: buffer_load_x2_offen_merged_or:
+; GFX13-GISEL:       ; %bb.0: ; %main_body
+; GFX13-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX13-GISEL-NEXT:    v_dual_add_nc_u32 v1, 4, v0 :: v_dual_add_nc_u32 v2, 12, v0
+; GFX13-GISEL-NEXT:    s_clause 0x1
+; GFX13-GISEL-NEXT:    buffer_load_b64 v[0:1], v1, s0, null offen
+; GFX13-GISEL-NEXT:    buffer_load_b64 v[2:3], v2, s0, null offen
+; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX13-GISEL-NEXT:    export mrt0 v0, v1, v2, v3 done
+; GFX13-GISEL-NEXT:    s_endpgm
 main_body:
   %a = shl i32 %inp, 4
   %a1 = add i32 %a, 4

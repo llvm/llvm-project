@@ -3277,8 +3277,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     bool IsDualOrBVH8 =
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ||
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY;
-    unsigned NumMods = !IsDualOrBVH8 ? 1 : 0; // Has A16 modifier
-    unsigned LastRegOpIdx = (MI.getNumExplicitOperands() - 1) - NumMods;
+    unsigned NumMods = IsDualOrBVH8 ? 0 : 1; // Has A16 modifier
+    unsigned LastRegOpIdx = MI.getNumExplicitOperands() - 1 - NumMods;
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(B, MI, {LastRegOpIdx});
     return;
@@ -5335,8 +5335,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     bool IsDualOrBVH8 =
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY ||
         MI.getOpcode() == AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY;
-    unsigned NumMods = !IsDualOrBVH8 ? 1 : 0; // Has A16 modifier
-    unsigned LastRegOpIdx = (MI.getNumExplicitOperands() - 1) - NumMods;
+    unsigned NumMods = IsDualOrBVH8 ? 0 : 1; // Has A16 modifier
+    unsigned LastRegOpIdx = MI.getNumExplicitOperands() - 1 - NumMods;
     unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
     if (IsDualOrBVH8) {

@@ -134,7 +134,8 @@ main_body:
 define amdgpu_vs <4 x float> @tbuffer_load_ofs_imm(i32 %arg, i32 %voffs) {
 ; GFX13-LABEL: tbuffer_load_ofs_imm:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], v1, v0, null format:78 offen offset:52
+; GFX13-NEXT:    v_add_nc_u32_e32 v1, 52, v1
+; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], v1, v0, null format:78 offen
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 main_body:

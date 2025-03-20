@@ -1420,8 +1420,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
-    AttributeList Attr =
-        Intrinsic::getAttributes(CI.getContext(), (Intrinsic::ID)IntrID);
+    AttributeSet Attr =
+        Intrinsic::getFnAttributes(CI.getContext(), (Intrinsic::ID)IntrID);
     MemoryEffects ME = Attr.getMemoryEffects();
     if (ME.doesNotAccessMemory())
       return false;
@@ -4297,6 +4297,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue Callee = CLI.Callee;
 
   llvm::SmallVector<SDValue, 6> ChainCallSpecialArgs;
+  bool UsesDynamicVGPRs = false;
   if (IsChainCallConv) {
     // The last arguments should be the value that we need to put in EXEC,
     // followed by the flags and any other arguments with special meanings.
@@ -4323,10 +4324,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Convert constants into TargetConstants, so they become immediate operands
     // instead of being selected into S_MOV.
     auto PushNodeOrTargetConstant = [&](TargetLowering::ArgListEntry Arg) {
-      if (auto ArgNode = dyn_cast<ConstantSDNode>(Arg.Node))
+      if (const auto *ArgNode = dyn_cast<ConstantSDNode>(Arg.Node)) {
         ChainCallSpecialArgs.push_back(DAG.getTargetConstant(
             ArgNode->getAPIntValue(), DL, ArgNode->getValueType(0)));
-      else
+      } else
         ChainCallSpecialArgs.push_back(Arg.Node);
     };
 
@@ -4339,12 +4340,18 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (FlagsValue.isZero()) {
       if (CLI.Args.size() > ChainCallArgIdx::Flags + 1)
         return lowerUnhandledCall(CLI, InVals,
-                                  "No additional args allowed if flags == 0");
+                                  "no additional args allowed if flags == 0");
     } else if (FlagsValue.isOneBitSet(0)) {
       if (CLI.Args.size() != ChainCallArgIdx::FallbackCallee + 1) {
-        return lowerUnhandledCall(CLI, InVals, "Expected 3 additional args");
+        return lowerUnhandledCall(CLI, InVals, "expected 3 additional args");
       }
 
+      if (!Subtarget->isWave32()) {
+        return lowerUnhandledCall(
+            CLI, InVals, "dynamic VGPR mode is only supported for wave32");
+      }
+
+      UsesDynamicVGPRs = true;
       std::for_each(CLI.Args.begin() + ChainCallArgIdx::NumVGPRs,
                     CLI.Args.end(), PushNodeOrTargetConstant);
     }
@@ -4678,7 +4685,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     case CallingConv::AMDGPU_CS_Chain:
     case CallingConv::AMDGPU_CS_ChainPreserve:
-      OPC = AMDGPUISD::TC_RETURN_CHAIN;
+      OPC = UsesDynamicVGPRs ? AMDGPUISD::TC_RETURN_CHAIN_DVGPR
+                             : AMDGPUISD::TC_RETURN_CHAIN;
       break;
     }
 
@@ -10834,7 +10842,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     assert(NodePtr.getValueType() == MVT::i64);
     assert(RayDir.getValueType() == MVT::v3f32);
 
-    if (!AMDGPU::isGFX12Plus(*Subtarget)) {
+    if (!Subtarget->hasBVHDualAndBVH8Insts()) {
       emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
       return SDValue();
     }
@@ -11873,6 +11881,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
+// Return whether the operation has NoUnsignedWrap property.
+static bool isNoUnsignedWrap(SDValue Addr) {
+  return (Addr.getOpcode() == ISD::ADD &&
+          Addr->getFlags().hasNoUnsignedWrap()) ||
+         Addr->getOpcode() == ISD::OR;
+}
+
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset
@@ -11889,8 +11904,14 @@ SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
   if ((C1 = dyn_cast<ConstantSDNode>(N0)))
     N0 = SDValue();
   else if (DAG.isBaseWithConstantOffset(N0)) {
-    C1 = cast<ConstantSDNode>(N0.getOperand(1));
-    N0 = N0.getOperand(0);
+    // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
+    // being added, so we can only safely match a 32-bit addition with no
+    // unsigned overflow.
+    bool CheckNUW = AMDGPU::isGFX1250Plus(*Subtarget);
+    if (!CheckNUW || isNoUnsignedWrap(N0)) {
+      C1 = cast<ConstantSDNode>(N0.getOperand(1));
+      N0 = N0.getOperand(0);
+    }
   }
 
   if (C1) {

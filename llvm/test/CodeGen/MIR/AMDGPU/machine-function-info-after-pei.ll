@@ -46,6 +46,7 @@
 ; AFTER-PEI-NEXT: needIdx0Restore: false
 ; AFTER-PEI-NEXT: longBranchReservedReg: ''
 ; AFTER-PEI-NEXT: hasInitWholeWave: false
+; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
 ; AFTER-PEI-NEXT: usesWholeWave: false
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {

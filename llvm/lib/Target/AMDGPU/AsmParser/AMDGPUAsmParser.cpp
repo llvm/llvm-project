@@ -135,6 +135,7 @@ public:
     ImmTyTFE,
     ImmTyD16,
     ImmTyClamp,
+    ImmTySUPR,
     ImmTyOModSI,
     ImmTySemaId,
     ImmTySemaIdRefl,
@@ -1194,6 +1195,7 @@ public:
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
     case ImmTyClamp: OS << "Clamp"; break;
+    case ImmTySUPR: OS << "SUPR"; break;
     case ImmTyOModSI: OS << "OModSI"; break;
     case ImmTyDPP8: OS << "DPP8"; break;
     case ImmTyDppCtrl: OS << "DppCtrl"; break;

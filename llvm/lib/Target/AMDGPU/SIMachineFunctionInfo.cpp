@@ -728,6 +728,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), NeedIdx0Restore(MFI.getNeedIdx0Restore()),
       HasInitWholeWave(MFI.hasInitWholeWave()),
+      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
       UsesWholeWave(MFI.usesWholeWave()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));

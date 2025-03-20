@@ -990,10 +990,10 @@ static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
       LLT::pointer(GV->getAddressSpace(), 64), GV);
     CallInst.addReg(Ptr.getReg(0));
 
-    if (IsDynamicVGPRChainCall)
+    if (IsDynamicVGPRChainCall) {
       // DynamicVGPR chain calls are always indirect.
       CallInst.addImm(0);
-    else
+    } else
       CallInst.add(Info.Callee);
   } else
     return false;
@@ -1233,20 +1233,21 @@ bool AMDGPUCallLowering::lowerTailCall(
     const APInt &FlagsValue = cast<ConstantInt>(FlagsArg.OrigValue)->getValue();
     if (FlagsValue.isZero()) {
       if (Info.OrigArgs.size() != 5) {
-        LLVM_DEBUG(dbgs() << "No additional args allowed if flags == 0");
+        LLVM_DEBUG(dbgs() << "No additional args allowed if flags == 0\n");
         return false;
       }
     } else if (FlagsValue.isOneBitSet(0)) {
       IsDynamicVGPRChainCall = true;
 
       if (Info.OrigArgs.size() != 8) {
-        LLVM_DEBUG(dbgs() << "Expected 3 additional args");
+        LLVM_DEBUG(dbgs() << "Expected 3 additional args\n");
         return false;
       }
 
       // On GFX12, we can only change the VGPR allocation for wave32.
       if (!ST.isWave32()) {
-        LLVM_DEBUG(dbgs() << "Dynamic VGPR mode is only supported for wave32");
+        F.getContext().diagnose(DiagnosticInfoUnsupported(
+            F, "dynamic VGPR mode is only supported for wave32"));
         return false;
       }
 
@@ -1254,7 +1255,7 @@ bool AMDGPUCallLowering::lowerTailCall(
       assert(FallbackExecArg.Regs.size() == 1 &&
              "Expected single register for fallback EXEC");
       if (!FallbackExecArg.Ty->isIntegerTy(ST.getWavefrontSize())) {
-        LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC");
+        LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC\n");
         return false;
       }
     }
@@ -1289,7 +1290,7 @@ bool AMDGPUCallLowering::lowerTailCall(
     assert(ExecArg.Regs.size() == 1 && "Too many regs for EXEC");
 
     if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize())) {
-      LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC");
+      LLVM_DEBUG(dbgs() << "Bad type for EXEC");
       return false;
     }
 

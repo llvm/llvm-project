@@ -117,41 +117,60 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->applyUpdates(DTUpdates);
 }
 
+static void copyOpWithoutRegFlags(MachineInstrBuilder &MIB,
+                                  MachineOperand &Op) {
+  if (Op.isReg())
+    MIB.addReg(Op.getReg());
+  else
+    MIB.add(Op);
+}
+
 void SILateBranchLowering::expandChainCall(MachineInstr &MI,
                                            const GCNSubtarget &ST,
                                            bool DynamicVGPR) {
   // This is a tail call that needs to be expanded into at least
   // 2 instructions, one for setting EXEC and one for the actual tail call.
-  unsigned ExecIdx =
+  int ExecIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::exec);
+  assert(ExecIdx != -1 && "Missing EXEC operand");
+  const DebugLoc &DL = MI.getDebugLoc();
   if (DynamicVGPR) {
     // We have 3 extra operands and we need to:
     // * Try to change the VGPR allocation
     // * Select the callee based on the result of the reallocation attempt
     // * Select the EXEC mask based on the result of the reallocation attempt
-    auto AllocMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                           TII->get(AMDGPU::S_ALLOC_VGPR));
-    AllocMI->addOperand(*TII->getNamedOperand(MI, AMDGPU::OpName::numvgprs));
+    // If any of the register operands of the chain pseudo is used in more than
+    // one of these instructions, we need to make sure that the kill flags
+    // aren't copied along.
+    auto AllocMI =
+        BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_ALLOC_VGPR));
+    copyOpWithoutRegFlags(AllocMI,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::numvgprs));
 
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-            TII->get(AMDGPU::S_CSELECT_B64))
-        .addDef(TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg())
-        .addReg(TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg())
-        .addReg(TII->getNamedOperand(MI, AMDGPU::OpName::fbcallee)->getReg());
+    auto SelectCallee =
+        BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_CSELECT_B64))
+            .addDef(TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg());
+    copyOpWithoutRegFlags(SelectCallee,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::src0));
+    copyOpWithoutRegFlags(SelectCallee,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::fbcallee));
 
-    auto SelectExec = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+    auto SelectExec = BuildMI(*MI.getParent(), MI, DL,
                               TII->get(ST.isWave32() ? AMDGPU::S_CSELECT_B32
                                                      : AMDGPU::S_CSELECT_B64))
                           .addDef(ExecReg);
-    SelectExec->addOperand(*TII->getNamedOperand(MI, AMDGPU::OpName::exec));
-    SelectExec->addOperand(*TII->getNamedOperand(MI, AMDGPU::OpName::fbexec));
+
+    copyOpWithoutRegFlags(SelectExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
+    copyOpWithoutRegFlags(SelectExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::fbexec));
   } else {
-    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg)
-        ->addOperand(*TII->getNamedOperand(MI, AMDGPU::OpName::exec));
+    auto SetExec = BuildMI(*MI.getParent(), MI, DL, TII->get(MovOpc), ExecReg);
+    copyOpWithoutRegFlags(SetExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
   }
 
-  for (unsigned OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx;
-       --OpIdx)
+  for (int OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx; --OpIdx)
     MI.removeOperand(OpIdx);
 
   MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));
@@ -201,12 +220,12 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
 
       case AMDGPU::SI_CS_CHAIN_TC_W32:
       case AMDGPU::SI_CS_CHAIN_TC_W64:
-        expandChainCall(MI, ST, /*DynamicVGPR*/ false);
+        expandChainCall(MI, ST, /*DynamicVGPR=*/false);
         MadeChange = true;
         break;
       case AMDGPU::SI_CS_CHAIN_TC_W32_DVGPR:
       case AMDGPU::SI_CS_CHAIN_TC_W64_DVGPR:
-        expandChainCall(MI, ST, /*DynamicVGPR*/ true);
+        expandChainCall(MI, ST, /*DynamicVGPR=*/true);
         MadeChange = true;
         break;
 

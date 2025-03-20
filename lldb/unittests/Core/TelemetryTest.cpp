@@ -81,6 +81,16 @@ using namespace lldb_private::telemetry;
 class TelemetryTest : public testing::Test {
 public:
   lldb_private::SubsystemRAII<lldb_private::FakePlugin> subsystems;
+  std::vector<std::unique_ptr<::llvm::telemetry::TelemetryInfo>>
+      received_entries;
+
+  void SetUp() override {
+    auto *ins = lldb_private::telemetry::TelemetryManager::GetInstance();
+    ASSERT_NE(ins, nullptr);
+
+    ins->addDestination(
+        std::make_unique<lldb_private::TestDestination>(&received_entries));
+  }
 };
 
 #if LLVM_ENABLE_TELEMETRY
@@ -90,17 +100,8 @@ public:
 #endif
 
 TELEMETRY_TEST(TelemetryTest, PluginTest) {
-  // This would have been called by the plugin reg in a "real" plugin
-  // For tests, we just call it directly.
-  lldb_private::FakePlugin::Initialize();
-
-  auto *ins = lldb_private::telemetry::TelemetryManager::GetInstance();
-  ASSERT_NE(ins, nullptr);
-
-  std::vector<std::unique_ptr<::llvm::telemetry::TelemetryInfo>>
-      received_entries;
-  ins->addDestination(
-      std::make_unique<lldb_private::TestDestination>(&received_entries));
+  lldb_private::telemetry::TelemetryManager *ins =
+      lldb_private::telemetry::TelemetryManager::GetInstance();
 
   lldb_private::FakeTelemetryInfo entry;
   entry.msg = "";
@@ -115,14 +116,6 @@ TELEMETRY_TEST(TelemetryTest, PluginTest) {
 }
 
 TELEMETRY_TEST(TelemetryTest, ScopedDispatcherTest) {
-  lldb_private::FakePlugin::Initialize();
-  auto *ins = TelemetryManager::GetInstance();
-  ASSERT_NE(ins, nullptr);
-  std::vector<std::unique_ptr<::llvm::telemetry::TelemetryInfo>>
-      received_entries;
-  ins->addDestination(
-      std::make_unique<lldb_private::TestDestination>(&received_entries));
-
   {
     ScopedDispatcher<lldb_private::FakeTelemetryInfo> helper(
         [](lldb_private::FakeTelemetryInfo *info) { info->num = 0; });

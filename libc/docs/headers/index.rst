@@ -40,6 +40,7 @@ Implementation Status
    time
    uchar
    unistd
+   sys/utsname
    wchar
    wctype
 ..

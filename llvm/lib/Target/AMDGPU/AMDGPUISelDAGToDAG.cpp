@@ -3506,6 +3506,7 @@ void AMDGPUDAGToDAGISel::SelectCvtTensor(SDNode *N, unsigned IntrID) {
   for (unsigned i = 1, numop = N->getNumOperands(); i < numop; ++i)
     Ops.push_back(N->getOperand(i));
   Ops.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // idxs
+  Ops.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // supr
 
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }

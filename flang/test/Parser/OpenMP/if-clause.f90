@@ -4,22 +4,22 @@ program openmp_parse_if
   logical :: cond
   integer :: i
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target update
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
-  ! CHECK-NOT: DirectiveNameModifier
+  ! CHECK-NOT: OmpDirectiveName
   !$omp target update if(cond) to(i)
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target update
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target update
   !$omp target update if(target update: cond) to(i)
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target enter data
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target enter data
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target enter data
   !$omp target enter data map(to: i) if(target enter data: cond)
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target exit data
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target exit data
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target exit data
   !$omp target exit data map(from: i) if(target exit data: cond)
