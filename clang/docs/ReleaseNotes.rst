@@ -284,7 +284,7 @@ Improvements to Clang's diagnostics
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
 
-- Clang now emits a ``-Wignored-base-class-qualifiers`` diagnostic when a base class includes cv-qualifiers ([toadd]).
+- Clang now emits a ``-Wignored-base-class-qualifiers`` diagnostic when a base class includes cv-qualifiers.
 
 Improvements to Clang's time-trace
 ----------------------------------
