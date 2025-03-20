@@ -84,7 +84,7 @@ static void traceRegMask(const BinaryContext &BC, StringRef Label,
   dbgs() << "\n";
 }
 
-// This class represents mapping from arbitrary physical registers to
+// This class represents mapping from a set of arbitrary physical registers to
 // consecutive array indexes.
 class TrackedRegisters {
   static const uint16_t NoIndex = -1;
