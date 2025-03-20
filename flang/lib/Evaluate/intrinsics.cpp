@@ -1573,6 +1573,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+    {"perror", {{"string", DefaultChar, Rank::scalar}}, {}, Rank::elemental,
+        IntrinsicClass::impureSubroutine},
     {"mvbits",
         {{"from", SameIntOrUnsigned}, {"frompos", AnyInt}, {"len", AnyInt},
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
