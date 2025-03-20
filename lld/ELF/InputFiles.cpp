@@ -229,26 +229,30 @@ static KnownAArch64BuildAttrSubsections extractBuildAttributesSubsections(
   KnownAArch64BuildAttrSubsections subSections;
   subSections.pauth.tagPlatform = attributes.getAttributeValue(
       "aeabi_pauthabi", llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM);
-  // Rather do this explicitly here, so behaviour in case of missing tags can be
-  // change in the future.
+  // Rather do this check explicitly here, so behaviour in case of missing tags
+  // can be change in the future.
   if (std::nullopt == subSections.pauth.tagPlatform)
     subSections.pauth.tagPlatform = 0;
+
   subSections.pauth.tagScheme = attributes.getAttributeValue(
       "aeabi_pauthabi", llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA);
   if (std::nullopt == subSections.pauth.tagScheme)
-    subSections.pauth.tagPlatform = 0;
+    subSections.pauth.tagScheme = 0;
+
   subSections.fAndB.tagBTI = attributes.getAttributeValue(
       "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_BTI);
-  if (std::nullopt == subSections.fAndB.tagPAC)
-    subSections.pauth.tagPlatform = 0;
+  if (std::nullopt == subSections.fAndB.tagBTI)
+    subSections.fAndB.tagBTI = 0;
+
   subSections.fAndB.tagPAC = attributes.getAttributeValue(
       "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_PAC);
-  if (std::nullopt == subSections.fAndB.tagBTI)
-    subSections.pauth.tagPlatform = 0;
+  if (std::nullopt == subSections.fAndB.tagPAC)
+    subSections.fAndB.tagPAC = 0;
+
   subSections.fAndB.tagGCS = attributes.getAttributeValue(
       "aeabi_feature_and_bits", llvm::AArch64BuildAttributes::TAG_FEATURE_GCS);
   if (std::nullopt == subSections.fAndB.tagGCS)
-    subSections.pauth.tagPlatform = 0;
+    subSections.fAndB.tagGCS = 0;
 
   return subSections;
 }
@@ -709,8 +713,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       // dispatcher.
       if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
         StringRef name = check(obj.getSectionName(sec, shstrtab));
-        AArch64AttributeParser attributes;
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+        AArch64AttributeParser attributes;
         if (Error e = attributes.parse(contents, ELFT::Endianness)) {
           InputSection isec(*this, sec, name);
           Warn(ctx) << &isec << ": " << std::move(e);
@@ -720,19 +724,19 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           KnownAArch64BuildAttrSubsections subSections =
               extractBuildAttributesSubsections(ctx, attributes, isec);
           if (!hasGnuProperties) {
-            (*this).aarch64PauthAbiCoreInfoStorage =
+            this->aarch64PauthAbiCoreInfoStorage =
                 std::make_unique<std::array<uint8_t, 16>>();
             uint64_t values[2] = {
                 static_cast<uint64_t>(*subSections.pauth.tagPlatform),
                 static_cast<uint64_t>(*subSections.pauth.tagScheme)};
-            std::memcpy((*this).aarch64PauthAbiCoreInfoStorage->data(),
-                        &values[0], sizeof(values));
-            (*this).aarch64PauthAbiCoreInfo =
-                *(*this).aarch64PauthAbiCoreInfoStorage;
-            (*this).andFeatures = 0;
-            (*this).andFeatures |= (*subSections.fAndB.tagBTI) << 0;
-            (*this).andFeatures |= (*subSections.fAndB.tagPAC) << 1;
-            (*this).andFeatures |= (*subSections.fAndB.tagGCS) << 2;
+            std::memcpy(this->aarch64PauthAbiCoreInfoStorage->data(), values,
+                        sizeof(values));
+            this->aarch64PauthAbiCoreInfo =
+                *(this->aarch64PauthAbiCoreInfoStorage);
+            this->andFeatures = 0;
+            this->andFeatures |= (*subSections.fAndB.tagBTI) << 0;
+            this->andFeatures |= (*subSections.fAndB.tagPAC) << 1;
+            this->andFeatures |= (*subSections.fAndB.tagGCS) << 2;
           }
         }
         sections[i] = &InputSection::discarded;
