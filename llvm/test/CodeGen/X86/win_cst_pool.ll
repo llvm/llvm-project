@@ -2,6 +2,8 @@
 ; RUN: llc < %s -mattr=sse2 -mattr=avx | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=sse2 -mattr=avx | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=sse2 -mattr=avx | FileCheck %s
+; UEFI environment.
+; RUN: llc < %s -mtriple=x86_64-uefi -mattr=sse2 -mattr=avx | FileCheck %s
 ; GNU environment.
 ; RUN: llc < %s -mtriple=x86_64-win32-gnu -mattr=sse2 -mattr=avx | FileCheck -check-prefix=MINGW %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
