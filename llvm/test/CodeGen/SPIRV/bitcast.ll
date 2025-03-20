@@ -21,7 +21,6 @@ entry:
   ret i16 %res
 }
 
-; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 define <4 x i16> @test_vector_half4(<4 x half> nofpclass(nan inf) %p1) {
 entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
