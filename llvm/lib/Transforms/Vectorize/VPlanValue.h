@@ -181,7 +181,8 @@ public:
   /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
   bool isLiveIn() const { return !hasDefiningRecipe(); }
 
-  /// Returns true if the VPValue is symbolic, that is a live-in without underlying value.
+  /// Returns true if the VPValue is symbolic, that is a live-in without
+  /// underlying value.
   bool isSymbolic() const { return SubclassID == VPSymbolicValueSC; }
 
   /// If the VPValue is a live-in, return its scalar type.
