@@ -36,9 +36,16 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
   // the vendor while creating the Manager.
   const bool detailed_command_telemetry;
 
-  explicit LLDBConfig(bool enable_telemetry, bool detailed_command_telemetry)
+  // If true, we will collect telemetry from LLDB's clients (eg., lldb-dap) via
+  // the SB interface. Must also be enabled by the vendor while creating the
+  // manager.
+  const bool enable_client_telemetry;
+
+  explicit LLDBConfig(bool enable_telemetry, bool detailed_command_telemetry,
+                      bool enable_client_telemetry)
       : ::llvm::telemetry::Config(enable_telemetry),
-        detailed_command_telemetry(detailed_command_telemetry) {}
+        detailed_command_telemetry(detailed_command_telemetry),
+        enable_client_telemetry(enable_client_telemetry) {}
 };
 
 // We expect each (direct) subclass of LLDBTelemetryInfo to
@@ -50,6 +57,7 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
 // must have their LLDBEntryKind in the similar form (ie., share common prefix)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
   static const llvm::telemetry::KindType BaseInfo = 0b11000000;
+  static const llvm::telemetry::KindType ClientInfo = 0b11100000;
   static const llvm::telemetry::KindType CommandInfo = 0b11010000;
   static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
 };
@@ -76,6 +84,13 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
     // Subclasses of this is also acceptable.
     return (t->getKind() & LLDBEntryKind::BaseInfo) == LLDBEntryKind::BaseInfo;
   }
+
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
+};
+
+struct ClientInfo : public LLDBBaseTelemetryInfo {
+  std::string request_name;
+  std::optional<std::string> error_msg;
 
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
@@ -155,6 +170,9 @@ public:
 
   const LLDBConfig *GetConfig() { return m_config.get(); }
 
+  virtual void
+  DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry,
+                         Debugger *debugger);
   virtual llvm::StringRef GetInstanceName() const = 0;
 
   static TelemetryManager *GetInstance();

@@ -672,13 +672,17 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 }
 
 bool DAP::HandleObject(const protocol::Message &M) {
+  TelemetryDispatcher dispatcher(&debugger);
   if (const auto *req = std::get_if<protocol::Request>(&M)) {
     auto handler_pos = request_handlers.find(req->command);
+    dispatcher.Set("request_name", req->command);
     if (handler_pos != request_handlers.end()) {
       (*handler_pos->second)(*req);
       return true; // Success
     }
 
+    dispatcher.Set("error",
+                   llvm::Twine("unhandled-command:" + req->command).str());
     DAP_LOG(log, "({0}) error: unhandled command '{1}'",
             transport.GetClientName(), req->command);
     return false; // Fail
