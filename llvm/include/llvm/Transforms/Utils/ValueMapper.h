@@ -105,6 +105,13 @@ enum RemapFlags {
   /// Any global values not in value map are mapped to null instead of mapping
   /// to self.  Illegal if RF_IgnoreMissingLocals is also set.
   RF_NullMapMissingGlobalValues = 8,
+
+  /// Do not remap atom instances. Only safe if to do this if the cloned
+  /// instructions being remapped are inserted into a new function, or an
+  /// existing function where the inlined-at fields are updated. If in doubt,
+  /// don't use this flag. It's used for compiler performance reasons rather
+  /// than correctness.
+  RF_DoNotRemapAtoms = 16,
 };
 
 inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
@@ -283,6 +290,9 @@ inline void RemapInstruction(Instruction *I, ValueToValueMapTy &VM,
   ValueMapper(VM, Flags, TypeMapper, Materializer, IdentityMD)
       .remapInstruction(*I);
 }
+
+/// Remap source atom. Called by RemapInstruction.
+void RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM);
 
 /// Remap the Values used in the DbgRecord \a DR using the value map \a
 /// VM.
