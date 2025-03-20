@@ -420,6 +420,17 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
+  // We are canonicalizing the successors of the latch when introducing the
+  // region. We will exit the region of the latch condition is true; invert the
+  // original condition if the original CFG branches to the header on true.
+  if (!LatchVPBB->getSingleSuccessor() &&
+      LatchVPBB->getSuccessors()[0] == HeaderVPB) {
+    auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
+    auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
+    Not->insertBefore(Term);
+    Term->setOperand(0, Not);
+  }
+
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
   VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();

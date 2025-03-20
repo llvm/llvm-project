@@ -55,6 +55,9 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
          make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
 
       VPValue *VPV = Ingredient.getVPSingleValue();
+      if (!VPV->getUnderlyingValue())
+        continue;
+
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
