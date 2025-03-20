@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -31,21 +32,6 @@
 using namespace fir;
 
 namespace {
-
-static llvm::StringRef getVolatileKeyword() { return "volatile"; }
-
-static mlir::ParseResult parseOptionalCommaAndKeyword(mlir::AsmParser &parser,
-                                                      mlir::StringRef keyword,
-                                                      bool &parsedKeyword) {
-  if (!parser.parseOptionalComma()) {
-    if (parser.parseKeyword(keyword))
-      return mlir::failure();
-    parsedKeyword = true;
-    return mlir::success();
-  }
-  parsedKeyword = false;
-  return mlir::success();
-}
 
 template <typename TYPE>
 TYPE parseIntSingleton(mlir::AsmParser &parser) {
@@ -89,6 +75,21 @@ bool verifySameLists(llvm::ArrayRef<RecordType::TypePair> a1,
                      llvm::ArrayRef<RecordType::TypePair> a2) {
   // FIXME: do we need to allow for any variance here?
   return a1 == a2;
+}
+
+static llvm::StringRef getVolatileKeyword() { return "volatile"; }
+
+static mlir::ParseResult parseOptionalCommaAndKeyword(mlir::AsmParser &parser,
+                                                      mlir::StringRef keyword,
+                                                      bool &parsedKeyword) {
+  if (!parser.parseOptionalComma()) {
+    if (parser.parseKeyword(keyword))
+      return mlir::failure();
+    parsedKeyword = true;
+    return mlir::success();
+  }
+  parsedKeyword = false;
+  return mlir::success();
 }
 
 RecordType verifyDerived(mlir::AsmParser &parser, RecordType derivedTy,
@@ -677,18 +678,24 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-            fir::ClassType>([&](auto t) -> mlir::Type {
-        using FIRT = decltype(t);
-        return FIRT::get(
-            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
+      .Case<fir::ReferenceType>([&](fir::ReferenceType refTy) -> mlir::Type {
+        auto newEleTy = changeElementType(refTy.getEleTy(), newElementType,
+                                          turnBoxIntoClass);
+        return fir::ReferenceType::get(newEleTy, refTy.isVolatile());
       })
+      .Case<fir::PointerType, fir::HeapType, fir::ClassType>(
+          [&](auto t) -> mlir::Type {
+            using FIRT = decltype(t);
+            return FIRT::get(changeElementType(t.getEleTy(), newElementType,
+                                               turnBoxIntoClass));
+          })
       .Case<fir::BoxType>([&](fir::BoxType t) -> mlir::Type {
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
+        // TODO: volatility on class types
         if (turnBoxIntoClass)
           return fir::ClassType::get(newInnerType);
-        return fir::BoxType::get(newInnerType);
+        return fir::BoxType::get(newInnerType, t.isVolatile());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
@@ -1413,11 +1420,16 @@ changeTypeShape(mlir::Type type,
           return fir::SequenceType::get(*newShape, seqTy.getEleTy());
         return seqTy.getEleTy();
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
-            fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType, fir::BoxType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
-        return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
+        return FIRT::get(changeTypeShape(t.getEleTy(), newShape),
+                         t.isVolatile());
       })
+      .Case<fir::PointerType, fir::HeapType, fir::ClassType>(
+          [&](auto t) -> mlir::Type {
+            using FIRT = decltype(t);
+            return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
+          })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
                 llvm::isa<mlir::NoneType>(t) ||

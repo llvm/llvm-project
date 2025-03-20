@@ -457,6 +457,10 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
   return fir::BoxType::get(eleTy);
 }
 
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
+
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///

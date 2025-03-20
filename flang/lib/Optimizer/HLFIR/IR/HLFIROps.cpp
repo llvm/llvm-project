@@ -61,6 +61,7 @@ getIntrinsicEffects(mlir::Operation *self,
   // }
   for (mlir::OpOperand &operand : self->getOpOperands()) {
     mlir::Type opTy = operand.get().getType();
+    fir::addVolatileMemoryEffects({opTy}, effects);
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
@@ -164,6 +165,8 @@ void hlfir::AssignOp::getEffects(
     }
   }
 
+  fir::addVolatileMemoryEffects({lhsType, rhsType}, effects);
+
   if (getRealloc()) {
     // Reallocation of the data cannot be precisely described by this API.
     effects.emplace_back(mlir::MemoryEffects::Free::get(),
@@ -195,7 +198,7 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
   bool hasDynamicLengthParams = fir::characterWithDynamicLen(eleType) ||
                                 fir::isRecordWithTypeParameters(eleType);
   if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams)
-    return fir::BoxType::get(type);
+    return fir::BoxType::get(type, fir::isa_volatile_type(inputType));
   return inputType;
 }
 
@@ -214,6 +217,22 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(inputType);
+      fortran_attrs && refType &&
+      bitEnumContainsAny(fortran_attrs.getFlags(),
+                         fir::FortranVariableFlagsEnum::fortran_volatile)) {
+    auto eleType = refType.getEleTy();
+    const bool isPointer = bitEnumContainsAny(
+        fortran_attrs.getFlags(), fir::FortranVariableFlagsEnum::pointer);
+    if (isPointer) {
+      // If an entity is a pointer, the entity it points to is volatile, as far
+      // as consumers of the pointer are concerned.
+      eleType = fir::updateTypeWithVolatility(eleType, true);
+    }
+    inputType = fir::ReferenceType::get(eleType, /*isVolatile=*/true);
+    memref =
+        builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+  }
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
