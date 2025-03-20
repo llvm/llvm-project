@@ -1325,7 +1325,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // Found a cycle.
     C.insert(&I);
     classifyCycle(&I, C, Early, Late);
-    Cycled.insert(C.begin(), C.end());
+    Cycled.insert_range(C);
     RShifts.insert(&I);
   }
 
