@@ -123,7 +123,7 @@ enum class SortSectionPolicy {
 enum class Target2Policy { Abs, Rel, GotRel };
 
 // For tracking ARM Float Argument PCS
-enum class ARMVFPArgKind { Default, Base, VFP, ToolChain };
+enum class ARMVFPArgKind {Default, Base, VFP, ToolChain};
 
 // For -z noseparate-code, -z separate-code and -z separate-loadable-segments.
 enum class SeparateSegmentKind { None, Code, Loadable };
@@ -196,8 +196,7 @@ struct Config {
   uint8_t osabi = 0;
   uint32_t andFeatures = 0;
   llvm::CachePruningPolicy thinLTOCachePolicy;
-  llvm::SetVector<llvm::CachedHashString>
-      dependencyFiles; // for --dependency-file
+  llvm::SetVector<llvm::CachedHashString> dependencyFiles; // for --dependency-file
   llvm::StringMap<uint64_t> sectionStartMap;
   llvm::StringRef bfdname;
   llvm::StringRef chroot;
