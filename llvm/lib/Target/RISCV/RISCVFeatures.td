@@ -1374,6 +1374,14 @@ def HasVendorXqciint
       AssemblerPredicate<(all_of FeatureVendorXqciint),
                          "'Xqciint' (Qualcomm uC Interrupts Extension)">;
 
+def FeatureVendorXqcilb
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Long Branch Extension",
+                                 [FeatureStdExtZca]>;
+
+def HasVendorXqcilb : Predicate<"Subtarget->hasVendorXqcilb()">,
+                      AssemblerPredicate<(all_of FeatureVendorXqcilb),
+                         "'Xqcilb' (Qualcomm uC Long Branch Extension)">;
+
 def FeatureVendorXqcili
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load Large Immediate Extension",
                                  [FeatureStdExtZca]>;
