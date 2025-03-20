@@ -843,7 +843,10 @@ public:
 
     // Set C++ ABI.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
-    // Set Integer types and alignment.
+    LongWidth = LongAlign = 32;
+    DoubleAlign = LongLongAlign = 64;
+    LongDoubleWidth = LongDoubleAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     IntMaxType = SignedLongLong;
     Int64Type = SignedLongLong;
     SizeType = UnsignedLongLong;
@@ -851,7 +854,6 @@ public:
     IntPtrType = SignedLongLong;
     WCharType = UnsignedShort;
     WIntType = UnsignedShort;
-    LongWidth = LongAlign = 32;
 
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
