@@ -105,8 +105,7 @@ Transport::Read(const std::chrono::microseconds &timeout) {
                                      kHeaderContentLength, *message_header)
                                  .str());
 
-  Expected<std::string> raw_length =
-      ReadUntil(*input, kHeaderSeparator);
+  Expected<std::string> raw_length = ReadUntil(*input, kHeaderSeparator);
   if (!raw_length)
     return raw_length.takeError();
   if (raw_length->empty())
