@@ -26,6 +26,6 @@ entry:
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
   ; CHECK: %[[#Res1:]] = OpBitcast %[[#vec4_int_16]] %[[#arg0]]
   %0 = bitcast <4 x half> %p1 to <4 x i16>
-  ;CHECK: OpReturnValue %[[#Res1]]
+  ; CHECK: OpReturnValue %[[#Res1]]
   ret <4 x i16> %0
 }
