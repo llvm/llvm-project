@@ -516,12 +516,8 @@ static std::unique_ptr<TagNode> writeFileDefinition(
       std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
-  std::string LineAnchor = "#";
+  std::string LineAnchor = formatv("#{0}{1}", RepositoryLinePrefix.value_or(""), L.LineNumber);
 
-  if (RepositoryLinePrefix)
-    LineAnchor += RepositoryLinePrefix.value().str();
-
-  LineAnchor += std::to_string(L.LineNumber);
 
   LocNumberNode->Attributes.emplace_back("href", (FileURL + LineAnchor).str());
   Node->Children.emplace_back(std::move(LocNumberNode));
