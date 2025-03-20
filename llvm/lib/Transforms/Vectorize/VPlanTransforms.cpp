@@ -2260,7 +2260,7 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
                 [&TypeInfo, GroupElementTy](VPValue *Op) {
                   return TypeInfo.inferScalarType(Op) == GroupElementTy;
                 }))
-      return false
+      return false;
   }
 
   unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
