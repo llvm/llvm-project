@@ -287,6 +287,9 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_create_data_set(&DataSetReloc2);
   checkError(Status, "amd_comgr_create_data_set");
 
+  Status = amd_comgr_action_info_set_option_list(DataAction, CompileOptions,
+                                                 CompileOptionsCount);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE,
                                DataAction, DataSetIn, DataSetReloc2);
   checkError(Status, "amd_comgr_do_action");
