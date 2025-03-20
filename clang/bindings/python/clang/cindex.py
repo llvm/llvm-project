@@ -3471,7 +3471,9 @@ class File(ClangObject):
         return "<File: %s>" % (self.name)
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, File) and bool(conf.lib.clang_File_isEqual(self, other))
+        return isinstance(other, File) and bool(
+            conf.lib.clang_File_isEqual(self, other)
+        )
 
     def __ne__(self, other) -> bool:
         return not self.__eq__(other)
