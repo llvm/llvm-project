@@ -111,8 +111,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (!(ArgTyA->isScalarType() || VTyA)) {
       SemaRef.Diag(A.get()->getBeginLoc(),
                    diag::err_typecheck_expect_any_scalar_or_vector)
-          << ArgTyA
-          << 1;
+          << ArgTyA << 1;
       return true;
     }
 
@@ -122,8 +121,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (!(ArgTyB->isScalarType() || VTyB)) {
       SemaRef.Diag(A.get()->getBeginLoc(),
                    diag::err_typecheck_expect_any_scalar_or_vector)
-          << ArgTyB
-          << 1;
+          << ArgTyB << 1;
       return true;
     }
 
@@ -133,8 +131,7 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (!(ArgTyC->isScalarType() || VTyC)) {
       SemaRef.Diag(A.get()->getBeginLoc(),
                    diag::err_typecheck_expect_any_scalar_or_vector)
-          << ArgTyC
-          << 1;
+          << ArgTyC << 1;
       return true;
     }
 

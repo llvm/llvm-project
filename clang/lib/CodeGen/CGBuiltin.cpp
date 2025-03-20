@@ -20963,9 +20963,12 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
            E->getArg(1)->getType()->hasFloatingRepresentation() &&
            E->getArg(2)->getType()->hasFloatingRepresentation() &&
            "SmoothStep operands must have a float representation");
-    assert((E->getArg(0)->getType()->isScalarType() || E->getArg(0)->getType()->isVectorType()) &&
-           (E->getArg(1)->getType()->isScalarType() || E->getArg(1)->getType()->isVectorType()) &&
-           (E->getArg(2)->getType()->isScalarType() || E->getArg(2)->getType()->isVectorType()) &&
+    assert((E->getArg(0)->getType()->isScalarType() ||
+            E->getArg(0)->getType()->isVectorType()) &&
+           (E->getArg(1)->getType()->isScalarType() ||
+            E->getArg(1)->getType()->isVectorType()) &&
+           (E->getArg(2)->getType()->isScalarType() ||
+            E->getArg(2)->getType()->isVectorType()) &&
            "SmoothStep operands must be a scalar or vector");
     return Builder.CreateIntrinsic(
         /*ReturnType=*/Min->getType(), Intrinsic::spv_smoothstep,
