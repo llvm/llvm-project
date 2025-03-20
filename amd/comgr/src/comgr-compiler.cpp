@@ -1973,7 +1973,7 @@ amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
       }
     }
 
-    // COV5 required for SPIRV
+    // COV5 required for SPIR-V
     Bc->SpirvFlags.push_back("-mcode-object-version=5");
 
     if (env::shouldEmitVerboseLogs()) {
