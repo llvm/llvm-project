@@ -1931,7 +1931,7 @@ static inline const std::unordered_set<std::string_view> ValidSpirvFlags{
 amd_comgr_status_t AMDGPUCompiler::extractSpirvFlags(DataSet *BcSet) {
 
   for (auto *Bc : BcSet->DataObjects) {
-    // Create SPIRV IR Module from Bitcode Buffer
+    // Create SPIR-V IR Module from Bitcode Buffer
     SMDiagnostic SMDiag;
     LLVMContext Context;
     Context.setDiagnosticHandler(
