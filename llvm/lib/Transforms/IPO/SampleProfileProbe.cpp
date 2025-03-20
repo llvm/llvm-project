@@ -16,19 +16,19 @@
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <unordered_set>
 #include <vector>
@@ -148,8 +148,9 @@ void PseudoProbeVerifier::verifyProbeFactors(
   auto &PrevProbeFactors = FunctionProbeFactors[F->getName()];
   for (const auto &I : ProbeFactors) {
     float CurProbeFactor = I.second;
-    if (PrevProbeFactors.count(I.first)) {
-      float PrevProbeFactor = PrevProbeFactors[I.first];
+    auto [It, Inserted] = PrevProbeFactors.try_emplace(I.first);
+    if (!Inserted) {
+      float PrevProbeFactor = It->second;
       if (std::abs(CurProbeFactor - PrevProbeFactor) >
           DistributionFactorVariance) {
         if (!BannerPrinted) {
@@ -163,7 +164,7 @@ void PseudoProbeVerifier::verifyProbeFactors(
     }
 
     // Update
-    PrevProbeFactors[I.first] = I.second;
+    It->second = I.second;
   }
 }
 
@@ -198,8 +199,7 @@ void SampleProfileProber::computeBlocksToIgnore(
   computeEHOnlyBlocks(*F, BlocksAndCallsToIgnore);
   findUnreachableBlocks(BlocksAndCallsToIgnore);
 
-  BlocksToIgnore.insert(BlocksAndCallsToIgnore.begin(),
-                        BlocksAndCallsToIgnore.end());
+  BlocksToIgnore.insert_range(BlocksAndCallsToIgnore);
 
   // Handle the call-to-invoke conversion case: make sure that the probe id and
   // callsite id are consistent before and after the block split. For block
@@ -343,7 +343,7 @@ uint32_t SampleProfileProber::getCallsiteId(const Instruction *Call) const {
 void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   Module *M = F.getParent();
   MDBuilder MDB(F.getContext());
-  // Since the GUID from probe desc and inline stack are computed seperately, we
+  // Since the GUID from probe desc and inline stack are computed separately, we
   // need to make sure their names are consistent, so here also use the name
   // from debug info.
   StringRef FName = F.getName();
@@ -400,7 +400,7 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     assert(Builder.GetInsertPoint() != BB->end() &&
            "Cannot get the probing point");
     Function *ProbeFn =
-        llvm::Intrinsic::getDeclaration(M, Intrinsic::pseudoprobe);
+        llvm::Intrinsic::getOrInsertDeclaration(M, Intrinsic::pseudoprobe);
     Value *Args[] = {Builder.getInt64(Guid), Builder.getInt64(Index),
                      Builder.getInt32(0),
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};
@@ -431,8 +431,8 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
       // and type of a callsite probe. This gets rid of the dependency on
       // plumbing a customized metadata through the codegen pipeline.
       uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-          Index, Type, 0,
-          PseudoProbeDwarfDiscriminator::FullDistributionFactor);
+          Index, Type, 0, PseudoProbeDwarfDiscriminator::FullDistributionFactor,
+          DIL->getBaseDiscriminator());
       DIL = DIL->cloneWithDiscriminator(V);
       Call->setDebugLoc(DIL);
     }

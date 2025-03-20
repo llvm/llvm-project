@@ -224,6 +224,18 @@ private:
   Instruction *ExactFPMathInst = nullptr;
 };
 
+/// This holds details about a histogram operation -- a load -> update -> store
+/// sequence where each lane in a vector might be updating the same element as
+/// another lane.
+struct HistogramInfo {
+  LoadInst *Load;
+  Instruction *Update;
+  StoreInst *Store;
+
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
+      : Load(Load), Update(Update), Store(Store) {}
+};
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -276,9 +288,12 @@ public:
   bool canVectorizeFPMath(bool EnableStrictReductions);
 
   /// Return true if we can vectorize this loop while folding its tail by
-  /// masking, and mark all respective loads/stores for masking.
-  /// This object's state is only modified iff this function returns true.
-  bool prepareToFoldTailByMasking();
+  /// masking.
+  bool canFoldTailByMasking() const;
+
+  /// Mark all respective loads/stores for masking. Must only be called when
+  /// tail-folding is possible.
+  void prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
@@ -293,7 +308,7 @@ public:
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
   /// Returns the widest induction type.
-  Type *getWidestInductionType() { return WidestIndTy; }
+  IntegerType *getWidestInductionType() { return WidestIndTy; }
 
   /// Returns True if given store is a final invariant store of one of the
   /// reductions found in the loop.
@@ -346,8 +361,8 @@ public:
   /// loop. Do not use after invoking 'createVectorizedLoopSkeleton' (PR34965).
   int isConsecutivePtr(Type *AccessTy, Value *Ptr) const;
 
-  /// Returns true if value V is uniform across \p VF lanes, when \p VF is
-  /// provided, and otherwise if \p V is invariant across all loop iterations.
+  /// Returns true if \p V is invariant across all loop iterations according to
+  /// SCEV.
   bool isInvariant(Value *V) const;
 
   /// Returns true if value V is uniform across \p VF lanes, when \p VF is
@@ -374,6 +389,23 @@ public:
     return LAI->getDepChecker().getMaxSafeVectorWidthInBits();
   }
 
+  /// Returns true if the loop has exactly one uncountable early exit, i.e. an
+  /// uncountable exit that isn't the latch block.
+  bool hasUncountableEarlyExit() const {
+    return getUncountableEdge().has_value();
+  }
+
+  /// Returns the uncountable early exiting block, if there is exactly one.
+  BasicBlock *getUncountableEarlyExitingBlock() const {
+    return hasUncountableEarlyExit() ? getUncountableEdge()->first : nullptr;
+  }
+
+  /// Returns the destination of the uncountable early exiting block, if there
+  /// is exactly one.
+  BasicBlock *getUncountableEarlyExitBlock() const {
+    return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
+  }
+
   /// Returns true if vector representation of the instruction \p I
   /// requires mask.
   bool isMaskRequired(const Instruction *I) const {
@@ -386,6 +418,20 @@ public:
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
+
+  /// Returns a HistogramInfo* for the given instruction if it was determined
+  /// to be part of a load -> update -> store sequence where multiple lanes
+  /// may be working on the same memory address.
+  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+    for (const HistogramInfo &HGram : Histograms)
+      if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
+        return &HGram;
+
+    return std::nullopt;
+  }
+
+  /// Returns a list of all known histogram operations in the loop.
+  bool hasHistograms() const { return !Histograms.empty(); }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
@@ -400,6 +446,19 @@ public:
   ScalarEvolution *getScalarEvolution() const { return PSE.getSE(); }
 
   DominatorTree *getDominatorTree() const { return DT; }
+
+  /// Returns all exiting blocks with a countable exit, i.e. the
+  /// exit-not-taken count is known exactly at compile time.
+  const SmallVector<BasicBlock *, 4> &getCountableExitingBlocks() const {
+    return CountableExitingBlocks;
+  }
+
+  /// Returns the loop edge to an uncountable exit, or std::nullopt if there
+  /// isn't a single such edge.
+  std::optional<std::pair<BasicBlock *, BasicBlock *>>
+  getUncountableEdge() const {
+    return UncountableEdge;
+  }
 
 private:
   /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
@@ -435,6 +494,11 @@ private:
   /// Returns true if the loop is vectorizable
   bool canVectorizeMemory();
 
+  /// If LAA cannot determine whether all dependences are safe, we may be able
+  /// to further analyse some IndirectUnsafe dependences and if they match a
+  /// certain pattern (like a histogram) then we may still be able to vectorize.
+  bool canVectorizeIndirectUnsafeDependences();
+
   /// Return true if we can vectorize this loop using the IF-conversion
   /// transformation.
   bool canVectorizeWithIfConvert();
@@ -442,6 +506,23 @@ private:
   /// Return true if we can vectorize this outer loop. The method performs
   /// specific checks for outer loop vectorization.
   bool canVectorizeOuterLoop();
+
+  /// Returns true if this is an early exit loop that can be vectorized.
+  /// Currently, a loop with an uncountable early exit is considered
+  /// vectorizable if:
+  ///   1. There are no writes to memory in the loop.
+  ///   2. The loop has only one early uncountable exit
+  ///   3. The early exit block dominates the latch block.
+  ///   4. The latch block has an exact exit count.
+  ///   5. The loop does not contain reductions or recurrences.
+  ///   6. We can prove at compile-time that loops will not contain faulting
+  ///   loads.
+  ///   7. It is safe to speculatively execute instructions such as divide or
+  ///   call instructions.
+  /// The list above is not based on theoretical limitations of vectorization,
+  /// but simply a statement that more work is needed to support these
+  /// additional cases safely.
+  bool isVectorizableEarlyExitLoop();
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
@@ -514,7 +595,7 @@ private:
   RecurrenceSet FixedOrderRecurrences;
 
   /// Holds the widest induction type encountered.
-  Type *WidestIndTy = nullptr;
+  IntegerType *WidestIndTy = nullptr;
 
   /// Allowed outside users. This holds the variables that can be accessed from
   /// outside the loop.
@@ -539,6 +620,11 @@ private:
   /// conditional assumes.
   SmallPtrSet<const Instruction *, 8> MaskedOp;
 
+  /// Contains all identified histogram operations, which are sequences of
+  /// load -> update -> store instructions where multiple lanes in a vector
+  /// may work on the same memory location.
+  SmallVector<HistogramInfo, 1> Histograms;
+
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
@@ -548,6 +634,14 @@ private:
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
+
+  /// Keep track of all the countable and uncountable exiting blocks if
+  /// the exact backedge taken count is not computable.
+  SmallVector<BasicBlock *, 4> CountableExitingBlocks;
+
+  /// Keep track of the loop edge to an uncountable exit, comprising a pair
+  /// of (Exiting, Exit) blocks, if there is exactly one early exit.
+  std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
 };
 
 } // namespace llvm

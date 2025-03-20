@@ -209,6 +209,9 @@ public:
     unsigned LastRowIndex;
     bool Empty;
 
+    /// The offset into the line table where this sequence begins
+    uint64_t StmtSeqOffset = UINT64_MAX;
+
     void reset();
 
     static bool orderByHighPC(const Sequence &LHS, const Sequence &RHS) {
@@ -240,10 +243,23 @@ public:
 
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
-    uint32_t lookupAddress(object::SectionedAddress Address) const;
+    uint32_t lookupAddress(object::SectionedAddress Address,
+                           bool *IsApproximateLine = nullptr) const;
 
-    bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
-                            std::vector<uint32_t> &Result) const;
+    /// Fills the Result argument with the indices of the rows that correspond
+    /// to the address range specified by \p Address and \p Size.
+    ///
+    /// \param Address - The starting address of the range.
+    /// \param Size - The size of the address range.
+    /// \param Result - The vector to fill with row indices.
+    /// \param StmtSequenceOffset - if provided, only rows from the sequence
+    /// starting at the matching offset will be added to the result.
+    ///
+    /// Returns true if any rows were found.
+    bool lookupAddressRange(
+        object::SectionedAddress Address, uint64_t Size,
+        std::vector<uint32_t> &Result,
+        std::optional<uint64_t> StmtSequenceOffset = std::nullopt) const;
 
     bool hasFileAtIndex(uint64_t FileIndex) const {
       return Prologue.hasFileAtIndex(FileIndex);
@@ -267,7 +283,7 @@ public:
     /// Fills the Result argument with the file and line information
     /// corresponding to Address. Returns true on success.
     bool getFileLineInfoForAddress(object::SectionedAddress Address,
-                                   const char *CompDir,
+                                   bool Approximate, const char *CompDir,
                                    DILineInfoSpecifier::FileLineInfoKind Kind,
                                    DILineInfo &Result) const;
 
@@ -301,10 +317,23 @@ public:
     getSourceByIndex(uint64_t FileIndex,
                      DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
-    uint32_t lookupAddressImpl(object::SectionedAddress Address) const;
+    uint32_t lookupAddressImpl(object::SectionedAddress Address,
+                               bool *IsApproximateLine = nullptr) const;
 
-    bool lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
-                                std::vector<uint32_t> &Result) const;
+    /// Fills the Result argument with the indices of the rows that correspond
+    /// to the address range specified by \p Address and \p Size.
+    ///
+    /// \param Address - The starting address of the range.
+    /// \param Size - The size of the address range.
+    /// \param Result - The vector to fill with row indices.
+    /// \param StmtSequenceOffset - if provided, only rows from the sequence
+    /// starting at the matching offset will be added to the result.
+    ///
+    /// Returns true if any rows were found.
+    bool
+    lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
+                           std::vector<uint32_t> &Result,
+                           std::optional<uint64_t> StmtSequenceOffset) const;
   };
 
   const LineTable *getLineTable(uint64_t Offset) const;
@@ -374,7 +403,7 @@ private:
     ParsingState(struct LineTable *LT, uint64_t TableOffset,
                  function_ref<void(Error)> ErrorHandler);
 
-    void resetRowAndSequence();
+    void resetRowAndSequence(uint64_t Offset);
     void appendRowToMatrix();
 
     struct AddrOpIndexDelta {

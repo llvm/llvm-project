@@ -10,7 +10,7 @@ body:             |
   bb.0:
     %0:sreg_32 = IMPLICIT_DEF
     %1:sreg_32_xm0_xexec = IMPLICIT_DEF
-    %2:sreg_64_xexec = IMPLICIT_DEF
+    %2:sreg_64_xexec_xnull = IMPLICIT_DEF
     %3:sgpr_32 = IMPLICIT_DEF
     %4:sreg_32_xexec_hi = IMPLICIT_DEF
     %5:sreg_32 = IMPLICIT_DEF
@@ -21,7 +21,7 @@ body:             |
     %10:sreg_32 = IMPLICIT_DEF
     %11:sreg_32 = IMPLICIT_DEF
     %12:sreg_64_xexec = IMPLICIT_DEF
-    %13:sreg_64_xexec = IMPLICIT_DEF
+    %13:sreg_64_xexec_xnull = IMPLICIT_DEF
     %14:sreg_32 = IMPLICIT_DEF
     %15:sreg_32 = IMPLICIT_DEF
     %16:sreg_32 = IMPLICIT_DEF

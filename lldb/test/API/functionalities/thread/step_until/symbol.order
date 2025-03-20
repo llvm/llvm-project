@@ -1,0 +1,9 @@
+SECTIONS {
+  .text.ordered : {
+    *(.text.call_me)
+    *(.text.foo)
+    *(.text.call_me.call_me.__part.1)
+    *(.text.call_me.call_me.__part.2)
+    *(.text.call_me.call_me.__part.3)
+  }
+} INSERT BEFORE .text;

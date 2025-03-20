@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "BreakpointBase.h"
-#include "DAP.h"
-#include "llvm/ADT/StringExtras.h"
+#include "JSONUtils.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace lldb_dap;
 
-BreakpointBase::BreakpointBase(const llvm::json::Object &obj)
-    : condition(std::string(GetString(obj, "condition"))),
-      hitCondition(std::string(GetString(obj, "hitCondition"))) {}
+BreakpointBase::BreakpointBase(DAP &d, const llvm::json::Object &obj)
+    : dap(d), condition(std::string(GetString(obj, "condition").value_or(""))),
+      hitCondition(std::string(GetString(obj, "hitCondition").value_or(""))) {}
 
 void BreakpointBase::UpdateBreakpoint(const BreakpointBase &request_bp) {
   if (condition != request_bp.condition) {

@@ -37,9 +37,9 @@
 ; by 4 bytes.
 ; HSA-ALLOCA: .amdhsa_private_segment_fixed_size 24
 
-; HSA-ALLOCA: s_add_i32 s6, s6, s9
-; HSA-ALLOCA: s_mov_b32 flat_scratch_lo, s7
-; HSA-ALLOCA: s_lshr_b32 flat_scratch_hi, s6, 8
+; HSA-ALLOCA: s_add_i32 s12, s12, s17
+; HSA-ALLOCA-DAG: s_mov_b32 flat_scratch_lo, s13
+; HSA-ALLOCA-DAG: s_lshr_b32 flat_scratch_hi, s12, 8
 
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen ; encoding: [0x00,0x10,0x70,0xe0
 ; SI-ALLOCA: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen ; encoding: [0x00,0x10,0x70,0xe0
@@ -52,9 +52,9 @@
 ; HSAOPT: [[LDZU:%[0-9]+]] = load i32, ptr addrspace(4) [[GEP1]], align 4, !range !2, !invariant.load !1
 ; HSAOPT: [[EXTRACTY:%[0-9]+]] = lshr i32 [[LDXY]], 16
 
-; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.x(), !range !3
-; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.y(), !range !3
-; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call i32 @llvm.amdgcn.workitem.id.z(), !range !3
+; HSAOPT: [[WORKITEM_ID_X:%[0-9]+]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
+; HSAOPT: [[WORKITEM_ID_Y:%[0-9]+]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
+; HSAOPT: [[WORKITEM_ID_Z:%[0-9]+]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
 
 ; HSAOPT: [[Y_SIZE_X_Z_SIZE:%[0-9]+]] = mul nuw nsw i32 [[EXTRACTY]], [[LDZU]]
 ; HSAOPT: [[YZ_X_XID:%[0-9]+]] = mul i32 [[Y_SIZE_X_Z_SIZE]], [[WORKITEM_ID_X]]
@@ -68,11 +68,11 @@
 ; HSAOPT: %arrayidx12 = getelementptr inbounds [5 x i32], ptr addrspace(3) [[LOCAL_GEP]], i32 0, i32 1
 
 
-; NOHSAOPT: call i32 @llvm.r600.read.local.size.y(), !range !1
-; NOHSAOPT: call i32 @llvm.r600.read.local.size.z(), !range !1
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.x(), !range !2
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.y(), !range !2
-; NOHSAOPT: call i32 @llvm.amdgcn.workitem.id.z(), !range !2
+; NOHSAOPT: call range(i32 0, 257) i32 @llvm.r600.read.local.size.y()
+; NOHSAOPT: call range(i32 0, 257) i32 @llvm.r600.read.local.size.z()
+; NOHSAOPT: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
+; NOHSAOPT: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
+; NOHSAOPT: call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
 define amdgpu_kernel void @mova_same_clause(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #0 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)
@@ -236,7 +236,7 @@ entry:
 ; R600-VECT: MOVA_INT
 
 ; SI-PROMOTE-VECT-DAG: s_lshl_b32
-; SI-PROMOTE-VECT-DAG: v_lshrrev
+; SI-PROMOTE-VECT-DAG: s_lshr_b32
 
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x60,0xe0
 ; SI-ALLOCA-DAG: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:1 ; encoding: [0x01,0x00,0x60,0xe0
@@ -258,7 +258,7 @@ entry:
 ; FUNC-LABEL: {{^}}no_overlap:
 ;
 ; A total of 5 bytes should be allocated and used.
-; SI: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
+; SI-ALLOCA: buffer_store_byte v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ;
 define amdgpu_kernel void @no_overlap(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)
@@ -281,6 +281,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}char_array_array:
 define amdgpu_kernel void @char_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i8]], addrspace(5)
@@ -294,6 +295,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}i32_array_array:
 define amdgpu_kernel void @i32_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i32]], addrspace(5)
@@ -306,6 +308,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}i64_array_array:
 define amdgpu_kernel void @i64_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x i64]], addrspace(5)
@@ -319,7 +322,7 @@ entry:
 }
 
 %struct.pair32 = type { i32, i32 }
-
+; FUNC-LABEL: {{^}}struct_array_array:
 define amdgpu_kernel void @struct_array_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x [2 x %struct.pair32]], addrspace(5)
@@ -333,6 +336,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}struct_pair32_array:
 define amdgpu_kernel void @struct_pair32_array(ptr addrspace(1) %out, i32 %index) #0 {
 entry:
   %alloca = alloca [2 x %struct.pair32], addrspace(5)
@@ -346,6 +350,7 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}select_private:
 define amdgpu_kernel void @select_private(ptr addrspace(1) %out, i32 %in) nounwind {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)
@@ -364,9 +369,10 @@ entry:
 
 ; FUNC-LABEL: ptrtoint:
 ; SI-NOT: ds_write
+; SI: s_add_i32 [[S_ADD_OFFSET:s[0-9]+]], s{{[0-9]+}}, 5
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
-; SI: v_add_{{[iu]}}32_e32 [[ADD_OFFSET:v[0-9]+]], vcc, 5,
-; SI: buffer_load_dword v{{[0-9]+}}, [[ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offen ;
+; SI: v_mov_b32_e32 [[V_ADD_OFFSET:v[0-9]+]], [[S_ADD_OFFSET]]
+; SI: buffer_load_dword v{{[0-9]+}}, [[V_ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offen ;
 define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32], addrspace(5)
   %tmp0 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -503,7 +509,7 @@ define amdgpu_kernel void @v2float_stack(ptr addrspace(1) %out, i32 %a) {
 }
 
 ; OPT-LABEL: @direct_alloca_read_0xi32(
-; OPT: store [0 x i32] undef, ptr addrspace(3)
+; OPT: store [0 x i32] poison, ptr addrspace(3)
 ; OPT: load [0 x i32], ptr addrspace(3)
 define amdgpu_kernel void @direct_alloca_read_0xi32(ptr addrspace(1) %out, i32 %index) {
 entry:
@@ -533,8 +539,3 @@ attributes #1 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
 !99 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
 ; HSAOPT: !1 = !{}
-; HSAOPT: !2 = !{i32 0, i32 257}
-; HSAOPT: !3 = !{i32 0, i32 256}
-
-; NOHSAOPT: !1 = !{i32 0, i32 257}
-; NOHSAOPT: !2 = !{i32 0, i32 256}

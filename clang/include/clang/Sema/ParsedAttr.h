@@ -392,19 +392,17 @@ public:
   }
 
   bool isArgExpr(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<Expr*>();
+    return Arg < NumArgs && isa<Expr *>(getArg(Arg));
   }
 
-  Expr *getArgAsExpr(unsigned Arg) const {
-    return getArg(Arg).get<Expr*>();
-  }
+  Expr *getArgAsExpr(unsigned Arg) const { return cast<Expr *>(getArg(Arg)); }
 
   bool isArgIdent(unsigned Arg) const {
-    return Arg < NumArgs && getArg(Arg).is<IdentifierLoc*>();
+    return Arg < NumArgs && isa<IdentifierLoc *>(getArg(Arg));
   }
 
   IdentifierLoc *getArgAsIdent(unsigned Arg) const {
-    return getArg(Arg).get<IdentifierLoc*>();
+    return cast<IdentifierLoc *>(getArg(Arg));
   }
 
   const AvailabilityChange &getAvailabilityIntroduced() const {
@@ -972,6 +970,14 @@ public:
     pool.takeAllFrom(Other.pool);
   }
 
+  void takeAllAtEndFrom(ParsedAttributes &Other) {
+    assert(&Other != this &&
+           "ParsedAttributes can't take attributes from itself");
+    addAllAtEnd(Other.begin(), Other.end());
+    Other.clearListOnly();
+    pool.takeAllFrom(Other.pool);
+  }
+
   void takeOneFrom(ParsedAttributes &Other, ParsedAttr *PA) {
     assert(&Other != this &&
            "ParsedAttributes can't take attribute from itself");
@@ -1069,10 +1075,11 @@ private:
   mutable AttributePool pool;
 };
 
-/// Consumes the attributes from `First` and `Second` and concatenates them into
-/// `Result`. Sets `Result.Range` to the combined range of `First` and `Second`.
-void takeAndConcatenateAttrs(ParsedAttributes &First, ParsedAttributes &Second,
-                             ParsedAttributes &Result);
+/// Consumes the attributes from `Second` and concatenates them
+/// at the end of `First`. Sets `First.Range`
+/// to the combined range of `First` and `Second`.
+void takeAndConcatenateAttrs(ParsedAttributes &First,
+                             ParsedAttributes &&Second);
 
 /// These constants match the enumerated choices of
 /// err_attribute_argument_n_type and err_attribute_argument_type.
@@ -1101,6 +1108,13 @@ enum AttributeDeclKind {
   ExpectedFunctionVariableOrClass,
   ExpectedKernelFunction,
   ExpectedFunctionWithProtoType,
+  ExpectedForLoopStatement,
+  ExpectedVirtualFunction,
+  ExpectedParameterOrImplicitObjectParameter,
+  ExpectedNonMemberFunction,
+  ExpectedFunctionOrClassOrEnum,
+  ExpectedClass,
+  ExpectedTypedef,
 };
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,

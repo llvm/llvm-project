@@ -49,8 +49,8 @@ Status OptionValueArch::SetValueFromString(llvm::StringRef value,
       m_value_was_set = true;
       NotifyValueChanged();
     } else
-      error.SetErrorStringWithFormat("unsupported architecture '%s'",
-                                     value_str.c_str());
+      error = Status::FromErrorStringWithFormat("unsupported architecture '%s'",
+                                                value_str.c_str());
     break;
   }
   case eVarSetOperationInsertBefore:

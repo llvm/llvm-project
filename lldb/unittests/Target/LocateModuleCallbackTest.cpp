@@ -358,7 +358,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {
                                    FileSpec &symbol_file_spec) {
         CheckCallbackArgsWithUUID(module_spec, module_file_spec,
                                   symbol_file_spec, ++callback_call_count);
-        return Status("The locate module callback failed");
+        return Status::FromErrorString("The locate module callback failed");
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
@@ -379,7 +379,7 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureCached) {
                                    FileSpec &symbol_file_spec) {
         CheckCallbackArgsWithUUID(module_spec, module_file_spec,
                                   symbol_file_spec, ++callback_call_count);
-        return Status("The locate module callback failed");
+        return Status::FromErrorString("The locate module callback failed");
       });
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
@@ -755,7 +755,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,
@@ -793,7 +793,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,
@@ -833,7 +833,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,
@@ -876,7 +876,7 @@ TEST_F(LocateModuleCallbackTest,
           // The module_spec does not have UUID on the first call.
           CheckCallbackArgsWithoutUUID(module_spec, module_file_spec,
                                        symbol_file_spec, callback_call_count);
-          return Status("Ignored empty UUID");
+          return Status::FromErrorString("Ignored empty UUID");
         } else {
           // The module_spec has UUID on the second call.
           CheckCallbackArgsWithUUID(module_spec, module_file_spec,

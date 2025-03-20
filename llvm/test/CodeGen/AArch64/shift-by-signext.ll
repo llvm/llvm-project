@@ -81,7 +81,6 @@ define i32 @n6_fshl(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; CHECK-LABEL: n6_fshl:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w1, #1
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    mvn w9, w2
 ; CHECK-NEXT:    lsl w10, w0, w2
 ; CHECK-NEXT:    lsr w8, w8, w9
@@ -95,7 +94,6 @@ define i32 @n7_fshr(i32 %x, i32 %y, i8 %shamt) nounwind {
 ; CHECK-LABEL: n7_fshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsl w8, w0, #1
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    mvn w9, w2
 ; CHECK-NEXT:    lsr w10, w1, w2
 ; CHECK-NEXT:    lsl w8, w8, w9

@@ -14,17 +14,16 @@
 
 #include "Allocator.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
+#include "Workshare.h"
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
 using namespace ompx;
-
-#pragma omp begin declare target device_type(nohost)
 
 static void
 inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -34,6 +33,7 @@ inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
   mapping::init(IsSPMD);
   state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
   allocator::init(IsSPMD, KernelEnvironment);
+  workshare::init(IsSPMD);
 }
 
 /// Simple generic state machine for worker threads.
@@ -153,5 +153,3 @@ void __kmpc_target_deinit() {
 
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }
-
-#pragma omp end declare target

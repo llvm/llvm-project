@@ -47,7 +47,7 @@ from ..support import seven
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
-    if fpath == None:
+    if fpath is None:
         return False
     if sys.platform == "win32":
         if not fpath.endswith(".exe"):
@@ -266,6 +266,9 @@ def parseOptionsAndInitTestdirs():
                     configuration.compiler = candidate
                     break
 
+    if args.make:
+        configuration.make_path = args.make
+
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil
     elif platform_system == "Darwin":
@@ -273,6 +276,7 @@ def parseOptionsAndInitTestdirs():
             "xcrun -find -toolchain default dsymutil"
         )
     if args.llvm_tools_dir:
+        configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
         configuration.yaml2obj = shutil.which("yaml2obj", path=args.llvm_tools_dir)
 
@@ -304,7 +308,9 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
     # Set SDKROOT if we are using an Apple SDK
-    if platform_system == "Darwin" and args.apple_sdk:
+    if args.sysroot is not None:
+        configuration.sdkroot = args.sysroot
+    elif platform_system == "Darwin" and args.apple_sdk:
         configuration.sdkroot = seven.get_command_output(
             'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (args.apple_sdk)
         )

@@ -760,14 +760,14 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   return std::error_code();
 
 handle_status_error:
-  DWORD LastError = ::GetLastError();
-  if (LastError == ERROR_FILE_NOT_FOUND || LastError == ERROR_PATH_NOT_FOUND)
+  std::error_code Err = mapLastWindowsError();
+  if (Err == std::errc::no_such_file_or_directory)
     Result = file_status(file_type::file_not_found);
-  else if (LastError == ERROR_SHARING_VIOLATION)
+  else if (Err == std::errc::permission_denied)
     Result = file_status(file_type::type_unknown);
   else
     Result = file_status(file_type::status_error);
-  return mapWindowsError(LastError);
+  return Err;
 }
 
 std::error_code status(const Twine &path, file_status &result, bool Follow) {
@@ -1373,9 +1373,11 @@ std::error_code closeFile(file_t &F) {
 }
 
 std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
+  SmallString<128> NativePath;
+  llvm::sys::path::native(path, NativePath, path::Style::windows_backslash);
   // Convert to utf-16.
   SmallVector<wchar_t, 128> Path16;
-  std::error_code EC = widenPath(path, Path16);
+  std::error_code EC = widenPath(NativePath, Path16);
   if (EC && !IgnoreErrors)
     return EC;
 
@@ -1387,14 +1389,36 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
   Path16.push_back(0);
   Path16.push_back(0);
 
-  SHFILEOPSTRUCTW shfos = {};
-  shfos.wFunc = FO_DELETE;
-  shfos.pFrom = Path16.data();
-  shfos.fFlags = FOF_NO_UI;
-
-  int result = ::SHFileOperationW(&shfos);
-  if (result != 0 && !IgnoreErrors)
-    return mapWindowsError(result);
+  HRESULT HR;
+  do {
+    HR =
+        CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (FAILED(HR))
+      break;
+    auto Uninitialize = make_scope_exit([] { CoUninitialize(); });
+    IFileOperation *FileOp = NULL;
+    HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
+                          IID_PPV_ARGS(&FileOp));
+    if (FAILED(HR))
+      break;
+    auto FileOpRelease = make_scope_exit([&FileOp] { FileOp->Release(); });
+    HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
+    if (FAILED(HR))
+      break;
+    PIDLIST_ABSOLUTE PIDL = ILCreateFromPathW(Path16.data());
+    auto FreePIDL = make_scope_exit([&PIDL] { ILFree(PIDL); });
+    IShellItem *ShItem = NULL;
+    HR = SHCreateItemFromIDList(PIDL, IID_PPV_ARGS(&ShItem));
+    if (FAILED(HR))
+      break;
+    auto ShItemRelease = make_scope_exit([&ShItem] { ShItem->Release(); });
+    HR = FileOp->DeleteItem(ShItem, NULL);
+    if (FAILED(HR))
+      break;
+    HR = FileOp->PerformOperations();
+  } while (false);
+  if (FAILED(HR) && !IgnoreErrors)
+    return mapWindowsError(HRESULT_CODE(HR));
   return std::error_code();
 }
 

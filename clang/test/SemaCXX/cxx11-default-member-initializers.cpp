@@ -55,6 +55,9 @@ public:
 } // namespace std
 
 #if __cplusplus >= 201703L
+
+// Test CXXDefaultInitExpr rebuild issue in 
+// https://github.com/llvm/llvm-project/pull/87933
 namespace test_rebuild {
 template <typename T, int> class C {
 public:
@@ -70,8 +73,6 @@ public:
 };
 
 struct B : A {
-  // Test CXXDefaultInitExpr rebuild issue in 
-  // https://github.com/llvm/llvm-project/pull/87933
   int *ar = some_func<int>(C{some_func<int>(0)});
   B() {}
 };
@@ -99,6 +100,28 @@ void TypeTest_Element_Test::TestBody() {
   &TestBody_got != expect; // expected-warning {{inequality comparison result unused}}
 }
 } //  namespace test_rebuild
+
+// Test CXXDefaultInitExpr rebuild issue in 
+// https://github.com/llvm/llvm-project/pull/92527
+namespace test_rebuild2 {
+struct F {
+  int g;
+};
+struct H {};
+struct I {
+  I(const F &);
+  I(H);
+};
+struct L {
+  I i = I({.g = 0});
+};
+struct N : L {};
+
+void f() {
+  delete new L; // Ok
+  delete new N; // Ok
+}
+} // namespace test_rebuild2
 #endif // __cplusplus >= 201703L
 
 #if __cplusplus >= 202002L

@@ -39,8 +39,8 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
     FileSystem::Instance().ResolveExecutableLocation(exe_spec);
 
   if (!fs.Exists(exe_spec)) {
-    error.SetErrorStringWithFormatv("executable doesn't exist: '{0}'",
-                                    exe_spec);
+    error = Status::FromErrorStringWithFormatv(
+        "executable doesn't exist: '{0}'", exe_spec);
     return HostProcess();
   }
 
@@ -57,14 +57,16 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
     llvm::Expected<HostThread> maybe_thread =
         process.StartMonitoring(launch_info.GetMonitorProcessCallback());
     if (!maybe_thread)
-      error.SetErrorStringWithFormatv("failed to launch host thread: {}",
-                                      llvm::toString(maybe_thread.takeError()));
+      error = Status::FromErrorStringWithFormatv(
+          "failed to launch host thread: {}",
+          llvm::toString(maybe_thread.takeError()));
     if (log)
       log->PutCString("started monitoring child process.");
   } else {
     // Invalid process ID, something didn't go well
     if (error.Success())
-      error.SetErrorString("process launch failed for unknown reasons");
+      error =
+          Status::FromErrorString("process launch failed for unknown reasons");
   }
   return process;
 }

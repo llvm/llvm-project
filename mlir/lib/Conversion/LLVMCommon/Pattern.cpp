@@ -62,7 +62,7 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
     Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
     ConversionPatternRewriter &rewriter) const {
 
-  auto [strides, offset] = getStridesAndOffset(type);
+  auto [strides, offset] = type.getStridesAndOffset();
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
   // Use a canonical representation of the start address so that later
@@ -139,8 +139,6 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     strides[i] = runningStride;
 
     int64_t staticSize = memRefType.getShape()[i];
-    if (staticSize == 0)
-      continue;
     bool useSizeAsStride = stride == 1;
     if (staticSize == ShapedType::kDynamic)
       stride = ShapedType::kDynamic;
@@ -220,7 +218,7 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
     ArrayRef<Value> sizes, ArrayRef<Value> strides,
     ConversionPatternRewriter &rewriter) const {
   auto structType = typeConverter->convertType(memRefType);
-  auto memRefDescriptor = MemRefDescriptor::undef(rewriter, loc, structType);
+  auto memRefDescriptor = MemRefDescriptor::poison(rewriter, loc, structType);
 
   // Field 1: Allocated pointer, used for malloc/free.
   memRefDescriptor.setAllocatedPtr(rewriter, loc, allocatedPtr);
@@ -278,11 +276,17 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 
   // Find the malloc and free, or declare them if necessary.
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
-  LLVM::LLVMFuncOp freeFunc, mallocFunc;
-  if (toDynamic)
+  FailureOr<LLVM::LLVMFuncOp> freeFunc, mallocFunc;
+  if (toDynamic) {
     mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
-  if (!toDynamic)
+    if (failed(mallocFunc))
+      return failure();
+  }
+  if (!toDynamic) {
     freeFunc = LLVM::lookupOrCreateFreeFn(module);
+    if (failed(freeFunc))
+      return failure();
+  }
 
   unsigned unrankedMemrefPos = 0;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
@@ -295,7 +299,8 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     // Allocate memory, copy, and free the source if necessary.
     Value memory =
         toDynamic
-            ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
+            ? builder
+                  .create<LLVM::CallOp>(loc, mallocFunc.value(), allocationSize)
                   .getResult()
             : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
                                              IntegerType::get(getContext(), 8),
@@ -304,7 +309,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     Value source = desc.memRefDescPtr(builder, loc);
     builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, false);
     if (!toDynamic)
-      builder.create<LLVM::CallOp>(loc, freeFunc, source);
+      builder.create<LLVM::CallOp>(loc, freeFunc.value(), source);
 
     // Create a new descriptor. The same descriptor can be returned multiple
     // times, attempting to modify its pointer can lead to memory leaks
@@ -314,7 +319,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     if (!descriptorType)
       return failure();
     auto updatedDesc =
-        UnrankedMemRefDescriptor::undef(builder, loc, descriptorType);
+        UnrankedMemRefDescriptor::poison(builder, loc, descriptorType);
     Value rank = desc.rank(builder, loc);
     updatedDesc.setRank(builder, loc, rank);
     updatedDesc.setMemRefDescPtr(builder, loc, memory);

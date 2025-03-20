@@ -28,6 +28,7 @@ void baz(void (*fn)(int, int, int), int arg1, int arg2, int arg3) {
     fn(arg1, arg2, arg3);
 }
 
+// CHECK: ![[#]] = !{i32 4, !"cfi-normalize-integers", i32 1}
 // CHECK: ![[TYPE1]] = !{i32 -1143117868}
 // CHECK: ![[TYPE2]] = !{i32 -460921415}
 // CHECK: ![[TYPE3]] = !{i32 -333839615}

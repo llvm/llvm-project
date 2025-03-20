@@ -116,13 +116,14 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
                                       const LocationContext *LCtx,
                                       bool notifyChanges) const {
   ProgramStateManager &Mgr = getStateManager();
-  ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
-                                                             LV, V));
+  ExprEngine &Eng = Mgr.getOwningEngine();
+  ProgramStateRef State = makeWithStore(Mgr.StoreMgr->Bind(getStore(), LV, V));
   const MemRegion *MR = LV.getAsRegion();
-  if (MR && notifyChanges)
-    return Mgr.getOwningEngine().processRegionChange(newState, MR, LCtx);
 
-  return newState;
+  if (MR && notifyChanges)
+    return Eng.processRegionChange(State, MR, LCtx);
+
+  return State;
 }
 
 ProgramStateRef
@@ -130,60 +131,42 @@ ProgramState::bindDefaultInitial(SVal loc, SVal V,
                                  const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
+  BindResult BindRes = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
+  ProgramStateRef State = makeWithStore(BindRes);
+  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
 ProgramStateRef
 ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
   ProgramStateManager &Mgr = getStateManager();
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
-  const StoreRef &newStore = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
-  ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
+  BindResult BindRes = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
+  ProgramStateRef State = makeWithStore(BindRes);
+  return Mgr.getOwningEngine().processRegionChange(State, R, LCtx);
 }
 
 typedef ArrayRef<const MemRegion *> RegionList;
 typedef ArrayRef<SVal> ValueList;
 
-ProgramStateRef
-ProgramState::invalidateRegions(RegionList Regions,
-                             const Expr *E, unsigned Count,
-                             const LocationContext *LCtx,
-                             bool CausedByPointerEscape,
-                             InvalidatedSymbols *IS,
-                             const CallEvent *Call,
-                             RegionAndSymbolInvalidationTraits *ITraits) const {
+ProgramStateRef ProgramState::invalidateRegions(
+    RegionList Regions, const Stmt *S, unsigned Count,
+    const LocationContext *LCtx, bool CausedByPointerEscape,
+    InvalidatedSymbols *IS, const CallEvent *Call,
+    RegionAndSymbolInvalidationTraits *ITraits) const {
   SmallVector<SVal, 8> Values;
   for (const MemRegion *Reg : Regions)
     Values.push_back(loc::MemRegionVal(Reg));
 
-  return invalidateRegionsImpl(Values, E, Count, LCtx, CausedByPointerEscape,
-                               IS, ITraits, Call);
+  return invalidateRegions(Values, S, Count, LCtx, CausedByPointerEscape, IS,
+                           Call, ITraits);
 }
 
-ProgramStateRef
-ProgramState::invalidateRegions(ValueList Values,
-                             const Expr *E, unsigned Count,
-                             const LocationContext *LCtx,
-                             bool CausedByPointerEscape,
-                             InvalidatedSymbols *IS,
-                             const CallEvent *Call,
-                             RegionAndSymbolInvalidationTraits *ITraits) const {
+ProgramStateRef ProgramState::invalidateRegions(
+    ValueList Values, const Stmt *S, unsigned Count,
+    const LocationContext *LCtx, bool CausedByPointerEscape,
+    InvalidatedSymbols *IS, const CallEvent *Call,
+    RegionAndSymbolInvalidationTraits *ITraits) const {
 
-  return invalidateRegionsImpl(Values, E, Count, LCtx, CausedByPointerEscape,
-                               IS, ITraits, Call);
-}
-
-ProgramStateRef
-ProgramState::invalidateRegionsImpl(ValueList Values,
-                                    const Expr *E, unsigned Count,
-                                    const LocationContext *LCtx,
-                                    bool CausedByPointerEscape,
-                                    InvalidatedSymbols *IS,
-                                    RegionAndSymbolInvalidationTraits *ITraits,
-                                    const CallEvent *Call) const {
   ProgramStateManager &Mgr = getStateManager();
   ExprEngine &Eng = Mgr.getOwningEngine();
 
@@ -197,21 +180,18 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
 
   StoreManager::InvalidatedRegions TopLevelInvalidated;
   StoreManager::InvalidatedRegions Invalidated;
-  const StoreRef &newStore
-  = Mgr.StoreMgr->invalidateRegions(getStore(), Values, E, Count, LCtx, Call,
-                                    *IS, *ITraits, &TopLevelInvalidated,
-                                    &Invalidated);
+  const StoreRef &NewStore = Mgr.StoreMgr->invalidateRegions(
+      getStore(), Values, S, Count, LCtx, Call, *IS, *ITraits,
+      &TopLevelInvalidated, &Invalidated);
 
-  ProgramStateRef newState = makeWithStore(newStore);
+  ProgramStateRef NewState = makeWithStore(NewStore);
 
   if (CausedByPointerEscape) {
-    newState = Eng.notifyCheckersOfPointerEscape(newState, IS,
-                                                 TopLevelInvalidated,
-                                                 Call,
-                                                 *ITraits);
+    NewState = Eng.notifyCheckersOfPointerEscape(
+        NewState, IS, TopLevelInvalidated, Call, *ITraits);
   }
 
-  return Eng.processRegionChanges(newState, IS, TopLevelInvalidated,
+  return Eng.processRegionChanges(NewState, IS, TopLevelInvalidated,
                                   Invalidated, LCtx, Call);
 }
 
@@ -224,6 +204,16 @@ ProgramStateRef ProgramState::killBinding(Loc LV) const {
     return this;
 
   return makeWithStore(newStore);
+}
+
+/// We should never form a MemRegion that would wrap a TypedValueRegion of a
+/// reference type. What we actually wanted was to create a MemRegion refering
+/// to the pointee of that reference.
+SVal ProgramState::desugarReference(SVal Val) const {
+  const auto *TyReg = dyn_cast_or_null<TypedValueRegion>(Val.getAsRegion());
+  if (!TyReg || !TyReg->getValueType()->isReferenceType())
+    return Val;
+  return getSVal(TyReg);
 }
 
 /// SymbolicRegions are expected to be wrapped by an ElementRegion as a
@@ -243,9 +233,8 @@ SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
                               const StackFrameContext *CalleeCtx) const {
-  const StoreRef &NewStore =
-    getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx);
-  return makeWithStore(NewStore);
+  return makeWithStore(
+      getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }
 
 SVal ProgramState::getSelfSVal(const LocationContext *LCtx) const {
@@ -299,12 +288,10 @@ SVal ProgramState::getSVal(Loc location, QualType T) const {
         //  The symbolic value stored to 'x' is actually the conjured
         //  symbol for the call to foo(); the type of that symbol is 'char',
         //  not unsigned.
-        const llvm::APSInt &NewV = getBasicVals().Convert(T, *Int);
-
+        APSIntPtr NewV = getBasicVals().Convert(T, *Int);
         if (V.getAs<Loc>())
           return loc::ConcreteInt(NewV);
-        else
-          return nonloc::ConcreteInt(NewV);
+        return nonloc::ConcreteInt(NewV);
       }
     }
   }
@@ -450,6 +437,18 @@ ProgramStateRef ProgramState::makeWithStore(const StoreRef &store) const {
   return getStateManager().getPersistentState(NewSt);
 }
 
+ProgramStateRef ProgramState::makeWithStore(const BindResult &BindRes) const {
+  ExprEngine &Eng = getStateManager().getOwningEngine();
+  ProgramStateRef State = makeWithStore(BindRes.ResultingStore);
+
+  // We must always notify the checkers for failing binds because otherwise they
+  // may keep stale traits for these symbols.
+  // Eg., Malloc checker may report leaks if we failed to bind that symbol.
+  if (BindRes.FailedToBindValues.empty())
+    return State;
+  return Eng.escapeValues(State, BindRes.FailedToBindValues, PSK_EscapeOnBind);
+}
+
 ProgramStateRef ProgramState::cloneAsPosteriorlyOverconstrained() const {
   ProgramState NewSt(*this);
   NewSt.PosteriorlyOverconstrained = true;
@@ -466,12 +465,14 @@ void ProgramState::setStore(const StoreRef &newStore) {
 }
 
 SVal ProgramState::getLValue(const FieldDecl *D, SVal Base) const {
+  Base = desugarReference(Base);
   Base = wrapSymbolicRegion(Base);
   return getStateManager().StoreMgr->getLValueField(D, Base);
 }
 
 SVal ProgramState::getLValue(const IndirectFieldDecl *D, SVal Base) const {
   StoreManager &SM = *getStateManager().StoreMgr;
+  Base = desugarReference(Base);
   Base = wrapSymbolicRegion(Base);
 
   // FIXME: This should work with `SM.getLValueField(D->getAnonField(), Base)`,

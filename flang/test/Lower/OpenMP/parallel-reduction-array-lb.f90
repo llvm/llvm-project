@@ -12,11 +12,13 @@ print *,i
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x2xi32 : !fir.ref<!fir.box<!fir.array<3x2xi32>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x2xi32 : !fir.ref<!fir.box<!fir.array<3x2xi32>>> alloc {
+! CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
+! CHECK:           omp.yield(%[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
@@ -30,8 +32,8 @@ end program
 ! CHECK:           %[[VAL_13:.*]] = fir.shape_shift %[[VAL_10]]#0, %[[VAL_10]]#1, %[[VAL_12]]#0, %[[VAL_12]]#1 : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_8]]#0(%[[VAL_13]]) : (!fir.heap<!fir.array<3x2xi32>>, !fir.shapeshift<2>) -> !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_14]] : i32, !fir.box<!fir.array<3x2xi32>>
-! CHECK:           fir.store %[[VAL_14]] to %[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
-! CHECK:           omp.yield(%[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
+! CHECK:           fir.store %[[VAL_14]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
 ! CHECK:         } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<3x2xi32>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>

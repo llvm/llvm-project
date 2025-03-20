@@ -16,5 +16,5 @@ char const *p;
 void f0() {
   char const str[] = "This will change";
   p = str;
-} // expected-warning{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference [core.StackAddressEscape]}}
-// expected-note@-1{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}
+} // expected-warning@-1{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference [core.StackAddressEscape]}}
+// expected-note@-2{{Address of stack memory associated with local variable 'str' is still referred to by the global variable 'p' upon returning to the caller.  This will be a dangling reference}}

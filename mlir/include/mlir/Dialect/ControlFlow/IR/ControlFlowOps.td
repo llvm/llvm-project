@@ -37,7 +37,8 @@ class CF_Op<string mnemonic, list<Trait> traits = []> :
 // AssertOp
 //===----------------------------------------------------------------------===//
 
-def AssertOp : CF_Op<"assert"> {
+def AssertOp : CF_Op<"assert",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Assert operation with message attribute";
   let description = [{
     Assert operation at runtime with single boolean operand and an error
@@ -49,7 +50,7 @@ def AssertOp : CF_Op<"assert"> {
     Example:
 
     ```mlir
-    assert %b, "Expected ... to be true"
+    cf.assert %b, "Expected ... to be true"
     ```
   }];
 
@@ -67,7 +68,7 @@ def BranchOp : CF_Op<"br", [
     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
     Pure, Terminator
   ]> {
-  let summary = "branch operation";
+  let summary = "Branch operation";
   let description = [{
     The `cf.br` operation represents a direct branch operation to a given
     block. The operands of this operation are forwarded to the successor block,
@@ -115,9 +116,9 @@ def CondBranchOp : CF_Op<"cond_br",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      Pure, Terminator]> {
-  let summary = "conditional branch operation";
+  let summary = "Conditional branch operation";
   let description = [{
-    The `cond_br` terminator operation represents a conditional branch on a
+    The `cf.cond_br` terminator operation represents a conditional branch on a
     boolean (1-bit integer) value. If the bit is set, then the first destination
     is jumped to; if it is false, the second destination is chosen. The count
     and types of operands must align with the arguments in the corresponding
@@ -135,7 +136,7 @@ def CondBranchOp : CF_Op<"cond_br",
     ```mlir
     func.func @select(%a: i32, %b: i32, %flag: i1) -> i32 {
       // Both targets are the same, operands differ
-      cond_br %flag, ^bb1(%a : i32), ^bb1(%b : i32)
+      cf.cond_br %flag, ^bb1(%a : i32), ^bb1(%b : i32)
 
     ^bb1(%x : i32) :
       return %x : i32
@@ -230,9 +231,9 @@ def SwitchOp : CF_Op<"switch",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      Pure, Terminator]> {
-  let summary = "switch operation";
+  let summary = "Switch operation";
   let description = [{
-    The `switch` terminator operation represents a switch on a signless integer
+    The `cf.switch` terminator operation represents a switch on a signless integer
     value. If the flag matches one of the specified cases, then the
     corresponding destination is jumped to. If the flag does not match any of
     the cases, the default destination is jumped to. The count and types of
@@ -241,7 +242,7 @@ def SwitchOp : CF_Op<"switch",
     Example:
 
     ```mlir
-    switch %flag : i32, [
+    cf.switch %flag : i32, [
       default: ^bb1(%a : i32),
       42: ^bb1(%b : i32),
       43: ^bb3(%c : i32)

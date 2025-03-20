@@ -19,7 +19,6 @@
 #include "MCTargetDesc/AVRMCExpr.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -27,6 +26,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -206,7 +206,7 @@ const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
     bool IsProgMem = GV->getAddressSpace() == AVR::ProgramMemory;
     if (IsProgMem) {
       const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GV), Ctx);
-      return AVRMCExpr::create(AVRMCExpr::VK_AVR_PM, Expr, false, Ctx);
+      return AVRMCExpr::create(AVRMCExpr::VK_PM, Expr, false, Ctx);
     }
   }
 

@@ -114,14 +114,18 @@ void f8() {
 int f9() { return M2(1); }
 
 template <typename T>
-T f10(const int x10) {
+T f_unknown_target(const int x10) {
   return std::move(x10);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the const variable 'x10' of the trivially-copyable type 'const int' has no effect; remove std::move() [performance-move-const-arg]
-  // CHECK-FIXES: return x10;
 }
+
 void f11() {
-  f10<int>(1);
-  f10<double>(1);
+  f_unknown_target<int>(1);
+  f_unknown_target<double>(1);
+}
+
+A&& f_return_right_ref() {
+  static A a{};
+  return std::move(a);
 }
 
 class NoMoveSemantics {
@@ -542,3 +546,40 @@ void testAlsoNonMoveable() {
 }
 
 } // namespace issue_62550
+
+namespace GH111450 {
+struct Status;
+
+struct Error {
+    Error(const Status& S);
+};
+
+struct Result {
+  Error E;
+  Result(Status&& S) : E(std::move(S)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+};
+} // namespace GH111450
+
+namespace GH126515 {
+
+struct TernaryMoveCall {
+TernaryMoveCall();
+TernaryMoveCall(const TernaryMoveCall&);
+TernaryMoveCall operator=(const TernaryMoveCall&);
+
+void TernaryCheckTriviallyCopyable(const char * c) {}
+
+void testTernaryMove() {
+  TernaryMoveCall t1;
+  TernaryMoveCall other(false ? TernaryMoveCall() : TernaryMoveCall(std::move(t1)) );
+  // CHECK-MESSAGES: :[[@LINE-1]]:69: warning: passing result of std::move() as a const reference argument; no move will actually happen [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-11]]:8: note: 'TernaryMoveCall' is not move assignable/constructible
+
+  const char* a = "a";
+  TernaryCheckTriviallyCopyable(true ? std::move(a) : "" );
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: std::move of the variable 'a' of the trivially-copyable type 'const char *' has no effect; remove std::move() [performance-move-const-arg]
+}
+
+};
+} // namespace GH126515

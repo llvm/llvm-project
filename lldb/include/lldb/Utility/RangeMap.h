@@ -450,6 +450,12 @@ public:
 
   void Append(const Entry &entry) { m_entries.emplace_back(entry); }
 
+  /// Append a range with data to the vector
+  /// \param B The base of the memory range
+  /// \param S The size of the memory range
+  /// \param T The data associated with the memory range
+  void Append(B &&b, S &&s, T &&t) { m_entries.emplace_back(Entry(b, s, t)); }
+
   bool Erase(uint32_t start, uint32_t end) {
     if (start >= end || end > m_entries.size())
       return false;
@@ -487,36 +493,27 @@ public:
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
     assert(IsSorted());
 #endif
-    typename Collection::iterator pos;
-    typename Collection::iterator end;
-    typename Collection::iterator prev;
-    bool can_combine = false;
-    // First we determine if we can combine any of the Entry objects so we
-    // don't end up allocating and making a new collection for no reason
-    for (pos = m_entries.begin(), end = m_entries.end(), prev = end; pos != end;
-         prev = pos++) {
-      if (prev != end && prev->data == pos->data) {
-        can_combine = true;
-        break;
-      }
-    }
+    auto first_intersect = std::adjacent_find(
+        m_entries.begin(), m_entries.end(), [](const Entry &a, const Entry &b) {
+          return a.DoesAdjoinOrIntersect(b) && a.data == b.data;
+        });
 
-    // We can combine at least one entry, then we make a new collection and
-    // populate it accordingly, and then swap it into place.
-    if (can_combine) {
-      Collection minimal_ranges;
-      for (pos = m_entries.begin(), end = m_entries.end(), prev = end;
-           pos != end; prev = pos++) {
-        if (prev != end && prev->data == pos->data)
-          minimal_ranges.back().SetRangeEnd(pos->GetRangeEnd());
-        else
-          minimal_ranges.push_back(*pos);
-      }
-      // Use the swap technique in case our new vector is much smaller. We must
-      // swap when using the STL because std::vector objects never release or
-      // reduce the memory once it has been allocated/reserved.
-      m_entries.swap(minimal_ranges);
+    if (first_intersect == m_entries.end())
+      return;
+
+    // We can combine at least one entry. Make a new collection and populate it
+    // accordingly, and then swap it into place.
+    auto pos = std::next(first_intersect);
+    Collection minimal_ranges(m_entries.begin(), pos);
+    for (; pos != m_entries.end(); ++pos) {
+      Entry &back = minimal_ranges.back();
+      if (back.DoesAdjoinOrIntersect(*pos) && back.data == pos->data)
+        back.SetRangeEnd(std::max(back.GetRangeEnd(), pos->GetRangeEnd()));
+      else
+        minimal_ranges.push_back(*pos);
     }
+    m_entries.swap(minimal_ranges);
+    ComputeUpperBounds(0, m_entries.size());
   }
 
   void Clear() { m_entries.clear(); }

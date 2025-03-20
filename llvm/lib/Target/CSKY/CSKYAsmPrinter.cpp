@@ -145,8 +145,10 @@ void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
                                        getSubtargetInfo().getFeatureBits());
 
   // Do any auto-generated pseudo lowerings.
-  if (emitPseudoExpansionLowering(*OutStreamer, MI))
+  if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
+    EmitToStreamer(*OutStreamer, OutInst);
     return;
+  }
 
   // If we just ended a constant pool, mark it as such.
   if (InConstantPool && MI->getOpcode() != CSKY::CONSTPOOL_ENTRY) {
@@ -217,8 +219,7 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
     MCSym = GetExternalSymbolSymbol(Sym);
   }
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(MCSym, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
 
   if (CCPV->getPCAdjustment()) {
 

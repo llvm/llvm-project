@@ -111,7 +111,7 @@ define void @inner_loop(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; CHECK-NEXT:    [[E_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX]], 1
 ; CHECK-NEXT:    br i1 [[E_PREDICATE]], label [[E:%.*]], label [[I]]
 ; CHECK:       loop.exit.guard2:
-; CHECK-NEXT:    [[MERGED_BB_IDX_MOVED]] = phi i32 [ 0, [[B]] ], [ 1, [[D]] ], [ undef, [[F]] ]
+; CHECK-NEXT:    [[MERGED_BB_IDX_MOVED]] = phi i32 [ 0, [[B]] ], [ 1, [[D]] ], [ poison, [[F]] ]
 ; CHECK-NEXT:    [[MERGED_BB_IDX3:%.*]] = phi i32 [ 0, [[B]] ], [ 0, [[D]] ], [ 1, [[F]] ]
 ; CHECK-NEXT:    [[LOOP_EXIT_GUARD_PREDICATE:%.*]] = icmp eq i32 [[MERGED_BB_IDX3]], 0
 ; CHECK-NEXT:    br i1 [[LOOP_EXIT_GUARD_PREDICATE]], label [[LOOP_EXIT_GUARD]], label [[G]]
@@ -152,8 +152,8 @@ define void @inner_loop(i1 %PredEntry, i1 %PredA, i1 %PredB) {
 ; BOOLEAN:       loop.exit.guard1:
 ; BOOLEAN-NEXT:    br i1 [[GUARD_E]], label [[E:%.*]], label [[I]]
 ; BOOLEAN:       loop.exit.guard2:
-; BOOLEAN-NEXT:    [[GUARD_E_MOVED]] = phi i1 [ false, [[B]] ], [ true, [[D]] ], [ undef, [[F]] ]
-; BOOLEAN-NEXT:    [[GUARD_C_MOVED]] = phi i1 [ true, [[B]] ], [ false, [[D]] ], [ undef, [[F]] ]
+; BOOLEAN-NEXT:    [[GUARD_E_MOVED]] = phi i1 [ false, [[B]] ], [ true, [[D]] ], [ poison, [[F]] ]
+; BOOLEAN-NEXT:    [[GUARD_C_MOVED]] = phi i1 [ true, [[B]] ], [ false, [[D]] ], [ poison, [[F]] ]
 ; BOOLEAN-NEXT:    [[GUARD_LOOP_EXIT_GUARD:%.*]] = phi i1 [ true, [[B]] ], [ true, [[D]] ], [ false, [[F]] ]
 ; BOOLEAN-NEXT:    br i1 [[GUARD_LOOP_EXIT_GUARD]], label [[LOOP_EXIT_GUARD]], label [[G]]
 ;

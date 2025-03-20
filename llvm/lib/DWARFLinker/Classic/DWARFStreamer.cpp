@@ -62,6 +62,8 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.AsmVerbose = true;
+  MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
     return createStringError(std::errc::invalid_argument,
@@ -101,17 +103,16 @@ Error DwarfStreamer::init(Triple TheTriple,
     MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
                                          *MAI, *MII, *MRI);
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), true, true, MIP,
-        std::unique_ptr<MCCodeEmitter>(MCE), std::unique_ptr<MCAsmBackend>(MAB),
-        true);
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
+        std::unique_ptr<MCCodeEmitter>(MCE),
+        std::unique_ptr<MCAsmBackend>(MAB));
     break;
   }
   case DWARFLinker::OutputFileType::Object: {
     MS = TheTarget->createMCObjectStreamer(
         TheTriple, *MC, std::unique_ptr<MCAsmBackend>(MAB),
         MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
-        *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
-        /*DWARFMustBeAtTheEnd*/ false);
+        *MSTI);
     break;
   }
   }
@@ -122,7 +123,7 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return createStringError(std::errc::invalid_argument,
@@ -808,7 +809,8 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
 
 void DwarfStreamer::emitLineTableForUnit(
     const DWARFDebugLine::LineTable &LineTable, const CompileUnit &Unit,
-    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool,
+    std::vector<uint64_t> *RowOffsets) {
   // Switch to the section where the table will be emitted into.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
 
@@ -829,7 +831,7 @@ void DwarfStreamer::emitLineTableForUnit(
 
   // Emit rows.
   emitLineTableRows(LineTable, LineEndSym,
-                    Unit.getOrigUnit().getAddressByteSize());
+                    Unit.getOrigUnit().getAddressByteSize(), RowOffsets);
 }
 
 void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
@@ -932,7 +934,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
     LineSectionSize += MS->emitULEB128IntValue(StrForm);
 
     LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_directory_index);
-    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_data1);
+    LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_FORM_udata);
 
     if (HasChecksums) {
       LineSectionSize += MS->emitULEB128IntValue(dwarf::DW_LNCT_MD5);
@@ -951,8 +953,7 @@ void DwarfStreamer::emitLineTablePrologueV5IncludeAndFileTable(
   // file_names (sequence of file name entries).
   for (auto File : P.FileNames) {
     emitLineTableString(P, File.Name, DebugStrPool, DebugLineStrPool);
-    MS->emitInt8(File.DirIdx);
-    LineSectionSize += 1;
+    LineSectionSize += MS->emitULEB128IntValue(File.DirIdx);
     if (HasChecksums) {
       MS->emitBinaryData(
           StringRef(reinterpret_cast<const char *>(File.Checksum.data()),
@@ -1036,7 +1037,7 @@ void DwarfStreamer::emitLineTableProloguePayload(
 
 void DwarfStreamer::emitLineTableRows(
     const DWARFDebugLine::LineTable &LineTable, MCSymbol *LineEndSym,
-    unsigned AddressByteSize) {
+    unsigned AddressByteSize, std::vector<uint64_t> *RowOffsets) {
 
   MCDwarfLineTableParams Params;
   Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -1060,6 +1061,7 @@ void DwarfStreamer::emitLineTableRows(
   unsigned FileNum = 1;
   unsigned LastLine = 1;
   unsigned Column = 0;
+  unsigned Discriminator = 0;
   unsigned IsStatement = 1;
   unsigned Isa = 0;
   uint64_t Address = -1ULL;
@@ -1067,6 +1069,11 @@ void DwarfStreamer::emitLineTableRows(
   unsigned RowsSinceLastSequence = 0;
 
   for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
+    // If we're tracking row offsets, record the current section size as the
+    // offset of this row.
+    if (RowOffsets)
+      RowOffsets->push_back(LineSectionSize);
+
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
@@ -1098,9 +1105,18 @@ void DwarfStreamer::emitLineTableRows(
       MS->emitULEB128IntValue(Column);
       LineSectionSize += 1 + getULEB128Size(Column);
     }
-
-    // FIXME: We should handle the discriminator here, but dsymutil doesn't
-    // consider it, thus ignore it for now.
+    if (Discriminator != Row.Discriminator &&
+        MS->getContext().getDwarfVersion() >= 4) {
+      Discriminator = Row.Discriminator;
+      unsigned Size = getULEB128Size(Discriminator);
+      MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);
+      MS->emitULEB128IntValue(Size + 1);
+      MS->emitIntValue(dwarf::DW_LNE_set_discriminator, 1);
+      MS->emitULEB128IntValue(Discriminator);
+      LineSectionSize += /* extended op */ 1 + getULEB128Size(Size + 1) +
+                         /* discriminator */ 1 + Size;
+    }
+    Discriminator = 0;
 
     if (Isa != Row.Isa) {
       Isa = Row.Isa;
@@ -1156,7 +1172,7 @@ void DwarfStreamer::emitLineTableRows(
       EncodingBuffer.resize(0);
       Address = -1ULL;
       LastLine = FileNum = IsStatement = 1;
-      RowsSinceLastSequence = Column = Isa = 0;
+      RowsSinceLastSequence = Column = Discriminator = Isa = 0;
     }
   }
 

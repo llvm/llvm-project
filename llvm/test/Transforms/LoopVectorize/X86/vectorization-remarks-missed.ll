@@ -12,7 +12,7 @@
 ;   }
 ; }
 ; File, line, and column should match those specified in the metadata
-; CHECK: remark: source.cpp:5:9: loop not vectorized: could not determine number of loop iterations
+; CHECK: remark: source.cpp:5:9: loop not vectorized: Cannot vectorize uncountable loop
 ; CHECK: remark: source.cpp:5:9: loop not vectorized
 
 ; void test_disabled(int *A, int Length) {
@@ -41,17 +41,17 @@
 ;   }
 ;   return k;
 ; }
-; CHECK: remark: source.cpp:29:7: loop not vectorized: control flow cannot be substituted for a select
+; CHECK: remark: source.cpp:29:7: loop not vectorized: Control flow cannot be substituted for a select
 ; CHECK: remark: source.cpp:27:3: loop not vectorized
 
 ; YAML:       --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            CantComputeNumberOfIterations
+; YAML-NEXT: Name:            UnsupportedUncountableLoop
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 5, Column: 9 }
 ; YAML-NEXT: Function:        _Z4testPii
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          could not determine number of loop iterations
+; YAML-NEXT:   - String:          Cannot vectorize uncountable loop
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Missed
 ; YAML-NEXT: Pass:            loop-vectorize
@@ -104,7 +104,7 @@
 ; YAML-NEXT: Function:        test_multiple_failures
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          control flow cannot be substituted for a select
+; YAML-NEXT:   - String:          Control flow cannot be substituted for a select
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
@@ -117,14 +117,14 @@
 ; YAML-NEXT: ...
 ; YAML-NEXT: --- !Analysis
 ; YAML-NEXT: Pass:            loop-vectorize
-; YAML-NEXT: Name:            CantComputeNumberOfIterations
+; YAML-NEXT: Name:            UnsupportedUncountableLoop
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }
 ; YAML-NEXT: Function:        test_multiple_failures
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'loop not vectorized: '
-; YAML-NEXT:   - String:          could not determine number of loop iterations
+; YAML-NEXT:   - String:          Cannot vectorize uncountable loop
 ; YAML-NEXT: ...
-; YAML-NEXT: --- !Missed
+; YAML:      --- !Missed
 ; YAML-NEXT: Pass:            loop-vectorize
 ; YAML-NEXT: Name:            MissedDetails
 ; YAML-NEXT: DebugLoc:        { File: source.cpp, Line: 27, Column: 3 }

@@ -49,6 +49,17 @@ define i16 @test4(i16 %x) {
   ret i16 %cond
 }
 
+define i16 @test4_with_range(i16 %x) {
+; CHECK-LABEL: @test4_with_range(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i16 [[CT]]
+;
+  %ct = call range(i16 0, 16) i16 @llvm.ctlz.i16(i16 %x, i1 true)
+  %tobool = icmp eq i16 %x, 0
+  %cond = select i1 %tobool, i16 16, i16 %ct
+  ret i16 %cond
+}
+
 define i32 @test5(i32 %x) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
@@ -110,6 +121,17 @@ define i16 @test4b(i16 %x) {
 ; CHECK-NEXT:    ret i16 [[CT]]
 ;
   %ct = tail call i16 @llvm.cttz.i16(i16 %x, i1 true)
+  %tobool = icmp eq i16 %x, 0
+  %cond = select i1 %tobool, i16 16, i16 %ct
+  ret i16 %cond
+}
+
+define i16 @test4b_with_range(i16 %x) {
+; CHECK-LABEL: @test4b_with_range(
+; CHECK-NEXT:    [[CT:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i16 [[CT]]
+;
+  %ct = call range(i16 0, 16) i16 @llvm.cttz.i16(i16 %x, i1 true)
   %tobool = icmp eq i16 %x, 0
   %cond = select i1 %tobool, i16 16, i16 %ct
   ret i16 %cond
@@ -473,6 +495,19 @@ define i32 @test_cttz_not_bw(i32 %x) {
   ret i32 %res
 }
 
+define i32 @test_cttz_not_bw_noundef(i32 %x) {
+; CHECK-LABEL: @test_cttz_not_bw_noundef(
+; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP_NOT]], i32 123, i32 [[CT]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %ct = tail call noundef i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %cmp = icmp ne i32 %x, 0
+  %res = select i1 %cmp, i32 %ct, i32 123
+  ret i32 %res
+}
+
 define i32 @test_cttz_not_bw_multiuse(i32 %x) {
 ; CHECK-LABEL: @test_cttz_not_bw_multiuse(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
@@ -620,6 +655,67 @@ define i16 @test_multiuse_trunc_undef(i64 %x, ptr %p) {
   %cond = select i1 %tobool, i16 %conv, i16 64
   store i16 %conv, ptr %p
   ret i16 %cond
+}
+
+define i64 @test_pr128441(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 false)
+; CHECK-NEXT:    ret i64 [[SEL]]
+;
+  %iszero = icmp ne i64 %x, %y
+  %xor = xor i64 %x, %y
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 %cttz, i64 64
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted1(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 false)
+; CHECK-NEXT:    ret i64 [[SEL]]
+;
+  %iszero = icmp ne i64 %x, %y
+  %xor = xor i64 %y, %x
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 %cttz, i64 64
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted2(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[XOR]], i1 false)
+; CHECK-NEXT:    ret i64 [[SEL]]
+;
+  %iszero = icmp eq i64 %x, %y
+  %xor = xor i64 %x, %y
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 64, i64 %cttz
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted3_negative(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted3_negative(
+; CHECK-NEXT:    ret i64 64
+;
+  %iszero = icmp eq i64 %x, %y
+  %xor = xor i64 %y, %x
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 %cttz, i64 64
+  ret i64 %sel
+}
+
+define i64 @test_pr128441_commuted4_negative(i64 %x, i64 %y) {
+; CHECK-LABEL: @test_pr128441_commuted4_negative(
+; CHECK-NEXT:    ret i64 64
+;
+  %iszero = icmp ne i64 %x, %y
+  %xor = xor i64 %x, %y
+  %cttz = call i64 @llvm.cttz.i64(i64 %xor, i1 true)
+  %sel = select i1 %iszero, i64 64, i64 %cttz
+  ret i64 %sel
 }
 
 declare i16 @llvm.ctlz.i16(i16, i1)

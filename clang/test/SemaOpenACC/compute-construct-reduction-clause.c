@@ -41,12 +41,12 @@ void uses(unsigned Parm) {
 #pragma acc parallel num_gangs(IVar) reduction(+:IVar)
   while (1);
 
-  // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel' construct with a 'num_gangs' clause with more than 1 argument, have 2}}
+  // expected-error@+2{{OpenACC 'num_gangs' clause with more than 1 argument may not appear on a 'parallel' construct with a 'reduction' clause}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel reduction(+:Parm) num_gangs(Parm, IVar)
   while (1);
 
-  // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel' construct with a 'num_gangs' clause with more than 1 argument, have 2}}
+  // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel' construct with a 'num_gangs' clause with more than 1 argument}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel num_gangs(Parm, IVar) reduction(+:Var)
   while (1);
@@ -104,4 +104,8 @@ void uses(unsigned Parm) {
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
 #pragma acc parallel reduction(&:HA.array[1:2])
   while (1);
+
+  // expected-error@+1{{OpenACC 'reduction' clause is not valid on 'init' directive}}
+#pragma acc init reduction(+:I)
+  for(;;);
 }

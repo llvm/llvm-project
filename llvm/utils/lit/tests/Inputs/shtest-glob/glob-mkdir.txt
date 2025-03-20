@@ -1,0 +1,2 @@
+## Tests glob pattern handling in the mkdir command.
+# RUN: not mkdir %S/example_file*.input

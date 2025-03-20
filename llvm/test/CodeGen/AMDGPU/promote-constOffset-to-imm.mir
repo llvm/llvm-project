@@ -1,8 +1,12 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX9 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck -check-prefixes=GCN,GFX8 %s
 
-# GFX9-LABEL: name: diffoporder_add
+# GCN-LABEL: name: diffoporder_add
 # GFX9: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, -2048, 0
 # GFX9: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
 
 name: diffoporder_add
 body:             |
@@ -43,7 +47,7 @@ body:             |
 ...
 ---
 
-# GFX9-LABEL: name: LowestInMiddle
+# GCN-LABEL: name: LowestInMiddle
 # GFX9: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11200
 # GFX9: [[BASE_LO:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_5:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 %{{[0-9]+}}, [[S_MOV_B32_1]]
 # GFX9: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_64_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, killed [[V_ADD_CO_U32_e64_5]]
@@ -56,6 +60,11 @@ body:             |
 # GFX9: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[BASE1_LO]], %subreg.sub0, [[BASE1_HI]], %subreg.sub1
 # GFX9: [[GLOBAL_LOAD_DWORDX2_1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE3]], 0, 0,
 # GFX9: [[GLOBAL_LOAD_DWORDX2_2:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 0, 0,
+
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+
 
 name: LowestInMiddle
 body:             |
@@ -101,7 +110,7 @@ body:             |
 ...
 ---
 
-# GFX9-LABEL: name: NegativeDistance
+# GCN-LABEL: name: NegativeDistance
 # GFX9: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 10240
 # GFX9: [[V_ADD_CO_U32_e64_4:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_5:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 %{{[0-9]+}}, [[S_MOV_B32_1]]
 # GFX9: [[BASE_HI:%[0-9]+]]:vgpr_32, dead %{{[0-9]+}}:sreg_64_xexec = V_ADDC_U32_e64 %{{[0-9]+}}, 0, killed [[V_ADD_CO_U32_e64_5]]
@@ -109,6 +118,10 @@ body:             |
 # GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -4096, 0
 # GFX9: [[GLOBAL_LOAD_DWORDX2_1:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], -2048, 0
 # GFX9: [[GLOBAL_LOAD_DWORDX2_2:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 0, 0
+
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
+# GFX8: %{{[0-9]+}}:vreg_64 = GLOBAL_LOAD_DWORDX2 %{{[0-9]+}}, 0, 0
 
 name: NegativeDistance
 body:             |
@@ -190,9 +203,12 @@ body:             |
 ...
 ---
 
-# GFX9-LABEL: name: diffoporder_add_store
+# GCN-LABEL: name: diffoporder_add_store
 # GFX9: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub0, 1000, 0,
 # GFX9: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0,
+
+# GFX8: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub0, 0, 0
+# GFX8: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0
 
 name: diffoporder_add_store
 body:             |
@@ -211,4 +227,242 @@ body:             |
     %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
     %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
     GLOBAL_STORE_DWORD %13, %0.sub1, 0, 0, implicit $exec
+...
+---
+
+# GCN-LABEL: name: diffoporder_add_flat_load
+# GFX9: FLAT_LOAD_DWORD %{{[0-9]+}}, 1000, 0,
+# GFX9: FLAT_LOAD_DWORD %{{[0-9]+}}, 0, 0,
+
+# GFX8: FLAT_LOAD_DWORD %{{[0-9]+}}, 0, 0,
+# GFX8: FLAT_LOAD_DWORD %{{[0-9]+}}, 0, 0,
+
+name: diffoporder_add_flat_load
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    %14:vgpr_32 = FLAT_LOAD_DWORD %6, 0, 0, implicit $exec, implicit $flat_scr
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    %15:vgpr_32 = FLAT_LOAD_DWORD %13, 0, 0, implicit $exec, implicit $flat_scr
+...
+---
+
+# GCN-LABEL: name: diffoporder_add_flat_store
+# GFX9: FLAT_STORE_DWORD %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: FLAT_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0,
+
+# GFX8: FLAT_STORE_DWORD %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: FLAT_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0,
+
+name: diffoporder_add_flat_store
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    FLAT_STORE_DWORD %6, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    FLAT_STORE_DWORD %13, %0.sub1, 0, 0, implicit $exec, implicit $flat_scr
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_global_atomic_cmpswap
+# GFX9: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 1000, 0,
+# GFX9: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+# GFX8: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+# GFX8: GLOBAL_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+name: diffoporder_add_global_atomic_cmpswap
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    GLOBAL_ATOMIC_CMPSWAP %6:vreg_64, %0:vreg_64, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    GLOBAL_ATOMIC_CMPSWAP %13:vreg_64, %0:vreg_64, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_flat_atomic_cmpswap
+# GFX9: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 1000, 0,
+# GFX9: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+# GFX8: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+# GFX8: FLAT_ATOMIC_CMPSWAP %{{[0-9]+}}, %0, 0, 0,
+
+name: diffoporder_add_flat_atomic_cmpswap
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    FLAT_ATOMIC_CMPSWAP %6:vreg_64, %0:vreg_64, 0, 0, implicit $exec, implicit $flat_scr
+
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    FLAT_ATOMIC_CMPSWAP %13:vreg_64, %0:vreg_64, 0, 0, implicit $exec, implicit $flat_scr
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_global_atomic_add
+# GFX9: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: GLOBAL_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_global_atomic_add
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    GLOBAL_ATOMIC_ADD %6:vreg_64, %0.sub0, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    GLOBAL_ATOMIC_ADD %13:vreg_64, %0.sub0, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_flat_atomic_add
+# GFX9: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: FLAT_ATOMIC_ADD %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_flat_atomic_add
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    FLAT_ATOMIC_ADD %6:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    FLAT_ATOMIC_ADD %13:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_global_atomic_add_rtn
+# GFX9: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: GLOBAL_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_global_atomic_add_rtn
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    %14:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN %6:vreg_64, %0.sub0, 0, 0, implicit $exec
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    %15:vgpr_32 = GLOBAL_ATOMIC_ADD_RTN %13:vreg_64, %0.sub0, 0, 0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: diffoporder_add_flat_atomic_add_rtn
+# GFX9: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 1000, 0,
+# GFX9: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+# GFX8: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+# GFX8: FLAT_ATOMIC_ADD_RTN %{{[0-9]+}}, %0.sub0, 0, 0,
+
+name: diffoporder_add_flat_atomic_add_rtn
+body:             |
+  bb.0.entry:
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+
+    %1:sgpr_32 = S_MOV_B32 4000
+    %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec
+    %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %3, 0, implicit $exec
+    %6:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %4, %subreg.sub1
+    %14:vgpr_32 = FLAT_ATOMIC_ADD_RTN %6:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+
+
+    %8:sgpr_32 = S_MOV_B32 3000
+    %9:vgpr_32, %10:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %8, 0, implicit $exec
+    %11:vgpr_32, dead %12:sreg_64_xexec = V_ADDC_U32_e64 %0.sub1, 0, %10, 0, implicit $exec
+    %13:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
+    %15:vgpr_32 = FLAT_ATOMIC_ADD_RTN %13:vreg_64, %0.sub0, 0, 0, implicit $exec, implicit $flat_scr
+...
+
+---
+# GCN-LABEL: name: negative_offset_nullptr
+# GCN: V_ADD_CO_U32_e64 -1, 0, 0
+# GCN: V_ADDC_U32_e64 -1, %{{[0-9]+}}, %{{[0-9]+}}, 0
+
+name:            negative_offset_nullptr
+body:             |
+  bb.0:
+    %0:sreg_64 = S_MOV_B64 $src_private_base
+    %1:sreg_32 = S_MOV_B32 0
+    %2:sreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0.sub1, %subreg.sub1
+    %3:vgpr_32, %4:sreg_64_xexec = V_ADD_CO_U32_e64 -1, 0, 0, implicit $exec
+    %5:vgpr_32 = COPY %2.sub1
+    %6:vgpr_32, %7:sreg_64 = V_ADDC_U32_e64 -1, %5, %4, 0, implicit $exec
+    %8:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %6, %subreg.sub1
+    %9:vgpr_32 = FLAT_LOAD_UBYTE %8, 0, 0, implicit $exec, implicit $flat_scr
+    S_ENDPGM 0, implicit %9
 ...

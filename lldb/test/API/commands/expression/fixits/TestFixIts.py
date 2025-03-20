@@ -53,7 +53,7 @@ class ExprCommandWithFixits(TestBase):
         expr = "struct MyTy { int m; }; MyTy x; MyTy *ptr = &x; int m = ptr.m;"
         value = frame.EvaluateExpression(expr, top_level_options)
         # A successfully parsed top-level expression will yield an
-        # unknown error . If a parsing error would have happened we
+        # unknown error. If a parsing error would have happened we
         # would get a different error kind, so let's check the error
         # kind here.
         self.assertEqual(value.GetError().GetCString(), "unknown error")
@@ -106,9 +106,8 @@ class ExprCommandWithFixits(TestBase):
         )
         self.assertIn("null_pointer->first", ret_val.GetError())
 
-    # The final function call runs into SIGILL on aarch64-linux.
     @expectedFailureAll(
-        archs=["aarch64"], oslist=["freebsd", "linux"], bugnumber="llvm.org/pr49407"
+        archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49407"
     )
     def test_with_multiple_retries(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""

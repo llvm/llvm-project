@@ -27,6 +27,7 @@
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
+#include "llvm/DebugInfo/CodeView/Formatters.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
@@ -644,10 +645,11 @@ void COFFDumper::cacheRelocations() {
   for (const SectionRef &S : Obj->sections()) {
     const coff_section *Section = Obj->getCOFFSection(S);
 
-    append_range(RelocMap[Section], S.relocations());
+    auto &RM = RelocMap[Section];
+    append_range(RM, S.relocations());
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[Section], [](RelocationRef L, RelocationRef R) {
+    llvm::sort(RM, [](RelocationRef L, RelocationRef R) {
       return L.getOffset() < R.getOffset();
     });
   }
@@ -793,7 +795,9 @@ void COFFDumper::printCOFFDebugDirectory() {
       DictScope PDBScope(W, "PDBInfo");
       W.printHex("PDBSignature", DebugInfo->Signature.CVSignature);
       if (DebugInfo->Signature.CVSignature == OMF::Signature::PDB70) {
-        W.printBinary("PDBGUID", ArrayRef(DebugInfo->PDB70.Signature));
+        W.printString(
+            "PDBGUID",
+            formatv("{0}", fmt_guid(DebugInfo->PDB70.Signature)).str());
         W.printNumber("PDBAge", DebugInfo->PDB70.Age);
         W.printString("PDBFileName", PDBFileName);
       }
@@ -927,6 +931,12 @@ void COFFDumper::printCOFFLoadConfig() {
     W.printHex("ExtraRFETableSize", CHPE->ExtraRFETableSize);
     W.printHex("__os_arm64x_dispatch_fptr", CHPE->__os_arm64x_dispatch_fptr);
     W.printHex("AuxiliaryIATCopy", CHPE->AuxiliaryIATCopy);
+
+    if (CHPE->Version >= 2) {
+      W.printHex("AuxiliaryDelayloadIAT", CHPE->AuxiliaryDelayloadIAT);
+      W.printHex("AuxiliaryDelayloadIATCopy", CHPE->AuxiliaryDelayloadIATCopy);
+      W.printHex("HybridImageInfoBitfield", CHPE->HybridImageInfoBitfield);
+    }
   }
 
   if (Tables.SEHTableVA) {
@@ -968,6 +978,43 @@ void COFFDumper::printCOFFLoadConfig() {
     ListScope LS(W, "GuardEHContTable");
     printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount,
                   4 + Stride, PrintExtra);
+  }
+
+  if (const coff_dynamic_reloc_table *DynRelocTable =
+          Obj->getDynamicRelocTable()) {
+    ListScope LS(W, "DynamicRelocations");
+    W.printHex("Version", DynRelocTable->Version);
+    for (auto reloc : Obj->dynamic_relocs()) {
+      switch (reloc.getType()) {
+      case COFF::IMAGE_DYNAMIC_RELOCATION_ARM64X: {
+        ListScope TLS(W, "Arm64X");
+        for (auto Arm64XReloc : reloc.arm64x_relocs()) {
+          ListScope ELS(W, "Entry");
+          W.printHex("RVA", Arm64XReloc.getRVA());
+          switch (Arm64XReloc.getType()) {
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
+            W.printString("Type", "ZEROFILL");
+            W.printHex("Size", Arm64XReloc.getSize());
+            break;
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
+            W.printString("Type", "VALUE");
+            W.printHex("Size", Arm64XReloc.getSize());
+            W.printHex("Value", Arm64XReloc.getValue());
+            break;
+          case COFF::IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA:
+            W.printString("Type", "DELTA");
+            W.printNumber("Value",
+                          static_cast<int32_t>(Arm64XReloc.getValue()));
+            break;
+          }
+        }
+        break;
+      }
+      default:
+        W.printHex("Type", reloc.getType());
+        break;
+      }
+    }
   }
 }
 
@@ -1224,14 +1271,15 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         reportError(errorCodeToError(EC), Obj->getFileName());
 
       W.printString("LinkageName", LinkageName);
-      if (FunctionLineTables.count(LinkageName) != 0) {
+      auto [It, Inserted] =
+          FunctionLineTables.try_emplace(LinkageName, Contents);
+      if (!Inserted) {
         // Saw debug info for this function already?
         reportError(errorCodeToError(object_error::parse_failed),
                     Obj->getFileName());
         return;
       }
 
-      FunctionLineTables[LinkageName] = Contents;
       FunctionNames.push_back(LinkageName);
       break;
     }

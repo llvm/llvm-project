@@ -76,10 +76,6 @@ void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
   InitialFrameState.push_back(Inst);
 }
 
-bool MCAsmInfo::isSectionAtomizableBySymbols(const MCSection &Section) const {
-  return false;
-}
-
 const MCExpr *
 MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
                                        unsigned Encoding,
@@ -127,4 +123,31 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
   // FIXME: Does .section .bss/.data/.text work everywhere??
   return SectionName == ".text" || SectionName == ".data" ||
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
+}
+
+void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
+  assert(VariantKindToName.empty() && "cannot initialize twice");
+  for (auto Desc : Descs) {
+    [[maybe_unused]] auto It =
+        VariantKindToName.try_emplace(Desc.Kind, Desc.Name);
+    assert(It.second && "duplicate Kind");
+    [[maybe_unused]] auto It2 =
+        NameToVariantKind.try_emplace(Desc.Name.lower(), Desc.Kind);
+    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
+    assert(It2.second || Desc.Name == "l");
+  }
+}
+
+StringRef MCAsmInfo::getVariantKindName(uint32_t Kind) const {
+  auto It = VariantKindToName.find(Kind);
+  assert(It != VariantKindToName.end() &&
+         "ensure the VariantKind is set in initializeVariantKinds");
+  return It->second;
+}
+
+std::optional<uint32_t> MCAsmInfo::getVariantKindForName(StringRef Name) const {
+  auto It = NameToVariantKind.find(Name.lower());
+  if (It != NameToVariantKind.end())
+    return It->second;
+  return {};
 }

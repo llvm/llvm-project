@@ -3,8 +3,8 @@
 float fp_reassoc_simple(float a, float b, float c) {
 // CHECK: _Z17fp_reassoc_simplefff
 // CHECK: %[[A:.+]] = fadd reassoc float %b, %c
-// CHECK: %[[M:.+]] = fmul reassoc float %[[A]], %b
-// CHECK-NEXT: fadd reassoc float %[[M]], %c
+// CHECK: %[[M:.+]] = fmul reassoc float %b, %[[A]]
+// CHECK-NEXT: fadd reassoc float %c, %[[M]]
 #pragma clang fp reassociate(on)
   a = b + c;
   return a * b + c;
@@ -34,7 +34,7 @@ float fp_reassoc_template(float a, float b, float c) {
   // CHECK: _Z19fp_reassoc_templatefff
   // CHECK: %[[A1:.+]] = fadd reassoc float %a, %b
   // CHECK-NEXT: %[[A2:.+]] = fsub reassoc float %[[A1]], %c
-  // CHECK-NEXT: fadd reassoc float %[[A2]], %c
+  // CHECK-NEXT: fadd reassoc float %c, %[[A2]]
   return template_reassoc<float>(a, b, c);
 }
 

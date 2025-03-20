@@ -53,7 +53,6 @@ class ModulePass;
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
-  ModulePass *createPPCMergeStringPoolPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
@@ -78,8 +77,7 @@ class ModulePass;
   void initializePPCMIPeepholePass(PassRegistry&);
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
-  void initializePPCDAGToDAGISelPass(PassRegistry &);
-  void initializePPCMergeStringPoolPass(PassRegistry &);
+  void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 
@@ -122,7 +120,7 @@ class ModulePass;
 
     /// MO_GOT_FLAG - If this bit is set the symbol reference is to be computed
     /// via the GOT. For example when combined with the MO_PCREL_FLAG it should
-    /// produce the relocation @got@pcrel. Fixup is VK_PPC_GOT_PCREL.
+    /// produce the relocation @got@pcrel. Fixup is VK_GOT_PCREL.
     MO_GOT_FLAG,
 
     /// MO_PCREL_OPT_FLAG - If this bit is set the operand is part of a
@@ -155,19 +153,19 @@ class ModulePass;
 
     /// MO_GOT_TLSGD_PCREL_FLAG - A combintaion of flags, if these bits are set
     /// they should produce the relocation @got@tlsgd@pcrel.
-    /// Fix up is VK_PPC_GOT_TLSGD_PCREL
+    /// Fix up is VK_GOT_TLSGD_PCREL
     /// MO_GOT_TLSGD_PCREL_FLAG = MO_PCREL_FLAG | MO_GOT_FLAG | MO_TLSGD_FLAG,
     MO_GOT_TLSGD_PCREL_FLAG,
 
     /// MO_GOT_TLSLD_PCREL_FLAG - A combintaion of flags, if these bits are set
     /// they should produce the relocation @got@tlsld@pcrel.
-    /// Fix up is VK_PPC_GOT_TLSLD_PCREL
+    /// Fix up is VK_GOT_TLSLD_PCREL
     /// MO_GOT_TLSLD_PCREL_FLAG = MO_PCREL_FLAG | MO_GOT_FLAG | MO_TLSLD_FLAG,
     MO_GOT_TLSLD_PCREL_FLAG,
 
     /// MO_GOT_TPREL_PCREL_FLAG - A combintaion of flags, if these bits are set
     /// they should produce the relocation @got@tprel@pcrel.
-    /// Fix up is VK_PPC_GOT_TPREL_PCREL
+    /// Fix up is VK_GOT_TPREL_PCREL
     /// MO_GOT_TPREL_PCREL_FLAG = MO_GOT_FLAG | MO_TPREL_FLAG | MO_PCREL_FLAG,
     MO_GOT_TPREL_PCREL_FLAG,
 
@@ -184,7 +182,7 @@ class ModulePass;
     MO_TLSLD_LO,
     MO_TOC_LO,
 
-    /// Symbol for VK_PPC_TLS fixup attached to an ADD instruction
+    /// Symbol for VK_TLS fixup attached to an ADD instruction
     MO_TLS,
 
     /// MO_PIC_HA_FLAG = MO_PIC_FLAG | MO_HA

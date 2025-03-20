@@ -91,12 +91,15 @@ namespace llvm {
     }
 
     bool operator<(const ValID &RHS) const {
-      assert(Kind == RHS.Kind && "Comparing ValIDs of different kinds");
+      assert((((Kind == t_LocalID || Kind == t_LocalName) &&
+               (RHS.Kind == t_LocalID || RHS.Kind == t_LocalName)) ||
+              ((Kind == t_GlobalID || Kind == t_GlobalName) &&
+               (RHS.Kind == t_GlobalID || RHS.Kind == t_GlobalName))) &&
+             "Comparing ValIDs of different kinds");
+      if (Kind != RHS.Kind)
+        return Kind < RHS.Kind;
       if (Kind == t_LocalID || Kind == t_GlobalID)
         return UIntVal < RHS.UIntVal;
-      assert((Kind == t_LocalName || Kind == t_GlobalName ||
-              Kind == t_ConstantStruct || Kind == t_PackedConstantStruct) &&
-             "Ordering not defined for this ValID kind yet");
       return StrVal < RHS.StrVal;
     }
   };
@@ -201,14 +204,17 @@ namespace llvm {
     bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
                               const SlotMapping *Slots);
 
+    bool parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
+                                          const SlotMapping *Slots);
+
     LLVMContext &getContext() { return Context; }
 
   private:
-    bool error(LocTy L, const Twine &Msg) const { return Lex.Error(L, Msg); }
-    bool tokError(const Twine &Msg) const { return error(Lex.getLoc(), Msg); }
+    bool error(LocTy L, const Twine &Msg) { return Lex.ParseError(L, Msg); }
+    bool tokError(const Twine &Msg) { return error(Lex.getLoc(), Msg); }
 
     bool checkValueID(LocTy L, StringRef Kind, StringRef Prefix,
-                      unsigned NextID, unsigned ID) const;
+                      unsigned NextID, unsigned ID);
 
     /// Restore the internal name and slot mappings using the mappings that
     /// were created at an earlier parsing stage.
@@ -337,7 +343,6 @@ namespace llvm {
 
     // Top-Level Entities
     bool parseTopLevelEntities();
-    bool finalizeDebugInfoFormat(Module *M);
     void dropUnknownMetadataReferences();
     bool validateEndOfModule(bool UpgradeDebugInfo);
     bool validateEndOfIndex();
@@ -373,6 +378,8 @@ namespace llvm {
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRangeAttr(AttrBuilder &B);
+    bool parseInitializesAttr(AttrBuilder &B);
+    bool parseCapturesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 
@@ -391,7 +398,7 @@ namespace llvm {
     bool parseGVFlags(GlobalValueSummary::GVFlags &GVFlags);
     bool parseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags);
     bool parseOptionalFFlags(FunctionSummary::FFlags &FFlags);
-    bool parseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls);
+    bool parseOptionalCalls(SmallVectorImpl<FunctionSummary::EdgeTy> &Calls);
     bool parseHotness(CalleeInfo::HotnessType &Hotness);
     bool parseOptionalTypeIdInfo(FunctionSummary::TypeIdInfo &TypeIdInfo);
     bool parseTypeTests(std::vector<GlobalValue::GUID> &TypeTests);
@@ -416,7 +423,7 @@ namespace llvm {
     bool parseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
                               IdLocListType &IdLocList);
     bool parseParamAccessOffset(ConstantRange &Range);
-    bool parseOptionalRefs(std::vector<ValueInfo> &Refs);
+    bool parseOptionalRefs(SmallVectorImpl<ValueInfo> &Refs);
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);
@@ -557,8 +564,7 @@ namespace llvm {
     bool parseExceptionArgs(SmallVectorImpl<Value *> &Args,
                             PerFunctionState &PFS);
 
-    bool resolveFunctionType(Type *RetType,
-                             const SmallVector<ParamInfo, 16> &ArgList,
+    bool resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                              FunctionType *&FuncTy);
 
     // Constant Parsing.
@@ -591,6 +597,7 @@ namespace llvm {
     template <class ParserTy>
     bool parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc);
     bool parseSpecializedMDNode(MDNode *&N, bool IsDistinct = false);
+    bool parseDIExpressionBody(MDNode *&Result, bool IsDistinct);
 
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   bool parse##CLASS(MDNode *&Result, bool IsDistinct);

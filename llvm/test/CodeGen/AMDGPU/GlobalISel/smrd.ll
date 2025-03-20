@@ -12,7 +12,7 @@ define amdgpu_kernel void @smrd0(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 1
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -24,7 +24,7 @@ define amdgpu_kernel void @smrd1(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 255
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -39,7 +39,7 @@ define amdgpu_kernel void @smrd2(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 256
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -54,7 +54,7 @@ define amdgpu_kernel void @smrd3(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 4294967296 ; 2 ^ 32
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -70,7 +70,7 @@ define amdgpu_kernel void @smrd4(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 262143
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
@@ -84,15 +84,17 @@ define amdgpu_kernel void @smrd5(ptr addrspace(4) %ptr) {
 entry:
   %0 = getelementptr i32, ptr addrspace(4) %ptr, i64 262144
   %1 = load i32, ptr addrspace(4) %0
-  store i32 %1, ptr addrspace(1) undef
+  store i32 %1, ptr addrspace(1) poison
   ret void
 }
 
-; GFX9_10 can use a signed immediate byte offset
+; GFX9+ can use a signed immediate byte offset but not without sgpr[offset]
 ; GCN-LABEL: {{^}}smrd6:
 ; SICIVI: s_add_u32 s{{[0-9]}}, s{{[0-9]}}, -4
 ; SICIVI: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x0
-; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], -0x4
+; GFX9_10: s_add_u32 s2, s2, -4
+; GFX9_10: s_addc_u32 s3, s3, -1
+; GFX9_10: s_load_dword s{{[0-9]}}, s[{{[0-9]:[0-9]}}], 0x0
 define amdgpu_kernel void @smrd6(ptr addrspace(1) %out, ptr addrspace(4) %ptr) #0 {
 entry:
   %tmp = getelementptr i32, ptr addrspace(4) %ptr, i64 -1

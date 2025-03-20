@@ -46,7 +46,7 @@ InstructionSelector *
 createM68kInstructionSelector(const M68kTargetMachine &, const M68kSubtarget &,
                               const M68kRegisterBankInfo &);
 
-void initializeM68kDAGToDAGISelPass(PassRegistry &);
+void initializeM68kDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeM68kExpandPseudoPass(PassRegistry &);
 void initializeM68kGlobalBaseRegPass(PassRegistry &);
 void initializeM68kCollapseMOVEMPass(PassRegistry &);

@@ -114,7 +114,7 @@ int template_test() {
 // DUMP: FunctionDecl {{.*}}run 'double ()'
 // DUMP: TemplateArgument type 'double'
 // DUMP: BuiltinType {{.*}}'double'
-// DUMP: TemplateArgument integral 1
+// DUMP: TemplateArgument integral '1U'
 // DUMP: OMPAllocateDeclAttr {{.*}}Implicit OMPNullMemAlloc
 // DUMP: ConstantExpr {{.*}}'unsigned int'
 // DUMP: value: Int 1

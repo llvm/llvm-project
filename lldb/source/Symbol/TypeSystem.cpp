@@ -157,6 +157,10 @@ bool TypeSystem::IsMeaninglessWithoutDynamicResolution(void *type) {
   return false;
 }
 
+ConstString TypeSystem::GetMangledTypeName(void *type) {
+  return GetTypeName(type, false);
+}
+
 ConstString TypeSystem::DeclGetMangledName(void *opaque_decl) {
   return ConstString();
 }
@@ -334,4 +338,15 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
         }));
   }
   return GetTypeSystemForLanguage(language);
+}
+
+bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
+  if (language == eLanguageTypeUnknown || language >= eNumLanguageTypes)
+    return false;
+
+  LanguageSet languages =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (languages.Empty())
+    return false;
+  return languages[language];
 }

@@ -8,11 +8,10 @@ define void @test_blockaddress() nounwind {
 ; LA32-LABEL: test_blockaddress:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(addr)
-; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(addr)
 ; LA32-NEXT:    pcalau12i $a1, %pc_hi20(.Ltmp0)
 ; LA32-NEXT:    addi.w $a1, $a1, %pc_lo12(.Ltmp0)
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    st.w $a1, $a0, %pc_lo12(addr)
+; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(addr)
 ; LA32-NEXT:    jr $a0
 ; LA32-NEXT:  .Ltmp0: # Block address taken
 ; LA32-NEXT:  .LBB0_1: # %block
@@ -21,11 +20,10 @@ define void @test_blockaddress() nounwind {
 ; LA64-LABEL: test_blockaddress:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a0, %pc_hi20(addr)
-; LA64-NEXT:    addi.d $a0, $a0, %pc_lo12(addr)
 ; LA64-NEXT:    pcalau12i $a1, %pc_hi20(.Ltmp0)
 ; LA64-NEXT:    addi.d $a1, $a1, %pc_lo12(.Ltmp0)
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    st.d $a1, $a0, %pc_lo12(addr)
+; LA64-NEXT:    ld.d $a0, $a0, %pc_lo12(addr)
 ; LA64-NEXT:    jr $a0
 ; LA64-NEXT:  .Ltmp0: # Block address taken
 ; LA64-NEXT:  .LBB0_1: # %block

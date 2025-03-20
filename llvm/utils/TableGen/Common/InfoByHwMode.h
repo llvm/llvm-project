@@ -11,8 +11,8 @@
 // data).
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
-#define LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H
+#define LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H
 
 #include "CodeGenHwModes.h"
 #include "llvm/ADT/SmallVector.h"
@@ -144,7 +144,7 @@ template <typename InfoT> struct InfoByHwMode {
     assert(hasMode(Mode) || hasDefault());
     InfoT I = get(Mode);
     Map.clear();
-    Map.insert(std::pair(DefaultMode, I));
+    Map.try_emplace(DefaultMode, I);
   }
 
 protected:
@@ -152,8 +152,8 @@ protected:
 };
 
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
-  ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH);
-  ValueTypeByHwMode(Record *R, MVT T);
+  ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH);
+  ValueTypeByHwMode(const Record *R, MVT T);
   ValueTypeByHwMode(MVT T) { Map.insert({DefaultMode, T}); }
   ValueTypeByHwMode() = default;
 
@@ -174,7 +174,8 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   }
 };
 
-ValueTypeByHwMode getValueTypeByHwMode(Record *Rec, const CodeGenHwModes &CGH);
+ValueTypeByHwMode getValueTypeByHwMode(const Record *Rec,
+                                       const CodeGenHwModes &CGH);
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);
 
@@ -183,7 +184,7 @@ struct RegSizeInfo {
   unsigned SpillSize;
   unsigned SpillAlignment;
 
-  RegSizeInfo(Record *R);
+  RegSizeInfo(const Record *R);
   RegSizeInfo() = default;
   bool operator<(const RegSizeInfo &I) const;
   bool operator==(const RegSizeInfo &I) const {
@@ -197,7 +198,7 @@ struct RegSizeInfo {
 };
 
 struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
-  RegSizeInfoByHwMode(Record *R, const CodeGenHwModes &CGH);
+  RegSizeInfoByHwMode(const Record *R, const CodeGenHwModes &CGH);
   RegSizeInfoByHwMode() = default;
   bool operator<(const RegSizeInfoByHwMode &VI) const;
   bool operator==(const RegSizeInfoByHwMode &VI) const;
@@ -211,7 +212,7 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   void writeToStream(raw_ostream &OS) const;
 
   void insertRegSizeForMode(unsigned Mode, RegSizeInfo Info) {
-    Map.insert(std::pair(Mode, Info));
+    Map.try_emplace(Mode, Info);
   }
 };
 
@@ -222,25 +223,25 @@ struct SubRegRange {
   uint16_t Size;
   uint16_t Offset;
 
-  SubRegRange(Record *R);
+  SubRegRange(const Record *R);
   SubRegRange(uint16_t Size, uint16_t Offset) : Size(Size), Offset(Offset) {}
 };
 
 struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
-  SubRegRangeByHwMode(Record *R, const CodeGenHwModes &CGH);
+  SubRegRangeByHwMode(const Record *R, const CodeGenHwModes &CGH);
   SubRegRangeByHwMode(SubRegRange Range) { Map.insert({DefaultMode, Range}); }
   SubRegRangeByHwMode() = default;
 
   void insertSubRegRangeForMode(unsigned Mode, SubRegRange Info) {
-    Map.insert(std::pair(Mode, Info));
+    Map.try_emplace(Mode, Info);
   }
 };
 
-struct EncodingInfoByHwMode : public InfoByHwMode<Record *> {
-  EncodingInfoByHwMode(Record *R, const CodeGenHwModes &CGH);
+struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
+  EncodingInfoByHwMode(const Record *R, const CodeGenHwModes &CGH);
   EncodingInfoByHwMode() = default;
 };
 
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_INFOBYHWMODE_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_INFOBYHWMODE_H

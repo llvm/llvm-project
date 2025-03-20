@@ -261,7 +261,8 @@ InstrumentationRuntimeMainThreadChecker::GetBacktracesFromExtendedStopInfo(
 
   StructuredData::ObjectSP thread_id_obj =
       info->GetObjectForDotSeparatedPath("tid");
-  tid_t tid = thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
+  lldb::tid_t tid =
+      thread_id_obj ? thread_id_obj->GetUnsignedIntegerValue() : 0;
 
   // We gather symbolication addresses above, so no need for HistoryThread to
   // try to infer the call addresses.

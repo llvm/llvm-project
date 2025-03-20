@@ -30,10 +30,10 @@
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
+// CHECK: "-stack-protector" "2"
 // CHECK-AARCH64: "-fsanitize=shadow-call-stack"
 // CHECK-RISCV64: "-fsanitize=shadow-call-stack"
 // CHECK-X86_64: "-fsanitize=safe-stack"
-// CHECK: "-stack-protector" "2"
 // CHECK-AARCH64: "-target-feature" "+outline-atomics"
 // CHECK-NOT: "-fcommon"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
@@ -297,3 +297,9 @@
 // RUN: %clang --target=riscv64-unknown-fuchsia -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
 // RISCV64-FLAGS: "-X" "--no-relax"
+
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia 2>&1 \
+// RUN:     -nostdlib -nolibc \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIB-NOLIBC
+// CHECK-NOSTDLIB-NOLIBC-NOT: "warning:"
+// CHECK-NOSTDLIB-NOLIBC-NOT: "error:"

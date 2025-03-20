@@ -15,7 +15,7 @@
 // RUN: FileCheck -check-prefix=CHECK-FAILURE %s < %t.out
 
 // FIXME: Clean up diagnostic text below and give it a location
-// CHECK-FAILURE: error: C99 was disabled in PCH file but is currently enabled
+// CHECK-FAILURE: error: C99 was disabled in AST file '{{.*}}load_failure.pcm' but is currently enabled
 // FIXME: When we have a syntax for modules in C, use that.
 
 

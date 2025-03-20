@@ -43,22 +43,21 @@ public:
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
-                   bool KillSrc) const override;
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
 
-  void storeRegToStack(MachineBasicBlock &MBB,
-                       MachineBasicBlock::iterator MI,
-                       Register SrcReg, bool isKill, int FrameIndex,
-                       const TargetRegisterClass *RC,
-                       const TargetRegisterInfo *TRI,
-                       int64_t Offset) const override;
+  void storeRegToStack(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, int64_t Offset,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStack(MachineBasicBlock &MBB,
-                        MachineBasicBlock::iterator MI,
-                        Register DestReg, int FrameIndex,
-                        const TargetRegisterClass *RC,
-                        const TargetRegisterInfo *TRI,
-                        int64_t Offset) const override;
+  void loadRegFromStack(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, int64_t Offset,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 

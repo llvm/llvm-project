@@ -25,6 +25,7 @@ namespace clang {
 namespace format {
 
 #define LIST_TOKEN_TYPES                                                       \
+  TYPE(AfterPPDirective)                                                       \
   TYPE(ArrayInitializerLSquare)                                                \
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
@@ -43,7 +44,10 @@ namespace format {
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
+  /* Name of class/struct/union/interface definition. */                       \
+  TYPE(ClassHeadName)                                                          \
   TYPE(ClassRBrace)                                                            \
+  TYPE(CompoundRequirementLBrace)                                              \
   /* ternary ?: expression */                                                  \
   TYPE(ConditionalExpr)                                                        \
   /* the condition in an if statement */                                       \
@@ -77,6 +81,7 @@ namespace format {
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
+  TYPE(FunctionDeclarationLParen)                                              \
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
@@ -101,6 +106,8 @@ namespace format {
   TYPE(JsTypeColon)                                                            \
   TYPE(JsTypeOperator)                                                         \
   TYPE(JsTypeOptionalQuestion)                                                 \
+  TYPE(LambdaArrow)                                                            \
+  TYPE(LambdaDefinitionLParen)                                                 \
   TYPE(LambdaLBrace)                                                           \
   TYPE(LambdaLSquare)                                                          \
   TYPE(LeadingJavaAnnotation)                                                  \
@@ -176,12 +183,14 @@ namespace format {
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypeDeclarationParen)                                                   \
+  TYPE(TemplateName)                                                           \
   TYPE(TypeName)                                                               \
   TYPE(TypenameMacro)                                                          \
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UnionRBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  TYPE(VariableTemplate)                                                       \
   /* Like in 'assign x = 0, y = 1;' . */                                       \
   TYPE(VerilogAssignComma)                                                     \
   /* like in begin : block */                                                  \
@@ -582,6 +591,12 @@ public:
   /// Might be function declaration open/closing paren.
   bool MightBeFunctionDeclParen = false;
 
+  /// Has "\n\f\n" or "\n\f\r\n" before TokenText.
+  bool HasFormFeedBefore = false;
+
+  /// Is the first token after a preprocessor line.
+  bool FirstAfterPPLine = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces
@@ -667,12 +682,16 @@ public:
     return Tok.isObjCAtKeyword(Kind);
   }
 
+  bool isAccessSpecifierKeyword() const {
+    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private);
+  }
+
   bool isAccessSpecifier(bool ColonRequired = true) const {
-    if (!isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private))
+    if (!isAccessSpecifierKeyword())
       return false;
     if (!ColonRequired)
       return true;
-    const auto NextNonComment = getNextNonComment();
+    const auto *NextNonComment = getNextNonComment();
     return NextNonComment && NextNonComment->is(tok::colon);
   }
 
@@ -720,11 +739,15 @@ public:
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
-                    TT_LeadingJavaAnnotation);
+                    TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 
   bool isPointerOrReference() const {
     return isOneOf(tok::star, tok::amp, tok::ampamp);
+  }
+
+  bool isPlacementOperator() const {
+    return isOneOf(tok::kw_new, tok::kw_delete);
   }
 
   bool isUnaryOperator() const {
@@ -1633,10 +1656,12 @@ struct AdditionalKeywords {
   /// If \c AcceptIdentifierName is true, returns true not only for keywords,
   // but also for IdentifierName tokens (aka pseudo-keywords), such as
   // ``yield``.
-  bool IsJavaScriptIdentifier(const FormatToken &Tok,
+  bool isJavaScriptIdentifier(const FormatToken &Tok,
                               bool AcceptIdentifierName = true) const {
     // Based on the list of JavaScript & TypeScript keywords here:
     // https://github.com/microsoft/TypeScript/blob/main/src/compiler/scanner.ts#L74
+    if (Tok.isAccessSpecifierKeyword())
+      return false;
     switch (Tok.Tok.getKind()) {
     case tok::kw_break:
     case tok::kw_case:
@@ -1656,9 +1681,6 @@ struct AdditionalKeywords {
     case tok::kw_import:
     case tok::kw_module:
     case tok::kw_new:
-    case tok::kw_private:
-    case tok::kw_protected:
-    case tok::kw_public:
     case tok::kw_return:
     case tok::kw_static:
     case tok::kw_switch:
@@ -1701,6 +1723,8 @@ struct AdditionalKeywords {
   /// Returns \c true if \p Tok is a C# keyword, returns
   /// \c false if it is a anything else.
   bool isCSharpKeyword(const FormatToken &Tok) const {
+    if (Tok.isAccessSpecifierKeyword())
+      return true;
     switch (Tok.Tok.getKind()) {
     case tok::kw_bool:
     case tok::kw_break:
@@ -1727,9 +1751,6 @@ struct AdditionalKeywords {
     case tok::kw_namespace:
     case tok::kw_new:
     case tok::kw_operator:
-    case tok::kw_private:
-    case tok::kw_protected:
-    case tok::kw_public:
     case tok::kw_return:
     case tok::kw_short:
     case tok::kw_sizeof:
@@ -1950,6 +1971,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
          isLineComment(*Previous) &&
          FormatTok.OriginalColumn >= MinContinueColumn;
 }
+
+// Returns \c true if \c Current starts a new parameter.
+bool startsNextParameter(const FormatToken &Current, const FormatStyle &Style);
 
 } // namespace format
 } // namespace clang

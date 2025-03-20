@@ -69,9 +69,7 @@ immediately enclosed by the latter),
 3. a value that dominates the `AffineScope` op enclosing the value's
 use,
 4. the result of a constant operation,
-5. the result of an
-[`affine.apply` operation](#affineapply-mliraffineapplyop) that recursively takes as
-arguments any valid symbolic identifiers, or
+5. the result of a `Pure` operation whose operands are valid symbolic identifiers.
 6. the result of a
 [`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) on either a memref that
 is an argument to a `AffineScope` op or a memref where the corresponding
@@ -372,7 +370,7 @@ Syntax:
 operation ::= `affine.dma_wait` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
 ```
 
-The `affine.dma_start` op blocks until the completion of a DMA operation
+The `affine.dma_wait` op blocks until the completion of a DMA operation
 associated with the tag element `%tag[%index]`. `%tag` is a memref, and `%index` has
 to be an index with the same restrictions as any load/store index. In
 particular, index for each memref dimension must be an affine expression of loop

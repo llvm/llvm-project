@@ -1,0 +1,55 @@
+// REQUIRES: system-linux, native, python
+
+// This test verifies that loading an ELF file from memory works and the new
+// features that were added when loading from memory work like:
+// - Loading the .dynamic section from the PT_DYNAMIC since ELF files loaded
+//   from memory don't have the section headers available.
+// This test will make a simple executable that:
+//   - links against libc
+//   - runs and stops at a breakpoint
+//   - create a memory ELF file
+//   - verify that "image dump objfile" will dump the dynamic section of the
+//     memory elf file and find the .dynamic string table.
+
+// RUN: %clang_host %p/Inputs/memory-elf.cpp -g -O0 -o %t
+
+// RUN: %lldb %t -b \
+// RUN:   -o "b main" \
+// RUN:   -o "run" \
+// RUN:   -o "script real_module = lldb.target.module[0]" \
+// RUN:   -o "script base_addr = real_module.GetObjectFileHeaderAddress().GetLoadAddress(lldb.target)" \
+// RUN:   -o "script mem_module = lldb.SBModule(lldb.process, base_addr)" \
+// RUN:   -o "script target2 = lldb.debugger.CreateTarget('')" \
+// RUN:   -o "script target2.AddModule(mem_module)" \
+// RUN:   -o "target select 1" \
+// RUN:   -o "image dump objfile" \
+// RUN:   | FileCheck %s --check-prefix=MAIN --dump-input=always
+// MAIN: (lldb) image dump objfile
+// MAIN: Dumping headers for 1 module(s).
+// MAIN: ObjectFileELF, file = '', arch = {{.*, addr = 0x[0-9a-f]+}}
+// MAIN: ELF Header
+
+// Make sure we find the program headers and see a PT_DYNAMIC entry.
+// MAIN: Program Headers
+// MAIN: ] PT_DYNAMIC
+
+// Make sure we see some sections created from the program headers
+// MAIN: SectID
+// MAIN: PT_LOAD[0]
+
+// Ensure we find some dependent modules as won't find these if we aren't able
+// to load the .dynamic section from the PT_DYNAMIC program header.
+// MAIN: Dependent Modules:
+
+// Check for the .dynamic dump and ensure we find all dynamic entries that are
+// required to be there and needed to get the .dynstr section and the symbol
+// table, and the DT_DEBUG entry to find the list of shared libraries.
+// MAIN: .dynamic:
+// Make sure we found the .dynstr section by checking for valid strings after NEEDED
+// MAIN-DAG: NEEDED {{0x[0-9a-f]+ ".*libc.*"}}
+// MAIN-DAG: STRTAB {{0x[0-9a-f]+}}
+// MAIN-DAG: SYMTAB {{0x[0-9a-f]+}}
+// MAIN-DAG: STRSZ {{0x[0-9a-f]+}}
+// MAIN-DAG: SYMENT {{0x[0-9a-f]+}}
+// MAIN-DAG: DEBUG {{0x[0-9a-f]+}}
+// MAIN:     NULL {{0x[0-9a-f]+}}

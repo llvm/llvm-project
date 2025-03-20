@@ -1,6 +1,9 @@
 # RUN: llc -mtriple powerpc64le-unknown-linux-gnu %s -o - 2>&1 \
 # RUN:   -run-pass=livevars,phi-node-elimination -verify-machineinstrs | \
 # RUN:  FileCheck %s
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu %s -o - 2>&1 \
+# RUN:   --passes='require<live-vars>,phi-node-elimination' -verify-each | \
+# RUN:  FileCheck %s
 
 --- |
   ; Function Attrs: noreturn nounwind

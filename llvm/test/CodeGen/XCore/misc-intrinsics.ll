@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 %0 = type { i32, i32 }
 
 declare i32 @llvm.xcore.bitrev(i32)

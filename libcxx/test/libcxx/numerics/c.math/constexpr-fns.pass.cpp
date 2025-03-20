@@ -20,9 +20,7 @@
 
 #include "test_macros.h"
 
-static_assert(std::__constexpr_isnan(0.) == false, "");
 static_assert(std::__constexpr_isinf(0.0) == false, "");
-static_assert(std::__constexpr_isfinite(0.0) == true, "");
 
 int main(int, char**)
 {

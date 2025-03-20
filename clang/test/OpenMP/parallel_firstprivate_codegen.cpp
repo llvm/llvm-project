@@ -258,9 +258,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ev(ptr nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK1-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i32 8, i1 false)
-// CHECK1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
-// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float 1.000000e+00)
-// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[S_ARR]], float 1.000000e+00)
+// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i32 1
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float 2.000000e+00)
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[VAR]], float 3.000000e+00)
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[T_VAR]], align 4
@@ -473,9 +472,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    call void @_ZN3SSTIiEC1Ev(ptr nonnull align 4 dereferenceable(4) [[SST]])
 // CHECK1-NEXT:    store i32 0, ptr [[T_VAR]], align 128
 // CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 128 [[VEC]], ptr align 128 @__const._Z5tmainIiET_v.vec, i32 8, i1 false)
-// CHECK1-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
-// CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 1)
-// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[S_ARR]], i32 1)
+// CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i32 1
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 2)
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[VAR]], i32 3)
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[T_VAR]], align 128
@@ -518,28 +516,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 4
 // CHECK1-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK1-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
 // CHECK1-NEXT:    store i8 [[BF_SET]], ptr [[B]], align 4
-// CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[C]], align 4
-// CHECK1-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[A3]], ptr [[A2]], align 4
-// CHECK1-NEXT:    [[B5:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK1-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[BF_LOAD6:%.*]] = load i8, ptr [[B5]], align 4
 // CHECK1-NEXT:    [[BF_SHL:%.*]] = shl i8 [[BF_LOAD6]], 4
 // CHECK1-NEXT:    [[BF_ASHR:%.*]] = ashr i8 [[BF_SHL]], 4
 // CHECK1-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_ASHR]] to i32
 // CHECK1-NEXT:    store i32 [[BF_CAST]], ptr [[B4]], align 4
-// CHECK1-NEXT:    [[C8:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK1-NEXT:    [[C8:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C8]], align 4
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[C7]], align 4
-// CHECK1-NEXT:    [[E9:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
+// CHECK1-NEXT:    [[E9:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK1-NEXT:    store ptr [[E9]], ptr [[E]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A2]], align 4
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -610,7 +608,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
 // CHECK1-NEXT:    store float [[CONV]], ptr [[F]], align 4
@@ -625,7 +623,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
@@ -640,9 +638,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
+// CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    store i32 0, ptr [[B]], align 4
 // CHECK1-NEXT:    ret void
 //
@@ -657,11 +655,11 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // CHECK1-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// CHECK1-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load float, ptr [[F2]], align 4
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
+// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to float
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[CONV]]
@@ -824,7 +822,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK1-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK1-NEXT:    ret void
@@ -838,9 +836,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    [[A_CASTED:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SST:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK1-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SST]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SST]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[A3]], ptr [[A2]], align 4
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A2]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -879,7 +877,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK1-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
@@ -897,11 +895,11 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 4
 // CHECK1-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 4
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// CHECK1-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
+// CHECK1-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
+// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[F]], align 4
@@ -925,7 +923,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK3-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_ANON:%.*]], align 4
 // CHECK3-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK3-NEXT:    call void @_ZN2SSC1ERi(ptr nonnull align 4 dereferenceable(28) [[SS]], ptr nonnull align 4 dereferenceable(4) @_ZZ4mainE5sivar)
-// CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr @_ZZ4mainE5sivar, ptr [[TMP0]], align 4
 // CHECK3-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(ptr nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK3-NEXT:    ret i32 0
@@ -959,28 +957,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK3-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CHECK3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK3-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK3-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK3-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK3-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK3-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 4
 // CHECK3-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK3-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
 // CHECK3-NEXT:    store i8 [[BF_SET]], ptr [[B]], align 4
-// CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4
 // CHECK3-NEXT:    store ptr [[TMP0]], ptr [[C]], align 4
-// CHECK3-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
+// CHECK3-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[A3]], ptr [[A2]], align 4
-// CHECK3-NEXT:    [[B5:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK3-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[BF_LOAD6:%.*]] = load i8, ptr [[B5]], align 4
 // CHECK3-NEXT:    [[BF_SHL:%.*]] = shl i8 [[BF_LOAD6]], 4
 // CHECK3-NEXT:    [[BF_ASHR:%.*]] = ashr i8 [[BF_SHL]], 4
 // CHECK3-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_ASHR]] to i32
 // CHECK3-NEXT:    store i32 [[BF_CAST]], ptr [[B4]], align 4
-// CHECK3-NEXT:    [[C8:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK3-NEXT:    [[C8:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C8]], align 4
 // CHECK3-NEXT:    store ptr [[TMP1]], ptr [[C7]], align 4
-// CHECK3-NEXT:    [[E9:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
+// CHECK3-NEXT:    [[E9:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK3-NEXT:    store ptr [[E9]], ptr [[E]], align 4
 // CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A2]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -1029,14 +1027,14 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 4
 // CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[E3]], ptr align 4 [[TMP2]], i32 16, i1 false)
 // CHECK3-NEXT:    store ptr [[E3]], ptr [[_TMP4]], align 4
-// CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK3-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 4
-// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 4
 // CHECK3-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 4
-// CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
+// CHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
 // CHECK3-NEXT:    store ptr [[B_ADDR]], ptr [[TMP6]], align 4
-// CHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
+// CHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
 // CHECK3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[_TMP1]], align 4
 // CHECK3-NEXT:    store ptr [[TMP8]], ptr [[TMP7]], align 4
 // CHECK3-NEXT:    call void @_ZZN2SSC1ERiENKUlvE_clEv(ptr nonnull align 4 dereferenceable(16) [[REF_TMP]])
@@ -1052,34 +1050,34 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK3-NEXT:    [[C_CASTED:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK3-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
+// CHECK3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
 // CHECK3-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK3-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // CHECK3-NEXT:    store i32 [[INC]], ptr [[TMP3]], align 4
-// CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
+// CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 4
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP7]], -1
 // CHECK3-NEXT:    store i32 [[DEC]], ptr [[TMP6]], align 4
-// CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
+// CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
 // CHECK3-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
 // CHECK3-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP10]], 1
 // CHECK3-NEXT:    store i32 [[DIV]], ptr [[TMP9]], align 4
-// CHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
+// CHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 4
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
 // CHECK3-NEXT:    store i32 [[TMP13]], ptr [[A_CASTED]], align 4
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
+// CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
 // CHECK3-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
 // CHECK3-NEXT:    store i32 [[TMP17]], ptr [[B_CASTED]], align 4
 // CHECK3-NEXT:    [[TMP18:%.*]] = load i32, ptr [[B_CASTED]], align 4
-// CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
+// CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
 // CHECK3-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 4
 // CHECK3-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
 // CHECK3-NEXT:    store i32 [[TMP21]], ptr [[C_CASTED]], align 4
@@ -1130,20 +1128,20 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    [[BLOCK:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, i32 }>, align 4
 // CHECK4-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK4-NEXT:    call void @_ZN2SSC1ERi(ptr nonnull align 4 dereferenceable(28) [[SS]], ptr nonnull align 4 dereferenceable(4) @_ZZ4mainE5sivar)
-// CHECK4-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 0
+// CHECK4-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 0
 // CHECK4-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 4
-// CHECK4-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 1
+// CHECK4-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 1
 // CHECK4-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 4
-// CHECK4-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 2
+// CHECK4-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 2
 // CHECK4-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 4
-// CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    store ptr @__main_block_invoke, ptr [[BLOCK_INVOKE]], align 4
-// CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
+// CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
 // CHECK4-NEXT:    store ptr @__block_descriptor_tmp.1, ptr [[BLOCK_DESCRIPTOR]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZZ4mainE5sivar, align 4
 // CHECK4-NEXT:    store i32 [[TMP0]], ptr [[BLOCK_CAPTURED]], align 4
-// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
 // CHECK4-NEXT:    call void [[TMP2]](ptr [[BLOCK]])
 // CHECK4-NEXT:    ret i32 0
@@ -1195,23 +1193,23 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    store i32 [[SIVAR]], ptr [[SIVAR_ADDR]], align 4
 // CHECK4-NEXT:    store i32 1, ptr [[G_ADDR]], align 4
 // CHECK4-NEXT:    store i32 2, ptr [[SIVAR_ADDR]], align 4
-// CHECK4-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 0
+// CHECK4-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 0
 // CHECK4-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 128
-// CHECK4-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 1
+// CHECK4-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 1
 // CHECK4-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 4
-// CHECK4-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 2
+// CHECK4-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 2
 // CHECK4-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 8
-// CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    store ptr @g_block_invoke, ptr [[BLOCK_INVOKE]], align 4
-// CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 4
+// CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 4
 // CHECK4-NEXT:    store ptr @__block_descriptor_tmp, ptr [[BLOCK_DESCRIPTOR]], align 16
-// CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 7
+// CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 7
 // CHECK4-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr [[G_ADDR]], align 4
 // CHECK4-NEXT:    store volatile i32 [[TMP0]], ptr [[BLOCK_CAPTURED]], align 128
-// CHECK4-NEXT:    [[BLOCK_CAPTURED1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK4-NEXT:    [[BLOCK_CAPTURED1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SIVAR_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP1]], ptr [[BLOCK_CAPTURED1]], align 4
-// CHECK4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
 // CHECK4-NEXT:    call void [[TMP3]](ptr [[BLOCK]])
 // CHECK4-NEXT:    ret void
@@ -1224,9 +1222,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 4
 // CHECK4-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 4
 // CHECK4-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK4-NEXT:    store i32 2, ptr [[BLOCK_CAPTURE_ADDR]], align 128
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [104 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
 // CHECK4-NEXT:    store i32 4, ptr [[BLOCK_CAPTURE_ADDR1]], align 4
 // CHECK4-NEXT:    ret void
 //
@@ -1246,28 +1244,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 4
 // CHECK4-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
 // CHECK4-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
-// CHECK4-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK4-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK4-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK4-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK4-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK4-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 4
 // CHECK4-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK4-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
 // CHECK4-NEXT:    store i8 [[BF_SET]], ptr [[B]], align 4
-// CHECK4-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK4-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 4
 // CHECK4-NEXT:    store ptr [[TMP0]], ptr [[C]], align 4
-// CHECK4-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
+// CHECK4-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK4-NEXT:    store ptr [[A3]], ptr [[A2]], align 4
-// CHECK4-NEXT:    [[B5:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK4-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK4-NEXT:    [[BF_LOAD6:%.*]] = load i8, ptr [[B5]], align 4
 // CHECK4-NEXT:    [[BF_SHL:%.*]] = shl i8 [[BF_LOAD6]], 4
 // CHECK4-NEXT:    [[BF_ASHR:%.*]] = ashr i8 [[BF_SHL]], 4
 // CHECK4-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_ASHR]] to i32
 // CHECK4-NEXT:    store i32 [[BF_CAST]], ptr [[B4]], align 4
-// CHECK4-NEXT:    [[C8:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK4-NEXT:    [[C8:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK4-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C8]], align 4
 // CHECK4-NEXT:    store ptr [[TMP1]], ptr [[C7]], align 4
-// CHECK4-NEXT:    [[E9:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
+// CHECK4-NEXT:    [[E9:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK4-NEXT:    store ptr [[E9]], ptr [[E]], align 4
 // CHECK4-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A2]], align 4
 // CHECK4-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -1316,28 +1314,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 4
 // CHECK4-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[E3]], ptr align 4 [[TMP2]], i32 16, i1 false)
 // CHECK4-NEXT:    store ptr [[E3]], ptr [[_TMP4]], align 4
-// CHECK4-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 0
+// CHECK4-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 0
 // CHECK4-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 4
-// CHECK4-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 1
+// CHECK4-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 1
 // CHECK4-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 4
-// CHECK4-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 2
+// CHECK4-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 2
 // CHECK4-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 4
-// CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    store ptr @g_block_invoke_2, ptr [[BLOCK_INVOKE]], align 4
-// CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 4
+// CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 4
 // CHECK4-NEXT:    store ptr @__block_descriptor_tmp.2, ptr [[BLOCK_DESCRIPTOR]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURED_THIS_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK4-NEXT:    [[BLOCK_CAPTURED_THIS_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    store ptr [[TMP0]], ptr [[BLOCK_CAPTURED_THIS_ADDR]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 6
+// CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 6
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 4
 // CHECK4-NEXT:    store ptr [[TMP3]], ptr [[BLOCK_CAPTURED]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURED5:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 7
+// CHECK4-NEXT:    [[BLOCK_CAPTURED5:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 7
 // CHECK4-NEXT:    [[TMP4:%.*]] = load i32, ptr [[B_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP4]], ptr [[BLOCK_CAPTURED5]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURED6:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 8
+// CHECK4-NEXT:    [[BLOCK_CAPTURED6:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[BLOCK]], i32 0, i32 8
 // CHECK4-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP1]], align 4
 // CHECK4-NEXT:    store ptr [[TMP5]], ptr [[BLOCK_CAPTURED6]], align 4
-// CHECK4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
 // CHECK4-NEXT:    call void [[TMP7]](ptr [[BLOCK]])
 // CHECK4-NEXT:    ret void
@@ -1353,32 +1351,32 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    [[C_CASTED:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 4
 // CHECK4-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURED_THIS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
+// CHECK4-NEXT:    [[BLOCK_CAPTURED_THIS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
 // CHECK4-NEXT:    [[THIS:%.*]] = load ptr, ptr [[BLOCK_CAPTURED_THIS]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // CHECK4-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR]], align 4
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK4-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // CHECK4-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i32, ptr [[BLOCK_CAPTURE_ADDR1]], align 4
 // CHECK4-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP2]], -1
 // CHECK4-NEXT:    store i32 [[DEC]], ptr [[BLOCK_CAPTURE_ADDR1]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR2]], align 4
 // CHECK4-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK4-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP4]], 1
 // CHECK4-NEXT:    store i32 [[DIV]], ptr [[TMP3]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR3:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR3:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // CHECK4-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR3]], align 4
 // CHECK4-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 // CHECK4-NEXT:    store i32 [[TMP6]], ptr [[A_CASTED]], align 4
 // CHECK4-NEXT:    [[TMP7:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR4:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR4:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK4-NEXT:    [[TMP8:%.*]] = load i32, ptr [[BLOCK_CAPTURE_ADDR4]], align 4
 // CHECK4-NEXT:    store i32 [[TMP8]], ptr [[B_CASTED]], align 4
 // CHECK4-NEXT:    [[TMP9:%.*]] = load i32, ptr [[B_CASTED]], align 4
-// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR5:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
+// CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR5:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, i32, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
 // CHECK4-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR5]], align 4
 // CHECK4-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
 // CHECK4-NEXT:    store i32 [[TMP11]], ptr [[C_CASTED]], align 4
@@ -1440,9 +1438,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ev(ptr nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK9-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// CHECK9-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float 1.000000e+00)
-// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[S_ARR]], float 1.000000e+00)
+// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float 2.000000e+00)
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr nonnull align 4 dereferenceable(4) [[VAR]], float 3.000000e+00)
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i32, ptr [[T_VAR]], align 4
@@ -1655,9 +1652,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    call void @_ZN3SSTIiEC1Ev(ptr nonnull align 4 dereferenceable(4) [[SST]])
 // CHECK9-NEXT:    store i32 0, ptr [[T_VAR]], align 128
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[VEC]], ptr align 128 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// CHECK9-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 1)
-// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[S_ARR]], i32 1)
+// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 2)
 // CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr nonnull align 4 dereferenceable(4) [[VAR]], i32 3)
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i32, ptr [[T_VAR]], align 128
@@ -1700,28 +1696,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store i32 0, ptr [[A]], align 8
-// CHECK9-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK9-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK9-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 4
 // CHECK9-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK9-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
 // CHECK9-NEXT:    store i8 [[BF_SET]], ptr [[B]], align 4
-// CHECK9-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK9-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[TMP0]], ptr [[C]], align 8
-// CHECK9-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store ptr [[A3]], ptr [[A2]], align 8
-// CHECK9-NEXT:    [[B5:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK9-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK9-NEXT:    [[BF_LOAD6:%.*]] = load i8, ptr [[B5]], align 4
 // CHECK9-NEXT:    [[BF_SHL:%.*]] = shl i8 [[BF_LOAD6]], 4
 // CHECK9-NEXT:    [[BF_ASHR:%.*]] = ashr i8 [[BF_SHL]], 4
 // CHECK9-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_ASHR]] to i32
 // CHECK9-NEXT:    store i32 [[BF_CAST]], ptr [[B4]], align 4
-// CHECK9-NEXT:    [[C8:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK9-NEXT:    [[C8:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C8]], align 8
 // CHECK9-NEXT:    store ptr [[TMP1]], ptr [[C7]], align 8
-// CHECK9-NEXT:    [[E9:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
+// CHECK9-NEXT:    [[E9:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK9-NEXT:    store ptr [[E9]], ptr [[E]], align 8
 // CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A2]], align 8
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -1792,7 +1788,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK9-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
 // CHECK9-NEXT:    store float [[CONV]], ptr [[F]], align 4
@@ -1807,7 +1803,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    store float [[A]], ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK9-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP1]] to float
@@ -1822,9 +1818,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK9-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
+// CHECK9-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 0, ptr [[B]], align 4
 // CHECK9-NEXT:    ret void
 //
@@ -1839,11 +1835,11 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK9-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
+// CHECK9-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP1:%.*]] = load float, ptr [[F2]], align 4
-// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
+// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK9-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to float
 // CHECK9-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[CONV]]
@@ -2006,7 +2002,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK9-NEXT:    store i32 [[TMP0]], ptr [[F]], align 4
 // CHECK9-NEXT:    ret void
@@ -2020,9 +2016,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[A_CASTED:%.*]] = alloca i64, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SST:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK9-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SST]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SST]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    store ptr [[A3]], ptr [[A2]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A2]], align 8
 // CHECK9-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -2061,7 +2057,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // CHECK9-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @g, align 128
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
@@ -2079,11 +2075,11 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK9-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
+// CHECK9-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
-// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
+// CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 // CHECK9-NEXT:    store i32 [[ADD]], ptr [[F]], align 4
@@ -2107,7 +2103,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_ANON:%.*]], align 8
 // CHECK11-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK11-NEXT:    call void @_ZN2SSC1ERi(ptr nonnull align 8 dereferenceable(32) [[SS]], ptr nonnull align 4 dereferenceable(4) @_ZZ4mainE5sivar)
-// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[CLASS_ANON]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK11-NEXT:    store ptr @_ZZ4mainE5sivar, ptr [[TMP0]], align 8
 // CHECK11-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(ptr nonnull align 8 dereferenceable(8) [[REF_TMP]])
 // CHECK11-NEXT:    ret i32 0
@@ -2141,28 +2137,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK11-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    store i32 0, ptr [[A]], align 8
-// CHECK11-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK11-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK11-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 4
 // CHECK11-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK11-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
 // CHECK11-NEXT:    store i8 [[BF_SET]], ptr [[B]], align 4
-// CHECK11-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK11-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK11-NEXT:    store ptr [[TMP0]], ptr [[C]], align 8
-// CHECK11-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    store ptr [[A3]], ptr [[A2]], align 8
-// CHECK11-NEXT:    [[B5:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK11-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK11-NEXT:    [[BF_LOAD6:%.*]] = load i8, ptr [[B5]], align 4
 // CHECK11-NEXT:    [[BF_SHL:%.*]] = shl i8 [[BF_LOAD6]], 4
 // CHECK11-NEXT:    [[BF_ASHR:%.*]] = ashr i8 [[BF_SHL]], 4
 // CHECK11-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_ASHR]] to i32
 // CHECK11-NEXT:    store i32 [[BF_CAST]], ptr [[B4]], align 4
-// CHECK11-NEXT:    [[C8:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK11-NEXT:    [[C8:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C8]], align 8
 // CHECK11-NEXT:    store ptr [[TMP1]], ptr [[C7]], align 8
-// CHECK11-NEXT:    [[E9:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
+// CHECK11-NEXT:    [[E9:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK11-NEXT:    store ptr [[E9]], ptr [[E]], align 8
 // CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A2]], align 8
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -2211,14 +2207,14 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[E3]], ptr align 4 [[TMP2]], i64 16, i1 false)
 // CHECK11-NEXT:    store ptr [[E3]], ptr [[_TMP4]], align 8
-// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK11-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 8
-// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
+// CHECK11-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 1
 // CHECK11-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK11-NEXT:    store ptr [[TMP5]], ptr [[TMP4]], align 8
-// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
+// CHECK11-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 2
 // CHECK11-NEXT:    store ptr [[B_ADDR]], ptr [[TMP6]], align 8
-// CHECK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
+// CHECK11-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 3
 // CHECK11-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[_TMP1]], align 8
 // CHECK11-NEXT:    store ptr [[TMP8]], ptr [[TMP7]], align 8
 // CHECK11-NEXT:    call void @_ZZN2SSC1ERiENKUlvE_clEv(ptr nonnull align 8 dereferenceable(32) [[REF_TMP]])
@@ -2234,34 +2230,34 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[C_CASTED:%.*]] = alloca i64, align 8
 // CHECK11-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON_0:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
+// CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
 // CHECK11-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK11-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // CHECK11-NEXT:    store i32 [[INC]], ptr [[TMP3]], align 4
-// CHECK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
+// CHECK11-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
 // CHECK11-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 8
 // CHECK11-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 // CHECK11-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP7]], -1
 // CHECK11-NEXT:    store i32 [[DEC]], ptr [[TMP6]], align 4
-// CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
+// CHECK11-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
 // CHECK11-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
 // CHECK11-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
 // CHECK11-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP10]], 1
 // CHECK11-NEXT:    store i32 [[DIV]], ptr [[TMP9]], align 4
-// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
+// CHECK11-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 1
 // CHECK11-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 8
 // CHECK11-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
 // CHECK11-NEXT:    store i32 [[TMP13]], ptr [[A_CASTED]], align 4
 // CHECK11-NEXT:    [[TMP14:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
+// CHECK11-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 2
 // CHECK11-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
 // CHECK11-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
 // CHECK11-NEXT:    store i32 [[TMP17]], ptr [[B_CASTED]], align 4
 // CHECK11-NEXT:    [[TMP18:%.*]] = load i64, ptr [[B_CASTED]], align 8
-// CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
+// CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
 // CHECK11-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
 // CHECK11-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
 // CHECK11-NEXT:    store i32 [[TMP21]], ptr [[C_CASTED]], align 4
@@ -2312,20 +2308,20 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    [[BLOCK:%.*]] = alloca <{ ptr, i32, i32, ptr, ptr, i32 }>, align 8
 // CHECK12-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK12-NEXT:    call void @_ZN2SSC1ERi(ptr nonnull align 8 dereferenceable(32) [[SS]], ptr nonnull align 4 dereferenceable(4) @_ZZ4mainE5sivar)
-// CHECK12-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 0
+// CHECK12-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 0
 // CHECK12-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 8
-// CHECK12-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 1
+// CHECK12-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 1
 // CHECK12-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 8
-// CHECK12-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 2
+// CHECK12-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 2
 // CHECK12-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 4
-// CHECK12-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
+// CHECK12-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK12-NEXT:    store ptr @__main_block_invoke, ptr [[BLOCK_INVOKE]], align 8
-// CHECK12-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
+// CHECK12-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
 // CHECK12-NEXT:    store ptr @__block_descriptor_tmp.1, ptr [[BLOCK_DESCRIPTOR]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK12-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK12-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZZ4mainE5sivar, align 4
 // CHECK12-NEXT:    store i32 [[TMP0]], ptr [[BLOCK_CAPTURED]], align 8
-// CHECK12-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK12-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // CHECK12-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
 // CHECK12-NEXT:    call void [[TMP2]](ptr [[BLOCK]])
 // CHECK12-NEXT:    ret i32 0
@@ -2377,23 +2373,23 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    store i64 [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
 // CHECK12-NEXT:    store i32 1, ptr [[G_ADDR]], align 4
 // CHECK12-NEXT:    store i32 2, ptr [[SIVAR_ADDR]], align 4
-// CHECK12-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 0
+// CHECK12-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 0
 // CHECK12-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 128
-// CHECK12-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 1
+// CHECK12-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 1
 // CHECK12-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 8
-// CHECK12-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 2
+// CHECK12-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 2
 // CHECK12-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 4
-// CHECK12-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 3
+// CHECK12-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK12-NEXT:    store ptr @g_block_invoke, ptr [[BLOCK_INVOKE]], align 16
-// CHECK12-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 4
+// CHECK12-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 4
 // CHECK12-NEXT:    store ptr @__block_descriptor_tmp, ptr [[BLOCK_DESCRIPTOR]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 7
+// CHECK12-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 7
 // CHECK12-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr [[G_ADDR]], align 4
 // CHECK12-NEXT:    store volatile i32 [[TMP0]], ptr [[BLOCK_CAPTURED]], align 128
-// CHECK12-NEXT:    [[BLOCK_CAPTURED1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK12-NEXT:    [[BLOCK_CAPTURED1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK12-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SIVAR_ADDR]], align 4
 // CHECK12-NEXT:    store i32 [[TMP1]], ptr [[BLOCK_CAPTURED1]], align 32
-// CHECK12-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK12-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // CHECK12-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
 // CHECK12-NEXT:    call void [[TMP3]](ptr [[BLOCK]])
 // CHECK12-NEXT:    ret void
@@ -2406,9 +2402,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8
 // CHECK12-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // CHECK12-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK12-NEXT:    store i32 2, ptr [[BLOCK_CAPTURE_ADDR]], align 128
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, i32, [92 x i8], i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
 // CHECK12-NEXT:    store i32 4, ptr [[BLOCK_CAPTURE_ADDR1]], align 32
 // CHECK12-NEXT:    ret void
 //
@@ -2428,28 +2424,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK12-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
 // CHECK12-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK12-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK12-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK12-NEXT:    store i32 0, ptr [[A]], align 8
-// CHECK12-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK12-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK12-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[B]], align 4
 // CHECK12-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
 // CHECK12-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
 // CHECK12-NEXT:    store i8 [[BF_SET]], ptr [[B]], align 4
-// CHECK12-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK12-NEXT:    [[C:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK12-NEXT:    store ptr [[TMP0]], ptr [[C]], align 8
-// CHECK12-NEXT:    [[A3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
+// CHECK12-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK12-NEXT:    store ptr [[A3]], ptr [[A2]], align 8
-// CHECK12-NEXT:    [[B5:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
+// CHECK12-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
 // CHECK12-NEXT:    [[BF_LOAD6:%.*]] = load i8, ptr [[B5]], align 4
 // CHECK12-NEXT:    [[BF_SHL:%.*]] = shl i8 [[BF_LOAD6]], 4
 // CHECK12-NEXT:    [[BF_ASHR:%.*]] = ashr i8 [[BF_SHL]], 4
 // CHECK12-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_ASHR]] to i32
 // CHECK12-NEXT:    store i32 [[BF_CAST]], ptr [[B4]], align 4
-// CHECK12-NEXT:    [[C8:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
+// CHECK12-NEXT:    [[C8:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 2
 // CHECK12-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[C8]], align 8
 // CHECK12-NEXT:    store ptr [[TMP1]], ptr [[C7]], align 8
-// CHECK12-NEXT:    [[E9:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
+// CHECK12-NEXT:    [[E9:%.*]] = getelementptr inbounds nuw [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK12-NEXT:    store ptr [[E9]], ptr [[E]], align 8
 // CHECK12-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A2]], align 8
 // CHECK12-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -2498,28 +2494,28 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK12-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[E3]], ptr align 4 [[TMP2]], i64 16, i1 false)
 // CHECK12-NEXT:    store ptr [[E3]], ptr [[_TMP4]], align 8
-// CHECK12-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 0
+// CHECK12-NEXT:    [[BLOCK_ISA:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 0
 // CHECK12-NEXT:    store ptr @_NSConcreteStackBlock, ptr [[BLOCK_ISA]], align 8
-// CHECK12-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 1
+// CHECK12-NEXT:    [[BLOCK_FLAGS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 1
 // CHECK12-NEXT:    store i32 1073741824, ptr [[BLOCK_FLAGS]], align 8
-// CHECK12-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 2
+// CHECK12-NEXT:    [[BLOCK_RESERVED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 2
 // CHECK12-NEXT:    store i32 0, ptr [[BLOCK_RESERVED]], align 4
-// CHECK12-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
+// CHECK12-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK12-NEXT:    store ptr @g_block_invoke_2, ptr [[BLOCK_INVOKE]], align 8
-// CHECK12-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
+// CHECK12-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
 // CHECK12-NEXT:    store ptr @__block_descriptor_tmp.2, ptr [[BLOCK_DESCRIPTOR]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED_THIS_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
+// CHECK12-NEXT:    [[BLOCK_CAPTURED_THIS_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK12-NEXT:    store ptr [[TMP0]], ptr [[BLOCK_CAPTURED_THIS_ADDR]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 6
+// CHECK12-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 6
 // CHECK12-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK12-NEXT:    store ptr [[TMP3]], ptr [[BLOCK_CAPTURED]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED5:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 8
+// CHECK12-NEXT:    [[BLOCK_CAPTURED5:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 8
 // CHECK12-NEXT:    [[TMP4:%.*]] = load i32, ptr [[B_ADDR]], align 4
 // CHECK12-NEXT:    store i32 [[TMP4]], ptr [[BLOCK_CAPTURED5]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED6:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 7
+// CHECK12-NEXT:    [[BLOCK_CAPTURED6:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 7
 // CHECK12-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP1]], align 8
 // CHECK12-NEXT:    store ptr [[TMP5]], ptr [[BLOCK_CAPTURED6]], align 8
-// CHECK12-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
+// CHECK12-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[STRUCT___BLOCK_LITERAL_GENERIC:%.*]], ptr [[BLOCK]], i32 0, i32 3
 // CHECK12-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // CHECK12-NEXT:    call void [[TMP7]](ptr [[BLOCK]])
 // CHECK12-NEXT:    ret void
@@ -2535,32 +2531,32 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    [[C_CASTED:%.*]] = alloca i64, align 8
 // CHECK12-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // CHECK12-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURED_THIS:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
+// CHECK12-NEXT:    [[BLOCK_CAPTURED_THIS:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 5
 // CHECK12-NEXT:    [[THIS:%.*]] = load ptr, ptr [[BLOCK_CAPTURED_THIS]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // CHECK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR]], align 8
 // CHECK12-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK12-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // CHECK12-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR1:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
 // CHECK12-NEXT:    [[TMP2:%.*]] = load i32, ptr [[BLOCK_CAPTURE_ADDR1]], align 8
 // CHECK12-NEXT:    [[DEC:%.*]] = add nsw i32 [[TMP2]], -1
 // CHECK12-NEXT:    store i32 [[DEC]], ptr [[BLOCK_CAPTURE_ADDR1]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK12-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR2]], align 8
 // CHECK12-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 // CHECK12-NEXT:    [[DIV:%.*]] = sdiv i32 [[TMP4]], 1
 // CHECK12-NEXT:    store i32 [[DIV]], ptr [[TMP3]], align 4
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR3:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR3:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // CHECK12-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR3]], align 8
 // CHECK12-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
 // CHECK12-NEXT:    store i32 [[TMP6]], ptr [[A_CASTED]], align 4
 // CHECK12-NEXT:    [[TMP7:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR4:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR4:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
 // CHECK12-NEXT:    [[TMP8:%.*]] = load i32, ptr [[BLOCK_CAPTURE_ADDR4]], align 8
 // CHECK12-NEXT:    store i32 [[TMP8]], ptr [[B_CASTED]], align 4
 // CHECK12-NEXT:    [[TMP9:%.*]] = load i64, ptr [[B_CASTED]], align 8
-// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR5:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
+// CHECK12-NEXT:    [[BLOCK_CAPTURE_ADDR5:%.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK12-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR5]], align 8
 // CHECK12-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
 // CHECK12-NEXT:    store i32 [[TMP11]], ptr [[C_CASTED]], align 4
@@ -2716,9 +2712,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP7]], align 128
 // CHECK17-NEXT:    store i64 [[TMP3]], ptr [[__VLA_EXPR0]], align 8
 // CHECK17-NEXT:    store i64 [[TMP5]], ptr [[__VLA_EXPR1]], align 8
-// CHECK17-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 1
+// CHECK17-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 1
 // CHECK17-NEXT:    [[TMP8:%.*]] = load i32, ptr [[B]], align 4
-// CHECK17-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
+// CHECK17-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
 // CHECK17-NEXT:    store i32 [[TMP8]], ptr [[A]], align 4
 // CHECK17-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[VLA1_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[S_ADDR]], align 8
@@ -2768,9 +2764,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP2]], [[TMP3]]
 // CHECK17-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 8
 // CHECK17-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[DOTVLA2__VOID_ADDR]], ptr align 128 [[TMP4]], i64 [[TMP14]], i1 false)
-// CHECK17-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[TMP1]], i32 0, i32 1
+// CHECK17-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP1]], i32 0, i32 1
 // CHECK17-NEXT:    [[TMP15:%.*]] = load i32, ptr [[B]], align 4
-// CHECK17-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[TMP1]], i32 0, i32 0
+// CHECK17-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[TMP1]], i32 0, i32 0
 // CHECK17-NEXT:    store i32 [[TMP15]], ptr [[A]], align 4
 // CHECK17-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP15]] to double
 // CHECK17-NEXT:    [[TMP16:%.*]] = mul nsw i64 1, [[TMP3]]
@@ -2782,7 +2778,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    store double [[CONV]], ptr [[ARRAYIDX7]], align 8
 // CHECK17-NEXT:    [[CONV8:%.*]] = fpext double [[CONV]] to x86_fp80
 // CHECK17-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[VLA1_ADDR]], align 8
-// CHECK17-NEXT:    [[B9:%.*]] = getelementptr inbounds [[STRUCT_ST]], ptr [[TMP1]], i32 0, i32 1
+// CHECK17-NEXT:    [[B9:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[TMP1]], i32 0, i32 1
 // CHECK17-NEXT:    [[TMP19:%.*]] = load i32, ptr [[B9]], align 4
 // CHECK17-NEXT:    [[IDXPROM10:%.*]] = sext i32 [[TMP19]] to i64
 // CHECK17-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds x86_fp80, ptr [[TMP18]], i64 [[IDXPROM10]]

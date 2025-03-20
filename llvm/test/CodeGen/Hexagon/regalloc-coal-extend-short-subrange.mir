@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass register-coalescer -verify-coalescing %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass register-coalescer -verify-coalescing %s -o - | FileCheck %s
 #
 # Check that this doesn't crash.
 # CHECK: ENDLOOP

@@ -103,8 +103,8 @@ define i8 @one_demanded_bit(i8 %x) {
 
 define <2 x i8> @one_demanded_bit_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @one_demanded_bit_splat(
-; CHECK-NEXT:    [[M:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[M]], <i8 32, i8 32>
+; CHECK-NEXT:    [[M:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 5)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[M]], splat (i8 32)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %m = mul <2 x i8> %x, <i8 160, i8 160> ; 0b1010_0000
@@ -134,7 +134,7 @@ define i33 @squared_one_demanded_low_bit(i33 %x) {
 
 define <2 x i8> @squared_one_demanded_low_bit_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_one_demanded_low_bit_splat(
-; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[X:%.*]], <i8 -2, i8 -2>
+; CHECK-NEXT:    [[AND:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 -2)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %mul = mul <2 x i8> %x, %x
@@ -154,8 +154,8 @@ define i33 @squared_demanded_2_low_bits(i33 %x) {
 
 define <2 x i8> @squared_demanded_2_low_bits_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @squared_demanded_2_low_bits_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[AND:%.*]] = or disjoint <2 x i8> [[TMP1]], <i8 -4, i8 -4>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[AND:%.*]] = or disjoint <2 x i8> [[TMP1]], splat (i8 -4)
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %mul = mul <2 x i8> %x, %x
@@ -182,7 +182,7 @@ define i33 @squared_demanded_3_low_bits(i33 %x) {
 define i64 @scalar_mul_bit_x0_y0(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_mul_bit_x0_y0(
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[AND2]], [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[X:%.*]], [[AND2]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -199,7 +199,7 @@ define i64 @scalar_mul_bit_x0_y0_uses(i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @use(i64 [[AND1]])
 ; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[Y:%.*]], 1
 ; CHECK-NEXT:    call void @use(i64 [[AND2]])
-; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[AND2]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = and i64 [[X]], [[AND2]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %and1 = and i64 %x, 1
@@ -240,8 +240,8 @@ define i64 @scalar_mul_bit_x0_yC(i64 %x, i64 %y, i64 %c) {
 ; Vector tests
 define <2 x i64> @vector_mul_bit_x0_y0(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: @vector_mul_bit_x0_y0(
-; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[Y:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[MUL:%.*]] = and <2 x i64> [[AND2]], [[X:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[Y:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[MUL:%.*]] = and <2 x i64> [[X:%.*]], [[AND2]]
 ; CHECK-NEXT:    ret <2 x i64> [[MUL]]
 ;
   %and1 = and <2 x i64> %x, <i64 1, i64 1>

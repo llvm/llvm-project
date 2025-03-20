@@ -16,7 +16,9 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <optional>
@@ -214,6 +216,22 @@ static void AddLiveExpr(llvm::ImmutableSet<const Expr *> &Set,
   Set = F.add(Set, LookThroughExpr(E));
 }
 
+/// Add as a live expression all individual conditions in a logical expression.
+/// For example, for the expression:
+/// "(a < b) || (c && d && ((e || f) != (g && h)))"
+/// the following expressions will be added as live:
+/// "a < b", "c", "d", "((e || f) != (g && h))"
+static void AddAllConditionalTerms(llvm::ImmutableSet<const Expr *> &Set,
+                                   llvm::ImmutableSet<const Expr *>::Factory &F,
+                                   const Expr *Cond) {
+  AddLiveExpr(Set, F, Cond);
+  if (auto const *BO = dyn_cast<BinaryOperator>(Cond->IgnoreParens());
+      BO && BO->isLogicalOp()) {
+    AddAllConditionalTerms(Set, F, BO->getLHS());
+    AddAllConditionalTerms(Set, F, BO->getRHS());
+  }
+}
+
 void TransferFunctions::Visit(Stmt *S) {
   if (observer)
     observer->observeStmt(S, currentBlock, val);
@@ -313,7 +331,27 @@ void TransferFunctions::Visit(Stmt *S) {
       AddLiveExpr(val.liveExprs, LV.ESetFact, cast<ForStmt>(S)->getCond());
       return;
     }
-
+    case Stmt::ConditionalOperatorClass: {
+      // Keep not only direct children alive, but also all the short-circuited
+      // parts of the condition. Short-circuiting evaluation may cause the
+      // conditional operator evaluation to skip the evaluation of the entire
+      // condtion expression, so the value of the entire condition expression is
+      // never computed.
+      //
+      // This makes a difference when we compare exploded nodes coming from true
+      // and false expressions with no side effects: the only difference in the
+      // state is the value of (part of) the condition.
+      //
+      // BinaryConditionalOperatorClass ('x ?: y') is not affected because it
+      // explicitly calculates the value of the entire condition expression (to
+      // possibly use as a value for the "true expr") even if it is
+      // short-circuited.
+      auto const *CO = cast<ConditionalOperator>(S);
+      AddAllConditionalTerms(val.liveExprs, LV.ESetFact, CO->getCond());
+      AddLiveExpr(val.liveExprs, LV.ESetFact, CO->getTrueExpr());
+      AddLiveExpr(val.liveExprs, LV.ESetFact, CO->getFalseExpr());
+      return;
+    }
   }
 
   // HACK + FIXME: What is this? One could only guess that this is an attempt to
@@ -626,12 +664,19 @@ void LiveVariables::dumpExprLiveness(const SourceManager &M) {
 }
 
 void LiveVariablesImpl::dumpExprLiveness(const SourceManager &M) {
+  const ASTContext &Ctx = analysisContext.getASTContext();
+  auto ByIDs = [&Ctx](const Expr *L, const Expr *R) {
+    return L->getID(Ctx) < R->getID(Ctx);
+  };
+
   // Don't iterate over blockEndsToLiveness directly because it's not sorted.
   for (const CFGBlock *B : *analysisContext.getCFG()) {
-
     llvm::errs() << "\n[ B" << B->getBlockID()
                  << " (live expressions at block exit) ]\n";
-    for (const Expr *E : blocksEndToLiveness[B].liveExprs) {
+    std::vector<const Expr *> LiveExprs;
+    llvm::append_range(LiveExprs, blocksEndToLiveness[B].liveExprs);
+    llvm::sort(LiveExprs, ByIDs);
+    for (const Expr *E : LiveExprs) {
       llvm::errs() << "\n";
       E->dump();
     }

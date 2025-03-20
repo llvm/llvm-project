@@ -23,7 +23,6 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include <cassert>
@@ -37,10 +36,12 @@ class AnyMemSetInst;
 class AnyMemTransferInst;
 class BasicBlock;
 class BatchAAResults;
+class Function;
+class Instruction;
+class StoreInst;
 class LoadInst;
 enum class ModRefInfo : uint8_t;
 class raw_ostream;
-class StoreInst;
 class VAArgInst;
 class Value;
 

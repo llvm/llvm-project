@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O0 < %s | FileCheck %s
 ; CHECK: allocframe(r29,#{{[1-9][0-9]*}}):raw
 ; CHECK: r29 = and(r29,#-64)
 

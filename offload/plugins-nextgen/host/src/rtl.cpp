@@ -89,8 +89,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
   /// Launch the kernel using the libffi.
-  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
+  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
+                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
+                   KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
     // Create a vector of ffi_types, one per argument.
     SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
@@ -105,7 +106,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
     // Call the kernel function through libffi.
     long Return;
-    ffi_call(&Cif, Func, &Return, (void **)Args);
+    ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
 
     return Plugin::success();
   }
@@ -418,7 +419,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
-  Expected<bool> isELFCompatible(StringRef) const override { return true; }
+  Expected<bool> isELFCompatible(uint32_t, StringRef) const override {
+    return true;
+  }
 
   Triple::ArchType getTripleArch() const override {
 #if defined(__x86_64__)
@@ -437,6 +440,10 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #else
     return llvm::Triple::ppc64;
 #endif
+#elif defined(__riscv) && (__riscv_xlen == 64)
+    return llvm::Triple::riscv64;
+#elif defined(__loongarch__) && (__loongarch_grlen == 64)
+    return llvm::Triple::loongarch64;
 #else
     return llvm::Triple::UnknownArch;
 #endif

@@ -30,7 +30,7 @@ class MachineModuleInfo;
 /// Represents the location at which a variable is stored.
 struct DbgVariableLocation {
   /// Base register.
-  unsigned Register;
+  MCRegister Register;
 
   /// Chain of offsetted loads necessary to load the value if it lives in
   /// memory. Every load except for the last is pointer-sized.
@@ -70,7 +70,7 @@ protected:
 
   /// This location indicates end of function prologue and beginning of
   /// function body.
-  DebugLoc PrologEndLoc;
+  const MachineInstr *PrologEndLoc;
 
   /// This block includes epilogue instructions.
   const MachineBasicBlock *EpilogBeginBlock = nullptr;
@@ -118,6 +118,8 @@ private:
 
   // AsmPrinterHandler overrides.
 public:
+  virtual ~DebugHandlerBase() override;
+
   void beginModule(Module *M) override;
 
   void beginInstruction(const MachineInstr *MI) override;

@@ -7,11 +7,11 @@
 # Make sure that register hints are preserved in the cloned function.
 
 # RESULT: registers:
-# RESULT-NEXT: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0' }
-# RESULT-NEXT: - { id: 1, class: vgpr_32, preferred-register: '' }
-# RESULT-NEXT: - { id: 2, class: vgpr_32, preferred-register: '%1' }
-# RESULT-NEXT: - { id: 3, class: vgpr_32, preferred-register: '%4' }
-# RESULT-NEXT: - { id: 4, class: vgpr_32, preferred-register: '%3' }
+# RESULT-NEXT: - { id: 0, class: vgpr_32, preferred-register: '$vgpr0', flags: [   ] }
+# RESULT-NEXT: - { id: 1, class: vgpr_32, preferred-register: '', flags: [   ] }
+# RESULT-NEXT: - { id: 2, class: vgpr_32, preferred-register: '%1', flags: [   ] }
+# RESULT-NEXT: - { id: 3, class: vgpr_32, preferred-register: '%4', flags: [   ] }
+# RESULT-NEXT: - { id: 4, class: vgpr_32, preferred-register: '%3', flags: [   ] }
 ---
 name: register_hints
 tracksRegLiveness: true

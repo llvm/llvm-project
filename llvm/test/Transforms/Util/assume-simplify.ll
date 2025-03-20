@@ -23,11 +23,11 @@ define i32 @test1(ptr %arg, ptr %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-NEXT:    [[I8:%.*]] = load i32, ptr [[ARG1]], align 4
 ; CHECK-NEXT:    [[I9:%.*]] = add nsw i32 [[I7]], [[I8]]
 ; CHECK-NEXT:    call void @may_throw()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 4), "ignore"(ptr undef) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARG1]], i64 4), "ignore"(ptr poison) ]
 ; CHECK-NEXT:    store i32 [[I9]], ptr [[ARG1]], align 4
 ; CHECK-NEXT:    br label [[B:%.*]]
 ; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "ignore"(ptr undef, i64 4), "ignore"(ptr undef) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARG]], i64 4), "ignore"(ptr poison, i64 4), "ignore"(ptr poison) ]
 ; CHECK-NEXT:    br label [[B]]
 ; CHECK:       B:
 ; CHECK-NEXT:    ret i32 0
@@ -278,7 +278,7 @@ define i32 @test5A(ptr dereferenceable(8) %p, i32 %i) {
 ; CHECK-SAME: (ptr dereferenceable(32) [[P:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "ignore"(ptr undef, i32 32) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "cold"(), "ignore"(ptr poison, i32 32) ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[B:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    ret i32 0

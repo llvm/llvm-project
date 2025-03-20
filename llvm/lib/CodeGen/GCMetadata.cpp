@@ -11,13 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GCMetadata.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
 #include <string>
@@ -69,7 +66,7 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 INITIALIZE_PASS(GCModuleInfo, "collector-metadata",
-                "Create Garbage Collector Module Metadata", false, false)
+                "Create Garbage Collector Module Metadata", false, true)
 
 // -----------------------------------------------------------------------------
 

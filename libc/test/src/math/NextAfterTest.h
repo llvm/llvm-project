@@ -18,6 +18,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class NextAfterTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
@@ -98,7 +100,7 @@ public:
     expected_bits = min_subnormal + 1;
     expected = LIBC_NAMESPACE::cpp::bit_cast<T>(expected_bits);
     ASSERT_FP_EQ(result, expected);
-    ASSERT_FP_EQ(func(x, 0), 0);
+    ASSERT_FP_EQ(func(x, 0), zero);
 
     x = -x;
     result = func(x, -1);

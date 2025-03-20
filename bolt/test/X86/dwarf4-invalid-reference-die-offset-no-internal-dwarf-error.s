@@ -6,7 +6,7 @@
 # RUN: cat %tlog.txt | FileCheck --check-prefix=CHECKBOLT %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=CHECK %s
 
-# Tests BOLT does not assert when DIE reference is invalid.
+## Tests BOLT does not assert when DIE reference is invalid.
 
 # CHECKBOLT: Referenced DIE offsets not in .debug_info
 # CHECKBOLT-NEXT: 91

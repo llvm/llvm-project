@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 // A header file for containing functionallity that is used across Flang tools,
 // such as helper functions which apply or generate information needed accross
-// tools like bbc and flang-new.
+// tools like bbc and flang.
 //===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 #define FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
 
-#include "flang/Common/MathOptionsBase.h"
 #include "flang/Frontend/CodeGenOptions.h"
-#include "flang/Frontend/LangOptions.h"
+#include "flang/Support/LangOptions.h"
+#include "flang/Support/MathOptionsBase.h"
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -122,7 +122,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
   bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
-  bool NSWOnLoopVarInc = false; ///< Add nsw flag to loop variable increments.
+  bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenMP = false; ///< Enable OpenMP lowering.
 };
 
 struct OffloadModuleOpts {
@@ -130,7 +131,9 @@ struct OffloadModuleOpts {
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
       bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
-      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {},
+      bool OpenMPIsGPU, bool OpenMPForceUSM, uint32_t OpenMPVersion,
+      std::string OMPHostIRFile = {},
+      const std::vector<llvm::Triple> &OMPTargetTriples = {},
       bool NoGPULib = false)
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
@@ -138,18 +141,21 @@ struct OffloadModuleOpts {
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
-        OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile),
+        OpenMPForceUSM(OpenMPForceUSM), OpenMPVersion(OpenMPVersion),
+        OMPHostIRFile(OMPHostIRFile),
+        OMPTargetTriples(OMPTargetTriples.begin(), OMPTargetTriples.end()),
         NoGPULib(NoGPULib) {}
 
-  OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
+  OffloadModuleOpts(Fortran::common::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
         OpenMPTeamSubscription(Opts.OpenMPTeamSubscription),
         OpenMPThreadSubscription(Opts.OpenMPThreadSubscription),
         OpenMPNoThreadState(Opts.OpenMPNoThreadState),
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
-        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
-        OMPHostIRFile(Opts.OMPHostIRFile), NoGPULib(Opts.NoGPULib) {}
+        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPForceUSM(Opts.OpenMPForceUSM),
+        OpenMPVersion(Opts.OpenMPVersion), OMPHostIRFile(Opts.OMPHostIRFile),
+        OMPTargetTriples(Opts.OMPTargetTriples), NoGPULib(Opts.NoGPULib) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -158,20 +164,25 @@ struct OffloadModuleOpts {
   bool OpenMPNoNestedParallelism = false;
   bool OpenMPIsTargetDevice = false;
   bool OpenMPIsGPU = false;
+  bool OpenMPForceUSM = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
+  std::vector<llvm::Triple> OMPTargetTriples = {};
   bool NoGPULib = false;
 };
 
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
 //  attributes accross Flang tools (bbc/flang)
 [[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
-    mlir::ModuleOp &module, OffloadModuleOpts Opts) {
+    mlir::ModuleOp module, OffloadModuleOpts Opts) {
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
     offloadMod.setIsTargetDevice(Opts.OpenMPIsTargetDevice);
     offloadMod.setIsGPU(Opts.OpenMPIsGPU);
+    if (Opts.OpenMPForceUSM) {
+      offloadMod.setRequires(mlir::omp::ClauseRequires::unified_shared_memory);
+    }
     if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
@@ -180,11 +191,14 @@ struct OffloadModuleOpts {
       if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
     }
+    auto strTriples = llvm::to_vector(llvm::map_range(Opts.OMPTargetTriples,
+        [](llvm::Triple triple) { return triple.normalize(); }));
+    offloadMod.setTargetTriples(strTriples);
   }
 }
 
 [[maybe_unused]] static void setOpenMPVersionAttribute(
-    mlir::ModuleOp &module, int64_t version) {
+    mlir::ModuleOp module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       mlir::omp::VersionAttr::get(module.getContext(), version));

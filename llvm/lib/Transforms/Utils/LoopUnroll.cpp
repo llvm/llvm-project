@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist_iterator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -46,7 +45,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -56,13 +54,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -374,7 +372,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
-  const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L->getHeader()->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (BasicBlock *BB : L->getBlocks()) {
     // Remove repeated debug instructions after loop unrolling.
@@ -417,6 +415,26 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
     // the block we're iterating through.
     RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
   }
+}
+
+// Loops containing convergent instructions that are uncontrolled or controlled
+// from outside the loop must have a count that divides their TripMultiple.
+LLVM_ATTRIBUTE_USED
+static bool canHaveUnrollRemainder(const Loop *L) {
+  if (getLoopConvergenceHeart(L))
+    return false;
+
+  // Check for uncontrolled convergent operations.
+  for (auto &BB : L->blocks()) {
+    for (auto &I : *BB) {
+      if (isa<ConvergenceControlInst>(I))
+        return true;
+      if (auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->isConvergent())
+          return CB->getConvergenceControlToken();
+    }
+  }
+  return true;
 }
 
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
@@ -506,7 +524,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (!BI)
       continue;
 
-    ExitInfo &Info = ExitInfos.try_emplace(ExitingBlock).first->second;
+    ExitInfo &Info = ExitInfos[ExitingBlock];
     Info.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
     Info.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     if (Info.TripCount != 0) {
@@ -564,19 +582,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  // Loops containing convergent instructions cannot use runtime unrolling,
-  // as the prologue/epilogue may add additional control-dependencies to
-  // convergent operations.
-  LLVM_DEBUG(
-      {
-        bool HasConvergent = false;
-        for (auto &BB : L->blocks())
-          for (auto &I : *BB)
-            if (auto *CB = dyn_cast<CallBase>(&I))
-              HasConvergent |= CB->isConvergent();
-        assert((!HasConvergent || !ULO.Runtime) &&
-               "Can't runtime unroll if loop contains a convergent operation.");
-      });
+  assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
+         "Can't runtime unroll if loop contains a convergent operation.");
 
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
@@ -586,7 +593,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
                                   EpilogProfitability, ULO.UnrollRemainder,
                                   ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, RemainderLoop)) {
+                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
+                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -722,7 +730,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       if (OldLoop)
         LoopsToSimplify.insert(NewLoops[OldLoop]);
 
-      if (*BB == Header)
+      if (*BB == Header) {
         // Loop over all of the PHI nodes in the block, changing them to use
         // the incoming values from the previous block.
         for (PHINode *OrigPHI : OrigPHINode) {
@@ -734,6 +742,16 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           VMap[OrigPHI] = InVal;
           NewPHI->eraseFromParent();
         }
+
+        // Eliminate copies of the loop heart intrinsic, if any.
+        if (ULO.Heart) {
+          auto it = VMap.find(ULO.Heart);
+          assert(it != VMap.end());
+          Instruction *heartCopy = cast<Instruction>(it->second);
+          heartCopy->eraseFromParent();
+          VMap.erase(it);
+        }
+      }
 
       // Update our running map of newest clones
       LastValueMap[*BB] = New;
@@ -751,7 +769,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           if (It != LastValueMap.end())
             Incoming = It->second;
           PHI.addIncoming(Incoming, New);
-          SE->forgetValue(&PHI);
+          SE->forgetLcssaPhiWithNewPredecessor(L, &PHI);
         }
       }
       // Keep track of new headers and latches as we create them, so that
@@ -864,7 +882,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
     // Replace the conditional branch with an unconditional one.
-    BranchInst::Create(Dest, Term->getIterator());
+    auto *BI = BranchInst::Create(Dest, Term->getIterator());
+    BI->setDebugLoc(Term->getDebugLoc());
     Term->eraseFromParent();
 
     DTUpdates.emplace_back(DominatorTree::Delete, Src, DeadSucc);
@@ -1072,8 +1091,8 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
   assert(LoopID->getNumOperands() > 0 && "requires at least one operand");
   assert(LoopID->getOperand(0) == LoopID && "invalid loop id");
 
-  for (unsigned i = 1, e = LoopID->getNumOperands(); i < e; ++i) {
-    MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+  for (const MDOperand &MDO : llvm::drop_begin(LoopID->operands())) {
+    MDNode *MD = dyn_cast<MDNode>(MDO);
     if (!MD)
       continue;
 

@@ -3,7 +3,7 @@
 // DEFINE: %{compile} = mlir-opt --convert-vector-to-scf --convert-scf-to-cf -convert-cf-to-llvm --convert-vector-to-llvm \
 // DEFINE: --convert-arith-to-llvm --gpu-to-llvm --reconcile-unrealized-casts \
 // DEFINE: %s
-// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE: %{run} = mlir-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
 // DEFINE:   --e main --entry-point-result=void \

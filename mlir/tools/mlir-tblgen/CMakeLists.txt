@@ -19,6 +19,7 @@ add_tablegen(mlir-tblgen MLIR
   LLVMIRConversionGen.cpp
   LLVMIRIntrinsicGen.cpp
   mlir-tblgen.cpp
+  OmpOpGen.cpp
   OpClass.cpp
   OpDefinitionsGen.cpp
   OpDocGen.cpp
@@ -31,6 +32,7 @@ add_tablegen(mlir-tblgen MLIR
   PassGen.cpp
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
+  TosaUtilsGen.cpp
   )
 
 target_link_libraries(mlir-tblgen

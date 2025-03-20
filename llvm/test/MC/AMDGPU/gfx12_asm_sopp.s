@@ -69,23 +69,11 @@ s_wait_alu depctr_va_sdst(3)
 s_wait_alu depctr_va_vdst(14) depctr_va_sdst(6) depctr_vm_vsrc(6)
 // GFX12: encoding: [0x9b,0xed,0x88,0xbf]
 
-s_singleuse_vdst 0x0000
-// GFX12: encoding: [0x00,0x00,0x93,0xbf]
-
-s_singleuse_vdst 0xffff
-// GFX12: encoding: [0xff,0xff,0x93,0xbf]
-
-s_singleuse_vdst 0x1234
-// GFX12: encoding: [0x34,0x12,0x93,0xbf]
-
 s_barrier_wait 0xffff
 // GFX12: encoding: [0xff,0xff,0x94,0xbf]
 
 s_barrier_wait 1
 // GFX12: encoding: [0x01,0x00,0x94,0xbf]
-
-s_barrier_leave
-// GFX12: encoding: [0x00,0x00,0x95,0xbf]
 
 //===----------------------------------------------------------------------===//
 // s_waitcnt

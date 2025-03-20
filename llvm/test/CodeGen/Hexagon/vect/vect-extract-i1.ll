@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 
 define i1 @t_i4x8(<4 x i8> %a, <4 x i8> %b) nounwind {
 entry:

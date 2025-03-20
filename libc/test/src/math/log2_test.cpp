@@ -14,7 +14,6 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcLog2Test = LIBC_NAMESPACE::testing::FPTest<double>;
@@ -99,12 +98,12 @@ TEST_F(LlvmLibcLog2Test, InDoubleRange) {
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
       double x = FPBits(v).get_val();
-      if (isnan(x) || isinf(x) || x < 0.0)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
       LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::log2(x);
       ++cc;
-      if (isnan(result) || isinf(result))
+      if (FPBits(result).is_nan() || FPBits(result).is_inf())
         continue;
 
       ++count;

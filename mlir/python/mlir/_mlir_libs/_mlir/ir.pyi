@@ -44,22 +44,10 @@ from __future__ import annotations
 
 import abc
 import collections
+from collections.abc import Callable, Sequence
 import io
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type as _Type,
-    TypeVar,
-    Union,
-)
-
-from typing import overload
+from pathlib import Path
+from typing import Any, BinaryIO, ClassVar, TypeVar, overload
 
 __all__ = [
     "AffineAddExpr",
@@ -120,13 +108,20 @@ __all__ = [
     "F32Type",
     "F64Type",
     "FlatSymbolRefAttr",
+    "Float4E2M1FNType",
+    "Float6E2M3FNType",
+    "Float6E3M2FNType",
+    "Float8E3M4Type",
     "Float8E4M3B11FNUZType",
     "Float8E4M3FNType",
     "Float8E4M3FNUZType",
+    "Float8E4M3Type",
     "Float8E5M2FNUZType",
     "Float8E5M2Type",
+    "Float8E8M0FNUType",
     "FloatAttr",
     "FloatTF32Type",
+    "FloatType",
     "FunctionType",
     "IndexType",
     "InferShapedTypeOpInterface",
@@ -134,6 +129,7 @@ __all__ = [
     "InsertionPoint",
     "IntegerAttr",
     "IntegerSet",
+    "IntegerSetAttr",
     "IntegerSetConstraint",
     "IntegerSetConstraintList",
     "IntegerType",
@@ -203,13 +199,14 @@ class _OperationBase:
     def get_asm(
         self,
         binary: bool = False,
-        large_elements_limit: Optional[int] = None,
+        large_elements_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
         use_local_scope: bool = False,
         assume_verified: bool = False,
-    ) -> Union[io.BytesIO, io.StringIO]:
+        skip_regions: bool = False,
+    ) -> io.BytesIO | io.StringIO:
         """
         Gets the assembly form of the operation with all options available.
 
@@ -234,7 +231,7 @@ class _OperationBase:
     def print(
         self,
         state: AsmState,
-        file: Optional[Any] = None,
+        file: Any | None = None,
         binary: bool = False,
     ) -> None:
         """
@@ -248,14 +245,15 @@ class _OperationBase:
     @overload
     def print(
         self,
-        large_elements_limit: Optional[int] = None,
+        large_elements_limit: int | None = None,
         enable_debug_info: bool = False,
         pretty_debug_info: bool = False,
         print_generic_op_form: bool = False,
         use_local_scope: bool = False,
         assume_verified: bool = False,
-        file: Optional[Any] = None,
+        file: Any | None = None,
         binary: bool = False,
+        skip_regions: bool = False,
     ) -> None:
         """
         Prints the assembly form of the operation to a file like object.
@@ -281,17 +279,18 @@ class _OperationBase:
             and report failures in a more robust fashion. Set this to True if doing this
             in order to avoid running a redundant verification. If the IR is actually
             invalid, behavior is undefined.
+          skip_regions: Whether to skip printing regions. Defaults to False.
         """
     def verify(self) -> bool:
         """
         Verify the operation. Raises MLIRError if verification fails, and returns true otherwise.
         """
-    def write_bytecode(self, file: Any, desired_version: Optional[int] = None) -> None:
+    def write_bytecode(self, file: BinaryIO | str, desired_version: int | None = None) -> None:
         """
         Write the bytecode form of the operation to a file like object.
 
         Args:
-          file: The file like object to write to.
+          file: The file like object or path to write to.
           desired_version: The version of bytecode to emit.
         Returns:
           The bytecode writer status.
@@ -315,7 +314,7 @@ class _OperationBase:
     @property
     def operands(self) -> OpOperandList: ...
     @property
-    def parent(self) -> Optional[_OperationBase]: ...
+    def parent(self) -> _OperationBase | None: ...
     @property
     def regions(self) -> RegionSequence: ...
     @property
@@ -370,13 +369,13 @@ class AffineExpr:
         """
     @staticmethod
     def get_constant(
-        value: int, context: Optional[Context] = None
+        value: int, context: Context | None = None
     ) -> AffineConstantExpr:
         """
         Gets a constant affine expression with the given value.
         """
     @staticmethod
-    def get_dim(position: int, context: Optional[Context] = None) -> AffineDimExpr:
+    def get_dim(position: int, context: Context | None = None) -> AffineDimExpr:
         """
         Gets an affine expression of a dimension at the given position.
         """
@@ -436,7 +435,7 @@ class AffineExpr:
         """
     @staticmethod
     def get_symbol(
-        position: int, context: Optional[Context] = None
+        position: int, context: Context | None = None
     ) -> AffineSymbolExpr:
         """
         Gets an affine expression of a symbol at the given position.
@@ -479,7 +478,7 @@ class AffineExpr:
 
 class Attribute:
     @staticmethod
-    def parse(asm: str, context: Optional[Context] = None) -> Attribute:
+    def parse(asm: str | bytes, context: Context | None = None) -> Attribute:
         """
         Parses an attribute from an assembly form. Raises an MLIRError on failure.
         """
@@ -520,7 +519,7 @@ class Attribute:
 
 class Type:
     @staticmethod
-    def parse(asm: str, context: Optional[Context] = None) -> Type:
+    def parse(asm: str | bytes, context: Context | None = None) -> Type:
         """
         Parses the assembly form of a type.
 
@@ -630,7 +629,7 @@ class AffineCeilDivExpr(AffineBinaryExpr):
 
 class AffineConstantExpr(AffineExpr):
     @staticmethod
-    def get(value: int, context: Optional[Context] = None) -> AffineConstantExpr: ...
+    def get(value: int, context: Context | None = None) -> AffineConstantExpr: ...
     @staticmethod
     def isinstance(other: AffineExpr) -> bool: ...
     def __init__(self, expr: AffineExpr) -> None: ...
@@ -639,7 +638,7 @@ class AffineConstantExpr(AffineExpr):
 
 class AffineDimExpr(AffineExpr):
     @staticmethod
-    def get(position: int, context: Optional[Context] = None) -> AffineDimExpr: ...
+    def get(position: int, context: Context | None = None) -> AffineDimExpr: ...
     @staticmethod
     def isinstance(other: AffineExpr) -> bool: ...
     def __init__(self, expr: AffineExpr) -> None: ...
@@ -647,7 +646,7 @@ class AffineDimExpr(AffineExpr):
     def position(self) -> int: ...
 
 class AffineExprList:
-    def __add__(self, arg0: AffineExprList) -> List[AffineExpr]: ...
+    def __add__(self, arg0: AffineExprList) -> list[AffineExpr]: ...
 
 class AffineFloorDivExpr(AffineBinaryExpr):
     @staticmethod
@@ -659,43 +658,43 @@ class AffineFloorDivExpr(AffineBinaryExpr):
 class AffineMap:
     @staticmethod
     def compress_unused_symbols(
-        arg0: List, arg1: Optional[Context]
-    ) -> List[AffineMap]: ...
+        arg0: list, arg1: Context | None
+    ) -> list[AffineMap]: ...
     @staticmethod
     def get(
         dim_count: int,
         symbol_count: int,
-        exprs: List,
-        context: Optional[Context] = None,
+        exprs: list,
+        context: Context | None = None,
     ) -> AffineMap:
         """
         Gets a map with the given expressions as results.
         """
     @staticmethod
-    def get_constant(value: int, context: Optional[Context] = None) -> AffineMap:
+    def get_constant(value: int, context: Context | None = None) -> AffineMap:
         """
         Gets an affine map with a single constant result
         """
     @staticmethod
-    def get_empty(context: Optional[Context] = None) -> AffineMap:
+    def get_empty(context: Context | None = None) -> AffineMap:
         """
         Gets an empty affine map.
         """
     @staticmethod
-    def get_identity(n_dims: int, context: Optional[Context] = None) -> AffineMap:
+    def get_identity(n_dims: int, context: Context | None = None) -> AffineMap:
         """
         Gets an identity map with the given number of dimensions.
         """
     @staticmethod
     def get_minor_identity(
-        n_dims: int, n_results: int, context: Optional[Context] = None
+        n_dims: int, n_results: int, context: Context | None = None
     ) -> AffineMap:
         """
         Gets a minor identity map with the given number of dimensions and results.
         """
     @staticmethod
     def get_permutation(
-        permutation: List[int], context: Optional[Context] = None
+        permutation: list[int], context: Context | None = None
     ) -> AffineMap:
         """
         Gets an affine map that permutes its inputs.
@@ -712,7 +711,7 @@ class AffineMap:
         """
     def get_major_submap(self, n_results: int) -> AffineMap: ...
     def get_minor_submap(self, n_results: int) -> AffineMap: ...
-    def get_submap(self, result_positions: List[int]) -> AffineMap: ...
+    def get_submap(self, result_positions: list[int]) -> AffineMap: ...
     def replace(
         self,
         expr: AffineExpr,
@@ -738,10 +737,10 @@ class AffineMap:
     @property
     def n_symbols(self) -> int: ...
     @property
-    def results(self) -> "AffineMapExprList": ...
+    def results(self) -> AffineMapExprList: ...
 
 class AffineMapAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(affine_map: AffineMap) -> AffineMapAttr:
         """
@@ -771,7 +770,7 @@ class AffineMulExpr(AffineBinaryExpr):
 
 class AffineSymbolExpr(AffineExpr):
     @staticmethod
-    def get(position: int, context: Optional[Context] = None) -> AffineSymbolExpr: ...
+    def get(position: int, context: Context | None = None) -> AffineSymbolExpr: ...
     @staticmethod
     def isinstance(other: AffineExpr) -> bool: ...
     def __init__(self, expr: AffineExpr) -> None: ...
@@ -779,15 +778,15 @@ class AffineSymbolExpr(AffineExpr):
     def position(self) -> int: ...
 
 class ArrayAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(attributes: List, context: Optional[Context] = None) -> ArrayAttr:
+    def get(attributes: list, context: Context | None = None) -> ArrayAttr:
         """
         Gets a uniqued Array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> ArrayAttr: ...
+    def __add__(self, arg0: list) -> ArrayAttr: ...
     def __getitem__(self, arg0: int) -> Attribute: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -823,9 +822,9 @@ class AttrBuilder:
         """
 
 class BF16Type(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> BF16Type:
+    def get(context: Context | None = None) -> BF16Type:
         """
         Create a bf16 type.
         """
@@ -839,8 +838,8 @@ class Block:
     @staticmethod
     def create_at_start(
         parent: Region,
-        arg_types: List[Type],
-        arg_locs: Optional[Sequence] = None,
+        arg_types: list[Type],
+        arg_locs: Sequence | None = None,
     ) -> Block:
         """
         Creates and returns a new Block at the beginning of the given region (with given argument types and locations).
@@ -866,11 +865,11 @@ class Block:
         """
         Append this block to a region, transferring ownership if necessary
         """
-    def create_after(self, *args, arg_locs: Optional[Sequence] = None) -> Block:
+    def create_after(self, *args, arg_locs: Sequence | None = None) -> Block:
         """
         Creates and returns a new Block after this block (with given argument types and locations).
         """
-    def create_before(self, *args, arg_locs: Optional[Sequence] = None) -> Block:
+    def create_before(self, *args, arg_locs: Sequence | None = None) -> Block:
         """
         Creates and returns a new Block before this block (with given argument types and locations).
         """
@@ -909,9 +908,14 @@ class BlockArgument(Value):
     def owner(self) -> Block: ...
 
 class BlockArgumentList:
-    def __add__(self, arg0: BlockArgumentList) -> List[BlockArgument]: ...
+    @overload
+    def __getitem__(self, arg0: int) -> BlockArgument: ...
+    @overload
+    def __getitem__(self, arg0: slice) -> BlockArgumentList: ...
+    def __len__(self) -> int: ...
+    def __add__(self, arg0: BlockArgumentList) -> list[BlockArgument]: ...
     @property
-    def types(self) -> List[Type]: ...
+    def types(self) -> list[Type]: ...
 
 class BlockIterator:
     def __iter__(self) -> BlockIterator: ...
@@ -921,7 +925,7 @@ class BlockList:
     def __getitem__(self, arg0: int) -> Block: ...
     def __iter__(self) -> BlockIterator: ...
     def __len__(self) -> int: ...
-    def append(self, *args, arg_locs: Optional[Sequence] = None) -> Block:
+    def append(self, *args, arg_locs: Sequence | None = None) -> Block:
         """
         Appends a new block, with argument types as positional args.
 
@@ -931,7 +935,7 @@ class BlockList:
 
 class BoolAttr(Attribute):
     @staticmethod
-    def get(value: bool, context: Optional[Context] = None) -> BoolAttr:
+    def get(value: bool, context: Context | None = None) -> BoolAttr:
         """
         Gets an uniqued bool attribute
         """
@@ -955,7 +959,7 @@ class BoolAttr(Attribute):
         """
 
 class ComplexType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(arg0: Type) -> ComplexType:
         """
@@ -985,7 +989,7 @@ class Context:
     def _get_context_again(self) -> Context: ...
     def _get_live_module_count(self) -> int: ...
     def _get_live_operation_count(self) -> int: ...
-    def _get_live_operation_objects(self) -> List[Operation]: ...
+    def _get_live_operation_objects(self) -> list[Operation]: ...
     def append_dialect_registry(self, registry: DialectRegistry) -> None: ...
     def attach_diagnostic_handler(
         self, callback: Callable[[Diagnostic], bool]
@@ -1016,14 +1020,14 @@ class Context:
 class DenseBoolArrayAttr(Attribute):
     @staticmethod
     def get(
-        values: List[bool], context: Optional[Context] = None
+        values: Sequence[bool], context: Context | None = None
     ) -> DenseBoolArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseBoolArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseBoolArrayAttr: ...
     def __getitem__(self, arg0: int) -> bool: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1046,9 +1050,9 @@ class DenseElementsAttr(Attribute):
     def get(
         array: Buffer,
         signless: bool = True,
-        type: Optional[Type] = None,
-        shape: Optional[List[int]] = None,
-        context: Optional[Context] = None,
+        type: Type | None = None,
+        shape: list[int] | None = None,
+        context: Context | None = None,
     ) -> DenseElementsAttr:
         """
         Gets a DenseElementsAttr from a Python buffer or array.
@@ -1113,14 +1117,14 @@ class DenseElementsAttr(Attribute):
 class DenseF32ArrayAttr(Attribute):
     @staticmethod
     def get(
-        values: List[float], context: Optional[Context] = None
+        values: Sequence[float], context: Context | None = None
     ) -> DenseF32ArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseF32ArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseF32ArrayAttr: ...
     def __getitem__(self, arg0: int) -> float: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1141,14 +1145,14 @@ class DenseF32ArrayIterator:
 class DenseF64ArrayAttr(Attribute):
     @staticmethod
     def get(
-        values: List[float], context: Optional[Context] = None
+        values: Sequence[float], context: Context | None = None
     ) -> DenseF64ArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseF64ArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseF64ArrayAttr: ...
     def __getitem__(self, arg0: int) -> float: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1168,6 +1172,14 @@ class DenseF64ArrayIterator:
 
 class DenseFPElementsAttr(DenseElementsAttr):
     @staticmethod
+    def get(
+        array: Buffer,
+        signless: bool = True,
+        type: Type | None = None,
+        shape: list[int] | None = None,
+        context: Context | None = None,
+    ) -> DenseFPElementsAttr: ...
+    @staticmethod
     def isinstance(other: Attribute) -> bool: ...
     def __getitem__(self, arg0: int) -> float: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
@@ -1180,13 +1192,13 @@ class DenseFPElementsAttr(DenseElementsAttr):
 
 class DenseI16ArrayAttr(Attribute):
     @staticmethod
-    def get(values: List[int], context: Optional[Context] = None) -> DenseI16ArrayAttr:
+    def get(values: Sequence[int], context: Context | None = None) -> DenseI16ArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseI16ArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseI16ArrayAttr: ...
     def __getitem__(self, arg0: int) -> int: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1206,13 +1218,13 @@ class DenseI16ArrayIterator:
 
 class DenseI32ArrayAttr(Attribute):
     @staticmethod
-    def get(values: List[int], context: Optional[Context] = None) -> DenseI32ArrayAttr:
+    def get(values: Sequence[int], context: Context | None = None) -> DenseI32ArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseI32ArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseI32ArrayAttr: ...
     def __getitem__(self, arg0: int) -> int: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1232,13 +1244,13 @@ class DenseI32ArrayIterator:
 
 class DenseI64ArrayAttr(Attribute):
     @staticmethod
-    def get(values: List[int], context: Optional[Context] = None) -> DenseI64ArrayAttr:
+    def get(values: Sequence[int], context: Context | None = None) -> DenseI64ArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseI64ArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseI64ArrayAttr: ...
     def __getitem__(self, arg0: int) -> int: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1258,13 +1270,13 @@ class DenseI64ArrayIterator:
 
 class DenseI8ArrayAttr(Attribute):
     @staticmethod
-    def get(values: List[int], context: Optional[Context] = None) -> DenseI8ArrayAttr:
+    def get(values: Sequence[int], context: Context | None = None) -> DenseI8ArrayAttr:
         """
         Gets a uniqued dense array attribute
         """
     @staticmethod
     def isinstance(other: Attribute) -> bool: ...
-    def __add__(self, arg0: List) -> DenseI8ArrayAttr: ...
+    def __add__(self, arg0: list) -> DenseI8ArrayAttr: ...
     def __getitem__(self, arg0: int) -> int: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
     def __iter__(
@@ -1284,6 +1296,14 @@ class DenseI8ArrayIterator:
 
 class DenseIntElementsAttr(DenseElementsAttr):
     @staticmethod
+    def get(
+        array: Buffer,
+        signless: bool = True,
+        type: Type | None = None,
+        shape: list[int] | None = None,
+        context: Context | None = None,
+    ) -> DenseIntElementsAttr: ...
+    @staticmethod
     def isinstance(other: Attribute) -> bool: ...
     def __getitem__(self, arg0: int) -> int: ...
     def __init__(self, cast_from_attr: Attribute) -> None: ...
@@ -1300,9 +1320,9 @@ class DenseResourceElementsAttr(Attribute):
         array: Buffer,
         name: str,
         type: Type,
-        alignment: Optional[int] = None,
+        alignment: int | None = None,
         is_mutable: bool = False,
-        context: Optional[Context] = None,
+        context: Context | None = None,
     ) -> DenseResourceElementsAttr:
         """
         Gets a DenseResourceElementsAttr from a Python buffer or array.
@@ -1345,7 +1365,7 @@ class Diagnostic:
     @property
     def message(self) -> str: ...
     @property
-    def notes(self) -> Tuple[Diagnostic]: ...
+    def notes(self) -> tuple[Diagnostic]: ...
     @property
     def severity(self) -> DiagnosticSeverity: ...
 
@@ -1365,7 +1385,7 @@ class DiagnosticInfo:
     @property
     def message(self) -> str: ...
     @property
-    def notes(self) -> List[DiagnosticInfo]: ...
+    def notes(self) -> list[DiagnosticInfo]: ...
     @property
     def severity(self) -> DiagnosticSeverity: ...
 
@@ -1387,7 +1407,7 @@ class DiagnosticSeverity:
     REMARK: ClassVar[DiagnosticSeverity]  # value = <DiagnosticSeverity.REMARK: 3>
     WARNING: ClassVar[DiagnosticSeverity]  # value = <DiagnosticSeverity.WARNING: 1>
     __members__: ClassVar[
-        Dict[str, DiagnosticSeverity]
+        dict[str, DiagnosticSeverity]
     ]  # value = {'ERROR': <DiagnosticSeverity.ERROR: 0>, 'WARNING': <DiagnosticSeverity.WARNING: 1>, 'NOTE': <DiagnosticSeverity.NOTE: 2>, 'REMARK': <DiagnosticSeverity.REMARK: 3>}
     def __eq__(self, other: Any) -> bool: ...
     def __getstate__(self) -> int: ...
@@ -1422,9 +1442,9 @@ class Dialects:
     def __getitem__(self, arg0: str) -> Dialect: ...
 
 class DictAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(value: Dict = {}, context: Optional[Context] = None) -> DictAttr:
+    def get(value: dict = {}, context: Context | None = None) -> DictAttr:
         """
         Gets an uniqued Dict attribute
         """
@@ -1453,9 +1473,9 @@ class FloatType(Type):
         """
 
 class F16Type(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> F16Type:
+    def get(context: Context | None = None) -> F16Type:
         """
         Create a f16 type.
         """
@@ -1466,9 +1486,9 @@ class F16Type(FloatType):
     def typeid(self) -> TypeID: ...
 
 class F32Type(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> F32Type:
+    def get(context: Context | None = None) -> F32Type:
         """
         Create a f32 type.
         """
@@ -1479,9 +1499,9 @@ class F32Type(FloatType):
     def typeid(self) -> TypeID: ...
 
 class F64Type(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> F64Type:
+    def get(context: Context | None = None) -> F64Type:
         """
         Create a f64 type.
         """
@@ -1493,7 +1513,7 @@ class F64Type(FloatType):
 
 class FlatSymbolRefAttr(Attribute):
     @staticmethod
-    def get(value: str, context: Optional[Context] = None) -> FlatSymbolRefAttr:
+    def get(value: str, context: Context | None = None) -> FlatSymbolRefAttr:
         """
         Gets a uniqued FlatSymbolRef attribute
         """
@@ -1512,10 +1532,62 @@ class FlatSymbolRefAttr(Attribute):
         Returns the value of the FlatSymbolRef attribute as a string
         """
 
-class Float8E4M3B11FNUZType(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+class Float4E2M1FNType(FloatType):
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> Float8E4M3B11FNUZType:
+    def get(context: Context | None = None) -> Float4E2M1FNType:
+        """
+        Create a float4_e2m1fn type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float6E2M3FNType(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Context | None = None) -> Float6E2M3FNType:
+        """
+        Create a float6_e2m3fn type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float6E3M2FNType(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Context | None = None) -> Float6E3M2FNType:
+        """
+        Create a float6_e3m2fn type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float8E3M4Type(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Context | None = None) -> Float8E3M4Type:
+        """
+        Create a float8_e3m4 type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float8E4M3B11FNUZType(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Context | None = None) -> Float8E4M3B11FNUZType:
         """
         Create a float8_e4m3b11fnuz type.
         """
@@ -1526,9 +1598,9 @@ class Float8E4M3B11FNUZType(FloatType):
     def typeid(self) -> TypeID: ...
 
 class Float8E4M3FNType(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> Float8E4M3FNType:
+    def get(context: Context | None = None) -> Float8E4M3FNType:
         """
         Create a float8_e4m3fn type.
         """
@@ -1539,9 +1611,9 @@ class Float8E4M3FNType(FloatType):
     def typeid(self) -> TypeID: ...
 
 class Float8E4M3FNUZType(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> Float8E4M3FNUZType:
+    def get(context: Context | None = None) -> Float8E4M3FNUZType:
         """
         Create a float8_e4m3fnuz type.
         """
@@ -1551,10 +1623,23 @@ class Float8E4M3FNUZType(FloatType):
     @property
     def typeid(self) -> TypeID: ...
 
-class Float8E5M2FNUZType(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+class Float8E4M3Type(FloatType):
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> Float8E5M2FNUZType:
+    def get(context: Context | None = None) -> Float8E4M3Type:
+        """
+        Create a float8_e4m3 type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class Float8E5M2FNUZType(FloatType):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(context: Context | None = None) -> Float8E5M2FNUZType:
         """
         Create a float8_e5m2fnuz type.
         """
@@ -1565,9 +1650,9 @@ class Float8E5M2FNUZType(FloatType):
     def typeid(self) -> TypeID: ...
 
 class Float8E5M2Type(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> Float8E5M2Type:
+    def get(context: Context | None = None) -> Float8E5M2Type:
         """
         Create a float8_e5m2 type.
         """
@@ -1577,20 +1662,33 @@ class Float8E5M2Type(FloatType):
     @property
     def typeid(self) -> TypeID: ...
 
-class FloatAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+class Float8E8M0FNUType(FloatType):
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(type: Type, value: float, loc: Optional[Location] = None) -> FloatAttr:
+    def get(context: Context | None = None) -> Float8E8M0FNUType:
+        """
+        Create a float8_e8m0fnu type.
+        """
+    @staticmethod
+    def isinstance(other: Type) -> bool: ...
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
+class FloatAttr(Attribute):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(type: Type, value: float, loc: Location | None = None) -> FloatAttr:
         """
         Gets an uniqued float point attribute associated to a type
         """
     @staticmethod
-    def get_f32(value: float, context: Optional[Context] = None) -> FloatAttr:
+    def get_f32(value: float, context: Context | None = None) -> FloatAttr:
         """
         Gets an uniqued float point attribute associated to a f32 type
         """
     @staticmethod
-    def get_f64(value: float, context: Optional[Context] = None) -> FloatAttr:
+    def get_f64(value: float, context: Context | None = None) -> FloatAttr:
         """
         Gets an uniqued float point attribute associated to a f64 type
         """
@@ -1612,9 +1710,9 @@ class FloatAttr(Attribute):
         """
 
 class FloatTF32Type(FloatType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> FloatTF32Type:
+    def get(context: Context | None = None) -> FloatTF32Type:
         """
         Create a tf32 type.
         """
@@ -1625,10 +1723,10 @@ class FloatTF32Type(FloatType):
     def typeid(self) -> TypeID: ...
 
 class FunctionType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        inputs: List[Type], results: List[Type], context: Optional[Context] = None
+        inputs: list[Type], results: list[Type], context: Context | None = None
     ) -> FunctionType:
         """
         Gets a FunctionType from a List of input and result types
@@ -1637,12 +1735,12 @@ class FunctionType(Type):
     def isinstance(other: Type) -> bool: ...
     def __init__(self, cast_from_type: Type) -> None: ...
     @property
-    def inputs(self) -> List:
+    def inputs(self) -> list:
         """
         Returns the List of input types in the FunctionType.
         """
     @property
-    def results(self) -> List:
+    def results(self) -> list:
         """
         Returns the List of result types in the FunctionType.
         """
@@ -1650,9 +1748,9 @@ class FunctionType(Type):
     def typeid(self) -> TypeID: ...
 
 class IndexType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> IndexType:
+    def get(context: Context | None = None) -> IndexType:
         """
         Create a index type.
         """
@@ -1663,7 +1761,7 @@ class IndexType(Type):
     def typeid(self) -> TypeID: ...
 
 class InferShapedTypeOpInterface:
-    def __init__(self, object: object, context: Optional[Context] = None) -> None:
+    def __init__(self, object: object, context: Context | None = None) -> None:
         """
         Creates an interface from a given operation/opview object or from a
         subclass of OpView. Raises ValueError if the operation does not implement the
@@ -1671,13 +1769,13 @@ class InferShapedTypeOpInterface:
         """
     def inferReturnTypeComponents(
         self,
-        operands: Optional[List] = None,
-        attributes: Optional[Attribute] = None,
+        operands: list | None = None,
+        attributes: Attribute | None = None,
         properties=None,
-        regions: Optional[List[Region]] = None,
-        context: Optional[Context] = None,
-        loc: Optional[Location] = None,
-    ) -> List[ShapedTypeComponents]:
+        regions: list[Region] | None = None,
+        context: Context | None = None,
+        loc: Location | None = None,
+    ) -> list[ShapedTypeComponents]:
         """
         Given the arguments required to build an operation, attempts to infer
         its return shaped type components. Raises ValueError on failure.
@@ -1695,7 +1793,7 @@ class InferShapedTypeOpInterface:
         """
 
 class InferTypeOpInterface:
-    def __init__(self, object: object, context: Optional[Context] = None) -> None:
+    def __init__(self, object: object, context: Context | None = None) -> None:
         """
         Creates an interface from a given operation/opview object or from a
         subclass of OpView. Raises ValueError if the operation does not implement the
@@ -1703,13 +1801,13 @@ class InferTypeOpInterface:
         """
     def inferReturnTypes(
         self,
-        operands: Optional[List] = None,
-        attributes: Optional[Attribute] = None,
+        operands: list | None = None,
+        attributes: Attribute | None = None,
         properties=None,
-        regions: Optional[List[Region]] = None,
-        context: Optional[Context] = None,
-        loc: Optional[Location] = None,
-    ) -> List[Type]:
+        regions: list[Region] | None = None,
+        context: Context | None = None,
+        loc: Location | None = None,
+    ) -> list[Type]:
         """
         Given the arguments required to build an operation, attempts to infer
         its return types. Raises ValueError on failure.
@@ -1760,13 +1858,13 @@ class InsertionPoint:
         Returns the block that this InsertionPoint points to.
         """
     @property
-    def ref_operation(self) -> Optional[_OperationBase]:
+    def ref_operation(self) -> _OperationBase | None:
         """
         The reference operation before which new operations are inserted, or None if the insertion point is at the end of the block
         """
 
 class IntegerAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(type: Type, value: int) -> IntegerAttr:
         """
@@ -1794,13 +1892,13 @@ class IntegerSet:
     def get(
         num_dims: int,
         num_symbols: int,
-        exprs: List,
-        eq_flags: List[bool],
-        context: Optional[Context] = None,
+        exprs: list,
+        eq_flags: list[bool],
+        context: Context | None = None,
     ) -> IntegerSet: ...
     @staticmethod
     def get_empty(
-        num_dims: int, num_symbols: int, context: Optional[Context] = None
+        num_dims: int, num_symbols: int, context: Context | None = None
     ) -> IntegerSet: ...
     def _CAPICreate(self) -> IntegerSet: ...
     @overload
@@ -1814,8 +1912,8 @@ class IntegerSet:
         """
     def get_replaced(
         self,
-        dim_exprs: List,
-        symbol_exprs: List,
+        dim_exprs: list,
+        symbol_exprs: list,
         num_result_dims: int,
         num_result_symbols: int,
     ) -> IntegerSet: ...
@@ -1838,6 +1936,21 @@ class IntegerSet:
     @property
     def n_symbols(self) -> int: ...
 
+class IntegerSetAttr(Attribute):
+    static_typeid: ClassVar[TypeID]
+    @staticmethod
+    def get(integer_set) -> IntegerSetAttr:
+        """
+        Gets an attribute wrapping an IntegerSet.
+        """
+    @staticmethod
+    def isinstance(other: Attribute) -> bool: ...
+    def __init__(self, cast_from_attr: Attribute) -> None: ...
+    @property
+    def type(self) -> Type: ...
+    @property
+    def typeid(self) -> TypeID: ...
+
 class IntegerSetConstraint:
     def __init__(self, *args, **kwargs) -> None: ...
     @property
@@ -1847,7 +1960,7 @@ class IntegerSetConstraint:
 
 class IntegerSetConstraintList:
     def __init__(self, *args, **kwargs) -> None: ...
-    def __add__(self, arg0: IntegerSetConstraintList) -> List[IntegerSetConstraint]: ...
+    def __add__(self, arg0: IntegerSetConstraintList) -> list[IntegerSetConstraint]: ...
     @overload
     def __getitem__(self, arg0: int) -> IntegerSetConstraint: ...
     @overload
@@ -1855,19 +1968,19 @@ class IntegerSetConstraintList:
     def __len__(self) -> int: ...
 
 class IntegerType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get_signed(width: int, context: Optional[Context] = None) -> IntegerType:
+    def get_signed(width: int, context: Context | None = None) -> IntegerType:
         """
         Create a signed integer type
         """
     @staticmethod
-    def get_signless(width: int, context: Optional[Context] = None) -> IntegerType:
+    def get_signless(width: int, context: Context | None = None) -> IntegerType:
         """
         Create a signless integer type
         """
     @staticmethod
-    def get_unsigned(width: int, context: Optional[Context] = None) -> IntegerType:
+    def get_unsigned(width: int, context: Context | None = None) -> IntegerType:
         """
         Create an unsigned integer type
         """
@@ -1902,28 +2015,28 @@ class Location:
     __hash__: ClassVar[None] = None
     @staticmethod
     def callsite(
-        callee: Location, frames: Sequence[Location], context: Optional[Context] = None
+        callee: Location, frames: Sequence[Location], context: Context | None = None
     ) -> Location:
         """
         Gets a Location representing a caller and callsite
         """
     @staticmethod
     def file(
-        filename: str, line: int, col: int, context: Optional[Context] = None
+        filename: str, line: int, col: int, context: Context | None = None
     ) -> Location:
         """
         Gets a Location representing a file, line and column
         """
     @staticmethod
-    def from_attr(attribute: Attribute, context: Optional[Context] = None) -> Location:
+    def from_attr(attribute: Attribute, context: Context | None = None) -> Location:
         """
         Gets a Location from a LocationAttr
         """
     @staticmethod
     def fused(
         locations: Sequence[Location],
-        metadata: Optional[Attribute] = None,
-        context: Optional[Context] = None,
+        metadata: Attribute | None = None,
+        context: Context | None = None,
     ) -> Location:
         """
         Gets a Location representing a fused location with optional metadata
@@ -1931,14 +2044,14 @@ class Location:
     @staticmethod
     def name(
         name: str,
-        childLoc: Optional[Location] = None,
-        context: Optional[Context] = None,
+        childLoc: Location | None = None,
+        context: Context | None = None,
     ) -> Location:
         """
         Gets a Location representing a named location with optional child location
         """
     @staticmethod
-    def unknown(context: Optional[Context] = None) -> Location:
+    def unknown(context: Context | None = None) -> Location:
         """
         Gets a Location representing an unknown location
         """
@@ -1967,14 +2080,14 @@ class Location:
         """
 
 class MemRefType(ShapedType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        shape: List[int],
+        shape: list[int],
         element_type: Type,
         layout: Attribute = None,
         memory_space: Attribute = None,
-        loc: Optional[Location] = None,
+        loc: Location | None = None,
     ) -> MemRefType:
         """
         Create a memref type
@@ -1993,23 +2106,36 @@ class MemRefType(ShapedType):
         The layout of the MemRef type.
         """
     @property
-    def memory_space(self) -> Optional[Attribute]:
+    def memory_space(self) -> Attribute | None:
         """
         Returns the memory space of the given MemRef type.
         """
     @property
     def typeid(self) -> TypeID: ...
+    def get_strides_and_offset(self) -> tuple[list[int], list[int]]:
+        """
+        The strides and offset of the MemRef type.
+        """
 
 class Module:
     @staticmethod
-    def create(loc: Optional[Location] = None) -> Module:
+    def create(loc: Location | None = None) -> Module:
         """
         Creates an empty module
         """
     @staticmethod
-    def parse(asm: str, context: Optional[Context] = None) -> Module:
+    def parse(asm: str | bytes, context: Context | None = None) -> Module:
         """
         Parses a module's assembly format from a string.
+
+        Returns a new MlirModule or raises an MLIRError if the parsing fails.
+
+        See also: https://mlir.llvm.org/docs/LangRef/
+        """
+    @staticmethod
+    def parseFile(path: str, context: Context | None = None) -> Module:
+        """
+        Parses a module's assembly format from file.
 
         Returns a new MlirModule or raises an MLIRError if the parsing fails.
 
@@ -2048,7 +2174,7 @@ class Module:
 
 class MLIRError(Exception):
     def __init__(
-        self, message: str, error_diagnostics: List[DiagnosticInfo]
+        self, message: str, error_diagnostics: list[DiagnosticInfo]
     ) -> None: ...
 
 class NamedAttribute:
@@ -2064,9 +2190,9 @@ class NamedAttribute:
         """
 
 class NoneType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> NoneType:
+    def get(context: Context | None = None) -> NoneType:
         """
         Create a none type.
         """
@@ -2097,7 +2223,7 @@ class OpOperandIterator:
     def __next__(self) -> OpOperand: ...
 
 class OpOperandList:
-    def __add__(self, arg0: OpOperandList) -> List[Value]: ...
+    def __add__(self, arg0: OpOperandList) -> list[Value]: ...
     @overload
     def __getitem__(self, arg0: int) -> Value: ...
     @overload
@@ -2117,7 +2243,7 @@ class OpResult(Value):
     def result_number(self) -> int: ...
 
 class OpResultList:
-    def __add__(self, arg0: OpResultList) -> List[OpResult]: ...
+    def __add__(self, arg0: OpResultList) -> list[OpResult]: ...
     @overload
     def __getitem__(self, arg0: int) -> OpResult: ...
     @overload
@@ -2126,11 +2252,16 @@ class OpResultList:
     @property
     def owner(self) -> _OperationBase: ...
     @property
-    def types(self) -> List[Type]: ...
+    def types(self) -> list[Type]: ...
 
 class OpSuccessors:
-    def __add__(self, arg0: OpSuccessors) -> List[Block]: ...
+    def __add__(self, arg0: OpSuccessors) -> list[Block]: ...
+    @overload
+    def __getitem__(self, arg0: int) -> Block: ...
+    @overload
+    def __getitem__(self, arg0: slice) -> OpSuccessors: ...
     def __setitem__(self, arg0: int, arg1: Block) -> None: ...
+    def __len__(self) -> int: ...
 
 class OpView(_OperationBase):
     _ODS_OPERAND_SEGMENTS: ClassVar[None] = ...
@@ -2139,25 +2270,25 @@ class OpView(_OperationBase):
     def __init__(self, operation: _OperationBase) -> None: ...
     @classmethod
     def build_generic(
-        cls: _Type[_TOperation],
-        results: Optional[Sequence[Type]] = None,
-        operands: Optional[Sequence[Value]] = None,
-        attributes: Optional[Dict[str, Attribute]] = None,
-        successors: Optional[Sequence[Block]] = None,
-        regions: Optional[int] = None,
-        loc: Optional[Location] = None,
-        ip: Optional[InsertionPoint] = None,
+        cls: type[_TOperation],
+        results: Sequence[Type] | None = None,
+        operands: Sequence[Value] | None = None,
+        attributes: dict[str, Attribute] | None = None,
+        successors: Sequence[Block] | None = None,
+        regions: int | None = None,
+        loc: Location | None = None,
+        ip: InsertionPoint | None = None,
     ) -> _TOperation:
         """
         Builds a specific, generated OpView based on class level attributes.
         """
     @classmethod
     def parse(
-        cls: _Type[_TOperation],
-        source: str,
+        cls: type[_TOperation],
+        source: str | bytes,
         *,
         source_name: str = "",
-        context: Optional[Context] = None,
+        context: Context | None = None,
     ) -> _TOperation:
         """
         Parses a specific, generated OpView based on class level attributes
@@ -2174,13 +2305,13 @@ class OpView(_OperationBase):
         """
 
 class OpaqueAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
         dialect_namespace: str,
         buffer: Buffer,
         type: Type,
-        context: Optional[Context] = None,
+        context: Context | None = None,
     ) -> OpaqueAttr:
         """
         Gets an Opaque attribute.
@@ -2204,10 +2335,10 @@ class OpaqueAttr(Attribute):
     def typeid(self) -> TypeID: ...
 
 class OpaqueType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        dialect_namespace: str, buffer: str, context: Optional[Context] = None
+        dialect_namespace: str, buffer: str, context: Context | None = None
     ) -> OpaqueType:
         """
         Create an unregistered (opaque) dialect type.
@@ -2233,13 +2364,13 @@ class Operation(_OperationBase):
     @staticmethod
     def create(
         name: str,
-        results: Optional[Sequence[Type]] = None,
-        operands: Optional[Sequence[Value]] = None,
-        attributes: Optional[Dict[str, Attribute]] = None,
-        successors: Optional[Sequence[Block]] = None,
+        results: Sequence[Type] | None = None,
+        operands: Sequence[Value] | None = None,
+        attributes: dict[str, Attribute] | None = None,
+        successors: Sequence[Block] | None = None,
         regions: int = 0,
-        loc: Optional[Location] = None,
-        ip: Optional[InsertionPoint] = None,
+        loc: Location | None = None,
+        ip: InsertionPoint | None = None,
         infer_type: bool = False,
     ) -> Operation:
         """
@@ -2262,7 +2393,7 @@ class Operation(_OperationBase):
         """
     @staticmethod
     def parse(
-        source: str, *, source_name: str = "", context: Optional[Context] = None
+        source: str | bytes, *, source_name: str = "", context: Context | None = None
     ) -> Operation:
         """
         Parses an operation. Supports both text assembly format and binary bytecode format.
@@ -2290,13 +2421,13 @@ class OperationList:
     def __len__(self) -> int: ...
 
 class RankedTensorType(ShapedType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        shape: List[int],
+        shape: list[int],
         element_type: Type,
-        encoding: Optional[Attribute] = None,
-        loc: Optional[Location] = None,
+        encoding: Attribute | None = None,
+        loc: Location | None = None,
     ) -> RankedTensorType:
         """
         Create a ranked tensor type
@@ -2305,7 +2436,7 @@ class RankedTensorType(ShapedType):
     def isinstance(other: Type) -> bool: ...
     def __init__(self, cast_from_type: Type) -> None: ...
     @property
-    def encoding(self) -> Optional[Attribute]: ...
+    def encoding(self) -> Attribute | None: ...
     @property
     def typeid(self) -> TypeID: ...
 
@@ -2391,7 +2522,7 @@ class ShapedType(Type):
         Returns the rank of the given ranked shaped type.
         """
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> list[int]:
         """
         Returns the shape of the ranked shaped type as a List of integers.
         """
@@ -2409,14 +2540,14 @@ class ShapedTypeComponents:
         """
     @staticmethod
     @overload
-    def get(shape: List, element_type: Type) -> ShapedTypeComponents:
+    def get(shape: list, element_type: Type) -> ShapedTypeComponents:
         """
         Create a ranked shaped type components object.
         """
     @staticmethod
     @overload
     def get(
-        shape: List, element_type: Type, attribute: Attribute
+        shape: list, element_type: Type, attribute: Attribute
     ) -> ShapedTypeComponents:
         """
         Create a ranked shaped type components object with attribute.
@@ -2437,23 +2568,23 @@ class ShapedTypeComponents:
         Returns the rank of the given ranked shaped type components. If the shaped type components does not have a rank, None is returned.
         """
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> list[int]:
         """
         Returns the shape of the ranked shaped type components as a List of integers. Returns none if the shaped type component does not have a rank.
         """
 
 class StridedLayoutAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        offset: int, strides: List[int], context: Optional[Context] = None
+        offset: int, strides: list[int], context: Context | None = None
     ) -> StridedLayoutAttr:
         """
         Gets a strided layout attribute.
         """
     @staticmethod
     def get_fully_dynamic(
-        rank: int, context: Optional[Context] = None
+        rank: int, context: Context | None = None
     ) -> StridedLayoutAttr:
         """
         Gets a strided layout attribute with dynamic offset and strides of a given rank.
@@ -2467,7 +2598,7 @@ class StridedLayoutAttr(Attribute):
         Returns the value of the float point attribute
         """
     @property
-    def strides(self) -> List[int]:
+    def strides(self) -> list[int]:
         """
         Returns the value of the float point attribute
         """
@@ -2477,9 +2608,9 @@ class StridedLayoutAttr(Attribute):
     def typeid(self) -> TypeID: ...
 
 class StringAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(value: str, context: Optional[Context] = None) -> StringAttr:
+    def get(value: str | bytes, context: Context | None = None) -> StringAttr:
         """
         Gets a uniqued string attribute
         """
@@ -2508,7 +2639,7 @@ class StringAttr(Attribute):
 
 class SymbolRefAttr(Attribute):
     @staticmethod
-    def get(symbols: List[str], context: Optional[Context] = None) -> Attribute:
+    def get(symbols: list[str], context: Context | None = None) -> Attribute:
         """
         Gets a uniqued SymbolRef attribute from a List of symbol names
         """
@@ -2522,7 +2653,7 @@ class SymbolRefAttr(Attribute):
     @property
     def typeid(self) -> TypeID: ...
     @property
-    def value(self) -> List[str]:
+    def value(self) -> list[str]:
         """
         Returns the value of the SymbolRef attribute as a List[str]
         """
@@ -2554,9 +2685,9 @@ class SymbolTable:
     def insert(self, operation: _OperationBase) -> Attribute: ...
 
 class TupleType(Type):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get_Tuple(elements: List[Type], context: Optional[Context] = None) -> TupleType:
+    def get_tuple(elements: list[Type], context: Context | None = None) -> TupleType:
         """
         Create a Tuple type
         """
@@ -2576,9 +2707,9 @@ class TupleType(Type):
     def typeid(self) -> TypeID: ...
 
 class TypeAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(value: Type, context: Optional[Context] = None) -> TypeAttr:
+    def get(value: Type, context: Context | None = None) -> TypeAttr:
         """
         Gets a uniqued Type attribute
         """
@@ -2603,9 +2734,9 @@ class TypeID:
     def _CAPIPtr(self) -> object: ...
 
 class UnitAttr(Attribute):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(context: Optional[Context] = None) -> UnitAttr:
+    def get(context: Context | None = None) -> UnitAttr:
         """
         Create a Unit attribute.
         """
@@ -2618,10 +2749,10 @@ class UnitAttr(Attribute):
     def typeid(self) -> TypeID: ...
 
 class UnrankedMemRefType(ShapedType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        element_type: Type, memory_space: Attribute, loc: Optional[Location] = None
+        element_type: Type, memory_space: Attribute, loc: Location | None = None
     ) -> UnrankedMemRefType:
         """
         Create a unranked memref type
@@ -2630,7 +2761,7 @@ class UnrankedMemRefType(ShapedType):
     def isinstance(other: Type) -> bool: ...
     def __init__(self, cast_from_type: Type) -> None: ...
     @property
-    def memory_space(self) -> Optional[Attribute]:
+    def memory_space(self) -> Attribute | None:
         """
         Returns the memory space of the given Unranked MemRef type.
         """
@@ -2638,9 +2769,9 @@ class UnrankedMemRefType(ShapedType):
     def typeid(self) -> TypeID: ...
 
 class UnrankedTensorType(ShapedType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
-    def get(element_type: Type, loc: Optional[Location] = None) -> UnrankedTensorType:
+    def get(element_type: Type, loc: Location | None = None) -> UnrankedTensorType:
         """
         Create a unranked tensor type
         """
@@ -2651,15 +2782,15 @@ class UnrankedTensorType(ShapedType):
     def typeid(self) -> TypeID: ...
 
 class VectorType(ShapedType):
-    static_typeid: ClassVar[TypeID]  # value = <mlir._mlir_libs._TypeID object>
+    static_typeid: ClassVar[TypeID]
     @staticmethod
     def get(
-        shape: List[int],
+        shape: list[int],
         element_type: Type,
         *,
-        scalable: Optional[List] = None,
-        scalable_dims: Optional[List[int]] = None,
-        loc: Optional[Location] = None,
+        scalable: list | None = None,
+        scalable_dims: list[int] | None = None,
+        loc: Location | None = None,
     ) -> VectorType:
         """
         Create a vector type
@@ -2670,7 +2801,7 @@ class VectorType(ShapedType):
     @property
     def scalable(self) -> bool: ...
     @property
-    def scalable_dims(self) -> List[bool]: ...
+    def scalable_dims(self) -> list[bool]: ...
     @property
     def typeid(self) -> TypeID: ...
 

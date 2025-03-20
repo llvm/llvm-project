@@ -161,7 +161,7 @@ func.func @_Qtest_recursive() attributes {fir.bindc_name = "test"} {
   %25 = arith.xori %24, %true : i1
   cf.cond_br %25, ^bb1, ^bb2
 ^bb1:  // pred: ^bb0
-  %26 = fir.call @_FortranAStopStatement(%c2_i32, %false, %false) fastmath<contract> : (i32, i1, i1) -> none
+  fir.call @_FortranAStopStatement(%c2_i32, %false, %false) fastmath<contract> : (i32, i1, i1) -> ()
   fir.unreachable
 ^bb2:  // pred: ^bb0
   return

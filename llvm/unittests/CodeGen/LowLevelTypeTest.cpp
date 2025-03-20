@@ -20,7 +20,6 @@ namespace {
 
 TEST(LowLevelTypeTest, Token) {
   LLVMContext C;
-  DataLayout DL("");
 
   const LLT TTy = LLT::token();
 
@@ -38,7 +37,7 @@ TEST(LowLevelTypeTest, Token) {
 
 TEST(LowLevelTypeTest, Scalar) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL;
 
   for (unsigned S : {0U, 1U, 17U, 32U, 64U, 0xfffffU}) {
     const LLT Ty = LLT::scalar(S);
@@ -70,7 +69,7 @@ TEST(LowLevelTypeTest, Scalar) {
 
 TEST(LowLevelTypeTest, Vector) {
   LLVMContext C;
-  DataLayout DL("");
+  DataLayout DL;
 
   for (unsigned S : {0U, 1U, 17U, 32U, 64U, 0xfffU}) {
     for (auto EC :
@@ -305,10 +304,9 @@ TEST(LowLevelTypeTest, Pointer) {
       EXPECT_FALSE(VTy != VTy);
 
       // Test Type->LLT conversion.
-      Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
+      Type *IRTy = PointerType::get(C, AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-          VectorType::get(PointerType::get(IntegerType::get(C, 8), AS), EC);
+      Type *IRVTy = VectorType::get(PointerType::get(C, AS), EC);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }

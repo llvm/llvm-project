@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; assume should be inserted.
 define void @byval_callee(ptr byval(float) align 128 nocapture %a, ptr %b) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@byval_callee
-; CHECK-SAME: (ptr nocapture byval(float) align 128 [[A:%.*]], ptr [[B:%.*]]) #0
+; CHECK-SAME: (ptr byval(float) align 128 captures(none) [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[B_IDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
@@ -25,7 +25,7 @@ entry:
 
 define void @byval_caller(ptr nocapture align 64 %a, ptr %b) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@byval_caller
-; CHECK-SAME: (ptr nocapture align 64 [[A:%.*]], ptr [[B:%.*]]) #0
+; CHECK-SAME: (ptr align 64 captures(none) [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = alloca float, align 128
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A1]])

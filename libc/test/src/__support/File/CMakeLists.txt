@@ -14,9 +14,9 @@ add_libc_test(
   LINK_LIBRARIES
     LibcMemoryHelpers
   DEPENDS
-    libc.include.errno
     libc.include.stdio
-    libc.include.stdlib
+    libc.hdr.types.size_t
+    libc.src.errno.errno
     libc.src.__support.CPP.new
     libc.src.__support.File.file
 )

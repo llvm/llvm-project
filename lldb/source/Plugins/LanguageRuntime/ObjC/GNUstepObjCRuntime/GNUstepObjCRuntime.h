@@ -57,18 +57,18 @@ public:
   //
   // LanguageRuntime implementation
   //
-  bool GetObjectDescription(Stream &str, Value &value,
-                            ExecutionContextScope *exe_scope) override;
+  llvm::Error GetObjectDescription(Stream &str, Value &value,
+                                   ExecutionContextScope *exe_scope) override;
 
-  bool GetObjectDescription(Stream &str, ValueObject &object) override;
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object) override;
 
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
-                                Address &address,
-                                Value::ValueType &value_type) override;
+                                Address &address, Value::ValueType &value_type,
+                                llvm::ArrayRef<uint8_t> &local_buffer) override;
 
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                  ValueObject &static_value) override;

@@ -114,7 +114,8 @@ std::unique_ptr<Module> llvm::parseInputFile(StringRef Filename,
     TargetTriple.setTriple(TheTriple.getTriple());
   }
 
-  Result->setTargetTriple(TargetTriple.getTriple()); // override the triple
+  // override the triple
+  Result->setTargetTriple(TargetTriple);
   return Result;
 }
 
@@ -142,7 +143,7 @@ bool BugDriver::addSources(const std::vector<std::string> &Filenames) {
 
   for (unsigned i = 1, e = Filenames.size(); i != e; ++i) {
     std::unique_ptr<Module> M = parseInputFile(Filenames[i], Context);
-    if (!M.get())
+    if (!M)
       return true;
 
     outs() << "Linking in input file: '" << Filenames[i] << "'\n";

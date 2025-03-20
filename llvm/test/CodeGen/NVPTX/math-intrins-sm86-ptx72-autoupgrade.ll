@@ -1,39 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | FileCheck %s
-; RUN: %if ptxas-11.2 %{ llc < %s -march=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | %ptxas-verify -arch=sm_86 %}
-
-declare half @llvm.nvvm.fmin.xorsign.abs.f16(half, half)
-declare half @llvm.nvvm.fmin.ftz.xorsign.abs.f16(half, half)
-declare half @llvm.nvvm.fmin.nan.xorsign.abs.f16(half, half)
-declare half @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f16(half, half)
-declare <2 x half> @llvm.nvvm.fmin.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare <2 x half> @llvm.nvvm.fmin.ftz.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare <2 x half> @llvm.nvvm.fmin.nan.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare <2 x half> @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare i16 @llvm.nvvm.fmin.xorsign.abs.bf16(i16, i16)
-declare i16 @llvm.nvvm.fmin.nan.xorsign.abs.bf16(i16, i16)
-declare i32 @llvm.nvvm.fmin.xorsign.abs.bf16x2(i32, i32)
-declare i32 @llvm.nvvm.fmin.nan.xorsign.abs.bf16x2(i32, i32)
-declare float @llvm.nvvm.fmin.xorsign.abs.f(float, float)
-declare float @llvm.nvvm.fmin.ftz.xorsign.abs.f(float, float)
-declare float @llvm.nvvm.fmin.nan.xorsign.abs.f(float, float)
-declare float @llvm.nvvm.fmin.ftz.nan.xorsign.abs.f(float, float)
-
-declare half @llvm.nvvm.fmax.xorsign.abs.f16(half, half)
-declare half @llvm.nvvm.fmax.ftz.xorsign.abs.f16(half, half)
-declare half @llvm.nvvm.fmax.nan.xorsign.abs.f16(half, half)
-declare half @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f16(half, half)
-declare <2 x half> @llvm.nvvm.fmax.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare <2 x half> @llvm.nvvm.fmax.ftz.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare <2 x half> @llvm.nvvm.fmax.nan.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare <2 x half> @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f16x2(<2 x half> , <2 x half>)
-declare i16 @llvm.nvvm.fmax.xorsign.abs.bf16(i16, i16)
-declare i16 @llvm.nvvm.fmax.nan.xorsign.abs.bf16(i16, i16)
-declare i32 @llvm.nvvm.fmax.xorsign.abs.bf16x2(i32, i32)
-declare i32 @llvm.nvvm.fmax.nan.xorsign.abs.bf16x2(i32, i32)
-declare float @llvm.nvvm.fmax.xorsign.abs.f(float, float)
-declare float @llvm.nvvm.fmax.ftz.xorsign.abs.f(float, float)
-declare float @llvm.nvvm.fmax.nan.xorsign.abs.f(float, float)
-declare float @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f(float, float)
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | FileCheck %s
+; RUN: %if ptxas-11.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | %ptxas-verify -arch=sm_86 %}
 
 ; CHECK-LABEL: fmin_xorsign_abs_f16
 define half @fmin_xorsign_abs_f16(half %0, half %1) {
@@ -100,35 +66,35 @@ define <2 x half> @fmin_ftz_nan_xorsign_abs_f16x2(<2 x half> %0, <2 x half> %1) 
 }
 
 ; CHECK-LABEL: fmin_xorsign_abs_bf16
-define i16 @fmin_xorsign_abs_bf16(i16 %0, i16 %1) {
+define bfloat @fmin_xorsign_abs_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: min.xorsign.abs.bf16
-  %res = call i16 @llvm.nvvm.fmin.xorsign.abs.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmin.xorsign.abs.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmin_nan_xorsign_abs_bf16
-define i16 @fmin_nan_xorsign_abs_bf16(i16 %0, i16 %1) {
+define bfloat @fmin_nan_xorsign_abs_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: min.NaN.xorsign.abs.bf16
-  %res = call i16 @llvm.nvvm.fmin.nan.xorsign.abs.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmin.nan.xorsign.abs.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmin_xorsign_abs_bf16x2
-define i32 @fmin_xorsign_abs_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmin_xorsign_abs_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: min.xorsign.abs.bf16x2
-  %res = call i32 @llvm.nvvm.fmin.xorsign.abs.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmin.xorsign.abs.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmin_nan_xorsign_abs_bf16x2
-define i32 @fmin_nan_xorsign_abs_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmin_nan_xorsign_abs_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: min.NaN.xorsign.abs.bf16x2
-  %res = call i32 @llvm.nvvm.fmin.nan.xorsign.abs.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmin.nan.xorsign.abs.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmin_xorsign_abs_f
@@ -228,35 +194,35 @@ define <2 x half> @fmax_ftz_nan_xorsign_abs_f16x2(<2 x half> %0, <2 x half> %1) 
 }
 
 ; CHECK-LABEL: fmax_xorsign_abs_bf16
-define i16 @fmax_xorsign_abs_bf16(i16 %0, i16 %1) {
+define bfloat @fmax_xorsign_abs_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: max.xorsign.abs.bf16
-  %res = call i16 @llvm.nvvm.fmax.xorsign.abs.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmax.xorsign.abs.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmax_nan_xorsign_abs_bf16
-define i16 @fmax_nan_xorsign_abs_bf16(i16 %0, i16 %1) {
+define bfloat @fmax_nan_xorsign_abs_bf16(bfloat %0, bfloat %1) {
   ; CHECK-NOT: call
   ; CHECK: max.NaN.xorsign.abs.bf16
-  %res = call i16 @llvm.nvvm.fmax.nan.xorsign.abs.bf16(i16 %0, i16 %1)
-  ret i16 %res
+  %res = call bfloat @llvm.nvvm.fmax.nan.xorsign.abs.bf16(bfloat %0, bfloat %1)
+  ret bfloat %res
 }
 
 ; CHECK-LABEL: fmax_xorsign_abs_bf16x2
-define i32 @fmax_xorsign_abs_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmax_xorsign_abs_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: max.xorsign.abs.bf16x2
-  %res = call i32 @llvm.nvvm.fmax.xorsign.abs.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmax.xorsign.abs.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmax_nan_xorsign_abs_bf16x2
-define i32 @fmax_nan_xorsign_abs_bf16x2(i32 %0, i32 %1) {
+define <2 x bfloat> @fmax_nan_xorsign_abs_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
   ; CHECK-NOT: call
   ; CHECK: max.NaN.xorsign.abs.bf16x2
-  %res = call i32 @llvm.nvvm.fmax.nan.xorsign.abs.bf16x2(i32 %0, i32 %1)
-  ret i32 %res
+  %res = call <2 x bfloat> @llvm.nvvm.fmax.nan.xorsign.abs.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1)
+  ret <2 x bfloat> %res
 }
 
 ; CHECK-LABEL: fmax_xorsign_abs_f

@@ -15,15 +15,15 @@ func.func @test_clone(%buf : memref<*xf32>) -> memref<*xf32> {
 func.func @test_to_memref(%arg0: tensor<?xi64>, %arg1: tensor<*xi64>)
     -> (memref<?xi64, affine_map<(d0) -> (d0 + 7)>>, memref<*xi64, 1>) {
   %0 = bufferization.to_memref %arg0
-    : memref<?xi64, affine_map<(d0) -> (d0 + 7)>>
+    : tensor<?xi64> to memref<?xi64, affine_map<(d0) -> (d0 + 7)>>
   %1 = bufferization.to_memref %arg1
-    : memref<*xi64, 1>
+    : tensor<*xi64> to memref<*xi64, 1>
   return %0, %1 : memref<?xi64, affine_map<(d0) -> (d0 + 7)>>, memref<*xi64, 1>
 }
 
 // CHECK-LABEL: func @test_to_tensor
 func.func @test_to_tensor(%buf : memref<2xf32>) -> tensor<2xf32> {
-  %tensor = bufferization.to_tensor %buf restrict writable : memref<2xf32>
+  %tensor = bufferization.to_tensor %buf restrict writable : memref<2xf32> to tensor<2xf32>
   return %tensor : tensor<2xf32>
 }
 
@@ -59,12 +59,15 @@ func.func @test_dealloc_tensor_op(%arg0: tensor<4xi32>) {
 }
 
 // CHECK-LABEL: func @test_materialize_in_destination_op
-func.func @test_materialize_in_destination_op(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: memref<?xf32, 3>)
-    -> tensor<?xf32> {
+func.func @test_materialize_in_destination_op(
+    %arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: memref<?xf32, 3>,
+    %arg4: tensor<5xf32>) -> tensor<?xf32> {
   // CHECK: bufferization.materialize_in_destination {{.*}} : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
   %1 = bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
   // CHECK: bufferization.materialize_in_destination {{.*}} : (tensor<?xf32>, memref<?xf32, 3>) -> ()
   bufferization.materialize_in_destination %arg0 in restrict writable %arg2 : (tensor<?xf32>, memref<?xf32, 3>) -> ()
+  // CHECK: bufferization.materialize_in_destination {{.*}} : (tensor<?xf32>, tensor<5xf32>) -> tensor<5xf32>
+  %2 = bufferization.materialize_in_destination %arg0 in %arg4 : (tensor<?xf32>, tensor<5xf32>) -> tensor<5xf32>
   return %1 : tensor<?xf32>
 }
 

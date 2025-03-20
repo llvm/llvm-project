@@ -119,7 +119,7 @@ are calculated from the object contents.
 is not intended to be cryptographically secure.
 .It Fl -build-id
 Synonym for
-.Fl -build-id Ns = Ns Cm fast .
+.Fl -build-id Ns = Ns Cm sha1 .
 .It Fl -call-graph-profile-sort Ns = Ns Ar algorithm
 .Ar algorithm
 may be:
@@ -278,6 +278,8 @@ Set the
 field to the specified value.
 .It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
+.It Fl -force-group-allocation
+Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well.
 .It Fl -format Ns = Ns Ar input-format , Fl b Ar input-format
 Specify the format of the inputs following this option.
 .Ar input-format
@@ -491,6 +493,10 @@ If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -package-metadata
+Emit a percent-encoded string to the
+.Cm .note.package
+section. For example, %25 decodes to a single %.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
@@ -527,6 +533,19 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl -randomize-section-padding Ns = Ns Ar seed
+Randomly insert padding between input sections and at the start of each segment using the given seed.
+Padding is inserted into output sections with names matching the following patterns:
+.Cm .bss ,
+.Cm .data ,
+.Cm .data.rel.ro ,
+.Cm .lbss ,
+.Cm .ldata ,
+.Cm .lrodata ,
+.Cm .ltext ,
+.Cm .rodata
+and
+.Cm .text* .
 .It Fl --relax-gp
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
@@ -855,6 +874,9 @@ The object will omit the
 .Dv PT_GNU_RELRO
 segment.
 .Pp
+.It Cm nosectionheader
+Don't generate the section header table.
+.Pp
 .It Cm notext
 Allow relocations against read-only segments.
 Sets the
@@ -933,6 +955,11 @@ Let __start_/__stop_ references retain the associated C identifier name sections
 .It Cm text
 Do not allow relocations against read-only segments.
 This is the default.
+.Pp
+.It Cm nobtcfi
+Create a
+.Dv PT_OPENBSD_NOBTCFI
+segment.
 .Pp
 .It Cm wxneeded
 Create a

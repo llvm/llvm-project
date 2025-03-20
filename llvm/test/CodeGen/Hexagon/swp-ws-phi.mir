@@ -1,0 +1,42 @@
+# REQUIRES: asserts
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: | FileCheck %s
+
+# CHECK: Window scheduling is not needed!
+# CHECK-LABEL: body:             |
+# CHECK: bb.0:
+# CHECK: [[REG:%[0-9]+]]:intregs = A2_tfrsi 0
+# CHECK: bb.2:
+# CHECK: {{%[0-9]+}}:intregs = PHI {{%[0-9]+}}, %bb.0, [[REG]], %bb.2
+
+---
+name:            poll_for_response
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1
+  
+    %0:intregs = COPY $r1
+    %1:intregs = COPY $r0
+    %2:intregs = A2_tfrsi 0
+    J2_loop0i %bb.2, 2, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.2, implicit-def dead $pc
+  
+  bb.1:
+    PS_jmpret $r31, implicit-def dead $pc
+  
+  bb.2:
+    successors: %bb.1(0x04000000), %bb.2(0x7c000000)
+  
+    %3:intregs = PHI %1, %bb.0, %2, %bb.2
+    %4:intregs = PHI %2, %bb.0, %5, %bb.2
+    %6:intregs = S2_lsr_i_r %3, 1
+    S2_storerb_io %0, 0, killed %6
+    S4_storerb_rr %0, %4, 0, %2
+    %5:intregs = A2_tfrsi 1
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.1, implicit-def $pc
+
+...

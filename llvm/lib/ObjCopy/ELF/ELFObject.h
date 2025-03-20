@@ -549,6 +549,7 @@ public:
   virtual void
   replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
   virtual bool hasContents() const { return false; }
+  virtual ArrayRef<uint8_t> getContents() const { return {}; }
   // Notify the section that it is subject to removal.
   virtual void onRemove();
 
@@ -619,6 +620,8 @@ public:
   bool hasContents() const override {
     return Type != ELF::SHT_NOBITS && Type != ELF::SHT_NULL;
   }
+  ArrayRef<uint8_t> getContents() const override { return Contents; }
+
   void restoreSymTabLink(SymbolTableSection &SymTab) override;
 };
 
@@ -654,6 +657,7 @@ public:
   Error accept(SectionVisitor &Sec) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
   bool hasContents() const override { return true; }
+  ArrayRef<uint8_t> getContents() const override { return Data; }
 };
 
 class CompressedSection : public SectionBase {
@@ -881,7 +885,8 @@ public:
   StringRef getNamePrefix() const;
 
   static bool classof(const SectionBase *S) {
-    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
+    return is_contained({ELF::SHT_REL, ELF::SHT_RELA, ELF::SHT_CREL},
+                        S->OriginalType);
   }
 };
 
@@ -910,7 +915,7 @@ class RelocationSection
 
 public:
   RelocationSection(const Object &O) : Obj(O) {}
-  void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
+  void addRelocation(const Relocation &Rel) { Relocations.push_back(Rel); }
   Error accept(SectionVisitor &Visitor) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
   Error removeSectionReferences(
@@ -925,7 +930,7 @@ public:
   static bool classof(const SectionBase *S) {
     if (S->OriginalFlags & ELF::SHF_ALLOC)
       return false;
-    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
+    return RelocationSectionBase::classof(S);
   }
 };
 
@@ -940,6 +945,9 @@ class GroupSection : public SectionBase {
   SmallVector<SectionBase *, 3> GroupMembers;
 
 public:
+  template <class T>
+  using ConstRange = iterator_range<
+      pointee_iterator<typename llvm::SmallVector<T *, 3>::const_iterator>>;
   // TODO: Contents is present in several classes of the hierarchy.
   // This needs to be refactored to avoid duplication.
   ArrayRef<uint8_t> Contents;
@@ -962,6 +970,10 @@ public:
   void replaceSectionReferences(
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
   void onRemove() override;
+
+  ConstRange<SectionBase> members() const {
+    return make_pointee_range(GroupMembers);
+  }
 
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_GROUP;
@@ -1156,6 +1168,8 @@ private:
     return Sec.Flags & ELF::SHF_ALLOC;
   };
 
+  Error updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data);
+
 public:
   template <class T>
   using ConstRange = iterator_range<pointee_iterator<
@@ -1198,6 +1212,7 @@ public:
 
   const auto &getUpdatedSections() const { return UpdatedSections; }
   Error updateSection(StringRef Name, ArrayRef<uint8_t> Data);
+  Error updateSectionData(SectionBase &S, ArrayRef<uint8_t> Data);
 
   SectionBase *findSection(StringRef Name) {
     auto SecIt =

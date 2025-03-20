@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
@@ -65,11 +64,10 @@ static bool hasType(const MCInst &MI, const MCInstrInfo &MII) {
   // If we define an output, and have at least one other argument.
   if (MCDesc.getNumDefs() == 1 && MCDesc.getNumOperands() >= 2) {
     // Check if we define an ID, and take a type as operand 1.
-    auto &DefOpInfo = MCDesc.operands()[0];
-    auto &FirstArgOpInfo = MCDesc.operands()[1];
-    return (DefOpInfo.RegClass == SPIRV::IDRegClassID ||
-            DefOpInfo.RegClass == SPIRV::ANYIDRegClassID) &&
-           FirstArgOpInfo.RegClass == SPIRV::TYPERegClassID;
+    return MCDesc.operands()[0].RegClass >= 0 &&
+           MCDesc.operands()[1].RegClass >= 0 &&
+           MCDesc.operands()[0].RegClass != SPIRV::TYPERegClassID &&
+           MCDesc.operands()[1].RegClass == SPIRV::TYPERegClassID;
   }
   return false;
 }
@@ -78,7 +76,8 @@ static void emitOperand(const MCOperand &Op, SmallVectorImpl<char> &CB) {
   if (Op.isReg()) {
     // Emit the id index starting at 1 (0 is an invalid index).
     support::endian::write<uint32_t>(
-        CB, Register::virtReg2Index(Op.getReg()) + 1, llvm::endianness::little);
+        CB, SPIRV::getIDFromRegister(Op.getReg().id()) + 1,
+        llvm::endianness::little);
   } else if (Op.isImm()) {
     support::endian::write(CB, static_cast<uint32_t>(Op.getImm()),
                            llvm::endianness::little);

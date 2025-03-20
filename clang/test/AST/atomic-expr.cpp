@@ -25,14 +25,14 @@ void useage(){
 }
 
 // CHECK:FunctionTemplateDecl 0x{{[0-9a-f]+}} <{{[^,]+}}, line:{{.*}}:1> line:{{.*}}:6 pr43370
-// CHECK: AtomicExpr
+// CHECK: AtomicExpr 0x{{[0-9a-f]+}} <{{.*}}> 'void' __atomic_store_n
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:20> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:28> 'int' 5
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:25> 'int' 0
 // CHECK:FunctionDecl 0x{{[0-9a-f]+}} <line:{{.*}}:1, line:{{.*}}:1> line:{{.*}}:6 used pr43370
-// CHECK: AtomicExpr
+// CHECK: AtomicExpr 0x{{[0-9a-f]+}} <{{.*}}> 'void' __atomic_store_n
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:20> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
@@ -40,7 +40,7 @@ void useage(){
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:25> 'int' 0
 
 // CHECK:FunctionTemplateDecl 0x{{[0-9a-f]+}} <line:{{.*}}:1, line:{{.*}}:1> line:{{.*}}:6 foo
-// CHECK: AtomicExpr
+// CHECK: AtomicExpr 0x{{[0-9a-f]+}} <{{.*}}> 'bool' __atomic_compare_exchange_n
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:37> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'
@@ -53,7 +53,7 @@ void useage(){
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-NEXT: IntegerLiteral 0x{{[0-9a-f]+}} <{{[^:]+}}:50> 'int' 0
 // CHECK:FunctionDecl 0x{{[0-9a-f]+}} <line:{{.*}}:1, line:{{.*}}:1> line:{{.*}}:6 used foo
-// CHECK: AtomicExpr
+// CHECK: AtomicExpr 0x{{[0-9a-f]+}} <{{.*}}> 'bool' __atomic_compare_exchange_n
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-SAME: <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <{{[^:]+}}:37> 'int[2]' lvalue Var 0x{{[0-9a-f]+}} 'arr' 'int[2]'

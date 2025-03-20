@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_PPC_GISEL_PPCREGISTERBANKINFO_H
-#define LLVM_LIB_TARGET_PPC_GISEL_PPCREGISTERBANKINFO_H
+#ifndef LLVM_LIB_TARGET_POWERPC_GISEL_PPCREGISTERBANKINFO_H
+#define LLVM_LIB_TARGET_POWERPC_GISEL_PPCREGISTERBANKINFO_H
 
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -67,6 +67,7 @@ public:
 
   const RegisterBank &getRegBankFromRegClass(const TargetRegisterClass &RC,
                                              LLT Ty) const override;
+
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
 

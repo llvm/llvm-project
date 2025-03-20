@@ -28,7 +28,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -69,7 +68,7 @@ void DemandedBits::determineLiveOperandBits(
           return;
         KnownBitsComputed = true;
 
-        const DataLayout &DL = UserI->getModule()->getDataLayout();
+        const DataLayout &DL = UserI->getDataLayout();
         Known = KnownBits(BitWidth);
         computeKnownBits(V1, Known, DL, 0, &AC, UserI, &DT);
 
@@ -404,14 +403,14 @@ APInt DemandedBits::getDemandedBits(Instruction *I) {
   if (Found != AliveBits.end())
     return Found->second;
 
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
   return APInt::getAllOnes(DL.getTypeSizeInBits(I->getType()->getScalarType()));
 }
 
 APInt DemandedBits::getDemandedBits(Use *U) {
   Type *T = (*U)->getType();
   auto *UserI = cast<Instruction>(U->getUser());
-  const DataLayout &DL = UserI->getModule()->getDataLayout();
+  const DataLayout &DL = UserI->getDataLayout();
   unsigned BitWidth = DL.getTypeSizeInBits(T->getScalarType());
 
   // We only track integer uses, everything else produces a mask with all bits

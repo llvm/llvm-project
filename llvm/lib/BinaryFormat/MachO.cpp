@@ -105,3 +105,21 @@ Expected<uint32_t> MachO::getCPUSubType(const Triple &T) {
     return getPowerPCSubType(T);
   return unsupported("subtype", T);
 }
+
+Expected<uint32_t> MachO::getCPUSubType(const Triple &T,
+                                        unsigned PtrAuthABIVersion,
+                                        bool PtrAuthKernelABIVersion) {
+  Expected<uint32_t> Result = MachO::getCPUSubType(T);
+  if (!Result)
+    return Result.takeError();
+  if (*Result != MachO::CPU_SUBTYPE_ARM64E)
+    return createStringError(
+        std::errc::invalid_argument,
+        "ptrauth ABI version is only supported on arm64e.");
+  if (PtrAuthABIVersion > 0xF)
+    return createStringError(
+        std::errc::invalid_argument,
+        "The ptrauth ABI version needs to fit within 4 bits.");
+  return CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(PtrAuthABIVersion,
+                                                 PtrAuthKernelABIVersion);
+}

@@ -686,13 +686,12 @@ TEST_F(OpenMPDecompositionTest, Order1) {
   std::string Dir3 = stringify(Dec.output[3]);
   std::string Dir4 = stringify(Dec.output[4]);
   std::string Dir5 = stringify(Dec.output[5]);
-  ASSERT_EQ(Dir0, "target"); // (31)
-  ASSERT_EQ(Dir1, "teams");  // (31)
-  // XXX OMP.td doesn't list "order" as allowed for "distribute"
-  ASSERT_EQ(Dir2, "distribute");       // (31)
-  ASSERT_EQ(Dir3, "parallel");         // (31)
-  ASSERT_EQ(Dir4, "for order(1, 0)");  // (31)
-  ASSERT_EQ(Dir5, "simd order(1, 0)"); // (31)
+  ASSERT_EQ(Dir0, "target");                 // (31)
+  ASSERT_EQ(Dir1, "teams");                  // (31)
+  ASSERT_EQ(Dir2, "distribute order(1, 0)"); // (31)
+  ASSERT_EQ(Dir3, "parallel");               // (31)
+  ASSERT_EQ(Dir4, "for order(1, 0)");        // (31)
+  ASSERT_EQ(Dir5, "simd order(1, 0)");       // (31)
 }
 
 // ALLOCATE
@@ -709,8 +708,7 @@ TEST_F(OpenMPDecompositionTest, Allocate1) {
 
   // Allocate + firstprivate
   omp::List<omp::Clause> Clauses{
-      {OMPC_allocate,
-       omp::clause::Allocate{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
       {OMPC_firstprivate, omp::clause::Firstprivate{{x}}},
   };
 
@@ -720,8 +718,8 @@ TEST_F(OpenMPDecompositionTest, Allocate1) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");                           // (33)
-  ASSERT_EQ(Dir1, "sections firstprivate(x) allocate(, , , (x))"); // (33)
+  ASSERT_EQ(Dir0, "parallel shared(x)");                         // (33)
+  ASSERT_EQ(Dir1, "sections firstprivate(x) allocate(, , (x))"); // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate2) {
@@ -730,8 +728,7 @@ TEST_F(OpenMPDecompositionTest, Allocate2) {
 
   // Allocate + in_reduction
   omp::List<omp::Clause> Clauses{
-      {OMPC_allocate,
-       omp::clause::Allocate{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
       {OMPC_in_reduction, omp::clause::InReduction{{{Add}, {x}}}},
   };
 
@@ -741,8 +738,8 @@ TEST_F(OpenMPDecompositionTest, Allocate2) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "target in_reduction((3), (x)) allocate(, , , (x))"); // (33)
-  ASSERT_EQ(Dir1, "parallel");                                          // (33)
+  ASSERT_EQ(Dir0, "target in_reduction((3), (x)) allocate(, , (x))"); // (33)
+  ASSERT_EQ(Dir1, "parallel");                                        // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate3) {
@@ -750,10 +747,8 @@ TEST_F(OpenMPDecompositionTest, Allocate3) {
 
   // Allocate + linear
   omp::List<omp::Clause> Clauses{
-      {OMPC_allocate,
-       omp::clause::Allocate{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
-      {OMPC_linear,
-       omp::clause::Linear{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
+      {OMPC_linear, omp::clause::Linear{{std::nullopt, std::nullopt, {x}}}},
   };
 
   omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_for,
@@ -765,8 +760,8 @@ TEST_F(OpenMPDecompositionTest, Allocate3) {
   // The "shared" clause is duplicated---this isn't harmful, but it
   // should be fixed eventually.
   ASSERT_EQ(Dir0, "parallel shared(x) shared(x)"); // (33)
-  ASSERT_EQ(Dir1, "for linear(, , , (x)) firstprivate(x) lastprivate(, (x)) "
-                  "allocate(, , , (x))"); // (33)
+  ASSERT_EQ(Dir1, "for linear(, , (x)) firstprivate(x) lastprivate(, (x)) "
+                  "allocate(, , (x))"); // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate4) {
@@ -774,8 +769,7 @@ TEST_F(OpenMPDecompositionTest, Allocate4) {
 
   // Allocate + lastprivate
   omp::List<omp::Clause> Clauses{
-      {OMPC_allocate,
-       omp::clause::Allocate{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
       {OMPC_lastprivate, omp::clause::Lastprivate{{std::nullopt, {x}}}},
   };
 
@@ -785,8 +779,8 @@ TEST_F(OpenMPDecompositionTest, Allocate4) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");                              // (33)
-  ASSERT_EQ(Dir1, "sections lastprivate(, (x)) allocate(, , , (x))"); // (33)
+  ASSERT_EQ(Dir0, "parallel shared(x)");                            // (33)
+  ASSERT_EQ(Dir1, "sections lastprivate(, (x)) allocate(, , (x))"); // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate5) {
@@ -794,8 +788,7 @@ TEST_F(OpenMPDecompositionTest, Allocate5) {
 
   // Allocate + private
   omp::List<omp::Clause> Clauses{
-      {OMPC_allocate,
-       omp::clause::Allocate{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
       {OMPC_private, omp::clause::Private{{x}}},
   };
 
@@ -805,8 +798,8 @@ TEST_F(OpenMPDecompositionTest, Allocate5) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel");                                // (33)
-  ASSERT_EQ(Dir1, "sections private(x) allocate(, , , (x))"); // (33)
+  ASSERT_EQ(Dir0, "parallel");                              // (33)
+  ASSERT_EQ(Dir1, "sections private(x) allocate(, , (x))"); // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate6) {
@@ -815,8 +808,7 @@ TEST_F(OpenMPDecompositionTest, Allocate6) {
 
   // Allocate + reduction
   omp::List<omp::Clause> Clauses{
-      {OMPC_allocate,
-       omp::clause::Allocate{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
   };
 
@@ -826,8 +818,8 @@ TEST_F(OpenMPDecompositionTest, Allocate6) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");                                 // (33)
-  ASSERT_EQ(Dir1, "sections reduction(, (3), (x)) allocate(, , , (x))"); // (33)
+  ASSERT_EQ(Dir0, "parallel shared(x)");                               // (33)
+  ASSERT_EQ(Dir1, "sections reduction(, (3), (x)) allocate(, , (x))"); // (33)
 }
 
 // REDUCTION
@@ -992,11 +984,9 @@ TEST_F(OpenMPDecompositionTest, Reduction7) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  // XXX Currently OMP.td allows "reduction" on "target".
-  ASSERT_EQ(Dir0,
-            "target reduction(, (3), (x)) map(2, , , , (x))"); // (36), (10)
-  ASSERT_EQ(Dir1, "parallel shared(x)");                       // (36), (1), (4)
-  ASSERT_EQ(Dir2, "do reduction(, (3), (x))");                 // (36)
+  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (36), (10)
+  ASSERT_EQ(Dir1, "parallel shared(x)");       // (36), (1), (4)
+  ASSERT_EQ(Dir2, "do reduction(, (3), (x))"); // (36)
 }
 
 // IF
@@ -1068,8 +1058,7 @@ TEST_F(OpenMPDecompositionTest, Linear1) {
   omp::Object x{"x"};
 
   omp::List<omp::Clause> Clauses{
-      {OMPC_linear,
-       omp::clause::Linear{{std::nullopt, std::nullopt, std::nullopt, {x}}}},
+      {OMPC_linear, omp::clause::Linear{{std::nullopt, std::nullopt, {x}}}},
   };
 
   omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_for_simd, Clauses);
@@ -1077,7 +1066,7 @@ TEST_F(OpenMPDecompositionTest, Linear1) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   ASSERT_EQ(Dir0, "for firstprivate(x) lastprivate(, (x))"); // (15.1), (15.2)
-  ASSERT_EQ(Dir1, "simd linear(, , , (x)) lastprivate(, (x))"); // (15.1)
+  ASSERT_EQ(Dir1, "simd linear(, , (x)) lastprivate(, (x))"); // (15.1)
 }
 
 // NOWAIT
@@ -1102,5 +1091,21 @@ TEST_F(OpenMPDecompositionTest, Nowait1) {
   ASSERT_EQ(Dir0, "target nowait"); // (23)
   ASSERT_EQ(Dir1, "parallel");      // (23)
   ASSERT_EQ(Dir2, "for");           // (23)
+}
+
+// ---
+
+// Check that "simd linear(x)" does not fail despite the implied "firstprivate"
+// (which "simd" does not allow).
+TEST_F(OpenMPDecompositionTest, Misc1) {
+  omp::Object x{"x"};
+  omp::List<omp::Clause> Clauses{
+      {OMPC_linear, omp::clause::Linear{{std::nullopt, std::nullopt, {x}}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_simd, Clauses);
+  ASSERT_EQ(Dec.output.size(), 1u);
+  std::string Dir0 = stringify(Dec.output[0]);
+  ASSERT_EQ(Dir0, "simd linear(, , (x)) lastprivate(, (x))");
 }
 } // namespace

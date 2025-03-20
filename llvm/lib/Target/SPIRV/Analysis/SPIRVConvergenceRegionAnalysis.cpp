@@ -56,20 +56,12 @@ getConvergenceTokenInternal(BasicBlockType *BB) {
       "Output type must be an intrinsic instruction.");
 
   for (auto &I : *BB) {
-    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::experimental_convergence_entry:
-      case Intrinsic::experimental_convergence_loop:
-        return II;
-      case Intrinsic::experimental_convergence_anchor: {
-        auto Bundle = II->getOperandBundle(LLVMContext::OB_convergencectrl);
-        assert(Bundle->Inputs.size() == 1 &&
-               Bundle->Inputs[0]->getType()->isTokenTy());
-        auto TII = dyn_cast<IntrinsicInst>(Bundle->Inputs[0].get());
-        assert(TII != nullptr);
-        return TII;
-      }
-      }
+    if (auto *CI = dyn_cast<ConvergenceControlInst>(&I)) {
+      // Make sure that the anchor or entry intrinsics did not reach here with a
+      // parent token. This should have failed the verifier.
+      assert(CI->isLoop() ||
+             !CI->getOperandBundle(LLVMContext::OB_convergencectrl));
+      return CI;
     }
 
     if (auto *CI = dyn_cast<CallInst>(&I)) {
@@ -138,7 +130,7 @@ ConvergenceRegion::ConvergenceRegion(
     SmallPtrSet<BasicBlock *, 8> &&Blocks, SmallPtrSet<BasicBlock *, 2> &&Exits)
     : DT(DT), LI(LI), ConvergenceToken(ConvergenceToken), Entry(Entry),
       Exits(std::move(Exits)), Blocks(std::move(Blocks)) {
-  for (auto *BB : this->Exits)
+  for ([[maybe_unused]] auto *BB : this->Exits)
     assert(this->Blocks.count(BB) != 0);
   assert(this->Blocks.count(this->Entry) != 0);
 }
@@ -203,7 +195,8 @@ public:
 
 private:
   bool isBackEdge(const BasicBlock *From, const BasicBlock *To) const {
-    assert(From != To && "From == To. This is awkward.");
+    if (From == To)
+      return true;
 
     // We only handle loop in the simplified form. This means:
     // - a single back-edge, a single latch.
@@ -230,6 +223,7 @@ private:
     auto *Terminator = From->getTerminator();
     for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
       auto *To = Terminator->getSuccessor(i);
+      // Ignore back edges.
       if (isBackEdge(From, To))
         continue;
 
@@ -276,7 +270,6 @@ public:
     while (ToProcess.size() != 0) {
       auto *L = ToProcess.front();
       ToProcess.pop();
-      assert(L->isLoopSimplifyForm());
 
       auto CT = getConvergenceToken(L->getHeader());
       SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),

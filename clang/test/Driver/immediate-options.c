@@ -2,6 +2,8 @@
 // HELP: isystem
 // HELP-NOT: ast-dump
 // HELP-NOT: driver-mode
+// HELP:     -Wa,
+// HELP-NOT: -W{{[a-z][a-z]}}
 
 // Make sure that Flang-only options are not available in Clang
 // HELP-NOT: test-io

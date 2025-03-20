@@ -37,9 +37,8 @@ void SystemZMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 bool SystemZMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAsmLayout *Layout,
-                                              const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+                                              const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   Res =

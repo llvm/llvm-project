@@ -16,7 +16,6 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -58,6 +57,7 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <algorithm>
@@ -104,7 +104,7 @@ static cl::opt<unsigned> UnrollMaxPercentThresholdBoost(
 
 static cl::opt<unsigned> UnrollMaxIterationsCountToAnalyze(
     "unroll-max-iteration-count-to-analyze", cl::init(10), cl::Hidden,
-    cl::desc("Don't allow loop unrolling to simulate more than this number of"
+    cl::desc("Don't allow loop unrolling to simulate more than this number of "
              "iterations when checking full unroll profitability"));
 
 static cl::opt<unsigned> UnrollCount(
@@ -219,6 +219,8 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.UnrollAndJam = false;
   UP.UnrollAndJamInnerLoopThreshold = 60;
   UP.MaxIterationsCountToAnalyze = UnrollMaxIterationsCountToAnalyze;
+  UP.SCEVExpansionBudget = SCEVCheapExpansionBudget;
+  UP.RuntimeUnrollMultiExit = false;
 
   // Override with any target specific settings
   TTI.getUnrollingPreferences(L, SE, UP, &ORE);
@@ -684,11 +686,15 @@ UnrollCostEstimator::UnrollCostEstimator(
     const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
-    Metrics.analyzeBasicBlock(BB, TTI, EphValues);
+    Metrics.analyzeBasicBlock(BB, TTI, EphValues, /* PrepareForLTO= */ false,
+                              L);
   NumInlineCandidates = Metrics.NumInlineCandidates;
   NotDuplicatable = Metrics.notDuplicatable;
-  Convergent = Metrics.convergent;
+  Convergence = Metrics.Convergence;
   LoopSize = Metrics.NumInsts;
+  ConvergenceAllowsRuntime =
+      Metrics.Convergence != ConvergenceKind::Uncontrolled &&
+      !getLoopConvergenceHeart(L);
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
@@ -699,6 +705,25 @@ UnrollCostEstimator::UnrollCostEstimator(
   if (LoopSize.isValid() && LoopSize < BEInsns + 1)
     // This is an open coded max() on InstructionCost
     LoopSize = BEInsns + 1;
+}
+
+bool UnrollCostEstimator::canUnroll() const {
+  switch (Convergence) {
+  case ConvergenceKind::ExtendedLoop:
+    LLVM_DEBUG(dbgs() << "  Convergence prevents unrolling.\n");
+    return false;
+  default:
+    break;
+  }
+  if (!LoopSize.isValid()) {
+    LLVM_DEBUG(dbgs() << "  Invalid loop size prevents unrolling.\n");
+    return false;
+  }
+  if (NotDuplicatable) {
+    LLVM_DEBUG(dbgs() << "  Non-duplicatable blocks prevent unrolling.\n");
+    return false;
+  }
+  return true;
 }
 
 uint64_t UnrollCostEstimator::getUnrolledLoopSize(
@@ -1206,8 +1231,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
   if (!UCE.canUnroll()) {
-    LLVM_DEBUG(dbgs() << "  Not unrolling loop which contains instructions"
-                      << " which cannot be duplicated or have invalid cost.\n");
+    LLVM_DEBUG(dbgs() << "  Loop not considered unrollable.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1254,15 +1278,9 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // is unsafe -- it adds a control-flow dependency to the convergent
   // operation.  Therefore restrict remainder loop (try unrolling without).
   //
-  // TODO: This is quite conservative.  In practice, convergent_op()
-  // is likely to be called unconditionally in the loop.  In this
-  // case, the program would be ill-formed (on most architectures)
-  // unless n were the same on all threads in a thread group.
-  // Assuming n is the same on all threads, any kind of unrolling is
-  // safe.  But currently llvm's notion of convergence isn't powerful
-  // enough to express this.
-  if (UCE.Convergent)
-    UP.AllowRemainder = false;
+  // TODO: This is somewhat conservative; we could allow the remainder if the
+  // trip count is uniform.
+  UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime;
 
   // Try to find the trip count upper bound if we cannot find the exact trip
   // count.
@@ -1281,6 +1299,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
       MaxOrZero, TripMultiple, UCE, UP, PP, UseUpperBound);
   if (!UP.Count)
     return LoopUnrollResult::Unmodified;
+
+  UP.Runtime &= UCE.ConvergenceAllowsRuntime;
 
   if (PP.PeelCount) {
     assert(UP.Count == 1 && "Cannot perform peel and unroll in the same step");
@@ -1324,11 +1344,18 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   // Unroll the loop.
   Loop *RemainderLoop = nullptr;
+  UnrollLoopOptions ULO;
+  ULO.Count = UP.Count;
+  ULO.Force = UP.Force;
+  ULO.AllowExpensiveTripCount = UP.AllowExpensiveTripCount;
+  ULO.UnrollRemainder = UP.UnrollRemainder;
+  ULO.Runtime = UP.Runtime;
+  ULO.ForgetAllSCEV = ForgetAllSCEV;
+  ULO.Heart = getLoopConvergenceHeart(L);
+  ULO.SCEVExpansionBudget = UP.SCEVExpansionBudget;
+  ULO.RuntimeUnrollMultiExit = UP.RuntimeUnrollMultiExit;
   LoopUnrollResult UnrollResult = UnrollLoop(
-      L,
-      {UP.Count, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
-       UP.UnrollRemainder, ForgetAllSCEV},
-      LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
+      L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
   if (UnrollResult == LoopUnrollResult::Unmodified)
     return LoopUnrollResult::Unmodified;
 
@@ -1490,9 +1517,9 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   Loop *ParentL = L.getParentLoop();
   SmallPtrSet<Loop *, 4> OldLoops;
   if (ParentL)
-    OldLoops.insert(ParentL->begin(), ParentL->end());
+    OldLoops.insert_range(*ParentL);
   else
-    OldLoops.insert(AR.LI.begin(), AR.LI.end());
+    OldLoops.insert_range(AR.LI);
 
   std::string LoopName = std::string(L.getName());
 

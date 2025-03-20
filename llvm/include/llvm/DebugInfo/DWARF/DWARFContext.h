@@ -209,6 +209,9 @@ public:
     return State->getDWOUnits();
   }
 
+  /// Return true of this DWARF context is a DWP file.
+  bool isDWP() const;
+
   /// Get units from .debug_types.dwo in the DWO context.
   unit_iterator_range dwo_types_section_units() {
     DWARFUnitVector &DWOUnits = State->getDWOUnits();
@@ -262,7 +265,10 @@ public:
   }
 
   DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
-  DWARFTypeUnit *getTypeUnitForHash(uint16_t Version, uint64_t Hash, bool IsDWO);
+  DWARFTypeUnit *getTypeUnitForHash(uint64_t Hash, bool IsDWO);
+
+  /// Return the DWARF unit that includes an offset (relative to .debug_info).
+  DWARFUnit *getUnitForOffset(uint64_t Offset);
 
   /// Return the compile unit that includes an offset (relative to .debug_info).
   DWARFCompileUnit *getCompileUnitForOffset(uint64_t Offset);
@@ -380,10 +386,10 @@ public:
   ///            executable's debug info.
   DIEsForAddress getDIEsForAddress(uint64_t Address, bool CheckDWO = false);
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
   DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
@@ -422,7 +428,7 @@ public:
     for (unsigned Size : DWARFContext::getSupportedAddressSizes())
       Stream << LS << Size;
     Stream << ')';
-    return make_error<StringError>(Stream.str(), EC);
+    return make_error<StringError>(Buffer, EC);
   }
 
   std::shared_ptr<DWARFContext> getDWOContext(StringRef AbsolutePath);

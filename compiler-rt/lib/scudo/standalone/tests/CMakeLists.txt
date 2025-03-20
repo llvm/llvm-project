@@ -46,11 +46,8 @@ set(SCUDO_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
 list(APPEND SCUDO_UNITTEST_LINK_FLAGS -pthread -no-pie)
-# Linking against libatomic is required with some compilers
-check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
-if (COMPILER_RT_HAS_LIBATOMIC)
-  list(APPEND SCUDO_UNITTEST_LINK_FLAGS -latomic)
-endif()
+
+append_list_if(COMPILER_RT_HAS_LIBATOMIC -latomic SCUDO_UNITTEST_LINK_FLAGS)
 
 set(SCUDO_TEST_HEADERS
   scudo_unit_test.h
@@ -66,27 +63,25 @@ macro(add_scudo_unittest testname)
          RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
   endif()
 
-  if(COMPILER_RT_HAS_SCUDO_STANDALONE)
-    foreach(arch ${SCUDO_TEST_ARCH})
-      # Additional runtime objects get added along RTScudoStandalone
-      set(SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:RTScudoStandalone.${arch}>)
-      foreach(rtobject ${TEST_ADDITIONAL_RTOBJECTS})
-        list(APPEND SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:${rtobject}.${arch}>)
-      endforeach()
-      # Add the static runtime library made of all the runtime objects
-      set(RUNTIME RT${testname}.${arch})
-      add_library(${RUNTIME} STATIC ${SCUDO_TEST_RTOBJECTS})
-      set(ScudoUnitTestsObjects)
-      generate_compiler_rt_tests(ScudoUnitTestsObjects ScudoUnitTests
-        "${testname}-${arch}-Test" ${arch}
-        SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
-        COMPILE_DEPS ${SCUDO_TEST_HEADERS}
-        DEPS scudo_standalone
-        RUNTIME ${RUNTIME}
-        CFLAGS ${SCUDO_UNITTEST_CFLAGS}
-        LINK_FLAGS ${SCUDO_UNITTEST_LINK_FLAGS})
+  foreach(arch ${SCUDO_TEST_ARCH})
+    # Additional runtime objects get added along RTScudoStandalone
+    set(SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:RTScudoStandalone.${arch}>)
+    foreach(rtobject ${TEST_ADDITIONAL_RTOBJECTS})
+      list(APPEND SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:${rtobject}.${arch}>)
     endforeach()
-  endif()
+    # Add the static runtime library made of all the runtime objects
+    set(RUNTIME RT${testname}.${arch})
+    add_library(${RUNTIME} STATIC ${SCUDO_TEST_RTOBJECTS})
+    set(ScudoUnitTestsObjects)
+    generate_compiler_rt_tests(ScudoUnitTestsObjects ScudoUnitTests
+      "${testname}-${arch}-Test" ${arch}
+      SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
+      COMPILE_DEPS ${SCUDO_TEST_HEADERS}
+      DEPS scudo_standalone
+      RUNTIME ${RUNTIME}
+      CFLAGS ${SCUDO_UNITTEST_CFLAGS}
+      LINK_FLAGS ${SCUDO_UNITTEST_LINK_FLAGS})
+  endforeach()
 endmacro()
 
 set(SCUDO_UNIT_TEST_SOURCES

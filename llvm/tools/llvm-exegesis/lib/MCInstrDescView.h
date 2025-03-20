@@ -72,20 +72,22 @@ struct Operand {
   bool isVariable() const;
   bool isMemory() const;
   bool isImmediate() const;
+  bool isEarlyClobber() const;
   unsigned getIndex() const;
   unsigned getTiedToIndex() const;
   unsigned getVariableIndex() const;
-  unsigned getImplicitReg() const;
+  MCRegister getImplicitReg() const;
   const RegisterAliasingTracker &getRegisterAliasing() const;
   const MCOperandInfo &getExplicitOperandInfo() const;
 
   // Please use the accessors above and not the following fields.
   std::optional<uint8_t> Index;
   bool IsDef = false;
+  bool IsEarlyClobber = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   std::optional<uint8_t> TiedToIndex;               // Set for Reg&Explicit Op.
-  MCPhysReg ImplicitReg = 0;                        // Non-0 for Implicit Op.
+  MCRegister ImplicitReg;                           // Non-0 for Implicit Op.
   std::optional<uint8_t> VariableIndex;             // Set for Explicit Op.
 };
 
@@ -115,6 +117,8 @@ struct Instruction {
   Instruction &operator=(const Instruction &) = delete;
   Instruction &operator=(Instruction &&) = delete;
 
+  unsigned getOpcode() const { return Description.getOpcode(); }
+
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
   const Operand &getPrimaryOperand(const Variable &Var) const;
@@ -132,6 +136,12 @@ struct Instruction {
   // Use and Def registers. It may also execute in parallel by picking non
   // aliasing Use and Def registers.
   bool hasAliasingRegisters(const BitVector &ForbiddenRegisters) const;
+
+  // Whether this instruction is self aliasing through some registers.
+  // Repeating this instruction may execute sequentially by picking aliasing
+  // Def and Not Memory Use registers. It may also execute in parallel by
+  // picking non aliasing Def and Not Memory Use registers.
+  bool hasAliasingNotMemoryRegisters(const BitVector &ForbiddenRegisters) const;
 
   // Whether this instruction's registers alias with OtherInstr's registers.
   bool hasAliasingRegistersThrough(const Instruction &OtherInstr,
@@ -160,12 +170,15 @@ struct Instruction {
   const BitVector &ImplUseRegs; // The set of aliased implicit use registers.
   const BitVector &AllDefRegs;  // The set of all aliased def registers.
   const BitVector &AllUseRegs;  // The set of all aliased use registers.
+  // The set of all aliased not memory use registers.
+  const BitVector &NonMemoryRegs;
+
 private:
   Instruction(const MCInstrDesc *Description, StringRef Name,
               SmallVector<Operand, 8> Operands,
               SmallVector<Variable, 4> Variables, const BitVector *ImplDefRegs,
               const BitVector *ImplUseRegs, const BitVector *AllDefRegs,
-              const BitVector *AllUseRegs);
+              const BitVector *AllUseRegs, const BitVector *NonMemoryRegs);
 };
 
 // Instructions are expensive to instantiate. This class provides a cache of

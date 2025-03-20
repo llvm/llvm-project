@@ -133,7 +133,7 @@ public:
   Dialect *getOrLoadDialect(StringRef name);
 
   /// Return true if we allow to create operation for unregistered dialects.
-  bool allowsUnregisteredDialects();
+  [[nodiscard]] bool allowsUnregisteredDialects();
 
   /// Enables creating operations in unregistered dialects.
   /// This option is **heavily discouraged**: it is convenient during testing
@@ -151,6 +151,14 @@ public:
   void disableMultithreading(bool disable = true);
   void enableMultithreading(bool enable = true) {
     disableMultithreading(!enable);
+  }
+
+  /// Set the flag specifying if thread-local storage should be used by storage
+  /// allocators in this context. Note that disabling mutlithreading implies
+  /// thread-local storage is also disabled.
+  void disableThreadLocalStorage(bool disable = true);
+  void enableThreadLocalStorage(bool enable = true) {
+    disableThreadLocalStorage(!enable);
   }
 
   /// Set a new thread pool to be used in this context. This method requires
@@ -196,6 +204,11 @@ public:
   /// Return a sorted array containing the information about all registered
   /// operations.
   ArrayRef<RegisteredOperationName> getRegisteredOperations();
+
+  /// Return a sorted array containing the information for registered operations
+  /// filtered by dialect name.
+  ArrayRef<RegisteredOperationName>
+  getRegisteredOperationsByDialect(StringRef dialectName);
 
   /// Return true if this operation name is registered in this context.
   bool isOperationRegistered(StringRef name);

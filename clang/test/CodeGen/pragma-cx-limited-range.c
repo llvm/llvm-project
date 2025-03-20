@@ -106,21 +106,17 @@ _Complex float pragma_on_div(_Complex float a, _Complex float b) {
   // IMPRVD-NEXT: fdiv float
   // IMPRVD-NEXT: fdiv float
 
-  // PRMTD:   fpext float {{.*}} to double
-  // PRMTD:   fpext float {{.*}} to double
-  // PRMTD:   fmul double
-  // PRMTD:   fmul double
-  // PRMTD:   fadd double
-  // PRMTD:   fmul double
-  // PRMTD:   fmul double
-  // PRMTD:   fadd double
-  // PRMTD:   fmul double
-  // PRMTD:   fmul double
-  // PRMTD:   fsub double
-  // PRMTD:   fdiv double
-  // PRMTD:   fdiv double
-  // PRMTD:   fptrunc double
-  // PRMTD:   fptrunc double
+  // PRMTD: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fadd float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fadd float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fmul float
+  // PRMTD-NEXT: fsub float
+  // PRMTD-NEXT: fdiv float
+  // PRMTD-NEXT: fdiv float
 
   return a / b;
 }
@@ -135,7 +131,7 @@ _Complex float pragma_off_div(_Complex float a, _Complex float b) {
 
   // IMPRVD: call {{.*}} @__divsc3
 
-  // PRMTD: call {{.*}} @__divdc3
+  // PRMTD: call {{.*}} @__divsc3
 
   return a / b;
 }
@@ -221,9 +217,9 @@ _Complex float pragma_default_div(_Complex float a, _Complex float b) {
   // PRMTD: load float, ptr {{.*}}
   // PRMTD: fpext float {{.*}} to double
   // PRMTD-NEXT: fpext float {{.*}} to double
-  // PRMTD-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 0
+  // PRMTD-NEXT: getelementptr inbounds nuw { float, float }, ptr {{.*}}, i32 0, i32 0
   // PRMTD-NEXT: load float, ptr {{.*}}
-  // PRMTD-NEXT: getelementptr inbounds { float, float }, ptr {{.*}}, i32 0, i32 1
+  // PRMTD-NEXT: getelementptr inbounds nuw { float, float }, ptr {{.*}}, i32 0, i32 1
   // PRMTD-NEXT: load float, ptr {{.*}}
   // PRMTD-NEXT: fpext float {{.*}} to double
   // PRMTD-NEXT: fpext float {{.*}} to double

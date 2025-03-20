@@ -112,6 +112,9 @@ namespace {
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
 
+    void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+    void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
+
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
     void printTemplateArguments(llvm::ArrayRef<TemplateArgument> Args,
@@ -495,6 +498,8 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
         isa<OMPDeclareMapperDecl>(*D) || isa<OMPRequiresDecl>(*D) ||
         isa<OMPAllocateDecl>(*D))
       Terminator = nullptr;
+    else if (isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(*D))
+      Terminator = nullptr;
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
     else if (auto FD = dyn_cast<FunctionDecl>(*D)) {
@@ -629,7 +634,6 @@ static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
     EOut << ")";
   }
   EOut << " ";
-  EOut.flush();
   Out << Proto;
 }
 
@@ -790,7 +794,6 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         llvm::raw_string_ostream EOut(Proto);
         FT->getNoexceptExpr()->printPretty(EOut, nullptr, SubPolicy,
                                            Indentation, "\n", &Context);
-        EOut.flush();
         Proto += ")";
       }
     }
@@ -868,7 +871,7 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
     for (unsigned i = 0; i < NumTPLists; ++i)
       printTemplateParameters(D->getFriendTypeTemplateParameterList(i));
     Out << "friend ";
-    Out << " " << TSI->getType().getAsString(Policy);
+    Out << TSI->getType().getAsString(Policy);
   }
   else if (FunctionDecl *FD =
       dyn_cast<FunctionDecl>(D->getFriendDecl())) {
@@ -885,6 +888,9 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
     Out << "friend ";
     VisitRedeclarableTemplateDecl(CTD);
   }
+
+  if (D->isPackExpansion())
+    Out << "...";
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
@@ -1187,6 +1193,13 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
   }
 
   Out << '>';
+
+  if (const Expr *RequiresClause = Params->getRequiresClause()) {
+    Out << " requires ";
+    RequiresClause->printPretty(Out, nullptr, Policy, Indentation, "\n",
+                                &Context);
+  }
+
   if (!OmitTemplateKW)
     Out << ' ';
 }
@@ -1900,5 +1913,41 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
     Out << " = ";
     NTTP->getDefaultArgument().getArgument().print(Policy, Out,
                                                    /*IncludeType=*/false);
+  }
+}
+
+void DeclPrinter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  if (!D->isInvalidDecl()) {
+    Out << "#pragma acc declare";
+    if (!D->clauses().empty()) {
+      Out << ' ';
+      OpenACCClausePrinter Printer(Out, Policy);
+      Printer.VisitClauseList(D->clauses());
+    }
+  }
+}
+void DeclPrinter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  if (!D->isInvalidDecl()) {
+    Out << "#pragma acc routine";
+
+    if (D->hasNameSpecified()) {
+      Out << "(";
+
+      // The referenced function was named here, but this makes us tolerant of
+      // errors.
+      if (D->getFunctionReference())
+        D->getFunctionReference()->printPretty(Out, nullptr, Policy,
+                                               Indentation, "\n", &Context);
+      else
+        Out << "<error>";
+
+      Out << ")";
+    }
+
+    if (!D->clauses().empty()) {
+      Out << ' ';
+      OpenACCClausePrinter Printer(Out, Policy);
+      Printer.VisitClauseList(D->clauses());
+    }
   }
 }

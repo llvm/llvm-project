@@ -2794,12 +2794,9 @@
 	edmk	0(-), 0
 
 #CHECK: error: invalid register pair
-#CHECK: eextr	%f0, %f2
-#CHECK: error: invalid register pair
-#CHECK: eextr	%f2, %f0
+#CHECK: eextr	%r0, %f2
 
-	eextr	%f0, %f2
-	eextr	%f2, %f0
+	eextr	%r0, %f2
 
 #CHECK: error: invalid register pair
 #CHECK: esta	%r1, %r0
@@ -2807,12 +2804,9 @@
 	esta	%r1, %r0
 
 #CHECK: error: invalid register pair
-#CHECK: esxtr	%f0, %f2
-#CHECK: error: invalid register pair
-#CHECK: esxtr	%f2, %f0
+#CHECK: esxtr	%r0, %f2
 
-	esxtr	%f0, %f2
-	esxtr	%f2, %f0
+	esxtr	%r0, %f2
 
 #CHECK: error: invalid operand
 #CHECK: ex      %r0, -1
@@ -2981,15 +2975,12 @@
 	idte	%r0, %r0, %r0, 16
 
 #CHECK: error: invalid register pair
-#CHECK: iextr	%f0, %f0, %f2
+#CHECK: iextr	%f0, %f2, %r0
 #CHECK: error: invalid register pair
-#CHECK: iextr	%f0, %f2, %f0
-#CHECK: error: invalid register pair
-#CHECK: iextr	%f2, %f0, %f0
+#CHECK: iextr	%f2, %f0, %r0
 
-	iextr	%f0, %f0, %f2
-	iextr	%f0, %f2, %f0
-	iextr	%f2, %f0, %f0
+	iextr	%f0, %f2, %r0
+	iextr	%f2, %f0, %r0
 
 #CHECK: error: invalid operand
 #CHECK: iihf	%r0, -1
@@ -4176,12 +4167,9 @@
 #CHECK: may	%f0, %f0, -1
 #CHECK: error: invalid operand
 #CHECK: may	%f0, %f0, 4096
-#CHECK: error: invalid register pair
-#CHECK: may	%f2, %f0, 0
 
 	may	%f0, %f0, -1
 	may	%f0, %f0, 4096
-	may	%f2, %f0, 0
 
 #CHECK: error: invalid operand
 #CHECK: mayh	%f0, %f0, -1
@@ -4198,11 +4186,6 @@
 
 	mayl	%f0, %f0, -1
 	mayl	%f0, %f0, 4096
-
-#CHECK: error: invalid register pair
-#CHECK: mayr	%f2, %f0, %f0
-
-	mayr	%f2, %f0, %f0
 
 #CHECK: error: invalid operand
 #CHECK: mc	-1, 0
@@ -5696,29 +5679,26 @@
 	rrbm	%r0, %r0
 
 #CHECK: error: invalid operand
-#CHECK: rrdtr	%f0, %f0, %f0, -1
+#CHECK: rrdtr	%f0, %f0, %r0, -1
 #CHECK: error: invalid operand
-#CHECK: rrdtr	%f0, %f0, %f0, 16
+#CHECK: rrdtr	%f0, %f0, %r0, 16
 
-	rrdtr	%f0, %f0, %f0, -1
-	rrdtr	%f0, %f0, %f0, 16
+	rrdtr	%f0, %f0, %r0, -1
+	rrdtr	%f0, %f0, %r0, 16
 
 #CHECK: error: invalid operand
-#CHECK: rrxtr	%f0, %f0, %f0, -1
+#CHECK: rrxtr	%f0, %f0, %r0, -1
 #CHECK: error: invalid operand
-#CHECK: rrxtr	%f0, %f0, %f0, 16
+#CHECK: rrxtr	%f0, %f0, %r0, 16
 #CHECK: error: invalid register pair
-#CHECK: rrxtr	%f0, %f0, %f2, 0
+#CHECK: rrxtr	%f0, %f2, %r0, 0
 #CHECK: error: invalid register pair
-#CHECK: rrxtr	%f0, %f2, %f0, 0
-#CHECK: error: invalid register pair
-#CHECK: rrxtr	%f2, %f0, %f0, 0
+#CHECK: rrxtr	%f2, %f0, %r0, 0
 
-	rrxtr	%f0, %f0, %f0, -1
-	rrxtr	%f0, %f0, %f0, 16
-	rrxtr	%f0, %f0, %f2, 0
-	rrxtr	%f0, %f2, %f0, 0
-	rrxtr	%f2, %f0, %f0, 0
+	rrxtr	%f0, %f0, %r0, -1
+	rrxtr	%f0, %f0, %r0, 16
+	rrxtr	%f0, %f2, %r0, 0
+	rrxtr	%f2, %f0, %r0, 0
 
 #CHECK: error: invalid operand
 #CHECK: rxsbg	%r0,%r0,0,-1,0

@@ -119,20 +119,29 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
   // register is used last. When moving instructions up, we need to
   // make sure all its defs (including dead def) will not cross its
   // last use when moving up.
-  DenseMap<unsigned, std::pair<unsigned, MachineInstr *>> UseMap;
+  DenseMap<Register, std::pair<unsigned, MachineInstr *>> UseMap;
 
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())
       continue;
-    bool SawStore = false;
-    BuildInstOrderMap(MBB.begin(), IOM);
-    UseMap.clear();
 
-    for (MachineBasicBlock::iterator Next = MBB.begin(); Next != MBB.end();) {
-      MachineInstr &MI = *Next;
-      ++Next;
-      if (MI.isPHI() || MI.isDebugOrPseudoInstr())
+    MachineBasicBlock::iterator Next = MBB.begin();
+    if (MBB.isEHPad()) {
+      // Do not track PHIs in IOM when handling EHPads.
+      // Otherwise their uses may be hoisted outside a landingpad range.
+      Next = MBB.SkipPHIsLabelsAndDebug(Next);
+      if (Next == MBB.end())
         continue;
+    }
+
+    BuildInstOrderMap(Next, IOM);
+    Next = MBB.SkipPHIsLabelsAndDebug(Next);
+    UseMap.clear();
+    bool SawStore = false;
+
+    while (Next != MBB.end()) {
+      MachineInstr &MI = *Next;
+      Next = MBB.SkipPHIsLabelsAndDebug(++Next);
       if (MI.mayStore())
         SawStore = true;
 
@@ -144,16 +153,16 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
           continue;
         if (MO.isUse())
           UseMap[MO.getReg()] = std::make_pair(CurrentOrder, &MI);
-        else if (MO.isDead() && UseMap.count(MO.getReg()))
+        else if (MO.isDead()) {
           // Barrier is the last instruction where MO get used. MI should not
           // be moved above Barrier.
-          if (Barrier < UseMap[MO.getReg()].first) {
-            Barrier = UseMap[MO.getReg()].first;
-            BarrierMI = UseMap[MO.getReg()].second;
-          }
+          auto It = UseMap.find(MO.getReg());
+          if (It != UseMap.end() && Barrier < It->second.first)
+            std::tie(Barrier, BarrierMI) = It->second;
+        }
       }
 
-      if (!MI.isSafeToMove(nullptr, SawStore)) {
+      if (!MI.isSafeToMove(SawStore)) {
         // If MI has side effects, it should become a barrier for code motion.
         // IOM is rebuild from the next instruction to prevent later
         // instructions from being moved before this MI.
@@ -237,7 +246,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
         if (MI.getOperand(0).isReg())
           for (; EndIter != MBB.end() && EndIter->isDebugValue() &&
                  EndIter->hasDebugOperandForReg(MI.getOperand(0).getReg());
-               ++EndIter, ++Next)
+               ++EndIter)
             IOM[&*EndIter] = NewOrder;
         MBB.splice(I, &MBB, MI.getIterator(), EndIter);
       }

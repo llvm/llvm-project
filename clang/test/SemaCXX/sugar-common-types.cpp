@@ -44,7 +44,7 @@ template <class T> struct S1 {
 };
 
 N t10 = 0 ? S1<X1>() : S1<Y1>(); // expected-error {{from 'S1<B1>' (aka 'S1<int>')}}
-N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<int>::S2<B2>' (aka 'S2<void>')}}
+N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<B1>::S2<B2>' (aka 'S2<void>')}}
 
 template <class T> using Al = S1<T>;
 
@@ -88,14 +88,7 @@ N t19 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::Y)){};
 // expected-error@-1 {{rvalue of type 'B1' (aka 'int')}}
 
 N t20 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::X)){};
-// expected-error@-1 {{rvalue of type '__underlying_type(Enums::X)' (aka 'int')}}
-
-using SBTF1 = SS1 [[clang::btf_type_tag("1")]];
-using SBTF2 = ::SS1 [[clang::btf_type_tag("1")]];
-using SBTF3 = ::SS1 [[clang::btf_type_tag("2")]];
-
-N t21 = 0 ? (SBTF1){} : (SBTF3){}; // expected-error {{from 'SS1'}}
-N t22 = 0 ? (SBTF1){} : (SBTF2){}; // expected-error {{from 'SS1 __attribute__((btf_type_tag("1")))' (aka 'SS1')}}
+// expected-error@-1 {{rvalue of type '__underlying_type(EnumsB::X)' (aka 'int')}}
 
 using QX = const SB1 *;
 using QY = const ::SB1 *;

@@ -39,8 +39,7 @@ public:
   void SetType(bool read, bool write);
 
   typedef std::vector<lldb::WatchpointSP> WatchpointCollection;
-  typedef LockingAdaptedIterable<WatchpointCollection, lldb::WatchpointSP,
-                                 vector_adapter, std::mutex>
+  typedef LockingAdaptedIterable<std::mutex, WatchpointCollection>
       WatchpointIterable;
 
   /// Iterate over the watchpoint constituents for this resource

@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q
 # RUN: llvm-bolt %t.exe -o %t.bolt.exe --keep-nops --relocs --print-finalized \
-# RUN:   |& FileCheck --check-prefix=CHECK-BOLT %s
+# RUN:   2>&1 | FileCheck --check-prefix=CHECK-BOLT %s
 # RUN: llvm-objdump -d %t.bolt.exe | FileCheck %s
 
   .text

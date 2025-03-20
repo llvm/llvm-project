@@ -17,23 +17,16 @@ namespace clang::tidy::utils::lexer {
 std::pair<Token, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
+  const std::optional<Token> Tok =
+      Lexer::findPreviousToken(Location, SM, LangOpts, !SkipComments);
+
+  if (Tok.has_value()) {
+    return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
+  }
+
   Token Token;
   Token.setKind(tok::unknown);
-
-  Location = Location.getLocWithOffset(-1);
-  if (Location.isInvalid())
-    return {Token, Location};
-
-  auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
-  while (Location != StartOfFile) {
-    Location = Lexer::GetBeginningOfToken(Location, SM, LangOpts);
-    if (!Lexer::getRawToken(Location, Token, SM, LangOpts) &&
-        (!SkipComments || !Token.is(tok::comment))) {
-      break;
-    }
-    Location = Location.getLocWithOffset(-1);
-  }
-  return {Token, Location};
+  return {Token, SourceLocation()};
 }
 
 Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
@@ -82,29 +75,6 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
 SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
                                   const LangOptions &LangOpts) {
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
-}
-
-std::optional<Token>
-findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
-                               const LangOptions &LangOpts) {
-  // `Lexer::findNextToken` will ignore comment
-  if (Start.isMacroID())
-    return std::nullopt;
-  Start = Lexer::getLocForEndOfToken(Start, 0, SM, LangOpts);
-  // Break down the source location.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Start);
-  bool InvalidTemp = false;
-  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
-  if (InvalidTemp)
-    return std::nullopt;
-  // Lex from the start of the given location.
-  Lexer L(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
-          File.data() + LocInfo.second, File.end());
-  L.SetCommentRetentionState(true);
-  // Find the token.
-  Token Tok;
-  L.LexFromRawLexer(Tok);
-  return Tok;
 }
 
 std::optional<Token>

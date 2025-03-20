@@ -243,6 +243,12 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           isa<PseudoProbeInst>(&I))
         continue;
 
+      // Bail out for intrinsic stackrestore call because it can modify
+      // unescaped allocas.
+      if (auto *II = dyn_cast<IntrinsicInst>(CI))
+        if (II->getIntrinsicID() == Intrinsic::stackrestore)
+          continue;
+
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
       bool IsNoTail = CI->isNoTailCall() ||
@@ -349,7 +355,7 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
       // does not write to memory and the load provably won't trap.
       // Writes to memory only matter if they may alias the pointer
       // being loaded from.
-      const DataLayout &DL = L->getModule()->getDataLayout();
+      const DataLayout &DL = L->getDataLayout();
       if (isModSet(AA->getModRefInfo(CI, MemoryLocation::get(L))) ||
           !isSafeToLoadUnconditionally(L->getPointerOperand(), L->getType(),
                                        L->getAlign(), DL, L))
@@ -520,7 +526,7 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
        OEBI != E;)
     if (AllocaInst *AI = dyn_cast<AllocaInst>(OEBI++))
       if (isa<ConstantInt>(AI->getArraySize()))
-        AI->moveBefore(&*NEBI);
+        AI->moveBefore(NEBI);
 
   // Now that we have created a new block, which jumps to the entry
   // block, insert a PHI node for each argument of the function.
@@ -594,7 +600,7 @@ void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
                                                               int OpndIdx) {
   Type *AggTy = CI->getParamByValType(OpndIdx);
   assert(AggTy);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Get alignment of byVal operand.
   Align Alignment(CI->getParamAlign(OpndIdx).valueOrOne());
@@ -621,7 +627,7 @@ void TailRecursionEliminator::copyLocalTempOfByValueOperandIntoArguments(
     CallInst *CI, int OpndIdx) {
   Type *AggTy = CI->getParamByValType(OpndIdx);
   assert(AggTy);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Get alignment of byVal operand.
   Align Alignment(CI->getParamAlign(OpndIdx).valueOrOne());
@@ -749,7 +755,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
   // call.
   for (PHINode *PN : ArgumentPHIs) {
     // If the PHI Node is a dynamic constant, replace it with the value it is.
-    if (Value *PNV = simplifyInstruction(PN, F.getParent()->getDataLayout())) {
+    if (Value *PNV = simplifyInstruction(PN, F.getDataLayout())) {
       PN->replaceAllUsesWith(PNV);
       PN->eraseFromParent();
     }
@@ -778,7 +784,8 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setName("accumulator.ret.tr");
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      RI->getOperand(0));
-          AccRecInstrNew->insertBefore(RI);
+          AccRecInstrNew->insertBefore(RI->getIterator());
+          AccRecInstrNew->dropLocation();
           RI->setOperand(0, AccRecInstrNew);
         }
       }
@@ -806,7 +813,8 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setName("accumulator.ret.tr");
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      SI->getFalseValue());
-          AccRecInstrNew->insertBefore(SI);
+          AccRecInstrNew->insertBefore(SI->getIterator());
+          AccRecInstrNew->dropLocation();
           SI->setFalseValue(AccRecInstrNew);
         }
       }

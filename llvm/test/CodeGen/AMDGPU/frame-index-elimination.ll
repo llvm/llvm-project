@@ -21,7 +21,7 @@
 ; GCN: ds_write_b32 v0, v0
 define void @func_mov_fi_i32() #0 {
   %alloca = alloca i32, addrspace(5)
-  store volatile ptr addrspace(5) %alloca, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %alloca, ptr addrspace(3) poison
   ret void
 }
 
@@ -47,8 +47,8 @@ define void @func_mov_fi_i32() #0 {
 define void @func_mov_fi_i32_offset() #0 {
   %alloca0 = alloca i32, addrspace(5)
   %alloca1 = alloca i32, addrspace(5)
-  store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) undef
-  store volatile ptr addrspace(5) %alloca1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) poison
+  store volatile ptr addrspace(5) %alloca1, ptr addrspace(3) poison
   ret void
 }
 
@@ -64,15 +64,15 @@ define void @func_mov_fi_i32_offset() #0 {
 ; GFX9-MUBUF:       v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT:  v_add_u32_e32 v0, 4, [[SCALED]]
 
-; GFX9-FLATSCR:      v_mov_b32_e32 [[ADD:v[0-9]+]], s32
-; GFX9-FLATSCR-NEXT: v_add_u32_e32 v0, 4, [[ADD]]
+; FIXME: Should commute and shrink
+; GFX9-FLATSCR: v_add_u32_e64 v0, 4, s32
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_add_constant_to_fi_i32() #0 {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [2 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
-  store volatile ptr addrspace(5) %gep0, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep0, ptr addrspace(3) poison
   ret void
 }
 
@@ -82,20 +82,20 @@ define void @func_add_constant_to_fi_i32() #0 {
 ; vgpr
 
 ; GCN-LABEL: {{^}}func_other_fi_user_i32:
+; MUBUF: s_lshr_b32 [[SCALED:s[0-9]+]], s32, 6
+; MUBUF: s_mul_i32 [[MUL:s[0-9]+]], [[SCALED]], 9
+; MUBUF: v_mov_b32_e32 v0, [[MUL]]
 
-; CI: v_lshr_b32_e64 v0, s32, 6
+; GFX9-FLATSCR: s_mul_i32 [[MUL:s[0-9]+]], s32, 9
+; GFX9-FLATSCR: v_mov_b32_e32 v0, [[MUL]]
 
-; GFX9-MUBUF:   v_lshrrev_b32_e64 v0, 6, s32
-; GFX9-FLATSCR: v_mov_b32_e32 v0, s32
-
-; GCN-NEXT: v_mul_lo_u32 v0, v0, 9
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
 define void @func_other_fi_user_i32() #0 {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -126,8 +126,7 @@ define void @func_load_private_arg_i32_ptr(ptr addrspace(5) %ptr) #0 {
 ; GFX9-MUBUF:      v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT: v_or_b32_e32 v0, 4, [[SHIFT]]
 
-; GFX9-FLATSCR:      v_mov_b32_e32 [[SP:v[0-9]+]], s32
-; GFX9-FLATSCR-NEXT: v_or_b32_e32 v0, 4, [[SP]]
+; GFX9-FLATSCR: v_or_b32_e64 v0, s32, 4
 
 ; GCN-NOT: v_mov
 ; GCN: ds_write_b32 v0, v0
@@ -135,7 +134,7 @@ define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   ret void
 }
 
@@ -150,8 +149,8 @@ define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load0 = load i8, ptr addrspace(5) %gep0
   %load1 = load i32, ptr addrspace(5) %gep1
-  store volatile i8 %load0, ptr addrspace(3) undef
-  store volatile i32 %load1, ptr addrspace(3) undef
+  store volatile i8 %load0, ptr addrspace(3) poison
+  store volatile i32 %load1, ptr addrspace(3) poison
   ret void
 }
 
@@ -164,12 +163,12 @@ define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8
 ; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4 glc{{$}}
 
 ; CI: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], s32, 6
-; CI: v_add_i32_e32 [[GEP:v[0-9]+]], vcc, 4, [[SHIFT]]
+; CI: v_add_i32_e64 [[GEP:v[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, 4, [[SHIFT]]
 
-; GFX9-MUBUF:   v_lshrrev_b32_e64 [[SP:v[0-9]+]], 6, s32
-; GFX9-FLATSCR: v_mov_b32_e32 [[SP:v[0-9]+]], s32
+; GFX9-MUBUF: v_lshrrev_b32_e64 [[SP:v[0-9]+]], 6, s32
+; GFX9-MUBUF: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
 
-; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
+; GFX9-FLATSCR: v_add_u32_e64 [[GEP:v[0-9]+]], 4, s32
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]
 define void @void_func_byval_struct_i8_i32_ptr_nonentry_block(ptr addrspace(5) byval({ i8, i32 }) %arg0, i32 %arg2) #0 {
@@ -180,7 +179,7 @@ bb:
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load volatile i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   br label %ret
 
 ret:
@@ -190,17 +189,16 @@ ret:
 ; Added offset can't be used with VOP3 add
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32:
 
-; CI-DAG: s_movk_i32 [[K:s[0-9]+|vcc_lo|vcc_hi]], 0x200
-; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
-; CI: v_add_i32_e32 [[VZ:v[0-9]+]], vcc, [[K]], [[SCALED]]
+; MUBUF: s_lshr_b32 [[SCALED:s[0-9]+]], s32, 6
+; MUBUF: s_addk_i32 [[SCALED]], 0x200
 
-; GFX9-MUBUF-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
-; GFX9-MUBUF:     v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
+; MUBUF: s_mul_i32 [[Z:s[0-9]+]], [[SCALED]], 9
+; MUBUF: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 
-; GFX9-FLATSCR-DAG: s_add_i32 [[SZ:[^,]+]], s32, 0x200
-; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
+; GFX9-FLATSCR: s_add_i32 [[SZ:[^,]+]], s32, 0x200
+; GFX9-FLATSCR: s_mul_i32 [[MUL:s[0-9]+]], [[SZ]], 9
+; GFX9-FLATSCR: v_mov_b32_e32 [[VZ:v[0-9]+]], [[MUL]]
 
-; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
@@ -209,23 +207,21 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   store volatile i32 7, ptr addrspace(5) %gep0
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca1 to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_other_fi_user_non_inline_imm_offset_i32_vcc_live:
 
-; CI-DAG: s_movk_i32 [[OFFSET:s[0-9]+]], 0x200
-; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], s32, 6
-; CI: v_add_i32_e64 [[VZ:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, [[OFFSET]], [[SCALED]]
+; MUBUF: s_lshr_b32 [[SCALED:s[0-9]+]], s32, 6
+; MUBUF: s_addk_i32 [[SCALED]], 0x200
+; MUBUF: s_mul_i32 [[Z:s[0-9]+]], [[SCALED]], 9
+; MUBUF: v_mov_b32_e32 [[VZ:v[0-9]+]], [[Z]]
 
-; GFX9-MUBUF-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
-; GFX9-MUBUF:     v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
+; GFX9-FLATSCR: s_add_i32 [[SZ:[^,]+]], s32, 0x200
+; GFX9-FLATSCR: s_mul_i32 [[MUL:s[0-9]+]], [[SZ]], 9
+; GFX9-FLATSCR: v_mov_b32_e32 [[VZ:v[0-9]+]], [[MUL]]
 
-; GFX9-FLATSCR-DAG: s_add_i32 [[SZ:[^,]+]], s32, 0x200
-; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
-
-; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
 ; GCN: ds_write_b32 v0, [[VZ]]
 define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   %alloca0 = alloca [128 x i32], align 4, addrspace(5)
@@ -236,7 +232,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca1 to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -258,8 +254,8 @@ declare void @func(ptr addrspace(5) nocapture) #0
 define void @undefined_stack_store_reg(float %arg, i32 %arg1) #0 {
 bb:
   %tmp = alloca <4 x float>, align 16, addrspace(5)
-  %tmp2 = insertelement <4 x float> undef, float %arg, i32 0
-  store <4 x float> %tmp2, ptr addrspace(5) undef
+  %tmp2 = insertelement <4 x float> poison, float %arg, i32 0
+  store <4 x float> %tmp2, ptr addrspace(5) poison
   %tmp3 = icmp eq i32 %arg1, 0
   br i1 %tmp3, label %bb4, label %bb5
 
@@ -284,8 +280,7 @@ bb5:
 ; GFX9-MUBUF: v_lshrrev_b32_e64 [[SHIFT:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT: v_or_b32_e32 [[PTR:v[0-9]+]], 4, [[SHIFT]]
 
-; GFX9-FLATSCR:      v_mov_b32_e32 [[SP:v[0-9]+]], s32
-; GFX9-FLATSCR-NEXT: v_or_b32_e32 [[PTR:v[0-9]+]], 4, [[SP]]
+; GFX9-FLATSCR: v_or_b32_e64 [[PTR:v[0-9]+]], s32, 4
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[PTR]]
 define void @alloca_ptr_nonentry_block(i32 %arg0) #0 {
@@ -297,7 +292,7 @@ bb:
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %alloca0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %alloca0, i32 0, i32 1
   %load1 = load volatile i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   br label %ret
 
 ret:
@@ -310,8 +305,8 @@ ret:
 
 ; GFX11-LABEL: tied_operand_test:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-DAG:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
-; GFX11-DAG:     v_mov_b32_e32 [[C:v[0-9]+]], 0x7b
+; GFX11:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11:     v_dual_mov_b32 [[C:v[0-9]+]], 0x7b :: v_dual_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
 ; GFX11-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
 ; GFX11-NEXT:    s_endpgm
@@ -329,6 +324,95 @@ entry:
   %add5 = add nuw nsw i32 %val, 5
   %addr1 = getelementptr inbounds %struct0, ptr addrspace(3) @_ZZN0, i32 0, i32 0, i32 %add5, i32 0
   store i16 %scratch0.load, ptr addrspace(3) %addr1, align 2
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_vop3_literal_error:
+; CI: v_lshr_b32_e64 [[SCALED_FP:v[0-9]+]], s33, 6
+; CI: s_movk_i32 vcc_lo, 0x3000
+; CI-NEXT: v_add_i32_e32 [[SCALED_FP]], vcc, vcc_lo, [[SCALED_FP]]
+; CI-NEXT: v_add_i32_e32 v0, vcc, 64, [[SCALED_FP]]
+
+; GFX9-MUBUF: v_lshrrev_b32_e64 [[SCALED_FP:v[0-9]+]], 6, s33
+; GFX9-MUBUF-NEXT: v_add_u32_e32 [[SCALED_FP]], 0x3000, [[SCALED_FP]]
+; GFX9-MUBUF-NEXT: v_add_u32_e32 v0, 64, [[SCALED_FP]]
+define void @fi_vop3_literal_error() {
+entry:
+  %pin.low = alloca i32, align 8192, addrspace(5)
+  %local.area = alloca [1060 x i64], align 4096, addrspace(5)
+  store i32 0, ptr addrspace(5) %pin.low, align 4
+  %gep.small.offset = getelementptr i8, ptr addrspace(5) %local.area, i64 64
+  %load1 = load volatile i64, ptr addrspace(5) %gep.small.offset, align 4
+  ret void
+}
+
+; Check for "SOP2/SOPC instruction requires too many immediate
+; constants" verifier error.  Frame index would fold into low half of
+; the lowered flat pointer add, and use s_add_u32 instead of
+; s_add_i32.
+
+; GCN-LABEL: {{^}}fi_sop2_s_add_u32_literal_error:
+; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0, 0x2010
+; GCN: s_addc_u32 [[ADD_HI:s[0-9]+]], s{{[0-9]+}}, 0
+define amdgpu_kernel void @fi_sop2_s_add_u32_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %Total3.ascast.i.i = addrspacecast ptr addrspace(5) %Total3.i.i to ptr
+  %gep = getelementptr i8, ptr %Total3.ascast.i.i, i64 4096
+  %p2i = ptrtoint ptr %gep to i64
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %icmp = icmp ugt i64 %p2i, 1
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_sop2_and_literal_error:
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x1fe00
+define amdgpu_kernel void @fi_sop2_and_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %p2i = ptrtoint ptr addrspace(5) %Total3.i.i to i32
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %or = and i32 %p2i, -512
+  %icmp = icmp ugt i32 %or, 9999999
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_sop2_or_literal_error:
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3039
+define amdgpu_kernel void @fi_sop2_or_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %p2i = ptrtoint ptr addrspace(5) %Total3.i.i to i32
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %or = or i32 %p2i, 12345
+  %icmp = icmp ugt i32 %or, 9999999
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
   ret void
 }
 

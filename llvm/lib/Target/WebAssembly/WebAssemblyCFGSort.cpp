@@ -16,11 +16,9 @@
 ///
 ////===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblySortRegion.h"
-#include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SetVector.h"
@@ -53,10 +51,10 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfo>();
     AU.addPreserved<WebAssemblyExceptionInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -186,10 +184,11 @@ struct Entry {
 /// Explore them.
 static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
-                       const MachineDominatorTree &MDT) {
+                       MachineDominatorTree &MDT) {
   // Remember original layout ordering, so we can update terminators after
   // reordering to point to the original layout successor.
   MF.RenumberBlocks();
+  MDT.updateBlockNumbers();
 
   // Prepare for a topological sort: Record the number of predecessors each
   // block has, ignoring loop backedges.
@@ -330,6 +329,7 @@ static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
   }
   assert(Entries.empty() && "Active sort region list not finished");
   MF.RenumberBlocks();
+  MDT.updateBlockNumbers();
 
 #ifndef NDEBUG
   SmallSetVector<const SortRegion *, 8> OnStack;
@@ -385,9 +385,9 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
-  auto &MDT = getAnalysis<MachineDominatorTree>();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   // Liveness is not tracked for VALUE_STACK physreg.
   MF.getRegInfo().invalidateLiveness();
 

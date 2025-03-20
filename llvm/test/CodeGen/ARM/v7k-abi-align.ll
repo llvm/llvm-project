@@ -117,7 +117,7 @@ define void @test_dpr_unwind_align_no_dprs() "frame-pointer"="all" {
 
 ; 128-bit vectors should use 128-bit (i.e. correctly aligned) slots on
 ; the stack.
-define <4 x float> @test_v128_stack_pass([8 x double], float, <4 x float> %in) "frame-pointer"="all" {
+define <4 x float> @test_v128_stack_pass([8 x double], float, <4 x float> %in) "frame-pointer"="none" {
 ; CHECK-LABEL: test_v128_stack_pass:
 ; CHECK: add r[[ADDR:[0-9]+]], sp, #16
 ; CHECK: vld1.64 {d0, d1}, [r[[ADDR]]:128]
@@ -140,7 +140,7 @@ define void @test_v128_stack_pass_varargs(<4 x float> %in) "frame-pointer"="all"
 
 ; To be compatible with AAPCS's va_start model (store r0-r3 at incoming SP, give
 ; a single pointer), 64-bit quantities must be pass
-define i64 @test_64bit_gpr_align(i32, i64 %r2_r3, i32 %sp) "frame-pointer"="all" {
+define i64 @test_64bit_gpr_align(i32, i64 %r2_r3, i32 %sp) "frame-pointer"="none" {
 ; CHECK-LABEL: test_64bit_gpr_align:
 ; CHECK: ldr [[RHS:r[0-9]+]], [sp]
 ; CHECK: adds r0, [[RHS]], r2

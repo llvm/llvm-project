@@ -14,5 +14,5 @@
 array0 a0;
 array1 a1;
 
-// CHECK-ERR1: Objective-C automated reference counting was enabled in PCH file but is currently disabled
-// CHECK-ERR2: Objective-C automated reference counting was disabled in PCH file but is currently enabled
+// CHECK-ERR1: Objective-C automated reference counting was enabled in AST file '{{.*}}' but is currently disabled
+// CHECK-ERR2: Objective-C automated reference counting was disabled in AST file '{{.*}}' but is currently enabled

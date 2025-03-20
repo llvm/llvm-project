@@ -13,7 +13,7 @@
 #ifndef MLIR_TOOLS_MLIRTRANSLATE_MLIRTRANSLATEMAIN_H
 #define MLIR_TOOLS_MLIRTRANSLATE_MLIRTRANSLATEMAIN_H
 
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {

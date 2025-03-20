@@ -15,6 +15,7 @@
 #ifndef NDEBUG
 #include "llvm/Analysis/RegionPrinter.h"
 #endif
+#include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/RegionInfoImpl.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"

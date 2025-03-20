@@ -310,6 +310,7 @@ struct ConvertIndexCmpPattern final : OpConversionPattern<CmpOp> {
     case IndexCmpPredicate::ULT:
       return rewriteCmpOp<spirv::ULessThanOp>(op, adaptor, rewriter);
     }
+    llvm_unreachable("Unknown predicate in ConvertIndexCmpPattern");
   }
 };
 
@@ -338,8 +339,8 @@ struct ConvertIndexSizeOf final : OpConversionPattern<SizeOfOp> {
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
-void index::populateIndexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                         RewritePatternSet &patterns) {
+void index::populateIndexToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<
       // clang-format off
     ConvertIndexAdd,

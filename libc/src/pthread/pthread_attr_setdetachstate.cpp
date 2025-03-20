@@ -9,11 +9,12 @@
 #include "pthread_attr_setdetachstate.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/errno/libc_errno.h"
 
-#include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setdetachstate,
                    (pthread_attr_t * attr, int detachstate)) {
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setdetachstate,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

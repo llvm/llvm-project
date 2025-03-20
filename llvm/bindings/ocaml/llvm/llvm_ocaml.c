@@ -687,8 +687,18 @@ value llvm_label_type(value Context) {
 }
 
 /* llcontext -> lltype */
-value llvm_x86_mmx_type(value Context) {
-  return to_val(LLVMX86MMXTypeInContext(Context_val(Context)));
+value llvm_x86_amx_type(value Context) {
+  return to_val(LLVMX86AMXTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_token_type(value Context) {
+  return to_val(LLVMTokenTypeInContext(Context_val(Context)));
+}
+
+/* llcontext -> lltype */
+value llvm_metadata_type(value Context) {
+  return to_val(LLVMMetadataTypeInContext(Context_val(Context)));
 }
 
 /* llmodule -> string -> lltype option */
@@ -1201,44 +1211,8 @@ value llvm_const_nuw_sub(value LHS, value RHS) {
 }
 
 /* llvalue -> llvalue -> llvalue */
-value llvm_const_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nsw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNSWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nuw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNUWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
 value llvm_const_xor(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstXor(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* Icmp.t -> llvalue -> llvalue -> llvalue */
-value llvm_const_icmp(value Pred, value LHSConstant, value RHSConstant) {
-  return to_val(LLVMConstICmp(Int_val(Pred) + LLVMIntEQ, Value_val(LHSConstant),
-                              Value_val(RHSConstant)));
-}
-
-/* Fcmp.t -> llvalue -> llvalue -> llvalue */
-value llvm_const_fcmp(value Pred, value LHSConstant, value RHSConstant) {
-  return to_val(LLVMConstFCmp(Int_val(Pred), Value_val(LHSConstant),
-                              Value_val(RHSConstant)));
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_shl(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstShl(Value_val(LHS), Value_val(RHS));
   return to_val(Value);
 }
 
@@ -2014,6 +1988,18 @@ static value alloc_builder(LLVMBuilderRef B) {
 /* llcontext -> llbuilder */
 value llvm_builder(value C) {
   return alloc_builder(LLVMCreateBuilderInContext(Context_val(C)));
+}
+
+/* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
+value llvm_position_builder_before_dbg_records(value Pos, value B) {
+  if (Tag_val(Pos) == 0) {
+    LLVMBasicBlockRef BB = BasicBlock_val(Field(Pos, 0));
+    LLVMPositionBuilderAtEnd(Builder_val(B), BB);
+  } else {
+    LLVMValueRef I = Value_val(Field(Pos, 0));
+    LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder_val(B), I);
+  }
+  return Val_unit;
 }
 
 /* (llbasicblock, llvalue) llpos -> llbuilder -> unit */

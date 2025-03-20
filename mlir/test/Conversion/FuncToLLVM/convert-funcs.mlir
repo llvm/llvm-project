@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -convert-cf-to-llvm -reconcile-unrealized-casts -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //CHECK: llvm.func @second_order_arg(!llvm.ptr)
 func.func private @second_order_arg(%arg0 : () -> ())
@@ -32,7 +32,7 @@ func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
 func.func private @llvmlinkage(i32) attributes { "llvm.linkage" = #llvm.linkage<extern_weak> }
 
 // CHECK-LABEL: llvm.func @llvmreadnone(i32)
-// CHECK-SAME: memory = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
+// CHECK-SAME: memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>
 func.func private @llvmreadnone(i32) attributes { llvm.readnone }
 
 // CHECK-LABEL: llvm.func @body(i32)

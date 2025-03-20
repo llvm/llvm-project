@@ -16,7 +16,7 @@ define i1 @blsmsk_eq_is_false(i32 %x) {
 
 define <2 x i1> @blsmsk_ne_is_true_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_ne_is_true_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 10>
   %x2 = sub <2 x i32> %x1, <i32 1, i32 1>
@@ -27,7 +27,7 @@ define <2 x i1> @blsmsk_ne_is_true_vec(<2 x i32> %x) {
 
 define <2 x i1> @blsmsk_ne_is_true_diff_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_ne_is_true_diff_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 130>
   %x2 = sub <2 x i32> %x1, <i32 1, i32 1>
@@ -82,7 +82,7 @@ define i32 @blsmsk_add_eval(i32 %x) {
 
 define <2 x i32> @blsmsk_add_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_add_eval_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 33, i32 33>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 33)
 ;
   %x1 = or <2 x i32> %x, <i32 9, i32 9>
   %x2 = add <2 x i32> %x1, <i32 -1, i32 -1>
@@ -115,7 +115,7 @@ define i32 @blsmsk_or_eval(i32 %x) {
 
 define <2 x i32> @blsmsk_or_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_or_eval_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 33, i32 33>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 33)
 ;
   %x1 = or <2 x i32> %x, <i32 9, i32 9>
   %x2 = add <2 x i32> %x1, <i32 -1, i32 -1>
@@ -161,7 +161,7 @@ define i32 @blsmsk_and_eval2(i32 %x) {
 ; CHECK-LABEL: @blsmsk_and_eval2(
 ; CHECK-NEXT:    [[X1:%.*]] = or i32 [[X:%.*]], 10
 ; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X1]], 63
-; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X2]], [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X]], [[X2]]
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X3]], 32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
@@ -174,8 +174,8 @@ define i32 @blsmsk_and_eval2(i32 %x) {
 
 define <2 x i32> @blsmsk_and_eval3_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_and_eval3_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 34, i32 34>
-; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[X1]], <i32 63, i32 63>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 34)
+; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[X1]], splat (i32 63)
 ; CHECK-NEXT:    [[X3:%.*]] = xor <2 x i32> [[X2]], [[X1]]
 ; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> [[X3]], <i32 16, i32 32>
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
@@ -242,9 +242,9 @@ define <2 x i32> @blsmsk_add_eval_assume_vec(<2 x i32> %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP0]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = extractelement <2 x i1> [[CMP]], i64 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
-; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[X]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[X]], splat (i32 -1)
 ; CHECK-NEXT:    [[X3:%.*]] = xor <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = add <2 x i32> [[X3]], <i32 32, i32 32>
+; CHECK-NEXT:    [[Z:%.*]] = add <2 x i32> [[X3]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %lb = and <2 x i32> %x, <i32 1, i32 1>
@@ -335,10 +335,10 @@ define i1 @blsi_ne_is_true(i32 %x) {
 
 define <2 x i1> @blsi_ge_is_false_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_ge_is_false_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 10, i32 10>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 10)
 ; CHECK-NEXT:    [[X2:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i32> [[X3]], <i32 7, i32 7>
+; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i32> [[X3]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 10>
@@ -352,8 +352,8 @@ define <2 x i1> @blsi_ge_is_false_diff_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_ge_is_false_diff_vec(
 ; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 10, i32 11>
 ; CHECK-NEXT:    [[X2:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i32> [[X3]], <i32 7, i32 7>
+; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i32> [[X3]], splat (i32 7)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 11>
@@ -399,7 +399,7 @@ define i32 @blsi_sub_eval(i32 %x) {
 
 define <2 x i32> @blsi_sub_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_sub_eval_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 -31, i32 -31>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 -31)
 ;
   %x1 = or <2 x i32> %x, <i32 33, i32 33>
   %x2 = sub <2 x i32> <i32 0, i32 0>, %x1
@@ -421,7 +421,7 @@ define i32 @blsi_or_eval(i32 %x) {
 
 define <2 x i32> @blsi_xor_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_xor_eval_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 33, i32 33>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 33)
 ;
   %x1 = or <2 x i32> %x, <i32 33, i32 33>
   %x2 = sub <2 x i32> <i32 0, i32 0>, %x1
@@ -443,10 +443,10 @@ define i32 @blsi_and_eval(i32 %x) {
 
 define <2 x i32> @blsi_and_eval2_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_and_eval2_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 30, i32 30>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 30)
 ; CHECK-NEXT:    [[X2:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X1]]
-; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> [[X3]], <i32 32, i32 32>
+; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = and <2 x i32> [[X3]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 30, i32 30>
@@ -460,7 +460,7 @@ define i32 @blsi_and_eval3(i32 %x) {
 ; CHECK-LABEL: @blsi_and_eval3(
 ; CHECK-NEXT:    [[X1:%.*]] = or i32 [[X:%.*]], 34
 ; CHECK-NEXT:    [[X2:%.*]] = sub nsw i32 0, [[X1]]
-; CHECK-NEXT:    [[X3:%.*]] = and i32 [[X2]], [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = and i32 [[X]], [[X2]]
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X3]], 208
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
@@ -473,15 +473,15 @@ define i32 @blsi_and_eval3(i32 %x) {
 
 define <2 x i1> @blsi_eq_is_false_assume_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_eq_is_false_assume_vec(
-; CHECK-NEXT:    [[LB:%.*]] = and <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[LB:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 2)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[LB]], zeroinitializer
 ; CHECK-NEXT:    [[CMP0:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP0]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = extractelement <2 x i1> [[CMP]], i64 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    [[X2:%.*]] = sub <2 x i32> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X2]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i32> [[X3]], <i32 8, i32 8>
+; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i32> [[X3]], splat (i32 8)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %lb = and <2 x i32> %x, <i32 2, i32 2>
@@ -533,7 +533,7 @@ define <2 x i1> @blsi_cmp_eq_diff_bits_vec(<2 x i32> %x) {
 ; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 2>
 ; CHECK-NEXT:    [[X2:%.*]] = sub <2 x i32> zeroinitializer, [[X1]]
 ; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X1]], [[X2]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i32> [[X3]], <i32 32, i32 32>
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i32> [[X3]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 1, i32 2>
@@ -577,10 +577,10 @@ define i32 @blsi_and_eval_assume(i32 %x) {
 
 define <2 x i1> @blsmsk_ne_no_proof_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_ne_no_proof_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 10, i32 10>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 10)
 ; CHECK-NEXT:    [[X2:%.*]] = add nsw <2 x i32> [[X1]], <i32 -2, i32 -3>
 ; CHECK-NEXT:    [[X3:%.*]] = xor <2 x i32> [[X2]], [[X1]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne <2 x i32> [[X3]], <i32 8, i32 8>
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne <2 x i32> [[X3]], splat (i32 8)
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 10, i32 10>
@@ -592,10 +592,10 @@ define <2 x i1> @blsmsk_ne_no_proof_vec(<2 x i32> %x) {
 
 define <2 x i32> @blsmsk_add_noeval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_add_noeval_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 9, i32 9>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 9)
 ; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[X1]], <i32 1, i32 -2>
 ; CHECK-NEXT:    [[X3:%.*]] = xor <2 x i32> [[X2]], [[X1]]
-; CHECK-NEXT:    [[Z:%.*]] = add <2 x i32> [[X3]], <i32 32, i32 32>
+; CHECK-NEXT:    [[Z:%.*]] = add <2 x i32> [[X3]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 9, i32 9>
@@ -649,10 +649,10 @@ define i32 @blsmsk_add_no_eval2(i32 %x) {
 
 define <2 x i32> @blsmsk_xor_no_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsmsk_xor_no_eval_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 34, i32 34>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 34)
 ; CHECK-NEXT:    [[X2:%.*]] = add <2 x i32> [[X1]], <i32 -9, i32 1>
 ; CHECK-NEXT:    [[X3:%.*]] = xor <2 x i32> [[X2]], [[X1]]
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i32> [[X3]], <i32 32, i32 32>
+; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i32> [[X3]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 34, i32 34>
@@ -668,7 +668,7 @@ define i32 @blsmsk_xor_no_eval_assume(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LB]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X]], -1
-; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X2]], [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X]], [[X2]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[X3]], 32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
@@ -687,7 +687,7 @@ define i32 @blsmsk_xor_no_eval_assume2(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LB]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[X2:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X2]], [[X]]
+; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X]], [[X2]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[X3]], 32
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
@@ -733,10 +733,10 @@ define i32 @blsi_or_no_eval(i32 %x) {
 
 define <2 x i32> @blsi_or_no_partial_eval_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @blsi_or_no_partial_eval_vec(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 30, i32 30>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 30)
 ; CHECK-NEXT:    [[X2:%.*]] = sub nsw <2 x i32> <i32 0, i32 1>, [[X1]]
 ; CHECK-NEXT:    [[X3:%.*]] = and <2 x i32> [[X1]], [[X2]]
-; CHECK-NEXT:    [[Z:%.*]] = or <2 x i32> [[X3]], <i32 32, i32 32>
+; CHECK-NEXT:    [[Z:%.*]] = or <2 x i32> [[X3]], splat (i32 32)
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %x1 = or <2 x i32> %x, <i32 30, i32 30>

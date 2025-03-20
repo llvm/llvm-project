@@ -1,7 +1,5 @@
 ; RUN: opt %s -S -passes=instcombine -o - \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=instcombine -o - \
-; RUN: | FileCheck %s
 
 ;; Check that when instcombine sinks an instruction used by a dbg.assign, the
 ;; usual debug intrinsic updating doesn't take place (i.e. do not
@@ -32,7 +30,7 @@
 
 ; CHECK: f.exit:
 ; CHECK-NEXT: store ptr null, ptr %i, align 8,{{.+}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign({{.+}}, {{.+}}, {{.+}}, metadata ![[ID]], metadata ptr %i, {{.+}}), !dbg
+; CHECK-NEXT: #dbg_assign({{.+}}, {{.+}}, {{.+}}, ![[ID]], ptr %i, {{.+}}, 
 
 %struct.a = type { ptr }
 

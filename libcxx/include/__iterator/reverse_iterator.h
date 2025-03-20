@@ -136,10 +136,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr pointer operator->() const
     requires is_pointer_v<_Iter> || requires(const _Iter __i) { __i.operator->(); }
   {
+    _Iter __tmp = current;
+    --__tmp;
     if constexpr (is_pointer_v<_Iter>) {
-      return std::prev(current);
+      return __tmp;
     } else {
-      return std::prev(current).operator->();
+      return __tmp.operator->();
     }
   }
 #else
@@ -184,7 +186,7 @@ public:
 
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI friend constexpr iter_rvalue_reference_t<_Iter> iter_move(const reverse_iterator& __i) noexcept(
-      is_nothrow_copy_constructible_v<_Iter>&& noexcept(ranges::iter_move(--std::declval<_Iter&>()))) {
+      is_nothrow_copy_constructible_v<_Iter> && noexcept(ranges::iter_move(--std::declval<_Iter&>()))) {
     auto __tmp = __i.base();
     return ranges::iter_move(--__tmp);
   }
@@ -192,9 +194,8 @@ public:
   template <indirectly_swappable<_Iter> _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr void
   iter_swap(const reverse_iterator& __x, const reverse_iterator<_Iter2>& __y) noexcept(
-      is_nothrow_copy_constructible_v<_Iter> &&
-      is_nothrow_copy_constructible_v<_Iter2>&& noexcept(
-          ranges::iter_swap(--std::declval<_Iter&>(), --std::declval<_Iter2&>()))) {
+      is_nothrow_copy_constructible_v<_Iter> && is_nothrow_copy_constructible_v<_Iter2> &&
+      noexcept(ranges::iter_swap(--std::declval<_Iter&>(), --std::declval<_Iter2&>()))) {
     auto __xtmp = __x.base();
     auto __ytmp = __y.base();
     ranges::iter_swap(--__xtmp, --__ytmp);
@@ -285,8 +286,8 @@ operator<=>(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>&
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto
-operator-(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
-    -> decltype(__y.base() - __x.base()) {
+operator-(const reverse_iterator<_Iter1>& __x,
+          const reverse_iterator<_Iter2>& __y) -> decltype(__y.base() - __x.base()) {
   return __y.base() - __x.base();
 }
 #else
@@ -328,8 +329,8 @@ __reverse_range(_Range&& __range) {
 
 template <class _Iter, bool __b>
 struct __unwrap_iter_impl<reverse_iterator<reverse_iterator<_Iter> >, __b> {
-  using _UnwrappedIter  = decltype(__unwrap_iter_impl<_Iter>::__unwrap(std::declval<_Iter>()));
-  using _ReverseWrapper = reverse_iterator<reverse_iterator<_Iter> >;
+  using _UnwrappedIter _LIBCPP_NODEBUG  = decltype(__unwrap_iter_impl<_Iter>::__unwrap(std::declval<_Iter>()));
+  using _ReverseWrapper _LIBCPP_NODEBUG = reverse_iterator<reverse_iterator<_Iter> >;
 
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ReverseWrapper
   __rewrap(_ReverseWrapper __orig_iter, _UnwrappedIter __unwrapped_iter) {

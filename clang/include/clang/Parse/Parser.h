@@ -91,6 +91,8 @@ class Parser : public CodeCompletionHandler {
 
   DiagnosticsEngine &Diags;
 
+  StackExhaustionHandler StackHandler;
+
   /// ScopeCache - Cache scopes to reduce malloc traffic.
   enum { ScopeCacheSize = 16 };
   unsigned NumCachedScopes;
@@ -467,15 +469,18 @@ class Parser : public CodeCompletionHandler {
 
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
+    /// This context permits declarations in language modes where declarations
+    /// are not statements.
+    AllowDeclarationsInC = 0x1,
     /// This context permits standalone OpenMP directives.
-    AllowStandaloneOpenMPDirectives = 0x1,
+    AllowStandaloneOpenMPDirectives = 0x2,
     /// This context is at the top level of a GNU statement expression.
-    InStmtExpr = 0x2,
+    InStmtExpr = 0x4,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
-    Compound = AllowStandaloneOpenMPDirectives,
+    Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
 
     LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
   };
@@ -515,7 +520,7 @@ public:
   typedef Sema::FullExprArg FullExprArg;
 
   /// A SmallVector of statements.
-  typedef SmallVector<Stmt *, 32> StmtVector;
+  typedef SmallVector<Stmt *, 24> StmtVector;
 
   // Parsing methods.
 
@@ -1021,6 +1026,8 @@ private:
   ///   ....
   ///   TPA.Revert();
   ///
+  /// If the Unannotated parameter is true, any token annotations created
+  /// during the tentative parse are reverted.
   class TentativeParsingAction {
     Parser &P;
     PreferredTypeBuilder PrevPreferredType;
@@ -1030,7 +1037,7 @@ private:
     bool isActive;
 
   public:
-    explicit TentativeParsingAction(Parser &p)
+    explicit TentativeParsingAction(Parser &p, bool Unannotated = false)
         : P(p), PrevPreferredType(P.PreferredType) {
       PrevTok = P.Tok;
       PrevTentativelyDeclaredIdentifierCount =
@@ -1038,7 +1045,7 @@ private:
       PrevParenCount = P.ParenCount;
       PrevBracketCount = P.BracketCount;
       PrevBraceCount = P.BraceCount;
-      P.PP.EnableBacktrackAtThisPos();
+      P.PP.EnableBacktrackAtThisPos(Unannotated);
       isActive = true;
     }
     void Commit() {
@@ -1069,12 +1076,10 @@ private:
   class RevertingTentativeParsingAction
       : private Parser::TentativeParsingAction {
   public:
-    RevertingTentativeParsingAction(Parser &P)
-        : Parser::TentativeParsingAction(P) {}
+    using TentativeParsingAction::TentativeParsingAction;
+
     ~RevertingTentativeParsingAction() { Revert(); }
   };
-
-  class UnannotatedTentativeParsingAction;
 
   /// ObjCDeclContextSwitch - An object used to switch context from
   /// an objective-c decl context to its enclosing decl context and
@@ -1351,6 +1356,10 @@ private:
     void ParseLexedMethodDefs() override;
     void ParseLexedAttributes() override;
     void ParseLexedPragmas() override;
+
+    // Delete copy constructor and copy assignment operator.
+    LateParsedClass(const LateParsedClass &) = delete;
+    LateParsedClass &operator=(const LateParsedClass &) = delete;
 
   private:
     Parser *Self;
@@ -1874,6 +1883,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
@@ -1923,7 +1936,8 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false);
+                           bool EarlyTypoCorrection = false,
+                           bool *HasTrailingComma = nullptr);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -1976,7 +1990,8 @@ private:
       CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHasErrors,
       bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
       bool IsTypename = false, const IdentifierInfo **LastII = nullptr,
-      bool OnlyNamespace = false, bool InUsingDeclaration = false);
+      bool OnlyNamespace = false, bool InUsingDeclaration = false,
+      bool Disambiguation = false);
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions
@@ -2119,6 +2134,8 @@ private:
     QualType PreferredBaseType;
   };
   ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
+  ExprResult createEmbedExpr();
+  void injectEmbedTokens();
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -2933,6 +2950,9 @@ private:
     return false;
   }
 
+  bool ParseSingleGNUAttribute(ParsedAttributes &Attrs, SourceLocation &EndLoc,
+                               LateParsedAttrList *LateAttrs = nullptr,
+                               Declarator *D = nullptr);
   void ParseGNUAttributes(ParsedAttributes &Attrs,
                           LateParsedAttrList *LateAttrs = nullptr,
                           Declarator *D = nullptr);
@@ -3011,25 +3031,29 @@ private:
           SemaCodeCompletion::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
-  void MaybeParseHLSLAnnotations(Declarator &D,
-                                 SourceLocation *EndLoc = nullptr) {
+  bool MaybeParseHLSLAnnotations(Declarator &D,
+                                 SourceLocation *EndLoc = nullptr,
+                                 bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
-      ParseHLSLAnnotations(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
+      return true;
     }
+    return false;
   }
 
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
                                  SourceLocation *EndLoc = nullptr) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
-    if (getLangOpts().HLSL && Tok.is(tok::colon))
+    if (Tok.is(tok::colon))
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                            SourceLocation *EndLoc = nullptr);
+                            SourceLocation *EndLoc = nullptr,
+                            bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
@@ -3506,6 +3530,30 @@ private:
   /// metadirective and therefore ends on the closing paren.
   StmtResult ParseOpenMPDeclarativeOrExecutableDirective(
       ParsedStmtContext StmtCtx, bool ReadDirectiveWithinMetadirective = false);
+
+  /// Parses executable directive.
+  ///
+  /// \param StmtCtx The context in which we're parsing the directive.
+  /// \param DKind The kind of the executable directive.
+  /// \param Loc Source location of the beginning of the directive.
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult
+  ParseOpenMPExecutableDirective(ParsedStmtContext StmtCtx,
+                                 OpenMPDirectiveKind DKind, SourceLocation Loc,
+                                 bool ReadDirectiveWithinMetadirective);
+
+  /// Parses informational directive.
+  ///
+  /// \param StmtCtx The context in which we're parsing the directive.
+  /// \param DKind The kind of the informational directive.
+  /// \param Loc Source location of the beginning of the directive.
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult ParseOpenMPInformationalDirective(
+      ParsedStmtContext StmtCtx, OpenMPDirectiveKind DKind, SourceLocation Loc,
+      bool ReadDirectiveWithinMetadirective);
+
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
   /// \param DKind Kind of current directive.
@@ -3549,6 +3597,9 @@ private:
 
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
+
+  /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
+  OMPClause *ParseOpenMPPermutationClause();
 
   /// Parses clause without any additional arguments.
   ///
@@ -3656,10 +3707,16 @@ private:
   struct OpenACCDirectiveParseInfo {
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
+    SourceLocation DirLoc;
+    SourceLocation LParenLoc;
+    SourceLocation RParenLoc;
     SourceLocation EndLoc;
+    SourceLocation MiscLoc;
+    OpenACCAtomicKind AtomicKind;
+    SmallVector<Expr *> Exprs;
     SmallVector<OpenACCClause *> Clauses;
-    // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
-    // Wait constructs, we likely want to put that information in here as well.
+    // TODO OpenACC: As we implement support for the Atomic, Routine, and Cache
+    // constructs, we likely want to put that information in here as well.
   };
 
   struct OpenACCWaitParseInfo {
@@ -3667,6 +3724,18 @@ private:
     Expr *DevNumExpr = nullptr;
     SourceLocation QueuesLoc;
     SmallVector<Expr *> QueueIdExprs;
+
+    SmallVector<Expr *> getAllExprs() {
+      SmallVector<Expr *> Out;
+      Out.push_back(DevNumExpr);
+      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      return Out;
+    }
+  };
+  struct OpenACCCacheParseInfo {
+    bool Failed = false;
+    SourceLocation ReadOnlyLoc;
+    SmallVector<Expr *> Vars;
   };
 
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
@@ -3690,13 +3759,15 @@ private:
   /// Helper that parses an ID Expression based on the language options.
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
-  void ParseOpenACCCacheVarList();
+  OpenACCCacheParseInfo ParseOpenACCCacheVarList();
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar(OpenACCClauseKind CK);
+  OpenACCVarParseResult ParseOpenACCVar(OpenACCDirectiveKind DK,
+                                        OpenACCClauseKind CK);
   /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCClauseKind CK);
+  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCDirectiveKind DK,
+                                                OpenACCClauseKind CK);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult
@@ -3714,8 +3785,9 @@ private:
   OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
                                                 bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
-  /// an ID expression.
-  ExprResult ParseOpenACCBindClauseArgument();
+  /// an identifier.
+  std::variant<std::monostate, StringLiteral *, IdentifierInfo *>
+  ParseOpenACCBindClauseArgument();
 
   /// A type to represent the state of parsing after an attempt to parse an
   /// OpenACC int-expr. This is useful to determine whether an int-expr list can
@@ -3740,14 +3812,23 @@ private:
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
                                                       OpenACCClauseKind CK,
                                                       SourceLocation Loc);
+
   /// Parses the 'size-expr', which is an integral value, or an asterisk.
-  bool ParseOpenACCSizeExpr();
+  /// Asterisk is represented by a OpenACCAsteriskSizeExpr
+  ExprResult ParseOpenACCSizeExpr(OpenACCClauseKind CK);
   /// Parses a comma delimited list of 'size-expr's.
-  bool ParseOpenACCSizeExprList();
+  bool ParseOpenACCSizeExprList(OpenACCClauseKind CK,
+                                llvm::SmallVectorImpl<Expr *> &SizeExprs);
   /// Parses a 'gang-arg-list', used for the 'gang' clause.
-  bool ParseOpenACCGangArgList(SourceLocation GangLoc);
-  /// Parses a 'gang-arg', used for the 'gang' clause.
-  bool ParseOpenACCGangArg(SourceLocation GangLoc);
+  bool ParseOpenACCGangArgList(SourceLocation GangLoc,
+                               llvm::SmallVectorImpl<OpenACCGangKind> &GKs,
+                               llvm::SmallVectorImpl<Expr *> &IntExprs);
+
+  using OpenACCGangArgRes = std::pair<OpenACCGangKind, ExprResult>;
+  /// Parses a 'gang-arg', used for the 'gang' clause. Returns a pair of the
+  /// ExprResult (which contains the validity of the expression), plus the gang
+  /// kind for the current argument.
+  OpenACCGangArgRes ParseOpenACCGangArg(SourceLocation GangLoc);
   /// Parses a 'condition' expr, ensuring it results in a
   ExprResult ParseOpenACCConditionExpr();
 
@@ -3763,6 +3844,8 @@ private:
   DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  clang::Parser::DeclGroupPtrTy ParseTemplateDeclarationOrSpecialization(
+      DeclaratorContext Context, SourceLocation &DeclEnd, AccessSpecifier AS);
   DeclGroupPtrTy ParseDeclarationAfterTemplate(
       DeclaratorContext Context, ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,
@@ -3863,6 +3946,8 @@ private:
   // Embarcadero: Arary and Expression Traits
   ExprResult ParseArrayTypeTrait();
   ExprResult ParseExpressionTrait();
+
+  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
 
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through

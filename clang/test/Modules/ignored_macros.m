@@ -10,7 +10,7 @@
 // RUN: %clang_cc1 -fmodules-cache-path=%t.modules -fmodules -fimplicit-module-maps -I %S/Inputs -emit-pch -o %t.pch -x objective-c-header %s -verify
 // RUN: not %clang_cc1 -fmodules-cache-path=%t.modules -DIGNORED=1 -fmodules -fimplicit-module-maps -I %S/Inputs -include-pch %t.pch %s > %t.err 2>&1
 // RUN: FileCheck -check-prefix=CHECK-CONFLICT %s < %t.err
-// CHECK-CONFLICT: PCH was compiled with module cache path
+// CHECK-CONFLICT: AST file '{{.*}}' was compiled with module cache path
 
 // Third trial: pass -DIGNORED=1 only to the second invocation, but
 // make it ignored. There should be no failure, IGNORED is defined in

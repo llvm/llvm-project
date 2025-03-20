@@ -28,6 +28,7 @@
 #include <deque>
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace clang {
 namespace ast_matchers {
@@ -285,12 +286,13 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
 
     for (unsigned I = 0, N = Node->capture_size(); I != N; ++I) {
-      const auto *C = Node->capture_begin() + I;
+      const LambdaCapture *C = Node->capture_begin() + I;
       if (!C->isExplicit())
         continue;
       if (Node->isInitCapture(C) && !match(*C->getCapturedVar()))
         return false;
-      if (!match(*Node->capture_init_begin()[I]))
+      const Expr *CIE = Node->capture_init_begin()[I];
+      if (CIE != nullptr && !match(*CIE))
         return false;
     }
 
@@ -421,7 +423,7 @@ class MatchASTVisitor : public RecursiveASTVisitor<MatchASTVisitor>,
                         public ASTMatchFinder {
 public:
   MatchASTVisitor(const MatchFinder::MatchersByType *Matchers,
-                  const MatchFinder::MatchFinderOptions &Options)
+                  const MatchFinderOptions &Options)
       : Matchers(Matchers), Options(Options), ActiveASTContext(nullptr) {}
 
   ~MatchASTVisitor() override {
@@ -1286,6 +1288,27 @@ private:
     auto Aliases = TypeAliases.find(CanonicalType);
     if (Aliases == TypeAliases.end())
       return false;
+
+    if (const auto *ElaboratedTypeNode =
+            llvm::dyn_cast<ElaboratedType>(TypeNode)) {
+      if (ElaboratedTypeNode->isSugared() && Aliases->second.size() > 1) {
+        const auto &DesugaredTypeName =
+            ElaboratedTypeNode->desugar().getAsString();
+
+        for (const TypedefNameDecl *Alias : Aliases->second) {
+          if (Alias->getName() != DesugaredTypeName) {
+            continue;
+          }
+
+          BoundNodesTreeBuilder Result(*Builder);
+          if (Matcher.matches(*Alias, this, &Result)) {
+            *Builder = std::move(Result);
+            return true;
+          }
+        }
+      }
+    }
+
     for (const TypedefNameDecl *Alias : Aliases->second) {
       BoundNodesTreeBuilder Result(*Builder);
       if (Matcher.matches(*Alias, this, &Result)) {
@@ -1328,7 +1351,7 @@ private:
   /// We precalculate a list of matchers that pass the toplevel restrict check.
   llvm::DenseMap<ASTNodeKind, std::vector<unsigned short>> MatcherFiltersMap;
 
-  const MatchFinder::MatchFinderOptions &Options;
+  const MatchFinderOptions &Options;
   ASTContext *ActiveASTContext;
 
   // Maps a canonical type to its TypedefDecls.
@@ -1551,19 +1574,41 @@ bool MatchASTVisitor::TraverseAttr(Attr *AttrNode) {
 class MatchASTConsumer : public ASTConsumer {
 public:
   MatchASTConsumer(MatchFinder *Finder,
-                   MatchFinder::ParsingDoneTestCallback *ParsingDone)
-      : Finder(Finder), ParsingDone(ParsingDone) {}
+                   MatchFinder::ParsingDoneTestCallback *ParsingDone,
+                   const MatchFinderOptions &Options)
+      : Finder(Finder), ParsingDone(ParsingDone), Options(Options) {}
 
 private:
+  bool HandleTopLevelDecl(DeclGroupRef DG) override {
+    if (Options.SkipSystemHeaders) {
+      for (Decl *D : DG) {
+        if (!isInSystemHeader(D))
+          TraversalScope.push_back(D);
+      }
+    }
+    return true;
+  }
+
   void HandleTranslationUnit(ASTContext &Context) override {
+    if (!TraversalScope.empty())
+      Context.setTraversalScope(TraversalScope);
+
     if (ParsingDone != nullptr) {
       ParsingDone->run();
     }
     Finder->matchAST(Context);
   }
 
+  bool isInSystemHeader(Decl *D) {
+    const SourceManager &SM = D->getASTContext().getSourceManager();
+    const SourceLocation Loc = SM.getExpansionLoc(D->getBeginLoc());
+    return SM.isInSystemHeader(Loc);
+  }
+
   MatchFinder *Finder;
   MatchFinder::ParsingDoneTestCallback *ParsingDone;
+  const MatchFinderOptions &Options;
+  std::vector<Decl *> TraversalScope;
 };
 
 } // end namespace
@@ -1682,7 +1727,8 @@ bool MatchFinder::addDynamicMatcher(const internal::DynTypedMatcher &NodeMatch,
 }
 
 std::unique_ptr<ASTConsumer> MatchFinder::newASTConsumer() {
-  return std::make_unique<internal::MatchASTConsumer>(this, ParsingDone);
+  return std::make_unique<internal::MatchASTConsumer>(this, ParsingDone,
+                                                      Options);
 }
 
 void MatchFinder::match(const clang::DynTypedNode &Node, ASTContext &Context) {

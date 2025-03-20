@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 
-#include <__availability>
 #include <__config>
+#include <__cstddef/max_align_t.h>
+#include <__cstddef/size_t.h>
 #include <__fwd/memory_resource.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

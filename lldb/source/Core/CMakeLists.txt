@@ -20,6 +20,7 @@ endif()
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp
+  AddressRangeListImpl.cpp
   AddressResolver.cpp
   AddressResolverFileLine.cpp
   Communication.cpp
@@ -51,25 +52,10 @@ add_lldb_library(lldbCore
   SourceLocationSpec.cpp
   SourceManager.cpp
   StreamAsynchronousIO.cpp
+  Telemetry.cpp
   ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
-  ValueObject.cpp
-  ValueObjectCast.cpp
-  ValueObjectChild.cpp
-  ValueObjectConstResult.cpp
-  ValueObjectConstResultCast.cpp
-  ValueObjectConstResultChild.cpp
-  ValueObjectConstResultImpl.cpp
-  ValueObjectDynamicValue.cpp
-  ValueObjectList.cpp
-  ValueObjectMemory.cpp
-  ValueObjectRegister.cpp
-  ValueObjectSyntheticFilter.cpp
-  ValueObjectUpdater.cpp
-  ValueObjectVariable.cpp
-  ValueObjectVTable.cpp
-
   DEPENDS
     clang-tablegen-targets
 
@@ -82,6 +68,7 @@ add_lldb_library(lldbCore
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
@@ -93,6 +80,7 @@ add_lldb_library(lldbCore
     Support
     Demangle
     TargetParser
+    Telemetry
   )
 
 add_dependencies(lldbCore

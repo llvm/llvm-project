@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -shape-bufferize <%s | FileCheck %s
+// RUN: mlir-opt -split-input-file --one-shot-bufferize="dialect-filter=shape,bufferization copy-before-write unknown-type-conversion=identity-layout-map allow-unknown-ops" <%s | FileCheck %s
 
 // -----
 
@@ -6,7 +6,7 @@
 // CHECK:           %[[WTRUE:.*]] = shape.const_witness true
 // CHECK:           %[[MEMREF:.*]] = shape.assuming %[[WTRUE]] -> (memref<2xf16>) {
 // CHECK:             %[[TENSOR_VAL:.*]] = "test.source"() : () -> tensor<2xf16>
-// CHECK:             %[[YIELDED_MEMREF:.*]] = bufferization.to_memref %[[TENSOR_VAL]] : memref<2xf16>
+// CHECK:             %[[YIELDED_MEMREF:.*]] = bufferization.to_memref %[[TENSOR_VAL]] : tensor<2xf16> to memref<2xf16>
 // CHECK:             shape.assuming_yield %[[YIELDED_MEMREF]] : memref<2xf16>
 // CHECK:           }
 // CHECK:           %[[TENSOR:.*]] = bufferization.to_tensor %[[MEMREF:.*]] : memref<2xf16>

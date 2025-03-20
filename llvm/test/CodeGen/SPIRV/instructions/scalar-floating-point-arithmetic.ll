@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; DISABLED-CHECK-DAG: OpName [[SCALAR_FNEG:%.+]] "scalar_fneg"
 ; CHECK-DAG: OpName [[SCALAR_FADD:%.+]] "scalar_fadd"
