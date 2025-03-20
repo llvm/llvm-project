@@ -840,8 +840,6 @@ public:
     // it is the only way to build EFI applications with Clang/LLVM today. We
     // intend to offer flexibility by supporting choices that are not default in
     // Windows target in the future.
-
-    // Set C++ ABI.
     this->TheCXXABI.set(TargetCXXABI::Microsoft);
     LongWidth = LongAlign = 32;
     DoubleAlign = LongLongAlign = 64;
@@ -854,7 +852,6 @@ public:
     IntPtrType = SignedLongLong;
     WCharType = UnsignedShort;
     WIntType = UnsignedShort;
-
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
   }
