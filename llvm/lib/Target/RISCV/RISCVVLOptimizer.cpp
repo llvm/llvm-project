@@ -1342,8 +1342,8 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
 
     if (UserMI.isPHI()) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
-        for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
-          Worklist.insert(&PhiUse);
+      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
+        Worklist.insert(&PhiUse);
       continue;
     }
 
