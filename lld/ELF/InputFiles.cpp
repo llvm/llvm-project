@@ -234,10 +234,6 @@ static void sanitizePauthSubSection(
     Incomplete data: ignore
   */
   if (pauthSubSection->Content.size() < 2) {
-    if (!pauthSubSection->Content.empty())
-      Warn(ctx) << &isec
-                << ": AArch64 Build Attributes: empty 'aeabi_pauthabi' "
-                   "subsection detected; ignoring subsection";
     if (1 == pauthSubSection->Content.size()) {
       if (1 == pauthSubSection->Content[0].Tag)
         Warn(ctx)
