@@ -1323,6 +1323,7 @@ std::optional<MachineOperand>
 RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   std::optional<MachineOperand> CommonVL;
   SmallSetVector<MachineOperand *, 8> Worklist;
+  SmallPtrSet<const MachineInstr *, 4> PHISeen;
   for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
     Worklist.insert(&UserOp);
 
@@ -1340,7 +1341,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       continue;
     }
 
-    if (UserMI.isPHI()) {
+    if (UserMI.isPHI() && PHISeen.insert(&UserMI).second) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
       for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
         Worklist.insert(&PhiUse);
