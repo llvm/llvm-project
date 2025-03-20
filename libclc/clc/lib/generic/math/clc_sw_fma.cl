@@ -100,7 +100,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   } else {
     // cutoff bits borrow one
     st_fma.mantissa =
------------------------------------------
+        st_mul.mantissa - st_c.mantissa -
         (cutoff_bits && (st_mul.exponent > st_c.exponent) ? 1 : 0);
   }
 

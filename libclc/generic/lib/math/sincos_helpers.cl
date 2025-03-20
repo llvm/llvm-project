@@ -205,7 +205,7 @@ _CLC_DEF int __clc_argReductionLargeS(private float *r, private float *rr,
 
   // shift amount to get 2 lsb of integer part at top 2 bits
   //   min: 25 (xe=18) max: 134 (xe=127)
--------------=-----------------;
+  uint shift = 256U - 2 - fbits;
 
   // Shift by up to 134/32 = 4 words
   int c = shift > 31;
