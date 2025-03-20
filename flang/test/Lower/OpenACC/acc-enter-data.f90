@@ -147,10 +147,10 @@ subroutine acc_enter_data_dummy(a, b, n, m)
 !CHECK: %[[LOAD_M:.*]] = fir.load %[[DECLM]]#0 : !fir.ref<i32>
 !CHECK: %[[M_I64:.*]] = fir.convert %[[LOAD_M]] : (i32) -> i64
 !CHECK: %[[M_IDX:.*]] = fir.convert %[[M_I64]] : (i64) -> index
-!CHECK: %[[M_N:.*]] = arith.subi %[[M_IDX]], %[[N_IDX]] : index
 !CHECK: %[[C1:.*]] = arith.constant 1 : index
-!CHECK: %[[M_N_1:.*]] = arith.addi %[[M_N]], %[[C1]] : index
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[M_N:.*]] = arith.subi %[[M_IDX]], %[[N_IDX]] : index
+!CHECK: %[[M_N_1:.*]] = arith.addi %[[M_N]], %[[C1]] : index
 !CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[M_N_1]], %[[C0]] : index
 !CHECK: %[[EXT_B:.*]] = arith.select %[[CMP]], %[[M_N_1]], %[[C0]] : index
 !CHECK: %[[DECLB:.*]]:2 = hlfir.declare %[[B]]

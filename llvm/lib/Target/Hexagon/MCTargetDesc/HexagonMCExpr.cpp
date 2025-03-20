@@ -25,9 +25,8 @@ HexagonMCExpr *HexagonMCExpr::create(MCExpr const *Expr, MCContext &Ctx) {
 }
 
 bool HexagonMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                              const MCAssembler *Asm,
-                                              MCFixup const *Fixup) const {
-  return Expr->evaluateAsRelocatable(Res, Asm, Fixup);
+                                              const MCAssembler *Asm) const {
+  return Expr->evaluateAsRelocatable(Res, Asm);
 }
 
 void HexagonMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
@@ -54,16 +53,16 @@ static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
   }
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(Expr);
-    switch (symRef.getKind()) {
+    switch (getVariantKind(&symRef)) {
     default:
       return;
-    case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
-    case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
-    case MCSymbolRefExpr::VK_Hexagon_GD_PLT:
-    case MCSymbolRefExpr::VK_Hexagon_LD_PLT:
-    case MCSymbolRefExpr::VK_Hexagon_IE:
-    case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
-    case MCSymbolRefExpr::VK_TPREL:
+    case HexagonMCExpr::VK_GD_GOT:
+    case HexagonMCExpr::VK_LD_GOT:
+    case HexagonMCExpr::VK_GD_PLT:
+    case HexagonMCExpr::VK_LD_PLT:
+    case HexagonMCExpr::VK_IE:
+    case HexagonMCExpr::VK_IE_GOT:
+    case HexagonMCExpr::VK_TPREL:
       break;
     }
     cast<MCSymbolELF>(symRef.getSymbol()).setType(ELF::STT_TLS);

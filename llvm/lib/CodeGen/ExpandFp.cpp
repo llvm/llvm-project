@@ -394,6 +394,7 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
 
   return true;
 }
+// clang-format off: preserve formatting of the following example
 
 /// Generate code to convert a fp number to integer, replacing FPToS(U)I with
 /// the generated code. This currently generates code similarly to compiler-rt's
@@ -447,6 +448,7 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
 ///
 /// Replace fp to integer with generated code.
 static void expandFPToI(Instruction *FPToI) {
+  // clang-format on
   IRBuilder<> Builder(FPToI);
   auto *FloatVal = FPToI->getOperand(0);
   IntegerType *IntTy = cast<IntegerType>(FPToI->getType());
@@ -583,6 +585,8 @@ static void expandFPToI(Instruction *FPToI) {
   FPToI->eraseFromParent();
 }
 
+// clang-format off: preserve formatting of the following example
+
 /// Generate code to convert a fp number to integer, replacing S(U)IToFP with
 /// the generated code. This currently generates code similarly to compiler-rt's
 /// implementations. This implementation has an implicit assumption that integer
@@ -666,6 +670,7 @@ static void expandFPToI(Instruction *FPToI) {
 ///
 /// Replace integer to fp with generated code.
 static void expandIToFP(Instruction *IToFP) {
+  // clang-format on
   IRBuilder<> Builder(IToFP);
   auto *IntVal = IToFP->getOperand(0);
   IntegerType *IntTy = cast<IntegerType>(IntVal->getType());

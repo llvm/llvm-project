@@ -235,6 +235,12 @@ struct TestLinalgElementwiseFusion
           // Skip fusing the first operand.
           return fusedOperand->getOperandNumber();
         }
+        Operation *consumer = fusedOperand->getOwner();
+        if (auto collapseOp = dyn_cast<tensor::CollapseShapeOp>(consumer)) {
+          auto producerResult = dyn_cast<OpResult>(collapseOp.getSrc());
+          // skip fusing first result.
+          return producerResult.getResultNumber();
+        }
         return true;
       };
       linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);

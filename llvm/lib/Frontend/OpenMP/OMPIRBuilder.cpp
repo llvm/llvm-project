@@ -2056,6 +2056,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
       DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
 
+      Builder.restoreIP(OldIP);
+
       unsigned P = 0;
       for (const DependData &Dep : Dependencies) {
         Value *Base =
@@ -2084,8 +2086,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
             Flags);
         ++P;
       }
-
-      Builder.restoreIP(OldIP);
     }
 
     // In the presence of the `if` clause, the following IR is generated:
@@ -5505,7 +5505,7 @@ createTargetMachine(Function *F, CodeGenOptLevel OptLevel) {
 
   StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
   StringRef Features = F->getFnAttribute("target-features").getValueAsString();
-  const std::string &Triple = M->getTargetTriple().str();
+  const llvm::Triple &Triple = M->getTargetTriple();
 
   std::string Error;
   const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);

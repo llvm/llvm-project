@@ -32,7 +32,7 @@
 
 using namespace llvm;
 
-void VPlanTransforms::VPInstructionsToVPRecipes(
+bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
@@ -83,6 +83,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
+          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
+          if (VectorID == Intrinsic::not_intrinsic)
+            return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
               {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
@@ -106,6 +109,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       Ingredient.eraseFromParent();
     }
   }
+  return true;
 }
 
 static bool sinkScalarOperands(VPlan &Plan) {
@@ -1747,7 +1751,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
-  VPScalarPHIRecipe *PrevEVL = nullptr;
+  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -1762,12 +1766,13 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
     }
-    PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
+    PrevEVL = new VPInstruction(Instruction::PHI, {MaxEVL, &EVL}, DebugLoc(),
+                                "prev.evl");
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
+    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
 
@@ -2089,9 +2094,9 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
       StringRef Name =
           isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR =
-          new VPScalarPHIRecipe(PhiR->getStartValue(), PhiR->getBackedgeValue(),
-                                PhiR->getDebugLoc(), Name);
+      auto *ScalarR = new VPInstruction(
+          Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+          PhiR->getDebugLoc(), Name);
       ScalarR->insertBefore(PhiR);
       PhiR->replaceAllUsesWith(ScalarR);
       PhiR->eraseFromParent();
@@ -2157,10 +2162,14 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn())
-      IncomingFromEarlyExit =
-          EarlyExitB.createNaryOp(VPInstruction::ExtractFirstActive,
-                                  {IncomingFromEarlyExit, EarlyExitTakenCond});
+    if (!IncomingFromEarlyExit->isLiveIn()) {
+      VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
+          VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
+          "first.active.lane");
+      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
+          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
+          nullptr, "early.exit.value");
+    }
     ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
@@ -2180,7 +2189,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
+void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -2189,18 +2198,27 @@ void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
   VPDT.recalculate(Plan);
 #endif
 
+  SmallVector<VPValue *> VPValues;
+  if (Plan.getOrCreateBackedgeTakenCount()->getNumUsers() > 0)
+    VPValues.push_back(Plan.getOrCreateBackedgeTakenCount());
+  append_range(VPValues, Plan.getLiveIns());
+  for (VPRecipeBase &R : *Plan.getEntry())
+    append_range(VPValues, R.definedValues());
+
   auto *VectorPreheader = Plan.getVectorPreheader();
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
-    if (all_of(LiveIn->users(),
-               [LiveIn](VPUser *U) { return U->usesScalars(LiveIn); }) ||
-        !LiveIn->getLiveInIRValue() ||
-        isa<Constant>(LiveIn->getLiveInIRValue()))
+  for (VPValue *VPV : VPValues) {
+    if (all_of(VPV->users(),
+               [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
+        (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
+         isa<Constant>(VPV->getLiveInIRValue())))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
     VPBasicBlock *HoistBlock = VectorPreheader;
     VPBasicBlock::iterator HoistPoint = VectorPreheader->end();
-    for (VPUser *User : LiveIn->users()) {
+    for (VPUser *User : VPV->users()) {
+      if (User->usesScalars(VPV))
+        continue;
       if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
         HoistPoint = HoistBlock->begin();
       else
@@ -2210,10 +2228,10 @@ void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
     }
 
     VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
-    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
-    LiveIn->replaceUsesWithIf(
-        Broadcast, [LiveIn, Broadcast](VPUser &U, unsigned Idx) {
-          return Broadcast != &U && !U.usesScalars(LiveIn);
-        });
+    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
+    VPV->replaceUsesWithIf(Broadcast,
+                           [VPV, Broadcast](VPUser &U, unsigned Idx) {
+                             return Broadcast != &U && !U.usesScalars(VPV);
+                           });
   }
 }
