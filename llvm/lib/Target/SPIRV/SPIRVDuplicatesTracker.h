@@ -64,6 +64,7 @@ enum SpecialTypeKind {
   STK_Pipe,
   STK_DeviceEvent,
   STK_Pointer,
+  STK_Buffer,
   STK_Last = -1
 };
 
@@ -137,6 +138,29 @@ inline SpecialTypeDescriptor make_descr_pointee(const Type *ElementType,
   return std::make_tuple(ElementType, AddressSpace,
                          SpecialTypeKind::STK_Pointer);
 }
+
+union BufferAttrs {
+  struct BitFlags {
+    unsigned IsStorageBuffer : 1;
+    unsigned IsWriteable : 1;
+  } Flags;
+  unsigned Val;
+
+  BufferAttrs(bool IsStorageBuffer, bool IsWriteable) {
+    Val = 0;
+    Flags.IsStorageBuffer = IsStorageBuffer;
+    Flags.IsWriteable = IsWriteable;
+  }
+};
+
+inline SpecialTypeDescriptor make_descr_buffer(const Type *ElementType,
+                                               bool IsStorageBuffer,
+                                               bool IsWriteable) {
+  return std::make_tuple(ElementType,
+                         BufferAttrs(IsStorageBuffer, IsWriteable).Val,
+                         SpecialTypeKind::STK_Buffer);
+}
+
 } // namespace SPIRV
 
 template <typename KeyTy> class SPIRVDuplicatesTrackerBase {

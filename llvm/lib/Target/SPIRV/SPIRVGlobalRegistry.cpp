@@ -1377,6 +1377,35 @@ SPIRVGlobalRegistry::getPointerStorageClass(const SPIRVType *Type) const {
       Type->getOperand(1).getImm());
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
+    MachineIRBuilder &MIRBuilder, Type *ElemType,
+    SPIRV::StorageClass::StorageClass SC, bool IsWritable, bool EmitIr) {
+  auto TD = SPIRV::make_descr_buffer(
+      ElemType, SC == SPIRV::StorageClass::StorageBuffer, IsWritable);
+  if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
+    return Res;
+
+  // TODO: Check that I will not collide with a similar struct that does not
+  // have the decorations.
+  auto *T = StructType::create(ElemType);
+  auto *BlockType =
+      getOrCreateSPIRVType(T, MIRBuilder, SPIRV::AccessQualifier::None, EmitIr);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                        SPIRV::Decoration::Offset, 0, {0});
+
+  if (!IsWritable) {
+    buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                          SPIRV::Decoration::NonWritable, 0, {});
+  }
+
+  SPIRVType *R = getOrCreateSPIRVPointerType(BlockType, MIRBuilder, SC);
+  DT.add(TD, &MIRBuilder.getMF(), getSPIRVTypeID(R));
+  return R;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
     MachineIRBuilder &MIRBuilder, SPIRVType *SampledType, SPIRV::Dim::Dim Dim,
     uint32_t Depth, uint32_t Arrayed, uint32_t Multisampled, uint32_t Sampled,

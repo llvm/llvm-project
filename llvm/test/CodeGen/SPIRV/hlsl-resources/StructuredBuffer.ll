@@ -7,50 +7,56 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 declare target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32, i32, i32, i32, i1) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_i32_5_2_0_0_2_0t(i32, i32, i32, i32, i1) #0
+declare target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32, i32, i32, i32, i1) #0
 
-; CHECK-DAG: OpDecorate [[BufferVar:%.+]] DescriptorSet 0
-; CHECK-DAG: OpDecorate [[BufferVar]] Binding 0
-; CHECK-DAG: OpDecorate [[BufferType:%.+]] Block
-; STVEN-CHECK-DAG: OpMemberDecorate [[BufferType]] 0 Offset 0 // The decoration is not output correctly in the assembly output
-; CHECK-DAG: OpMemberDecorate [[BufferType]] 0 NonWritable
-; CHECK-DAG: OpDecorate [[ImageVar:%.+]] DescriptorSet 0
-; CHECK-DAG: OpDecorate [[ImageVar]] Binding 1
+; CHECK: OpDecorate [[BufferVar:%.+]] DescriptorSet 0
+; CHECK: OpDecorate [[BufferVar]] Binding 0
+; CHECK: OpDecorate [[BufferType:%.+]] Block
+; CHECK: OpMemberDecorate [[BufferType]] 0 NonWritable
+; CHECK-DISABLE: OpMemberDecorate [[RWBufferType]] 0 Offset 0 // The 0 at the end is not output for some reason
+; CHECK: OpDecorate [[RWBufferVar:%.+]] DescriptorSet 0
+; CHECK: OpDecorate [[RWBufferVar]] Binding 1
+; CHECK: OpDecorate [[RWBufferType:%.+]] Block
+; CHECK-DISABLE: OpMemberDecorate [[BufferType]] 0 Offset 0 //  Same as above
 
 
-; CHECK-DAG:  [[ArrayType:%.+]] = OpTypeRuntimeArray
-; CHECK-DAG:  [[BufferType]] = OpTypeStruct [[ArrayType]]
-; CHECK-DAG: [[BufferPtrType:%.+]] = OpTypePointer StorageBuffer [[BufferType]]
-; CHECK-DAG: [[int:%[0-9]+]] = OpTypeInt 32 0
+; CHECK: [[int:%[0-9]+]] = OpTypeInt 32 0
+; CHECK: [[ArrayType:%.+]] = OpTypeRuntimeArray
+; CHECK: [[RWBufferType]] = OpTypeStruct [[ArrayType]]
+; CHECK: [[RWBufferPtrType:%.+]] = OpTypePointer StorageBuffer [[RWBufferType]]
+; CHECK: [[BufferType]] = OpTypeStruct [[ArrayType]]
+; CHECK: [[BufferPtrType:%.+]] = OpTypePointer StorageBuffer [[BufferType]]
 ; CHECK-DAG: [[zero:%[0-9]+]] = OpConstant [[int]] 0
 ; CHECK-DAG: [[one:%[0-9]+]] = OpConstant [[int]] 1
 ; CHECK-DAG: [[BufferVar]] = OpVariable [[BufferPtrType]] StorageBuffer
-; CHECK-DAG: [[ImageVar]] = OpVariable {{.*}} UniformConstant
+; CHECK-DAG: [[RWBufferVar]] = OpVariable [[RWBufferPtrType]] StorageBuffer
 
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 define void @main() local_unnamed_addr #1 {
 entry:
-; CHECK: [[BufferHandle:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
-  %i_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  %o_h.i.i = tail call target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_i32_5_2_0_0_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false)
+; CHECK-DAG: [[BufferHandle:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
+; CHECK-DAG: [[RWBufferHandle:%.+]] = OpCopyObject [[RWBufferPtrType]] [[RWBufferVar]]
+  %_ZL1i_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
+
+  %_ZL1o_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 1, i32 1, i32 0, i1 false)
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle]] [[zero]] [[one]]
-  %0 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %i_h.i.i, i32 1)
+  %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %_ZL1i_h.i.i, i32 1)
 
 ; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]] Aligned 4
   %1 = load i32, ptr addrspace(11) %0, align 4, !tbaa !3
 
-; CHECK: [[ImageHandle:%.+]] = OpLoad {{.*}} [[ImageVar]]
-  %2 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %o_h.i.i, i32 0)
+; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[RWBufferHandle]] [[zero]] [[zero]]
+  %2 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %_ZL1o_h.i.i, i32 0)
 
-; CHECK: OpImageWrite [[ImageHandle]] [[zero]] [[LD]]
+; CHECK: OpStore [[AC]] [[LD]]
   store i32 %1, ptr addrspace(11) %2, align 4, !tbaa !3
   ret void
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0), i32) #0
+declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1), i32) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0), i32) #0

@@ -3050,23 +3050,11 @@ static SPIRVType *getVulkanBufferType(const TargetExtType *ExtensionType,
          "Vulkan buffer have 2 integer parameters: storage class and is "
          "writable.");
 
-  auto *T = StructType::create(ExtensionType->getTypeParameter(0));
-  auto *BlockType = GR->getOrCreateSPIRVType(
-      T, MIRBuilder, SPIRV::AccessQualifier::None, false);
-  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
-                  SPIRV::Decoration::Block, {});
-  buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
-                        SPIRV::Decoration::Offset, 0, {0});
-
-  bool IsWritable = ExtensionType->getIntParameter(1);
-  if (!IsWritable) {
-    buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
-                          SPIRV::Decoration::NonWritable, 0, {});
-  }
-
+  auto *T = ExtensionType->getTypeParameter(0);
   auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
       ExtensionType->getIntParameter(0));
-  return GR->getOrCreateSPIRVPointerType(BlockType, MIRBuilder, SC);
+  bool IsWritable = ExtensionType->getIntParameter(1);
+  return GR->getOrCreateVulkanBufferType(MIRBuilder, T, SC, IsWritable);
 }
 
 namespace SPIRV {
