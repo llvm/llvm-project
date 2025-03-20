@@ -102,51 +102,6 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<BasicBlock *> &UsingBlocks,
   }
 }
 
-#if 0
-struct XXX {
-  struct BBValueInfo {
-    Value *LiveInValue = nullptr;
-    Value *LiveOutValue = nullptr;
-  };
-
-  DominatorTree &DT;
-  PredIteratorCache &PredCache;
-  Type *ValTy;
-  DenseMap<BasicBlock *, BBValueInfo> BBInfos;
-
-  Value *computeLiveInValue(BasicBlock *BB) {
-    return computeLiveInValueImpl(BB, BBInfos[BB]);
-  }
-
-  Value *computeLiveOutValue(BasicBlock *BB) {
-    auto &BBInfo = BBInfos[BB];
-    return BBInfo.LiveOutValue ? BBInfo.LiveOutValue
-                               : computeLiveInValueImpl(BB, BBInfo);
-  }
-
-  void clear() { BBInfos.clear(); }
-
-private:
-  Value *computeLiveInValueImpl(BasicBlock *BB, BBValueInfo &BBInfo);
-};
-
-Value *XXX::computeLiveInValueImpl(BasicBlock *BB, BBValueInfo &BBInfo) {
-  if (BBInfo.LiveInValue)
-    return BBInfo.LiveInValue;
-
-  Value *V = DT.isReachableFromEntry(BB) && !PredCache.get(BB).empty()
-                  ? computeLiveOutValue(DT.getNode(BB)->getIDom()->getBlock())
-                  : UndefValue::get(ValTy);
-
-  // The call to ComputeValue can insert new entries into the map:
-  // assume BBInfos shouldn't grow due to [1] above and BBInfo reference is
-  // valid.
-  assert(&BBInfo == &BBInfos[BB] && "Map shouldn't grow!");
-  BBInfo.LiveInValue = V;
-  return V;
-};
-#endif
-
 struct BBValueInfo {
   Value *LiveInValue = nullptr;
   Value *LiveOutValue = nullptr;
@@ -202,8 +157,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
     // IsLiveOut indicates whether we are computing live-out values (true) or
     // live-in values (false).
     auto ComputeValue = [&](BasicBlock *BB, bool IsLiveOut) -> Value * {
-
-      auto *BBInfo = &BBInfos[BB];      
+      auto *BBInfo = &BBInfos[BB];
 
       if (IsLiveOut && BBInfo->LiveOutValue)
         return BBInfo->LiveOutValue;
@@ -213,7 +167,7 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
 
       SmallVector<BBValueInfo *, 4> Stack = {BBInfo};
       Value *V = nullptr;
-      
+
       while (DT->isReachableFromEntry(BB) && !PredCache.get(BB).empty() &&
              (BB = DT->getNode(BB)->getIDom()->getBlock())) {
         BBInfo = &BBInfos[BB];
