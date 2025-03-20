@@ -59,14 +59,14 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
 
 namespace NonPacProtectedRetAnalysis {
 
-static void traceInst(const BinaryContext &BC, StringRef Label,
-                      const MCInst &MI) {
+[[maybe_unused]] static void traceInst(const BinaryContext &BC, StringRef Label,
+                                       const MCInst &MI) {
   dbgs() << "  " << Label << ": ";
   BC.printInstruction(dbgs(), MI);
 }
 
-static void traceReg(const BinaryContext &BC, StringRef Label,
-                     ErrorOr<MCPhysReg> Reg) {
+[[maybe_unused]] static void traceReg(const BinaryContext &BC, StringRef Label,
+                                      ErrorOr<MCPhysReg> Reg) {
   dbgs() << "    " << Label << ": ";
   if (Reg.getError())
     dbgs() << "(error)";
@@ -77,8 +77,8 @@ static void traceReg(const BinaryContext &BC, StringRef Label,
   dbgs() << "\n";
 }
 
-static void traceRegMask(const BinaryContext &BC, StringRef Label,
-                         BitVector Mask) {
+[[maybe_unused]] static void traceRegMask(const BinaryContext &BC,
+                                          StringRef Label, BitVector Mask) {
   dbgs() << "    " << Label << ": ";
   RegStatePrinter(BC).print(dbgs(), Mask);
   dbgs() << "\n";
