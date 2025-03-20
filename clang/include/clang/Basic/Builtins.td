@@ -4893,8 +4893,8 @@ def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLDot2Add : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot2add"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "float(...)";
 }
 
 def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {
