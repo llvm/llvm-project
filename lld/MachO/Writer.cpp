@@ -941,16 +941,17 @@ template <class LP> void Writer::createLoadCommands() {
     LoadCommandType lcType = LC_LOAD_DYLIB;
     if (dylibFile->reexport) {
       if (dylibFile->forceWeakImport)
-        warn(path::filename(dylibFile->getName()) + " is re-exported so cannot be weak-linked");
+        warn(path::filename(dylibFile->getName()) +
+             " is re-exported so cannot be weak-linked");
 
       lcType = LC_REEXPORT_DYLIB;
-    } else if (dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak) {
+    } else if (dylibFile->forceWeakImport ||
+               dylibFile->refState == RefState::Weak) {
       lcType = LC_LOAD_WEAK_DYLIB;
     }
     in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->installName,
-                                        dylibFile->compatibilityVersion,
-                                        dylibFile->currentVersion));
-
+                                            dylibFile->compatibilityVersion,
+                                            dylibFile->currentVersion));
   }
 
   for (const auto &dyldEnv : config->dyldEnvs)
