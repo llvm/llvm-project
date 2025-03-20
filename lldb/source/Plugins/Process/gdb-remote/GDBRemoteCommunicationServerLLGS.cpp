@@ -41,6 +41,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/TargetParser/Triple.h"
@@ -54,6 +55,7 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 using namespace llvm;
 
+sys::DynamicLibrary g_gpu_plugin;
 // GDBRemote Errors
 
 namespace {
@@ -253,7 +255,8 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       &GDBRemoteCommunicationServerLLGS::Handle_vCtrlC);
 }
 
-void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(const ProcessLaunchInfo &info) {
+void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(
+    const ProcessLaunchInfo &info) {
   m_process_launch_info = info;
 }
 
@@ -289,6 +292,9 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
     if (!process_or)
       return Status::FromError(process_or.takeError());
     m_continue_process = m_current_process = process_or->get();
+    // Notify anyone wanting to know when a NativeProcessProtocol is created.
+    if (m_process_created_callback)
+      m_process_created_callback(process_or->get());
     m_debugged_processes.emplace(
         m_current_process->GetID(),
         DebuggedProcess{std::move(*process_or), DebuggedProcess::Flag{}});
@@ -362,6 +368,9 @@ Status GDBRemoteCommunicationServerLLGS::AttachToProcess(lldb::pid_t pid) {
     return status;
   }
   m_continue_process = m_current_process = process_or->get();
+  // Notify anyone wanting to know when a NativeProcessProtocol is created.
+  if (m_process_created_callback)
+    m_process_created_callback(process_or->get());
   m_debugged_processes.emplace(
       m_current_process->GetID(),
       DebuggedProcess{std::move(*process_or), DebuggedProcess::Flag{}});
@@ -614,10 +623,11 @@ static void CollectRegNums(const uint32_t *reg_num, StreamString &response,
   }
 }
 
-static void WriteRegisterValueInHexFixedWidth(
-    StreamString &response, NativeRegisterContext &reg_ctx,
-    const RegisterInfo &reg_info, const RegisterValue *reg_value_p,
-    lldb::ByteOrder byte_order) {
+static void WriteRegisterValueInHexFixedWidth(StreamString &response,
+                                              NativeRegisterContext &reg_ctx,
+                                              const RegisterInfo &reg_info,
+                                              const RegisterValue *reg_value_p,
+                                              lldb::ByteOrder byte_order) {
   RegisterValue reg_value;
   if (!reg_value_p) {
     Status error = reg_ctx.ReadRegister(&reg_info, reg_value);
@@ -643,7 +653,7 @@ static std::optional<json::Object>
 GetRegistersAsJSON(NativeThreadProtocol &thread) {
   Log *log = GetLog(LLDBLog::Thread);
 
-  NativeRegisterContext& reg_ctx = thread.GetRegisterContext();
+  NativeRegisterContext &reg_ctx = thread.GetRegisterContext();
 
   json::Object register_object;
 
@@ -682,8 +692,8 @@ GetRegistersAsJSON(NativeThreadProtocol &thread) {
     }
 
     StreamString stream;
-    WriteRegisterValueInHexFixedWidth(stream, reg_ctx, *reg_info_p,
-                                      &reg_value, lldb::eByteOrderBig);
+    WriteRegisterValueInHexFixedWidth(stream, reg_ctx, *reg_info_p, &reg_value,
+                                      lldb::eByteOrderBig);
 
     register_object.try_emplace(llvm::to_string(reg_num),
                                 stream.GetString().str());
@@ -794,8 +804,7 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
   return threads_array;
 }
 
-StreamString
-GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
+StreamString GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     NativeThreadProtocol &thread) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Thread);
 
@@ -1379,10 +1388,37 @@ GDBRemoteCommunicationServerLLGS::Handle_jLLDBTraceGetBinaryData(
     return SendErrorResponse(bytes.takeError());
 }
 
+void PrintSomething() { puts(__PRETTY_FUNCTION__); }
+
+typedef void (*LLDBServerPluginInitialize)();
+
+template <class T> static T FuncPtr(void *Ptr) {
+  union {
+    T F;
+    void *P;
+  } Tmp;
+  Tmp.P = Ptr;
+  return Tmp.F;
+}
+
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qProcessInfo(
     StringExtractorGDBRemote &packet) {
   // Fail if we don't have a current process.
+  static std::once_flag OnceFlag;
+
+  std::call_once(OnceFlag, []() {
+    const char *plugin_path =
+        "/data/users/gclayton/github/Debug/lib/liblldbServerPluginMockGPU.so";
+    std::string error;
+    g_gpu_plugin =
+        sys::DynamicLibrary::getPermanentLibrary(plugin_path, &error);
+    LLDBServerPluginInitialize plugin_initialize =
+        FuncPtr<LLDBServerPluginInitialize>(
+            g_gpu_plugin.getAddressOfSymbol("LLDBServerPluginInitialize"));
+    plugin_initialize();
+  });
+
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
     return SendErrorResponse(68);
@@ -3104,8 +3140,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     }
 
     response.Indent();
-    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
-                    "\" regnum=\"%d\" ",
+    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32 "\" regnum=\"%d\" ",
                     reg_info->name, reg_info->byte_size * 8, reg_index);
 
     if (!reg_context.RegisterOffsetIsDynamic())
@@ -3316,7 +3351,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QSaveRegisterState(
   }
 
   // Grab the register context for the thread.
-  NativeRegisterContext& reg_context = thread->GetRegisterContext();
+  NativeRegisterContext &reg_context = thread->GetRegisterContext();
 
   // Save registers to a buffer.
   WritableDataBufferSP register_data_sp;
@@ -3577,8 +3612,7 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
   for (auto it = m_debugged_processes.begin();
        it != m_debugged_processes.end();) {
     if (pid == LLDB_INVALID_PROCESS_ID || pid == it->first) {
-      LLDB_LOGF(log,
-                "GDBRemoteCommunicationServerLLGS::%s detaching %" PRId64,
+      LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s detaching %" PRId64,
                 __FUNCTION__, it->first);
       if (llvm::Error e = it->second.process_up->Detach().ToError())
         detach_error = llvm::joinErrors(std::move(detach_error), std::move(e));
@@ -3727,7 +3761,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QPassSignals(
       break; // End of string
     if (separator != ';')
       return SendIllFormedResponse(packet, "Invalid separator,"
-                                            " expected semicolon.");
+                                           " expected semicolon.");
   }
 
   // Fail if we don't have a current process.

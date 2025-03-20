@@ -60,11 +60,14 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionMIPS64
       lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
+      lldbServerPluginInterface
 
     LINK_COMPONENTS
       Option
       Support
 )
+
+set_target_properties(lldb-server PROPERTIES ENABLE_EXPORTS 1)
 
 add_dependencies(lldb-server
   LLGSOptionsTableGen
@@ -72,3 +75,5 @@ add_dependencies(lldb-server
 )
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})
+
+add_subdirectory(Plugins)
