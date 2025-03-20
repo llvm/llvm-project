@@ -22,11 +22,11 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK-NEXT: Attribute::get(C, Attribute::NoUnwind),
 // CHECK-NEXT: });
 
-
-// CHECK: getAttributes(LLVMContext &C, ID id)
+// CHECK: static constexpr uint16_t IntrinsicsToAttributesMap[] = {
 // CHECK: 0 << 8 | 0, // llvm.deref.ptr.ret
 // CHECK: 1 << 8 | 1, // llvm.random.gen
 
+// CHECK: getAttributes(LLVMContext &C, ID id)
 // CHECK: case 1:
 // CHECK-NEXT: return AttributeList::get(C, {
 // CHECK-NEXT:   {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, FnAttrID)}
