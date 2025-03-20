@@ -7,7 +7,7 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 declare target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32, i32, i32, i32, i1) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_i32_5_2_0_0_2_0t(i32, i32, i32, i32, i1) #0
+declare target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32, i32, i32, i32, i1) #0
 
 ; CHECK-DAG: OpDecorate [[BufferVar:%.+]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[BufferVar]] Binding 0
@@ -30,27 +30,29 @@ declare target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefr
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none)
 define void @main() local_unnamed_addr #1 {
 entry:
-; CHECK: [[BufferHandle:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
-  %i_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
 
-  %o_h.i.i = tail call target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.Image_i32_5_2_0_0_2_0t(i32 0, i32 1, i32 1, i32 0, i1 false)
+; CHECK: [[BufferHandle:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
+  %_ZL1i_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
+
+; CHECK: STEVEN
+  %_ZL1o_h.i.i = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 1, i32 1, i32 0, i1 false)
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle]] [[zero]] [[one]]
-  %0 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %i_h.i.i, i32 1)
+  %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %_ZL1i_h.i.i, i32 1)
 
 ; CHECK: [[LD:%.+]] = OpLoad [[int]] [[AC]] Aligned 4
   %1 = load i32, ptr addrspace(11) %0, align 4, !tbaa !3
 
-; CHECK: [[ImageHandle:%.+]] = OpLoad {{.*}} [[ImageVar]]
-  %2 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) %o_h.i.i, i32 0)
+; CHECK: STEVEN
+  %2 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %_ZL1o_h.i.i, i32 0)
 
-; CHECK: OpImageWrite [[ImageHandle]] [[zero]] [[LD]]
+; CHECK: STEVEN
   store i32 %1, ptr addrspace(11) %2, align 4, !tbaa !3
   ret void
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.Image_i32_5_2_0_0_2_0t(target("spirv.Image", i32, 5, 2, 0, 0, 2, 0), i32) #0
+declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1), i32) #0
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0), i32) #0
