@@ -4919,8 +4919,9 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
-  return CGF.Builder.CreateStructGEP(base, idx, field->getName(),
-                                     IsBaseConstantNull);
+  if (IsBaseConstantNull)
+    return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
+  return CGF.Builder.CreateStructGEP(base, idx, field->getName());
 }
 
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,

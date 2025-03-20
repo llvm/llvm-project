@@ -10,7 +10,7 @@ struct S {
 
 // CHECK-LABEL: @_Z23get_offset_of_y_naivelyv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
 //
 uintptr_t get_offset_of_y_naively() {
   return ((uintptr_t)(&(((S *)nullptr)->y)));
@@ -28,7 +28,7 @@ struct T {
 
 // CHECK-LABEL: @_Z30get_offset_of_y_naively_nestedv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr nuw ([[STRUCT_S:%.*]], ptr getelementptr nuw ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr getelementptr ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
 //
 uintptr_t get_offset_of_y_naively_nested() {
   return ((uintptr_t)(&(((T *)nullptr)->s.y)));
@@ -36,7 +36,7 @@ uintptr_t get_offset_of_y_naively_nested() {
 
 // CHECK-LABEL: @_Z42get_offset_of_y_naively_nested_with_parensv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr nuw ([[STRUCT_S:%.*]], ptr getelementptr nuw ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr getelementptr ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
 //
 uintptr_t get_offset_of_y_naively_nested_with_parens() {
   return ((uintptr_t)(&((((T *)nullptr)->s).y)));
