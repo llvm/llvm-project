@@ -19,7 +19,6 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Threading.h"
-#include <memory>
 
 namespace llvm {
 struct DILineInfo;
