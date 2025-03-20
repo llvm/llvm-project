@@ -929,18 +929,35 @@ void ClauseProcessor::processMapObjects(
     llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
+  auto getDefaultMapperID = [&](const omp::Object &object,
+                                std::string &mapperIdName) {
+    if (!mlir::isa<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp())) {
+      const semantics::DerivedTypeSpec *typeSpec = nullptr;
+
+      if (object.sym()->owner().IsDerivedType())
+        typeSpec = object.sym()->owner().derivedTypeSpec();
+      else if (object.sym()->GetType() &&
+               object.sym()->GetType()->category() ==
+                   semantics::DeclTypeSpec::TypeDerived)
+        typeSpec = &object.sym()->GetType()->derivedTypeSpec();
+
+      if (typeSpec) {
+        mapperIdName = typeSpec->name().ToString() + ".default";
+        mapperIdName =
+            converter.mangleName(mapperIdName, *typeSpec->GetScope());
+      }
+    }
+  };
+
   // Create the mapper symbol from its name, if specified.
   mlir::FlatSymbolRefAttr mapperId;
-  if (!mapperIdNameRef.empty() && !objects.empty()) {
+  if (!mapperIdNameRef.empty() && !objects.empty() &&
+      mapperIdNameRef != "__implicit_mapper") {
     std::string mapperIdName = mapperIdNameRef.str();
-    if (mapperIdName == "default") {
-      const omp::Object &object = objects.front();
-      auto &typeSpec = object.sym()->owner().IsDerivedType()
-                           ? *object.sym()->owner().derivedTypeSpec()
-                           : object.sym()->GetType()->derivedTypeSpec();
-      mapperIdName = typeSpec.name().ToString() + ".default";
-      mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
-    }
+    const omp::Object &object = objects.front();
+    if (mapperIdNameRef == "default")
+      getDefaultMapperID(object, mapperIdName);
     assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
            "mapper not found");
     mapperId =
@@ -976,6 +993,15 @@ void ClauseProcessor::processMapObjects(
             parentMemberIndices[parentObj.value()], asFortran.str(),
             mapTypeBits);
       }
+    }
+
+    if (mapperIdNameRef == "__implicit_mapper") {
+      std::string mapperIdName;
+      getDefaultMapperID(object, mapperIdName);
+      mapperId = converter.getModuleOp().lookupSymbol(mapperIdName)
+                     ? mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                                    mapperIdName)
+                     : mlir::FlatSymbolRefAttr();
     }
 
     // Explicit map captures are captured ByRef by default,
@@ -1023,7 +1049,7 @@ bool ClauseProcessor::processMap(
     const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-    std::string mapperIdName;
+    std::string mapperIdName = "__implicit_mapper";
     // If the map type is specified, then process it else Tofrom is the
     // default.
     Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
