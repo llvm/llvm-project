@@ -6,12 +6,9 @@
 ; but not another.
 
 ; CHECK-INTERESTINGNESS:     #dbg_value(i32 %added,
-; INTRINSIC-INTERESTINGNESS: llvm.dbg.value(metadata i32 %added,
 
 ; CHECK-FINAL:      %added = add
 ; CHECK-FINAL-NEXT: #dbg_value(i32 %added,
-; INTRINSIC-FINAL:      %added = add
-; INTRINSIC-FINAL-NEXT: llvm.dbg.value(metadata i32 %added,
 
 define i32 @main() !dbg !7 {
 entry:

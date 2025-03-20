@@ -3,7 +3,12 @@
 ; RUN: opt --passes=verify %s.bc -o - -S \
 ; RUN:   | FileCheck %s --implicit-check-not=llvm.dbg
 
-;; Assembled with llvm-as ./brains.ll -o out.bc --write-experimental-debuginfo-iterators-to-bitcode=false
+;; While we're at it, test the textual IR autoupgrade path too.
+; RUN: opt --passes=verify %s -o - -S \
+; RUN:   | FileCheck %s --implicit-check-not=llvm.dbg
+
+;; Bitcode file was assembled with llvm-as ./brains.ll -o out.bc
+;; --write-experimental-debuginfo-iterators-to-bitcode=false
 ;; immediately before the latter flag was deleted.
 
 ; CHECK: @f(i32 %[[VAL_A:[0-9a-zA-Z]+]])
@@ -28,6 +33,28 @@
 ; CHECK-DAG: ![[LOC_4]] = !DILocation(line: 3, column: 30
 ; CHECK-DAG: ![[LABEL_ID]] = !DILabel(
 ; CHECK-DAG: ![[EMPTY]] = !{}
+
+;; Also test that the bitcode file itself doesn't contain any debug records,
+;; and instead has function calls, the storage for intrinsics. This is to
+;; ensure we're actually testing the autoupgrade path from a bitcode file that
+;; definitely contains intrinsics.
+
+; RUN: llvm-bcanalyzer %s.bc --dump --disable-histogram | FileCheck %s --check-prefix=BITCODE --implicit-check-not=FUNCTION_BLOCK --implicit-check-not=DEBUG_RECORD
+
+; BITCODE-LABEL: <FUNCTION_BLOCK
+; BITCODE:       <INST_CALL
+; BITCODE:       <INST_ALLOCA
+; BITCODE:       <INST_CALL
+; BITCODE:       <INST_BINOP
+; BITCODE:       <INST_CALL
+; BITCODE:       <INST_CALL
+; BITCODE:       <INST_STORE
+; BITCODE:       <INST_CALL
+; BITCODE:       <INST_CALL
+; BITCODE:       <INST_RET
+; BITCODE:       </FUNCTION_BLOCK>
+;; Summary text,
+; BITCODE:   Block ID #12 (FUNCTION_BLOCK):
 
 define dso_local i32 @f(i32 %a) !dbg !7 {
 entry:
