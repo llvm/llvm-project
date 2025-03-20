@@ -1403,6 +1403,16 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
+// The checker group "nullability" consists of the checkers that are
+// implemented as the parts of the checker class `NullabilityChecker`. These
+// checkers share a checker option "nullability:NoDiagnoseCallsToSystemHeaders"
+// which semantically belongs to the whole group and not just one checker from
+// it. As this is a unique situation (I don't know about any other similar
+// group-level option) there is no mechanism to inject this group name from
+// e.g. Checkers.td, so I'm just hardcoding it here. (These are old stable
+// checkers, I don't think that their name will change.)
+#define CHECKER_GROUP_NAME "nullability"
+
 #define REGISTER_CHECKER(Part, TrackingRequired)                               \
   void ento::register##Part##Checker(CheckerManager &Mgr) {                    \
     auto *Checker = Mgr.registerChecker<NullabilityChecker,                    \
@@ -1411,8 +1421,7 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
     Checker->NoDiagnoseCallsToSystemHeaders =                                  \
         Checker->NoDiagnoseCallsToSystemHeaders ||                             \
         Mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-            Mgr.getCurrentCheckerName(), "NoDiagnoseCallsToSystemHeaders",     \
-            true);                                                             \
+            CHECKER_GROUP_NAME, "NoDiagnoseCallsToSystemHeaders", true);       \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##Part##Checker(const CheckerManager &) {           \
