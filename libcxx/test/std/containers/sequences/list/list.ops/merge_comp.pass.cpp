@@ -8,7 +8,7 @@
 
 // <list>
 
-// template <class Compare> void merge(list& x, Compare comp);
+// template <class Compare> void merge(list& x, Compare comp); // constexpr since C++26
 // If (addressof(x) == this) does nothing; otherwise ...
 
 #include <list>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {10, 9, 7, 3, 1};
     int a2[] = {11, 8, 6, 5, 4, 2, 0};
@@ -47,6 +47,15 @@ int main(int, char**) {
     assert((c1 == std::list<int, min_allocator<int>>(a3, a3 + sizeof(a3) / sizeof(a3[0]))));
     assert(c2.empty());
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;
