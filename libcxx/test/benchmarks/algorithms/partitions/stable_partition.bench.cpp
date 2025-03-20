@@ -166,14 +166,14 @@ int main(int argc, char** argv) {
     };
 
     // std::stable_partition
-    bm.operator()<std::vector<int>>("std::stable_partition(vector<int>) (no alloc)", std_stable_partition);
-    bm.operator()<std::deque<int>>("std::stable_partition(deque<int>) (no alloc)", std_stable_partition);
-    bm.operator()<std::list<int>>("std::stable_partition(list<int>) (no alloc)", std_stable_partition);
+    bm.operator()<std::vector<int>>("std::stable_partition(vector<int>) (alloc fails)", std_stable_partition);
+    bm.operator()<std::deque<int>>("std::stable_partition(deque<int>) (alloc fails)", std_stable_partition);
+    bm.operator()<std::list<int>>("std::stable_partition(list<int>) (alloc fails)", std_stable_partition);
 
     // ranges::stable_partition
-    bm.operator()<std::vector<int>>("rng::stable_partition(vector<int>) (no alloc)", std::ranges::stable_partition);
-    bm.operator()<std::deque<int>>("rng::stable_partition(deque<int>) (no alloc)", std::ranges::stable_partition);
-    bm.operator()<std::list<int>>("rng::stable_partition(list<int>) (no alloc)", std::ranges::stable_partition);
+    bm.operator()<std::vector<int>>("rng::stable_partition(vector<int>) (alloc fails)", std::ranges::stable_partition);
+    bm.operator()<std::deque<int>>("rng::stable_partition(deque<int>) (alloc fails)", std::ranges::stable_partition);
+    bm.operator()<std::list<int>>("rng::stable_partition(list<int>) (alloc fails)", std::ranges::stable_partition);
   }
 
   benchmark::Initialize(&argc, argv);
