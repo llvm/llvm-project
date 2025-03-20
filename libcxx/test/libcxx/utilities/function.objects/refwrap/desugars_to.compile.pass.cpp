@@ -20,8 +20,11 @@
 
 struct Operation {};
 struct Tag {};
+
+namespace std {
 template <>
-bool const std::__desugars_to_v<Tag, Operation> = true;
+bool const __desugars_to_v<Tag, Operation> = true;
+}
 
 static_assert(std::__desugars_to_v<Tag, Operation>, "something is wrong with the test");
 
