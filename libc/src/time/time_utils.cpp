@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 // TODO: clean this up in a followup patch
-int64_t mktime_internal(const tm *tm_out) {
+time_t mktime_internal(const tm *tm_out, bool* out_of_range_flag) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
   int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
@@ -26,21 +26,33 @@ int64_t mktime_internal(const tm *tm_out) {
   // 32-bit end-of-the-world is 03:14:07 UTC on 19 January 2038.
   if (sizeof(time_t) == 4 &&
       tm_year_from_base >= time_constants::END_OF32_BIT_EPOCH_YEAR) {
-    if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR)
-      return time_utils::out_of_range();
-    if (tm_out->tm_mon > 0)
-      return time_utils::out_of_range();
-    if (tm_out->tm_mday > 19)
-      return time_utils::out_of_range();
+    if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR) {
+      *out_of_range_flag = true;
+      return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+    }
+    if (tm_out->tm_mon > 0) {
+      *out_of_range_flag = true;
+      return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+    }
+    if (tm_out->tm_mday > 19) {
+      *out_of_range_flag = true;
+      return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+    }
     else if (tm_out->tm_mday == 19) {
-      if (tm_out->tm_hour > 3)
-        return time_utils::out_of_range();
+      if (tm_out->tm_hour > 3) {
+        *out_of_range_flag = true;
+        return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+      }
       else if (tm_out->tm_hour == 3) {
-        if (tm_out->tm_min > 14)
-          return time_utils::out_of_range();
+        if (tm_out->tm_min > 14) {
+          *out_of_range_flag = true;
+          return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+        }
         else if (tm_out->tm_min == 14) {
-          if (tm_out->tm_sec > 7)
-            return time_utils::out_of_range();
+          if (tm_out->tm_sec > 7) {
+            *out_of_range_flag = true;
+            return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+          }
         }
       }
     }
@@ -66,7 +78,7 @@ int64_t mktime_internal(const tm *tm_out) {
   bool tm_year_is_leap = time_utils::is_leap_year(tm_year_from_base);
 
   // Calculate total number of days based on the month and the day (tm_mday).
-  int64_t total_days = tm_out->tm_mday - 1;
+  int total_days = tm_out->tm_mday - 1;
   for (int64_t i = 0; i < month; ++i)
     total_days += time_constants::NON_LEAP_YEAR_DAYS_IN_MONTH[i];
   // Add one day if it is a leap year and the month is after February.
@@ -102,7 +114,7 @@ int64_t mktime_internal(const tm *tm_out) {
 
   // TODO: https://github.com/llvm/llvm-project/issues/121962
   // Need to handle timezone and update of tm_isdst.
-  int64_t seconds = tm_out->tm_sec +
+  time_t seconds = tm_out->tm_sec +
                     tm_out->tm_min * time_constants::SECONDS_PER_MIN +
                     tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
                     total_days * time_constants::SECONDS_PER_DAY;
@@ -136,7 +148,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 //
 // Compute the number of months from the remaining days. Finally, adjust years
 // to be 1900 and months to be from January.
-int64_t update_from_seconds(int64_t total_seconds, tm *tm) {
+int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   // Days in month starting from March in the year 2000.
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
@@ -152,7 +164,7 @@ int64_t update_from_seconds(int64_t total_seconds, tm *tm) {
           : INT_MAX * static_cast<int64_t>(
                           time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
-  time_t ts = static_cast<time_t>(total_seconds);
+  time_t ts = total_seconds;
   if (ts < time_min || ts > time_max)
     return time_utils::out_of_range();
 
