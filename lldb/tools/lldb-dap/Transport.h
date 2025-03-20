@@ -34,7 +34,7 @@ public:
     OS << "End of file reached.";
   }
   std::error_code convertToErrorCode() const override {
-    return std::make_error_code(std::errc::timed_out);
+    return llvm::inconvertibleErrorCode();
   }
 };
 
