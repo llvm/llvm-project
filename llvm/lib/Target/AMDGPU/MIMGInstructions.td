@@ -1520,11 +1520,10 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual, bit isBVH8> {
   int GFX11PlusNSAAddrs = !if(IsA16, 4, 5);
   RegisterClass node_ptr_type = !if(Is64, VReg_64, VGPR_32);
   list<RegisterClass> GFX11PlusAddrTypes =
-    !if(isBVH8, [VReg_64, VReg_64, VReg_96, VReg_96, VGPR_32],
-      !if(isDual, [VReg_64, VReg_64, VReg_96, VReg_96, VReg_64],
-          !if(IsA16,
-              [node_ptr_type, VGPR_32, VReg_96, VReg_96],
-              [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96])));
+     !cond(isBVH8 : [node_ptr_type, VReg_64, VReg_96, VReg_96, VGPR_32],
+           isDual : [node_ptr_type, VReg_64, VReg_96, VReg_96, VReg_64],
+           IsA16  : [node_ptr_type, VGPR_32, VReg_96, VReg_96],
+           true   : [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]);
 }
 
 class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>

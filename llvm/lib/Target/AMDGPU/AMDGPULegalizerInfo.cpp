@@ -7214,7 +7214,7 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
   Register Offsets = MI.getOperand(9).getReg();
   Register TDescr = MI.getOperand(10).getReg();
 
-  if (!AMDGPU::isGFX12Plus(ST)) {
+  if (!ST.hasBVHDualAndBVH8Insts()) {
     DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
                                         "intrinsic not supported on subtarget",
                                         MI.getDebugLoc());
@@ -7232,26 +7232,22 @@ bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
       AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
   assert(Opcode != -1);
 
-  SmallVector<Register, 12> Ops;
-  Ops.push_back(NodePtr);
-  Ops.push_back(B.buildMergeLikeInstr(
-                     V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)})
-                    .getReg(0));
-  Ops.push_back(RayOrigin);
-  Ops.push_back(RayDir);
-  Ops.push_back(Offsets);
+  auto RayExtentInstanceMaskVec = B.buildMergeLikeInstr(
+      V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)});
 
-  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
-                                 : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
-                 .addDef(DstReg)
-                 .addDef(DstOrigin)
-                 .addDef(DstDir)
-                 .addImm(Opcode);
-
-  for (Register R : Ops)
-    MIB.addUse(R);
-
-  MIB.addUse(TDescr).cloneMemRefs(MI);
+  B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                      : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+      .addDef(DstReg)
+      .addDef(DstOrigin)
+      .addDef(DstDir)
+      .addImm(Opcode)
+      .addUse(NodePtr)
+      .addUse(RayExtentInstanceMaskVec.getReg(0))
+      .addUse(RayOrigin)
+      .addUse(RayDir)
+      .addUse(Offsets)
+      .addUse(TDescr)
+      .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;

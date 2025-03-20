@@ -520,6 +520,7 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
     return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
                           : FuncInfo->getStackPtrOffsetReg();
 
+
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use

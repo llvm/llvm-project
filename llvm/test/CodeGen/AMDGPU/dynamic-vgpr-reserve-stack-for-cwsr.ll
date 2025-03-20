@@ -6,7 +6,7 @@
 define amdgpu_cs void @amdgpu_cs() #0 {
 ; CHECK-LABEL: amdgpu_cs:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -18,7 +18,7 @@ define amdgpu_cs void @amdgpu_cs() #0 {
 define amdgpu_kernel void @kernel() #0 {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -30,7 +30,7 @@ define amdgpu_kernel void @kernel() #0 {
 define amdgpu_cs void @with_local() #0 {
 ; CHECK-LABEL: with_local:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 13
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
@@ -48,7 +48,7 @@ define amdgpu_cs void @with_local() #0 {
 define amdgpu_cs void @with_calls_inline_const() #0 {
 ; CHECK-LABEL: with_calls_inline_const:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
@@ -72,7 +72,7 @@ define amdgpu_cs void @with_calls_inline_const() #0 {
 define amdgpu_cs void @with_calls_no_inline_const() #0 {
 ; CHECK-LABEL: with_calls_no_inline_const:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 15
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
@@ -92,66 +92,23 @@ define amdgpu_cs void @with_calls_no_inline_const() #0 {
   ret void
 }
 
-; We're going to limit this to 16 VGPRs, so we need to spill the rest.
-define amdgpu_cs void @with_spills(ptr addrspace(1) %p1, ptr addrspace(1) %p2) #1 {
+define amdgpu_cs void @with_spills() {
 ; CHECK-LABEL: with_spills:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
-; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:96
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:80 ; 16-byte Folded Spill
-; CHECK-NEXT:    s_clause 0x2
-; CHECK-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:112
-; CHECK-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:64
-; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:80
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:64 ; 16-byte Folded Spill
-; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:32
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:48 ; 16-byte Folded Spill
-; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:48
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:32 ; 16-byte Folded Spill
-; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:16 ; 16-byte Folded Spill
-; CHECK-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    scratch_store_b128 off, v[4:7], s33 ; 16-byte Folded Spill
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:80 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_clause 0x2
-; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:96
-; CHECK-NEXT:    global_store_b128 v[2:3], v[8:11], off offset:112
-; CHECK-NEXT:    global_store_b128 v[2:3], v[12:15], off offset:64
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:64 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:80
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:48 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:32
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:32 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:48
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:16 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 th:TH_LOAD_LU ; 16-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b128 v[2:3], v[4:7], off offset:16
 ; CHECK-NEXT:    s_alloc_vgpr 0
 ; CHECK-NEXT:    s_endpgm
-  %v = load <32 x i32>, ptr addrspace(1) %p1
-  store <32 x i32> %v, ptr addrspace(1) %p2
+  call void asm "; spills", "~{v40},~{v42}"()
   ret void
 }
 
 define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
 ; CHECK-LABEL: realign_stack:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 1)
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
 ; CHECK-NEXT:    s_mov_b32 s1, callee@abs32@hi
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
 ; CHECK-NEXT:    s_mov_b32 s0, callee@abs32@lo
@@ -177,8 +134,39 @@ define amdgpu_cs void @realign_stack(<32 x i32> %x) #0 {
   ret void
 }
 
-; Non-entry functions and graphics shaders can't run on a compute queue,
-; so they don't need to worry about CWSR.
+define amdgpu_cs void @frame_pointer_none() #1 {
+; CHECK-LABEL: frame_pointer_none:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
+; CHECK-NEXT:    v_mov_b32_e32 v0, 13
+; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
+  %local = alloca i32, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  ret void
+}
+
+define amdgpu_cs void @frame_pointer_all() #2 {
+; CHECK-LABEL: frame_pointer_all:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_HW_ID2, 8, 2)
+; CHECK-NEXT:    v_mov_b32_e32 v0, 13
+; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    scratch_store_b8 off, v0, s33 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_alloc_vgpr 0
+; CHECK-NEXT:    s_endpgm
+  %local = alloca i32, addrspace(5)
+  store volatile i8 13, ptr addrspace(5) %local
+  ret void
+}
+
+; Non-entry functions and graphics shaders don't need to worry about CWSR.
 define amdgpu_gs void @amdgpu_gs() #0 {
 ; CHECK-LABEL: amdgpu_gs:
 ; CHECK:       ; %bb.0:
@@ -259,5 +247,5 @@ define void @default() #0 {
 declare amdgpu_gfx void @callee(i32) #0
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-num-vgpr"="16"}
-
+attributes #1 = { nounwind "frame-pointer"="none" }
+attributes #2 = { nounwind "frame-pointer"="all" }

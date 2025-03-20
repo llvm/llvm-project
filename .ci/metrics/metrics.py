@@ -43,7 +43,7 @@ GITHUB_JOB_TO_TRACK = {
 # This means we essentially have a list of workflows sorted by creation date,
 # and that's all we can deduce from it. So for each iteration, we'll blindly
 # process the last N workflows.
-GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 1000
+GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 2000
 # Second reason for the cut: reaching a workflow older than X.
 # This means we will miss long-tails (exceptional jobs running for more than
 # X hours), but that's also the case with the count cutoff above.
