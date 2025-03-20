@@ -108,7 +108,7 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
 
   std::string CallSiteLoc =
       formatCallSiteLocation(CB.getDebugLoc(), ReplaySettings.ReplayFormat);
-  StringRef Callee = CB.getCalledFunction()->getName();
+  StringRef Callee = *CB.getCalledFunctionName();
   std::string Combined = (Callee + CallSiteLoc).str();
 
   // Replay decision, if it has one

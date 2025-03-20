@@ -159,7 +159,7 @@ static void remarkFlatAddrspaceAccess(OptimizationRemarkEmitter &ORE,
     R << "in ";
     identifyFunction(R, Caller);
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst)) {
-      R << ", '" << II->getCalledFunction()->getName() << "' call";
+      R << ", '" << *II->getCalledFunctionName() << "' call";
     } else {
       R << ", '" << Inst.getOpcodeName() << "' instruction";
     }
