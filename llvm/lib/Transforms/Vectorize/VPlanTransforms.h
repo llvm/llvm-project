@@ -179,8 +179,8 @@ struct VPlanTransforms {
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 
-  /// This function convert initial recipes to the abstract recipes and clamp \p
-  /// Range based on cost model for following optimizations and cost
+  /// This function converts initial recipes to the abstract recipes and clamps
+  /// \p Range based on cost model for following optimizations and cost
   /// estimations. The converted abstract recipes will lower to concrete
   /// recipies before codegen.
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,

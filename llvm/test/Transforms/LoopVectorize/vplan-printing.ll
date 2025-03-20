@@ -1207,72 +1207,39 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body.preheader>:
-; CHECK-NEXT: Successor(s): vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
+; CHECK:      vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, vp<%5>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<%5>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
 ; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN ir<%load0> = load vp<%4>
-; CHECK-NEXT:     EXTENDED-REDUCE vp<%5> = ir<%r.09> + reduce.add (ir<%load0> extended to i64)
+; CHECK-NEXT:     EXTENDED-REDUCE vp<%5> = ir<%rdx> + reduce.add (ir<%load0> extended to i64)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%7> = compute-reduction-result ir<%r.09>, vp<%5>
-; CHECK-NEXT:   EMIT vp<%8> = extract-from-end vp<%7>, ir<1>
-; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<%1>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%7>, ir<0>
-; CHECK-NEXT: Successor(s): ir-bb<for.body>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:   IR   %r.09 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
-; CHECK-NEXT:   IR   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.010
-; CHECK-NEXT:   IR   %load0 = load i32, ptr %arrayidx, align 4
-; CHECK-NEXT:   IR   %conv0 = zext i32 %load0 to i64
-; CHECK-NEXT:   IR   %add = add nsw i64 %r.09, %conv0
-; CHECK-NEXT:   IR   %inc = add nuw nsw i32 %i.010, 1
-; CHECK-NEXT:   IR   %exitcond = icmp eq i32 %inc, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%8> from middle.block)
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
-  %cmp8 = icmp sgt i32 %n, 0
-  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %r.09 = phi i64 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.010
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %iv
   %load0 = load i32, ptr %arrayidx, align 4
   %conv0 = zext i32 %load0 to i64
-  %add = add nsw i64 %r.09, %conv0
-  %inc = add nuw nsw i32 %i.010, 1
-  %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+  %rdx.next = add nsw i64 %rdx, %conv0
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
   ret i64 %r.0.lcssa
 }
 
@@ -1283,16 +1250,13 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body.preheader>:
-; CHECK-NEXT: Successor(s): vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
+; CHECK:      vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, vp<%6>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<%6>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
 ; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
@@ -1300,62 +1264,30 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
 ; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
 ; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
-; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%r.09> + reduce.add (mul nsw ir<%load0>, ir<%load1>)
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%rdx> + reduce.add (mul nsw ir<%load0>, ir<%load1>)
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%8> = compute-reduction-result ir<%r.09>, vp<%6>
-; CHECK-NEXT:   EMIT vp<%9> = extract-from-end vp<%8>, ir<1>
-; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<%1>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%8>, ir<0>
-; CHECK-NEXT: Successor(s): ir-bb<for.body>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:   IR   %r.09 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
-; CHECK-NEXT:   IR   %arrayidx = getelementptr inbounds i64, ptr %x, i32 %i.010
-; CHECK-NEXT:   IR   %load0 = load i64, ptr %arrayidx, align 4
-; CHECK-NEXT:   IR   %arrayidx1 = getelementptr inbounds i64, ptr %y, i32 %i.010
-; CHECK-NEXT:   IR   %load1 = load i64, ptr %arrayidx1, align 4
-; CHECK-NEXT:   IR   %mul = mul nsw i64 %load0, %load1
-; CHECK-NEXT:   IR   %add = add nsw i64 %r.09, %mul
-; CHECK-NEXT:   IR   %inc = add nuw nsw i32 %i.010, 1
-; CHECK-NEXT:   IR   %exitcond = icmp eq i32 %inc, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%9> from middle.block)
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
-  %cmp8 = icmp sgt i32 %n, 0
-  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %r.09 = phi i64 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i64, ptr %x, i32 %i.010
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i64, ptr %x, i32 %iv
   %load0 = load i64, ptr %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i64, ptr %y, i32 %i.010
+  %arrayidx1 = getelementptr inbounds i64, ptr %y, i32 %iv
   %load1 = load i64, ptr %arrayidx1, align 4
   %mul = mul nsw i64 %load0, %load1
-  %add = add nsw i64 %r.09, %mul
-  %inc = add nuw nsw i32 %i.010, 1
-  %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+  %rdx.next = add nsw i64 %rdx, %mul
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
   ret i64 %r.0.lcssa
 }
 
@@ -1366,16 +1298,13 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body.preheader>:
-; CHECK-NEXT: Successor(s): vector.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: vector.ph:
+; CHECK:      vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%r.09> = phi ir<0>, vp<%6>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<%6>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
 ; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
@@ -1383,68 +1312,33 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
 ; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
 ; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
-; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%r.09> + reduce.add (mul nsw (ir<%load0> extended to i64), (ir<%load1> extended to i64))
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%rdx> + reduce.add (mul nsw (ir<%load0> extended to i64), (ir<%load1> extended to i64))
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
-; CHECK-EMPTY:
-; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%8> = compute-reduction-result ir<%r.09>, vp<%6>
-; CHECK-NEXT:   EMIT vp<%9> = extract-from-end vp<%8>, ir<1>
-; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%1>
-; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
-; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
-; CHECK-EMPTY:
-; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<%1>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%8>, ir<0>
-; CHECK-NEXT: Successor(s): ir-bb<for.body>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:   IR   %r.09 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
-; CHECK-NEXT:   IR   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.010
-; CHECK-NEXT:   IR   %load0 = load i16, ptr %arrayidx, align 4
-; CHECK-NEXT:   IR   %arrayidx1 = getelementptr inbounds i16, ptr %y, i32 %i.010
-; CHECK-NEXT:   IR   %load1 = load i16, ptr %arrayidx1, align 4
-; CHECK-NEXT:   IR   %conv0 = sext i16 %load0 to i32
-; CHECK-NEXT:   IR   %conv1 = sext i16 %load1 to i32
-; CHECK-NEXT:   IR   %mul = mul nsw i32 %conv0, %conv1
-; CHECK-NEXT:   IR   %conv = sext i32 %mul to i64
-; CHECK-NEXT:   IR   %add = add nsw i64 %r.09, %conv
-; CHECK-NEXT:   IR   %inc = add nuw nsw i32 %i.010, 1
-; CHECK-NEXT:   IR   %exitcond = icmp eq i32 %inc, %n
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<for.cond.cleanup.loopexit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i64 [ %add, %for.body ] (extra operand: vp<%9> from middle.block)
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
 ;
 entry:
-  %cmp8 = icmp sgt i32 %n, 0
-  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %r.09 = phi i64 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.010
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i16, ptr %x, i32 %iv
   %load0 = load i16, ptr %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i16, ptr %y, i32 %i.010
+  %arrayidx1 = getelementptr inbounds i16, ptr %y, i32 %iv
   %load1 = load i16, ptr %arrayidx1, align 4
   %conv0 = sext i16 %load0 to i32
   %conv1 = sext i16 %load1 to i32
   %mul = mul nsw i32 %conv0, %conv1
   %conv = sext i32 %mul to i64
-  %add = add nsw i64 %r.09, %conv
-  %inc = add nuw nsw i32 %i.010, 1
-  %exitcond = icmp eq i32 %inc, %n
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+  %rdx.next = add nsw i64 %rdx, %conv
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  %r.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
   ret i64 %r.0.lcssa
 }
 

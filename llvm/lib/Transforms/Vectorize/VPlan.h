@@ -599,11 +599,6 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
-  struct GEPFlagsTy {
-    char IsInBounds : 1;
-    GEPFlagsTy(bool IsInBounds) : IsInBounds(IsInBounds) {}
-  };
-
   struct NonNegFlagsTy {
     char NonNeg : 1;
     NonNegFlagsTy(bool IsNonNeg) : NonNeg(IsNonNeg) {}
@@ -2303,9 +2298,9 @@ protected:
   /// Note that IsNonNeg flag and the debug location are for extend instruction.
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, bool IsNonNeg, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, NonNegFlagsTy(IsNonNeg), DL),
-        RdxDesc(R), IsOrdered(IsOrdered), IsConditional(CondOp) {
+                    bool IsOrdered, NonNegFlagsTy NonNeg, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, NonNeg, DL), RdxDesc(R),
+        IsOrdered(IsOrdered), IsConditional(CondOp) {
     if (CondOp)
       addOperand(CondOp);
   }
@@ -2314,9 +2309,9 @@ protected:
   /// Note that the NUW/NSW and DL are for mul instruction.
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, bool NUW, bool NSW, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, WrapFlagsTy(NUW, NSW), DL),
-        RdxDesc(R), IsOrdered(IsOrdered), IsConditional(CondOp) {
+                    bool IsOrdered, WrapFlagsTy WrapFlags, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, WrapFlags, DL), RdxDesc(R),
+        IsOrdered(IsOrdered), IsConditional(CondOp) {
     if (CondOp)
       addOperand(CondOp);
   }
@@ -2441,22 +2436,24 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
   VPExtendedReductionRecipe(VPExtendedReductionRecipe *ExtRed)
       : VPReductionRecipe(
             VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceDescriptor(),
-            {ExtRed->getChainOp(), ExtRed->getVecOp()}, ExtRed->getCondOp(),
-            ExtRed->isOrdered(), ExtRed->isNonNeg(), ExtRed->getDebugLoc()),
+            nullptr, {ExtRed->getChainOp(), ExtRed->getVecOp()},
+            ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc()),
         ExtOp(ExtRed->getExtOpcode()) {}
 
 public:
   VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
-      : VPReductionRecipe(VPDef::VPExtendedReductionSC,
-                          R->getRecurrenceDescriptor(),
-                          {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
-                          R->isOrdered(), Ext->isNonNeg(), Ext->getDebugLoc()),
+      : VPReductionRecipe(
+            VPDef::VPExtendedReductionSC, R->getRecurrenceDescriptor(),
+            {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
+            R->isOrdered(), NonNegFlagsTy(Ext->isNonNeg()), Ext->getDebugLoc()),
         ExtOp(Ext->getOpcode()) {}
 
   ~VPExtendedReductionRecipe() override = default;
 
   VPExtendedReductionRecipe *clone() override {
-    return new VPExtendedReductionRecipe(this);
+    auto *Copy = new VPExtendedReductionRecipe(this);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPExtendedReductionSC);
@@ -2504,11 +2501,9 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   VPMulAccumulateReductionRecipe(VPMulAccumulateReductionRecipe *MulAcc)
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC,
-            MulAcc->getRecurrenceDescriptor(),
+            MulAcc->getRecurrenceDescriptor(), nullptr,
             {MulAcc->getChainOp(), MulAcc->getVecOp0(), MulAcc->getVecOp1()},
-            MulAcc->getCondOp(), MulAcc->isOrdered(),
-            MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
-            MulAcc->getDebugLoc()),
+            MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc()),
         ExtOp(MulAcc->getExtOpcode()), IsNonNeg(MulAcc->isNonNeg()) {}
 
 public:
@@ -2518,8 +2513,9 @@ public:
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
             {R->getChainOp(), Ext0->getOperand(0), Ext1->getOperand(0)},
-            R->getCondOp(), R->isOrdered(), Mul->hasNoUnsignedWrap(),
-            Mul->hasNoSignedWrap(), R->getDebugLoc()),
+            R->getCondOp(), R->isOrdered(),
+            WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
+            R->getDebugLoc()),
         ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()) {
     assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
@@ -2530,8 +2526,9 @@ public:
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceDescriptor(),
             {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
-            R->getCondOp(), R->isOrdered(), Mul->hasNoUnsignedWrap(),
-            Mul->hasNoSignedWrap(), R->getDebugLoc()),
+            R->getCondOp(), R->isOrdered(),
+            WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
+            R->getDebugLoc()),
         ExtOp(Instruction::CastOps::CastOpsEnd) {
     assert(getRecurrenceDescriptor().getOpcode() == Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
@@ -2541,7 +2538,9 @@ public:
   ~VPMulAccumulateReductionRecipe() override = default;
 
   VPMulAccumulateReductionRecipe *clone() override {
-    return new VPMulAccumulateReductionRecipe(this);
+    auto *Copy = new VPMulAccumulateReductionRecipe(this);
+    Copy->transferFlags(*this);
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPMulAccumulateReductionSC);

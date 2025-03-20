@@ -2273,11 +2273,10 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-/// This function tries to match following pattern to create
+/// This function tries convert extended in-loop reductions to
 /// VPExtendedReductionRecipe and clamp the \p Range if it is beneficial and
-/// valid. The created VPExtendedReductionRecipe will lower to concrete recipes
-/// before execution.
-///   reduce(ext(...)).
+/// valid. The created VPExtendedReductionRecipe must be lower to concrete
+/// recipes before execution.
 static VPExtendedReductionRecipe *
 tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                                      VFRange &Range) {
@@ -2295,7 +2294,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
-              Opcode, isZExt, RedTy, SrcVecTy, RdxDesc.getFastMathFlags(),
+              Opcode, isZExt, RedTy, SrcVecTy, Red->getFastMathFlags(),
               CostKind);
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
@@ -2318,10 +2317,10 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   return nullptr;
 }
 
-/// This function try to match following pattern to create
+/// This function tries convert extended in-loop reductions to
 /// VPMulAccumulateReductionRecipe and clamp the \p Range if it is beneficial
-/// and valid. The created VPMulAccumulateReduction will lower to concrete
-/// before executeion.
+/// and valid. The created VPExtendedReductionRecipe must be lower to concrete
+/// recipes before execution. Patterns of MulAccumulateReduction:
 ///   reduce.add(mul(...)),
 ///   reduce.add(mul(ext(A), ext(B))),
 ///   reduce.add(ext(mul(ext(A), ext(B)))).
@@ -2431,7 +2430,7 @@ static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
 void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                                VFRange &Range) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
         tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
