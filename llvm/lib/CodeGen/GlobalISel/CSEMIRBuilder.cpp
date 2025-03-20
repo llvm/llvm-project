@@ -199,15 +199,12 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     }
     break;
   }
-  case TargetOpcode::G_ADD:
   case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_MUL:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_SHL:
-  case TargetOpcode::G_SUB:
   case TargetOpcode::G_XOR:
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SDIV:

@@ -635,8 +635,28 @@ public:
   /// Returns the value, if this constant is a scalar.
   APInt getScalarValue() const;
 
+  /// Returns the value, if this constant is a scalable vector.
+  APInt getSplatValue() const;
+
+  /// Returns the values, if this constant is a fixed vector.
+  ArrayRef<APInt> getAsArrayRef() const;
+
   static std::optional<GIConstant> getConstant(Register Const,
                                                const MachineRegisterInfo &MRI);
+
+  /// Returns a new constant where add(this, x) was applied.
+  GIConstant add(const GIConstant &) const;
+
+  /// Returns a new constant where sub(this, x) was applied.
+  GIConstant sub(const GIConstant &) const;
+
+  /// Returns a new constant where mul(this, x) was applied.
+  GIConstant mul(const GIConstant &) const;
+
+  bool isZero() const;
+  bool isOne() const;
+  bool isTwo() const;
+  bool isAllOnes() const;
 };
 
 /// An floating-point-like constant.

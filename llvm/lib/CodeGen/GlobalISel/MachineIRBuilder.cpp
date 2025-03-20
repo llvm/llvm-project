@@ -321,8 +321,12 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
   assert(EltTy.getScalarSizeInBits() == Val.getBitWidth() &&
          "creating constant with the wrong size");
 
-  assert(!Ty.isScalableVector() &&
-         "unexpected scalable vector in buildConstant");
+  if (Ty.isScalableVector()) {
+    auto Const = buildInstr(TargetOpcode::G_CONSTANT)
+                     .addDef(getMRI()->createGenericVirtualRegister(EltTy))
+                     .addCImm(&Val);
+    return buildSplatVector(Res, Const);
+  }
 
   if (Ty.isFixedVector()) {
     auto Const = buildInstr(TargetOpcode::G_CONSTANT)

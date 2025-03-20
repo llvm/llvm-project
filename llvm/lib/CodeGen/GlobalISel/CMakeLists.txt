@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMGlobalISel
   Localizer.cpp
   LostDebugLocObserver.cpp
   MachineIRBuilder.cpp
+  OptMIRBuilder.cpp
   RegBankSelect.cpp
   Utils.cpp
 
