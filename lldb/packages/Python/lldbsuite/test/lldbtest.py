@@ -722,17 +722,15 @@ class Base(unittest.TestCase):
 
     def getSourceDir(self):
         """Return the full path to the current test."""
-        return os.path.realpath(os.path.join(configuration.test_src_root, self.mydir))
+        return os.path.join(configuration.test_src_root, self.mydir)
 
     def getBuildDirBasename(self):
         return self.__class__.__module__ + "." + self.testMethodName
 
     def getBuildDir(self):
         """Return the full path to the current test."""
-        return os.path.realpath(
-            os.path.join(
-                configuration.test_build_dir, self.mydir, self.getBuildDirBasename()
-            )
+        return os.path.join(
+            configuration.test_build_dir, self.mydir, self.getBuildDirBasename()
         )
 
     def makeBuildDir(self):
