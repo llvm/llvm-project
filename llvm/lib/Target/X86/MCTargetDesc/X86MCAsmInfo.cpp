@@ -52,7 +52,7 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {X86MCExpr::VK_NTPOFF, "NTPOFF"},
     {X86MCExpr::VK_PCREL, "PCREL"},
     {X86MCExpr::VK_PLT, "PLT"},
-    {X86MCExpr::VK_X86_PLTOFF, "PLTOFF"},
+    {X86MCExpr::VK_PLTOFF, "PLTOFF"},
     {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
     {X86MCExpr::VK_SIZE, "SIZE"},
     {X86MCExpr::VK_TLSCALL, "tlscall"},

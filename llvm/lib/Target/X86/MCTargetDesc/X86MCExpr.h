@@ -50,7 +50,7 @@ public:
     VK_NTPOFF,
     VK_PCREL,
     VK_PLT,
-    VK_X86_PLTOFF,
+    VK_PLTOFF,
     VK_SIZE,
     VK_TLSCALL,
     VK_TLSDESC,

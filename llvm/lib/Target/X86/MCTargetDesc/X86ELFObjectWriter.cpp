@@ -233,7 +233,7 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
   case X86MCExpr::VK_GOTPCREL_NORELAX:
     checkIs32(Ctx, Loc, Type);
     return ELF::R_X86_64_GOTPCREL;
-  case X86MCExpr::VK_X86_PLTOFF:
+  case X86MCExpr::VK_PLTOFF:
     checkIs64(Ctx, Loc, Type);
     return ELF::R_X86_64_PLTOFF64;
   }
