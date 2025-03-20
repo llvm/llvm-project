@@ -446,7 +446,14 @@ Analysis::computeDfState(BinaryFunction &BF,
 
   PacRetAnalysis PRWIA(BF, AllocatorId, RegsToTrackVec);
   PRWIA.run();
+  LLVM_DEBUG({
+    dbgs() << " After detailed PacRetAnalysis:\n";
+    BF.dump();
+  });
+
   for (auto Report : Result.Diagnostics) {
+    LLVM_DEBUG(
+        { traceInst(BC, "Attaching clobbering info to", Report->Location); });
     Report->setOverwritingInstrs(PRWIA.getLastClobberingInsts(
         Report->Location, BF, Report->getAffectedRegisters()));
   }
