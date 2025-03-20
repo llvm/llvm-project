@@ -2496,7 +2496,7 @@ public:
         assert((isa<Instruction>(V) || isa<PoisonValue>(V)) &&
                "Expected instruction or poison value");
         if (isa<PoisonValue>(V)) {
-          for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx)
+          for (unsigned OpIdx : seq<unsigned>(NumOperands))
             OpsVec[OpIdx][Lane] = {
                 PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
                 false};
