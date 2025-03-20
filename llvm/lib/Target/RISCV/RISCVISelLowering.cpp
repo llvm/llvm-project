@@ -5555,15 +5555,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           SDValue Hi =
               getDeinterleaveShiftAndTrunc(DL, SubVT, V2, Factor, Index, DAG);
 
-          MVT NewVT = SubVT.getDoubleNumVectorElementsVT();
-          SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Lo, Hi);
-          for (unsigned F = Factor; F > 2; F >>= 1) {
-            SDValue Undef = DAG.getUNDEF(NewVT);
-            NewVT = NewVT.getDoubleNumVectorElementsVT();
-            Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, Concat, Undef);
-          }
-
-          return Concat;
+          SDValue Vec = DAG.getUNDEF(VT);
+          Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Vec, Lo,
+                            DAG.getVectorIdxConstant(0, DL));
+          return DAG.getNode(
+              ISD::INSERT_SUBVECTOR, DL, VT, Vec, Hi,
+              DAG.getVectorIdxConstant(SubVT.getVectorMinNumElements(), DL));
         }
       }
     }
