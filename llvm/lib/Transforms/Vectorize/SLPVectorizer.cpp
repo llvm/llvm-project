@@ -2489,42 +2489,39 @@ public:
       ArgSize = isa<IntrinsicInst>(MainOp) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
-      for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
-        OpsVec[OpIdx].resize(NumLanes);
-        for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-          assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
-                 "Expected instruction or poison value");
-          // Our tree has just 3 nodes: the root and two operands.
-          // It is therefore trivial to get the APO. We only need to check the
-          // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or
-          // RHS operand. The LHS operand of both add and sub is never attached
-          // to an inversese operation in the linearized form, therefore its APO
-          // is false. The RHS is true only if VL[Lane] is an inverse operation.
-
-          // Since operand reordering is performed on groups of commutative
-          // operations or alternating sequences (e.g., +, -), we can safely
-          // tell the inverse operations by checking commutativity.
-          if (isa<PoisonValue>(VL[Lane])) {
-            if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
-              if (OpIdx == 0) {
-                OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
-                continue;
-              }
-            } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
-              if (OpIdx == 0) {
-                OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
-                continue;
-              }
-            }
+      for (OperandDataVec &Ops : OpsVec)
+        Ops.resize(NumLanes);
+      for (unsigned Lane : seq<unsigned>(NumLanes)) {
+        Value *V = VL[Lane];
+        assert((isa<Instruction>(V) || isa<PoisonValue>(V)) &&
+               "Expected instruction or poison value");
+        if (isa<PoisonValue>(V)) {
+          for (unsigned OpIdx : seq<unsigned>(NumOperands))
             OpsVec[OpIdx][Lane] = {
                 PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
                 false};
-            continue;
+          if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
+            OpsVec[0][Lane] = {EI->getVectorOperand(), true, false};
+          } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
+            OpsVec[0][Lane] = {EV->getAggregateOperand(), true, false};
           }
-          bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
+          continue;
+        }
+        // Our tree has just 3 nodes: the root and two operands.
+        // It is therefore trivial to get the APO. We only need to check the
+        // opcode of V and whether the operand at OpIdx is the LHS or RHS
+        // operand. The LHS operand of both add and sub is never attached to an
+        // inversese operation in the linearized form, therefore its APO is
+        // false. The RHS is true only if V is an inverse operation.
+
+        // Since operand reordering is performed on groups of commutative
+        // operations or alternating sequences (e.g., +, -), we can safely tell
+        // the inverse operations by checking commutativity.
+        bool IsInverseOperation = !isCommutative(cast<Instruction>(V));
+        for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {cast<Instruction>(VL[Lane])->getOperand(OpIdx),
-                                 APO, false};
+          OpsVec[OpIdx][Lane] = {cast<Instruction>(V)->getOperand(OpIdx), APO,
+                                 false};
         }
       }
     }
