@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__type_traits/desugars_to.h>
 
 struct Tag {};
