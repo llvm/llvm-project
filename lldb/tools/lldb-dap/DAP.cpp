@@ -1174,13 +1174,13 @@ llvm::StringMap<bool> DAP::GetCapabilities() {
   capabilities["supportsDelayedStackTraceLoading"] = true;
   capabilities["supportsEvaluateForHovers"] = true;
   capabilities["supportsExceptionOptions"] = true;
+  capabilities["supportsGotoTargetsRequest"] = true;
   capabilities["supportsLogPoints"] = true;
   capabilities["supportsProgressReporting"] = true;
   capabilities["supportsSteppingGranularity"] = true;
   capabilities["supportsValueFormattingOptions"] = true;
 
   // Unsupported capabilities.
-  capabilities["supportsGotoTargetsRequest"] = false;
   capabilities["supportsLoadedSourcesRequest"] = false;
   capabilities["supportsRestartFrame"] = false;
   capabilities["supportsStepBack"] = false;
