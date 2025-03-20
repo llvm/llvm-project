@@ -15,7 +15,7 @@
 // COM: Check translation
 // CHECK: SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 {{.*}}
 
-// COM: Check that SPIRV flags are correctly extracted
+// COM: Check that SPIR-V flags are correctly extracted
 // CHECK: Driver Job Args: {{.*}} "-fno-rounding-math" "-O3" "-fno-autolink" "-fvisibility=hidden" "-fexceptions" "-fcolor-diagnostics" "-mcode-object-version=5"
 
 #include <cstdlib>
