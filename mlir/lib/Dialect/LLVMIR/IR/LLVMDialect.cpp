@@ -3713,6 +3713,20 @@ LogicalResult LinkerOptionsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ModuleFlagsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ModuleFlagsOp::verify() {
+  if (Operation *parentOp = (*this)->getParentOp();
+      parentOp && !satisfiesLLVMModule(parentOp))
+    return emitOpError("must appear at the module level");
+  for (Attribute flag : getFlags())
+    if (!isa<ModuleFlagAttr>(flag))
+      return emitOpError("expected a module flag attribute");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 

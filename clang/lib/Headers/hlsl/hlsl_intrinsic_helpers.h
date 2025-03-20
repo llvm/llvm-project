@@ -58,9 +58,7 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #endif
 }
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-fmod_impl(T X, T Y) {
+template <typename T> constexpr T fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);
 #else

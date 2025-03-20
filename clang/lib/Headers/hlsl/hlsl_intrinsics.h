@@ -129,19 +129,33 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 /// Return the floating-point remainder of the x parameter divided by the y
 /// parameter.
 
+template <typename T>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half fmod(half X, half Y) { return __detail::fmod_impl(X, Y); }
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> fmod(T X, T Y) {
+  return __detail::fmod_impl(X, Y);
+}
 
-const inline float fmod(float X, float Y) { return __detail::fmod_impl(X, Y); }
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+fmod(T X, T Y) {
+  return __detail::fmod_impl(X, Y);
+}
 
 template <int N>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline vector<half, N> fmod(vector<half, N> X, vector<half, N> Y) {
+const inline __detail::HLSL_FIXED_VECTOR<half, N> fmod(
+    __detail::HLSL_FIXED_VECTOR<half, N> X,
+    __detail::HLSL_FIXED_VECTOR<half, N> Y) {
   return __detail::fmod_vec_impl(X, Y);
 }
 
 template <int N>
-const inline vector<float, N> fmod(vector<float, N> X, vector<float, N> Y) {
+const inline __detail::HLSL_FIXED_VECTOR<float, N>
+fmod(__detail::HLSL_FIXED_VECTOR<float, N> X,
+     __detail::HLSL_FIXED_VECTOR<float, N> Y) {
   return __detail::fmod_vec_impl(X, Y);
 }
 

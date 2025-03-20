@@ -117,8 +117,8 @@ add_entrypoint_object(
     sscanf.h
   DEPENDS
     libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main
+    libc.src.stdio.scanf_core.string_reader
 )
 
 add_entrypoint_object(
@@ -129,8 +129,8 @@ add_entrypoint_object(
     vsscanf.h
   DEPENDS
     libc.src.__support.arg_list
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main
+    libc.src.stdio.scanf_core.string_reader
 )
 
 add_entrypoint_object(

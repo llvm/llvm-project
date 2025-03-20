@@ -225,9 +225,6 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
   int VLMul = 1;
   int NF = 1;
 
-  let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
-  let CopyCost = !if(IsVRegClass, !mul(VLMul, NF), 1);
-
   let TSFlags{0} = IsVRegClass;
   let TSFlags{2-1} = !logtwo(VLMul);
   let TSFlags{5-3} = !sub(NF, 1);
@@ -713,12 +710,18 @@ foreach m = [1, 2, 4] in {
   }
 }
 
-class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
+class VReg<list<ValueType> regTypes, dag regList, int Vlmul, int nf = 1>
     : RISCVRegisterClass<regTypes,
                          64, // The maximum supported ELEN is 64.
                          regList> {
   let IsVRegClass = 1;
   let VLMul = Vlmul;
+  let NF = nf;
+
+  let Size = !mul(VLMul, NF, 64);
+  let CopyCost = !mul(VLMul, NF);
+  // Prefer to allocate high LMUL registers first.
+  let AllocationPriority = !if(!gt(Vlmul, 1), Vlmul, 0);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
@@ -799,17 +802,15 @@ class VTupRegList<int LMUL, int NF> {
 
 foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
-    let NF = nf in {
-      def "VRN" # nf # "M" # m # "NoV0"
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
-               m>;
-      def "VRN" # nf # "M" # m
-        : VReg<VTupRegList<m, nf>.L,
-               (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
-                    !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
-               m>;
-    }
+    def "VRN" # nf # "M" # m # "NoV0"
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
+             m, nf>;
+    def "VRN" # nf # "M" # m
+      : VReg<VTupRegList<m, nf>.L,
+             (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0"),
+                  !cast<RegisterTuples>("VN" # nf # "M" # m # "V0")),
+             m, nf>;
   }
 }
 

@@ -86,6 +86,10 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
+* Enabled the
+  [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
+  for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -110,16 +114,27 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcibm` (Bit Manipulation)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcibi` (Branch Immediate)
+  extension.
 * Adds experimental assembler and code generation support for the Qualcomm
   'Xqccmp' extension, which is a frame-pointer convention compatible version of
   Zcmp.
 * Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
+  extension.
+* Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
+  extension.
+* Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
+  extension.
+* Adds experimental assembler support for Zvqdotq.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -165,7 +180,8 @@ Changes to the LLVM tools
 
 * llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
 * llvm-strip now supports continuing to process files on encountering an error.
-* In llvm-objcopy's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
+* In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
+  ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 
 Changes to LLDB
 ---------------------------------

@@ -9,15 +9,15 @@
 declare void @bar()
 
 ;.
-; LOWERING: @an_entrypoint_ctx_root = global { ptr, ptr, ptr, i8 } zeroinitializer
-; LOWERING: @another_entrypoint_no_callees_ctx_root = global { ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @__llvm_ctx_profile_callsite = external hidden thread_local global ptr
 ; LOWERING: @__llvm_ctx_profile_expected_callee = external hidden thread_local global ptr
-; LOWERING: @[[GLOB0:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB1:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB2:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB3:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB4:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB0:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB1:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB2:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB3:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB4:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB5:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB6:[0-9]+]] = internal global { ptr, ptr, ptr, i8 } zeroinitializer
 ;.
 define void @foo(i32 %a, ptr %fct) {
 ; INSTRUMENT-LABEL: define void @foo(
@@ -97,7 +97,7 @@ define void @an_entrypoint(i32 %a) {
 ;
 ; LOWERING-LABEL: define void @an_entrypoint(
 ; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META1:![0-9]+]] {
-; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_start_context(ptr @an_entrypoint_ctx_root, i64 4909520559318251808, i32 2, i32 1)
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_start_context(ptr @[[GLOB1]], i64 4909520559318251808, i32 2, i32 1)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 1
 ; LOWERING-NEXT:    [[TMP4:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__llvm_ctx_profile_expected_callee)
@@ -117,10 +117,10 @@ define void @an_entrypoint(i32 %a) {
 ; LOWERING-NEXT:    [[TMP13:%.*]] = getelementptr { { i64, ptr, i32, i32 }, [2 x i64], [1 x ptr] }, ptr [[TMP1]], i32 0, i32 2, i32 0
 ; LOWERING-NEXT:    store volatile ptr [[TMP13]], ptr [[TMP7]], align 8
 ; LOWERING-NEXT:    call void @foo(i32 1, ptr null)
-; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @an_entrypoint_ctx_root)
+; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @[[GLOB1]])
 ; LOWERING-NEXT:    ret void
 ; LOWERING:       no:
-; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @an_entrypoint_ctx_root)
+; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @[[GLOB1]])
 ; LOWERING-NEXT:    ret void
 ;
   %t = icmp eq i32 %a, 0
@@ -147,7 +147,7 @@ define void @another_entrypoint_no_callees(i32 %a) {
 ;
 ; LOWERING-LABEL: define void @another_entrypoint_no_callees(
 ; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META2:![0-9]+]] {
-; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_start_context(ptr @another_entrypoint_no_callees_ctx_root, i64 -6371873725078000974, i32 2, i32 0)
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_start_context(ptr @[[GLOB2]], i64 -6371873725078000974, i32 2, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
 ; LOWERING-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -158,10 +158,10 @@ define void @another_entrypoint_no_callees(i32 %a) {
 ; LOWERING-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 4
 ; LOWERING-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 1
 ; LOWERING-NEXT:    store i64 [[TMP7]], ptr [[TMP5]], align 4
-; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @another_entrypoint_no_callees_ctx_root)
+; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @[[GLOB2]])
 ; LOWERING-NEXT:    ret void
 ; LOWERING:       no:
-; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @another_entrypoint_no_callees_ctx_root)
+; LOWERING-NEXT:    call void @__llvm_ctx_profile_release_context(ptr @[[GLOB2]])
 ; LOWERING-NEXT:    ret void
 ;
   %t = icmp eq i32 %a, 0
@@ -181,7 +181,7 @@ define void @simple(i32 %a) {
 ;
 ; LOWERING-LABEL: define void @simple(
 ; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META3:![0-9]+]] {
-; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB1]], ptr @simple, i64 -3006003237940970099, i32 1, i32 0)
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB3]], ptr @simple, i64 -3006003237940970099, i32 1, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
 ; LOWERING-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -205,7 +205,7 @@ define i32 @no_callsites(i32 %a) {
 ;
 ; LOWERING-LABEL: define i32 @no_callsites(
 ; LOWERING-SAME: i32 [[A:%.*]]) !guid [[META4:![0-9]+]] {
-; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB2]], ptr @no_callsites, i64 5679753335911435902, i32 2, i32 0)
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB4]], ptr @no_callsites, i64 5679753335911435902, i32 2, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
 ; LOWERING-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -237,7 +237,7 @@ define void @no_counters() {
 ;
 ; LOWERING-LABEL: define void @no_counters(
 ; LOWERING-SAME: ) !guid [[META5:![0-9]+]] {
-; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB3]], ptr @no_counters, i64 5458232184388660970, i32 1, i32 1)
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB5]], ptr @no_counters, i64 5458232184388660970, i32 1, i32 1)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 1
 ; LOWERING-NEXT:    [[TMP4:%.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__llvm_ctx_profile_expected_callee)
@@ -265,7 +265,7 @@ define void @inlineasm() {
 ;
 ; LOWERING-LABEL: define void @inlineasm(
 ; LOWERING-SAME: ) !guid [[META6:![0-9]+]] {
-; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB4]], ptr @inlineasm, i64 -3771893999295659109, i32 1, i32 0)
+; LOWERING-NEXT:    [[TMP1:%.*]] = call ptr @__llvm_ctx_profile_get_context(ptr @[[GLOB6]], ptr @inlineasm, i64 -3771893999295659109, i32 1, i32 0)
 ; LOWERING-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; LOWERING-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], -2
 ; LOWERING-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr

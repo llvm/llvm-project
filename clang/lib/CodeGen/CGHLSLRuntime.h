@@ -125,15 +125,6 @@ public:
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
 
-  struct BufferResBinding {
-    // The ID like 2 in register(b2, space1).
-    std::optional<unsigned> Reg;
-    // The Space like 1 is register(b2, space1).
-    // Default value is 0.
-    unsigned Space;
-    BufferResBinding(HLSLResourceBindingAttr *Attr);
-  };
-
 protected:
   CodeGenModule &CGM;
 
@@ -148,7 +139,6 @@ public:
   convertHLSLSpecificType(const Type *T,
                           SmallVector<int32_t> *Packoffsets = nullptr);
 
-  void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();
 
   void addBuffer(const HLSLBufferDecl *D);
@@ -169,11 +159,6 @@ public:
   void emitInitListOpaqueValues(CodeGenFunction &CGF, InitListExpr *E);
 
 private:
-  void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                   llvm::hlsl::ResourceClass RC,
-                                   llvm::hlsl::ResourceKind RK, bool IsROV,
-                                   llvm::hlsl::ElementType ET,
-                                   BufferResBinding &Binding);
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
   llvm::Triple::ArchType getArch();

@@ -191,6 +191,115 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CIR ConstArrayAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
+                       Type type, Attribute elts, int trailingZerosNum) {
+
+  if (!(mlir::isa<ArrayAttr>(elts) || mlir::isa<StringAttr>(elts)))
+    return emitError() << "constant array expects ArrayAttr or StringAttr";
+
+  if (auto strAttr = mlir::dyn_cast<StringAttr>(elts)) {
+    const auto arrayTy = mlir::cast<ArrayType>(type);
+    const auto intTy = mlir::dyn_cast<IntType>(arrayTy.getEltType());
+
+    // TODO: add CIR type for char.
+    if (!intTy || intTy.getWidth() != 8) {
+      emitError() << "constant array element for string literals expects "
+                     "!cir.int<u, 8> element type";
+      return failure();
+    }
+    return success();
+  }
+
+  assert(mlir::isa<ArrayAttr>(elts));
+  const auto arrayAttr = mlir::cast<mlir::ArrayAttr>(elts);
+  const auto arrayTy = mlir::cast<ArrayType>(type);
+
+  // Make sure both number of elements and subelement types match type.
+  if (arrayTy.getSize() != arrayAttr.size() + trailingZerosNum)
+    return emitError() << "constant array size should match type size";
+  return success();
+}
+
+Attribute ConstArrayAttr::parse(AsmParser &parser, Type type) {
+  mlir::FailureOr<Type> resultTy;
+  mlir::FailureOr<Attribute> resultVal;
+
+  // Parse literal '<'
+  if (parser.parseLess())
+    return {};
+
+  // Parse variable 'value'
+  resultVal = FieldParser<Attribute>::parse(parser);
+  if (failed(resultVal)) {
+    parser.emitError(
+        parser.getCurrentLocation(),
+        "failed to parse ConstArrayAttr parameter 'value' which is "
+        "to be a `Attribute`");
+    return {};
+  }
+
+  // ArrayAttrrs have per-element type, not the type of the array...
+  if (mlir::isa<ArrayAttr>(*resultVal)) {
+    // Array has implicit type: infer from const array type.
+    if (parser.parseOptionalColon().failed()) {
+      resultTy = type;
+    } else { // Array has explicit type: parse it.
+      resultTy = FieldParser<Type>::parse(parser);
+      if (failed(resultTy)) {
+        parser.emitError(
+            parser.getCurrentLocation(),
+            "failed to parse ConstArrayAttr parameter 'type' which is "
+            "to be a `::mlir::Type`");
+        return {};
+      }
+    }
+  } else {
+    auto ta = mlir::cast<TypedAttr>(*resultVal);
+    resultTy = ta.getType();
+    if (mlir::isa<mlir::NoneType>(*resultTy)) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "expected type declaration for string literal");
+      return {};
+    }
+  }
+
+  unsigned zeros = 0;
+  if (parser.parseOptionalComma().succeeded()) {
+    if (parser.parseOptionalKeyword("trailing_zeros").succeeded()) {
+      unsigned typeSize =
+          mlir::cast<cir::ArrayType>(resultTy.value()).getSize();
+      mlir::Attribute elts = resultVal.value();
+      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
+        zeros = typeSize - str.size();
+      else
+        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+    } else {
+      return {};
+    }
+  }
+
+  // Parse literal '>'
+  if (parser.parseGreater())
+    return {};
+
+  return parser.getChecked<ConstArrayAttr>(
+      parser.getCurrentLocation(), parser.getContext(), resultTy.value(),
+      resultVal.value(), zeros);
+}
+
+void ConstArrayAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  printer.printStrippedAttrOrType(getElts());
+  if (getTrailingZerosNum())
+    printer << ", trailing_zeros";
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 

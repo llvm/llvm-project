@@ -232,7 +232,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO);
+           bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -252,6 +252,7 @@ private:
 private:
   friend class Program;
   friend class ByteCodeEmitter;
+  friend class Context;
 
   /// Program reference.
   Program &P;

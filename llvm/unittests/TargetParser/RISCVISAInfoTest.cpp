@@ -653,12 +653,18 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "'xwchc' and 'zcb' extensions are incompatible");
   }
 
+  for (StringRef Input : {"rv32i_zcf_zclsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zclsd' and 'zcf' extensions are incompatible");
+  }
+
   for (StringRef Input :
        {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
         "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
         "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p4",
-        "rv64i_xqcilo0p2", "rv64i_xqcili0p2", "rv64i_xqcilia0p2",
-        "rv64i_xqcibm0p4"}) {
+        "rv64i_xqcilo0p2", "rv64i_xqcilia0p2", "rv64i_xqcibm0p4",
+        "rv64i_xqcibi0p2", "rv64i_xqcili0p2", "rv64i_xqcisim0p2",
+        "rv64i_xqcilb0p2"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -969,6 +975,7 @@ R"(All available -march extensions for RISC-V
     zihintntl            1.0
     zihintpause          2.0
     zihpm                2.0
+    zilsd                1.0
     zimop                1.0
     zmmul                1.0
     za128rs              1.0
@@ -990,6 +997,7 @@ R"(All available -march extensions for RISC-V
     zcd                  1.0
     zce                  1.0
     zcf                  1.0
+    zclsd                1.0
     zcmop                1.0
     zcmp                 1.0
     zcmt                 1.0
@@ -1128,6 +1136,7 @@ Experimental extensions
     zalasr               0.1
     zvbc32e              0.7
     zvkgs                0.7
+    zvqdotq              0.0
     sdext                1.0
     sdtrig               1.0
     smctr                1.0
@@ -1136,16 +1145,19 @@ Experimental extensions
     xqccmp               0.1
     xqcia                0.4
     xqciac               0.3
+    xqcibi               0.2
     xqcibm               0.4
     xqcicli              0.2
     xqcicm               0.2
     xqcics               0.2
     xqcicsr              0.2
     xqciint              0.4
+    xqcilb               0.2
     xqcili               0.2
     xqcilia              0.2
     xqcilo               0.2
     xqcilsm              0.2
+    xqcisim              0.2
     xqcisls              0.2
     xrivosvisni          0.1
     xrivosvizip          0.1

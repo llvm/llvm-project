@@ -453,6 +453,19 @@ def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
   ];
 }
 
+def CUFComputeSharedMemoryOffsetsAndSize
+    : Pass<"cuf-compute-shared-memory", "mlir::ModuleOp"> {
+  let summary = "Create the shared memory global variable and set offsets";
+
+  let description = [{
+    Compute the size and alignment of the shared memory global and materialize
+    it. Compute the offset of each cuf.shared_memory operation according to
+    the global and set it.
+  }];
+
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
 def SetRuntimeCallAttributes
     : Pass<"set-runtime-call-attrs", "mlir::func::FuncOp"> {
   let summary = "Set Fortran runtime fir.call attributes targeting LLVM IR";
