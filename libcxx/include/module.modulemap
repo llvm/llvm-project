@@ -2286,9 +2286,8 @@ module std [system] {
     export *
   }
   module assertion_handler {
-    // This header is generated via CMake. It must be textual because it may be vendor-provided,
-    // which means that we can't know what to re-export (if anything) in advance.
-    textual header "__assertion_handler"
+    header "__assertion_handler" // generated via CMake
+    export *
   }
 
   module undef_macros {
