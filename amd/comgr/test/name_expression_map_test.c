@@ -48,6 +48,9 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
   size_t Count;
+  const char *CompileOptions[] = {"-nogpulib", "-nogpuinc"};
+  size_t CompileOptionsCount =
+    sizeof(CompileOptions) / sizeof(CompileOptions[0]);
 
   SizeSource = setBuf(TEST_OBJ_DIR "/name-expression.hip", &BufSource);
 
@@ -71,6 +74,9 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_action_info_set_isa_name(DataAction,
                                               "amdgcn-amd-amdhsa--gfx900");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
+  Status = amd_comgr_action_info_set_option_list(DataAction, CompileOptions,
+                                                 CompileOptionsCount);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
 
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
