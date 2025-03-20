@@ -1222,8 +1222,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
-    AttributeList Attr =
-        Intrinsic::getAttributes(CI.getContext(), (Intrinsic::ID)IntrID);
+    AttributeSet Attr =
+        Intrinsic::getFnAttributes(CI.getContext(), (Intrinsic::ID)IntrID);
     MemoryEffects ME = Attr.getMemoryEffects();
     if (ME.doesNotAccessMemory())
       return false;
