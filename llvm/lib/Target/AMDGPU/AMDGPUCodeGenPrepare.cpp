@@ -1589,6 +1589,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I, const TargetLowering *TLI,
 
   unsigned OrigBit = OldType->getScalarSizeInBits();
   unsigned MaxBitsNeeded = OrigBit;
+
   switch (Opc) {
   case Instruction::Add:
     MaxBitsNeeded = KnownBits::add(computeKnownBits(I->getOperand(0), DL),
