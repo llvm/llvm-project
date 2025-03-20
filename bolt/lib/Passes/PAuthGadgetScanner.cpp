@@ -517,12 +517,12 @@ void GadgetReport::generateReport(raw_ostream &OS,
      << " instructions that write to the affected registers after any "
         "authentication are:\n";
   // Sort by address to ensure output is deterministic.
-  std::vector<MCInstReference> ORRI = OverwritingInstrs;
-  llvm::sort(ORRI, [](const MCInstReference &A, const MCInstReference &B) {
+  std::vector<MCInstReference> OI = OverwritingInstrs;
+  llvm::sort(OI, [](const MCInstReference &A, const MCInstReference &B) {
     return A.getAddress() < B.getAddress();
   });
-  for (unsigned I = 0; I < ORRI.size(); ++I) {
-    MCInstReference InstRef = ORRI[I];
+  for (unsigned I = 0; I < OI.size(); ++I) {
+    MCInstReference InstRef = OI[I];
     OS << "  " << (I + 1) << ". ";
     BC.printInstruction(OS, InstRef, InstRef.getAddress(), BF);
   };
