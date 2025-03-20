@@ -61,16 +61,16 @@ add_clang_library(clangCodeGen
   CGAtomic.cpp
   CGBlocks.cpp
   CGBuiltin.cpp
-  BuiltinTargets/AArch64.cpp
-  BuiltinTargets/AMDGPU.cpp
-  BuiltinTargets/Hexagon.cpp
-  BuiltinTargets/NVPTX.cpp
-  BuiltinTargets/PPC.cpp
-  BuiltinTargets/RISCV.cpp
-  BuiltinTargets/SPIR.cpp
-  BuiltinTargets/SystemZ.cpp
-  BuiltinTargets/WebAssembly.cpp
-  BuiltinTargets/X86.cpp
+  TargetBuiltins/AArch64.cpp
+  TargetBuiltins/AMDGPU.cpp
+  TargetBuiltins/Hexagon.cpp
+  TargetBuiltins/NVPTX.cpp
+  TargetBuiltins/PPC.cpp
+  TargetBuiltins/RISCV.cpp
+  TargetBuiltins/SPIR.cpp
+  TargetBuiltins/SystemZ.cpp
+  TargetBuiltins/WebAssembly.cpp
+  TargetBuiltins/X86.cpp
   CGCUDANV.cpp
   CGCUDARuntime.cpp
   CGCXX.cpp
