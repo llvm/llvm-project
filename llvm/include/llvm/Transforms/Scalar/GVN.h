@@ -172,6 +172,10 @@ public:
     // Value number to PHINode mapping. Used for phi-translate in scalarpre.
     DenseMap<uint32_t, PHINode *> NumberingPhi;
 
+    // Value number to BasicBlock mapping. Used for phi-translate across
+    // MemoryPhis.
+    DenseMap<uint32_t, BasicBlock *> NumberingBB;
+
     // Cache for phi-translate in scalarpre.
     using PhiTranslateMap =
         DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
@@ -179,6 +183,7 @@ public:
 
     AAResults *AA = nullptr;
     MemoryDependenceResults *MD = nullptr;
+    MemorySSA *MSSA = nullptr;
     DominatorTree *DT = nullptr;
 
     uint32_t nextValueNumber = 1;
@@ -189,12 +194,14 @@ public:
     Expression createExtractvalueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
+    uint32_t lookupOrAddLoadStore(Instruction *I);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                               uint32_t Num, GVNPass &Gvn);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
                           const BasicBlock *PhiBlock, GVNPass &Gvn);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &exp);
     bool areAllValsInBB(uint32_t num, const BasicBlock *BB, GVNPass &Gvn);
+    void addMemoryStateToExp(Instruction *I, Expression &E);
 
   public:
     ValueTable();
@@ -217,6 +224,7 @@ public:
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
     void setMemDep(MemoryDependenceResults *M) { MD = M; }
+    void setMemorySSA(MemorySSA *M) { MSSA = M; }
     void setDomTree(DominatorTree *D) { DT = D; }
     uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
     void verifyRemoved(const Value *) const;
