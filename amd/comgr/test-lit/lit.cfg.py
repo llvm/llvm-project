@@ -17,4 +17,4 @@ if not config.comgr_disable_spirv:
 
 # By default, disable the cache for the tests.
 # Test for the cache must explicitly enable this variable.
-config.environment['AMD_COMGR_CACHE_DIR'] = ""
+config.environment['AMD_COMGR_CACHE'] = "0"

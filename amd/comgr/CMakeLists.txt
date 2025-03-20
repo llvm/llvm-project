@@ -74,6 +74,7 @@ set(SOURCES
   src/comgr-cache.cpp
   src/comgr-cache-command.cpp
   src/comgr-cache-bundler-command.cpp
+  src/comgr-clang-command.cpp
   src/comgr-compiler.cpp
   src/comgr.cpp
   src/comgr-device-libs.cpp

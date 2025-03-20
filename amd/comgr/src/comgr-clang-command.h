@@ -33,52 +33,53 @@
  *
  ******************************************************************************/
 
-#ifndef COMGR_CACHE_COMMAND_H
-#define COMGR_CACHE_COMMAND_H
+#ifndef COMGR_CLANG_COMMAND_H
+#define COMGR_CLANG_COMMAND_H
 
-#include "amd_comgr.h"
+#include "comgr-cache-command.h"
 
-#include <clang/Driver/Action.h>
-#include <llvm/Support/Error.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/SHA256.h>
+#include <llvm/Support/VirtualFileSystem.h>
 
-namespace llvm {
-class raw_ostream;
-}
+namespace clang {
+class DiagnosticOptions;
+namespace driver {
+class Command;
+} // namespace driver
+} // namespace clang
 
 namespace COMGR {
-class CachedCommandAdaptor {
+class ClangCommand final : public CachedCommandAdaptor {
 public:
-  using ActionClass =
-      std::underlying_type_t<clang::driver::Action::ActionClass>;
-  using HashAlgorithm = llvm::SHA256;
-  using Identifier = llvm::SmallString<64>;
+  using ExecuteFnTy = std::function<amd_comgr_status_t(
+      clang::driver::Command &, llvm::raw_ostream &, clang::DiagnosticOptions &,
+      llvm::vfs::FileSystem &)>;
 
-  llvm::Expected<Identifier> getIdentifier() const;
+private:
+  clang::driver::Command &Command;
+  clang::DiagnosticOptions &DiagOpts;
+  llvm::vfs::FileSystem &VFS;
+  ExecuteFnTy ExecuteImpl;
 
-  virtual bool canCache() const = 0;
-  virtual llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) = 0;
-  virtual llvm::Expected<llvm::StringRef> readExecuteOutput() = 0;
-  virtual amd_comgr_status_t execute(llvm::raw_ostream &LogS) = 0;
+  // To avoid copies, store the output of execute, such that readExecuteOutput
+  // can return a reference.
+  std::unique_ptr<llvm::MemoryBuffer> Output;
 
-  virtual ~CachedCommandAdaptor() = default;
+public:
+  ClangCommand(clang::driver::Command &Command,
+               clang::DiagnosticOptions &DiagOpts, llvm::vfs::FileSystem &VFS,
+               ExecuteFnTy &&ExecuteImpl);
 
-  // helper to work around the comgr-xxxxx string appearing in files
-  static void addFileContents(HashAlgorithm &H, llvm::StringRef Buf);
-  static void addString(HashAlgorithm &H, llvm::StringRef S);
-  static std::optional<size_t> searchComgrTmpModel(llvm::StringRef S);
+  bool canCache() const override;
+  llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) override;
+  llvm::Expected<llvm::StringRef> readExecuteOutput() override;
+  amd_comgr_status_t execute(llvm::raw_ostream &LogS) override;
 
-  // helper since several command types just write to a single output file
-  static llvm::Error writeUniqueExecuteOutput(llvm::StringRef OutputFilename,
-                                              llvm::StringRef CachedBuffer);
-  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  readUniqueExecuteOutput(llvm::StringRef OutputFilename);
+  ~ClangCommand() override = default;
 
 protected:
-  virtual ActionClass getClass() const = 0;
-  virtual void addOptionsIdentifier(HashAlgorithm &) const = 0;
-  virtual llvm::Error addInputIdentifier(HashAlgorithm &) const = 0;
+  ActionClass getClass() const override;
+  void addOptionsIdentifier(HashAlgorithm &) const override;
+  llvm::Error addInputIdentifier(HashAlgorithm &) const override;
 };
 } // namespace COMGR
 

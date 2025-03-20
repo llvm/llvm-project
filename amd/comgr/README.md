@@ -132,13 +132,13 @@ If an issue arises during cache initialization, the execution will proceed with
 the cache turned off.
 
 By default, the cache is turned off, set the environment variable
-`AMD_COMGR_CACHE=1` to enable it. This may change in a future release.
+`AMD_COMGR_CACHE=1` to enable it.
 
 * `AMD_COMGR_CACHE`: When unset or set to 0, the cache is turned off.
-* `AMD_COMGR_CACHE_DIR`: When set to "", the cache is turned off. If assigned a
-  value, that value is used as the path for cache storage. By default, it is
-  directed to "$XDG_CACHE_HOME/comgr_cache" (which defaults to
-  "$USER/.cache/comgr_cache" on Linux, and "%LOCALAPPDATA%\cache\comgr_cache"
+* `AMD_COMGR_CACHE_DIR`: If assigned a non-empty value, that value is used as
+  the path for cache storage. If the variable is unset or set to an empty string `""`,
+  it is directed to "$XDG_CACHE_HOME/comgr" (which defaults to
+  "$USER/.cache/comgr" on Linux, and "%LOCALAPPDATA%\cache\comgr"
   on Microsoft Windows).
 * `AMD_COMGR_CACHE_POLICY`: If assigned a value, the string is interpreted and
   applied to the cache pruning policy. The cache is pruned only upon program

@@ -287,8 +287,8 @@ StringRef getCacheDirectory() {
   if (CacheDisabled)
     return "";
 
-  static const char *EnvCacheDirectory = std::getenv("AMD_COMGR_CACHE_DIR");
-  if (EnvCacheDirectory)
+  StringRef EnvCacheDirectory = std::getenv("AMD_COMGR_CACHE_DIR");
+  if (!EnvCacheDirectory.empty())
     return EnvCacheDirectory;
 
   // mark Result as static to keep it cached across calls
@@ -297,7 +297,7 @@ StringRef getCacheDirectory() {
     return Result;
 
   if (sys::path::cache_directory(Result)) {
-    sys::path::append(Result, Twine("comgr_cache"));
+    sys::path::append(Result, "comgr");
     return Result;
   }
 
