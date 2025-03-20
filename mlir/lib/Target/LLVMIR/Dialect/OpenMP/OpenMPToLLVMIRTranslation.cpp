@@ -5324,32 +5324,9 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
                     dyn_cast<omp::BlockArgOpenMPOpInterface>(oper))
               forwardArgs(moduleTranslation, blockArgsIface);
             else {
-              // For non-BlockArgOpenMPOpInterface ops, we also want to map
-              // their entry block arguments to their operands, if any. For the
-              // current support in the OpenMP dialect, the table below lists
-              // all ops that have arguments (SSA operands and/or attributes)
-              // and not target-related. Of all these ops, we need to only
-              // process `omp.atomic.update` since it is the only op that has
-              // SSA operands & an attached region. Therefore, the region's
-              // entry block arguments must be mapped to the op's operands in
-              // case they are referenced inside the region.
-              //
-              // clang-format off
-              // =============================================================================
-              // | op                | operands? | region(s)? | parent is func? | processed? |
-              // =============================================================================
-              // | atomic.read       | yes       | no         | yes             | no         |
-              // | atomic.write      | yes       | no         | yes             | no         |
-              // | atomic.update     | yes       | yes        | yes             | yes        |
-              // | critical          | no        | no         | yes             | no         |
-              // | declare_mapper    | no        | yes        | no              | no         |
-              // | declare_reduction | no        | yes        | no              | no         |
-              // | flush             | yes       | no         | yes             | no         |
-              // | private           | no        | yes        | yes             | no         |
-              // | threadprivate     | yes       | no         | yes             | no         |
-              // | yield             | yes       | no         | yes             | no         |
-              // =============================================================================
-              // clang-format on
+              // Here we map entry block arguments of
+              // non-BlockArgOpenMPOpInterface ops if they can be encountered
+              // inside of a function and they define any of these arguments.
               if (isa<mlir::omp::AtomicUpdateOp>(oper))
                 for (auto [operand, arg] :
                      llvm::zip_equal(oper->getOperands(),
