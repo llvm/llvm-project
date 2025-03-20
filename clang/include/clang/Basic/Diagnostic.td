@@ -180,6 +180,23 @@ multiclass CXXCompat<
         DefaultIgnore;
 }
 
+// These generate pairs of C++ compatibility warnings of the form:
+//
+//    - compat_cxx<std>_<name>
+//    - compat_pre_cxx<std>_<name>
+//
+// The 'compat_cxx...' warning is intended to be issued in C++<std> mode,
+// and the 'compat_pre_cxx...' warning in C++ modes before C++<std>.
+//
+// Example:
+//
+//   defm inline_variable : CXX17Compat<"inline variables are">;
+//
+// This generates two warnings:
+//
+//   - compat_cxx17_inline_variable:     'inline variables are incompatible with C++ standards before C++17'
+//   - compat_pre_cxx17_inline_variable: 'inline variables are a C++17 extension'
+//
 multiclass CXX11Compat<string message, bit ext_warn = true> : CXXCompat<message, 11, ext_warn>;
 multiclass CXX14Compat<string message, bit ext_warn = true> : CXXCompat<message, 14, ext_warn>;
 multiclass CXX17Compat<string message, bit ext_warn = true> : CXXCompat<message, 17, ext_warn>;
