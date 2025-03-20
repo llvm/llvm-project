@@ -51,7 +51,7 @@ ld.d $a1, $a1, %ie_pc_lo12(b)
 add.d $a1, $a1, $tp
 
 # Test instructions are interleaved.
-# PCALAU12I has an R_LARCH_RELAX. We preform relaxation.
+# PCALAU12I has an R_LARCH_RELAX. We perform relaxation.
 pcalau12i $a2, %ie_pc_hi20(a)
 .reloc .-4, R_LARCH_RELAX, 0
 pcalau12i $a3, %ie_pc_hi20(b)

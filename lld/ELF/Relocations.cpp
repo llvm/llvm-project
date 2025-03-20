@@ -1375,7 +1375,7 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  // LoongArch support IE to LE optimization in non-extreme code model.
+  // LoongArch supports IE to LE optimization in non-extreme code model.
   bool execOptimizeInLoongArch =
       ctx.arg.emachine == EM_LOONGARCH &&
       (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12);
