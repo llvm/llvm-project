@@ -899,8 +899,7 @@ SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
   SDValue NewSP = Op.getOperand(1);
 
   if (Subtarget.isWindowedABI()) {
-    return DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, Chain,
-                       NewSP);
+    return DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::Other, Chain, NewSP);
   }
 
   return DAG.getCopyToReg(Chain, SDLoc(Op), Xtensa::SP, NewSP);
