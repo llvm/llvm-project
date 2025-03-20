@@ -126,6 +126,8 @@ public:
 
   static FileSpec GetXcodeContentsDirectory() { return {}; }
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
+  static FileSpec GetCurrentXcodeToolchainDirectory() { return {}; }
+  static FileSpec GetCurrentCommandLineToolsDirectory() { return {}; }
 #ifdef LLDB_ENABLE_SWIFT
   static FileSpec GetSwiftResourceDir() { return {}; }
   static FileSpec GetSwiftResourceDir(llvm::Triple triple) { return {}; }
