@@ -3455,9 +3455,17 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
   return false;
 }
 
+static cl::opt<bool> RVDisableInlineAsmCompress(
+    "riscv-disable-inline-asm-compress",
+    cl::desc("disable compressing inline-asm instructions to their compress "
+             "counterpart."),
+    cl::init(false), cl::Hidden);
+
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = RISCVRVC::compress(CInst, Inst, getSTI());
+  bool Res = false;
+  if (!RVDisableInlineAsmCompress)
+    Res = RISCVRVC::compress(CInst, Inst, getSTI());
   if (Res)
     ++RISCVNumInstrsCompressed;
   S.emitInstruction((Res ? CInst : Inst), getSTI());
