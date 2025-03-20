@@ -2199,6 +2199,8 @@ private:
                                  SourceLocation &LParenLoc,
                                  SourceLocation &RParenLoc);
   StmtResult ParseAcceptStatement(SourceLocation *TrailingElseLoc);
+  StmtResult ParseSelectStatement(SourceLocation *TrailingElseLoc);
+
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);

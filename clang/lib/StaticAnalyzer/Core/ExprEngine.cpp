@@ -1860,6 +1860,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::GotoStmtClass:
     case Stmt::IfStmtClass:
     case Stmt::AcceptStmtClass:
+    case Stmt::SelectStmtClass:
     case Stmt::IndirectGotoStmtClass:
     case Stmt::LabelStmtClass:
     case Stmt::NoStmtClass:

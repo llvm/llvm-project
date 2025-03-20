@@ -224,6 +224,12 @@ public:
         return true;
       }
 
+      bool TraverseSelectStmt(SelectStmt *IS) override {
+        if (!TFA.isTrivial(IS))
+          return DynamicRecursiveASTVisitor::TraverseSelectStmt(IS);
+        return true;
+      }
+
       bool TraverseIfStmt(IfStmt *IS) override {
         if (!TFA.isTrivial(IS))
           return DynamicRecursiveASTVisitor::TraverseIfStmt(IS);

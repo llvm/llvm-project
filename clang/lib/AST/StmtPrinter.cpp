@@ -123,6 +123,7 @@ namespace {
     void PrintRawDecl(Decl *D);
     void PrintRawDeclStmt(const DeclStmt *S);
     void PrintRawAcceptStmt(AcceptStmt *Accept);
+    void PrintRawSelectStmt(SelectStmt *Select);
     void PrintRawIfStmt(IfStmt *If);
     void PrintRawCXXCatchStmt(CXXCatchStmt *Catch);
     void PrintCallArgs(CallExpr *E);
@@ -356,9 +357,67 @@ void StmtPrinter::PrintRawAcceptStmt(AcceptStmt *Accept) {
   }
 }
 
+void StmtPrinter::PrintRawSelectStmt(SelectStmt *Select) {
+  if (Select->isConsteval()) {
+    OS << "_Select ";
+    if (Select->isNegatedConsteval())
+      OS << "!";
+    OS << "consteval";
+    OS << NL;
+    PrintStmt(Select->getThen());
+    if (Stmt *Else = Select->getElse()) {
+      Indent();
+      OS << "else";
+      PrintStmt(Else);
+      OS << NL;
+    }
+    return;
+  }
+
+  OS << "_Select (";
+  if (Select->getInit())
+    PrintInitStmt(Select->getInit(), 4);
+  if (const DeclStmt *DS = Select->getConditionVariableDeclStmt())
+    PrintRawDeclStmt(DS);
+  else
+    PrintExpr(Select->getCond());
+  OS << ')';
+
+  if (auto *CS = dyn_cast<CompoundStmt>(Select->getThen())) {
+    OS << ' ';
+    PrintRawCompoundStmt(CS);
+    OS << (Select->getElse() ? " " : NL);
+  } else {
+    OS << NL;
+    PrintStmt(Select->getThen());
+    if (Select->getElse()) Indent();
+  }
+
+  if (Stmt *Else = Select->getElse()) {
+    OS << "else";
+
+    if (auto *CS = dyn_cast<CompoundStmt>(Else)) {
+      OS << ' ';
+      PrintRawCompoundStmt(CS);
+      OS << NL;
+    } else if (auto *ElseIf = dyn_cast<IfStmt>(Else)) {
+      OS << ' ';
+      PrintRawIfStmt(ElseIf);
+    } else {
+      OS << NL;
+      PrintStmt(Select->getElse());
+    }
+  }
+}
+
 void StmtPrinter::VisitAcceptStmt(AcceptStmt *Accept) {
   Indent();
   PrintRawAcceptStmt(Accept);
+}
+
+void StmtPrinter::VisitSelectStmt(SelectStmt *Select) {
+  Indent();
+  PrintRawSelectStmt(Select);
 }
 
 void StmtPrinter::PrintRawIfStmt(IfStmt *If) {

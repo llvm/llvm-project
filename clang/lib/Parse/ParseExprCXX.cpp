@@ -2169,6 +2169,14 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     return Sema::ConditionError();
   }
 
+  // SPECIAL CASE: Accepting a destructor expression
+  if (CK == Sema::ConditionKind::ACCEPT && Tok.is(tok::tilde)) {
+    ConsumeToken(); // consume '~'
+    ConsumeToken(); // consume class name
+    return Actions.ActOnCondition(getCurScope(), Loc, nullptr, CK,
+                                  true);
+  }
+
   ParsedAttributes attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
@@ -2186,7 +2194,6 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     ForConditionScope.enter(/*IsConditionVariable=*/false);
 
     ProhibitAttributes(attrs);
-
     // We can have an empty expression here.
     //   if (; true);
     if (InitStmt && Tok.is(tok::semi)) {
@@ -2204,8 +2211,9 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
 
     // Parse the expression.
     ExprResult Expr = ParseExpression(); // expression
-    if (Expr.isInvalid())
+    if (Expr.isInvalid()){
       return Sema::ConditionError();
+    }
 
     if (InitStmt && Tok.is(tok::semi)) {
       WarnOnInit();

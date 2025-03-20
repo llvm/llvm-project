@@ -207,6 +207,34 @@ protected:
     SourceLocation AcceptLoc;
   };
 
+  // Identical to IfStmt, but for _Select
+  class SelectStmtBitfields {
+    friend class ASTStmtReader;
+    friend class SelectStmt;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// Whether this is a constexpr if, or a consteval if, or neither.
+    LLVM_PREFERRED_TYPE(IfStatementKind)
+    unsigned Kind : 3;
+
+    /// True if this if statement has storage for an else statement.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasElse : 1;
+
+    /// True if this if statement has storage for a variable declaration.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasVar : 1;
+
+    /// True if this if statement has storage for an init statement.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasInit : 1;
+
+    /// The location of the "_Select".
+    SourceLocation SelectLoc;
+  };
+
 
   class IfStmtBitfields {
     friend class ASTStmtReader;
@@ -1254,6 +1282,7 @@ protected:
     AttributedStmtBitfields AttributedStmtBits;
     IfStmtBitfields IfStmtBits;
     AcceptStmtBitfields AcceptStmtBits;
+    SelectStmtBitfields SelectStmtBits;
     SwitchStmtBitfields SwitchStmtBits;
     WhileStmtBitfields WhileStmtBits;
     DoStmtBitfields DoStmtBits;
@@ -2186,6 +2215,254 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == AttributedStmtClass;
+  }
+};
+
+class SelectStmt final : public Stmt, private llvm::TrailingObjects<SelectStmt, Stmt *, SourceLocation> {
+    friend TrailingObjects;
+
+  // SelectStmt is followed by several trailing objects, some of which optional.
+  // Note that it would be more convenient to put the optional trailing
+  // objects at then end but this would change the order of the children.
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the init statement.
+  //    Present if and only if hasInitStorage().
+  //
+  // * A "Stmt *" for the condition variable.
+  //    Present if and only if hasVarStorage(). This is in fact a "DeclStmt *".
+  //
+  // * A "Stmt *" for the condition.
+  //    Always present. This is in fact a "Expr *".
+  //
+  // * A "Stmt *" for the then statement.
+  //    Always present.
+  //
+  // * A "Stmt *" for the else statement.
+  //    Present if and only if hasElseStorage().
+  //
+  // * A "SourceLocation" for the location of the "else".
+  //    Present if and only if hasElseStorage().
+  enum { InitOffset = 0, ThenOffsetFromCond = 1, ElseOffsetFromCond = 2 };
+  enum { NumMandatoryStmtPtr = 2 };
+  SourceLocation LParenLoc;
+  SourceLocation RParenLoc;
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + hasElseStorage() + hasVarStorage() +
+           hasInitStorage();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
+    return hasElseStorage();
+  }
+
+  unsigned initOffset() const { return InitOffset; }
+  unsigned varOffset() const { return InitOffset + hasInitStorage(); }
+  unsigned condOffset() const {
+    return InitOffset + hasInitStorage() + hasVarStorage();
+  }
+  unsigned thenOffset() const { return condOffset() + ThenOffsetFromCond; }
+  unsigned elseOffset() const { return condOffset() + ElseOffsetFromCond; }
+
+  /// Build an if/then/else statement.
+  SelectStmt(const ASTContext &Ctx, SourceLocation IL, IfStatementKind Kind,
+         Stmt *Init, VarDecl *Var, Expr *Cond, SourceLocation LParenLoc,
+         SourceLocation RParenLoc, Stmt *Then, SourceLocation EL, Stmt *Else);
+
+  /// Build an empty if/then/else statement.
+  explicit SelectStmt(EmptyShell Empty, bool HasElse, bool HasVar, bool HasInit);
+
+public:
+  /// Create an IfStmt.
+  static SelectStmt *Create(const ASTContext &Ctx, SourceLocation IL,
+                        IfStatementKind Kind, Stmt *Init, VarDecl *Var,
+                        Expr *Cond, SourceLocation LPL, SourceLocation RPL,
+                        Stmt *Then, SourceLocation EL = SourceLocation(),
+                        Stmt *Else = nullptr);
+
+  /// Create an empty IfStmt optionally with storage for an else statement,
+  /// condition variable and init expression.
+  static SelectStmt *CreateEmpty(const ASTContext &Ctx, bool HasElse, bool HasVar,
+                             bool HasInit);
+
+  /// True if this IfStmt has the storage for an init statement.
+  bool hasInitStorage() const { return SelectStmtBits.HasInit; }
+
+  /// True if this IfStmt has storage for a variable declaration.
+  bool hasVarStorage() const { return SelectStmtBits.HasVar; }
+
+  /// True if this IfStmt has storage for an else statement.
+  bool hasElseStorage() const { return SelectStmtBits.HasElse; }
+
+  Expr *getCond() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  void setCond(Expr *Cond) {
+    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+  }
+
+  Stmt *getThen() { return getTrailingObjects<Stmt *>()[thenOffset()]; }
+  const Stmt *getThen() const {
+    return getTrailingObjects<Stmt *>()[thenOffset()];
+  }
+
+  void setThen(Stmt *Then) {
+    getTrailingObjects<Stmt *>()[thenOffset()] = Then;
+  }
+
+  Stmt *getElse() {
+    return hasElseStorage() ? getTrailingObjects<Stmt *>()[elseOffset()]
+                            : nullptr;
+  }
+
+  const Stmt *getElse() const {
+    return hasElseStorage() ? getTrailingObjects<Stmt *>()[elseOffset()]
+                            : nullptr;
+  }
+
+  void setElse(Stmt *Else) {
+    assert(hasElseStorage() &&
+           "This if statement has no storage for an else statement!");
+    getTrailingObjects<Stmt *>()[elseOffset()] = Else;
+  }
+
+  /// Retrieve the variable declared in this "if" statement, if any.
+  ///
+  /// In the following example, "x" is the condition variable.
+  /// \code
+  /// if (int x = foo()) {
+  ///   printf("x is %d", x);
+  /// }
+  /// \endcode
+  VarDecl *getConditionVariable();
+  const VarDecl *getConditionVariable() const {
+    return const_cast<SelectStmt*>(this)->getConditionVariable();
+  }
+
+  /// Set the condition variable for this if statement.
+  /// The if statement must have storage for the condition variable.
+  void setConditionVariable(const ASTContext &Ctx, VarDecl *V);
+
+  /// If this IfStmt has a condition variable, return the faux DeclStmt
+  /// associated with the creation of that condition variable.
+  DeclStmt *getConditionVariableDeclStmt() {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
+
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
+
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
+  Stmt *getInit() {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  const Stmt *getInit() const {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  void setInit(Stmt *Init) {
+    assert(hasInitStorage() &&
+           "This Accept statement has no storage for an init statement!");
+    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+  }
+
+  SourceLocation getSelectLoc() const { return SelectStmtBits.SelectLoc; }
+  void setAcceptLoc(SourceLocation SelectLoc) { SelectStmtBits.SelectLoc = SelectLoc; }
+
+  SourceLocation getElseLoc() const {
+    return hasElseStorage() ? *getTrailingObjects<SourceLocation>()
+                            : SourceLocation();
+  }
+
+  void setElseLoc(SourceLocation ElseLoc) {
+    assert(hasElseStorage() &&
+           "This Accept statement has no storage for an else statement!");
+    *getTrailingObjects<SourceLocation>() = ElseLoc;
+  }
+
+  bool isConsteval() const {
+    return getStatementKind() == IfStatementKind::ConstevalNonNegated ||
+           getStatementKind() == IfStatementKind::ConstevalNegated;
+  }
+
+  bool isNonNegatedConsteval() const {
+    return getStatementKind() == IfStatementKind::ConstevalNonNegated;
+  }
+
+  bool isNegatedConsteval() const {
+    return getStatementKind() == IfStatementKind::ConstevalNegated;
+  }
+
+  bool isConstexpr() const {
+    return getStatementKind() == IfStatementKind::Constexpr;
+  }
+
+  void setStatementKind(IfStatementKind Kind) {
+    SelectStmtBits.Kind = static_cast<unsigned>(Kind);
+  }
+
+  IfStatementKind getStatementKind() const {
+    return static_cast<IfStatementKind>(SelectStmtBits.Kind);
+  }
+
+  /// If this is an 'if constexpr', determine which substatement will be taken.
+  /// Otherwise, or if the condition is value-dependent, returns std::nullopt.
+  std::optional<const Stmt *> getNondiscardedCase(const ASTContext &Ctx) const;
+  std::optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
+
+  bool isObjCAvailabilityCheck() const;
+
+  SourceLocation getBeginLoc() const { return getSelectLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    if (getElse())
+      return getElse()->getEndLoc();
+    return getThen()->getEndLoc();
+  }
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
+  // Iterators over subexpressions.  The iterators will include iterating
+  // over the initialization expression referenced by the condition variable.
+  child_range children() {
+    // We always store a condition, but there is none for consteval if
+    // statements, so skip it.
+    return child_range(getTrailingObjects<Stmt *>() +
+                           (isConsteval() ? thenOffset() : 0),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
+  }
+
+  const_child_range children() const {
+    // We always store a condition, but there is none for consteval if
+    // statements, so skip it.
+    return const_child_range(getTrailingObjects<Stmt *>() +
+                                 (isConsteval() ? thenOffset() : 0),
+                             getTrailingObjects<Stmt *>() +
+                                 numTrailingObjects(OverloadToken<Stmt *>()));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == SelectStmtClass;
   }
 };
 

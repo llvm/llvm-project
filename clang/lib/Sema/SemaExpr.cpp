@@ -15808,6 +15808,7 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
 
 ExprResult Sema::ActOnUnaryOp(Scope *S, SourceLocation OpLoc, tok::TokenKind Op,
                               Expr *Input, bool IsAfterAmp) {
+  
   return BuildUnaryOp(S, OpLoc, ConvertTokenKindToUnaryOpcode(Op), Input,
                       IsAfterAmp);
 }
@@ -20390,12 +20391,13 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
                                            bool MissingOK) {
   // MissingOK indicates whether having no condition expression is valid
   // (for loop) or invalid (e.g. while loop).
-  if (!SubExpr)
+  if (!SubExpr && CK != ConditionKind::ACCEPT)
     return MissingOK ? ConditionResult() : ConditionError();
 
   ExprResult Cond;
   switch (CK) {
   case ConditionKind::ACCEPT:
+    // TODO: Create a special analyzer for function names here
     if (getLangOpts().CPlusPlus) {
         Cond = ExprResult(new (Context) CXXBoolLiteralExpr(true, Context.BoolTy, Loc));
     } else {
@@ -20425,7 +20427,6 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
   FullExprArg FullExpr = MakeFullExpr(Cond.get(), Loc);
   if (!FullExpr.get())
     return ConditionError();
-
   return ConditionResult(*this, nullptr, FullExpr,
                          CK == ConditionKind::ConstexprIf);
 }

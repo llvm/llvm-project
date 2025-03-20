@@ -939,12 +939,8 @@ StmtResult Sema::ActOnAcceptStmt(SourceLocation AcceptLoc, IfStatementKind State
   if (Cond.isInvalid())
     return StmtError();
 
-  bool ConstevalOrNegatedConsteval =
-      StatementKind == IfStatementKind::ConstevalNonNegated ||
-      StatementKind == IfStatementKind::ConstevalNegated;
-
   Expr *CondExpr = Cond.get().second;
-  assert((CondExpr || ConstevalOrNegatedConsteval) &&
+  assert((CondExpr) &&
          "If statement: missing condition");
   // Only call the CommaVisitor when not C89 due to differences in scope flags.
   if (CondExpr && (getLangOpts().C99 || getLangOpts().CPlusPlus) &&
@@ -952,7 +948,7 @@ StmtResult Sema::ActOnAcceptStmt(SourceLocation AcceptLoc, IfStatementKind State
     CommaVisitor(*this).Visit(CondExpr);
 
   // TODO: Known issue -> this should warn for `_Accept ( condition ) {};` but doesn't 
-  if (!ConstevalOrNegatedConsteval && !elseStmt) {
+  if (!elseStmt) {
     // try to cast the {} block 
     if (auto *CS = dyn_cast<CompoundStmt>(thenStmt)) {
       if (CS->body_empty()) // Check if the block `{}` is empty
@@ -960,49 +956,16 @@ StmtResult Sema::ActOnAcceptStmt(SourceLocation AcceptLoc, IfStatementKind State
       }
   }
 
-  if (ConstevalOrNegatedConsteval ||
-      StatementKind == IfStatementKind::Constexpr) {
-    auto DiagnoseLikelihood = [&](const Stmt *S) {
-      if (const Attr *A = Stmt::getLikelihoodAttr(S)) {
-        Diags.Report(A->getLocation(),
-                     diag::warn_attribute_has_no_effect_on_compile_time_if)
-            << A << ConstevalOrNegatedConsteval << A->getRange();
-        Diags.Report(AcceptLoc,
-                     diag::note_attribute_has_no_effect_on_compile_time_if_here)
-            << ConstevalOrNegatedConsteval
-            << SourceRange(AcceptLoc, (ConstevalOrNegatedConsteval
-                                       ? thenStmt->getBeginLoc()
-                                       : LParenLoc)
-                                      .getLocWithOffset(-1));
-      }
-    };
-    DiagnoseLikelihood(thenStmt);
-    DiagnoseLikelihood(elseStmt);
-  } else {
-    std::tuple<bool, const Attr *, const Attr *> LHC =
-        Stmt::determineLikelihoodConflict(thenStmt, elseStmt);
-    if (std::get<0>(LHC)) {
-      const Attr *ThenAttr = std::get<1>(LHC);
-      const Attr *ElseAttr = std::get<2>(LHC);
-      Diags.Report(ThenAttr->getLocation(),
-                   diag::warn_attributes_likelihood_ifstmt_conflict)
-          << ThenAttr << ThenAttr->getRange();
-      Diags.Report(ElseAttr->getLocation(), diag::note_conflicting_attribute)
-          << ElseAttr << ElseAttr->getRange();
-    }
-  }
-
-  if (ConstevalOrNegatedConsteval) {
-    bool Immediate = ExprEvalContexts.back().Context ==
-                     ExpressionEvaluationContext::ImmediateFunctionContext;
-    if (CurContext->isFunctionOrMethod()) {
-      const auto *FD =
-          dyn_cast<FunctionDecl>(Decl::castFromDeclContext(CurContext));
-      if (FD && FD->isImmediateFunction())
-        Immediate = true;
-    }
-    if (isUnevaluatedContext() || Immediate)
-      Diags.Report(AcceptLoc, diag::warn_consteval_if_always_true) << Immediate;
+  std::tuple<bool, const Attr *, const Attr *> LHC =
+      Stmt::determineLikelihoodConflict(thenStmt, elseStmt);
+  if (std::get<0>(LHC)) {
+    const Attr *ThenAttr = std::get<1>(LHC);
+    const Attr *ElseAttr = std::get<2>(LHC);
+    Diags.Report(ThenAttr->getLocation(),
+                  diag::warn_attributes_likelihood_ifstmt_conflict)
+        << ThenAttr << ThenAttr->getRange();
+    Diags.Report(ElseAttr->getLocation(), diag::note_conflicting_attribute)
+        << ElseAttr << ElseAttr->getRange();
   }
 
   return BuildAcceptStmt(AcceptLoc, StatementKind, LParenLoc, InitStmt, Cond, RParenLoc,
@@ -1024,6 +987,65 @@ StmtResult Sema::BuildAcceptStmt(SourceLocation AcceptLoc,
     setFunctionHasBranchProtectedScope();
 
   return AcceptStmt::Create(Context, AcceptLoc, StatementKind, InitStmt,
+                        Cond.get().first, Cond.get().second, LParenLoc,
+                        RParenLoc, thenStmt, ElseLoc, elseStmt);
+}
+
+StmtResult Sema::ActOnSelectStmt(SourceLocation AcceptLoc, IfStatementKind StatementKind,
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *thenStmt, SourceLocation ElseLoc, Stmt *elseStmt) {
+  if (Cond.isInvalid())
+    return StmtError();
+
+  Expr *CondExpr = Cond.get().second;
+  assert((CondExpr) &&
+         "_Select statement: missing condition");
+  // Only call the CommaVisitor when not C89 due to differences in scope flags.
+  if (CondExpr && (getLangOpts().C99 || getLangOpts().CPlusPlus) &&
+      !Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
+    CommaVisitor(*this).Visit(CondExpr);
+
+  // TODO: Known issue -> this should warn for `_Select ( condition ) {};` but doesn't 
+  if (!elseStmt) {
+    // try to cast the {} block 
+    if (auto *CS = dyn_cast<CompoundStmt>(thenStmt)) {
+      if (CS->body_empty()) // Check if the block `{}` is empty
+        DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_accept_body);
+      }
+  }
+
+  std::tuple<bool, const Attr *, const Attr *> LHC =
+      Stmt::determineLikelihoodConflict(thenStmt, elseStmt);
+  if (std::get<0>(LHC)) {
+    const Attr *ThenAttr = std::get<1>(LHC);
+    const Attr *ElseAttr = std::get<2>(LHC);
+    Diags.Report(ThenAttr->getLocation(),
+                  diag::warn_attributes_likelihood_ifstmt_conflict)
+        << ThenAttr << ThenAttr->getRange();
+    Diags.Report(ElseAttr->getLocation(), diag::note_conflicting_attribute)
+        << ElseAttr << ElseAttr->getRange();
+  }
+
+  return BuildSelectStmt(AcceptLoc, StatementKind, LParenLoc, InitStmt, Cond, RParenLoc,
+                     thenStmt, ElseLoc, elseStmt);
+  
+}
+
+StmtResult Sema::BuildSelectStmt(SourceLocation AcceptLoc,
+                             IfStatementKind StatementKind,
+                             SourceLocation LParenLoc, Stmt *InitStmt,
+                             ConditionResult Cond, SourceLocation RParenLoc,
+                             Stmt *thenStmt, SourceLocation ElseLoc,
+                             Stmt *elseStmt) {
+  if (Cond.isInvalid())
+    return StmtError();
+
+  if (StatementKind != IfStatementKind::Ordinary ||
+      isa<ObjCAvailabilityCheckExpr>(Cond.get().second))
+    setFunctionHasBranchProtectedScope();
+
+  return SelectStmt::Create(Context, AcceptLoc, StatementKind, InitStmt,
                         Cond.get().first, Cond.get().second, LParenLoc,
                         RParenLoc, thenStmt, ElseLoc, elseStmt);
 }

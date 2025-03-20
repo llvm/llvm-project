@@ -1534,6 +1534,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
     }
     return CT;
   }
+  case Stmt::SelectStmtClass:
   case Stmt::AcceptStmtClass:
   case Stmt::IfStmtClass: {
     auto *IS = cast<IfStmt>(S);

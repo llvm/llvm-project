@@ -229,6 +229,37 @@ void ASTStmtWriter::VisitAcceptStmt(AcceptStmt *S) {
   Code = serialization::STMT_IF;
 }
 
+void ASTStmtWriter::VisitSelectStmt(SelectStmt *S) {
+  VisitStmt(S);
+
+  bool HasElse = S->getElse() != nullptr;
+  bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
+  bool HasInit = S->getInit() != nullptr;
+
+  CurrentPackingBits.updateBits();
+
+  CurrentPackingBits.addBit(HasElse);
+  CurrentPackingBits.addBit(HasVar);
+  CurrentPackingBits.addBit(HasInit);
+  Record.push_back(static_cast<uint64_t>(S->getStatementKind()));
+  Record.AddStmt(S->getCond());
+  Record.AddStmt(S->getThen());
+  if (HasElse)
+    Record.AddStmt(S->getElse());
+  if (HasVar)
+    Record.AddStmt(S->getConditionVariableDeclStmt());
+  if (HasInit)
+    Record.AddStmt(S->getInit());
+
+  Record.AddSourceLocation(S->getSelectLoc());
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  if (HasElse)
+    Record.AddSourceLocation(S->getElseLoc());
+
+  Code = serialization::STMT_IF;
+}
+
 void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
 

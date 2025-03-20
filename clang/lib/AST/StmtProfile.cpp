@@ -285,6 +285,11 @@ void StmtProfiler::VisitAcceptStmt(const AcceptStmt *S) {
   VisitDecl(S->getConditionVariable());
 }
 
+void StmtProfiler::VisitSelectStmt(const SelectStmt *S) {
+  VisitStmt(S);
+  VisitDecl(S->getConditionVariable());
+}
+
 void StmtProfiler::VisitIfStmt(const IfStmt *S) {
   VisitStmt(S);
   VisitDecl(S->getConditionVariable());

@@ -817,6 +817,7 @@ public:
   void IssueDiagnostics(Stmt *S) { TraverseStmt(S); }
 
   bool TraverseAcceptStmt(AcceptStmt *Accept) override;
+  bool TraverseSelectStmt(SelectStmt *Select) override;
   bool TraverseIfStmt(IfStmt *If) override;
 
   // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
@@ -1050,6 +1051,33 @@ bool DiagnoseUnguardedAvailability::TraverseAcceptStmt(AcceptStmt *Accept) {
 
   auto *Guarded = Accept->getThen();
   auto *Unguarded = Accept->getElse();
+  if (IfCond.isNegated) {
+    std::swap(Guarded, Unguarded);
+  }
+
+  AvailabilityStack.push_back(CondVersion);
+  bool ShouldContinue = TraverseStmt(Guarded);
+  AvailabilityStack.pop_back();
+
+  return ShouldContinue && TraverseStmt(Unguarded);
+}
+
+bool DiagnoseUnguardedAvailability::TraverseSelectStmt(SelectStmt *Select) {
+  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(Select->getCond());
+  if (!IfCond.E) {
+    // This isn't an availability checking 'if', we can just continue.
+    return DynamicRecursiveASTVisitor::TraverseSelectStmt(Select);
+  }
+
+  VersionTuple CondVersion = IfCond.E->getVersion();
+  // If we're using the '*' case here or if this check is redundant, then we
+  // use the enclosing version to check both branches.
+  if (CondVersion.empty() || CondVersion <= AvailabilityStack.back()) {
+    return TraverseStmt(Select->getThen()) && TraverseStmt(Select->getElse());
+  }
+
+  auto *Guarded = Select->getThen();
+  auto *Unguarded = Select->getElse();
   if (IfCond.isNegated) {
     std::swap(Guarded, Unguarded);
   }

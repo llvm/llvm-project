@@ -243,6 +243,32 @@ void ASTStmtReader::VisitAcceptStmt(AcceptStmt *S) {
     S->setElseLoc(readSourceLocation());
 }
 
+void ASTStmtReader::VisitSelectStmt(SelectStmt *S) {
+  VisitStmt(S);
+
+  CurrentUnpackingBits.emplace(Record.readInt());
+
+  bool HasElse = CurrentUnpackingBits->getNextBit();
+  bool HasVar = CurrentUnpackingBits->getNextBit();
+  bool HasInit = CurrentUnpackingBits->getNextBit();
+
+  S->setStatementKind(static_cast<IfStatementKind>(Record.readInt()));
+  S->setCond(Record.readSubExpr());
+  S->setThen(Record.readSubStmt());
+  if (HasElse)
+    S->setElse(Record.readSubStmt());
+  if (HasVar)
+    S->setConditionVariableDeclStmt(cast<DeclStmt>(Record.readSubStmt()));
+  if (HasInit)
+    S->setInit(Record.readSubStmt());
+
+  S->setAcceptLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
+  if (HasElse)
+    S->setElseLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
 

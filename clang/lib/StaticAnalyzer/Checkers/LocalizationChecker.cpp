@@ -1211,6 +1211,8 @@ class PluralMisuseChecker : public Checker<check::ASTCodeBody> {
     bool EndVisitIfStmt(IfStmt *I);
     bool EndVisitAcceptStmt(AcceptStmt *I);
     bool TraverseAcceptStmt(AcceptStmt *x) override;
+    bool EndVisitSelectStmt(SelectStmt *I);
+    bool TraverseSelectStmt(SelectStmt *x) override;
     bool TraverseIfStmt(IfStmt *x) override;
     bool VisitConditionalOperator(ConditionalOperator *C) override;
     bool TraverseConditionalOperator(ConditionalOperator *C) override;
@@ -1321,6 +1323,26 @@ bool PluralMisuseChecker::MethodCrawler::TraverseAcceptStmt(AcceptStmt *I) {
 // so we override TraverseAcceptStmt and make a call to EndVisitAcceptStmt
 // after traversing the AcceptStmt
 bool PluralMisuseChecker::MethodCrawler::EndVisitAcceptStmt(AcceptStmt *I) {
+  MatchingStatements.pop_back();
+  if (!MatchingStatements.empty()) {
+    if (MatchingStatements.back() != nullptr) {
+      InMatchingStatement = true;
+      return true;
+    }
+  }
+  InMatchingStatement = false;
+  return true;
+}
+
+/// Override TraverseSelectStmt so we know when we are done traversing an AcceptStmt
+bool PluralMisuseChecker::MethodCrawler::TraverseSelectStmt(SelectStmt *I) {
+  DynamicRecursiveASTVisitor::TraverseSelectStmt(I);
+  return EndVisitSelectStmt(I);
+}
+
+// so we override TraverseSelectStmt and make a call to EndVisitSelectStmt
+// after traversing the SelectStmt
+bool PluralMisuseChecker::MethodCrawler::EndVisitSelectStmt(SelectStmt *I) {
   MatchingStatements.pop_back();
   if (!MatchingStatements.empty()) {
     if (MatchingStatements.back() != nullptr) {

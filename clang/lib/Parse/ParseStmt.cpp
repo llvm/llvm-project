@@ -324,6 +324,8 @@ Retry:
   }
   case tok::kw__Accept:
     return ParseAcceptStatement(TrailingElseLoc);
+  case tok::kw__Select:
+    return ParseSelectStatement(TrailingElseLoc);
   case tok::kw__When:                  // C99 6.8.4.1: if-statement
     return ParseWhenStatement(TrailingElseLoc);
   case tok::kw_if:                  // C99 6.8.4.1: if-statement
@@ -1404,9 +1406,10 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
     ExprResult CondExpr = Actions.CreateRecoveryExpr(
         Start, Tok.getLocation() == Start ? Start : PrevTokLocation, {},
         Actions.PreferredConditionType(CK));
-    if (!CondExpr.isInvalid())
+    if (!CondExpr.isInvalid()) {
       Cond = Actions.ActOnCondition(getCurScope(), Loc, CondExpr.get(), CK,
                                     /*MissingOK=*/false);
+    }
   }
 
   // Either the condition is valid or the rparen is present.
@@ -1580,7 +1583,6 @@ StmtResult Parser::ParseAcceptStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation OrLoc;
   SourceLocation OrStmtLoc;
   StmtResult OrStmt;
-
   // For now, since `or` is also `pipepipe` (||), we must force it to recognize it as `or` in this context. However, this means `||` also works here. 
   // TODO: In the future, we would like some context-specific lexing 
   if (Tok.is(tok::pipepipe)) {
@@ -1636,6 +1638,125 @@ StmtResult Parser::ParseAcceptStatement(SourceLocation *TrailingElseLoc) {
   IfStatementKind Kind = IfStatementKind::Ordinary;
  
   return Actions.ActOnAcceptStmt(AcceptLoc, Kind, LParen, InitStmt.get(), Cond, RParen,
+                             ThenStmt.get(), OrLoc, OrStmt.get());
+}
+
+StmtResult Parser::ParseSelectStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw__Select) && "Not a _Select stmt!");
+  SourceLocation SelectLoc = ConsumeToken();  // eat the '_Select'.
+
+
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(Tok, diag::err_expected_lparen_after) << "_Select";
+    SkipUntil(tok::semi);
+    return StmtError();
+  }
+
+  bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
+
+  ParseScope SelectScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
+
+  // Parse the condition.
+  StmtResult InitStmt;
+  Sema::ConditionResult Cond;
+  SourceLocation LParen;
+  SourceLocation RParen;
+  if (ParseParenExprOrCondition(&InitStmt, Cond, SelectLoc,
+                                  Sema::ConditionKind::ACCEPT,
+                                  LParen, RParen))
+    return StmtError();
+
+
+  bool IsBracedThen = Tok.is(tok::l_brace);
+
+  // For C++ we create a scope for the condition and a new scope for
+  // substatements because:
+  // -When the 'then' scope exits, we want the condition declaration to still be
+  //    active for the 'else' scope too.
+  // -Sema will detect name clashes by considering declarations of a
+  //    'ControlScope' as part of its direct subscope.
+  // -If we wanted the condition and substatement to be in the same scope, we
+  //    would have to notify ParseStatement not to create a new scope. It's
+  //    simpler to let it create a new scope.
+  //
+  ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, IsBracedThen);
+
+  MisleadingIndentationChecker MIChecker(*this, MSK_if, SelectLoc);
+
+  // Read the 'then' stmt.
+  SourceLocation ThenStmtLoc = Tok.getLocation();
+
+  SourceLocation InnerStatementTrailingElseLoc;
+  StmtResult ThenStmt;
+
+  ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
+
+  if (Tok.isNot(tok::kw_or))
+    MIChecker.Check();
+
+  InnerScope.Exit();
+
+  SourceLocation OrLoc;
+  SourceLocation OrStmtLoc;
+  StmtResult OrStmt;
+
+  // For now, since `or` is also `pipepipe` (||), we must force it to recognize it as `or` in this context. However, this means `||` also works here. 
+  // TODO: In the future, we would like some context-specific lexing 
+  if (Tok.is(tok::pipepipe)) {
+    Tok.setKind(tok::kw_or);
+  } else if (Tok.is(tok::ampamp)) { // same thing here with '&&' 
+    Tok.setKind(tok::kw_and);
+  }
+  if (Tok.is(tok::kw_or) || Tok.is(tok::kw_and) || Tok.is(tok::kw__Else)) {
+    if (TrailingElseLoc)
+      *TrailingElseLoc = Tok.getLocation();
+
+    OrLoc = ConsumeToken();
+    OrStmtLoc = Tok.getLocation();
+
+    // The substatement in a selection-statement (each substatement, in the else
+    // form of the _Select statement) implicitly defines a local scope.
+    //
+    ParseScope InnerScope(this, Scope::DeclScope, C99orCXX,
+                          Tok.is(tok::l_brace));
+
+    MisleadingIndentationChecker MIChecker(*this, MSK_else, OrLoc);
+    OrStmt = ParseStatement();
+
+    if (OrStmt.isUsable())
+      MIChecker.Check();
+
+    // Pop the 'else' scope if needed.
+    InnerScope.Exit();
+  } else if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompletion().CodeCompleteAfterSelect(getCurScope(), IsBracedThen);
+    return StmtError();
+  } else if (InnerStatementTrailingElseLoc.isValid()) {
+    Diag(InnerStatementTrailingElseLoc, diag::warn_dangling_else);
+  }
+
+  SelectScope.Exit();
+
+  // If the then or else stmt is invalid and the other is valid (and present),
+  // turn the invalid one into a null stmt to avoid dropping the other
+  // part.  If both are invalid, return error.
+  if ((ThenStmt.isInvalid() && OrStmt.isInvalid()) ||
+      (ThenStmt.isInvalid() && OrStmt.get() == nullptr) ||
+      (ThenStmt.get() == nullptr && OrStmt.isInvalid())) {
+    // Both invalid, or one is invalid and other is non-present: return error.
+    return StmtError();
+  }
+
+  // Now if either are invalid, replace with a ';'.
+  if (ThenStmt.isInvalid())
+    ThenStmt = Actions.ActOnNullStmt(ThenStmtLoc);
+  if (OrStmt.isInvalid())
+    OrStmt = Actions.ActOnNullStmt(OrStmtLoc);
+
+  IfStatementKind Kind = IfStatementKind::Ordinary;
+ 
+  return Actions.ActOnSelectStmt(SelectLoc, Kind, LParen, InitStmt.get(), Cond, RParen,
                              ThenStmt.get(), OrLoc, OrStmt.get());
 }
 

@@ -10680,6 +10680,14 @@ public:
   /// value.
   bool checkAndRewriteMustTailAttr(Stmt *St, const Attr &MTA);
 
+  StmtResult ActOnSelectStmt(SourceLocation AcceptLoc, IfStatementKind StatementKind,
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
+  StmtResult BuildSelectStmt(SourceLocation AcceptLoc, IfStatementKind StatementKind,
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
   // Act On Accept Statement
   StmtResult ActOnAcceptStmt(SourceLocation AcceptLoc, IfStatementKind StatementKind,
                          SourceLocation LParenLoc, Stmt *InitStmt,

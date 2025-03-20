@@ -397,6 +397,41 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
+  bool TraverseSelectStmt(SelectStmt *Select) {
+    // If we used the V1 hash, use the default traversal.
+    if (Hash.getHashVersion() == PGO_HASH_V1)
+      return Base::TraverseSelectStmt(Select);
+
+    // When single byte coverage mode is enabled, add a counter to then and
+    // else.
+    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
+    for (Stmt *CS : Select->children()) {
+      if (!CS || NoSingleByteCoverage)
+        continue;
+      if (CS == Select->getThen())
+        CounterMap[Select->getThen()] = NextCounter++;
+      else if (CS == Select->getElse())
+        CounterMap[Select->getElse()] = NextCounter++;
+    }
+
+    // Otherwise, keep track of which branch we're in while traversing.
+    VisitStmt(Select);
+
+
+    // TODO: Verify correctness -> Hashing here uses some If stuff, maybe correct
+    for (Stmt *CS : Select->children()) {
+      if (!CS)
+        continue;
+      if (CS == Select->getThen())
+        Hash.combine(PGOHash::IfThenBranch);
+      else if (CS == Select->getElse())
+        Hash.combine(PGOHash::IfElseBranch);
+      TraverseStmt(CS);
+    }
+    Hash.combine(PGOHash::EndOfScope);
+    return true;
+  }
+
   bool TraverseIfStmt(IfStmt *If) {
     // If we used the V1 hash, use the default traversal.
     if (Hash.getHashVersion() == PGO_HASH_V1)
@@ -918,6 +953,40 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
   }
 
   void VisitAcceptStmt(const AcceptStmt *S) {
+    RecordStmtCount(S);
+
+    if (S->isConsteval()) {
+      const Stmt *Stm = S->isNegatedConsteval() ? S->getThen() : S->getElse();
+      if (Stm)
+        Visit(Stm);
+      return;
+    }
+
+    uint64_t ParentCount = CurrentCount;
+    if (S->getInit())
+      Visit(S->getInit());
+    Visit(S->getCond());
+
+    // Counter tracks the "then" part of an if statement. The count for
+    // the "else" part, if it exists, will be calculated from this counter.
+    uint64_t ThenCount = setCount(PGO.getRegionCount(S));
+    CountMap[S->getThen()] = ThenCount;
+    Visit(S->getThen());
+    uint64_t OutCount = CurrentCount;
+
+    uint64_t ElseCount = ParentCount - ThenCount;
+    if (S->getElse()) {
+      setCount(ElseCount);
+      CountMap[S->getElse()] = ElseCount;
+      Visit(S->getElse());
+      OutCount += CurrentCount;
+    } else
+      OutCount += ElseCount;
+    setCount(OutCount);
+    RecordNextStmtCount = true;
+  }
+
+  void VisitSelectStmt(const SelectStmt *S) {
     RecordStmtCount(S);
 
     if (S->isConsteval()) {
