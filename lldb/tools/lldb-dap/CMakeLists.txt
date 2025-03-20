@@ -23,6 +23,7 @@ add_lldb_tool(lldb-dap
   Breakpoint.cpp
   BreakpointBase.cpp
   DAP.cpp
+  DAPLog.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
