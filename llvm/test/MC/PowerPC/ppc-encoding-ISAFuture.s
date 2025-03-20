@@ -5,21 +5,21 @@
 # RUN: llvm-mc -triple powerpc-unknown-aix-gnu --show-encoding %s | \
 # RUN:   FileCheck -check-prefix=CHECK-BE %s
 
-# CHECK-BE: dmxxextfdmr512 1, 2, 34, 0    # encoding: [0xf0,0x82,0x17,0x12]
-# CHECK-LE: dmxxextfdmr512 1, 2, 34, 0    # encoding: [0x12,0x17,0x82,0xf0]
-            dmxxextfdmr512 1, 2, 34, 0
+# CHECK-BE: dmxxextfdmr512 2, 34, 1, 0    # encoding: [0xf0,0x82,0x17,0x12]
+# CHECK-LE: dmxxextfdmr512 2, 34, 1, 0    # encoding: [0x12,0x17,0x82,0xf0]
+            dmxxextfdmr512 2, 34, 1, 0
 
-# CHECK-BE: dmxxextfdmr512 1, 2, 34, 1    # encoding: [0xf0,0x83,0x17,0x12]
-# CHECK-LE: dmxxextfdmr512 1, 2, 34, 1    # encoding: [0x12,0x17,0x83,0xf0]
-            dmxxextfdmr512 1, 2, 34, 1
+# CHECK-BE: dmxxextfdmr512 2, 34, 1, 1    # encoding: [0xf0,0x83,0x17,0x12]
+# CHECK-LE: dmxxextfdmr512 2, 34, 1, 1    # encoding: [0x12,0x17,0x83,0xf0]
+            dmxxextfdmr512 2, 34, 1, 1
 
-# CHECK-BE: dmxxextfdmr256 3, 8, 0        # encoding: [0xf1,0x80,0x47,0x90]
-# CHECK-LE: dmxxextfdmr256 3, 8, 0        # encoding: [0x90,0x47,0x80,0xf1]
-            dmxxextfdmr256 3, 8, 0
+# CHECK-BE: dmxxextfdmr256 8, 3, 0        # encoding: [0xf1,0x80,0x47,0x90]
+# CHECK-LE: dmxxextfdmr256 8, 3, 0        # encoding: [0x90,0x47,0x80,0xf1]
+            dmxxextfdmr256 8, 3, 0
 
-# CHECK-BE: dmxxextfdmr256 3, 8, 3        # encoding: [0xf1,0x81,0x4f,0x90]
-# CHECK-LE: dmxxextfdmr256 3, 8, 3        # encoding: [0x90,0x4f,0x81,0xf1]
-            dmxxextfdmr256 3, 8, 3
+# CHECK-BE: dmxxextfdmr256 8, 3, 3        # encoding: [0xf1,0x81,0x4f,0x90]
+# CHECK-LE: dmxxextfdmr256 8, 3, 3        # encoding: [0x90,0x4f,0x81,0xf1]
+            dmxxextfdmr256 8, 3, 3
 
 # CHECK-BE: dmxxinstfdmr512 1, 2, 34, 0   # encoding: [0xf0,0x82,0x17,0x52]
 # CHECK-LE: dmxxinstfdmr512 1, 2, 34, 0   # encoding: [0x52,0x17,0x82,0xf0]
