@@ -4,6 +4,8 @@
 ; CHECK-SPIRV-DAG: %[[#TyInt32:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#TyInt16:]] = OpTypeInt 16 0
 ; CHECK-SPIRV-DAG: %[[#TyHalf:]] = OpTypeFloat 16
+; CHECK-SPIRV-DAG: %[[#vec4_int_16:]] = OpTypeVector %[[#int_16]] 4
+; CHECK-SPIRV-DAG: %[[#vec4_float_16:]] = OpTypeVector %[[#float_16]] 4
 ; CHECK-SPIRV-DAG: %[[#Arg32:]] = OpFunctionParameter %[[#TyInt32]]
 ; CHECK-SPIRV-DAG: %[[#Arg16:]] = OpUConvert %[[#TyInt16]] %[[#Arg32]]
 ; CHECK-SPIRV-DAG: %[[#ValHalf:]] = OpBitcast %[[#TyHalf]] %[[#Arg16:]]
@@ -18,4 +20,21 @@ entry:
   %val2 = fmul half %val, %val
   %res = bitcast half %val2 to i16
   ret i16 %res
+}
+
+define <4 x i16> @test_vector_int4(<4 x i16> returned %p0) {
+entry:
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_int_16]]
+  ; CHECK: OpReturnValue %[[#arg0]]
+  ret <4 x i16> %p0
+}
+
+; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+define <4 x i16> @test_vector_half4(<4 x half> nofpclass(nan inf) %p1) {
+entry:
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
+  ; CHECK: %[[#]] = OpBitcast %[[#vec4_int_16]] %[[#arg0]]
+  %0 = bitcast <4 x half> %p1 to <4 x i16>
+  ;CHECK: OpReturnValue %[[#]]
+  ret <4 x i16> %0
 }

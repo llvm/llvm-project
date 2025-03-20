@@ -94,7 +94,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
                                 vector<int16_t, N>>
-asint16(vector < T, N > V) {
+asint16(vector<T, N> V) {
   return __detail::bit_cast<int16_t, T, N>(V);
 }
 

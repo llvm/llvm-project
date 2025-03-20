@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -emit-llvm -O1 -o - | FileCheck %s
+
 // CHECK: define {{.*}}test_ints{{.*}}(i16 {{.*}} [[VAL:%.*]]){{.*}}
 // CHECK-NOT: bitcast
 // CHECK: ret i16 [[VAL]]
