@@ -15,6 +15,8 @@ class ExprDiagnosticsTestCase(TestBase):
 
         self.main_source = "main.cpp"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
+        self.main_source_diag_path = os.path.join("diagnostics", "main.cpp")
+        self.header_source_diag_path = os.path.join("diagnostics", "lib.h")
 
     def test_source_and_caret_printing(self):
         """Test that the source and caret positions LLDB prints are correct"""
@@ -113,9 +115,6 @@ class ExprDiagnosticsTestCase(TestBase):
             value.GetError().GetCString(),
         )
 
-        # Declarations from the debug information currently have no debug information. It's not clear what
-        # we should do in this case, but we should at least not print anything that's wrong.
-        # In the future our declarations should have valid source locations.
         value = frame.EvaluateExpression("struct FooBar { double x };", top_level_opts)
         self.assertFalse(value.GetError().Success())
         self.assertIn(
@@ -140,8 +139,11 @@ class ExprDiagnosticsTestCase(TestBase):
             """
     1 | foo(1, 2)
       | ^~~
-note: candidate function not viable: requires single argument 'x', but 2 arguments were provided
 """,
+            value.GetError().GetCString(),
+        )
+        self.assertIn(
+            "candidate function not viable: requires single argument 'x', but 2 arguments were provided",
             value.GetError().GetCString(),
         )
 
@@ -260,3 +262,116 @@ note: candidate function not viable: requires single argument 'x', but 2 argumen
         self.assertEqual(err_ty.GetIntegerValue(), lldb.eErrorTypeExpression)
         diags = data.GetValueForKey("errors").GetItemAtIndex(0)
         check_error(diags)
+
+    def test_source_locations_from_debug_information(self):
+        """Test that the source locations from debug information are correct"""
+        self.build()
+
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+
+        frame = thread.GetFrameAtIndex(0)
+
+        # Test source locations of functions
+        value = frame.EvaluateExpression("foo(1, 2)")
+        self.assertFalse(value.GetError().Success())
+        error_msg = value.GetError().GetCString()
+        self.assertIn(
+            """:1:1: no matching function for call to 'foo'
+    1 | foo(1, 2)
+      | ^~~
+""",
+            error_msg,
+        )
+
+        self.assertIn(
+            """
+    1 | void foo() {}
+      | ^
+""",
+            error_msg,
+        )
+
+        self.assertIn(
+            """
+    2 | void foo(char, char const *x) {}
+      | ^
+""",
+            error_msg,
+        )
+
+        self.assertIn(
+            """
+    3 | void foo(int x) {}
+      | ^
+""",
+            error_msg,
+        )
+
+        self.assertIn(f"{self.header_source_diag_path}:", error_msg)
+        self.assertIn(f"{self.main_source_diag_path}:", error_msg)
+
+        top_level_opts = lldb.SBExpressionOptions()
+        top_level_opts.SetTopLevel(True)
+
+        # Test source locations of records
+        value = frame.EvaluateExpression("struct FooBar { double x; };", top_level_opts)
+        self.assertFalse(value.GetError().Success())
+        error_msg = value.GetError().GetCString()
+        self.assertIn(
+            """:1:8: redefinition of 'FooBar'
+    1 | struct FooBar { double x; };
+""",
+            error_msg,
+        )
+        self.assertIn(
+            """previous definition is here
+    5 | struct FooBar {
+      | ^
+""",
+            error_msg,
+        )
+        self.assertIn(f"{self.main_source_diag_path}:", error_msg)
+
+        # Test source locations of enums
+        value = frame.EvaluateExpression("enum class EnumInSource {};", top_level_opts)
+        self.assertFalse(value.GetError().Success())
+        error_msg = value.GetError().GetCString()
+        self.assertIn(
+            """previous declaration is here
+    9 | enum class EnumInSource { A, B, C };
+      | ^
+""",
+            error_msg,
+        )
+        self.assertIn(f"{self.main_source_diag_path}:", error_msg)
+
+    @skipIf(
+        debug_info=no_match("dsym"),
+        bugnumber="Template function decl can only be found via dsym",
+    )
+    def test_source_locations_from_debug_information_template_func(self):
+        """Test that the source locations from debug information are correct
+        for template functions"""
+        self.build()
+
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "// Break here", self.main_source_spec
+        )
+
+        frame = thread.GetFrameAtIndex(0)
+
+        # Test source locations of template functions
+        value = frame.EvaluateExpression("templateFunc<int>(1)")
+        self.assertFalse(value.GetError().Success())
+        error_msg = value.GetError().GetCString()
+        self.assertIn(
+            """11:1: non-template declaration found by name lookup
+   11 | template <typename T> void templateFunc() {}
+      | ^
+""",
+            error_msg,
+        )
+
+        self.assertIn(f"{self.main_source_diag_path}:", error_msg)
