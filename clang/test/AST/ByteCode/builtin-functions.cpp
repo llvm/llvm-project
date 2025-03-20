@@ -20,6 +20,7 @@ extern "C" {
   extern size_t wcslen(const wchar_t *p);
   extern void *memchr(const void *s, int c, size_t n);
   extern char *strchr(const char *s, int c);
+  extern wchar_t *wmemchr(const wchar_t *s, wchar_t c, size_t n);
 }
 
 namespace strcmp {
@@ -1488,4 +1489,27 @@ namespace Strchr {
 
   constexpr bool a = !strchr("hello", 'h'); // both-error {{constant expression}} \
                                             // both-note {{non-constexpr function 'strchr' cannot be used in a constant expression}}
+}
+
+namespace WMemChr {
+  constexpr const wchar_t *kStr = L"abca\xffff\0dL";
+  constexpr wchar_t kFoo[] = {L'f', L'o', L'o'};
+
+  static_assert(__builtin_wmemchr(kStr, L'a', 0) == nullptr);
+  static_assert(__builtin_wmemchr(kStr, L'a', 1) == kStr);
+  static_assert(__builtin_wmemchr(kStr, L'\0', 5) == nullptr);
+  static_assert(__builtin_wmemchr(kStr, L'\0', 6) == kStr + 5);
+  static_assert(__builtin_wmemchr(kStr, L'\xffff', 8) == kStr + 4);
+  static_assert(__builtin_wmemchr(kFoo, L'x', 3) == nullptr);
+  static_assert(__builtin_wmemchr(kFoo, L'x', 4) == nullptr); // both-error {{not an integral constant}} \
+                                                              // both-note {{dereferenced one-past-the-end}}
+  static_assert(__builtin_wmemchr(nullptr, L'x', 3) == nullptr); // both-error {{not an integral constant}} \
+                                                                 // both-note {{dereferenced null}}
+  static_assert(__builtin_wmemchr(nullptr, L'x', 0) == nullptr);
+
+  constexpr bool b = !wmemchr(L"hello", L'h', 3); // both-error {{constant expression}} \
+                                                  // both-note {{non-constexpr function 'wmemchr' cannot be used in a constant expression}}
+
+  constexpr wchar_t kStr2[] = {L'f', L'o', L'\xffff', L'o'};
+  static_assert(__builtin_wmemchr(kStr2, L'\xffff', 4) == kStr2 + 2);
 }
