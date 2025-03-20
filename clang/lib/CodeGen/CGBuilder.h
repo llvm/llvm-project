@@ -221,8 +221,6 @@ public:
   ///
   /// This API assumes that drilling into a struct like this is always an
   /// inbounds and nuw operation.
-  /// Specifically, inbounds flag will not be set if \p IsBaseConstantNull is
-  /// true.
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::Twine &Name = "") {
