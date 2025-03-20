@@ -1025,7 +1025,7 @@ def int_memset_inline
 def int_experimental_memset_pattern
     : Intrinsic<[],
       [llvm_anyptr_ty, // Destination.
-       llvm_anyint_ty, // Pattern value.
+       llvm_any_ty,    // Pattern value.
        llvm_anyint_ty, // Count (number of times to fill value).
        llvm_i1_ty],    // IsVolatile.
       [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
