@@ -1015,7 +1015,8 @@ static bool relax(Ctx &ctx, InputSection &sec) {
 //
 // The code sequence converted is as follows:
 //  * lu12i.w   $a0, %le_hi20(sym)      # le_hi20 != 0, otherwise NOP
-//  * ori       $a0, src, %le_lo12(sym) # le_hi20 != 0, src = $a0, otherwise src = $zero
+//  * ori       $a0, src, %le_lo12(sym) # le_hi20 != 0, src = $a0,
+//                                      # otherwise,    src = $zero
 //
 // When relaxation enables, redundant NOPs can be removed.
 void LoongArch::tlsIeToLe(uint8_t *loc, const Relocation &rel,
