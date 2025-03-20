@@ -49,4 +49,22 @@ TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::acoshf16(
                          LIBC_NAMESPACE::fputil::cast<float16>(0.5)));
   EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      aNaN,
+      LIBC_NAMESPACE::acoshf16(LIBC_NAMESPACE::fputil::cast<float16>(-1.0)),
+      FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      aNaN,
+      LIBC_NAMESPACE::acoshf16(LIBC_NAMESPACE::fputil::cast<float16>(-2.0)),
+      FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(
+      aNaN,
+      LIBC_NAMESPACE::acoshf16(LIBC_NAMESPACE::fputil::cast<float16>(-3.0)),
+      FE_INVALID);
+  EXPECT_MATH_ERRNO(EDOM);
 }
