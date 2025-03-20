@@ -1,5 +1,3 @@
-# REQUIRES: aarch64
-
 
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 49
