@@ -21157,9 +21157,6 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
 }
 
 bool DAGCombiner::hasCallInLdStChain(StoreSDNode *St, LoadSDNode *Ld) {
-  assert(Ld == cast<LoadSDNode>(peekThroughBitcasts(St->getValue())) &&
-         "Load and store mismatch");
-
   SmallPtrSet<const SDNode *, 32> Visited;
   SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
   Worklist.emplace_back(St->getChain().getNode(), false);
