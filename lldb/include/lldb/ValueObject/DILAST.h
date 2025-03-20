@@ -67,12 +67,10 @@ public:
   IdentifierNode(uint32_t location, std::string name,
                  lldb::DynamicValueType use_dynamic,
                  std::shared_ptr<ExecutionContextScope> exe_ctx_scope)
-      : ASTNode(location, NodeKind::eIdentifierNode), m_name(std::move(name)),
-        m_use_dynamic(use_dynamic) {}
+      : ASTNode(location, NodeKind::eIdentifierNode), m_name(std::move(name)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  lldb::DynamicValueType GetUseDynamic() const { return m_use_dynamic; }
   std::string GetName() const { return m_name; }
 
   static bool classof(const ASTNode *node) {
@@ -81,7 +79,6 @@ public:
 
 private:
   std::string m_name;
-  lldb::DynamicValueType m_use_dynamic;
 };
 
 /// This class contains one Visit method for each specialized type of

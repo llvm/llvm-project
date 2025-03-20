@@ -154,18 +154,12 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
   // Support $rax as a special syntax for accessing registers.
   // Will return an invalid value in case the requested register doesn't exist.
   if (name_ref.consume_front("$")) {
-    lldb::ValueObjectSP value_sp;
-
     lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
     if (!reg_ctx)
       return nullptr;
 
     if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(name_ref))
-      value_sp =
-          ValueObjectRegister::Create(stack_frame.get(), reg_ctx, reg_info);
-
-    if (value_sp)
-      return value_sp;
+      return ValueObjectRegister::Create(stack_frame.get(), reg_ctx, reg_info);
 
     return nullptr;
   }
@@ -216,15 +210,13 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::DILEvalNode(const ASTNode *node) {
 
   // Traverse an AST pointed by the `node`.
-  auto value_or_error = node->Accept(this);
-
-  // Return the computed value or error.
-  return value_or_error;
+  return node->Accept(this);
 }
+
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
-  lldb::DynamicValueType use_dynamic = node->GetUseDynamic();
+  lldb::DynamicValueType use_dynamic = m_default_dynamic;
 
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node->GetName(), m_exe_ctx_scope, use_dynamic);
@@ -235,10 +227,9 @@ Interpreter::Visit(const IdentifierNode *node) {
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
-    Status error = Status((uint32_t)ErrorCode::kUndeclaredIdentifier,
-                          lldb::eErrorTypeGeneric,
-                          FormatDiagnostics(m_expr, errMsg, node->GetLocation(),
-                                            node->GetName().size()));
+    Status error = GetStatusError(DILDiagnosticError(
+        ErrorCode::kUndeclaredIdentifier, m_expr, errMsg, node->GetLocation(),
+        node->GetName().size()));
     return error.ToError();
   }
 

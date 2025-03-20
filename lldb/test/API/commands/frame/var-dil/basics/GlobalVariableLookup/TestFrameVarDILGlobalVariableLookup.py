@@ -24,7 +24,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.expect("settings set target.experimental.use-DIL true", substrs=[""])
+        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("globalVar", type="int", value="-559038737")  # 0xDEADBEEF
         self.expect_var_path("globalPtr", type="int *")
         self.expect_var_path("globalRef", type="int &")

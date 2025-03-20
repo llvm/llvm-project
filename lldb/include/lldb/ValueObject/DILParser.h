@@ -10,12 +10,15 @@
 #define LLDB_VALUEOBJECT_DILPARSER_H
 
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <vector>
 
@@ -28,9 +31,35 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
-std::string FormatDiagnostics(llvm::StringRef input_expr,
-                              const std::string &message, uint32_t loc,
-                              uint16_t err_len);
+// The following is modeled on class OptionParseError.
+class DILDiagnosticError
+    : public llvm::ErrorInfo<DILDiagnosticError, DiagnosticError> {
+  std::vector<DiagnosticDetail> m_details;
+
+public:
+  using llvm::ErrorInfo<DILDiagnosticError, DiagnosticError>::ErrorInfo;
+  DILDiagnosticError(DiagnosticDetail detail)
+      : ErrorInfo(std::error_code(EINVAL, std::generic_category())),
+        m_details({detail}) {}
+
+  DILDiagnosticError(ErrorCode ec, llvm::StringRef expr,
+                     const std::string &message, uint32_t loc,
+                     uint16_t err_len);
+
+  std::unique_ptr<CloneableError> Clone() const override {
+    return std::make_unique<DILDiagnosticError>(m_details[0]);
+  }
+
+  llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
+    return m_details;
+  }
+};
+
+// This is needed, at the moment, because the code that calls the 'frame
+// var' implementation from CommandObjectFrame ONLY passes Status in/out
+// as a way to determine if an error occurred. We probably want to change that
+// in the future.
+Status GetStatusError(DILDiagnosticError dil_error);
 
 /// Pure recursive descent parser for C++ like expressions.
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
@@ -48,8 +77,6 @@ public:
   bool UseSynthetic() { return m_use_synthetic; }
 
   lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
-
-  using PtrOperator = std::tuple<Token::Kind, uint32_t>;
 
 private:
   explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,

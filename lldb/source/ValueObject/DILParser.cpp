@@ -26,26 +26,23 @@
 
 namespace lldb_private::dil {
 
-std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
-                              uint32_t loc, uint16_t err_len) {
+DILDiagnosticError::DILDiagnosticError(ErrorCode ec, llvm::StringRef expr,
+                                       const std::string &message, uint32_t loc,
+                                       uint16_t err_len)
+    : // ErrorInfo(ec) {
+      ErrorInfo(std::error_code(EINVAL, std::generic_category())) {
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
-  std::string arrow_str = "^";
   std::string rendered_msg =
       llvm::formatv("<user expression 0>:1:{0}: {1}\n    1 | {2}\n     | ^",
-                    loc + 1, message, text);
+                    loc + 1, message, expr);
   DiagnosticDetail detail;
   detail.source_location = sloc;
   detail.severity = lldb::eSeverityError;
   detail.message = message;
   detail.rendered = rendered_msg;
-  std::vector<DiagnosticDetail> diagnostics;
-  diagnostics.push_back(detail);
-  StreamString diag_stream(true);
-  RenderDiagnosticDetails(diag_stream, 7, true, diagnostics);
-  std::string ret_str = text.str() + "\n" + diag_stream.GetString().str();
-  return ret_str;
+  m_details.push_back(detail);
 }
 
 llvm::Expected<ASTNodeUP>
@@ -236,6 +233,13 @@ std::string DILParser::ParseUnqualifiedId() {
   return identifier;
 }
 
+// Must somehow convert the DILDiagnosticError to a lldb::Status, since *that*
+// is was must be returned to the  place where CommandObjectFrame::DoExecute
+// calls GetVariableValueForExpressionPath (at the moment).
+Status GetStatusError(DILDiagnosticError dil_error) {
+  return Status(dil_error.GetDetails()[0].message);
+}
+
 void DILParser::BailOut(ErrorCode code, const std::string &error,
                         uint32_t loc) {
   if (m_error.Fail()) {
@@ -244,9 +248,8 @@ void DILParser::BailOut(ErrorCode code, const std::string &error,
     return;
   }
 
-  m_error = Status((uint32_t)code, lldb::eErrorTypeGeneric,
-                   FormatDiagnostics(m_input_expr, error, loc,
-                                     CurToken().GetSpelling().length()));
+  m_error = GetStatusError(DILDiagnosticError(
+      code, m_input_expr, error, loc, CurToken().GetSpelling().length()));
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
