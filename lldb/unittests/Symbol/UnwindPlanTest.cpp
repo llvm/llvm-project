@@ -14,55 +14,55 @@
 using namespace lldb_private;
 using namespace lldb;
 
-static UnwindPlan::RowSP make_simple_row(addr_t offset, uint64_t cfa_value) {
-  UnwindPlan::RowSP row_sp = std::make_shared<UnwindPlan::Row>();
-  row_sp->SetOffset(offset);
-  row_sp->GetCFAValue().SetIsConstant(cfa_value);
-  return row_sp;
+static UnwindPlan::Row make_simple_row(addr_t offset, uint64_t cfa_value) {
+  UnwindPlan::Row row;
+  row.SetOffset(offset);
+  row.GetCFAValue().SetIsConstant(cfa_value);
+  return row;
 }
 
 TEST(UnwindPlan, InsertRow) {
-  UnwindPlan::RowSP row1_sp = make_simple_row(0, 42);
-  UnwindPlan::RowSP row2_sp = make_simple_row(0, 47);
+  UnwindPlan::Row row1 = make_simple_row(0, 42);
+  UnwindPlan::Row row2 = make_simple_row(0, 47);
 
   UnwindPlan plan(eRegisterKindGeneric);
-  plan.InsertRow(row1_sp);
-  EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(*row1_sp));
+  plan.InsertRow(row1);
+  EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(row1));
 
-  plan.InsertRow(row2_sp, /*replace_existing=*/false);
-  EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(*row1_sp));
+  plan.InsertRow(row2, /*replace_existing=*/false);
+  EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(row1));
 
-  plan.InsertRow(row2_sp, /*replace_existing=*/true);
-  EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(*row2_sp));
+  plan.InsertRow(row2, /*replace_existing=*/true);
+  EXPECT_THAT(plan.GetRowForFunctionOffset(0), testing::Pointee(row2));
 }
 
 TEST(UnwindPlan, GetRowForFunctionOffset) {
-  UnwindPlan::RowSP row1_sp = make_simple_row(10, 42);
-  UnwindPlan::RowSP row2_sp = make_simple_row(20, 47);
+  UnwindPlan::Row row1 = make_simple_row(10, 42);
+  UnwindPlan::Row row2 = make_simple_row(20, 47);
 
   UnwindPlan plan(eRegisterKindGeneric);
-  plan.InsertRow(row1_sp);
-  plan.InsertRow(row2_sp);
+  plan.InsertRow(row1);
+  plan.InsertRow(row2);
 
   EXPECT_THAT(plan.GetRowForFunctionOffset(0), nullptr);
   EXPECT_THAT(plan.GetRowForFunctionOffset(9), nullptr);
-  EXPECT_THAT(plan.GetRowForFunctionOffset(10), testing::Pointee(*row1_sp));
-  EXPECT_THAT(plan.GetRowForFunctionOffset(19), testing::Pointee(*row1_sp));
-  EXPECT_THAT(plan.GetRowForFunctionOffset(20), testing::Pointee(*row2_sp));
-  EXPECT_THAT(plan.GetRowForFunctionOffset(99), testing::Pointee(*row2_sp));
+  EXPECT_THAT(plan.GetRowForFunctionOffset(10), testing::Pointee(row1));
+  EXPECT_THAT(plan.GetRowForFunctionOffset(19), testing::Pointee(row1));
+  EXPECT_THAT(plan.GetRowForFunctionOffset(20), testing::Pointee(row2));
+  EXPECT_THAT(plan.GetRowForFunctionOffset(99), testing::Pointee(row2));
 }
 
 TEST(UnwindPlan, PlanValidAtAddress) {
-  UnwindPlan::RowSP row1_sp = make_simple_row(0, 42);
-  UnwindPlan::RowSP row2_sp = make_simple_row(10, 47);
+  UnwindPlan::Row row1 = make_simple_row(0, 42);
+  UnwindPlan::Row row2 = make_simple_row(10, 47);
 
   UnwindPlan plan(eRegisterKindGeneric);
   EXPECT_FALSE(plan.PlanValidAtAddress(Address(0)));
 
-  plan.InsertRow(row2_sp);
+  plan.InsertRow(row2);
   EXPECT_FALSE(plan.PlanValidAtAddress(Address(0)));
 
-  plan.InsertRow(row1_sp);
+  plan.InsertRow(row1);
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(0)));
   EXPECT_TRUE(plan.PlanValidAtAddress(Address(10)));
 
