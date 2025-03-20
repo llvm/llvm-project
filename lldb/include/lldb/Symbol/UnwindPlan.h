@@ -462,13 +462,9 @@ public:
 
   void Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const;
 
-  void AppendRow(const RowSP &row_sp);
-  void AppendRow(Row row) { AppendRow(std::make_shared<Row>(std::move(row))); }
+  void AppendRow(Row row);
 
-  void InsertRow(const RowSP &row_sp, bool replace_existing = false);
-  void InsertRow(Row row, bool replace_existing = false) {
-    InsertRow(std::make_shared<Row>(std::move(row)), replace_existing);
-  }
+  void InsertRow(Row row, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
   // instructions. If offset is -1 it indicates that the function start is

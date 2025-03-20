@@ -1681,7 +1681,7 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
   llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
   switch (isTupleLike(*this, Loc, T, TupleSize)) {
   case IsTupleLike::Error:
-    return {};
+    return std::nullopt;
   case IsTupleLike::TupleLike:
     return TupleSize.getExtValue();
   case IsTupleLike::NotTupleLike:
@@ -1706,7 +1706,7 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
       RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitField(); });
 
   if (CheckMemberDecompositionFields(*this, Loc, OrigRD, T, BasePair))
-    return true;
+    return std::nullopt;
 
   return NumFields;
 }

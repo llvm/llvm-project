@@ -2978,6 +2978,15 @@ def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
   HelpText<"Force linking the clang builtins runtime library">;
 
 /// ClangIR-specific options - BEGIN
+def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable CIR transformations pipeline">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisablePasses">>;
+def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Disable MLIR module verifier">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
@@ -4822,8 +4831,9 @@ def : Joined<["-"], "mllvm=">,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>, Alias<mllvm>,
   HelpText<"Alias for -mllvm">, MetaVarName<"<arg>">;
 def mmlir : Separate<["-"], "mmlir">,
-  Visibility<[ClangOption, CLOption, FC1Option, FlangOption]>,
-  HelpText<"Additional arguments to forward to MLIR's option processing">;
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>,
+  HelpText<"Additional arguments to forward to MLIR's option processing">,
+  MarshallingInfoStringVector<FrontendOpts<"MLIRArgs">>;
 def ffuchsia_api_level_EQ : Joined<["-"], "ffuchsia-api-level=">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set Fuchsia API level">,

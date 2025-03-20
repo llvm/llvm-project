@@ -240,7 +240,7 @@ TEST_F(ContextTest, Dump) {
     TestProfileWriter(ContextRoot *Root, size_t Entries)
         : Root(Root), Entries(Entries) {}
 
-    void writeContextual(const ContextNode &Node,
+    void writeContextual(const ContextNode &Node, const ContextNode *Unhandled,
                          uint64_t TotalRootEntryCount) override {
       EXPECT_EQ(TotalRootEntryCount, Entries);
       EXPECT_EQ(EnteredSectionCount, 1);
