@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for zext_v16i10_v16i16
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for zext_v2i64_v2i128
 
 define i16 @zext_i8_to_i16(i8 %a) {
 ; CHECK-LABEL: zext_i8_to_i16:
@@ -1211,4 +1212,17 @@ define <16 x i64> @zext_v16i10_v16i64(<16 x i10> %a) {
 entry:
   %c = zext <16 x i10> %a to <16 x i64>
   ret <16 x i64> %c
+}
+
+define <2 x i128> @zext_v2i64_v2i128(<2 x i64> %a) {
+; CHECK-LABEL: zext_v2i64_v2i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x2, v0.d[1]
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    ret
+entry:
+  %c = zext <2 x i64> %a to <2 x i128>
+  ret <2 x i128> %c
 }
