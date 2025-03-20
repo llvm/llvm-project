@@ -44,6 +44,13 @@ bool SBLock::IsValid() const {
   return static_cast<bool>(m_opaque_up) && static_cast<bool>(*m_opaque_up);
 }
 
+void SBLock::Lock() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (m_opaque_up)
+    m_opaque_up->Lock();
+}
+
 void SBLock::Unlock() const {
   LLDB_INSTRUMENT_VA(this);
 

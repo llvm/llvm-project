@@ -565,3 +565,18 @@ class TargetAPITestCase(TestBase):
             lock_copy = lock
             self.assertTrue(lock.IsValid())
         self.assertFalse(lock_copy.IsValid())
+
+        lock = target.AcquireAPILock()
+        self.assertTrue(lock.IsValid())
+        lock.Unlock()
+        self.assertFalse(lock.IsValid())
+
+        with lock:
+            self.assertTrue(lock.IsValid())
+
+        self.assertFalse(lock.IsValid())
+
+        with lock:
+            self.assertTrue(lock.IsValid())
+
+        self.assertFalse(lock.IsValid())

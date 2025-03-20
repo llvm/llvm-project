@@ -19,6 +19,9 @@ class APILock;
 
 namespace lldb {
 
+/// A general-purpose lock in the SB API. The lock can be locked and unlocked.
+/// The default constructed lock is unlocked, but generally the lock is locked
+/// when it is returned from a class.
 class LLDB_API SBLock {
 public:
   SBLock();
@@ -26,8 +29,13 @@ public:
   SBLock &operator=(SBLock &&rhs);
   ~SBLock();
 
+  /// Returns true if this lock has ownership of the underlying mutex.
   bool IsValid() const;
 
+  /// Blocking operation that takes ownership of this lock.
+  void Lock() const;
+
+  /// Releases ownership of this lock.
   void Unlock() const;
 
 private:
