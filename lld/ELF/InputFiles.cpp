@@ -212,7 +212,12 @@ static void updateSupportedARMFeatures(Ctx &ctx,
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }
 
-// Sanitize pauth values
+// Sanitize pauth values.
+// Ensure that pauthSubSection is either std::nullopt or contains exactly two build attributes: ID and Scheme.
+// - Content[0]: ID, Content[1]: Scheme.
+// - Remove build attributes with unknown tags.
+// - Set pauthSubSection to std::nullopt if any required attributes are missing.
+// - Sort the content vector so that ID is at Content[0] and Scheme at Content[1].
 static void sanitizePauthSubSection(
     Ctx &ctx, std::optional<llvm::BuildAttributeSubSection> &pauthSubSection,
     InputSection isec) {
@@ -259,7 +264,12 @@ static void sanitizePauthSubSection(
   assert(2 == pauthSubSection->Content[1].Tag && "first tag should be 2");
 }
 
-// Sanitize features bits
+// Sanitize feature bits.
+// Ensure that fAndBSubSection always contains exactly three build attributes: BTI, PAC, and GCS.
+// - Content[0]: BTI, Content[1]: PAC, Content[2]: GCS.
+// - Remove build attributes with unknown tags.
+// - If any attribute is missing, add it with its value set to `0`.
+// - Sort the content vector so that Content[0] is BTI, Content[1] is PAC, and Content[2] is GCS.
 static void sanitizeFAndBSubSection(
     std::optional<llvm::BuildAttributeSubSection> &fAndBSubSection) {
   /*
