@@ -92,7 +92,7 @@ protected:
 public:
   /// Return the underlying Value attached to this VPValue.
   Value *getUnderlyingValue() const {
-    return SubclassID == VPSymbolicValueSC ? nullptr : UnderlyingVal;
+    return isSymbolic() ? nullptr : UnderlyingVal;
   }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
@@ -181,9 +181,11 @@ public:
   /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
   bool isLiveIn() const { return !hasDefiningRecipe(); }
 
+  /// Returns true if the VPValue is symbolic, that is a live-in without underlying value.
   bool isSymbolic() const { return SubclassID == VPSymbolicValueSC; }
 
-  Type *getType() const;
+  /// If the VPValue is a live-in, return its scalar type.
+  Type *getScalarType() const;
 
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef

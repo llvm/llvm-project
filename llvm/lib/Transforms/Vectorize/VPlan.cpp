@@ -1375,7 +1375,7 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
 }
 
 Type *VPValue::getType() const {
-  assert(isLiveIn());
+  assert(isLiveIn() && "can only return the type for a live-in");
   return SubclassID == VPSymbolicValueSC ? Ty : getUnderlyingValue()->getType();
 }
 

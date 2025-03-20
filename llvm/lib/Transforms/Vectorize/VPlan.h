@@ -3454,7 +3454,7 @@ public:
   VPlan(Loop *L, Type *InductionTy);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
-  /// wrapping \p ScalarHeaderBB and a trip count of \p TC.
+  /// wrapping \p ScalarHeaderBB and a trip count of \p TC. Also creates symbolic VectorTripCount, VF and VFxUF VPValues using \p InductionTy.
   VPlan(BasicBlock *ScalarHeaderBB, VPValue *TC, Type *InductionTy)
       : VectorTripCount(InductionTy), VF(InductionTy), VFxUF(InductionTy) {
     setEntry(createVPBasicBlock("preheader"));
