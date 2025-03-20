@@ -55,9 +55,8 @@ static SmallVector<Value *> populateOperands(Value *Arg, IRBuilder<> &Builder) {
 }
 
 static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
-                                             IRBuilder<> &Builder) {
-  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
-  unsigned NumOperands = Orig->getNumOperands() - 1;
+                                             IRBuilder<> &Builder,
+                                             unsigned NumOperands) {
   assert(NumOperands > 0);
   Value *Arg0 = Orig->getOperand(0);
   [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
@@ -75,6 +74,12 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
+static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
+                                             IRBuilder<> &Builder) {
+  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
+    return argVectorFlatten(Orig, Builder, Orig->getNumOperands() - 1);
+}
+/*
 static SmallVector<Value *> argVectorFlattenExcludeLastElement(CallInst *Orig,
                                                                IRBuilder<> &Builder) {
   // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
@@ -95,7 +100,7 @@ static SmallVector<Value *> argVectorFlattenExcludeLastElement(CallInst *Orig,
   }
   return NewOperands;
 }
-
+*/
 namespace {
 class OpLowerer {
   Module &M;
@@ -190,7 +195,13 @@ public:
       } else if (IsVectorArgExpansion) {
         Args = argVectorFlatten(CI, OpBuilder.getIRB());
       } else if (F.getIntrinsicID() == Intrinsic::dx_dot2add) {
-        unsigned NumOperands = CI->getNumOperands() - 1;
+        // arg[NumOperands-1] is a pointer and is not needed by our flattening.
+        // arg[NumOperands-2] also does not need to be flattened because it is a scalar.
+        unsigned NumOperands = CI->getNumOperands() - 2;
+        Args.push_back(CI->getArgOperand(NumOperands));
+        Args.append(argVectorFlatten(CI, OpBuilder.getIRB(), NumOperands));
+
+        /*unsigned NumOperands = CI->getNumOperands() - 1;
         assert(NumOperands > 0);
         Value *LastArg = CI->getOperand(NumOperands - 1);
         
@@ -201,6 +212,7 @@ public:
         
         //Args = populateOperands(LastArg, OpBuilder.getIRB());
         Args.append(argVectorFlattenExcludeLastElement(CI, OpBuilder.getIRB()));
+        */
       } else {
         Args.append(CI->arg_begin(), CI->arg_end());
       }

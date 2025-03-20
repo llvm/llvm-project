@@ -176,6 +176,18 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 }
 
 //===----------------------------------------------------------------------===//
+// dot2add builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float dot2add(half2 a, half2 b, float c)
+/// \brief Dot product of 2 vector of type half and add a float scalar value.
+
+_HLSL_AVAILABILITY(shadermodel, 6.4)
+const inline float dot2add(half2 a, half2 b, float c) {
+  return __detail::dot2add_impl(a, b, c);
+}
+
+//===----------------------------------------------------------------------===//
 // fmod builtins
 //===----------------------------------------------------------------------===//
 

@@ -1989,7 +1989,7 @@ void SemaHLSL::diagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
 }
 
 // Helper function for CheckHLSLBuiltinFunctionCall
-static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall, unsigned NumArgs) {
   assert(TheCall->getNumArgs() > 1);
   ExprResult A = TheCall->getArg(0);
 
@@ -1999,7 +1999,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   SourceLocation BuiltinLoc = TheCall->getBeginLoc();
 
   bool AllBArgAreVectors = true;
-  for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
+  for (unsigned i = 1; i < NumArgs; ++i) {
     ExprResult B = TheCall->getArg(i);
     QualType ArgTyB = B.get()->getType();
     auto *VecTyB = ArgTyB->getAs<VectorType>();
@@ -2050,6 +2050,10 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
+  return CheckVectorElementCallArgs(S, TheCall, TheCall->getNumArgs());
+}
+
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   assert(TheCall->getNumArgs() > 1);
   QualType ArgTy0 = TheCall->getArg(0)->getType();
@@ -2092,16 +2096,23 @@ static bool CheckArgTypeIsCorrect(
   return false;
 }
 
-static bool CheckAllArgTypesAreCorrect(
-    Sema *S, CallExpr *TheCall, QualType ExpectedType,
+static bool CheckArgTypesAreCorrect(
+    Sema *S, CallExpr *TheCall, unsigned NumArgs, QualType ExpectedType,
     llvm::function_ref<bool(clang::QualType PassedType)> Check) {
-  for (unsigned i = 0; i < TheCall->getNumArgs(); ++i) {
+  for (unsigned i = 0; i < NumArgs; ++i) {
     Expr *Arg = TheCall->getArg(i);
     if (CheckArgTypeIsCorrect(S, Arg, ExpectedType, Check)) {
       return true;
     }
   }
   return false;
+}
+
+static bool CheckAllArgTypesAreCorrect(
+  Sema *S, CallExpr *TheCall, QualType ExpectedType,
+  llvm::function_ref<bool(clang::QualType PassedType)> Check) {
+    return CheckArgTypesAreCorrect(S, TheCall, TheCall->getNumArgs(),           
+                                   ExpectedType, Check);
 }
 
 static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
@@ -2147,15 +2158,17 @@ static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
   return true;
 }
 
-static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall) {
+static bool CheckNoDoubleVectors(Sema *S, CallExpr *TheCall, 
+                                 unsigned NumArgs, QualType ExpectedType) {
   auto checkDoubleVector = [](clang::QualType PassedType) -> bool {
     if (const auto *VecTy = PassedType->getAs<VectorType>())
       return VecTy->getElementType()->isDoubleType();
     return false;
   };
-  return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.FloatTy,
-                                    checkDoubleVector);
+  return CheckArgTypesAreCorrect(S, TheCall, NumArgs, 
+                                 ExpectedType, checkDoubleVector);
 }
+
 static bool CheckFloatingOrIntRepresentation(Sema *S, CallExpr *TheCall) {
   auto checkAllSignedTypes = [](clang::QualType PassedType) -> bool {
     return !PassedType->hasIntegerRepresentation() &&
@@ -2471,7 +2484,21 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     if (SemaRef.BuiltinVectorToScalarMath(TheCall))
       return true;
-    if (CheckNoDoubleVectors(&SemaRef, TheCall))
+    if (CheckNoDoubleVectors(&SemaRef, TheCall, 
+                             TheCall->getNumArgs(), SemaRef.Context.FloatTy))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_dot2add: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall, TheCall->getNumArgs() - 1))
+      return true;
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), SemaRef.getASTContext().FloatTy))
+      return true;
+    if (CheckNoDoubleVectors(&SemaRef, TheCall,
+                             TheCall->getNumArgs() - 1,
+                             SemaRef.Context.HalfTy))
       return true;
     break;
   }

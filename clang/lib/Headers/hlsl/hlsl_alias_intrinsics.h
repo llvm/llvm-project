@@ -973,16 +973,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
 uint64_t dot(uint64_t4, uint64_t4);
 
 //===----------------------------------------------------------------------===//
-// dot2add builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn float dot2add(half2 a, half2 b, float c)
-
-_HLSL_AVAILABILITY(shadermodel, 6.4)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot2add)
-float dot2add(half2, half2, float);
-
-//===----------------------------------------------------------------------===//
 // dot4add builtins
 //===----------------------------------------------------------------------===//
 
