@@ -163,9 +163,8 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
     if (!MI.getOperand(1).isFI())
       return Register();
     FrameIndex = MI.getOperand(1).getIndex();
-    unsigned BytesPerBlock = RISCV::RVVBitsPerBlock / 8;
     unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
-    MemBytes = TypeSize::getScalable(BytesPerBlock * LMUL);
+    MemBytes = TypeSize::getScalable(RISCV::RVVBytesPerBlock * LMUL);
     return MI.getOperand(0).getReg();
   }
 
@@ -214,9 +213,8 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     if (!MI.getOperand(1).isFI())
       return Register();
     FrameIndex = MI.getOperand(1).getIndex();
-    unsigned BytesPerBlock = RISCV::RVVBitsPerBlock / 8;
     unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
-    MemBytes = TypeSize::getScalable(BytesPerBlock * LMUL);
+    MemBytes = TypeSize::getScalable(RISCV::RVVBytesPerBlock * LMUL);
     return MI.getOperand(0).getReg();
   }
 
