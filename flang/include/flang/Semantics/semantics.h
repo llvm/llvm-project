@@ -19,6 +19,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
+#include "clang/Basic/Diagnostic.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -68,7 +69,7 @@ class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
       const common::LanguageFeatureControl &, const common::LangOptions &,
-      parser::AllCookedSources &);
+      parser::AllCookedSources &, clang::DiagnosticsEngine &);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -82,6 +83,7 @@ public:
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
   }
+  clang::DiagnosticsEngine &getDiagnostics() const { return diags_; }
   int quadPrecisionKind() const { return defaultKinds_.quadPrecisionKind(); }
   bool IsEnabled(common::LanguageFeature feature) const {
     return languageFeatures_.IsEnabled(feature);
@@ -305,6 +307,7 @@ private:
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl &languageFeatures_;
   const common::LangOptions &langOpts_;
+  clang::DiagnosticsEngine &diags_;
   parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;

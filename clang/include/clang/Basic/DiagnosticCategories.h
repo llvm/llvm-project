@@ -21,7 +21,8 @@ namespace clang {
     };
 
     enum class Group {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)    \
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs,    \
+                       IsClang, IsFlang)                                       \
       GroupName,
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef CATEGORY

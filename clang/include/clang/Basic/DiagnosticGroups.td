@@ -902,12 +902,13 @@ def UnevaluatedExpression : DiagGroup<"unevaluated-expression",
 def UnusedValue : DiagGroup<"unused-value", [UnusedComparison, UnusedResult,
                                              UnevaluatedExpression]>;
 def UnusedConstVariable : DiagGroup<"unused-const-variable">;
-def UnusedVariable : DiagGroup<"unused-variable",
-                               [UnusedConstVariable]>;
+def UnusedVariable
+    : DiagGroup<"unused-variable", [UnusedConstVariable], [{}], 1, 1>;
 def UnusedButSetVariable : DiagGroup<"unused-but-set-variable">;
 def UnusedLocalTypedef : DiagGroup<"unused-local-typedef">;
 def UnusedPropertyIvar :  DiagGroup<"unused-property-ivar">;
 def UnusedGetterReturnValue : DiagGroup<"unused-getter-return-value">;
+def UnusedDummyArgument : DiagGroup<"unused-dummy-argument", [], [{}], 0, 1>;
 def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
 def UsedSearchPath : DiagGroup<"search-path-usage">;
 def UserDefinedLiterals : DiagGroup<"user-defined-literals">;

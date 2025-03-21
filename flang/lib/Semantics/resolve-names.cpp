@@ -6731,6 +6731,11 @@ bool DeclarationVisitor::Pre(const parser::CommonBlockObject &) {
 void DeclarationVisitor::Post(const parser::CommonBlockObject &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   DeclareObjectEntity(name);
+  if (name.symbol) {
+    if (auto *detail{name.symbol->detailsIf<ObjectEntityDetails>()}) {
+      detail->set_isUsed();
+    }
+  }
   auto pair{specPartState_.commonBlockObjects.insert(name.source)};
   if (!pair.second) {
     const SourceName &prev{*pair.first};
