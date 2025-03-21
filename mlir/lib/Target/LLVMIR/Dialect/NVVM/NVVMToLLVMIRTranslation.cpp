@@ -150,6 +150,15 @@ static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
   }
 }
 
+/// Return the intrinsic ID associated with st.bulk for the given address type.
+static llvm::Intrinsic::ID
+getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
+  bool isSharedMemory =
+      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
+                        : llvm::Intrinsic::nvvm_st_bulk;
+}
+
 static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
                                               NVVM::ProxyKind toProxy,
                                               NVVM::MemScopeKind scope,
