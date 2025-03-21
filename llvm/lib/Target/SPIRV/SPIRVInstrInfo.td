@@ -16,13 +16,6 @@ include "SPIRVSymbolicOperands.td"
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
   def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
-  def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
-  def GET_fID: Pseudo<(outs fID:$dst_id), (ins fID:$src)>;
-  def GET_pID: Pseudo<(outs pID:$dst_id), (ins pID:$src)>;
-  def GET_vID: Pseudo<(outs vID:$dst_id), (ins vID:$src)>;
-  def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins vfID:$src)>;
-  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
 
 def UNKNOWN_type
