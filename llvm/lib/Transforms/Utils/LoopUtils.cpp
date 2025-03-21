@@ -317,6 +317,35 @@ std::optional<MDNode *> llvm::makeFollowupLoopID(
 
     HasAnyFollowup = true;
     for (const MDOperand &Option : drop_begin(FollowupNode->operands())) {
+      // The followup metadata typically forms as follows:
+      //
+      //   !0 = distinct !{!0, !1, !2}
+      //   !1 = !{!"llvm.loop.distribute.enable", i1 true}
+      //   !2 = !{!"llvm.loop.distribute.followup_all", !3}
+      //   !3 = distinct !{!3, !4}
+      //   !4 = !{!"llvm.loop.vectorize.enable", i1 true}
+      //
+      // If we push Option (!3 in this case) in MDs, the new metadata looks
+      // something like:
+      //
+      //   !5 = distinct !{!5, !3}
+      //
+      // This doesn't contain !4, so the vectorization pass doesn't recognize
+      // this loop as vectorization enabled. To make the new metadata contain !4
+      // instead of !3, traverse all of Option's operands and push them into
+      // MDs if Option seems to be a LoopID.
+      if (auto *MDN = dyn_cast<MDNode>(Option)) {
+        // TODO: Is there a proper way to detect LoopID?
+        if (MDN->getNumOperands() > 1 && MDN->getOperand(0) == MDN) {
+          for (const MDOperand &NestedOption : drop_begin(MDN->operands())) {
+            MDs.push_back(NestedOption.get());
+            Changed = true;
+          }
+          continue;
+        }
+      }
+
+      // If Option does't seem to be a LoopID, push it as it is.
       MDs.push_back(Option.get());
       Changed = true;
     }
