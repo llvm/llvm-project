@@ -157,29 +157,6 @@ following backend compilation commands with maximum parallelism:
     /usr/bin/clang -O2 -c -fprofile-sample-use=my.prof t2.o  -fthinlto-index=t2.o.thinlto.bc -o t2.native.o \
       -fproc-stat-report=t2.stats.txt
 
-Temporary Files
----------------
-
-During its operation, DTLTO generates temporary files. Temporary files are
-created in the same directory as the linker's output file:
-
-- **JSON Job Description File**:
-
-  - Format: ``<linker output file basename>.<PID>.dist-file.json``
-  - Example: ``dtlto.77380.dist-file.json`` (for output file ``dtlto.elf``).
-
-- **Object Files From Backend Compilations**:
-
-  - Format: ``<Module identifier basename>.<Task>.<PID>.native.o``
-  - Example: ``my.1.77380.native.o`` (for bitcode module ``my.o``).
-
-- **Summary Index Shard Files**:
-
-  - Format: ``<Module identifier basename>.<Task>.<PID>.native.o.thinlto.bc``
-  - Example: ``my.1.77380.native.o.thinlto.bc`` (for bitcode module ``my.o``).
-
-Temporary files are removed by default.
-
 TODOs
 -----
 
