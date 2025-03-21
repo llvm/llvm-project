@@ -836,6 +836,13 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
       Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseRegNum,
       IndexRegNum, DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
 
+  if (BranchType == IndirectBranchType::UNKNOWN) {
+    if (opts::Verbosity > 2)
+      outs() << "BOLT-WARNING: failed to match indirect branch, "
+             << getPrintName() << " at 0x" << Twine::utohexstr(Offset)
+             << " offset\n";
+  }
+
   if (BranchType == IndirectBranchType::UNKNOWN && !MemLocInstr)
     return BranchType;
 
