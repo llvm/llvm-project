@@ -53,6 +53,69 @@ public:
 
   void WillResume(lldb::StateType resume_state) override;
 
+  void SetQueueName(const char *name) override {
+    if (m_backing_thread_sp)
+      m_backing_thread_sp->SetQueueName(name);
+  }
+
+  lldb::queue_id_t GetQueueID() override {
+    if (m_backing_thread_sp)
+      return m_backing_thread_sp->GetQueueID();
+    return LLDB_INVALID_QUEUE_ID;
+  }
+
+  void SetQueueID(lldb::queue_id_t new_val) override {
+    if (m_backing_thread_sp)
+      m_backing_thread_sp->SetQueueID(new_val);
+  }
+
+  lldb::QueueKind GetQueueKind() override {
+    if (m_backing_thread_sp)
+      return m_backing_thread_sp->GetQueueKind();
+    return lldb::eQueueKindUnknown;
+  }
+
+  void SetQueueKind(lldb::QueueKind kind) override {
+    if (m_backing_thread_sp)
+      m_backing_thread_sp->SetQueueKind(kind);
+  }
+
+  lldb::QueueSP GetQueue() override {
+    if (m_backing_thread_sp)
+      return m_backing_thread_sp->GetQueue();
+    return lldb::QueueSP();
+  }
+
+  lldb::addr_t GetQueueLibdispatchQueueAddress() override {
+    if (m_backing_thread_sp)
+      return m_backing_thread_sp->GetQueueLibdispatchQueueAddress();
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  void SetQueueLibdispatchQueueAddress(lldb::addr_t dispatch_queue_t) override {
+    if (m_backing_thread_sp)
+      m_backing_thread_sp->SetQueueLibdispatchQueueAddress(dispatch_queue_t);
+  }
+
+  lldb_private::LazyBool GetAssociatedWithLibdispatchQueue() override {
+    if (m_backing_thread_sp)
+      return m_backing_thread_sp->GetAssociatedWithLibdispatchQueue();
+    return lldb_private::eLazyBoolNo;
+  }
+
+  void SetAssociatedWithLibdispatchQueue(
+      lldb_private::LazyBool associated_with_libdispatch_queue) override {
+    if (m_backing_thread_sp)
+      m_backing_thread_sp->SetAssociatedWithLibdispatchQueue(
+          associated_with_libdispatch_queue);
+  }
+
+  bool ThreadHasQueueInformation() const override {
+    if (m_backing_thread_sp)
+      return m_backing_thread_sp->ThreadHasQueueInformation();
+    return false;
+  }
+
   void DidResume() override {
     if (m_backing_thread_sp)
       m_backing_thread_sp->DidResume();
@@ -132,6 +195,55 @@ public:
     if (!m_queue.empty())
       return m_queue.c_str();
     return ThreadMemory::GetQueueName();
+  }
+
+  /// TODO: this method should take into account the queue override.
+  void SetQueueName(const char *name) override { Thread::SetQueueName(name); }
+
+  /// TODO: this method should take into account the queue override.
+  lldb::queue_id_t GetQueueID() override { return Thread::GetQueueID(); }
+
+  /// TODO: this method should take into account the queue override.
+  void SetQueueID(lldb::queue_id_t new_val) override {
+    Thread::SetQueueID(new_val);
+  }
+
+  /// TODO: this method should take into account the queue override.
+  lldb::QueueKind GetQueueKind() override { return Thread::GetQueueKind(); }
+
+  /// TODO: this method should take into account the queue override.
+  void SetQueueKind(lldb::QueueKind kind) override {
+    Thread::SetQueueKind(kind);
+  }
+
+  /// TODO: this method should take into account the queue override.
+  lldb::QueueSP GetQueue() override { return Thread::GetQueue(); }
+
+  /// TODO: this method should take into account the queue override.
+  lldb::addr_t GetQueueLibdispatchQueueAddress() override {
+    return Thread::GetQueueLibdispatchQueueAddress();
+  }
+
+  /// TODO: this method should take into account the queue override.
+  void SetQueueLibdispatchQueueAddress(lldb::addr_t dispatch_queue_t) override {
+    Thread::SetQueueLibdispatchQueueAddress(dispatch_queue_t);
+  }
+
+  /// TODO: this method should take into account the queue override.
+  bool ThreadHasQueueInformation() const override {
+    return Thread::ThreadHasQueueInformation();
+  }
+
+  /// TODO: this method should take into account the queue override.
+  lldb_private::LazyBool GetAssociatedWithLibdispatchQueue() override {
+    return Thread::GetAssociatedWithLibdispatchQueue();
+  }
+
+  /// TODO: this method should take into account the queue override.
+  void SetAssociatedWithLibdispatchQueue(
+      lldb_private::LazyBool associated_with_libdispatch_queue) override {
+    Thread::SetAssociatedWithLibdispatchQueue(
+        associated_with_libdispatch_queue);
   }
 
   lldb::ValueObjectSP &GetValueObject() { return m_thread_info_valobj_sp; }
