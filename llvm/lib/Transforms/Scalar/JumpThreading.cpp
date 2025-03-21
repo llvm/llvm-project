@@ -1241,8 +1241,8 @@ bool JumpThreadingPass::preserveLoopPreHeader(BasicBlock *BB) {
       if (isOpDefinedInBlock(Op, BB))
         HasValueDefinedInPreHeader = true;
       else if (!isa<PHINode>(Inst) &&
-               llvm::any_of(Inst->operand_values(),
-                            [&PHI](Value *V) { return V == &PHI; }))
+             llvm::any_of(Inst->operand_values(),
+                          [&PHI](Value *V) { return V == &PHI; }))
         HasPotentialSelfReference = true;
     }
     return HasValueDefinedInPreHeader && HasPotentialSelfReference;
