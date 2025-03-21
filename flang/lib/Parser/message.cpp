@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace Fortran::parser {
@@ -272,7 +273,6 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
   return llvm::raw_ostream::SAVEDCOLOR;
 }
 
-// TODO: Make these configurable, based on verbosity level.
 static constexpr int MAX_CONTEXTS_EMITTED{2};
 static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
@@ -282,7 +282,9 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   const AllSources &sources{allCooked.allSources()};
   sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
-  // Always refers to whether the attachment in the loop below is a context.
+  // Refers to whether the attachment in the loop below is a context, but can't
+  // be declared inside the loop because the previous iteration's 
+  // attachment->attachmentIsContext_ indicates this.
   bool isContext{attachmentIsContext_};
   int contextsEmitted{0};
   // Emit attachments.
