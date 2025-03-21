@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 // TODO: clean this up in a followup patch
-time_t mktime_internal(const tm *tm_out, bool* out_of_range_flag) {
+TMParse mktime_internal(const tm *tm_out) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
   int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
@@ -27,31 +27,22 @@ time_t mktime_internal(const tm *tm_out, bool* out_of_range_flag) {
   if (sizeof(time_t) == 4 &&
       tm_year_from_base >= time_constants::END_OF32_BIT_EPOCH_YEAR) {
     if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR) {
-      *out_of_range_flag = true;
-      return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+      return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
     }
     if (tm_out->tm_mon > 0) {
-      *out_of_range_flag = true;
-      return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+      return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
     }
     if (tm_out->tm_mday > 19) {
-      *out_of_range_flag = true;
-      return time_constants::OUT_OF_RANGE_RETURN_VALUE;
-    }
-    else if (tm_out->tm_mday == 19) {
+      return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+    } else if (tm_out->tm_mday == 19) {
       if (tm_out->tm_hour > 3) {
-        *out_of_range_flag = true;
-        return time_constants::OUT_OF_RANGE_RETURN_VALUE;
-      }
-      else if (tm_out->tm_hour == 3) {
+        return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+      } else if (tm_out->tm_hour == 3) {
         if (tm_out->tm_min > 14) {
-          *out_of_range_flag = true;
-          return time_constants::OUT_OF_RANGE_RETURN_VALUE;
-        }
-        else if (tm_out->tm_min == 14) {
+          return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+        } else if (tm_out->tm_min == 14) {
           if (tm_out->tm_sec > 7) {
-            *out_of_range_flag = true;
-            return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+            return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
           }
         }
       }
@@ -78,7 +69,7 @@ time_t mktime_internal(const tm *tm_out, bool* out_of_range_flag) {
   bool tm_year_is_leap = time_utils::is_leap_year(tm_year_from_base);
 
   // Calculate total number of days based on the month and the day (tm_mday).
-  int total_days = tm_out->tm_mday - 1;
+  int64_t total_days = tm_out->tm_mday - 1;
   for (int64_t i = 0; i < month; ++i)
     total_days += time_constants::NON_LEAP_YEAR_DAYS_IN_MONTH[i];
   // Add one day if it is a leap year and the month is after February.
@@ -115,10 +106,10 @@ time_t mktime_internal(const tm *tm_out, bool* out_of_range_flag) {
   // TODO: https://github.com/llvm/llvm-project/issues/121962
   // Need to handle timezone and update of tm_isdst.
   time_t seconds = tm_out->tm_sec +
-                    tm_out->tm_min * time_constants::SECONDS_PER_MIN +
-                    tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
-                    total_days * time_constants::SECONDS_PER_DAY;
-  return seconds;
+                   tm_out->tm_min * time_constants::SECONDS_PER_MIN +
+                   tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
+                   total_days * time_constants::SECONDS_PER_DAY;
+  return {seconds, false};
 }
 
 static int64_t computeRemainingYears(int64_t daysPerYears,

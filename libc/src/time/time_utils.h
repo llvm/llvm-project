@@ -24,9 +24,15 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
+
+// store the result of mktime_internal(const tm* )
+struct TMParse {
+  time_t seconds;
+  bool out_of_range_flag;
+};
 // calculates the seconds from the epoch for tm_in. Does not update the struct,
 // you must call update_from_seconds for that.
-time_t mktime_internal(const tm *tm_out, bool* out_of_range_flag);
+TMParse mktime_internal(const tm *tm_out);
 
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
@@ -329,8 +335,8 @@ public:
   }
 
   LIBC_INLINE time_t get_epoch() const {
-    bool out_of_range_flag = false;
-    return mktime_internal(timeptr, &out_of_range_flag);
+    auto[seconds, _] = mktime_internal(timeptr);
+    return seconds;
   }
 
   // returns the timezone offset in microwave time:
