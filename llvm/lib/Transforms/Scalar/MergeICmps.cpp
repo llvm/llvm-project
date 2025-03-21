@@ -132,10 +132,14 @@ private:
   DenseMap<const Value*, int> BaseToIndex;
 };
 
+
+// All Instructions related to a comparison.
+typedef SmallDenseSet<const Instruction *, 8> InstructionSet;
+
 // If this value is a load from a constant offset w.r.t. a base address, and
 // there are no other users of the load or address, returns the base address and
 // the offset.
-BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
+BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId, InstructionSet* BlockInsts) {
   auto *const LoadI = dyn_cast<LoadInst>(Val);
   if (!LoadI)
     return {};
@@ -174,11 +178,12 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     if (!GEP->accumulateConstantOffset(DL, Offset))
       return {};
     Base = GEP->getPointerOperand();
+    BlockInsts->insert(GEP);
   }
+  BlockInsts->insert(LoadI);
   return BCEAtom(GEP, LoadI, BaseId.getBaseId(Base), Offset);
 }
 
-typedef SmallDenseSet<const Instruction *, 8> InstructionSet;
 
 struct Comparison {
 public:
@@ -200,7 +205,6 @@ public:
 
   virtual ~Comparison() = default;
   virtual LoadOperands getLoads() = 0;
-  virtual InstructionSet getInsts() = 0;
   bool areContiguous(const Comparison& Other) const;
   bool operator<(const Comparison &Other) const;
 };
@@ -226,13 +230,6 @@ struct BCEConstCmp : public Comparison {
   Comparison::LoadOperands getLoads() override {
     return std::make_pair(&Lhs,std::nullopt);
   }
-  InstructionSet getInsts() override {
-    InstructionSet BlockInsts{CmpI,Lhs.LoadI};
-    if (Lhs.GEP)
-      BlockInsts.insert(Lhs.GEP);
-    return BlockInsts;
-  }
-
 };
 
 // A comparison between two BCE atoms, e.g. `a == o.a` in the example at the
@@ -255,14 +252,6 @@ struct BCECmp : public Comparison {
 
   Comparison::LoadOperands getLoads() override {
     return std::make_pair(&Lhs,&Rhs);
-  }
-  InstructionSet getInsts() override {
-    InstructionSet BlockInsts{CmpI, Lhs.LoadI, Rhs.LoadI};
-    if (Lhs.GEP)
-      BlockInsts.insert(Lhs.GEP);
-    if (Rhs.GEP)
-      BlockInsts.insert(Rhs.GEP);
-    return BlockInsts;
   }
 };
 
@@ -455,7 +444,7 @@ std::optional<Comparison*> visitICmp(const ICmpInst *const CmpI,
                     << (ExpectedPredicate == ICmpInst::ICMP_EQ ? "eq" : "ne")
                     << "\n");
   // First operand is always a load
-  auto Lhs = visitICmpLoadOperand(CmpI->getOperand(0), BaseId);
+  auto Lhs = visitICmpLoadOperand(CmpI->getOperand(0), BaseId, BlockInsts);
   if (!Lhs.BaseId)
     return std::nullopt;
 
@@ -465,10 +454,11 @@ std::optional<Comparison*> visitICmp(const ICmpInst *const CmpI,
   const auto &DL = CmpI->getDataLayout();
   int SizeBits = DL.getTypeSizeInBits(CmpI->getOperand(0)->getType());
 
+  BlockInsts->insert(CmpI);
   if (auto const& Const = dyn_cast<Constant>(RhsOperand))
     return new BCEConstCmp(std::move(Lhs), Const, SizeBits, CmpI);
 
-  auto Rhs = visitICmpLoadOperand(RhsOperand, BaseId);
+  auto Rhs = visitICmpLoadOperand(RhsOperand, BaseId, BlockInsts);
   if (!Rhs.BaseId)
     return std::nullopt;
   return new BCECmp(std::move(Lhs), std::move(Rhs), SizeBits, CmpI);
@@ -553,10 +543,6 @@ std::optional<MultBCECmpBlock> visitCmpBlock(Value *const Val,
   if (!Result)
     return std::nullopt;
 
-  for (auto* Cmp : Result->getCmpChain()) {
-    auto CmpInsts = Cmp->getInsts();
-    BlockInsts.insert(CmpInsts.begin(), CmpInsts.end());
-  }
   BlockInsts.insert(BranchI);
   return MultBCECmpBlock(Result->getCmpChain(), Block, BlockInsts);
 }
