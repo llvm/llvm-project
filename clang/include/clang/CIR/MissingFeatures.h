@@ -127,6 +127,9 @@ struct MissingFeatures {
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }
   static bool zextOp() { return false; }
+
+  // Future CIR attributes
+  static bool optInfoAttr() { return false; }
 };
 
 } // namespace cir
