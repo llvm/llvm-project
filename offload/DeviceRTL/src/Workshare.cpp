@@ -878,7 +878,6 @@ public:
     Ty ThreadChunk = 0;
     Ty NumThreads = 1;
     Ty TId = 0;
-    ASSERT(TId == mapping::getThreadIdInBlock(), "Bad thread id");
 
     // All teams need to participate.
     Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
