@@ -1124,6 +1124,12 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   // Handle a single conditional branch.
   if (NumTerminators == 1 && I->getDesc().isConditionalBranch()) {
     parseCondBranch(*I, TBB, Cond);
+    // Try and optimize the conditional branch.
+    if (AllowModify) {
+      optimizeCondBranch(*I);
+      // The branch might have changed, reanalyze it.
+      return analyzeBranch(MBB, TBB, FBB, Cond, false);
+    }
     return false;
   }
 
@@ -1132,6 +1138,14 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       I->getDesc().isUnconditionalBranch()) {
     parseCondBranch(*std::prev(I), TBB, Cond);
     FBB = getBranchDestBlock(*I);
+    // Try and optimize the pair.
+    if (AllowModify) {
+      if (optimizeCondBranch(*std::prev(I)))
+        I->eraseFromParent();
+
+      // The branch might have changed, reanalyze it.
+      return analyzeBranch(MBB, TBB, FBB, Cond, false);
+    }
     return false;
   }
 
@@ -1287,7 +1301,8 @@ bool RISCVInstrInfo::reverseBranchCondition(
 
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
-  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  if (!MBB)
+    return false;
 
   MachineBasicBlock *TBB, *FBB;
   SmallVector<MachineOperand, 3> Cond;
@@ -1297,8 +1312,97 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
 
-  if (CC == RISCVCC::COND_EQ || CC == RISCVCC::COND_NE)
+  // Right now we only care about LI (i.e. ADDI x0, imm)
+  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
+    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+        MI->getOperand(1).getReg() == RISCV::X0) {
+      Imm = MI->getOperand(2).getImm();
+      return true;
+    }
     return false;
+  };
+
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  // Either a load from immediate instruction or X0.
+  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
+    if (!Op.isReg())
+      return false;
+    Register Reg = Op.getReg();
+    if (Reg == RISCV::X0) {
+      Imm = 0;
+      return true;
+    }
+    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+  };
+
+  // Try and convert a conditional branch that can be evaluated statically
+  // into an unconditional branch.
+  MachineBasicBlock *Folded = nullptr;
+  int64_t C0, C1;
+  if (isFromLoadImm(Cond[1], C0) && isFromLoadImm(Cond[2], C1)) {
+    switch (CC) {
+    case RISCVCC::COND_INVALID:
+      llvm_unreachable("Unexpected CC");
+    case RISCVCC::COND_EQ: {
+      Folded = (C0 == C1) ? TBB : FBB;
+      break;
+    }
+    case RISCVCC::COND_NE: {
+      Folded = (C0 != C1) ? TBB : FBB;
+      break;
+    }
+    case RISCVCC::COND_LT: {
+      Folded = (C0 < C1) ? TBB : FBB;
+      break;
+    }
+    case RISCVCC::COND_GE: {
+      Folded = (C0 >= C1) ? TBB : FBB;
+      break;
+    }
+    case RISCVCC::COND_LTU: {
+      Folded = ((uint64_t)C0 < (uint64_t)C1) ? TBB : FBB;
+      break;
+    }
+    case RISCVCC::COND_GEU: {
+      Folded = ((uint64_t)C0 >= (uint64_t)C1) ? TBB : FBB;
+      break;
+    }
+    }
+
+    // Do the conversion
+    // Build the new unconditional branch
+    DebugLoc DL = MBB->findBranchDebugLoc();
+    if (Folded) {
+      BuildMI(*MBB, MI, DL, get(RISCV::PseudoBR)).addMBB(Folded);
+    } else {
+      MachineFunction::iterator Fallthrough = ++MBB->getIterator();
+      if (Fallthrough == MBB->getParent()->end())
+        return false;
+      BuildMI(*MBB, MI, DL, get(RISCV::PseudoBR)).addMBB(&*Fallthrough);
+    }
+
+    // Update successors of MBB.
+    if (Folded == TBB) {
+      // If we're taking TBB, then the succ to delete is the fallthrough (if
+      // it was a succ in the first place), or its the MBB from the
+      // unconditional branch.
+      if (!FBB) {
+        MachineFunction::iterator Fallthrough = ++MBB->getIterator();
+        if (Fallthrough != MBB->getParent()->end() &&
+            MBB->isSuccessor(&*Fallthrough))
+          MBB->removeSuccessor(&*Fallthrough, true);
+      } else {
+        MBB->removeSuccessor(FBB, true);
+      }
+    } else if (Folded == FBB) {
+      // If we're taking the fallthrough or unconditional branch, then the
+      // succ to remove is the one from the conditional branch.
+      MBB->removeSuccessor(TBB, true);
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
 
   // For two constants C0 and C1 from
   // ```
@@ -1317,24 +1421,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   //
   // To make sure this optimization is really beneficial, we only
   // optimize for cases where Y had only one use (i.e. only used by the branch).
-
-  // Right now we only care about LI (i.e. ADDI x0, imm)
-  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
-    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
-        MI->getOperand(1).getReg() == RISCV::X0) {
-      Imm = MI->getOperand(2).getImm();
-      return true;
-    }
-    return false;
-  };
-  // Either a load from immediate instruction or X0.
-  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
-    if (!Op.isReg())
-      return false;
-    Register Reg = Op.getReg();
-    return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
-  };
-
   MachineOperand &LHS = MI.getOperand(0);
   MachineOperand &RHS = MI.getOperand(1);
   // Try to find the register for constant Z; return
@@ -1353,7 +1439,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   };
 
   bool Modify = false;
-  int64_t C0;
   if (isFromLoadImm(LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
     // Might be case 1.
     // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need

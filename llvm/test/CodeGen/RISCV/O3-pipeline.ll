@@ -117,13 +117,14 @@
 ; CHECK-NEXT:       Machine code sinking
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Trace Metrics
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
 ; RV64-NEXT:        RISC-V Optimize W Instructions
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       RISC-V VL Optimizer
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
