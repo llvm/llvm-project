@@ -85,7 +85,7 @@ public:
   // Emit code for a subset of itineraries.
   void emitForItineraries(raw_ostream &OS,
                           std::vector<const CodeGenProcModel *> &ProcItinList,
-                          std::string DFAName);
+                          const std::string &DFAName);
 
   void run(raw_ostream &OS);
 };
@@ -231,7 +231,7 @@ void DFAPacketizerEmitter::run(raw_ostream &OS) {
 
 void DFAPacketizerEmitter::emitForItineraries(
     raw_ostream &OS, std::vector<const CodeGenProcModel *> &ProcModels,
-    std::string DFAName) {
+    const std::string &DFAName) {
   OS << "} // end namespace llvm\n\n";
   OS << "namespace {\n";
   collectAllFuncUnits(ProcModels);

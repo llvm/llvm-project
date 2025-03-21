@@ -98,7 +98,7 @@ std::string SymScalar::getFlagString(const MachO::Symbol *Sym) {
   return std::string(Flags);
 }
 
-void SymScalar::print(raw_ostream &OS, std::string Indent, MachO::Target Targ) {
+void SymScalar::print(raw_ostream &OS, const std::string &Indent, const MachO::Target &Targ) {
   if (Val->getKind() == MachO::EncodeKind::ObjectiveCClass) {
     if (Targ.Arch == MachO::AK_i386 && Targ.Platform == MachO::PLATFORM_MACOS) {
       OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ")
@@ -144,7 +144,7 @@ void addDiffForTargSlice(V Val, Target Targ, DiffOutput &Diff,
 }
 
 DiffOutput getSingleAttrDiff(const std::vector<InterfaceFileRef> &IRefVec,
-                             std::string Name, InterfaceInputOrder Order) {
+                             const std::string &Name, InterfaceInputOrder Order) {
   DiffOutput Diff(Name);
   Diff.Kind = AD_Str_Vec;
   for (const auto &IRef : IRefVec)
@@ -157,7 +157,7 @@ DiffOutput getSingleAttrDiff(const std::vector<InterfaceFileRef> &IRefVec,
 
 DiffOutput
 getSingleAttrDiff(const std::vector<std::pair<Target, std::string>> &PairVec,
-                  std::string Name, InterfaceInputOrder Order) {
+                  const std::string &Name, InterfaceInputOrder Order) {
   DiffOutput Diff(Name);
   Diff.Kind = AD_Str_Vec;
   for (const auto &Pair : PairVec)
@@ -168,7 +168,7 @@ getSingleAttrDiff(const std::vector<std::pair<Target, std::string>> &PairVec,
 }
 
 DiffOutput getSingleAttrDiff(InterfaceFile::const_symbol_range SymRange,
-                             std::string Name, InterfaceInputOrder Order) {
+                             const std::string &Name, InterfaceInputOrder Order) {
   DiffOutput Diff(Name);
   Diff.Kind = AD_Sym_Vec;
   for (const auto *Sym : SymRange)
@@ -284,7 +284,7 @@ DiffOutput recordDifferences(const std::vector<T> &LHS,
 
 DiffOutput recordDifferences(llvm::MachO::InterfaceFile::const_symbol_range LHS,
                              llvm::MachO::InterfaceFile::const_symbol_range RHS,
-                             std::string Attr) {
+                             const std::string &Attr) {
   DiffOutput Diff(Attr);
   Diff.Kind = AD_Sym_Vec;
   findAndAddDiff(LHS, RHS, Diff, lhs);

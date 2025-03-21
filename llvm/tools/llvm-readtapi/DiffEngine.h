@@ -85,7 +85,7 @@ public:
 
   std::string getFlagString(const MachO::Symbol *Sym);
 
-  void print(raw_ostream &OS, std::string Indent, MachO::Target Targ);
+  void print(raw_ostream &OS, const std::string &Indent, const MachO::Target &Targ);
 
   const MachO::Symbol *getVal() const { return Val; }
   InterfaceInputOrder getOrder() const { return Order; }
