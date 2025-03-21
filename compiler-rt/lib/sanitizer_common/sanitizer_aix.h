@@ -15,16 +15,16 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_AIX
-#include "sanitizer_common.h"
+#  include "sanitizer_common.h"
 #  include "sanitizer_posix.h"
 
 namespace __sanitizer {
 
-#if SANITIZER_WORDSIZE == 32
+#  if SANITIZER_WORDSIZE == 32
 static const uptr InstructionStart = 0x10000000;
-#else
+#  else
 static const uptr InstructionStart = 0x100000000;
-#endif
+#  endif
 
 struct ProcSelfMapsBuff {
   char *data;

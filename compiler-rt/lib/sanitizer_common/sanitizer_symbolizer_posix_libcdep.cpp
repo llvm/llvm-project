@@ -63,9 +63,10 @@ char *__cxa_demangle(const char *mangled, char *buffer, size_t *length,
   return FooPtr(mangled, buffer, length, status);
 }
 #  else
-  extern "C" SANITIZER_WEAK_ATTRIBUTE
-  char *__cxa_demangle(const char *mangled, char *buffer,
-                                  size_t *length, int *status);
+extern "C" SANITIZER_WEAK_ATTRIBUTE char *__cxa_demangle(const char *mangled,
+                                                         char *buffer,
+                                                         size_t *length,
+                                                         int *status);
 #  endif
 }
 

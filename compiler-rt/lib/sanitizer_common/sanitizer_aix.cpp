@@ -270,7 +270,7 @@ void internal_join_thread(void *th) {
 uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
   clock_t rclk_id = reinterpret_cast<clock_t>(clk_id);
   struct timespec *rtp = reinterpret_cast<struct timespec *>(tp);
-  DEFINE__REAL(uptr, clock_gettime, clock_t rclk_id, struct timespec * rtp);
+  DEFINE__REAL(uptr, clock_gettime, clock_t rclk_id, struct timespec *rtp);
   return _REAL(clock_gettime, rclk_id, rtp);
 }
 
