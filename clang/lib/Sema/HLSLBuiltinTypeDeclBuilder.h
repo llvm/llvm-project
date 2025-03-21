@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Helper classes for creating HLSL builtin class types. Used by external HLSL
+// sema source.
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
+#define LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
 
 #include "clang/AST/Type.h"
 #include "clang/Sema/Sema.h"
@@ -94,3 +99,5 @@ private:
 } // namespace hlsl
 
 } // namespace clang
+
+#endif // LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
