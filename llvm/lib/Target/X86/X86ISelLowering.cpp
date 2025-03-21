@@ -58164,6 +58164,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            DAG.getTargetConstant(Idx, DL, MVT::i8));
       }
       break;
+    case X86ISD::VPERMILPV:
+      if (!IsSplat && (VT.is256BitVector() ||
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(Opcode, DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
     case X86ISD::PSHUFB:
     case X86ISD::PSADBW:
     case X86ISD::VPMADDUBSW:

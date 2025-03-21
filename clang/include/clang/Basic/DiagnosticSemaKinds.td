@@ -12,6 +12,59 @@
 
 let Component = "Sema" in {
 let CategoryName = "Semantic Issue" in {
+// C++11 compatibility with C++98.
+defm nonclass_type_friend : CXX11Compat<"non-class friend type %0 is">;
+defm static_data_member_in_union : CXX11Compat<"static data member %0 in union is">;
+defm templ_default_in_function_templ : CXX11Compat<
+  "default template arguments for a function template are">;
+defm template_arg_extra_parens : CXX11Compat<
+  "parentheses around address non-type template argument are">;
+defm typename_outside_of_template : CXX11Compat<"'typename' outside of a template is">;
+
+// C++14 compatibility with C++11 and earlier.
+defm constexpr_type_definition : CXX14Compat<
+  "type definition in a constexpr %select{function|constructor}0 is">;
+defm constexpr_local_var : CXX14Compat<
+  "variable declaration in a constexpr %select{function|constructor}0 is">;
+defm constexpr_body_multiple_return : CXX14Compat<
+  "multiple return statements in constexpr function is">;
+defm variable_template : CXX14Compat<"variable templates are">;
+
+// C++17 compatibility with C++14 and earlier.
+defm decomp_decl : CXX17Compat<"decomposition declarations are">;
+defm inline_variable : CXX17Compat<"inline variables are">;
+
+// C++20 compatibility with C++17 and earlier.
+defm decomp_decl_spec : CXX20Compat<
+  "decomposition declaration declared "
+  "%plural{1:'%1'|:with '%1' specifiers}0 is">;
+defm constexpr_local_var_no_init : CXX20Compat<
+  "uninitialized variable in a constexpr %select{function|constructor}0 is">;
+defm constexpr_function_try_block : CXX20Compat<
+  "function try block in constexpr %select{function|constructor}0 is">;
+defm constexpr_union_ctor_no_init : CXX20Compat<
+  "constexpr union constructor that does not initialize any member is">;
+defm constexpr_ctor_missing_init : CXX20Compat<
+  "constexpr constructor that does not initialize all members is">;
+defm adl_only_template_id : CXX20Compat<
+  "use of function template name with no prior declaration in function call "
+  "with explicit template arguments is">;
+
+// C++23 compatibility with C++20 and earlier.
+defm constexpr_static_var : CXX23Compat<
+  "definition of a %select{static|thread_local}1 variable "
+  "in a constexpr %select{function|constructor}0 "
+  "is">;
+
+// C++26 compatibility with C++23 and earlier.
+defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
+
+// Compatibility warnings duplicated across multiple language versions.
+foreach std = [14, 20, 23] in {
+  defm constexpr_body_invalid_stmt : CXXCompat<
+    "use of this statement in a constexpr %select{function|constructor}0 is", std>;
+}
+
 def note_previous_decl : Note<"%0 declared here">;
 def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;
@@ -523,30 +576,9 @@ def warn_modifying_shadowing_decl :
 // C++ decomposition declarations
 def err_decomp_decl_context : Error<
   "decomposition declaration not permitted in this context">;
-def warn_cxx14_compat_decomp_decl : Warning<
-  "decomposition declarations are incompatible with "
-  "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre17Compat>;
-def ext_decomp_decl : ExtWarn<
-  "decomposition declarations are a C++17 extension">, InGroup<CXX17>;
-def ext_decomp_decl_cond : ExtWarn<
-  "structured binding declaration in a condition is a C++2c extenstion">,
-  InGroup<CXX26>;
-def warn_cxx26_decomp_decl_cond : Warning<
-  "structured binding declaration in a condition is incompatible with "
-  "C++ standards before C++2c">,
-  InGroup<CXXPre26Compat>, DefaultIgnore;
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;
-def ext_decomp_decl_spec : ExtWarn<
-  "decomposition declaration declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0 is a C++20 extension">,
-  InGroup<CXX20>;
-def warn_cxx17_compat_decomp_decl_spec : Warning<
-  "decomposition declaration declared "
-  "%plural{1:'%1'|:with '%1' specifiers}0 "
-  "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_decomp_decl_type : Error<
   "decomposition declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
@@ -1695,12 +1727,6 @@ def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
   InGroup<DiagGroup<"redundant-consteval-if">>;
 
-def ext_inline_variable : ExtWarn<
-  "inline variables are a C++17 extension">, InGroup<CXX17>;
-def warn_cxx14_compat_inline_variable : Warning<
-  "inline variables are incompatible with C++ standards before C++17">,
-  DefaultIgnore, InGroup<CXXPre17Compat>;
-
 def warn_inline_namespace_reopened_noninline : Warning<
   "inline namespace reopened as a non-inline namespace">,
   InGroup<InlineNamespaceReopenedNoninline>;
@@ -1716,11 +1742,6 @@ def ext_enum_friend : ExtWarn<
   InGroup<DiagGroup<"friend-enum">>;
 def note_enum_friend : Note<
   "remove 'enum%select{| struct| class}0' to befriend an enum">;
-def ext_nonclass_type_friend : ExtWarn<
-  "non-class friend type %0 is a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_nonclass_type_friend : Warning<
-  "non-class friend type %0 is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def err_friend_is_member : Error<
   "friends cannot be members of the declaring class">;
 def warn_cxx98_compat_friend_is_member : Warning<
@@ -2152,11 +2173,6 @@ def select_tag_type_kind : TextSubstitution<
 def err_static_data_member_not_allowed_in_anon_struct : Error<
   "static data member %0 not allowed in anonymous "
   "%sub{select_tag_type_kind}1">;
-def ext_static_data_member_in_union : ExtWarn<
-  "static data member %0 in union is a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_static_data_member_in_union : Warning<
-  "static data member %0 in union is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def ext_union_member_of_reference_type : ExtWarn<
   "union member %0 has reference type %1, which is a Microsoft extension">,
   InGroup<MicrosoftUnionMemberReference>;
@@ -2904,63 +2920,17 @@ def err_constexpr_non_literal_param : Error<
   "not a literal type">;
 def err_constexpr_body_invalid_stmt : Error<
   "statement not allowed in %select{constexpr|consteval}1 %select{function|constructor}0">;
-def ext_constexpr_body_invalid_stmt : ExtWarn<
-  "use of this statement in a constexpr %select{function|constructor}0 "
-  "is a C++14 extension">, InGroup<CXX14>;
-def warn_cxx11_compat_constexpr_body_invalid_stmt : Warning<
-  "use of this statement in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14Compat>, DefaultIgnore;
-def ext_constexpr_body_invalid_stmt_cxx20 : ExtWarn<
-  "use of this statement in a constexpr %select{function|constructor}0 "
-  "is a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_constexpr_body_invalid_stmt : Warning<
-  "use of this statement in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
-def ext_constexpr_body_invalid_stmt_cxx23 : ExtWarn<
-  "use of this statement in a constexpr %select{function|constructor}0 "
-  "is a C++23 extension">, InGroup<CXX23>;
-def warn_cxx20_compat_constexpr_body_invalid_stmt : Warning<
-  "use of this statement in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
-def ext_constexpr_type_definition : ExtWarn<
-  "type definition in a constexpr %select{function|constructor}0 "
-  "is a C++14 extension">, InGroup<CXX14>;
-def warn_cxx11_compat_constexpr_type_definition : Warning<
-  "type definition in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14Compat>, DefaultIgnore;
 def err_constexpr_vla : Error<
   "variably-modified type %0 cannot be used in a constexpr "
   "%select{function|constructor}1">;
-def ext_constexpr_local_var : ExtWarn<
-  "variable declaration in a constexpr %select{function|constructor}0 "
-  "is a C++14 extension">, InGroup<CXX14>;
-def warn_cxx11_compat_constexpr_local_var : Warning<
-  "variable declaration in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14Compat>, DefaultIgnore;
-def ext_constexpr_static_var : ExtWarn<
-  "definition of a %select{static|thread_local}1 variable "
-  "in a constexpr %select{function|constructor}0 "
-  "is a C++23 extension">, InGroup<CXX23>;
 def warn_cxx20_compat_constexpr_var : Warning<
-  "definition of a %select{static variable|thread_local variable|variable "
-  "of non-literal type}1 in a constexpr %select{function|constructor}0 "
+  "definition of a variable of non-literal type in a constexpr "
+  "%select{function|constructor}0 "
   "is incompatible with C++ standards before C++23">,
   InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_constexpr_local_var_non_literal_type : Error<
   "variable of non-literal type %1 cannot be defined in a constexpr "
   "%select{function|constructor}0 before C++23">;
-def ext_constexpr_local_var_no_init : ExtWarn<
-  "uninitialized variable in a constexpr %select{function|constructor}0 "
-  "is a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_constexpr_local_var_no_init : Warning<
-  "uninitialized variable in a constexpr %select{function|constructor}0 "
-  "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_constexpr_function_never_constant_expr : ExtWarn<
   "%select{constexpr|consteval}1 %select{function|constructor}0 never produces a "
   "constant expression">, InGroup<DiagGroup<"invalid-constexpr">>, DefaultError;
@@ -2982,41 +2952,11 @@ def err_constexpr_return_missing_expr : Error<
 def warn_cxx11_compat_constexpr_body_no_return : Warning<
   "constexpr function with no return statements is incompatible with C++ "
   "standards before C++14">, InGroup<CXXPre14Compat>, DefaultIgnore;
-def ext_constexpr_body_multiple_return : ExtWarn<
-  "multiple return statements in constexpr function is a C++14 extension">,
-  InGroup<CXX14>;
-def warn_cxx11_compat_constexpr_body_multiple_return : Warning<
-  "multiple return statements in constexpr function "
-  "is incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14Compat>, DefaultIgnore;
 def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
 def err_ms_constexpr_cannot_be_applied : Error<
   "attribute 'msvc::constexpr' cannot be applied to the %select{constexpr|consteval|virtual}0 function %1">;
 
-// C++20 function try blocks in constexpr
-def ext_constexpr_function_try_block_cxx20 : ExtWarn<
-  "function try block in constexpr %select{function|constructor}0 is "
-  "a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_constexpr_function_try_block : Warning<
-  "function try block in constexpr %select{function|constructor}0 is "
-  "incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
-
-def ext_constexpr_union_ctor_no_init : ExtWarn<
-  "constexpr union constructor that does not initialize any member "
-  "is a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_constexpr_union_ctor_no_init : Warning<
-  "constexpr union constructor that does not initialize any member "
-  "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
-def ext_constexpr_ctor_missing_init : ExtWarn<
-  "constexpr constructor that does not initialize all members "
-  "is a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_constexpr_ctor_missing_init : Warning<
-  "constexpr constructor that does not initialize all members "
-  "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
 def note_constexpr_ctor_missing_init : Note<
   "member not initialized by constructor">;
 def note_non_literal_no_constexpr_ctors : Note<
@@ -5293,12 +5233,6 @@ def note_template_param_prev_default_arg_in_other_module : Note<
   "previous default template argument defined in module %0">;
 def err_template_param_default_arg_missing : Error<
   "template parameter missing a default argument">;
-def ext_template_parameter_default_in_function_template : ExtWarn<
-  "default template arguments for a function template are a C++11 extension">,
-  InGroup<CXX11>;
-def warn_cxx98_compat_template_parameter_default_in_function_template : Warning<
-  "default template arguments for a function template are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def err_template_parameter_default_template_member : Error<
   "cannot add a default template argument to the definition of a member of a "
   "class template">;
@@ -5307,11 +5241,6 @@ def err_template_parameter_default_friend_template : Error<
 def err_template_template_parm_no_parms : Error<
   "template template parameter must have its own template parameters">;
 
-def ext_variable_template : ExtWarn<"variable templates are a C++14 extension">,
-  InGroup<CXX14>;
-def warn_cxx11_compat_variable_template : Warning<
-  "variable templates are incompatible with C++ standards before C++14">,
-  InGroup<CXXPre14Compat>, DefaultIgnore;
 def err_template_variable_noparams : Error<
   "extraneous 'template<>' in declaration of variable %0">;
 def err_template_member : Error<"non-static data member %0 cannot be declared as a template">;
@@ -5320,15 +5249,6 @@ def err_template_member_noparams : Error<
   "extraneous 'template<>' in declaration of member %0">;
 def err_template_tag_noparams : Error<
   "extraneous 'template<>' in declaration of %0 %1">;
-
-def warn_cxx17_compat_adl_only_template_id : Warning<
-  "use of function template name with no prior function template "
-  "declaration in function call with explicit template arguments "
-  "is incompatible with C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
-def ext_adl_only_template_id : ExtWarn<
-  "use of function template name with no prior declaration in function call "
-  "with explicit template arguments is a C++20 extension">, InGroup<CXX20>;
 
 def warn_unqualified_call_to_std_cast_function : Warning<
   "unqualified call to '%0'">, InGroup<DiagGroup<"unqualified-std-cast-call">>;
@@ -5468,11 +5388,6 @@ def err_template_arg_not_pointer_to_member_form : Error<
   "non-type template argument is not a pointer to member constant">;
 def err_template_arg_invalid : Error<
   "non-type template argument '%0' is invalid">;
-def ext_template_arg_extra_parens : ExtWarn<
-  "address non-type template argument cannot be surrounded by parentheses">;
-def warn_cxx98_compat_template_arg_extra_parens : Warning<
-  "redundant parentheses surrounding address non-type template argument are "
-  "incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
 def err_pointer_to_member_type : Error<
   "invalid use of pointer to member type after %select{.*|->*}0">;
 def err_pointer_to_member_call_drops_quals : Error<
@@ -5887,11 +5802,6 @@ def err_typename_missing_template
 def ext_typename_missing
     : ExtWarn<"missing 'typename' prior to dependent type name %0">,
       InGroup<DiagGroup<"typename-missing">>;
-def ext_typename_outside_of_template : ExtWarn<
-  "'typename' occurs outside of a template">, InGroup<CXX11>;
-def warn_cxx98_compat_typename_outside_of_template : Warning<
-  "use of 'typename' outside of a template is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def err_typename_refers_to_using_value_decl : Error<
   "typename specifier refers to a dependent using declaration for a value "
   "%0 in %1">;
