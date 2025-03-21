@@ -83,7 +83,7 @@ multiclass avx10_minmax_packed_base<string OpStr, X86VectorVTInfo VTI, SDNode Op
 }
 
 multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {
-  let Uses = []<Register>, mayRaiseFPException = 0 in {
+  let Uses = []<Register>, mayRaiseFPException = 0 in
     defm Zrrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info512, (outs VTI.info512.RC:$dst),
                                 (ins VTI.info512.RC:$src1, VTI.info512.RC:$src2, i32u8imm:$src3), OpStr,
                                 "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
@@ -91,15 +91,6 @@ multiclass avx10_minmax_packed_sae<string OpStr, AVX512VLVectorVTInfo VTI, SDNod
                                                         (VTI.info512.VT VTI.info512.RC:$src2),
                                                         (i32 timm:$src3)))>,
                                 EVEX, VVVV, EVEX_B, EVEX_V512, Sched<[WriteFMAX]>;
-    let hasEVEX_U = 1 in
-    defm Z256rrib : AVX512_maskable<0x52, MRMSrcReg, VTI.info256, (outs VTI.info256.RC:$dst),
-                                (ins VTI.info256.RC:$src1, VTI.info256.RC:$src2, i32u8imm:$src3), OpStr,
-                                "$src3, {sae}, $src2, $src1", "$src1, $src2, {sae}, $src3",
-                                (VTI.info256.VT (OpNode (VTI.info256.VT VTI.info256.RC:$src1),
-                                                        (VTI.info256.VT VTI.info256.RC:$src2),
-                                                        (i32 timm:$src3)))>,
-                                EVEX, VVVV, EVEX_B, EVEX_V256, Sched<[WriteFMAX]>;
-  }
 }
 
 multiclass avx10_minmax_packed<string OpStr, AVX512VLVectorVTInfo VTI, SDNode OpNode> {

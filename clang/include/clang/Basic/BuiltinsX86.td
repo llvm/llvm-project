@@ -4826,7 +4826,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vminmaxpd256_round_mask : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant int, _Vector<4, double>, unsigned char, _Constant int)">;
+  def vminmaxpd256_mask : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant int, _Vector<4, double>, unsigned char)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4838,7 +4838,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vminmaxph256_round_mask : X86Builtin<"_Vector<16, _Float16>(_Vector<16, _Float16>, _Vector<16, _Float16>, _Constant int, _Vector<16, _Float16>, unsigned short, _Constant int)">;
+  def vminmaxph256_mask : X86Builtin<"_Vector<16, _Float16>(_Vector<16, _Float16>, _Vector<16, _Float16>, _Constant int, _Vector<16, _Float16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4850,7 +4850,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vminmaxps256_round_mask : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant int, _Vector<8, float>, unsigned char, _Constant int)">;
+  def vminmaxps256_mask : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant int, _Vector<8, float>, unsigned char)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
