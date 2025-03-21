@@ -985,29 +985,26 @@ define <8 x double> @concat_vpermilvar_v8f64_v2f64(<2 x double> %a0, <2 x double
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    vmovapd 8(%ebp), %xmm3
-; X86-NEXT:    vpermilpd 72(%ebp), %xmm0, %xmm0
-; X86-NEXT:    vpermilpd 88(%ebp), %xmm1, %xmm1
-; X86-NEXT:    vpermilpd 104(%ebp), %xmm2, %xmm2
-; X86-NEXT:    vpermilpd 120(%ebp), %xmm3, %xmm3
-; X86-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; X86-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; X86-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; X86-NEXT:    vinsertf128 $1, 8(%ebp), %ymm2, %ymm1
+; X86-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; X86-NEXT:    vpermilpd 72(%ebp), %zmm0, %zmm0
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: concat_vpermilvar_v8f64_v2f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; X64-NEXT:    vextractf32x4 $2, %zmm4, %xmm6
-; X64-NEXT:    vextractf32x4 $3, %zmm4, %xmm7
-; X64-NEXT:    vpermilpd %xmm4, %xmm0, %xmm0
-; X64-NEXT:    vpermilpd %xmm5, %xmm1, %xmm1
-; X64-NEXT:    vpermilpd %xmm6, %xmm2, %xmm2
-; X64-NEXT:    vpermilpd %xmm7, %xmm3, %xmm3
+; X64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; X64-NEXT:    vextractf32x4 $2, %zmm4, %xmm5
+; X64-NEXT:    vextractf32x4 $3, %zmm4, %xmm6
+; X64-NEXT:    vpermilpd %xmm5, %xmm2, %xmm2
+; X64-NEXT:    vpermilpd %xmm6, %xmm3, %xmm3
 ; X64-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vpermilpd %ymm4, %ymm0, %ymm0
 ; X64-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %m0 = shufflevector <8 x i64> %m, <8 x i64> poison, <2 x i32> <i32 0, i32 1>
@@ -1027,10 +1024,9 @@ define <8 x double> @concat_vpermilvar_v8f64_v2f64(<2 x double> %a0, <2 x double
 define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double> %a1, <8 x i64> %m) nounwind {
 ; CHECK-LABEL: concat_vpermilvar_v8f64_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf64x4 $1, %zmm2, %ymm3
-; CHECK-NEXT:    vpermilpd %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpermilpd %ymm3, %ymm1, %ymm1
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpermilpd %zmm2, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %m0 = shufflevector <8 x i64> %m, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %m1 = shufflevector <8 x i64> %m, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
