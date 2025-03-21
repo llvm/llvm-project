@@ -78,7 +78,7 @@ class FRemExpander {
   Value *One;
 
   /// The sign bit for floating point values of type \p FremTy.
-  const unsigned long Signbit;
+  const unsigned long long Signbit;
 
 public:
   static std::optional<FRemExpander> create(IRBuilder<> &B, Type *Ty) {
@@ -87,7 +87,7 @@ public:
     if (Ty->isFloatTy() || Ty->isHalfTy())
       return FRemExpander{B, Ty, 12, 0x80000000UL, Ty, B.getInt32Ty()};
     if (Ty->isDoubleTy())
-      return FRemExpander{B, Ty, 26, 0x8000000000000000UL, Ty, B.getInt64Ty()};
+      return FRemExpander{B, Ty, 26, 0x8000000000000000ULL, Ty, B.getInt64Ty()};
 
     return std::nullopt;
   }
@@ -100,8 +100,8 @@ public:
   Value *buildFRem(Value *X, Value *Y, std::optional<SimplifyQuery> &SQ) const;
 
 private:
-  FRemExpander(IRBuilder<> &B, Type *FremTy, short Bits, unsigned long Signbit,
-               Type *ComputeFpTy, Type *IntTy)
+  FRemExpander(IRBuilder<> &B, Type *FremTy, short Bits,
+               unsigned long long Signbit, Type *ComputeFpTy, Type *IntTy)
       : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), IntTy(IntTy),
         ExTy(B.getInt32Ty()), Bits(ConstantInt::get(ExTy, Bits)),
         One(ConstantInt::get(ExTy, 1)), Signbit(Signbit) {};
