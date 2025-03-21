@@ -53,6 +53,7 @@ typedef enum {
   _FortranAAbort_idx,
   _FortranAStopStatementText_idx,
   _FortranAioBeginExternalFormattedOutput_idx,
+  _FortranAStopStatement_idx,
 } offload_emis_fortrt_idx;
 
 /// This structure is created by emisExtractArgBuf to make it easier

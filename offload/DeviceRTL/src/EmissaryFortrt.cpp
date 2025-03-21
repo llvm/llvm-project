@@ -33,9 +33,13 @@ uint32_t omp_get_num_threads();
 uint32_t omp_get_team_num();
 uint32_t omp_get_num_teams();
 
+// All Fortran Runtime Functions pass 4 extra args to assist with
+// defered execution and debug. The host variadic wrappers do not use
+// these arguments when calling the actual Fortran runtime.
 #define _EXTRA_ARGS                                                            \
   omp_get_thread_num(), omp_get_num_threads(), omp_get_team_num(),             \
       omp_get_num_teams()
+#define _START_ARGS(idx) _PACK_EMIS_IDS(EMIS_ID_FORTRT, idx), _EXTRA_ARGS,
 
 void *_FortranAioBeginExternalListOutput(uint32_t a1, const char *a2,
                                          uint32_t a3) {
@@ -116,15 +120,20 @@ bool _FortranAioOutputLogical(void *cookie, bool barg) {
       cookie, barg);
 }
 void _FortranAAbort() {
-  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_FORTRT, _FortranAAbort_idx));
+  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_FORTRT, _FortranAAbort_idx),
+                 _EXTRA_ARGS);
   // When  host service _FortranAAbort finishes, we must die from the device.
   __builtin_trap();
 }
+void _FortranAStopStatement(int32_t a1, bool a2, bool a3) {
+  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_FORTRT, _FortranAStopStatement_idx),
+                 _EXTRA_ARGS, a1, a2, a3);
+  __builtin_trap();
+}
 void _FortranAStopStatementText(char *errmsg, int64_t a1, bool a2, bool a3) {
-  // TODO: must use string length from a1 arg
   errmsg[a1 - 1] = (char)0;
   _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_FORTRT, _FortranAStopStatementText_idx),
-                 errmsg, a1, a2, a3);
+                 _EXTRA_ARGS, errmsg, a1, a2, a3);
   __builtin_trap();
 }
 
