@@ -110,7 +110,6 @@ struct MissingFeatures {
   static bool brCondOp() { return false; }
   static bool switchOp() { return false; }
   static bool tryOp() { return false; }
-  static bool unaryOp() { return false; }
   static bool selectOp() { return false; }
   static bool complexCreateOp() { return false; }
   static bool complexRealOp() { return false; }

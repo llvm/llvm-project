@@ -1392,7 +1392,10 @@ module std [system] {
       header "__functional/not_fn.h"
       export std.functional.perfect_forward // inherited from and using its operators
     }
-    module operations                   { header "__functional/operations.h" }
+    module operations {
+      header "__functional/operations.h"
+      export std_core.fwd.functional
+    }
     module perfect_forward {
       header "__functional/perfect_forward.h"
       export std.tuple
@@ -1558,6 +1561,7 @@ module std [system] {
   }
 
   module map {
+    module fwd { header "__fwd/map.h" }
     header "map"
     export *
   }
@@ -1915,6 +1919,7 @@ module std [system] {
   }
 
   module set {
+    module fwd { header "__fwd/set.h" }
     header "set"
     export *
   }
@@ -1982,7 +1987,7 @@ module std [system] {
       export std.utility.element_count // used as part of the constexpr C function's API
     }
     module extern_template_lists    { header "__string/extern_template_lists.h" }
-    module fwd                      {  header "__fwd/string.h" }
+    module fwd                      { header "__fwd/string.h" }
 
     header "string"
     export *
