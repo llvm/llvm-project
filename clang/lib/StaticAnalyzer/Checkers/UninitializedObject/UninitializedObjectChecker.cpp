@@ -17,14 +17,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include "clang/include/clang/AST/Decl.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -291,7 +292,10 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
 
   // Are all of this non-union's fields initialized?
   for (const FieldDecl *I : RD->fields()) {
-
+    // Skip checking for unnamed bitfield
+    if (I->isUnnamedBitField()) {
+      continue;
+    }
     const auto FieldVal =
         State->getLValue(I, loc::MemRegionVal(R)).castAs<loc::MemRegionVal>();
     const auto *FR = FieldVal.getRegionAs<FieldRegion>();
