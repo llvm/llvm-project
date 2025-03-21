@@ -388,6 +388,12 @@ static bool validTypeParams(mlir::Type dynTy, mlir::ValueRange typeParams,
     if (!allowParamsForBox)
       return typeParams.size() == 0;
 
+    // A boxed value may have no length parameters, when the lengths
+    // are assumed. If dynamic lengths are used, then proceed
+    // to the verification below.
+    if (typeParams.size() == 0)
+      return true;
+
     dynTy = fir::getFortranElementType(dynTy);
   }
   // Derived type must have all type parameters satisfied.

@@ -179,8 +179,12 @@ constexpr bool test_all() {
   }
   test_mid(std::ranges::partial_sort, in, mid, &Foo::binary_pred, &Bar::val);
   test_mid(std::ranges::nth_element, in, mid, &Foo::binary_pred, &Bar::val);
+#if TEST_STD_VER < 26
   if (!std::is_constant_evaluated())
+#endif
+  {
     test_mid(std::ranges::inplace_merge, in, mid, &Foo::binary_pred, &Bar::val);
+  }
   test(std::ranges::make_heap, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::push_heap, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::pop_heap, in, &Foo::binary_pred, &Bar::val);

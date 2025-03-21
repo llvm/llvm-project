@@ -968,6 +968,17 @@ func.func @test_pack_unpack_array(%arg0: !fir.ref<!fir.box<none>>, %arg1: !fir.b
   return
 }
 
+// Test assumed-length character array packing.
+// CHECK-LABEL:   func.func @test_pack_array_character(
+// CHECK-SAME:                                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+func.func @test_pack_array_character(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>>) {
+// CHECK:           %[[VAL_1:.*]] = fir.pack_array %[[VAL_0]] heap whole : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+  %0 = fir.pack_array %arg0 heap whole : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
+// CHECK:           fir.unpack_array %[[VAL_1]] to %[[VAL_0]] heap no_copy : !fir.box<!fir.array<?x!fir.char<1,?>>>
+  fir.unpack_array %0 to %arg0 heap no_copy : !fir.box<!fir.array<?x!fir.char<1,?>>>
+  return
+}
+
 // CHECK-LABEL:   func.func @test_is_contiguous_box(
 func.func @test_is_contiguous_box(%arg0: !fir.class<!fir.type<sometype{i:i32}>>, %arg1: !fir.box<!fir.array<?x?xf32>>, %arg2: !fir.box<i32>) -> i1 {
 // CHECK:           fir.is_contiguous_box %{{.*}} innermost : (!fir.class<!fir.type<sometype{i:i32}>>) -> i1

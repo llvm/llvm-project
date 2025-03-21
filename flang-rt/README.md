@@ -124,7 +124,7 @@ $ ninja install
 
 ## Configuration Option Reference
 
-Flang-RT has the following configuration options. This is in
+Flang-RT has the followign configuration options. This is in
 addition to the build options the LLVM_ENABLE_RUNTIMES mechanism and
 CMake itself provide.
 

@@ -105,8 +105,12 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* Changing the default code model from `small` to `medium` for 64-bit.
+
 Changes to the MIPS Backend
 ---------------------------
+
+* `-mcpu=i6400` and `-mcpu=i6500` were added.
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -114,6 +118,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
@@ -126,6 +132,13 @@ Changes to the RISC-V Backend
   'Xqccmp' extension, which is a frame-pointer convention compatible version of
   Zcmp.
 * Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
+  extension.
+* Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
+  extension.
+* Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
+  extension.
+* Adds experimental assembler support for Zvqdotq.
 
 Changes to the WebAssembly Backend
 ----------------------------------
