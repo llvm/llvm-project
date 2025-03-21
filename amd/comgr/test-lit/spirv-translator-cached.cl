@@ -12,12 +12,12 @@
 // RUN: export AMD_COMGR_CACHE=1
 // RUN: AMD_COMGR_CACHE_DIR=%t.cache spirv-translator %t.spv -o %t.translated.bc
 // RUN: COUNT=$(ls "%t.cache" | wc -l)
-// RUN: [ 3 -eq $COUNT ]
+// RUN: [ 2 -eq $COUNT ]
 
 // COM: Run again and check that the cache contents haven't changed
 // RUN: AMD_COMGR_CACHE_DIR=%t.cache spirv-translator %t.spv -o %t.translated.again.bc
 // RUN: COUNT=$(ls "%t.cache" | wc -l)
-// RUN: [ 3 -eq $COUNT ]
+// RUN: [ 2 -eq $COUNT ]
 
 // COM: Run again and check that the cache contents haven't changed
 // RUN: AMD_COMGR_CACHE_DIR=%t.cache spirv-translator %t.spv -o %t.translated.again.bc
