@@ -68,8 +68,7 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, std::ofstream *log,
-         const ReplMode default_repl_mode,
+DAP::DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
     : debug_adapter_path(path), log(log), transport(transport),
       broadcaster("lldb-dap"), exception_breakpoints(),

@@ -425,6 +425,60 @@ add_entrypoint_object(
     ${fprintf_deps}
 )
 
+list(APPEND scanf_deps
+      libc.src.__support.arg_list
+      libc.src.stdio.scanf_core.vfscanf_internal
+      libc.hdr.types.FILE
+)
+
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
+  list(APPEND scanf_deps
+      libc.src.__support.File.file
+      libc.src.__support.File.platform_file
+      libc.src.__support.File.platform_stdin
+  )
+endif()
+
+add_entrypoint_object(
+  fscanf
+  SRCS
+    fscanf.cpp
+  HDRS
+    ../fscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
+  vfscanf
+  SRCS
+    vfscanf.cpp
+  HDRS
+    ../vfscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
+  scanf
+  SRCS
+    scanf.cpp
+  HDRS
+    ../scanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    ../vscanf.h
+  DEPENDS
+    ${scanf_deps}
+)
+
 add_entrypoint_object(
   fgets
   SRCS

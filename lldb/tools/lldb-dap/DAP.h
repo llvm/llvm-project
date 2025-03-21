@@ -144,7 +144,7 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 
 struct DAP {
   llvm::StringRef debug_adapter_path;
-  std::ofstream *log;
+  Log *log;
   Transport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -211,15 +211,14 @@ struct DAP {
   /// \param[in] path
   ///     Path to the lldb-dap binary.
   /// \param[in] log
-  ///     Log file stream, if configured.
+  ///     Log stream, if configured.
   /// \param[in] default_repl_mode
   ///     Default repl mode behavior, as configured by the binary.
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is allocaed.
   /// \param[in] transport
   ///     Transport for this debug session.
-  DAP(llvm::StringRef path, std::ofstream *log,
-      const ReplMode default_repl_mode,
+  DAP(llvm::StringRef path, Log *log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, Transport &transport);
 
   ~DAP();
