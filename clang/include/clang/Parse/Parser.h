@@ -1264,7 +1264,7 @@ public:
   }
 
   DiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId);
-  DiagnosticBuilder DiagCompat(const Token& Tok, unsigned CompatDiagId);
+  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagId);
   DiagnosticBuilder DiagCompat(unsigned CompatDiagId) {
     return DiagCompat(Tok, CompatDiagId);
   }

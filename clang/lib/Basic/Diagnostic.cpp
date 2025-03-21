@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticError.h"

@@ -1539,11 +1539,12 @@ void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
     StringRef DiagPre = R.getValueAsString("DiagPre");
     int64_t CXXStdVer = R.getValueAsInt("Std");
 
-    // We don't want to create empty enums since some compilers (including Clang)
-    // warn about that, so these macros are used to avoid having to unconditionally
-    // write 'enum {' and '};' in the headers.
+    // We don't want to create empty enums since some compilers (including
+    // Clang) warn about that, so these macros are used to avoid having to
+    // unconditionally write 'enum {' and '};' in the headers.
     if (PrevComponent != DiagComponent) {
-      if (!PrevComponent.empty()) OS << "DIAG_COMPAT_ENUM_END()\n";
+      if (!PrevComponent.empty())
+        OS << "DIAG_COMPAT_ENUM_END()\n";
       OS << "DIAG_COMPAT_ENUM_BEGIN()\n";
       PrevComponent = DiagComponent;
     }
@@ -1557,7 +1558,8 @@ void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
     OS << ")\n";
   }
 
-  if (!PrevComponent.empty()) OS << "DIAG_COMPAT_ENUM_END()\n";
+  if (!PrevComponent.empty())
+    OS << "DIAG_COMPAT_ENUM_END()\n";
 }
 
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing

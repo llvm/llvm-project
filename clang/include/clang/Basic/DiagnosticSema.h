@@ -40,7 +40,9 @@ enum {
 
 namespace diag_compat {
 #define DIAG_COMPAT_ENUM_BEGIN() enum {
-#define DIAG_COMPAT_ENUM_END() };
+#define DIAG_COMPAT_ENUM_END()                                                 \
+  }                                                                            \
+  ;
 #define DIAG_COMPAT_ENUM(IDX, NAME, ...) NAME = IDX,
 #include "clang/Basic/DiagnosticSemaCompatEnums.inc"
 #undef DIAG_COMPAT_ENUM

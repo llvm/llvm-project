@@ -785,8 +785,8 @@ unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
 #define DIAG_COMPAT_ENUM_BEGIN()
 #define DIAG_COMPAT_ENUM_END()
 #define DIAG_COMPAT_ENUM(Value, Name, Std, Diag, DiagPre)                      \
-{Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
-  static constexpr CompatDiag Diags[] {
+  {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
+  static constexpr CompatDiag Diags[]{
 #include "clang/Basic/DiagnosticAllCompatEnums.inc"
   };
 #undef DIAG_COMPAT_ENUM
@@ -811,10 +811,9 @@ unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
     return 1998;
   }();
 
-  const CompatDiag& D = Diags[CompatDiagId];
+  const CompatDiag &D = Diags[CompatDiagId];
   return StdVer >= D.StdVer ? D.DiagId : D.PreDiagId;
 }
-
 
 /// ProcessDiag - This is the method used to report a diagnostic that is
 /// finally fully formed.

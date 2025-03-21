@@ -105,9 +105,11 @@ namespace clang {
     };
   }
 
-namespace diag_compat {
+  namespace diag_compat {
 #define DIAG_COMPAT_ENUM_BEGIN() enum {
-#define DIAG_COMPAT_ENUM_END() };
+#define DIAG_COMPAT_ENUM_END()                                               \
+    }                                                                          \
+    ;
 #define DIAG_COMPAT_ENUM(IDX, NAME, ...) NAME = IDX,
 #include "clang/Basic/DiagnosticCommonCompatEnums.inc"
 #undef DIAG_COMPAT_ENUM
@@ -477,7 +479,8 @@ public:
 
   /// Get the appropriate diagnostic Id to use for issuing a compatibility
   /// diagnostic. For use by the various DiagCompat() helpers.
-  static unsigned getCompatDiagId(const LangOptions& LangOpts, unsigned CompatDiagId);
+  static unsigned getCompatDiagId(const LangOptions &LangOpts,
+                                  unsigned CompatDiagId);
 
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by
