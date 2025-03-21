@@ -345,6 +345,22 @@ struct ConvertCIRToLLVMPass
   StringRef getArgument() const override { return "cir-flat-to-llvm"; }
 };
 
+mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
+    cir::BrCondOp brOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // When ZExtOp is implemented, we'll need to check if the condition is a
+  // ZExtOp and if so, delete it if it has a single use.
+  assert(!cir::MissingFeatures::zextOp());
+
+  mlir::Value i1Condition = adaptor.getCond();
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CondBrOp>(
+      brOp, i1Condition, brOp.getDestTrue(), adaptor.getDestOperandsTrue(),
+      brOp.getDestFalse(), adaptor.getDestOperandsFalse());
+
+  return mlir::success();
+}
+
 mlir::Type CIRToLLVMCastOpLowering::convertTy(mlir::Type ty) const {
   return getTypeConverter()->convertType(ty);
 }
@@ -1116,6 +1132,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                                             dl);
   patterns.add<
       // clang-format off
+               CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMTrapOpLowering,
