@@ -298,8 +298,7 @@ void AMDGPUSwLowerLDS::getUsesOfLDSByNonKernels() {
     for (User *V : GV->users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (!isKernelLDS(F) && F->hasFnAttribute(Attribute::SanitizeAddress) &&
-            !F->isDeclaration())
+        if (!isKernelLDS(F) && !F->isDeclaration())
           FuncLDSAccessInfo.NonKernelToLDSAccessMap[F].insert(GV);
       }
     }
@@ -1135,6 +1134,17 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
   AsanInfo.Offset = Offset;
 }
 
+static bool hasFnWithSanitizeAddressAttr(FunctionVariableMap &LDSAccesses) {
+  for (auto &K : LDSAccesses) {
+    Function *F = K.first;
+    if (!F)
+      continue;
+    if (F->hasFnAttribute(Attribute::SanitizeAddress))
+      return true;
+  }
+  return false;
+}
+
 bool AMDGPUSwLowerLDS::run() {
   bool Changed = false;
 
@@ -1145,6 +1155,14 @@ bool AMDGPUSwLowerLDS::run() {
   // Get all the direct and indirect access of LDS for all the kernels.
   LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
 
+  // Flag to decide whether to lower all the LDS accesses
+  // based on sanitize_address attribute.
+  bool LowerAllLDS = hasFnWithSanitizeAddressAttr(LDSUsesInfo.direct_access) ||
+                     hasFnWithSanitizeAddressAttr(LDSUsesInfo.indirect_access);
+
+  if (!LowerAllLDS)
+    return Changed;
+
   // Utility to group LDS access into direct, indirect, static and dynamic.
   auto PopulateKernelStaticDynamicLDS = [&](FunctionVariableMap &LDSAccesses,
                                             bool DirectAccess) {
@@ -1154,8 +1172,6 @@ bool AMDGPUSwLowerLDS::run() {
         continue;
 
       assert(isKernelLDS(F));
-      if (!F->hasFnAttribute(Attribute::SanitizeAddress))
-        continue;
 
       // Only inserts if key isn't already in the map.
       FuncLDSAccessInfo.KernelToLDSParametersMap.insert(
@@ -1222,6 +1238,7 @@ bool AMDGPUSwLowerLDS::run() {
   // Get non-kernels with LDS ptr as argument and called by kernels.
   getNonKernelsWithLDSArguments(CG);
 
+  // Lower LDS accesses in non-kernels.
   if (!FuncLDSAccessInfo.NonKernelToLDSAccessMap.empty() ||
       !FuncLDSAccessInfo.NonKernelsWithLDSArgument.empty()) {
     NonKernelLDSParameters NKLDSParams;
