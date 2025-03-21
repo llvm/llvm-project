@@ -492,11 +492,6 @@ multiclass avx10_cvttps2dqs<bits<8> opc, string OpcodeStr, SDPatternOperator OpN
     defm Z256 : avx512_vcvt_fp<opc, OpcodeStr, v8i32x_info, v8f32x_info, OpNode,
                               MaskOpNode, sched.YMM>, EVEX_V256;
   }
-
-  let Predicates = [HasAVX10_2], hasEVEX_U=1 in {
-    defm Z256 : avx512_vcvt_fp_sae<opc, OpcodeStr, v8i32x_info, v8f32x_info,
-                                  OpNodeSAE, sched.YMM>, EVEX_V256;
-  }
 }
 
 defm VCVTTPD2DQS : avx10_cvttpd2dqs<0x6D, "vcvttpd2dqs", X86cvttp2sis,
