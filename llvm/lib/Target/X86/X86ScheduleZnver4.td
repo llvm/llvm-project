@@ -9,7 +9,8 @@
 // This file defines the machine model for Znver4 to support instruction
 // scheduling and other instruction cost heuristics.
 // Based on:
-//  * AMD Software Optimization Guide for the AMD Zen4 Microarchitecture.
+//  * AMD Software Optimization Guide for the AMD Family 19h (Zen4) 
+//    Microarchitecture
 //    https://www.amd.com/system/files/TechDocs/57647.zip
 //===----------------------------------------------------------------------===//
 
