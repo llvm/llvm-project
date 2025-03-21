@@ -2195,6 +2195,17 @@ bool RISCVFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   const MachineFunction *MF = MBB.getParent();
   const auto *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
 
+  // Make sure VTYPE and VL are not live-in since we will use vsetvli in the
+  // prologue to get the VLEN, and that will clobber these registers.
+  //
+  // We may do also check the stack contains objects with scalable vector type,
+  // but this will require iterating over all the stack objects, but this may
+  // not worth since the situation is rare, we could do further check in future
+  // if we find it is necessary.
+  if (STI.preferVsetvliOverReadVLENB() &&
+      (MBB.isLiveIn(RISCV::VTYPE) || MBB.isLiveIn(RISCV::VL)))
+    return false;
+
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;
 
