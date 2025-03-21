@@ -243,7 +243,7 @@ PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
 /// cheaper checks, which cannot detect complex one but enough for some cases.
 bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
   // Currently we only support a loop that has single latch.
-  auto *Latch = L.getLoopLatch();
+  BasicBlock *Latch = L.getLoopLatch();
   if (Latch == nullptr)
     return false;
 
@@ -273,8 +273,6 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
     } else if (auto *BinOp = dyn_cast<BinaryOperator>(I)) {
       if (BinOp->getOpcode() != Instruction::Add &&
           BinOp->getOpcode() != Instruction::Sub)
-        return false;
-      if (!BinOp->hasNoUnsignedWrap() || !BinOp->hasNoSignedWrap())
         return false;
       if (!isa<ConstantInt>(BinOp->getOperand(1)))
         return false;
