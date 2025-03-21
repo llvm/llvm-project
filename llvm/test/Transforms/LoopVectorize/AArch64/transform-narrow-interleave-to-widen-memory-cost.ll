@@ -122,17 +122,17 @@ define void @test_complex_add_double(ptr %res, ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = load <2 x double>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = load <2 x double>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = load <2 x double>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC10:%.*]] = load <2 x double>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[STRIDED_VEC1]], [[STRIDED_VEC7]]
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = load <2 x double>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC10:%.*]] = load <2 x double>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[STRIDED_VEC4]], [[STRIDED_VEC10]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[WIDE_LOAD1]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP1]]
-; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[TMP10]], align 4
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

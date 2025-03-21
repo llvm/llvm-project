@@ -24,7 +24,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP2]], align 8
 ; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP5]], align 8
-; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
@@ -131,7 +131,7 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP8]]
 ; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP3]], align 8
 ; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD1]], ptr [[TMP7]], align 8
-; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:

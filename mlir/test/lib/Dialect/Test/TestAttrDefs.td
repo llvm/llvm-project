@@ -17,6 +17,7 @@
 include "TestDialect.td"
 include "TestEnumDefs.td"
 include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -384,6 +385,14 @@ def NestedPolynomialAttr2 : Test_Attr<"NestedPolynomialAttr2"> {
   }];
 }
 
+// Test a ptr constant memory space.
+def TestConstMemorySpaceAttr : Test_Attr<"TestConstMemorySpace", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let mnemonic = "const_memory_space";
+  let parameters = (ins DefaultValuedParameter<"unsigned", "0">:$addressSpace);
+  let assemblyFormat = "(`<` $addressSpace^ `>`)?";
+}
 
 // Test custom location handling.
 def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {

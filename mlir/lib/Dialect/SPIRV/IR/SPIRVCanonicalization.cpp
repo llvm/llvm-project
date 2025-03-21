@@ -476,7 +476,7 @@ OpFoldResult spirv::IMulOp::fold(FoldAdaptor adaptor) {
 OpFoldResult spirv::ISubOp::fold(FoldAdaptor adaptor) {
   // x - x = 0
   if (getOperand1() == getOperand2())
-    return Builder(getContext()).getIntegerAttr(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
 
   // According to the SPIR-V spec:
   //

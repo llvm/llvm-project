@@ -936,9 +936,9 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // 1 X form.
   unsigned MaxCountRemainder = 0;
   for (unsigned j = 0; j < (unsigned)Form; j++)
-    if ((RemainderOffsetInfo.contains(j)) &&
-        RemainderOffsetInfo[j].second >
-            RemainderOffsetInfo[MaxCountRemainder].second)
+    if (auto It = RemainderOffsetInfo.find(j);
+        It != RemainderOffsetInfo.end() &&
+        It->second.second > RemainderOffsetInfo[MaxCountRemainder].second)
       MaxCountRemainder = j;
 
   // Abort when there are too few insts with common base.

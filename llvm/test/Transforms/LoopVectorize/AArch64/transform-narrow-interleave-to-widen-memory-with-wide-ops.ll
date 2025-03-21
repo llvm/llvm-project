@@ -26,7 +26,7 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP11:%.*]] = fneg <2 x double> [[WIDE_LOAD1]]
 ; VF2-NEXT:    store <2 x double> [[TMP9]], ptr [[TMP2]], align 8
 ; VF2-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP5]], align 8
-; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:

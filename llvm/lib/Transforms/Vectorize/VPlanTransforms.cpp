@@ -35,7 +35,7 @@
 
 using namespace llvm;
 
-void VPlanTransforms::VPInstructionsToVPRecipes(
+bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
@@ -86,6 +86,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
+          Intrinsic::ID VectorID = getVectorIntrinsicIDForCall(CI, &TLI);
+          if (VectorID == Intrinsic::not_intrinsic)
+            return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
               {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
@@ -109,6 +112,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       Ingredient.eraseFromParent();
     }
   }
+  return true;
 }
 
 static bool sinkScalarOperands(VPlan &Plan) {
@@ -1771,7 +1775,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
+    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
       R->setOperand(1, &EVL);
   }
 
@@ -2198,6 +2202,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
+  if (Plan.getOrCreateBackedgeTakenCount()->getNumUsers() > 0)
+    VPValues.push_back(Plan.getOrCreateBackedgeTakenCount());
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
     append_range(VPValues, R.definedValues());
@@ -2206,8 +2212,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   for (VPValue *VPV : VPValues) {
     if (all_of(VPV->users(),
                [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
-        (VPV->isLiveIn() &&
-         (!VPV->getLiveInIRValue() || isa<Constant>(VPV->getLiveInIRValue()))))
+        (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
+         isa<Constant>(VPV->getLiveInIRValue())))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
@@ -2255,6 +2261,7 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
                                          unsigned VectorRegWidth) {
   if (!InterleaveR)
     return false;
+
   Type *GroupElementTy = nullptr;
   if (InterleaveR->getStoredValues().empty()) {
     GroupElementTy = TypeInfo.inferScalarType(InterleaveR->getVPValue(0));
@@ -2274,7 +2281,6 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
   }
 
   unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
-
   auto IG = InterleaveR->getInterleaveGroup();
   return IG->getFactor() == VF && IG->getNumMembers() == VF &&
          GroupSize == VectorRegWidth;
@@ -2321,6 +2327,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (InterleaveR->getStoredValues().empty())
       continue;
 
+    // For now, we only support full interleave groups storing load interleave
+    // groups.
     if (all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
           VPRecipeBase *DefR = Op.value()->getDefiningRecipe();
           if (!DefR)
@@ -2403,7 +2411,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // original iteration.
   auto *CanIV = Plan.getCanonicalIV();
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
-  Inc->setOperand(
-      1, Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
+  Inc->setOperand(1, Plan.getOrAddLiveIn(ConstantInt::get(
+                         CanIV->getScalarType(), 1 * Plan.getUF())));
   removeDeadRecipes(Plan);
 }
