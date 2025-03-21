@@ -106,6 +106,21 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.sinf16
 )
+add_fp_unittest(
+  sinpi_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinpi_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.sinpi
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
 
 add_fp_unittest(
   sinpif_test
