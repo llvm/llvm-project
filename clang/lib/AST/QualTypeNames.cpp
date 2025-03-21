@@ -391,10 +391,9 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     Qualifiers Quals = QT.getQualifiers();
     // Fully qualify the pointee and class types.
     QT = getFullyQualifiedType(QT->getPointeeType(), Ctx, WithGlobalNsPrefix);
-    NestedNameSpecifier *Qualifier = getFullyQualifiedNestedNameSpecifier(
-        Ctx, MPT->getQualifier(), WithGlobalNsPrefix);
-    QT = Ctx.getMemberPointerType(QT, Qualifier,
-                                  MPT->getMostRecentCXXRecordDecl());
+    QualType Class = getFullyQualifiedType(QualType(MPT->getClass(), 0), Ctx,
+                                           WithGlobalNsPrefix);
+    QT = Ctx.getMemberPointerType(QT, Class.getTypePtr());
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;
