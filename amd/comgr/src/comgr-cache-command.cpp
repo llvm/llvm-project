@@ -100,8 +100,8 @@ CachedCommandAdaptor::getIdentifier() const {
 }
 
 llvm::Error
-CachedCommandAdaptor::writeUniqueExecuteOutput(StringRef OutputFilename,
-                                               StringRef CachedBuffer) {
+CachedCommandAdaptor::writeSingleOutputFile(StringRef OutputFilename,
+                                            StringRef CachedBuffer) {
   std::error_code EC;
   raw_fd_ostream Out(OutputFilename, EC);
   if (EC) {
@@ -122,7 +122,7 @@ CachedCommandAdaptor::writeUniqueExecuteOutput(StringRef OutputFilename,
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-CachedCommandAdaptor::readUniqueExecuteOutput(StringRef OutputFilename) {
+CachedCommandAdaptor::readSingleOutputFile(StringRef OutputFilename) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
       MemoryBuffer::getFile(OutputFilename);
   if (!MBOrErr) {

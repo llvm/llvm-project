@@ -70,10 +70,10 @@ public:
   static std::optional<size_t> searchComgrTmpModel(llvm::StringRef S);
 
   // helper since several command types just write to a single output file
-  static llvm::Error writeUniqueExecuteOutput(llvm::StringRef OutputFilename,
-                                              llvm::StringRef CachedBuffer);
+  static llvm::Error writeSingleOutputFile(llvm::StringRef OutputFilename,
+                                           llvm::StringRef CachedBuffer);
   static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  readUniqueExecuteOutput(llvm::StringRef OutputFilename);
+  readSingleOutputFile(llvm::StringRef OutputFilename);
 
 protected:
   virtual ActionClass getClass() const = 0;

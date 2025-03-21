@@ -78,7 +78,7 @@ Error UnbundleCommand::writeExecuteOutput(StringRef CachedBuffer) {
     StringRef OutputFileContents = CachedBuffer.substr(0, OutputFileSize);
     CachedBuffer = CachedBuffer.drop_front(OutputFileSize);
 
-    if (Error Err = CachedCommandAdaptor::writeUniqueExecuteOutput(
+    if (Error Err = CachedCommandAdaptor::writeSingleOutputFile(
             OutputFilename, OutputFileContents))
       return Err;
   }
@@ -93,7 +93,7 @@ Expected<StringRef> UnbundleCommand::readExecuteOutput() {
   size_t OutputSize = 0;
   for (StringRef OutputFilename : Config.OutputFileNames) {
     auto MaybeOneOutput =
-        CachedCommandAdaptor::readUniqueExecuteOutput(OutputFilename);
+        CachedCommandAdaptor::readSingleOutputFile(OutputFilename);
     if (!MaybeOneOutput)
       return MaybeOneOutput.takeError();
 

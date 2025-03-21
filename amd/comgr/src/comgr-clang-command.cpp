@@ -158,12 +158,12 @@ bool ClangCommand::canCache() const {
 
 Error ClangCommand::writeExecuteOutput(StringRef CachedBuffer) {
   StringRef OutputFilename = Command.getOutputFilenames().front();
-  return CachedCommandAdaptor::writeUniqueExecuteOutput(OutputFilename,
-                                                        CachedBuffer);
+  return CachedCommandAdaptor::writeSingleOutputFile(OutputFilename,
+                                                     CachedBuffer);
 }
 
 Expected<StringRef> ClangCommand::readExecuteOutput() {
-  auto MaybeBuffer = CachedCommandAdaptor::readUniqueExecuteOutput(
+  auto MaybeBuffer = CachedCommandAdaptor::readSingleOutputFile(
       Command.getOutputFilenames().front());
   if (!MaybeBuffer)
     return MaybeBuffer.takeError();
