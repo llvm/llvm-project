@@ -194,13 +194,32 @@ void CoarrayChecker::Leave(const parser::SyncAllStmt &x) {
 
 void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
   CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
-
   const auto &imageSet{std::get<parser::SyncImagesStmt::ImageSet>(x.t)};
   if (const auto *intExpr{std::get_if<parser::IntExpr>(&imageSet.u)}) {
     if (const auto *expr{GetExpr(context_, *intExpr)}) {
       if (expr->Rank() > 1) {
         context_.Say(parser::FindSourceLocation(imageSet), // C1174
             "An image-set that is an int-expr must be a scalar or a rank-one array"_err_en_US);
+      }
+      if (const auto *someInt{
+              std::get_if<evaluate::Expr<evaluate::SomeInteger>>(&expr->u)};
+          someInt && evaluate::IsActuallyConstant(*someInt)) {
+        auto converted{evaluate::Fold(context_.foldingContext(),
+            evaluate::ConvertToType<evaluate::SubscriptInteger>(
+                common::Clone(*someInt)))};
+        if (const auto *cst{
+                evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
+                    converted)}) {
+          for (auto elt : cst->values()) {
+            auto n{elt.ToInt64()};
+            if (n < 1) {
+              context_.Say(parser::FindSourceLocation(imageSet),
+                  "Image number %jd in the image-set is not valid"_err_en_US,
+                  std::intmax_t{n});
+              break;
+            }
+          }
+        }
       }
     }
   }
