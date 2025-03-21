@@ -216,7 +216,8 @@ public:
       return;
     }
 
-    if (DstTy == S32 && TruncSrcTy == S16) {
+    if ((DstTy == S64 && TruncSrcTy == S32) ||
+        (DstTy == S32 && TruncSrcTy == S16)) {
       B.buildAnyExt(Dst, TruncSrc);
       cleanUpAfterCombine(MI, Trunc);
       return;
