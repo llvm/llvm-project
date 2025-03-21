@@ -1,0 +1,44 @@
+//==-- SystemZTargetStreamer.cpp - SystemZ Target Streamer Methods ----------=//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines SystemZ-specific target streamer classes.
+/// These are for implementing support for target-specific assembly directives.
+///
+//===----------------------------------------------------------------------===//
+
+#include "SystemZTargetStreamer.h"
+
+using namespace llvm;
+
+void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
+  getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));
+}
+
+// HLASM statements can only perform a single operation at a time
+const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
+    MCContext &Ctx, const MCSymbol *Hi, const MCSymbol *Lo) {
+  assert(Hi && Lo && "Symbols required to calculate expression");
+  MCSymbol *Temp = Ctx.createTempSymbol();
+  OS << Temp->getName() << " EQU ";
+  const MCBinaryExpr *TempExpr = MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(Hi, Ctx), MCSymbolRefExpr::create(Lo, Ctx), Ctx);
+  TempExpr->print(OS, Ctx.getAsmInfo());
+  OS << "\n";
+  return MCBinaryExpr::createLShr(MCSymbolRefExpr::create(Temp, Ctx),
+                                  MCConstantExpr::create(1, Ctx), Ctx);
+}
+
+const MCExpr *SystemZTargetGOFFStreamer::createWordDiffExpr(
+    MCContext &Ctx, const MCSymbol *Hi, const MCSymbol *Lo) {
+  assert(Hi && Lo && "Symbols required to calculate expression");
+  return MCBinaryExpr::createLShr(
+      MCBinaryExpr::createSub(MCSymbolRefExpr::create(Hi, Ctx),
+                              MCSymbolRefExpr::create(Lo, Ctx), Ctx),
+      MCConstantExpr::create(1, Ctx), Ctx);
+}

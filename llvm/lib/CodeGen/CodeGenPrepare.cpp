@@ -7577,7 +7577,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     FalseBlock = StartBlock;
 
   SmallPtrSet<const Instruction *, 2> INS;
-  INS.insert(ASI.begin(), ASI.end());
+  INS.insert_range(ASI);
   // Use reverse iterator because later select may use the value of the
   // earlier select, and we need to propagate value through earlier select
   // to get the PHI operand.

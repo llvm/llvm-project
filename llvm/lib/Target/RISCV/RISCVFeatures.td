@@ -411,7 +411,7 @@ def FeatureStdExtZcf
 def FeatureStdExtZclsd
     : RISCVExtension<1, 0,
                      "Compressed Load/Store Pair Instructions",
-                     [FeatureStdExtZilsd,FeatureStdExtZca]>;     
+                     [FeatureStdExtZilsd, FeatureStdExtZca]>;
 def HasStdExtZclsd : Predicate<"Subtarget->hasStdExtZclsd()">,
                     AssemblerPredicate<(all_of FeatureStdExtZclsd),
                         "'Zclsd' (Compressed Load/Store pair instructions)">;
@@ -820,6 +820,16 @@ def FeatureStdExtZvksc
 def FeatureStdExtZvksg
     : RISCVExtension<1, 0, "shorthand for 'Zvks' and 'Zvkg'",
                      [FeatureStdExtZvks, FeatureStdExtZvkg]>;
+
+// Vector quad widening dot product
+
+def FeatureStdExtZvqdotq
+    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
+                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
@@ -1580,6 +1590,12 @@ def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "V
 
 def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                                              "true", "VXRM writes causes pipeline flush">;
+
+def TunePreferVsetvliOverReadVLENB
+    : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
+                       "PreferVsetvliOverReadVLENB",
+                       "true",
+                       "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

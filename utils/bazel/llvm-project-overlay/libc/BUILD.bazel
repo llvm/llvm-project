@@ -5203,7 +5203,7 @@ libc_support_library(
 
 libc_function(
     name = "scanf",
-    srcs = ["src/stdio/scanf.cpp"],
+    srcs = ["src/stdio/generic/scanf.cpp"],
     hdrs = ["src/stdio/scanf.h"],
     deps = [
         ":__support_arg_list",
@@ -5215,7 +5215,7 @@ libc_function(
 
 libc_function(
     name = "vscanf",
-    srcs = ["src/stdio/vscanf.cpp"],
+    srcs = ["src/stdio/generic/vscanf.cpp"],
     hdrs = ["src/stdio/vscanf.h"],
     deps = [
         ":__support_arg_list",
@@ -5227,7 +5227,7 @@ libc_function(
 
 libc_function(
     name = "fscanf",
-    srcs = ["src/stdio/fscanf.cpp"],
+    srcs = ["src/stdio/generic/fscanf.cpp"],
     hdrs = ["src/stdio/fscanf.h"],
     deps = [
         ":__support_arg_list",
@@ -5239,7 +5239,7 @@ libc_function(
 
 libc_function(
     name = "vfscanf",
-    srcs = ["src/stdio/vfscanf.cpp"],
+    srcs = ["src/stdio/generic/vfscanf.cpp"],
     hdrs = ["src/stdio/vfscanf.h"],
     deps = [
         ":__support_arg_list",

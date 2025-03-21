@@ -1136,6 +1136,7 @@ Experimental extensions
     zalasr               0.1
     zvbc32e              0.7
     zvkgs                0.7
+    zvqdotq              0.0
     sdext                1.0
     sdtrig               1.0
     smctr                1.0
