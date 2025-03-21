@@ -625,36 +625,34 @@ static unsigned getMinOrigOrder(const BCECmpChain::ContiguousBlocks &Blocks) {
 
 /// Given a chain of comparison blocks (of the same kind), groups the blocks into contiguous
 /// ranges that can be merged together into a single comparison.
-static std::vector<BCECmpChain::ContiguousBlocks>
-mergeBlocks(std::vector<SingleBCECmpBlock> &&Blocks) {
-  std::vector<BCECmpChain::ContiguousBlocks> MergedBlocks;
-
+template<class RandomIt>
+static void mergeBlocks(RandomIt First, RandomIt Last,
+                        std::vector<BCECmpChain::ContiguousBlocks>* MergedBlocks) {
   // Sort to detect continuous offsets.
-  llvm::sort(Blocks,
+  llvm::sort(First, Last,
              [](const SingleBCECmpBlock &LhsBlock, const SingleBCECmpBlock &RhsBlock) {
               return LhsBlock < RhsBlock;
              });
 
   BCECmpChain::ContiguousBlocks *LastMergedBlock = nullptr;
-  for (SingleBCECmpBlock &Block : Blocks) {
-    if (!LastMergedBlock || !LastMergedBlock->back().getCmp()->areContiguous(*Block.getCmp())) {
-      MergedBlocks.emplace_back();
-      LastMergedBlock = &MergedBlocks.back();
+  int Offset = MergedBlocks->size();
+  for (auto& BlockIt = First; BlockIt != Last; ++BlockIt) {
+    if (!LastMergedBlock || !LastMergedBlock->back().getCmp()->areContiguous(*BlockIt->getCmp())) {
+      MergedBlocks->emplace_back();
+      LastMergedBlock = &MergedBlocks->back();
     } else {
-      LLVM_DEBUG(dbgs() << "Merging block " << Block.BB->getName() << " into "
+      LLVM_DEBUG(dbgs() << "Merging block " << BlockIt->BB->getName() << " into "
                         << LastMergedBlock->back().BB->getName() << "\n");
     }
-    LastMergedBlock->push_back(std::move(Block));
+    LastMergedBlock->push_back(std::move(*BlockIt));
   }
 
   // While we allow reordering for merging, do not reorder unmerged comparisons.
   // Doing so may introduce branch on poison.
-  llvm::sort(MergedBlocks, [](const BCECmpChain::ContiguousBlocks &LhsBlocks,
+  llvm::sort(MergedBlocks->begin() + Offset, MergedBlocks->end(), [](const BCECmpChain::ContiguousBlocks &LhsBlocks,
                               const BCECmpChain::ContiguousBlocks &RhsBlocks) {
     return getMinOrigOrder(LhsBlocks) < getMinOrigOrder(RhsBlocks);
   });
-
-  return MergedBlocks;
 }
 
 BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
@@ -737,19 +735,12 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
 
   EntryBlock_ = Comparisons[0].BB;
 
-  std::vector<SingleBCECmpBlock> ConstComparisons, BceComparisons;
   auto isConstCmp = [](SingleBCECmpBlock& C) { return isa<BCEConstCmp>(C.getCmp()); };
-  // TODO: too many copies here
-  std::partition_copy(Comparisons.begin(), Comparisons.end(), 
-                      std::back_inserter(ConstComparisons), 
-                      std::back_inserter(BceComparisons),
-                      isConstCmp);
+  auto BceIt = std::partition(Comparisons.begin(), Comparisons.end(), isConstCmp);
 
-  auto MergedConstCmpBlocks = mergeBlocks(std::move(ConstComparisons));
-  auto MergedBCECmpBlocks = mergeBlocks(std::move(BceComparisons));
-
-  MergedBlocks_.insert(MergedBlocks_.end(),MergedBCECmpBlocks.begin(),MergedBCECmpBlocks.end());
-  MergedBlocks_.insert(MergedBlocks_.end(),MergedConstCmpBlocks.begin(),MergedConstCmpBlocks.end());
+  // this will order the merged BCE-comparisons before the BCE-const-comparisons
+  mergeBlocks(BceIt, Comparisons.end(), &MergedBlocks_);
+  mergeBlocks(Comparisons.begin(), BceIt, &MergedBlocks_);
 }
 
 namespace {
