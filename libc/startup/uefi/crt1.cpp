@@ -27,6 +27,6 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   main(0, nullptr, nullptr);
 
   // TODO: convert the return value of main to EFI_STATUS
-  return 0; // TODO: EFI_SUCCESS
+  return EFI_SUCCESS;
 }
 }
