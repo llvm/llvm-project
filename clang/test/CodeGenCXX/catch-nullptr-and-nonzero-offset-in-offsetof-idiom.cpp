@@ -50,6 +50,42 @@ uintptr_t get_offset_of_zero_storage() {
   return ((uintptr_t)(&(((T *)nullptr)->e2)));
 }
 
+namespace std { typedef decltype(__nullptr) nullptr_t; }
+// CHECK-LABEL: @_Z29get_offset_of_y_integral_zerov(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+//
+uintptr_t get_offset_of_y_integral_zero() {
+  return ((uintptr_t)(&(((S *)0)->y)));
+}
+
+// CHECK-LABEL: @_Z37get_offset_of_y_integral_zero_voidptrv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+//
+uintptr_t get_offset_of_y_integral_zero_voidptr() {
+  return ((uintptr_t)(&(((S *)(void*)0)->y)));
+}
+
+// CHECK-LABEL: @_Z25get_offset_of_y_nullptr_tv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+//
+uintptr_t get_offset_of_y_nullptr_t() {
+  return ((uintptr_t)(&(((S *)std::nullptr_t{})->y)));
+}
+
+// CHECK-LABEL: @_Z32get_offset_of_y_nullptr_constantv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[NULL:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr null, ptr [[NULL]], align 8
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+//
+uintptr_t get_offset_of_y_nullptr_constant() {
+  constexpr void *null = nullptr;
+  return ((uintptr_t)(&(((S *)null)->y)));
+}
+
 // CHECK-LABEL: @_Z27get_offset_of_y_via_builtinv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i64 4
