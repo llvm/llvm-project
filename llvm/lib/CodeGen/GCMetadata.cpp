@@ -23,6 +23,10 @@ using namespace llvm;
 
 bool GCStrategyMap::invalidate(Module &M, const PreservedAnalyses &PA,
                                ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<CollectorMetadataAnalysis>();
+  if (PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>())
+    return false;
+
   for (const auto &F : M) {
     if (F.isDeclaration() || !F.hasGC())
       continue;
@@ -36,15 +40,20 @@ AnalysisKey CollectorMetadataAnalysis::Key;
 
 CollectorMetadataAnalysis::Result
 CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
-  Result R;
-  auto &Map = R.StrategyMap;
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  Result R(FAM);
   for (auto &F : M) {
     if (F.isDeclaration() || !F.hasGC())
       continue;
-    if (auto GCName = F.getGC(); !Map.contains(GCName))
-      Map[GCName] = getGCStrategy(GCName);
+    auto GCName = F.getGC();
+    R.insert(GCName, getGCStrategy(GCName));
   }
   return R;
+}
+
+GCFunctionInfo &llvm::GCStrategyMap::getFunctionInfo(Function &F) {
+  assert(FAM && "Need initialize!");
+  return FAM->getResult<GCFunctionAnalysis>(F);
 }
 
 AnalysisKey GCFunctionAnalysis::Key;
@@ -59,9 +68,8 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
       MAMProxy.cachedResultExists<CollectorMetadataAnalysis>(*F.getParent()) &&
       "This pass need module analysis `collector-metadata`!");
   auto &Map =
-      MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent())
-          ->StrategyMap;
-  GCFunctionInfo Info(F, *Map[F.getGC()]);
+      *MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent());
+  GCFunctionInfo Info(F, Map.at(F.getGC()));
   return Info;
 }
 
