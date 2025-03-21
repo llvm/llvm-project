@@ -1233,12 +1233,7 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
   }
 }
 
-static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
-                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
-                          StringSaver &Saver) {
-  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
-  if (!ElfObj)
-    return;
+static DenseMap<StringRef, SectionRef> getSectionNames(const ObjectFile &Obj) {
   DenseMap<StringRef, SectionRef> Sections;
   for (SectionRef Section : Obj.sections()) {
     Expected<StringRef> SecNameOrErr = Section.getName();
@@ -1248,13 +1243,23 @@ static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
     }
     Sections[*SecNameOrErr] = Section;
   }
+  return Sections;
+}
+
+static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
+                          DenseMap<StringRef, SectionRef> &SectionNames,
+                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
+                          StringSaver &Saver) {
+  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
+  if (!ElfObj)
+    return;
   for (auto Plt : ElfObj->getPltEntries(STI)) {
     if (Plt.Symbol) {
       SymbolRef Symbol(*Plt.Symbol, ElfObj);
       uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
       if (Expected<StringRef> NameOrErr = Symbol.getName()) {
         if (!NameOrErr->empty())
-          AllSymbols[Sections[Plt.Section]].emplace_back(
+          AllSymbols[SectionNames[Plt.Section]].emplace_back(
               Plt.Address, Saver.save((*NameOrErr + "@plt").str()), SymbolType);
         continue;
       } else {
@@ -1770,9 +1775,34 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   if (Obj.isELF() && Obj.sections().empty())
     createFakeELFSections(Obj);
 
+  DisassemblerTarget *PltTarget = DT;
+  auto SectionNames = getSectionNames(Obj);
+  if (SecondaryTarget && isArmElf(Obj)) {
+    auto PltSectionRef = SectionNames.find(".plt");
+    if (PltSectionRef != SectionNames.end()) {
+      bool PltIsThumb = false;
+      for (auto [Addr, SymbolName] : AllMappingSymbols[PltSectionRef->second]) {
+        if (Addr != 0)
+          continue;
+
+        if (SymbolName == 't') {
+          PltIsThumb = true;
+          break;
+        }
+        if (SymbolName == 'a')
+          break;
+      }
+
+      if (PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode"))
+        PltTarget = PltIsThumb ? &PrimaryTarget : &*SecondaryTarget;
+      else
+        PltTarget = PltIsThumb ? &*SecondaryTarget : &PrimaryTarget;
+    }
+  }
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  addPltEntries(*DT->SubtargetInfo, Obj, AllSymbols, Saver);
+  addPltEntries(*PltTarget->SubtargetInfo, Obj, SectionNames, AllSymbols,
+                Saver);
 
   // Create a mapping from virtual address to section. An empty section can
   // cause more than one section at the same address. Sort such sections to be
