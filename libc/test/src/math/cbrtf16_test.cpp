@@ -51,6 +51,4 @@ TEST_F(LlvmLibcCbrtf16Test, SpecialValues) {
     EXPECT_MPFR_MATCH(mpfr::Operation::Cbrt, x, LIBC_NAMESPACE::cbrtf16(x), 0.5,
                       mpfr::RoundingMode::Upward);
   }
-
-  ASSERT_EQ(1, 1);
 }
