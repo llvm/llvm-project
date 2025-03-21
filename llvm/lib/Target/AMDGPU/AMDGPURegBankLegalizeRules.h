@@ -75,6 +75,10 @@ enum UniformityLLTOpPredicateID {
   V3S32,
   V4S32,
 
+  UniV2S16,
+
+  DivV2S16,
+
   // B types
   B32,
   B64,
@@ -117,7 +121,9 @@ enum RegBankLLTMappingApplyID {
   SgprP3,
   SgprP4,
   SgprP5,
+  SgprV2S16,
   SgprV4S32,
+  SgprV2S32,
   SgprB32,
   SgprB64,
   SgprB96,
@@ -134,6 +140,8 @@ enum RegBankLLTMappingApplyID {
   VgprP3,
   VgprP4,
   VgprP5,
+  VgprV2S16,
+  VgprV2S32,
   VgprB32,
   VgprB64,
   VgprB96,
@@ -145,6 +153,7 @@ enum RegBankLLTMappingApplyID {
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
   UniInVgprS32,
+  UniInVgprV2S16,
   UniInVgprV4S32,
   UniInVgprB32,
   UniInVgprB64,
@@ -173,6 +182,7 @@ enum LoweringMethodID {
   DoNotLower,
   VccExtToSel,
   UniExtToSel,
+  SExtInRegSplitTo32,
   Uni_BFE,
   Div_BFE,
   VgprToVccCopy,
@@ -180,6 +190,7 @@ enum LoweringMethodID {
   SplitTo32Sel,
   Ext32To64,
   UniCstExt,
+  Unpack,
   SplitLoad,
   WidenLoad,
 };
