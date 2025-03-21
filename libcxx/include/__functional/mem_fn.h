@@ -43,7 +43,7 @@ public:
 };
 
 template <class _Rp, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::*__pm) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __mem_fn<_Rp _Tp::*> mem_fn(_Rp _Tp::* __pm) _NOEXCEPT {
   return __mem_fn<_Rp _Tp::*>(__pm);
 }
 

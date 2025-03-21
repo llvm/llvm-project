@@ -114,7 +114,7 @@ _LIBCPP_HIDE_FROM_ABI bool __not_null(_Fp* __ptr) {
 }
 
 template <class _Ret, class _Class>
-_LIBCPP_HIDE_FROM_ABI bool __not_null(_Ret _Class::*__ptr) {
+_LIBCPP_HIDE_FROM_ABI bool __not_null(_Ret _Class::* __ptr) {
   return __ptr;
 }
 
@@ -492,7 +492,7 @@ template <typename _Fun>
 struct __use_small_storage
     : public integral_constant<
           bool,
-          sizeof(_Fun) <= sizeof(__policy_storage)&& _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
+          sizeof(_Fun) <= sizeof(__policy_storage) && _LIBCPP_ALIGNOF(_Fun) <= _LIBCPP_ALIGNOF(__policy_storage) &&
               is_trivially_copy_constructible<_Fun>::value && is_trivially_destructible<_Fun>::value> {};
 
 // Policy contains information about how to copy, destroy, and move the

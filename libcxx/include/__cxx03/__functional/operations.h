@@ -206,8 +206,8 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS bit_and<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) &
-                        std::forward<_T2>(__u))) -> decltype(std::forward<_T1>(__t) & std::forward<_T2>(__u)) {
+      noexcept(noexcept(std::forward<_T1>(__t) & std::forward<_T2>(__u)))
+          -> decltype(std::forward<_T1>(__t) & std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) & std::forward<_T2>(__u);
   }
   typedef void is_transparent;
@@ -424,8 +424,8 @@ template <>
 struct _LIBCPP_TEMPLATE_VIS greater_equal<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) >=
-                        std::forward<_T2>(__u))) -> decltype(std::forward<_T1>(__t) >= std::forward<_T2>(__u)) {
+      noexcept(noexcept(std::forward<_T1>(__t) >= std::forward<_T2>(__u)))
+          -> decltype(std::forward<_T1>(__t) >= std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) >= std::forward<_T2>(__u);
   }
   typedef void is_transparent;

@@ -536,13 +536,13 @@ operator>>(basic_istream<_CharT, _Traits>& __is, _CharT (&__buf)[_Np]) {
 template <class _Traits, size_t _Np>
 inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, unsigned char (&__buf)[_Np]) {
-  return __is >> (char(&)[_Np])__buf;
+  return __is >> (char (&)[_Np])__buf;
 }
 
 template <class _Traits, size_t _Np>
 inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, signed char (&__buf)[_Np]) {
-  return __is >> (char(&)[_Np])__buf;
+  return __is >> (char (&)[_Np])__buf;
 }
 
 #    else

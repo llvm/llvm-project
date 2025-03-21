@@ -2277,8 +2277,8 @@ template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
           class            = enable_if_t<__is_allocator<_Allocator>::value> >
-explicit basic_string(basic_string_view<_CharT, _Traits>,
-                      const _Allocator& = _Allocator()) -> basic_string<_CharT, _Traits, _Allocator>;
+explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
+    -> basic_string<_CharT, _Traits, _Allocator>;
 
 template <class _CharT,
           class _Traits,

@@ -243,8 +243,8 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(_Tp* __p) noexcept {
 }
 
 template <class _Pointer>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto
-to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
+inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(const _Pointer& __p) noexcept
+    -> decltype(std::__to_address(__p)) {
   return std::__to_address(__p);
 }
 #endif

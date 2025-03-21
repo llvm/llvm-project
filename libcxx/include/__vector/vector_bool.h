@@ -1109,8 +1109,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t vector<bool, _Allocator>::__hash_code() con
 }
 
 template <class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS hash<vector<bool, _Allocator> >
-    : public __unary_function<vector<bool, _Allocator>, size_t> {
+struct _LIBCPP_TEMPLATE_VIS
+hash<vector<bool, _Allocator> > : public __unary_function<vector<bool, _Allocator>, size_t> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t
   operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT {
     return __vec.__hash_code();

@@ -195,12 +195,16 @@ public:
 inline condition_variable_any::condition_variable_any() : __mut_(make_shared<mutex>()) {}
 
 inline void condition_variable_any::notify_one() _NOEXCEPT {
-  { lock_guard<mutex> __lx(*__mut_); }
+  {
+    lock_guard<mutex> __lx(*__mut_);
+  }
   __cv_.notify_one();
 }
 
 inline void condition_variable_any::notify_all() _NOEXCEPT {
-  { lock_guard<mutex> __lx(*__mut_); }
+  {
+    lock_guard<mutex> __lx(*__mut_);
+  }
   __cv_.notify_all();
 }
 

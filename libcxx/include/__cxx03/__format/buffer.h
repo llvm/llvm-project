@@ -488,8 +488,8 @@ protected:
 /// The buffer that counts and limits the number of insertions.
 template <class _OutIt, __fmt_char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)
-struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer final
-    : public __format_to_n_buffer_base< _OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>> {
+struct _LIBCPP_TEMPLATE_VIS
+__format_to_n_buffer final : public __format_to_n_buffer_base< _OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>> {
   using _Base = __format_to_n_buffer_base<_OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>>;
   using _Size = iter_difference_t<_OutIt>;
 

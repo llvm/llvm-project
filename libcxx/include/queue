@@ -452,14 +452,12 @@ template <class _InputIterator,
           class _Alloc,
           __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0,
           __enable_if_t<__is_allocator<_Alloc>::value, int>                        = 0>
-queue(_InputIterator,
-      _InputIterator,
-      _Alloc) -> queue<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
+queue(_InputIterator, _InputIterator, _Alloc)
+    -> queue<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
 
 template <ranges::input_range _Range, class _Alloc, __enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
-queue(from_range_t,
-      _Range&&,
-      _Alloc) -> queue<ranges::range_value_t<_Range>, deque<ranges::range_value_t<_Range>, _Alloc>>;
+queue(from_range_t, _Range&&, _Alloc)
+    -> queue<ranges::range_value_t<_Range>, deque<ranges::range_value_t<_Range>, _Alloc>>;
 #  endif
 
 template <class _Tp, class _Container>
@@ -942,8 +940,8 @@ swap(priority_queue<_Tp, _Container, _Compare>& __x, priority_queue<_Tp, _Contai
 }
 
 template <class _Tp, class _Container, class _Compare, class _Alloc>
-struct _LIBCPP_TEMPLATE_VIS uses_allocator<priority_queue<_Tp, _Container, _Compare>, _Alloc>
-    : public uses_allocator<_Container, _Alloc> {};
+struct _LIBCPP_TEMPLATE_VIS
+uses_allocator<priority_queue<_Tp, _Container, _Compare>, _Alloc> : public uses_allocator<_Container, _Alloc> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

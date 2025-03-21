@@ -752,8 +752,8 @@ class _LIBCPP_TEMPLATE_VIS __dtor;
 
 #    define _LIBCPP_VARIANT_DESTRUCTOR(destructible_trait, destructor_definition, destroy)                             \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __dtor<__traits<_Types...>, destructible_trait>                                       \
-          : public __base<destructible_trait, _Types...> {                                                             \
+      class _LIBCPP_TEMPLATE_VIS                                                                                       \
+      __dtor<__traits<_Types...>, destructible_trait> : public __base<destructible_trait, _Types...> {                 \
         using __base_type _LIBCPP_NODEBUG = __base<destructible_trait, _Types...>;                                     \
         using __index_t _LIBCPP_NODEBUG   = typename __base_type::__index_t;                                           \
                                                                                                                        \
@@ -830,8 +830,8 @@ class _LIBCPP_TEMPLATE_VIS __move_constructor;
 
 #    define _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(move_constructible_trait, move_constructor_definition)                    \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>, move_constructible_trait>                     \
-          : public __ctor<__traits<_Types...>> {                                                                       \
+      class _LIBCPP_TEMPLATE_VIS                                                                                       \
+      __move_constructor<__traits<_Types...>, move_constructible_trait> : public __ctor<__traits<_Types...>> {         \
         using __base_type _LIBCPP_NODEBUG = __ctor<__traits<_Types...>>;                                               \
                                                                                                                        \
       public:                                                                                                          \
@@ -852,8 +852,7 @@ _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
 _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(
     _Trait::_Available,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __move_constructor(__move_constructor&& __that) noexcept(
-        __all<is_nothrow_move_constructible_v<_Types>...>::value)
-    : __move_constructor(__valueless_t{}) {
+        __all<is_nothrow_move_constructible_v<_Types>...>::value) : __move_constructor(__valueless_t{}) {
       this->__generic_construct(*this, std::move(__that));
     } _LIBCPP_EAT_SEMICOLON);
 
@@ -889,8 +888,9 @@ _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Available,
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that)
-    : __copy_constructor(__valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
+    _LIBCPP_HIDE_FROM_ABI
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __copy_constructor(const __copy_constructor& __that) : __copy_constructor(
+        __valueless_t{}) { this->__generic_construct(*this, __that); } _LIBCPP_EAT_SEMICOLON);
 
 _LIBCPP_VARIANT_COPY_CONSTRUCTOR(
     _Trait::_Unavailable,
@@ -957,8 +957,8 @@ class _LIBCPP_TEMPLATE_VIS __move_assignment;
 
 #    define _LIBCPP_VARIANT_MOVE_ASSIGNMENT(move_assignable_trait, move_assignment_definition)                         \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __move_assignment<__traits<_Types...>, move_assignable_trait>                         \
-          : public __assignment<__traits<_Types...>> {                                                                 \
+      class _LIBCPP_TEMPLATE_VIS                                                                                       \
+      __move_assignment<__traits<_Types...>, move_assignable_trait> : public __assignment<__traits<_Types...>> {       \
         using __base_type _LIBCPP_NODEBUG = __assignment<__traits<_Types...>>;                                         \
                                                                                                                        \
       public:                                                                                                          \
@@ -996,8 +996,8 @@ class _LIBCPP_TEMPLATE_VIS __copy_assignment;
 
 #    define _LIBCPP_VARIANT_COPY_ASSIGNMENT(copy_assignable_trait, copy_assignment_definition)                         \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS __copy_assignment<__traits<_Types...>, copy_assignable_trait>                         \
-          : public __move_assignment<__traits<_Types...>> {                                                            \
+      class _LIBCPP_TEMPLATE_VIS                                                                                       \
+      __copy_assignment<__traits<_Types...>, copy_assignable_trait> : public __move_assignment<__traits<_Types...>> {  \
         using __base_type _LIBCPP_NODEBUG = __move_assignment<__traits<_Types...>>;                                    \
                                                                                                                        \
       public:                                                                                                          \
@@ -1579,8 +1579,8 @@ visit(_Visitor&& __visitor, _Vs&&... __vs) {
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto
-swap(variant<_Types...>& __lhs,
-     variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs))) -> decltype(__lhs.swap(__rhs)) {
+swap(variant<_Types...>& __lhs, variant<_Types...>& __rhs) noexcept(noexcept(__lhs.swap(__rhs)))
+    -> decltype(__lhs.swap(__rhs)) {
   return __lhs.swap(__rhs);
 }
 

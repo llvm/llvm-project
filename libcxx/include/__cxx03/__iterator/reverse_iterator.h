@@ -284,8 +284,8 @@ operator<=>(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>&
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 auto
-operator-(const reverse_iterator<_Iter1>& __x,
-          const reverse_iterator<_Iter2>& __y) -> decltype(__y.base() - __x.base()) {
+operator-(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
+    -> decltype(__y.base() - __x.base()) {
   return __y.base() - __x.base();
 }
 #else

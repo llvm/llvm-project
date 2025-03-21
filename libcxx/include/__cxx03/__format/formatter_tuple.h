@@ -136,12 +136,12 @@ private:
 };
 
 template <__fmt_char_type _CharT, formattable<_CharT>... _Args>
-struct _LIBCPP_TEMPLATE_VIS formatter<pair<_Args...>, _CharT>
-    : public __formatter_tuple<_CharT, pair<_Args...>, _Args...> {};
+struct _LIBCPP_TEMPLATE_VIS
+formatter<pair<_Args...>, _CharT> : public __formatter_tuple<_CharT, pair<_Args...>, _Args...> {};
 
 template <__fmt_char_type _CharT, formattable<_CharT>... _Args>
-struct _LIBCPP_TEMPLATE_VIS formatter<tuple<_Args...>, _CharT>
-    : public __formatter_tuple<_CharT, tuple<_Args...>, _Args...> {};
+struct _LIBCPP_TEMPLATE_VIS
+formatter<tuple<_Args...>, _CharT> : public __formatter_tuple<_CharT, tuple<_Args...>, _Args...> {};
 
 #endif //_LIBCPP_STD_VER >= 23
 

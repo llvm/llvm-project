@@ -23,8 +23,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Cont>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto
-empty(const _Cont& __c) noexcept(noexcept(__c.empty())) -> decltype(__c.empty()) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto empty(const _Cont& __c) noexcept(noexcept(__c.empty()))
+    -> decltype(__c.empty()) {
   return __c.empty();
 }
 
