@@ -39,7 +39,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <condition_variable>
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>

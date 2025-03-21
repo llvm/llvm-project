@@ -700,6 +700,10 @@ bool DAP::HandleObject(const Message &M) {
     {
       std::lock_guard<std::mutex> lock(m_active_request_mutex);
       m_active_request = req;
+
+      // Clear interrupt marker prior to handling the next request.
+      if (debugger.InterruptRequested())
+        debugger.CancelInterruptRequest();
     }
 
     auto cleanup = llvm::make_scope_exit([&]() {
@@ -717,10 +721,6 @@ bool DAP::HandleObject(const Message &M) {
         return true;
       }
     }
-
-    // Clear interrupt marker prior to handling the next request.
-    if (debugger.InterruptRequested())
-      debugger.CancelInterruptRequest();
 
     auto handler_pos = request_handlers.find(req->command);
     if (handler_pos != request_handlers.end()) {
