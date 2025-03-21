@@ -1594,7 +1594,7 @@ def LLVM_DSOLocalEquivalentOp : LLVM_Op<"dso_local_equivalent",
     llvm.mlir.global external constant @const() : i64 {
       %0 = llvm.mlir.addressof @const : !llvm.ptr
       %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
-      %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+      %2 = llvm.dso_local_equivalent @func : !llvm.ptr
       %4 = llvm.ptrtoint %2 : !llvm.ptr to i64
       llvm.return %4 : i64
     }

@@ -430,11 +430,11 @@ llvm.func @call_alias_func() {
 
 // -----
 
-llvm.mlir.global external @zed() : !llvm.ptr
+llvm.mlir.global external @y() : !llvm.ptr
 
 llvm.func @call_alias_func() {
   // expected-error @below{{op must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'}}
-  %0 = llvm.dso_local_equivalent @foo : !llvm.ptr
+  %0 = llvm.dso_local_equivalent @y : !llvm.ptr
   llvm.call %0() : !llvm.ptr, () -> (i32)
   llvm.return
 }
