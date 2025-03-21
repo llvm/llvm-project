@@ -1,3 +1,5 @@
+// REQUIRES: ondisk_cas
+
 // RUN: rm -rf %t
 
 // RUN: c-index-test core --scan-deps -working-dir %S -output-dir=%t -cas-path %t/cas \

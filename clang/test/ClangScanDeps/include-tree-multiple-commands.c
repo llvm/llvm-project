@@ -2,6 +2,8 @@
 // there will be separate -E, -emit-llvm-bc, -S, and -cc1as jobs, which should
 // each result in a "command" in the output.
 
+// REQUIRES: ondisk_cas
+
 // We use an x86_64-apple-darwin target to avoid host-dependent behaviour in
 // the driver. Platforms without an integrated assembler have different commands
 // REQUIRES: x86-registered-target

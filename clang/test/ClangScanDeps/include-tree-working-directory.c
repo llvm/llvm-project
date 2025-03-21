@@ -1,3 +1,5 @@
+// REQUIRES: ondisk_cas
+
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/other
 // RUN: split-file %s %t

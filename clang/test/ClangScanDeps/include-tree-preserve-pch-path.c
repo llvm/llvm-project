@@ -1,3 +1,5 @@
+// REQUIRES: ondisk_cas
+
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb_pch.json.template > %t/cdb_pch.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
