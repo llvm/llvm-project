@@ -177,6 +177,7 @@ enum LoweringMethodID {
   Div_BFE,
   VgprToVccCopy,
   SplitTo32,
+  SplitTo32Sel,
   Ext32To64,
   UniCstExt,
   SplitLoad,
