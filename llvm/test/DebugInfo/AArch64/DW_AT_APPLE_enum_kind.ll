@@ -1,5 +1,6 @@
-; RUN: llc < %s -filetype=obj -o %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
+; RUN: clang++ %s -c -g -emit-llvm -o %t.bc
+; RUN: llc %t.bc -filetype=obj -o %t.o
+; RUN: llvm-dwarfdump -v %t.o | FileCheck %s
 
 ; C++ source to regenerate:
 ; enum __attribute__((enum_extensibility(open))) OpenEnum {

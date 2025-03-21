@@ -1704,8 +1704,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       }
     }
 
-    if (Record.size() > 25 && Record[25] != dwarf::DW_APPLE_ENUM_KIND_invalid)
-      EnumKind = Record[25];
+    if (Record.size() > 24 && Record[24] != dwarf::DW_APPLE_ENUM_KIND_invalid)
+      EnumKind = Record[24];
 
     DICompositeType *CT = nullptr;
     if (Identifier)
