@@ -179,18 +179,13 @@ define <8 x i16> @udiv8xi16(<8 x i16> %x) {
 ; CHECK-GI-LABEL: udiv8xi16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI4_0
-; CHECK-GI-NEXT:    movi v3.8h, #15
-; CHECK-GI-NEXT:    movi v4.8h, #16
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
 ; CHECK-GI-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    sub v2.8h, v4.8h, v3.8h
-; CHECK-GI-NEXT:    neg v2.8h, v2.8h
 ; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ushl v0.8h, v0.8h, v2.8h
-; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ushr v0.8h, v0.8h, #12
+; CHECK-GI-NEXT:    usra v1.8h, v0.8h, #1
+; CHECK-GI-NEXT:    ushr v0.8h, v1.8h, #12
 ; CHECK-GI-NEXT:    ret
   %div = udiv <8 x i16> %x, <i16 6537, i16 6537, i16 6537, i16 6537, i16 6537, i16 6537, i16 6537, i16 6537>
   ret <8 x i16> %div
@@ -252,18 +247,11 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %a) {
 ; CHECK-GI-NEXT:    movk x8, #9362, lsl #48
 ; CHECK-GI-NEXT:    umulh x9, x9, x8
 ; CHECK-GI-NEXT:    umulh x8, x10, x8
-; CHECK-GI-NEXT:    adrp x10, .LCPI6_0
-; CHECK-GI-NEXT:    ldr q3, [x10, :lo12:.LCPI6_0]
 ; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    adrp x9, .LCPI6_1
-; CHECK-GI-NEXT:    ldr q2, [x9, :lo12:.LCPI6_1]
-; CHECK-GI-NEXT:    sub v2.2d, v3.2d, v2.2d
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    neg v2.2d, v2.2d
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    ushl v0.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    ushr v0.2d, v0.2d, #2
+; CHECK-GI-NEXT:    usra v1.2d, v0.2d, #1
+; CHECK-GI-NEXT:    ushr v0.2d, v1.2d, #2
 ; CHECK-GI-NEXT:    ret
   %r = udiv <2 x i64> %a, splat (i64 7)
   ret <2 x i64> %r
