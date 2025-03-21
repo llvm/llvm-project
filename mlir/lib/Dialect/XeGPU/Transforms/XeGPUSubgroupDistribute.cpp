@@ -753,7 +753,7 @@ namespace {
 ///   gpu.func @foo(%arg0: memref<*xf16>) -> vector<8x16xf32> {
 ///     ...
 ///     ...
-///     gpu.yield %result: vector<8x16xf32>
+///     gpu.return %result: vector<8x16xf32>
 ///   }
 /// ```
 /// To
@@ -1075,9 +1075,6 @@ SubgroupOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
         descOp, "expecting a memref typed value as the source");
 
   auto descOffsets = descOp.getMixedOffsets();
-  if (descOffsets.size() != 2)
-    return rewriter.notifyMatchFailure(descOp,
-                                       "offsets size is expected to be 2");
 
   xegpu::SGMapAttr sgMap = descOp.getType().getSGMapAttr();
   if (!sgMap)
@@ -1085,16 +1082,26 @@ SubgroupOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
         descOp, "the tensor descriptor lacks sg_map attribute");
 
   SmallVector<size_t> newRetIndices;
+  SmallVector<Value> newYieldValues;
+  SmallVector<Type> newYieldTypes;
+
+  for (auto arg : descOp->getOperands()) {
+    newYieldValues.push_back(arg);
+    newYieldTypes.push_back(arg.getType());
+  }
   rewriter.setInsertionPoint(subgroupOp);
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-      rewriter, subgroupOp, /* new yieled values = */ descOp.getSource(),
-      /* new yielded types = */ descOp.getSourceType(), newRetIndices);
+      rewriter, subgroupOp, /* new yieled values = */ newYieldValues,
+      /* new yielded types = */ newYieldTypes, newRetIndices);
 
+  SmallVector<Value> newDescOperands;
+  for (auto i : newRetIndices) {
+    newDescOperands.push_back(newWarpOp.getResult(i));
+  }
   rewriter.setInsertionPointAfter(newWarpOp);
   auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
-      newWarpOp.getLoc(), descOp.getType(),
-      dyn_cast<TypedValue<MemRefType>>(newWarpOp.getResult(newRetIndices[0])),
-      descOffsets);
+      newWarpOp.getLoc(), descOp.getType(), newDescOperands,
+      descOp->getAttrs());
 
   Value distributedVal = newWarpOp.getResult(operandIdx);
   rewriter.replaceAllUsesWith(distributedVal, newDescOp);
@@ -1119,7 +1126,7 @@ SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
   xegpu::SGMapAttr sgMapB =
       mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_b"));
   xegpu::SGMapAttr sgMapResult =
-      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_out"));
+      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_c"));
   if (!sgMapA || !sgMapB || !sgMapResult)
     return rewriter.notifyMatchFailure(
         dpasOp, "the xegpu::Dpas op lacks sg_map attribute for A, B or result");
@@ -1177,6 +1184,12 @@ struct XeGPUSubgroupDistributePass final
 };
 } // namespace
 
+void xegpu::populateXeGPUSubgroupDistributePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<SubgroupOpTensorDescOp, SubgroupOpStoreNd, SubgroupOpLoadNd,
+               SubgroupOpDpas>(patterns.getContext());
+}
+
 void XeGPUSubgroupDistributePass::runOnOperation() {
   auto &analyis = getAnalysis<RunSGMapPropagation>();
   // Print the analysis result and exit. (for testing purposes)
@@ -1192,14 +1205,18 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     signalPassFailure();
   /// Move all operations inside a GPU functions inside
   /// gpu.warp_execute_on_lane0
-  {
-    RewritePatternSet patterns(&getContext());
-    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
-    /// We want to avoid ops from hoisted out of the gpu.warp_execute_on_lane0
-    /// region.
-    GreedyRewriteConfig config;
-    config.cseConstants = false;
-    config.fold = false;
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
-  }
+
+  RewritePatternSet patterns(&getContext());
+  patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+  /// We want to avoid ops from hoisted out of the gpu.warp_execute_on_lane0
+  /// region.
+  GreedyRewriteConfig config;
+  config.cseConstants = false;
+  config.fold = false;
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
+
+  /// Finally, do the SIMD to SIMT distribution.
+  patterns.clear();
+  xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
 }
