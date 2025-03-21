@@ -2219,25 +2219,24 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   llvm_unreachable("unexpected literal operator lookup result");
 }
 
-DeclRefExpr *
-Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
-                       SourceLocation Loc,
-                       const CXXScopeSpec *SS) {
+DeclRefExpr *Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
+                                    SourceLocation Loc, QualType DeclType,
+                                    const CXXScopeSpec *SS) {
   DeclarationNameInfo NameInfo(D->getDeclName(), Loc);
-  return BuildDeclRefExpr(D, Ty, VK, NameInfo, SS);
+  return BuildDeclRefExpr(D, Ty, VK, NameInfo, DeclType, SS);
 }
 
 DeclRefExpr *
 Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
-                       const DeclarationNameInfo &NameInfo,
+                       const DeclarationNameInfo &NameInfo, QualType DeclType,
                        const CXXScopeSpec *SS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
                        const TemplateArgumentListInfo *TemplateArgs,
                        const TemplateArgumentList *ConvertedArgs) {
   NestedNameSpecifierLoc NNS =
       SS ? SS->getWithLocInContext(Context) : NestedNameSpecifierLoc();
-  return BuildDeclRefExpr(D, Ty, VK, NameInfo, NNS, FoundD, TemplateKWLoc,
-                          TemplateArgs, ConvertedArgs);
+  return BuildDeclRefExpr(D, Ty, VK, NameInfo, NNS, DeclType, FoundD,
+                          TemplateKWLoc, TemplateArgs, ConvertedArgs);
 }
 
 // CUDA/HIP: Check whether a captured reference variable is referencing a
@@ -2300,18 +2299,18 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
 DeclRefExpr *
 Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        const DeclarationNameInfo &NameInfo,
-                       NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
-                       SourceLocation TemplateKWLoc,
+                       NestedNameSpecifierLoc NNS, QualType DeclType,
+                       NamedDecl *FoundD, SourceLocation TemplateKWLoc,
                        const TemplateArgumentListInfo *TemplateArgs,
                        const TemplateArgumentList *ConvertedArgs) {
   bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
                                   NeedToCaptureVariable(D, NameInfo.getLoc());
 
   assert(!TemplateArgs || ConvertedArgs);
-  DeclRefExpr *E = DeclRefExpr::Create(Context, NNS, TemplateKWLoc, D,
-                                       RefersToCapturedVariable, NameInfo, Ty,
-                                       VK, FoundD, TemplateArgs, ConvertedArgs,
-                                       getNonOdrUseReasonInCurrentContext(D));
+  DeclRefExpr *E = DeclRefExpr::Create(
+      Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
+      VK, DeclType, FoundD, TemplateArgs, ConvertedArgs,
+      getNonOdrUseReasonInCurrentContext(D));
   MarkDeclRefReferenced(E);
 
   // C++ [except.spec]p17:
@@ -2732,6 +2731,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // LookupName handles a name lookup from within anonymous struct.
     if (LookupName(R, S)) {
       if (auto *VD = dyn_cast<ValueDecl>(R.getFoundDecl())) {
+        // FIXME: resugar
         QualType type = VD->getType().getNonReferenceType();
         // This will eventually be translated into MemberExpr upon
         // the use of instantiated struct fields.
@@ -3306,19 +3306,19 @@ ExprResult Sema::BuildDeclarationNameExpr(
     return BuildAnonymousStructUnionMemberReference(SS, NameInfo.getLoc(),
                                                     IndirectField);
 
-  QualType type = VD->getType();
-  if (type.isNull())
+  QualType DeclType = VD->getType();
+  if (DeclType.isNull())
     return ExprError();
   assert(!TemplateArgs || ConvertedArgs);
-  type = ConvertedArgs
-             ? resugar(SS.getScopeRep(), VD, ConvertedArgs->asArray(), type)
-             : resugar(SS.getScopeRep(), type);
+  DeclType = ConvertedArgs ? resugar(SS.getScopeRep(), VD,
+                                     ConvertedArgs->asArray(), DeclType)
+                           : resugar(SS.getScopeRep(), DeclType);
   ExprValueKind valueKind = VK_PRValue;
 
   // In 'T ...V;', the type of the declaration 'V' is 'T...', but the type of
   // a reference to 'V' is simply (unexpanded) 'T'. The type, like the value,
   // is expanded by some outer '...' in the context of the use.
-  type = type.getNonPackExpansionType();
+  QualType type = DeclType.getNonPackExpansionType();
 
   switch (D->getKind()) {
     // Ignore all the non-ValueDecl kinds.
@@ -3473,8 +3473,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     // If we're referring to a method with an __unknown_anytype
     // result type, make the entire expression __unknown_anytype.
     // This should only be possible with a type written directly.
-    if (const FunctionProtoType *proto =
-            dyn_cast<FunctionProtoType>(VD->getType()))
+    if (const FunctionProtoType *proto = dyn_cast<FunctionProtoType>(DeclType))
       if (proto->getReturnType() == Context.UnknownAnyTy) {
         type = Context.UnknownAnyTy;
         valueKind = VK_PRValue;
@@ -3495,9 +3494,9 @@ ExprResult Sema::BuildDeclarationNameExpr(
     break;
   }
 
-  auto *E = BuildDeclRefExpr(VD, type, valueKind, NameInfo, &SS, FoundD,
-                             /*FIXME: TemplateKWLoc*/ SourceLocation(),
-                             TemplateArgs, ConvertedArgs);
+  auto *E = BuildDeclRefExpr(
+      VD, type, valueKind, NameInfo, DeclType, &SS, FoundD,
+      /*FIXME: TemplateKWLoc*/ SourceLocation(), TemplateArgs, ConvertedArgs);
   // Clang AST consumers assume a DeclRefExpr refers to a valid decl. We
   // wrap a DeclRefExpr referring to an invalid decl with a dependent-type
   // RecoveryExpr to avoid follow-up semantic analysis (thus prevent bogus
@@ -6641,10 +6640,11 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       if ((FDecl =
                rewriteBuiltinFunctionDecl(this, Context, FDecl, ArgExprs))) {
         NDecl = FDecl;
-        Fn = DeclRefExpr::Create(
-            Context, FDecl->getQualifierLoc(), SourceLocation(), FDecl, false,
-            SourceLocation(), FDecl->getType(), Fn->getValueKind(), FDecl,
-            nullptr, nullptr, DRE->isNonOdrUse());
+        NestedNameSpecifierLoc NNS = FDecl->getQualifierLoc();
+        QualType T = resugar(NNS.getNestedNameSpecifier(), FDecl->getType());
+        Fn = DeclRefExpr::Create(Context, NNS, SourceLocation(), FDecl, false,
+                                 SourceLocation(), T, Fn->getValueKind(), T,
+                                 FDecl, nullptr, nullptr, DRE->isNonOdrUse());
       }
     }
   } else if (auto *ME = dyn_cast<MemberExpr>(NakedFn))
@@ -19465,8 +19465,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
         S.Context, DRE->getQualifierLoc(), DRE->getTemplateKeywordLoc(),
         DRE->getDecl(), DRE->refersToEnclosingVariableOrCapture(),
         DRE->getNameInfo(), DRE->getType(), DRE->getValueKind(),
-        DRE->getFoundDecl(), CopiedTemplateArgs(DRE), DRE->getConvertedArgs(),
-        NOUR);
+        DRE->getDeclType(), DRE->getFoundDecl(), CopiedTemplateArgs(DRE),
+        DRE->getConvertedArgs(), NOUR);
   }
 
   case Expr::FunctionParmPackExprClass: {
@@ -19870,20 +19870,13 @@ static void DoMarkVarDeclReferenced(
 
         // Re-set the member to trigger a recomputation of the dependence bits
         // for the expression.
-        CXXScopeSpec SS;
         if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E)) {
-          DRE->setDecl(DRE->getDecl());
-          SS.Adopt(DRE->getQualifierLoc());
-          assert(DRE->template_arguments().size() == 0 ||
-                 DRE->getConvertedArgs() != nullptr);
-          QualType T = DRE->getConvertedArgs()
-                           ? SemaRef.resugar(SS.getScopeRep(), DRE->getDecl(),
-                                             DRE->getConvertedArgs()->asArray(),
-                                             DRE->getType())
-                           : SemaRef.resugar(SS.getScopeRep(), DRE->getType());
-          DRE->setType(T);
+          if (DRE->getType()->isUndeducedType())
+            DRE->setType(SemaRef.resugar(DRE, DRE->getDecl()));
+          DRE->recomputeDependency();
         } else if (auto *ME = dyn_cast_or_null<MemberExpr>(E)) {
           ME->setMemberDecl(ME->getMemberDecl());
+          CXXScopeSpec SS;
           SS.Adopt(ME->getQualifierLoc());
           assert(ME->template_arguments().size() == 0 ||
                  ME->getDeduced() != nullptr);
@@ -20930,6 +20923,8 @@ ExprResult RebuildUnknownAnyExpr::resolveDecl(Expr *E, ValueDecl *VD) {
           Params.push_back(Param);
         }
         NewFD->setParams(Params);
+        NewFD->setPreviousDeclaration(FD);
+        // FIXME: resugar?
         DRE->setDecl(NewFD);
         VD = DRE->getDecl();
       }
@@ -21197,7 +21192,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
         DRE->copyTemplateArgumentsInto(TemplateArgs);
         // FIXME: resugar
         return BuildDeclRefExpr(
-            FD, FD->getType(), VK_LValue, DRE->getNameInfo(),
+            FD, FD->getType(), VK_LValue, DRE->getNameInfo(), QualType(),
             DRE->hasQualifier() ? &SS : nullptr, DRE->getFoundDecl(),
             DRE->getTemplateKeywordLoc(),
             DRE->hasExplicitTemplateArgs() ? &TemplateArgs : nullptr,

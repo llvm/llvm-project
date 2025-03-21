@@ -16587,21 +16587,19 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
             : VK_PRValue;
 
     // FIXME: Duplicated from BuildDeclarationNameExpr.
-    QualType Type;
-    {
-      unsigned BID = Fn->getBuiltinID();
-      if (BID && !Context.BuiltinInfo.isDirectlyAddressable(BID)) {
-        Type = Context.BuiltinFnTy;
-        ValueKind = VK_PRValue;
-      } else {
-        Type = Deduced ? resugar(NNS.getNestedNameSpecifier(), Fn,
-                                 Deduced->asArray(), Fn->getType())
-                       : resugar(NNS.getNestedNameSpecifier(), Fn->getType());
-      }
+    QualType DeclType =
+        Deduced ? resugar(NNS.getNestedNameSpecifier(), Fn, Deduced->asArray(),
+                          Fn->getType())
+                : resugar(NNS.getNestedNameSpecifier(), Fn->getType());
+    QualType Type = DeclType;
+    if (unsigned BID = Fn->getBuiltinID();
+        BID && !Context.BuiltinInfo.isDirectlyAddressable(BID)) {
+      Type = Context.BuiltinFnTy;
+      ValueKind = VK_PRValue;
     }
 
     DeclRefExpr *DRE = BuildDeclRefExpr(
-        Fn, Type, ValueKind, ULE->getNameInfo(), NNS, Found.getDecl(),
+        Fn, Type, ValueKind, ULE->getNameInfo(), NNS, DeclType, Found.getDecl(),
         ULE->getTemplateKeywordLoc(), TemplateArgs, Deduced);
     DRE->setHadMultipleCandidates(ULE->getNumDecls() > 1);
     return DRE;
@@ -16625,12 +16623,13 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     // implicit member access, rewrite to a simple decl ref.
     if (MemExpr->isImplicitAccess()) {
       if (cast<CXXMethodDecl>(Fn)->isStatic()) {
+        // FIXME: Include the MemberExpr Qualifier.
         QualType Type = Deduced ? resugar(BasePointeeType, Fn,
                                           Deduced->asArray(), Fn->getType())
                                 : resugar(BasePointeeType, Fn->getType());
         DeclRefExpr *DRE = BuildDeclRefExpr(
             Fn, Type, VK_LValue, MemExpr->getNameInfo(),
-            MemExpr->getQualifierLoc(), Found.getDecl(),
+            MemExpr->getQualifierLoc(), Type, Found.getDecl(),
             MemExpr->getTemplateKeywordLoc(), TemplateArgs, Deduced);
         DRE->setHadMultipleCandidates(MemExpr->getNumDecls() > 1);
         return DRE;

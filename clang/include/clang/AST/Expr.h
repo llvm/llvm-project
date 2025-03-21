@@ -1266,7 +1266,7 @@ class DeclRefExpr final
     : public Expr,
       private llvm::TrailingObjects<DeclRefExpr, NestedNameSpecifierLoc,
                                     NamedDecl *, ASTTemplateKWAndArgsInfo,
-                                    TemplateArgumentLoc> {
+                                    TemplateArgumentLoc, QualType> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
@@ -1292,9 +1292,19 @@ class DeclRefExpr final
     return hasTemplateKWAndArgsInfo();
   }
 
+  size_t numTrailingObjects(OverloadToken<TemplateArgumentLoc>) const {
+    return getNumTemplateArgs();
+  }
+
+  size_t numTrailingObjects(OverloadToken<QualType>) const {
+    return HasResugaredDeclType();
+  }
+
   /// Test whether there is a distinct FoundDecl attached to the end of
   /// this DRE.
   bool hasFoundDecl() const { return DeclRefExprBits.HasFoundDecl; }
+
+  static bool needsDeclTypeStorage(ValueDecl *VD, QualType DeclType);
 
   DeclRefExpr(const ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
               SourceLocation TemplateKWLoc, ValueDecl *D,
@@ -1302,7 +1312,7 @@ class DeclRefExpr final
               const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
               const TemplateArgumentListInfo *TemplateArgs,
               const TemplateArgumentList *ConvertedArgs, QualType T,
-              ExprValueKind VK, NonOdrUseReason NOUR);
+              ExprValueKind VK, QualType DeclType, NonOdrUseReason NOUR);
 
   /// Construct an empty declaration reference expression.
   explicit DeclRefExpr(EmptyShell Empty) : Expr(DeclRefExprClass, Empty) {}
@@ -1318,7 +1328,8 @@ public:
   Create(const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
          SourceLocation TemplateKWLoc, ValueDecl *D,
          bool RefersToEnclosingVariableOrCapture, SourceLocation NameLoc,
-         QualType T, ExprValueKind VK, NamedDecl *FoundD = nullptr,
+         QualType T, ExprValueKind VK, QualType DeclType = QualType(),
+         NamedDecl *FoundD = nullptr,
          const TemplateArgumentListInfo *TemplateArgs = nullptr,
          const TemplateArgumentList *ConvertedArgs = nullptr,
          NonOdrUseReason NOUR = NOUR_None);
@@ -1328,7 +1339,7 @@ public:
          SourceLocation TemplateKWLoc, ValueDecl *D,
          bool RefersToEnclosingVariableOrCapture,
          const DeclarationNameInfo &NameInfo, QualType T, ExprValueKind VK,
-         NamedDecl *FoundD = nullptr,
+         QualType DeclType = QualType(), NamedDecl *FoundD = nullptr,
          const TemplateArgumentListInfo *TemplateArgs = nullptr,
          const TemplateArgumentList *ConvertedArgs = nullptr,
          NonOdrUseReason NOUR = NOUR_None);
@@ -1337,11 +1348,22 @@ public:
   static DeclRefExpr *CreateEmpty(const ASTContext &Context, bool HasQualifier,
                                   bool HasFoundDecl,
                                   bool HasTemplateKWAndArgsInfo,
-                                  unsigned NumTemplateArgs);
+                                  unsigned NumTemplateArgs,
+                                  bool HasResugaredDeclType);
 
   ValueDecl *getDecl() { return D; }
   const ValueDecl *getDecl() const { return D; }
   void setDecl(ValueDecl *NewD);
+  void recomputeDependency();
+
+  bool HasResugaredDeclType() const {
+    return DeclRefExprBits.HasResugaredDeclType;
+  }
+  QualType getDeclType() const {
+    return HasResugaredDeclType() ? *getTrailingObjects<QualType>()
+                                  : D->getType();
+  }
+  void setDeclType(QualType T);
 
   DeclarationNameInfo getNameInfo() const {
     return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(), DNLoc);

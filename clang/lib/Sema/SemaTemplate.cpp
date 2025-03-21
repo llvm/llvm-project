@@ -922,6 +922,19 @@ QualType Sema::resugar(const Type *Base, const NestedNameSpecifier *FieldNNS,
   bool Changed = false;
   return Resugarer(*this, Names).transform(T, Changed);
 }
+QualType Sema::resugar(DeclRefExpr *DRE, ValueDecl *VD) {
+  assert(DRE->template_arguments().size() == 0 ||
+         DRE->getConvertedArgs() != nullptr);
+  const NestedNameSpecifier *NNS =
+      DRE->getQualifierLoc().getNestedNameSpecifier();
+  QualType T = VD->getType();
+  QualType NewT =
+      DRE->getConvertedArgs()
+          ? SemaRef.resugar(NNS, VD, DRE->getConvertedArgs()->asArray(), T)
+          : SemaRef.resugar(NNS, T);
+  DRE->setDeclType(NewT);
+  return NewT;
+}
 
 /// \brief Determine whether the declaration found is acceptable as the name
 /// of a template and, if so, return that template declaration. Otherwise,

@@ -40,9 +40,8 @@ Z x1 = A<Float>::B<Bar>::a;
 namespace t4 {
 template <class A1> A1 (*a) ();
 
-// FIXME: resugar this
 Z x1 = decltype(a<Int>){}();
-// expected-error@-1 {{with an rvalue of type 'int'}}
+// expected-error@-1 {{with an rvalue of type 'Int' (aka 'int')}}
 } // namespace t4
 
 namespace t5 {
@@ -128,9 +127,8 @@ namespace t12 {
 template<class A1> A1 *a;
 template<int A3, class A4> decltype(a<A4[A3 - 1]>) a<A4[A3]>;
 
-// FIXME: resugar this
 Z x1 = *a<Int[1]>;
-// expected-error@-1 {{with an lvalue of type 'int[0]'}}
+// expected-error@-1 {{with an lvalue of type 'Int[0]' (aka 'int[0]'}}
 } // namespace t12
 
 namespace t13 {

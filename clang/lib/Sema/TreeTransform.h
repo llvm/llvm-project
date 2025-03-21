@@ -16145,9 +16145,10 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
         ArgStorage = TemplateArgument(TemplateName(TTPD), std::nullopt);
       } else {
         auto *VD = cast<ValueDecl>(Pack);
+        QualType DeclType = VD->getType();
         ExprResult DRE = getSema().BuildDeclRefExpr(
-            VD, VD->getType().getNonLValueExprType(getSema().Context),
-            VD->getType()->isReferenceType() ? VK_LValue : VK_PRValue,
+            VD, DeclType.getNonLValueExprType(getSema().Context),
+            DeclType->isReferenceType() ? VK_LValue : VK_PRValue,
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();

@@ -6848,22 +6848,23 @@ public:
 
   DeclRefExpr *BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                                 SourceLocation Loc,
+                                QualType DeclType = QualType(),
                                 const CXXScopeSpec *SS = nullptr);
-  DeclRefExpr *
-  BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
-                   const DeclarationNameInfo &NameInfo,
-                   const CXXScopeSpec *SS = nullptr,
-                   NamedDecl *FoundD = nullptr,
-                   SourceLocation TemplateKWLoc = SourceLocation(),
-                   const TemplateArgumentListInfo *TemplateArgs = nullptr,
-                   const TemplateArgumentList *ConvertArgs = nullptr);
+  DeclRefExpr *BuildDeclRefExpr(
+      ValueDecl *D, QualType Ty, ExprValueKind VK,
+      const DeclarationNameInfo &NameInfo, QualType DeclType = QualType(),
+      const CXXScopeSpec *SS = nullptr, NamedDecl *FoundD = nullptr,
+      SourceLocation TemplateKWLoc = SourceLocation(),
+      const TemplateArgumentListInfo *TemplateArgs = nullptr,
+      const TemplateArgumentList *ConvertArgs = nullptr);
 
   /// BuildDeclRefExpr - Build an expression that references a
   /// declaration that does not require a closure capture.
   DeclRefExpr *
   BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                    const DeclarationNameInfo &NameInfo,
-                   NestedNameSpecifierLoc NNS, NamedDecl *FoundD = nullptr,
+                   NestedNameSpecifierLoc NNS, QualType DeclType = QualType(),
+                   NamedDecl *FoundD = nullptr,
                    SourceLocation TemplateKWLoc = SourceLocation(),
                    const TemplateArgumentListInfo *TemplateArgs = nullptr,
                    const TemplateArgumentList *ConvertArgs = nullptr);
@@ -14006,6 +14007,7 @@ public:
   QualType resugar(const Type *Base, QualType T);
   QualType resugar(const Type *Base, NamedDecl *ND,
                    ArrayRef<TemplateArgument> Args, QualType T);
+  QualType resugar(DeclRefExpr *DRE, ValueDecl *VD);
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.

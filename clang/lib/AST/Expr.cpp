@@ -426,6 +426,11 @@ APValue ConstantExpr::getAPValueResult() const {
   llvm_unreachable("invalid ResultKind");
 }
 
+bool DeclRefExpr::needsDeclTypeStorage(ValueDecl *VD, QualType DeclType) {
+  return !DeclType.isNull() &&
+         (DeclType != VD->getType() || VD->getType()->isUndeducedType());
+}
+
 DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
                          bool RefersToEnclosingVariableOrCapture, QualType T,
                          ExprValueKind VK, SourceLocation L,
@@ -442,6 +447,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   DeclRefExprBits.IsImmediateEscalating = false;
+  DeclRefExprBits.HasResugaredDeclType = false;
   DeclRefExprBits.Loc = L;
   setDependence(computeDependence(this, Ctx));
 }
@@ -453,7 +459,8 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
                          const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
                          const TemplateArgumentListInfo *TemplateArgs,
                          const TemplateArgumentList *ConvertedArgs, QualType T,
-                         ExprValueKind VK, NonOdrUseReason NOUR)
+                         ExprValueKind VK, QualType DeclType,
+                         NonOdrUseReason NOUR)
     : Expr(DeclRefExprClass, T, VK, OK_Ordinary), D(D),
       ConvertedArgs(ConvertedArgs), DNLoc(NameInfo.getInfo()) {
   assert(!TemplateArgs || ConvertedArgs);
@@ -472,6 +479,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
       RefersToEnclosingVariableOrCapture;
   DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
+  DeclRefExprBits.HasResugaredDeclType = needsDeclTypeStorage(D, DeclType);
   if (TemplateArgs) {
     auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
@@ -483,33 +491,39 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
   }
+  if (HasResugaredDeclType()) {
+    assert(Ctx.hasSameType(DeclType, D->getType()));
+    *getTrailingObjects<QualType>() =
+        DeclType.isNull() ? D->getType() : DeclType;
+  }
   DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.HadMultipleCandidates = 0;
   setDependence(computeDependence(this, Ctx));
+}
+
+DeclRefExpr *DeclRefExpr::Create(
+    const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
+    SourceLocation TemplateKWLoc, ValueDecl *D,
+    bool RefersToEnclosingVariableOrCapture, SourceLocation NameLoc, QualType T,
+    ExprValueKind VK, QualType DeclType, NamedDecl *FoundD,
+    const TemplateArgumentListInfo *TemplateArgs,
+    const TemplateArgumentList *ConvertedArgs, NonOdrUseReason NOUR) {
+  return Create(Context, QualifierLoc, TemplateKWLoc, D,
+                RefersToEnclosingVariableOrCapture,
+                DeclarationNameInfo(D->getDeclName(), NameLoc), T, VK, DeclType,
+                FoundD, TemplateArgs, ConvertedArgs, NOUR);
 }
 
 DeclRefExpr *DeclRefExpr::Create(const ASTContext &Context,
                                  NestedNameSpecifierLoc QualifierLoc,
                                  SourceLocation TemplateKWLoc, ValueDecl *D,
                                  bool RefersToEnclosingVariableOrCapture,
-                                 SourceLocation NameLoc, QualType T,
-                                 ExprValueKind VK, NamedDecl *FoundD,
+                                 const DeclarationNameInfo &NameInfo,
+                                 QualType T, ExprValueKind VK,
+                                 QualType DeclType, NamedDecl *FoundD,
                                  const TemplateArgumentListInfo *TemplateArgs,
                                  const TemplateArgumentList *ConvertedArgs,
                                  NonOdrUseReason NOUR) {
-  return Create(Context, QualifierLoc, TemplateKWLoc, D,
-                RefersToEnclosingVariableOrCapture,
-                DeclarationNameInfo(D->getDeclName(), NameLoc), T, VK, FoundD,
-                TemplateArgs, ConvertedArgs, NOUR);
-}
-
-DeclRefExpr *DeclRefExpr::Create(
-    const ASTContext &Context, NestedNameSpecifierLoc QualifierLoc,
-    SourceLocation TemplateKWLoc, ValueDecl *D,
-    bool RefersToEnclosingVariableOrCapture,
-    const DeclarationNameInfo &NameInfo, QualType T, ExprValueKind VK,
-    NamedDecl *FoundD, const TemplateArgumentListInfo *TemplateArgs,
-    const TemplateArgumentList *ConvertedArgs, NonOdrUseReason NOUR) {
   // Filter out cases where the found Decl is the same as the value refenenced.
   if (D == FoundD)
     FoundD = nullptr;
@@ -517,38 +531,52 @@ DeclRefExpr *DeclRefExpr::Create(
   bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
   std::size_t Size =
       totalSizeToAlloc<NestedNameSpecifierLoc, NamedDecl *,
-                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc, QualType>(
           QualifierLoc ? 1 : 0, FoundD ? 1 : 0,
           HasTemplateKWAndArgsInfo ? 1 : 0,
-          TemplateArgs ? TemplateArgs->size() : 0);
+          TemplateArgs ? TemplateArgs->size() : 0,
+          needsDeclTypeStorage(D, DeclType) ? 1 : 0);
 
   void *Mem = Context.Allocate(Size, alignof(DeclRefExpr));
   return new (Mem)
       DeclRefExpr(Context, QualifierLoc, TemplateKWLoc, D,
                   RefersToEnclosingVariableOrCapture, NameInfo, FoundD,
-                  TemplateArgs, ConvertedArgs, T, VK, NOUR);
+                  TemplateArgs, ConvertedArgs, T, VK, DeclType, NOUR);
 }
 
 DeclRefExpr *DeclRefExpr::CreateEmpty(const ASTContext &Context,
-                                      bool HasQualifier,
-                                      bool HasFoundDecl,
+                                      bool HasQualifier, bool HasFoundDecl,
                                       bool HasTemplateKWAndArgsInfo,
-                                      unsigned NumTemplateArgs) {
+                                      unsigned NumTemplateArgs,
+                                      bool HasResugaredDeclType) {
   assert(NumTemplateArgs == 0 || HasTemplateKWAndArgsInfo);
   std::size_t Size =
       totalSizeToAlloc<NestedNameSpecifierLoc, NamedDecl *,
-                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc, QualType>(
           HasQualifier ? 1 : 0, HasFoundDecl ? 1 : 0, HasTemplateKWAndArgsInfo,
-          NumTemplateArgs);
+          NumTemplateArgs, HasResugaredDeclType ? 1 : 0);
   void *Mem = Context.Allocate(Size, alignof(DeclRefExpr));
   return new (Mem) DeclRefExpr(EmptyShell());
 }
 
 void DeclRefExpr::setDecl(ValueDecl *NewD) {
+  assert(D != NewD);
+  assert(declaresSameEntity(D, NewD));
+  assert(!HasResugaredDeclType() ||
+         D->getASTContext().hasSameType(NewD->getType(),
+                                        *getTrailingObjects<QualType>()));
   D = NewD;
-  if (getType()->isUndeducedType())
-    setType(NewD->getType());
-  setDependence(computeDependence(this, NewD->getASTContext()));
+  recomputeDependency();
+}
+
+void DeclRefExpr::recomputeDependency() {
+  setDependence(computeDependence(this, D->getASTContext()));
+}
+
+void DeclRefExpr::setDeclType(QualType T) {
+  assert(!T.isNull());
+  if (HasResugaredDeclType())
+    *getTrailingObjects<QualType>() = T;
 }
 
 SourceLocation DeclRefExpr::getBeginLoc() const {

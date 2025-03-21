@@ -9015,11 +9015,14 @@ void Sema::completeExprArrayBound(Expr *E) {
         // Update the type to the definition's type both here and within the
         // expression.
         if (Def) {
-          DRE->setDecl(Def);
-          QualType T = Def->getType();
+          QualType T = SemaRef.resugar(DRE, Def);
           DRE->setType(T);
           // FIXME: Update the type on all intervening expressions.
           E->setType(T);
+          if (Var != Def)
+            DRE->setDecl(Def);
+          else
+            DRE->recomputeDependency();
         }
 
         // We still go on to try to complete the type independently, as it
@@ -9618,7 +9621,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   // We apply the same rules for Objective-C ivar and property references.
   if (const auto *DRE = dyn_cast<DeclRefExpr>(IDExpr)) {
     const ValueDecl *VD = DRE->getDecl();
-    QualType T = VD->getType();
+    QualType T = DRE->getDeclType();
     return isa<TemplateParamObjectDecl>(VD) ? T.getUnqualifiedType() : T;
   }
   if (const auto *ME = dyn_cast<MemberExpr>(IDExpr)) {

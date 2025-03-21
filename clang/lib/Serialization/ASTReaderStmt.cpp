@@ -622,6 +622,7 @@ void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
   E->DeclRefExprBits.HasQualifier = CurrentUnpackingBits->getNextBit();
   E->DeclRefExprBits.HasTemplateKWAndArgsInfo =
       CurrentUnpackingBits->getNextBit();
+  E->DeclRefExprBits.HasResugaredDeclType = CurrentUnpackingBits->getNextBit();
   E->DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
 
   unsigned NumTemplateArgs = 0;
@@ -639,6 +640,9 @@ void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
     ReadTemplateKWAndArgsInfo(
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
         E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
+
+  if (E->HasResugaredDeclType())
+    *E->getTrailingObjects<QualType>() = Record.readQualType();
 
   E->D = readDeclAs<ValueDecl>();
   E->ConvertedArgs = Record.readTemplateArgumentList();
@@ -3186,11 +3190,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       bool HasFoundDecl = DeclRefExprBits.getNextBit();
       bool HasQualifier = DeclRefExprBits.getNextBit();
       bool HasTemplateKWAndArgsInfo = DeclRefExprBits.getNextBit();
+      bool HasResugaredDeclType = DeclRefExprBits.getNextBit();
       unsigned NumTemplateArgs = HasTemplateKWAndArgsInfo
                                      ? Record[ASTStmtReader::NumExprFields + 1]
                                      : 0;
       S = DeclRefExpr::CreateEmpty(Context, HasQualifier, HasFoundDecl,
-                                   HasTemplateKWAndArgsInfo, NumTemplateArgs);
+                                   HasTemplateKWAndArgsInfo, NumTemplateArgs,
+                                   HasResugaredDeclType);
       break;
     }
 
