@@ -3801,6 +3801,13 @@ void TargetLowering::computeKnownBitsForTargetInstr(
   Known.resetAll();
 }
 
+void TargetLowering::computeKnownFPClassForTargetInstr(
+    GISelValueTracking &Analysis, Register R, KnownFPClass &Known,
+    const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+    unsigned Depth) const {
+  Known.resetAll();
+}
+
 void TargetLowering::computeKnownBitsForFrameIndex(
   const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
   // The low bits are known zero if the pointer is aligned.
