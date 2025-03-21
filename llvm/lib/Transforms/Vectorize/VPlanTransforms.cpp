@@ -1136,10 +1136,11 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     // Currently only handle cases where the single user is a header-mask
     // comparison with the backedge-taken-count.
     using namespace VPlanPatternMatch;
-    if (!match(*WideIV->user_begin(),
-               m_Binary<Instruction::ICmp>(
-                   m_Specific(WideIV),
-                   m_Specific(Plan.getOrCreateBackedgeTakenCount()))))
+    if (!match(
+            *WideIV->user_begin(),
+            m_Binary<Instruction::ICmp>(
+                m_Specific(WideIV),
+                m_Broadcast(m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
