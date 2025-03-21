@@ -51,6 +51,21 @@ struct ArgTypeTraits<llvm::StringRef> {
 };
 
 template <>
+struct ArgTypeTraits<int64_t> {
+  static bool hasCorrectType(const VariantValue &value) {
+    return value.isSigned();
+  }
+
+  static unsigned get(const VariantValue &value) { return value.getSigned(); }
+
+  static ArgKind getKind() { return ArgKind::Signed; }
+
+  static std::optional<std::string> getBestGuess(const VariantValue &) {
+    return std::nullopt;
+  }
+};
+
+template <>
 struct ArgTypeTraits<DynMatcher> {
 
   static bool hasCorrectType(const VariantValue &value) {

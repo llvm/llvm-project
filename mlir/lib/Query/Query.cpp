@@ -12,6 +12,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Query/Matcher/MatchFinder.h"
 #include "mlir/Query/QuerySession.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -24,15 +25,6 @@ QueryRef parse(llvm::StringRef line, const QuerySession &qs) {
 std::vector<llvm::LineEditor::Completion>
 complete(llvm::StringRef line, size_t pos, const QuerySession &qs) {
   return QueryParser::complete(line, pos, qs);
-}
-
-static void printMatch(llvm::raw_ostream &os, QuerySession &qs, Operation *op,
-                       const std::string &binding) {
-  auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>();
-  auto smloc = qs.getSourceManager().FindLocForLineAndColumn(
-      qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
-  qs.getSourceManager().PrintMessage(os, smloc, llvm::SourceMgr::DK_Note,
-                                     "\"" + binding + "\" binds here");
 }
 
 // TODO: Extract into a helper function that can be reused outside query
@@ -99,6 +91,12 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
   return funcOp;
 }
 
+static void parseQueryOptions(QuerySession &qs, QueryOptions &options) {
+  options.omitBlockArguments = qs.omitBlockArguments;
+  options.omitUsesFromAbove = qs.omitUsesFromAbove;
+  options.inclusive = qs.inclusive;
+}
+
 Query::~Query() = default;
 
 LogicalResult InvalidQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
@@ -114,6 +112,11 @@ LogicalResult HelpQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   os << "Available commands:\n\n"
         "  match MATCHER, m MATCHER      "
         "Match the mlir against the given matcher.\n"
+        "Set query options, useful for complex matchers \n"
+        "   set omitBlockArguments (true|false) \n"
+        "   set omitUsesFromAbove (true|false) \n"
+        "   set inclusive (true|false) \n"
+        "Give a matcher expression a name, to be used later\n"
         "  quit                              "
         "Terminates the query session.\n\n";
   return mlir::success();
@@ -126,9 +129,11 @@ LogicalResult QuitQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
 
 LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
   Operation *rootOp = qs.getRootOp();
-  int matchCount = 0;
-  std::vector<Operation *> matches =
-      matcher::MatchFinder().getMatches(rootOp, matcher);
+
+  QueryOptions options;
+  parseQueryOptions(qs, options);
+  auto matches = matcher::MatchFinder().getMatches(rootOp, options,
+                                                   std::move(matcher), os, qs);
 
   // An extract call is recognized by considering if the matcher has a name.
   // TODO: Consider making the extract more explicit.
@@ -140,14 +145,6 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
     function->erase();
     return mlir::success();
   }
-
-  os << "\n";
-  for (Operation *op : matches) {
-    os << "Match #" << ++matchCount << ":\n\n";
-    // Placeholder "root" binding for the initial draft.
-    printMatch(os, qs, op, "root");
-  }
-  os << matchCount << (matchCount == 1 ? " match.\n\n" : " matches.\n\n");
 
   return mlir::success();
 }
