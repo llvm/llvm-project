@@ -89,8 +89,8 @@ define i8 @scmp.8.128(i128 %x, i128 %y) nounwind {
 ; RV32I-NEXT:    lw a2, 4(a1)
 ; RV32I-NEXT:    lw a4, 8(a1)
 ; RV32I-NEXT:    lw a5, 12(a1)
-; RV32I-NEXT:    lw a6, 12(a0)
 ; RV32I-NEXT:    lw a3, 4(a0)
+; RV32I-NEXT:    lw a6, 12(a0)
 ; RV32I-NEXT:    lw a7, 8(a0)
 ; RV32I-NEXT:    beq a6, a5, .LBB4_2
 ; RV32I-NEXT:  # %bb.1:

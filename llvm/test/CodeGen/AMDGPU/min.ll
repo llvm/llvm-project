@@ -649,14 +649,14 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ;
 ; GFX9-LABEL: s_test_imin_sle_v4i8:
 ; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    s_load_dword s3, s[8:9], 0x4c
 ; GFX9-NEXT:    s_load_dword s2, s[8:9], 0x28
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s5, s2, 16
 ; GFX9-NEXT:    s_lshr_b32 s8, s3, 16
 ; GFX9-NEXT:    s_ashr_i32 s9, s3, 24
+; GFX9-NEXT:    s_lshr_b32 s5, s2, 16
 ; GFX9-NEXT:    s_ashr_i32 s6, s2, 24
 ; GFX9-NEXT:    s_bfe_i32 s8, s8, 0x80000
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s9

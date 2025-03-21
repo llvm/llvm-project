@@ -1945,10 +1945,11 @@ define amdgpu_kernel void @s_log_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 ; GFX1100-GISEL-NEXT:    v_dual_fmac_f32 v12, 0x3377d1cf, v2 :: v_dual_fmac_f32 v13, 0x3377d1cf, v3
 ; GFX1100-GISEL-NEXT:    v_add_f32_e32 v7, v7, v12
 ; GFX1100-GISEL-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-GISEL-NEXT:    v_dual_mul_f32 v5, 0x3f317217, v0 :: v_dual_add_f32 v8, v8, v13
-; GFX1100-GISEL-NEXT:    v_mul_f32_e32 v6, 0x3f317217, v1
+; GFX1100-GISEL-NEXT:    v_mul_f32_e32 v5, 0x3f317217, v0
 ; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1100-GISEL-NEXT:    v_mul_f32_e32 v6, 0x3f317217, v1
+; GFX1100-GISEL-NEXT:    v_add_f32_e32 v8, v8, v13
+; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1100-GISEL-NEXT:    v_fma_f32 v10, 0x3f317217, v0, -v5
 ; GFX1100-GISEL-NEXT:    v_fma_f32 v11, 0x3f317217, v1, -v6
 ; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)

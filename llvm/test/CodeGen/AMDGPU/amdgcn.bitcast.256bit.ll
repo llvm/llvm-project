@@ -20545,19 +20545,19 @@ define <32 x i8> @bitcast_v16bf16_to_v32i8(<16 x bfloat> %a, i32 %b) {
 ; GFX11-FAKE16-NEXT:    v_add3_u32 v9, v15, v10, 0x7fff
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v15, 0x400000, v10
 ; GFX11-FAKE16-NEXT:    v_add3_u32 v10, v19, v14, 0x7fff
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_3)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v20, v9, v15 :: v_dual_add_f32 v9, 0x40c00000, v17
-; GFX11-FAKE16-NEXT:    v_and_b32_e32 v17, 0xffff0000, v33
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v18, 0x400000, v12
 ; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v12, v12
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v15, 0x400000, v14
-; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v12, v16, v18, vcc_lo
+; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v12, v16, v18 :: v_dual_and_b32 v17, 0xffff0000, v33
 ; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v14, v14
 ; GFX11-FAKE16-NEXT:    v_bfe_u32 v16, v9, 16, 1
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v18, 16, v32
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v14, v10, v15 :: v_dual_add_f32 v15, 0x40c00000, v17
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-FAKE16-NEXT:    v_add_f32_e32 v17, 0x40c00000, v18
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-FAKE16-NEXT:    v_add3_u32 v16, v16, v9, 0x7fff
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v18, 0x400000, v9
 ; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v9, v9
