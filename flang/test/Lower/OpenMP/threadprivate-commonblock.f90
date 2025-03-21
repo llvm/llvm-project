@@ -47,11 +47,11 @@ contains
   !CHECK-DAG:  %[[F_ADDR_CVT:.*]] = fir.convert %[[F_ADDR]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<2x!fir.char<1,5>>>
   !CHECK-DAG:  %[[F_DECL:.*]]:2 = hlfir.declare %[[F_ADDR_CVT]]({{.*}}) typeparams {{.*}} {uniq_name = "_QMtestEf"} : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.ref<!fir.array<2x!fir.char<1,5>>>)
   !CHECK-DAG:  {{.*}} = fir.load %[[A_DECL]]#0 : !fir.ref<i32>
-  !CHECK-DAG:  {{.*}} = fir.embox %[[B_DECL]]#1({{.*}}) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
+  !CHECK-DAG:  {{.*}} = fir.embox %[[B_DECL]]#0({{.*}}) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
   !CHECK-DAG:  {{.*}} = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
-  !CHECK-DAG:  {{.*}} = fir.load %[[D_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
-  !CHECK-DAG:  {{.*}} = fir.convert %[[E_DECL]]#1 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  !CHECK-DAG:  {{.*}} = fir.embox %[[F_DECL]]#1({{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
+  !CHECK-DAG:  {{.*}} = fir.load %[[D_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  !CHECK-DAG:  {{.*}} = fir.convert %[[E_DECL]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+  !CHECK-DAG:  {{.*}} = fir.embox %[[F_DECL]]#0({{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
     print *, a, b, c, d, e, f
 
     !$omp parallel
@@ -82,22 +82,22 @@ contains
     !CHECK-DAG:  %[[TP_F_ADDR_CVT:.*]] = fir.convert %[[TP_F_ADDR]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<2x!fir.char<1,5>>>
     !CHECK-DAG:  %[[TP_F_DECL:.*]]:2 = hlfir.declare %[[TP_F_ADDR_CVT]]({{.*}}) typeparams {{.*}} {uniq_name = "_QMtestEf"} : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.ref<!fir.array<2x!fir.char<1,5>>>)
     !CHECK-DAG:  {{.*}} = fir.load %[[TP_A_DECL]]#0 : !fir.ref<i32>
-    !CHECK-DAG:  {{.*}} = fir.embox %[[TP_B_DECL]]#1({{.*}}) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
+    !CHECK-DAG:  {{.*}} = fir.embox %[[TP_B_DECL]]#0({{.*}}) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
     !CHECK-DAG:  {{.*}} = fir.load %[[TP_C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
-    !CHECK-DAG:  {{.*}} = fir.load %[[TP_D_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
-    !CHECK-DAG:  {{.*}} = fir.convert %[[TP_E_DECL]]#1 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    !CHECK-DAG:  {{.*}} = fir.embox %[[TP_F_DECL]]#1(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
+    !CHECK-DAG:  {{.*}} = fir.load %[[TP_D_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+    !CHECK-DAG:  {{.*}} = fir.convert %[[TP_E_DECL]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+    !CHECK-DAG:  {{.*}} = fir.embox %[[TP_F_DECL]]#0(%{{.*}}) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
     !CHECK-DAG: omp.terminator
     !CHECK-DAG: }
     print *, a, b, c, d, e, f
     !$omp end parallel
 
   !CHECK-DAG:  %{{.*}} = fir.load %[[A_DECL]]#0 : !fir.ref<i32>
-  !CHECK-DAG:  %{{.*}} = fir.embox %[[B_DECL]]#1(%63) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
+  !CHECK-DAG:  %{{.*}} = fir.embox %[[B_DECL]]#0(%63) : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<2xf32>>
   !CHECK-DAG:  %{{.*}} = fir.load %[[C_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<complex<f32>>>>
-  !CHECK-DAG:  %{{.*}} = fir.load %[[D_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
-  !CHECK-DAG:  %{{.*}} = fir.convert %[[E_DECL]]#1 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  !CHECK-DAG:  %{{.*}} = fir.embox %[[F_DECL]]#1(%79) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
+  !CHECK-DAG:  %{{.*}} = fir.load %[[D_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  !CHECK-DAG:  %{{.*}} = fir.convert %[[E_DECL]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+  !CHECK-DAG:  %{{.*}} = fir.embox %[[F_DECL]]#0(%79) : (!fir.ref<!fir.array<2x!fir.char<1,5>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.char<1,5>>>
     print *, a, b, c, d, e, f
 
   end

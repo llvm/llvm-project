@@ -7385,8 +7385,13 @@ class APValueToBufferConverter {
       for (size_t I = 0, E = CXXRD->getNumBases(); I != E; ++I) {
         const CXXBaseSpecifier &BS = CXXRD->bases_begin()[I];
         CXXRecordDecl *BaseDecl = BS.getType()->getAsCXXRecordDecl();
+        const APValue &Base = Val.getStructBase(I);
 
-        if (!visitRecord(Val.getStructBase(I), BS.getType(),
+        // Can happen in error cases.
+        if (!Base.isStruct())
+          return false;
+
+        if (!visitRecord(Base, BS.getType(),
                          Layout.getBaseClassOffset(BaseDecl) + Offset))
           return false;
       }
@@ -10551,8 +10556,9 @@ bool MemberPointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       if (!Result.castToDerived(Derived))
         return Error(E);
     }
-    const Type *FinalTy = E->getType()->castAs<MemberPointerType>()->getClass();
-    if (!Result.castToDerived(FinalTy->getAsCXXRecordDecl()))
+    if (!Result.castToDerived(E->getType()
+                                  ->castAs<MemberPointerType>()
+                                  ->getMostRecentCXXRecordDecl()))
       return Error(E);
     return true;
   }
