@@ -961,6 +961,9 @@ class Sema;
       StandardConversionSequence FinalConversion;
     };
 
+    /// Deduced Arguments for Function Templates.
+    const TemplateArgumentList *Deduced;
+
     /// Get RewriteKind value in OverloadCandidateRewriteKind type (This
     /// function is to workaround the spurious GCC bitfield enum warning)
     OverloadCandidateRewriteKind getRewriteKind() const {

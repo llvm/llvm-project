@@ -5101,14 +5101,15 @@ namespace {
 /// a given template-id.
 struct PartialSpecMatchResult {
   VarTemplatePartialSpecializationDecl *Partial;
-  TemplateArgumentList *Args;
+  TemplateArgumentList *CanonicalArgs, *SugaredArgs;
 };
 } // end anonymous namespace
 
 DeclResult
 Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
                          SourceLocation TemplateNameLoc,
-                         const TemplateArgumentListInfo &TemplateArgs) {
+                         const TemplateArgumentListInfo &TemplateArgs,
+                         const TemplateArgumentList *&ConvertedArgs) {
   assert(Template && "A variable template id without template?");
 
   // Check that the template argument list is well-formed for this template.
@@ -5126,12 +5127,17 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
           TemplateArgs, CTAI.CanonicalConverted))
     return DeclResult();
 
+  ConvertedArgs =
+      TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted);
+
   // Find the variable template specialization declaration that
   // corresponds to these arguments.
   void *InsertPos = nullptr;
   if (VarTemplateSpecializationDecl *Spec =
           Template->findSpecialization(CTAI.CanonicalConverted, InsertPos)) {
     checkSpecializationReachability(TemplateNameLoc, Spec);
+    ConvertedArgs =
+        TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted);
     // If we already have a variable template specialization, return it.
     return Spec;
   }
@@ -5185,7 +5191,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
     } else {
       Matched.push_back(PartialSpecMatchResult());
       Matched.back().Partial = Partial;
-      Matched.back().Args = Info.takeSugared();
+      Matched.back().SugaredArgs = Info.takeSugared();
+      Matched.back().CanonicalArgs = Info.takeCanonical();
     }
   }
 
@@ -5228,11 +5235,13 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
     // Instantiate using the best variable template partial specialization.
     InstantiationPattern = Best->Partial;
-    PartialSpecArgs = Best->Args;
+    PartialSpecArgs = Best->SugaredArgs;
   } else {
     //   -- If no match is found, the instantiation is generated
     //      from the primary template.
     // InstantiationPattern = Template->getTemplatedDecl();
+    ConvertedArgs =
+        TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted);
   }
 
   // 2. Create the canonical declaration.
@@ -5253,9 +5262,10 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
 
     // Print the matching partial specializations.
     for (MatchResult P : Matched)
+      // FIXME: Use SugaredArgs here.
       Diag(P.Partial->getLocation(), diag::note_partial_spec_match)
           << getTemplateArgumentBindingsText(P.Partial->getTemplateParameters(),
-                                             *P.Args);
+                                             *P.CanonicalArgs);
     return true;
   }
 
@@ -5273,9 +5283,9 @@ ExprResult Sema::CheckVarTemplateId(
     const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
     VarTemplateDecl *Template, NamedDecl *FoundD, SourceLocation TemplateLoc,
     const TemplateArgumentListInfo *TemplateArgs) {
-
+  const TemplateArgumentList *ConvertedArgs;
   DeclResult Decl = CheckVarTemplateId(Template, TemplateLoc, NameInfo.getLoc(),
-                                       *TemplateArgs);
+                                       *TemplateArgs, ConvertedArgs);
   if (Decl.isInvalid())
     return ExprError();
 
@@ -5288,7 +5298,8 @@ ExprResult Sema::CheckVarTemplateId(
                                        NameInfo.getLoc());
 
   // Build an ordinary singleton decl ref.
-  return BuildDeclarationNameExpr(SS, NameInfo, Var, FoundD, TemplateArgs);
+  return BuildDeclarationNameExpr(SS, NameInfo, Var, FoundD, TemplateArgs,
+                                  ConvertedArgs);
 }
 
 void Sema::diagnoseMissingTemplateArguments(TemplateName Name,
@@ -8007,13 +8018,14 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
          ->isFunctionType())) {
 
     if (Arg->getType() == Context.OverloadTy) {
-      if (FunctionDecl *Fn = ResolveAddressOfOverloadedFunction(Arg, ParamType,
-                                                                true,
-                                                                FoundResult)) {
+      const TemplateArgumentList *ConvertedArgs;
+      if (FunctionDecl *Fn = ResolveAddressOfOverloadedFunction(
+              Arg, ParamType, true, FoundResult, ConvertedArgs)) {
         if (DiagnoseUseOfDecl(Fn, Arg->getBeginLoc()))
           return ExprError();
 
-        ExprResult Res = FixOverloadedFunctionReference(Arg, FoundResult, Fn);
+        ExprResult Res =
+            FixOverloadedFunctionReference(Arg, FoundResult, Fn, ConvertedArgs);
         if (Res.isInvalid())
           return ExprError();
         Arg = Res.get();
@@ -8061,13 +8073,14 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
            "Only object references allowed here");
 
     if (Arg->getType() == Context.OverloadTy) {
-      if (FunctionDecl *Fn = ResolveAddressOfOverloadedFunction(Arg,
-                                                 ParamRefType->getPointeeType(),
-                                                                true,
-                                                                FoundResult)) {
+      const TemplateArgumentList *ConvertedArgs;
+      if (FunctionDecl *Fn = ResolveAddressOfOverloadedFunction(
+              Arg, ParamRefType->getPointeeType(), true, FoundResult,
+              ConvertedArgs)) {
         if (DiagnoseUseOfDecl(Fn, Arg->getBeginLoc()))
           return ExprError();
-        ExprResult Res = FixOverloadedFunctionReference(Arg, FoundResult, Fn);
+        ExprResult Res =
+            FixOverloadedFunctionReference(Arg, FoundResult, Fn, ConvertedArgs);
         if (Res.isInvalid())
           return ExprError();
         Arg = Res.get();
@@ -11022,8 +11035,10 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
       TemplateArgumentListInfo TemplateArgs =
           makeTemplateArgumentListInfo(*this, *D.getName().TemplateId);
 
-      DeclResult Res = CheckVarTemplateId(PrevTemplate, TemplateLoc,
-                                          D.getIdentifierLoc(), TemplateArgs);
+      const TemplateArgumentList *ConvertedArgs;
+      DeclResult Res =
+          CheckVarTemplateId(PrevTemplate, TemplateLoc, D.getIdentifierLoc(),
+                             TemplateArgs, ConvertedArgs);
       if (Res.isInvalid())
         return true;
 

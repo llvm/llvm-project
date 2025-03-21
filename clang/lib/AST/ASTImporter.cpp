@@ -7500,6 +7500,7 @@ ExpectedStmt ASTNodeImporter::VisitDeclRefExpr(DeclRefExpr *E) {
   auto ToQualifierLoc = importChecked(Err, E->getQualifierLoc());
   auto ToTemplateKeywordLoc = importChecked(Err, E->getTemplateKeywordLoc());
   auto ToDecl = importChecked(Err, E->getDecl());
+  auto ToConvertedArgs = importChecked(Err, E->getConvertedArgs());
   auto ToLocation = importChecked(Err, E->getLocation());
   auto ToType = importChecked(Err, E->getType());
   if (Err)
@@ -7526,7 +7527,8 @@ ExpectedStmt ASTNodeImporter::VisitDeclRefExpr(DeclRefExpr *E) {
   auto *ToE = DeclRefExpr::Create(
       Importer.getToContext(), ToQualifierLoc, ToTemplateKeywordLoc, ToDecl,
       E->refersToEnclosingVariableOrCapture(), ToLocation, ToType,
-      E->getValueKind(), ToFoundD, ToResInfo, E->isNonOdrUse());
+      E->getValueKind(), ToFoundD, ToResInfo, ToConvertedArgs,
+      E->isNonOdrUse());
   if (E->hadMultipleCandidates())
     ToE->setHadMultipleCandidates(true);
   ToE->setIsImmediateEscalating(E->isImmediateEscalating());
@@ -8451,6 +8453,7 @@ ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
   auto ToQualifierLoc = importChecked(Err, E->getQualifierLoc());
   auto ToTemplateKeywordLoc = importChecked(Err, E->getTemplateKeywordLoc());
   auto ToMemberDecl = importChecked(Err, E->getMemberDecl());
+  auto ToDeduced = importChecked(Err, E->getDeduced());
   auto ToType = importChecked(Err, E->getType());
   auto ToDecl = importChecked(Err, E->getFoundDecl().getDecl());
   auto ToName = importChecked(Err, E->getMemberNameInfo().getName());
@@ -8475,7 +8478,7 @@ ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
   return MemberExpr::Create(Importer.getToContext(), ToBase, E->isArrow(),
                             ToOperatorLoc, ToQualifierLoc, ToTemplateKeywordLoc,
                             ToMemberDecl, ToFoundDecl, ToMemberNameInfo,
-                            ResInfo, ToType, E->getValueKind(),
+                            ResInfo, ToDeduced, ToType, E->getValueKind(),
                             E->getObjectKind(), E->isNonOdrUse());
 }
 
@@ -10196,6 +10199,17 @@ ASTImporter::Import(const CXXBaseSpecifier *BaseSpec) {
 llvm::Expected<APValue> ASTImporter::Import(const APValue &FromValue) {
   ASTNodeImporter Importer(*this);
   return Importer.ImportAPValue(FromValue);
+}
+
+llvm::Expected<TemplateArgumentList *>
+ASTImporter::Import(const TemplateArgumentList *ArgList) {
+  ASTNodeImporter Importer(*this);
+  if (!ArgList)
+    return nullptr;
+  SmallVector<TemplateArgument, 4> ToArgs(ArgList->size());
+  if (auto Res = Importer.ImportTemplateArguments(ArgList->asArray(), ToArgs))
+    return std::move(Res);
+  return TemplateArgumentList::CreateCopy(ToContext, ToArgs);
 }
 
 Error ASTImporter::ImportDefinition(Decl *From) {

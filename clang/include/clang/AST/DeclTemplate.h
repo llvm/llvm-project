@@ -264,7 +264,7 @@ public:
 
   /// Create a new template argument list that copies the given set of
   /// template arguments.
-  static TemplateArgumentList *CreateCopy(ASTContext &Context,
+  static TemplateArgumentList *CreateCopy(const ASTContext &Context,
                                           ArrayRef<TemplateArgument> Args);
 
   /// Retrieve the template argument at a given index.

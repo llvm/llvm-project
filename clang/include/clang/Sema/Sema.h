@@ -6855,7 +6855,8 @@ public:
                    const CXXScopeSpec *SS = nullptr,
                    NamedDecl *FoundD = nullptr,
                    SourceLocation TemplateKWLoc = SourceLocation(),
-                   const TemplateArgumentListInfo *TemplateArgs = nullptr);
+                   const TemplateArgumentListInfo *TemplateArgs = nullptr,
+                   const TemplateArgumentList *ConvertArgs = nullptr);
 
   /// BuildDeclRefExpr - Build an expression that references a
   /// declaration that does not require a closure capture.
@@ -6864,7 +6865,8 @@ public:
                    const DeclarationNameInfo &NameInfo,
                    NestedNameSpecifierLoc NNS, NamedDecl *FoundD = nullptr,
                    SourceLocation TemplateKWLoc = SourceLocation(),
-                   const TemplateArgumentListInfo *TemplateArgs = nullptr);
+                   const TemplateArgumentListInfo *TemplateArgs = nullptr,
+                   const TemplateArgumentList *ConvertArgs = nullptr);
 
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
                                   bool HasTrailingLParen);
@@ -6886,6 +6888,7 @@ public:
       const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
       NamedDecl *FoundD = nullptr,
       const TemplateArgumentListInfo *TemplateArgs = nullptr,
+      const TemplateArgumentList *ConvertedArgs = nullptr,
       bool AcceptInvalidDecl = false);
 
   // ExpandFunctionLocalPredefinedMacros - Returns a new vector of Tokens,
@@ -8698,14 +8701,13 @@ public:
                                    SourceLocation TemplateKWLoc,
                                    UnqualifiedId &Member, Decl *ObjCImpDecl);
 
-  MemberExpr *
-  BuildMemberExpr(Expr *Base, bool IsArrow, SourceLocation OpLoc,
-                  NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
-                  ValueDecl *Member, DeclAccessPair FoundDecl,
-                  bool HadMultipleCandidates,
-                  const DeclarationNameInfo &MemberNameInfo, QualType Ty,
-                  ExprValueKind VK, ExprObjectKind OK,
-                  const TemplateArgumentListInfo *TemplateArgs = nullptr);
+  MemberExpr *BuildMemberExpr(
+      Expr *Base, bool IsArrow, SourceLocation OpLoc,
+      NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
+      ValueDecl *Member, DeclAccessPair FoundDecl, bool HadMultipleCandidates,
+      const DeclarationNameInfo &MemberNameInfo, QualType Ty, ExprValueKind VK,
+      ExprObjectKind OK, const TemplateArgumentListInfo *TemplateArgs = nullptr,
+      const TemplateArgumentList *Deduced = nullptr);
 
   // Check whether the declarations we found through a nested-name
   // specifier in a member expression are actually members of the base
@@ -10294,6 +10296,7 @@ public:
       ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
       ConversionSequenceList EarlyConversions = {},
       OverloadCandidateParamOrder PO = {},
+      const TemplateArgumentList *Deduced = nullptr,
       bool AggregateCandidateDeduction = false, bool StrictPackMatch = false);
 
   /// Add all of the function declarations in the given function set to
@@ -10330,6 +10333,7 @@ public:
                           bool PartialOverloading = false,
                           ConversionSequenceList EarlyConversions = {},
                           OverloadCandidateParamOrder PO = {},
+                          const TemplateArgumentList *Deduced = nullptr,
                           bool StrictPackMatch = false);
 
   /// Add a C++ member function template as a candidate to the candidate
@@ -10538,6 +10542,7 @@ public:
   FunctionDecl *
   ResolveAddressOfOverloadedFunction(Expr *AddressOfExpr, QualType TargetType,
                                      bool Complain, DeclAccessPair &Found,
+                                     const TemplateArgumentList *&ConvertedArgs,
                                      bool *pHadMultipleCandidates = nullptr);
 
   /// Given an expression that refers to an overloaded function, try to
@@ -10571,7 +10576,9 @@ public:
   /// If no template-ids are found, no diagnostics are emitted and NULL is
   /// returned.
   FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
-      OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
+      OverloadExpr *ovl, TemplateArgumentListInfo &ExplicitTemplateArgs,
+      const TemplateArgumentList *&ConvertedArgs, bool Complain = false,
+      DeclAccessPair *Found = nullptr,
       TemplateSpecCandidateSet *FailedTSC = nullptr,
       bool ForTypeDeduction = false);
 
@@ -10756,11 +10763,14 @@ public:
   /// perhaps a '&' around it). We have resolved the overloaded function
   /// to the function declaration Fn, so patch up the expression E to
   /// refer (possibly indirectly) to Fn. Returns the new expr.
-  ExprResult FixOverloadedFunctionReference(Expr *E, DeclAccessPair FoundDecl,
-                                            FunctionDecl *Fn);
-  ExprResult FixOverloadedFunctionReference(ExprResult,
-                                            DeclAccessPair FoundDecl,
-                                            FunctionDecl *Fn);
+  ExprResult
+  FixOverloadedFunctionReference(Expr *E, DeclAccessPair FoundDecl,
+                                 FunctionDecl *Fn,
+                                 const TemplateArgumentList *Deduced);
+  ExprResult
+  FixOverloadedFunctionReference(ExprResult, DeclAccessPair FoundDecl,
+                                 FunctionDecl *Fn,
+                                 const TemplateArgumentList *Deduced);
 
   /// - Returns a selector which best matches given argument list or
   /// nullptr if none could be found
@@ -11541,7 +11551,8 @@ public:
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
-                                const TemplateArgumentListInfo &TemplateArgs);
+                                const TemplateArgumentListInfo &TemplateArgs,
+                                const TemplateArgumentList *&ConvertedArgs);
 
   /// Form a reference to the specialization of the given variable template
   /// corresponding to the specified argument list, or a null-but-valid result

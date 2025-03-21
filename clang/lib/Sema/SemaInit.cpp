@@ -3895,17 +3895,16 @@ bool InitializationSequence::isConstructorInitialization() const {
   return !Steps.empty() && Steps.back().Kind == SK_ConstructorInitialization;
 }
 
-void
-InitializationSequence
-::AddAddressOverloadResolutionStep(FunctionDecl *Function,
-                                   DeclAccessPair Found,
-                                   bool HadMultipleCandidates) {
+void InitializationSequence ::AddAddressOverloadResolutionStep(
+    FunctionDecl *Function, DeclAccessPair Found,
+    const TemplateArgumentList *ConvertedArgs, bool HadMultipleCandidates) {
   Step S;
   S.Kind = SK_ResolveAddressOfOverloadedFunction;
   S.Type = Function->getType();
   S.Function.HadMultipleCandidates = HadMultipleCandidates;
   S.Function.Function = Function;
   S.Function.FoundDecl = Found;
+  S.Function.ConvertedArgs = ConvertedArgs;
   Steps.push_back(S);
 }
 
@@ -4644,13 +4643,12 @@ ResolveOverloadedFunctionForReferenceBinding(Sema &S,
   if (S.Context.getCanonicalType(UnqualifiedSourceType) ==
         S.Context.OverloadTy) {
     DeclAccessPair Found;
+    const TemplateArgumentList *ConvertedArgs;
     bool HadMultipleCandidates = false;
-    if (FunctionDecl *Fn
-        = S.ResolveAddressOfOverloadedFunction(Initializer,
-                                               UnqualifiedTargetType,
-                                               false, Found,
-                                               &HadMultipleCandidates)) {
-      Sequence.AddAddressOverloadResolutionStep(Fn, Found,
+    if (FunctionDecl *Fn = S.ResolveAddressOfOverloadedFunction(
+            Initializer, UnqualifiedTargetType, false, Found, ConvertedArgs,
+            &HadMultipleCandidates)) {
+      Sequence.AddAddressOverloadResolutionStep(Fn, Found, ConvertedArgs,
                                                 HadMultipleCandidates);
       SourceType = Fn->getType();
       UnqualifiedSourceType = SourceType.getUnqualifiedType();
@@ -6855,12 +6853,14 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
     AddPassByIndirectCopyRestoreStep(DestType, ShouldCopy);
   } else if (ICS.isBad()) {
+    const TemplateArgumentList *ConvertedArgs;
     if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer))
       AddZeroInitializationStep(Entity.getType());
     else if (DeclAccessPair Found;
              Initializer->getType() == Context.OverloadTy &&
              !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
-                                                   /*Complain=*/false, Found))
+                                                   /*Complain=*/false, Found,
+                                                   ConvertedArgs))
       SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (Initializer->getType()->isFunctionType() &&
              isExprAnUnaddressableFunction(S, Initializer))
@@ -7890,9 +7890,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
       S.CheckAddressOfMemberAccess(CurInit.get(), Step->Function.FoundDecl);
       if (S.DiagnoseUseOfDecl(Step->Function.FoundDecl, Kind.getLocation()))
         return ExprError();
-      CurInit = S.FixOverloadedFunctionReference(CurInit,
-                                                 Step->Function.FoundDecl,
-                                                 Step->Function.Function);
+      CurInit = S.FixOverloadedFunctionReference(
+          CurInit, Step->Function.FoundDecl, Step->Function.Function,
+          Step->Function.ConvertedArgs);
       // We might get back another placeholder expression if we resolved to a
       // builtin.
       if (!CurInit.isInvalid())
@@ -8771,11 +8771,13 @@ bool InitializationSequence::Diagnose(Sema &S,
 
     if (OnlyArg->getType() == S.Context.OverloadTy) {
       DeclAccessPair Found;
+      const TemplateArgumentList *ConvertedArgs;
       if (FunctionDecl *FD = S.ResolveAddressOfOverloadedFunction(
               OnlyArg, DestType.getNonReferenceType(), /*Complain=*/false,
-              Found)) {
-        if (Expr *Resolved =
-                S.FixOverloadedFunctionReference(OnlyArg, Found, FD).get())
+              Found, ConvertedArgs)) {
+        if (Expr *Resolved = S.FixOverloadedFunctionReference(OnlyArg, Found,
+                                                              FD, ConvertedArgs)
+                                 .get())
           OnlyArg = Resolved;
       }
     }
@@ -8853,10 +8855,9 @@ bool InitializationSequence::Diagnose(Sema &S,
 
   case FK_AddressOfOverloadFailed: {
     DeclAccessPair Found;
-    S.ResolveAddressOfOverloadedFunction(OnlyArg,
-                                         DestType.getNonReferenceType(),
-                                         true,
-                                         Found);
+    const TemplateArgumentList *ConvertedArgs;
+    S.ResolveAddressOfOverloadedFunction(
+        OnlyArg, DestType.getNonReferenceType(), true, Found, ConvertedArgs);
     break;
   }
 

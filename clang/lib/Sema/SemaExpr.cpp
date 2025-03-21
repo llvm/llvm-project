@@ -2232,11 +2232,12 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        const DeclarationNameInfo &NameInfo,
                        const CXXScopeSpec *SS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
-                       const TemplateArgumentListInfo *TemplateArgs) {
+                       const TemplateArgumentListInfo *TemplateArgs,
+                       const TemplateArgumentList *ConvertedArgs) {
   NestedNameSpecifierLoc NNS =
       SS ? SS->getWithLocInContext(Context) : NestedNameSpecifierLoc();
   return BuildDeclRefExpr(D, Ty, VK, NameInfo, NNS, FoundD, TemplateKWLoc,
-                          TemplateArgs);
+                          TemplateArgs, ConvertedArgs);
 }
 
 // CUDA/HIP: Check whether a captured reference variable is referencing a
@@ -2301,13 +2302,16 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        const DeclarationNameInfo &NameInfo,
                        NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
-                       const TemplateArgumentListInfo *TemplateArgs) {
+                       const TemplateArgumentListInfo *TemplateArgs,
+                       const TemplateArgumentList *ConvertedArgs) {
   bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
                                   NeedToCaptureVariable(D, NameInfo.getLoc());
 
-  DeclRefExpr *E = DeclRefExpr::Create(
-      Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
-      VK, FoundD, TemplateArgs, getNonOdrUseReasonInCurrentContext(D));
+  assert(!TemplateArgs || ConvertedArgs);
+  DeclRefExpr *E = DeclRefExpr::Create(Context, NNS, TemplateKWLoc, D,
+                                       RefersToCapturedVariable, NameInfo, Ty,
+                                       VK, FoundD, TemplateArgs, ConvertedArgs,
+                                       getNonOdrUseReasonInCurrentContext(D));
   MarkDeclRefReferenced(E);
 
   // C++ [except.spec]p17:
@@ -3221,7 +3225,7 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
-                                    R.getRepresentativeDecl(), nullptr,
+                                    R.getRepresentativeDecl(), nullptr, nullptr,
                                     AcceptInvalidDecl);
 
   // We only need to check the declaration if there's exactly one
@@ -3252,10 +3256,11 @@ static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
 ExprResult Sema::BuildDeclarationNameExpr(
     const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo, NamedDecl *D,
     NamedDecl *FoundD, const TemplateArgumentListInfo *TemplateArgs,
-    bool AcceptInvalidDecl) {
+    const TemplateArgumentList *ConvertedArgs, bool AcceptInvalidDecl) {
   assert(D && "Cannot refer to a NULL declaration");
   assert(!isa<FunctionTemplateDecl>(D) &&
          "Cannot refer unambiguously to a function template");
+  assert(!TemplateArgs || ConvertedArgs);
 
   SourceLocation Loc = NameInfo.getLoc();
   if (CheckDeclInExpr(*this, Loc, D, AcceptInvalidDecl)) {
@@ -3485,9 +3490,9 @@ ExprResult Sema::BuildDeclarationNameExpr(
     break;
   }
 
-  auto *E =
-      BuildDeclRefExpr(VD, type, valueKind, NameInfo, &SS, FoundD,
-                       /*FIXME: TemplateKWLoc*/ SourceLocation(), TemplateArgs);
+  auto *E = BuildDeclRefExpr(VD, type, valueKind, NameInfo, &SS, FoundD,
+                             /*FIXME: TemplateKWLoc*/ SourceLocation(),
+                             TemplateArgs, ConvertedArgs);
   // Clang AST consumers assume a DeclRefExpr refers to a valid decl. We
   // wrap a DeclRefExpr referring to an invalid decl with a dependent-type
   // RecoveryExpr to avoid follow-up semantic analysis (thus prevent bogus
@@ -6634,7 +6639,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         Fn = DeclRefExpr::Create(
             Context, FDecl->getQualifierLoc(), SourceLocation(), FDecl, false,
             SourceLocation(), FDecl->getType(), Fn->getValueKind(), FDecl,
-            nullptr, DRE->isNonOdrUse());
+            nullptr, nullptr, DRE->isNonOdrUse());
       }
     }
   } else if (auto *ME = dyn_cast<MemberExpr>(NakedFn))
@@ -9735,9 +9740,10 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     // As a set of extensions to C, we support overloading on functions. These
     // functions need to be resolved here.
     DeclAccessPair DAP;
+    const TemplateArgumentList *ConvertedArgs;
     if (FunctionDecl *FD = ResolveAddressOfOverloadedFunction(
-            RHS.get(), LHSType, /*Complain=*/false, DAP))
-      RHS = FixOverloadedFunctionReference(RHS.get(), DAP, FD);
+            RHS.get(), LHSType, /*Complain=*/false, DAP, ConvertedArgs))
+      RHS = FixOverloadedFunctionReference(RHS.get(), DAP, FD, ConvertedArgs);
     else
       return Incompatible;
   }
@@ -14223,14 +14229,19 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
       }
 
       OverloadExpr *Ovl = cast<OverloadExpr>(E);
-      if (isa<UnresolvedMemberExpr>(Ovl))
-        if (!ResolveSingleFunctionTemplateSpecialization(Ovl)) {
-          Diag(OpLoc, diag::err_invalid_form_pointer_member_function)
-            << OrigOp.get()->getSourceRange();
-          return QualType();
-        }
-
-      return Context.OverloadTy;
+      if (!isa<UnresolvedMemberExpr>(Ovl))
+        return Context.OverloadTy;
+      if (Ovl->hasExplicitTemplateArgs()) {
+        TemplateArgumentListInfo ExplicitTemplateArgs;
+        Ovl->copyTemplateArgumentsInto(ExplicitTemplateArgs);
+        const TemplateArgumentList *ConvertedArgs;
+        if (ResolveSingleFunctionTemplateSpecialization(
+                Ovl, ExplicitTemplateArgs, ConvertedArgs))
+          return Context.OverloadTy;
+      }
+      Diag(OpLoc, diag::err_invalid_form_pointer_member_function)
+          << OrigOp.get()->getSourceRange();
+      return QualType();
     }
 
     if (PTy->getKind() == BuiltinType::UnknownAny)
@@ -19449,7 +19460,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
         S.Context, DRE->getQualifierLoc(), DRE->getTemplateKeywordLoc(),
         DRE->getDecl(), DRE->refersToEnclosingVariableOrCapture(),
         DRE->getNameInfo(), DRE->getType(), DRE->getValueKind(),
-        DRE->getFoundDecl(), CopiedTemplateArgs(DRE), NOUR);
+        DRE->getFoundDecl(), CopiedTemplateArgs(DRE), DRE->getConvertedArgs(),
+        NOUR);
   }
 
   case Expr::FunctionParmPackExprClass: {
@@ -19495,8 +19507,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
           S.Context, Base.get(), ME->isArrow(), ME->getOperatorLoc(),
           ME->getQualifierLoc(), ME->getTemplateKeywordLoc(),
           ME->getMemberDecl(), ME->getFoundDecl(), ME->getMemberNameInfo(),
-          CopiedTemplateArgs(ME), ME->getType(), ME->getValueKind(),
-          ME->getObjectKind(), ME->isNonOdrUse());
+          CopiedTemplateArgs(ME), ME->getDeduced(), ME->getType(),
+          ME->getValueKind(), ME->getObjectKind(), ME->isNonOdrUse());
     }
 
     if (ME->getMemberDecl()->isCXXInstanceMember())
@@ -19513,7 +19525,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
         S.Context, ME->getBase(), ME->isArrow(), ME->getOperatorLoc(),
         ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), ME->getMemberDecl(),
         ME->getFoundDecl(), ME->getMemberNameInfo(), CopiedTemplateArgs(ME),
-        ME->getType(), ME->getValueKind(), ME->getObjectKind(), NOUR);
+        ME->getDeduced(), ME->getType(), ME->getValueKind(),
+        ME->getObjectKind(), NOUR);
   }
 
   case Expr::BinaryOperatorClass: {
@@ -21161,7 +21174,8 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
             FD, FD->getType(), VK_LValue, DRE->getNameInfo(),
             DRE->hasQualifier() ? &SS : nullptr, DRE->getFoundDecl(),
             DRE->getTemplateKeywordLoc(),
-            DRE->hasExplicitTemplateArgs() ? &TemplateArgs : nullptr);
+            DRE->hasExplicitTemplateArgs() ? &TemplateArgs : nullptr,
+            DRE->getConvertedArgs());
       }
     }
 

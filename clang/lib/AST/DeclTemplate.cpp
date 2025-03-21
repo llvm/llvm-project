@@ -948,7 +948,7 @@ TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
 }
 
 TemplateArgumentList *
-TemplateArgumentList::CreateCopy(ASTContext &Context,
+TemplateArgumentList::CreateCopy(const ASTContext &Context,
                                  ArrayRef<TemplateArgument> Args) {
   void *Mem = Context.Allocate(totalSizeToAlloc<TemplateArgument>(Args.size()));
   return new (Mem) TemplateArgumentList(Args);

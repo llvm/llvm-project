@@ -231,8 +231,8 @@ MemberExpr *ASTMaker::makeMemberExpression(Expr *base, ValueDecl *MemberDecl,
       C, base, IsArrow, SourceLocation(), NestedNameSpecifierLoc(),
       SourceLocation(), MemberDecl, FoundDecl,
       DeclarationNameInfo(MemberDecl->getDeclName(), SourceLocation()),
-      /* TemplateArgumentListInfo=*/ nullptr, MemberDecl->getType(), ValueKind,
-      OK_Ordinary, NOUR_None);
+      /* TemplateArgumentListInfo=*/nullptr, /*Deduced=*/nullptr,
+      MemberDecl->getType(), ValueKind, OK_Ordinary, NOUR_None);
 }
 
 ValueDecl *ASTMaker::findMemberField(const RecordDecl *RD, StringRef Name) {

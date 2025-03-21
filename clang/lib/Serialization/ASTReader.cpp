@@ -9793,6 +9793,15 @@ void ASTRecordReader::readTemplateArgumentList(
     TemplArgs.push_back(readTemplateArgument(Canonicalize));
 }
 
+const TemplateArgumentList *
+ASTRecordReader::readTemplateArgumentList(bool Canonicalize) {
+  SmallVector<TemplateArgument, 8> Args;
+  readTemplateArgumentList(Args, Canonicalize);
+  if (Args.size() == 0)
+    return nullptr;
+  return TemplateArgumentList::CreateCopy(getContext(), Args);
+}
+
 /// Read a UnresolvedSet structure.
 void ASTRecordReader::readUnresolvedSet(LazyASTUnresolvedSet &Set) {
   unsigned NumDecls = readInt();

@@ -597,6 +597,9 @@ public:
                         NamedDecl *FirstQualifierInScope = nullptr,
                         bool AllowInjectedClassName = false);
 
+  std::optional<TemplateArgument>
+  TransformTemplateArgument(const TemplateArgument &Arg);
+
   /// Transform the given template argument.
   ///
   /// By default, this operation transforms the type, expression, or
@@ -2717,11 +2720,12 @@ public:
                                 ValueDecl *VD,
                                 const DeclarationNameInfo &NameInfo,
                                 NamedDecl *Found,
-                                TemplateArgumentListInfo *TemplateArgs) {
+                                TemplateArgumentListInfo *TemplateArgs,
+                                const TemplateArgumentList *ConvertedArgs) {
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
     return getSema().BuildDeclarationNameExpr(SS, NameInfo, VD, Found,
-                                              TemplateArgs);
+                                              TemplateArgs, ConvertedArgs);
   }
 
   /// Build a new expression in parentheses.
@@ -4830,6 +4834,80 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
   llvm_unreachable("overloaded function decl survived to here");
 }
 
+template <typename Derived>
+std::optional<TemplateArgument>
+TreeTransform<Derived>::TransformTemplateArgument(const TemplateArgument &Arg) {
+  switch (auto Kind = Arg.getKind()) {
+  case TemplateArgument::Null:
+    llvm_unreachable("Unexpected TemplateArgument Null");
+  case TemplateArgument::Expression:
+    llvm_unreachable("Unexpected TemplateArgument Expr");
+
+  case TemplateArgument::Pack: {
+    SmallVector<TemplateArgument, 4> Args(Arg.getPackAsArray());
+    for (auto &I : Args) {
+      const auto Arg = getDerived().TransformTemplateArgument(I);
+      if (!Arg)
+        return std::nullopt;
+      I = *Arg;
+    }
+    return TemplateArgument(
+        TemplateArgumentList::CreateCopy(getSema().Context, Args)->asArray());
+  }
+
+  case TemplateArgument::Integral:
+  case TemplateArgument::NullPtr:
+  case TemplateArgument::Declaration:
+  case TemplateArgument::StructuralValue: {
+    QualType T = Arg.getNonTypeTemplateArgumentType();
+    QualType NewT = getDerived().TransformType(T);
+    if (NewT.isNull())
+      return std::nullopt;
+
+    ValueDecl *D = Arg.getKind() == TemplateArgument::Declaration
+                       ? Arg.getAsDecl()
+                       : nullptr;
+    ValueDecl *NewD = D ? cast_or_null<ValueDecl>(getDerived().TransformDecl(
+                              getDerived().getBaseLocation(), D))
+                        : nullptr;
+    if (D && !NewD)
+      return std::nullopt;
+    if (NewT == T && D == NewD)
+      return Arg;
+    if (Kind == TemplateArgument::Integral)
+      return TemplateArgument(getSema().Context, Arg.getAsIntegral(), NewT);
+    if (Kind == TemplateArgument::NullPtr)
+      return TemplateArgument(NewT, /*IsNullPtr=*/true);
+    if (Kind == TemplateArgument::StructuralValue)
+      return TemplateArgument(getSema().Context, NewT,
+                              Arg.getAsStructuralValue());
+    assert(Kind == TemplateArgument::Declaration);
+    return TemplateArgument(NewD, NewT);
+  }
+  case TemplateArgument::Type:
+    if (QualType T = getDerived().TransformType(Arg.getAsType()); !T.isNull())
+      return TemplateArgument(T);
+    return std::nullopt;
+  case TemplateArgument::Template: {
+    CXXScopeSpec SS;
+    if (TemplateName Template = getDerived().TransformTemplateName(
+            SS, Arg.getAsTemplate(), SourceLocation());
+        !Template.isNull())
+      return TemplateArgument(Template);
+    return std::nullopt;
+  }
+  case TemplateArgument::TemplateExpansion: {
+    CXXScopeSpec SS;
+    if (TemplateName Template = getDerived().TransformTemplateName(
+            SS, Arg.getAsTemplateOrTemplatePattern(), SourceLocation());
+        !Template.isNull())
+      return TemplateArgument(Template, Arg.getNumTemplateExpansions());
+    return std::nullopt;
+  }
+  }
+  llvm_unreachable("Unexpected Template Kind");
+}
+
 template<typename Derived>
 void TreeTransform<Derived>::InventTemplateArgumentLoc(
                                          const TemplateArgument &Arg,
@@ -4851,45 +4929,15 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
   case TemplateArgument::Integral:
   case TemplateArgument::NullPtr:
   case TemplateArgument::Declaration:
-  case TemplateArgument::StructuralValue: {
+  case TemplateArgument::StructuralValue:
     // Transform a resolved template argument straight to a resolved template
     // argument. We get here when substituting into an already-substituted
     // template type argument during concept satisfaction checking.
-    QualType T = Arg.getNonTypeTemplateArgumentType();
-    QualType NewT = getDerived().TransformType(T);
-    if (NewT.isNull())
-      return true;
-
-    ValueDecl *D = Arg.getKind() == TemplateArgument::Declaration
-                       ? Arg.getAsDecl()
-                       : nullptr;
-    ValueDecl *NewD = D ? cast_or_null<ValueDecl>(getDerived().TransformDecl(
-                              getDerived().getBaseLocation(), D))
-                        : nullptr;
-    if (D && !NewD)
-      return true;
-
-    if (NewT == T && D == NewD)
-      Output = Input;
-    else if (Arg.getKind() == TemplateArgument::Integral)
-      Output = TemplateArgumentLoc(
-          TemplateArgument(getSema().Context, Arg.getAsIntegral(), NewT),
-          TemplateArgumentLocInfo());
-    else if (Arg.getKind() == TemplateArgument::NullPtr)
-      Output = TemplateArgumentLoc(TemplateArgument(NewT, /*IsNullPtr=*/true),
-                                   TemplateArgumentLocInfo());
-    else if (Arg.getKind() == TemplateArgument::Declaration)
-      Output = TemplateArgumentLoc(TemplateArgument(NewD, NewT),
-                                   TemplateArgumentLocInfo());
-    else if (Arg.getKind() == TemplateArgument::StructuralValue)
-      Output = TemplateArgumentLoc(
-          TemplateArgument(getSema().Context, NewT, Arg.getAsStructuralValue()),
-          TemplateArgumentLocInfo());
-    else
-      llvm_unreachable("unexpected template argument kind");
-
-    return false;
-  }
+    if (const auto Out = getDerived().TransformTemplateArgument(Arg)) {
+      Output = TemplateArgumentLoc(*Out, TemplateArgumentLocInfo());
+      return false;
+    }
+    return true;
 
   case TemplateArgument::Type: {
     TypeSourceInfo *DI = Input.getTypeSourceInfo();
@@ -7369,6 +7417,7 @@ QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
             ArgIterator(*this, ConvertedArgs.begin()),
             ArgIterator(*this, ConvertedArgs.end()), NewTemplateArgs))
       return QualType();
+    assert(NewTemplateArgs.size() != 0);
   } else {
     using ArgIterator =
         TemplateArgumentLocContainerIterator<TemplateSpecializationTypeLoc>;
@@ -12874,9 +12923,22 @@ TreeTransform<Derived>::TransformDeclRefExpr(DeclRefExpr *E) {
                                                 TransArgs))
       return ExprError();
   }
+  const TemplateArgumentList *NewConvertedArgs = nullptr;
+  if (const TemplateArgumentList *OldConvertedArgs = E->getConvertedArgs()) {
+    assert(OldConvertedArgs->size() != 0);
+    SmallVector<TemplateArgument, 4> NewArgs(OldConvertedArgs->asArray());
+    for (auto I : NewArgs) {
+      const auto Arg = getDerived().TransformTemplateArgument(I);
+      if (!Arg)
+        return ExprError();
+      I = *Arg;
+    }
+    NewConvertedArgs =
+        TemplateArgumentList::CreateCopy(getSema().Context, NewArgs);
+  }
 
-  return getDerived().RebuildDeclRefExpr(QualifierLoc, ND, NameInfo,
-                                         Found, TemplateArgs);
+  return getDerived().RebuildDeclRefExpr(QualifierLoc, ND, NameInfo, Found,
+                                         TemplateArgs, NewConvertedArgs);
 }
 
 template<typename Derived>

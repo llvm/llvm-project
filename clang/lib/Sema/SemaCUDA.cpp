@@ -317,25 +317,28 @@ bool SemaCUDA::isImplicitHostDeviceFunction(const FunctionDecl *D) {
 
 void SemaCUDA::EraseUnwantedMatches(
     const FunctionDecl *Caller,
-    SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>> &Matches) {
+    SmallVectorImpl<std::tuple<DeclAccessPair, FunctionDecl *,
+                               const TemplateArgumentList *>> &Matches) {
   if (Matches.size() <= 1)
     return;
 
-  using Pair = std::pair<DeclAccessPair, FunctionDecl*>;
+  using Tuple =
+      std::tuple<DeclAccessPair, FunctionDecl *, const TemplateArgumentList *>;
 
   // Gets the CUDA function preference for a call from Caller to Match.
-  auto GetCFP = [&](const Pair &Match) {
-    return IdentifyPreference(Caller, Match.second);
+  auto GetCFP = [&](const Tuple &Match) {
+    return IdentifyPreference(Caller, std::get<1>(Match));
   };
 
   // Find the best call preference among the functions in Matches.
   CUDAFunctionPreference BestCFP = GetCFP(*std::max_element(
-      Matches.begin(), Matches.end(),
-      [&](const Pair &M1, const Pair &M2) { return GetCFP(M1) < GetCFP(M2); }));
+      Matches.begin(), Matches.end(), [&](const Tuple &M1, const Tuple &M2) {
+        return GetCFP(M1) < GetCFP(M2);
+      }));
 
   // Erase all functions with lower priority.
   llvm::erase_if(Matches,
-                 [&](const Pair &Match) { return GetCFP(Match) < BestCFP; });
+                 [&](const Tuple &Match) { return GetCFP(Match) < BestCFP; });
 }
 
 /// When an implicitly-declared special member has to invoke more than one

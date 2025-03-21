@@ -2868,7 +2868,10 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
 
   FoundDelete.suppressDiagnostics();
 
-  SmallVector<std::pair<DeclAccessPair,FunctionDecl*>, 2> Matches;
+  SmallVector<
+      std::tuple<DeclAccessPair, FunctionDecl *, const TemplateArgumentList *>,
+      2>
+      Matches;
 
   // Whether we're looking for a placement operator delete is dictated
   // by whether we selected a placement operator new, not by whether
@@ -2918,6 +2921,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
                              DEnd = FoundDelete.end();
          D != DEnd; ++D) {
       FunctionDecl *Fn = nullptr;
+      const TemplateArgumentList *ConvertedArgs = nullptr;
       if (FunctionTemplateDecl *FnTmpl =
               dyn_cast<FunctionTemplateDecl>((*D)->getUnderlyingDecl())) {
         // Perform template argument deduction to try to match the
@@ -2926,14 +2930,15 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
         if (DeduceTemplateArguments(FnTmpl, nullptr, ExpectedFunctionType, Fn,
                                     Info) != TemplateDeductionResult::Success)
           continue;
+        ConvertedArgs = Info.takeSugared();
       } else
         Fn = cast<FunctionDecl>((*D)->getUnderlyingDecl());
 
       if (Context.hasSameType(adjustCCAndNoReturn(Fn->getType(),
                                                   ExpectedFunctionType,
-                                                  /*AdjustExcpetionSpec*/true),
+                                                  /*AdjustExcpetionSpec=*/true),
                               ExpectedFunctionType))
-        Matches.push_back(std::make_pair(D.getPair(), Fn));
+        Matches.push_back({D.getPair(), Fn, ConvertedArgs});
     }
 
     if (getLangOpts().CUDA)
@@ -2953,12 +2958,12 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
         /*WantAlign*/ hasNewExtendedAlignment(*this, AllocElemType),
         &BestDeallocFns);
     if (Selected)
-      Matches.push_back(std::make_pair(Selected.Found, Selected.FD));
+      Matches.push_back({Selected.Found, Selected.FD, nullptr});
     else {
       // If we failed to select an operator, all remaining functions are viable
       // but ambiguous.
       for (auto Fn : BestDeallocFns)
-        Matches.push_back(std::make_pair(Fn.Found, Fn.FD));
+        Matches.push_back({Fn.Found, Fn.FD, nullptr});
     }
   }
 
@@ -2967,7 +2972,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   //   function, that function will be called; otherwise, no
   //   deallocation function will be called.
   if (Matches.size() == 1) {
-    OperatorDelete = Matches[0].second;
+    OperatorDelete = std::get<1>(Matches[0]);
 
     // C++1z [expr.new]p23:
     //   If the lookup finds a usual deallocation function (3.7.4.2)
@@ -3006,7 +3011,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     }
 
     CheckAllocationAccess(StartLoc, Range, FoundDelete.getNamingClass(),
-                          Matches[0].first);
+                          std::get<0>(Matches[0]));
   } else if (!Matches.empty()) {
     // We found multiple suitable operators. Per [expr.new]p20, that means we
     // call no 'operator delete' function, but we should at least warn the user.
@@ -3015,8 +3020,8 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
       << DeleteName << AllocElemType;
 
     for (auto &Match : Matches)
-      Diag(Match.second->getLocation(),
-           diag::note_member_declared_here) << DeleteName;
+      Diag(std::get<1>(Match)->getLocation(), diag::note_member_declared_here)
+          << DeleteName;
   }
 
   return false;
@@ -4376,15 +4381,17 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   // Resolve overloaded function references.
   if (Context.hasSameType(FromType, Context.OverloadTy)) {
     DeclAccessPair Found;
-    FunctionDecl *Fn = ResolveAddressOfOverloadedFunction(From, ToType,
-                                                          true, Found);
+    const TemplateArgumentList *ConvertedArgs;
+    FunctionDecl *Fn = ResolveAddressOfOverloadedFunction(From, ToType, true,
+                                                          Found, ConvertedArgs);
     if (!Fn)
       return ExprError();
 
     if (DiagnoseUseOfDecl(Fn, From->getBeginLoc()))
       return ExprError();
 
-    ExprResult Res = FixOverloadedFunctionReference(From, Found, Fn);
+    ExprResult Res =
+        FixOverloadedFunctionReference(From, Found, Fn, ConvertedArgs);
     if (Res.isInvalid())
       return ExprError();
 

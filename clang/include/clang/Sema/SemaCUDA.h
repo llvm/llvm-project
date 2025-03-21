@@ -229,8 +229,8 @@ public:
   /// calling priority.
   void EraseUnwantedMatches(
       const FunctionDecl *Caller,
-      llvm::SmallVectorImpl<std::pair<DeclAccessPair, FunctionDecl *>>
-          &Matches);
+      llvm::SmallVectorImpl<std::tuple<DeclAccessPair, FunctionDecl *,
+                                       const TemplateArgumentList *>> &Matches);
 
   /// Given a implicit special member, infer its CUDA target from the
   /// calls it needs to make to underlying base/field special members.
