@@ -156,4 +156,26 @@ def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">
 def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
     "loc_kind_array", "LocationKindAttr">;
 
+/// Optimization heuristics for fir.pack_array operation.
+def fir_PackArrayHeuristics
+    : I32BitEnumAttr<"PackArrayHeuristics", "",
+                     [
+                         /// fir.pack_array cannot be optimized based on the
+                         /// array usage pattern.
+                         I32BitEnumAttrCaseNone<"None", "none">,
+                         /// fir.pack_array can be optimized away, if the array
+                         /// is not used in a loop.
+                         I32BitEnumAttrCaseBit<"LoopOnly", 0, "loop_only">,
+]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+}
+
+def fir_PackArrayHeuristicsAttr
+    : EnumAttr<FIROpsDialect, fir_PackArrayHeuristics,
+               "pack_array_heuristics"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

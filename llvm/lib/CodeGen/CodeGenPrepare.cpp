@@ -4672,8 +4672,8 @@ class TypePromotionHelper {
   static void addPromotedInst(InstrToOrigTy &PromotedInsts,
                               Instruction *ExtOpnd, bool IsSExt) {
     ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
-    InstrToOrigTy::iterator It = PromotedInsts.find(ExtOpnd);
-    if (It != PromotedInsts.end()) {
+    auto [It, Inserted] = PromotedInsts.try_emplace(ExtOpnd);
+    if (!Inserted) {
       // If the new extension is same as original, the information in
       // PromotedInsts[ExtOpnd] is still correct.
       if (It->second.getInt() == ExtTy)
@@ -4684,7 +4684,7 @@ class TypePromotionHelper {
       // BothExtension.
       ExtTy = BothExtension;
     }
-    PromotedInsts[ExtOpnd] = TypeIsSExt(ExtOpnd->getType(), ExtTy);
+    It->second = TypeIsSExt(ExtOpnd->getType(), ExtTy);
   }
 
   /// Utility function to query the original type of instruction \p Opnd
@@ -7577,7 +7577,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
     FalseBlock = StartBlock;
 
   SmallPtrSet<const Instruction *, 2> INS;
-  INS.insert(ASI.begin(), ASI.end());
+  INS.insert_range(ASI);
   // Use reverse iterator because later select may use the value of the
   // earlier select, and we need to propagate value through earlier select
   // to get the PHI operand.

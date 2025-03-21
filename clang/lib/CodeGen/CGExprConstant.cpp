@@ -1981,7 +1981,10 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   // Zero-extend bool.
-  if (C->getType()->isIntegerTy(1) && !destType->isBitIntType()) {
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if ((C->getType()->isIntegerTy(1) && !destType->isBitIntType()) ||
+      (destType->isExtVectorBoolType() &&
+       !destType->isPackedVectorBoolType(CGM.getContext()))) {
     llvm::Type *boolTy = CGM.getTypes().ConvertTypeForMem(destType);
     llvm::Constant *Res = llvm::ConstantFoldCastOperand(
         llvm::Instruction::ZExt, C, boolTy, CGM.getDataLayout());

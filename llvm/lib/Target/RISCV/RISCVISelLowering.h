@@ -33,6 +33,7 @@ enum NodeType : unsigned {
   RET_GLUE,
   SRET_GLUE,
   MRET_GLUE,
+  QC_C_MILEAVERET_GLUE,
   CALL,
   TAIL,
   /// Select with condition operator - This selects between a true value and

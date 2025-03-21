@@ -80,16 +80,16 @@ main_body:
   %75 = extractelement <4 x float> %74, i32 1
   %76 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 4)
   %77 = extractelement <4 x float> %76, i32 2
-  %78 = insertelement <4 x float> undef, float %4, i32 0
+  %78 = insertelement <4 x float> poison, float %4, i32 0
   %79 = insertelement <4 x float> %78, float %5, i32 1
   %80 = insertelement <4 x float> %79, float %6, i32 2
   %81 = insertelement <4 x float> %80, float 0.000000e+00, i32 3
-  %82 = insertelement <4 x float> undef, float %73, i32 0
+  %82 = insertelement <4 x float> poison, float %73, i32 0
   %83 = insertelement <4 x float> %82, float %75, i32 1
   %84 = insertelement <4 x float> %83, float %77, i32 2
   %85 = insertelement <4 x float> %84, float 0.000000e+00, i32 3
   %86 = call float @llvm.r600.dot4(<4 x float> %81, <4 x float> %85)
-  %87 = insertelement <4 x float> undef, float %86, i32 0
+  %87 = insertelement <4 x float> poison, float %86, i32 0
   call void @llvm.r600.store.swizzle(<4 x float> %87, i32 2, i32 2)
   ret void
 }

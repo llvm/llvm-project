@@ -64,8 +64,7 @@ MCOperand CSKYMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
     Kind = CSKYMCExpr::VK_CSKY_ADDR_LO16;
     break;
   }
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *ME = MCSymbolRefExpr::create(Sym, Ctx);
 
   if (Kind != CSKYMCExpr::VK_CSKY_None)
     ME = CSKYMCExpr::create(ME, Kind, Ctx);

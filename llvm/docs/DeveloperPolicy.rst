@@ -539,9 +539,9 @@ What are the expectations around a revert?
 Obtaining Commit Access
 -----------------------
 
-Once you have 3 or more merged pull requests, you may use this
-link <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_ to file
-an issue and request commit access. Replace the <user> string in the title
+Once you have 3 or more merged pull requests, you may use `this link
+<https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_
+to file an issue and request commit access. Replace the <user> string in the title
 with your github username, and explain why you are requesting commit access in
 the issue description.  Once the issue is created, you will need to get two
 current contributors to support your request before commit access will be granted.

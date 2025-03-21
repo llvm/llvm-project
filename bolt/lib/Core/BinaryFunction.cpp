@@ -67,7 +67,7 @@ extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
 
-cl::opt<bool> CheckEncoding(
+static cl::opt<bool> CheckEncoding(
     "check-encoding",
     cl::desc("perform verification of LLVM instruction encoding/decoding. "
              "Every instruction in the input is decoded and re-encoded. "
@@ -144,14 +144,11 @@ cl::opt<bool>
               cl::desc("print time spent constructing binary functions"),
               cl::Hidden, cl::cat(BoltCategory));
 
-cl::opt<bool>
-TrapOnAVX512("trap-avx512",
-  cl::desc("in relocation mode trap upon entry to any function that uses "
-            "AVX-512 instructions"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> TrapOnAVX512(
+    "trap-avx512",
+    cl::desc("in relocation mode trap upon entry to any function that uses "
+             "AVX-512 instructions"),
+    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
   if (Function.isIgnored())
@@ -1476,10 +1473,19 @@ Error BinaryFunction::disassemble() {
           }
         }
 
+        uint64_t Addend = Relocation.Addend;
+
+        // For GOT relocations, create a reference against GOT entry ignoring
+        // the relocation symbol.
+        if (Relocation::isGOT(Relocation.Type)) {
+          assert(Relocation::isPCRelative(Relocation.Type) &&
+                 "GOT relocation must be PC-relative on RISC-V");
+          Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
+          Addend = Relocation.Value + Relocation.Offset + getAddress();
+        }
         int64_t Value = Relocation.Value;
         const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Relocation.Addend, Ctx.get(), Value,
-            Relocation.Type);
+            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
         (void)Result;
         assert(Result && "cannot replace immediate with relocation");
       }
@@ -4617,7 +4623,7 @@ bool BinaryFunction::isAArch64Veneer() const {
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                   uint64_t RelType, uint64_t Addend,
+                                   uint32_t RelType, uint64_t Addend,
                                    uint64_t Value) {
   assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
          "address is outside of the function");

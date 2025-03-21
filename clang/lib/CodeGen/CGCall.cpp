@@ -2705,7 +2705,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
-  // Apply `nonnull`, `dereferencable(N)` and `align N` to the `this` argument,
+  // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
   // unless this is a thunk function.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&

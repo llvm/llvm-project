@@ -859,12 +859,13 @@ public:
                                 SourceLocation Sigil);
 
   /// Build a new member pointer type given the pointee type and the
-  /// class type it refers into.
+  /// qualifier it refers into.
   ///
   /// By default, performs semantic analysis when building the member pointer
   /// type. Subclasses may override this routine to provide different behavior.
-  QualType RebuildMemberPointerType(QualType PointeeType, QualType ClassType,
-                                    SourceLocation Sigil);
+  QualType RebuildMemberPointerType(QualType PointeeType,
+                                    NestedNameSpecifier *Qualifier,
+                                    CXXRecordDecl *Cls, SourceLocation Sigil);
 
   QualType RebuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
                                     SourceLocation ProtocolLAngleLoc,
@@ -1913,14 +1914,16 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPReductionClause(
       ArrayRef<Expr *> VarList, OpenMPReductionClauseModifier Modifier,
+      OpenMPOriginalSharingModifier OriginalSharingModifier,
       SourceLocation StartLoc, SourceLocation LParenLoc,
       SourceLocation ModifierLoc, SourceLocation ColonLoc,
       SourceLocation EndLoc, CXXScopeSpec &ReductionIdScopeSpec,
       const DeclarationNameInfo &ReductionId,
       ArrayRef<Expr *> UnresolvedReductions) {
     return getSema().OpenMP().ActOnOpenMPReductionClause(
-        VarList, Modifier, StartLoc, LParenLoc, ModifierLoc, ColonLoc, EndLoc,
-        ReductionIdScopeSpec, ReductionId, UnresolvedReductions);
+        VarList, {Modifier, OriginalSharingModifier}, StartLoc, LParenLoc,
+        ModifierLoc, ColonLoc, EndLoc, ReductionIdScopeSpec, ReductionId,
+        UnresolvedReductions);
   }
 
   /// Build a new OpenMP 'task_reduction' clause.
@@ -4093,7 +4096,7 @@ public:
                                             StmtResult StrBlock) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         K, BeginLoc, DirLoc, SourceLocation{}, SourceLocation{}, {},
-        SourceLocation{}, EndLoc, Clauses, StrBlock);
+        OpenACCAtomicKind::None, SourceLocation{}, EndLoc, Clauses, StrBlock);
   }
 
   StmtResult RebuildOpenACCLoopConstruct(SourceLocation BeginLoc,
@@ -4103,7 +4106,8 @@ public:
                                          StmtResult Loop) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Loop, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, Loop);
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, Loop);
   }
 
   StmtResult RebuildOpenACCCombinedConstruct(OpenACCDirectiveKind K,
@@ -4114,7 +4118,7 @@ public:
                                              StmtResult Loop) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         K, BeginLoc, DirLoc, SourceLocation{}, SourceLocation{}, {},
-        SourceLocation{}, EndLoc, Clauses, Loop);
+        OpenACCAtomicKind::None, SourceLocation{}, EndLoc, Clauses, Loop);
   }
 
   StmtResult RebuildOpenACCDataConstruct(SourceLocation BeginLoc,
@@ -4124,7 +4128,8 @@ public:
                                          StmtResult StrBlock) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Data, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, StrBlock);
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, StrBlock);
   }
 
   StmtResult
@@ -4133,7 +4138,8 @@ public:
                                    ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::EnterData, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, {});
   }
 
   StmtResult
@@ -4142,7 +4148,8 @@ public:
                                   ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::ExitData, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, {});
   }
 
   StmtResult RebuildOpenACCHostDataConstruct(SourceLocation BeginLoc,
@@ -4152,7 +4159,8 @@ public:
                                              StmtResult StrBlock) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::HostData, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, StrBlock);
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, StrBlock);
   }
 
   StmtResult RebuildOpenACCInitConstruct(SourceLocation BeginLoc,
@@ -4161,7 +4169,8 @@ public:
                                          ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Init, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, {});
   }
 
   StmtResult
@@ -4170,7 +4179,8 @@ public:
                                   ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Shutdown, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, {});
   }
 
   StmtResult RebuildOpenACCSetConstruct(SourceLocation BeginLoc,
@@ -4179,7 +4189,8 @@ public:
                                         ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Set, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, {});
   }
 
   StmtResult RebuildOpenACCUpdateConstruct(SourceLocation BeginLoc,
@@ -4188,7 +4199,8 @@ public:
                                            ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Update, BeginLoc, DirLoc, SourceLocation{},
-        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+        SourceLocation{}, {}, OpenACCAtomicKind::None, SourceLocation{}, EndLoc,
+        Clauses, {});
   }
 
   StmtResult RebuildOpenACCWaitConstruct(
@@ -4201,7 +4213,7 @@ public:
     Exprs.insert(Exprs.end(), QueueIdExprs.begin(), QueueIdExprs.end());
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Wait, BeginLoc, DirLoc, LParenLoc, QueuesLoc,
-        Exprs, RParenLoc, EndLoc, Clauses, {});
+        Exprs, OpenACCAtomicKind::None, RParenLoc, EndLoc, Clauses, {});
   }
 
   StmtResult RebuildOpenACCCacheConstruct(
@@ -4210,7 +4222,7 @@ public:
       SourceLocation RParenLoc, SourceLocation EndLoc) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Cache, BeginLoc, DirLoc, LParenLoc, ReadOnlyLoc,
-        VarList, RParenLoc, EndLoc, {}, {});
+        VarList, OpenACCAtomicKind::None, RParenLoc, EndLoc, {}, {});
   }
 
   StmtResult RebuildOpenACCAtomicConstruct(SourceLocation BeginLoc,
@@ -5598,31 +5610,30 @@ TreeTransform<Derived>::TransformMemberPointerType(TypeLocBuilder &TLB,
   if (PointeeType.isNull())
     return QualType();
 
-  TypeSourceInfo* OldClsTInfo = TL.getClassTInfo();
-  TypeSourceInfo *NewClsTInfo = nullptr;
-  if (OldClsTInfo) {
-    NewClsTInfo = getDerived().TransformType(OldClsTInfo);
-    if (!NewClsTInfo)
-      return QualType();
-  }
-
   const MemberPointerType *T = TL.getTypePtr();
-  QualType OldClsType = QualType(T->getClass(), 0);
-  QualType NewClsType;
-  if (NewClsTInfo)
-    NewClsType = NewClsTInfo->getType();
-  else {
-    NewClsType = getDerived().TransformType(OldClsType);
-    if (NewClsType.isNull())
+
+  NestedNameSpecifierLoc OldQualifierLoc = TL.getQualifierLoc();
+  NestedNameSpecifierLoc NewQualifierLoc =
+      getDerived().TransformNestedNameSpecifierLoc(OldQualifierLoc);
+  if (!NewQualifierLoc)
+    return QualType();
+
+  CXXRecordDecl *OldCls = T->getMostRecentCXXRecordDecl(), *NewCls = nullptr;
+  if (OldCls) {
+    NewCls = cast_or_null<CXXRecordDecl>(
+        getDerived().TransformDecl(TL.getStarLoc(), OldCls));
+    if (!NewCls)
       return QualType();
   }
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      PointeeType != T->getPointeeType() ||
-      NewClsType != OldClsType) {
-    Result = getDerived().RebuildMemberPointerType(PointeeType, NewClsType,
-                                                   TL.getStarLoc());
+  if (getDerived().AlwaysRebuild() || PointeeType != T->getPointeeType() ||
+      NewQualifierLoc.getNestedNameSpecifier() !=
+          OldQualifierLoc.getNestedNameSpecifier() ||
+      NewCls != OldCls) {
+    Result = getDerived().RebuildMemberPointerType(
+        PointeeType, NewQualifierLoc.getNestedNameSpecifier(), NewCls,
+        TL.getStarLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -5637,7 +5648,7 @@ TreeTransform<Derived>::TransformMemberPointerType(TypeLocBuilder &TLB,
 
   MemberPointerTypeLoc NewTL = TLB.push<MemberPointerTypeLoc>(Result);
   NewTL.setSigilLoc(TL.getSigilLoc());
-  NewTL.setClassTInfo(NewClsTInfo);
+  NewTL.setQualifierLoc(NewQualifierLoc);
 
   return Result;
 }
@@ -8547,21 +8558,34 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
   SmallVector<Expr*, 8> Exprs;
   SmallVector<IdentifierInfo *, 4> Names;
 
-  ExprResult AsmString;
   SmallVector<Expr*, 8> Clobbers;
 
   bool ExprsChanged = false;
+
+  auto RebuildString = [&](Expr *E) {
+    ExprResult Result = getDerived().TransformExpr(E);
+    if (!Result.isUsable())
+      return Result;
+    if (Result.get() != E) {
+      ExprsChanged = true;
+      Result = SemaRef.ActOnGCCAsmStmtString(Result.get(), /*ForLabel=*/false);
+    }
+    return Result;
+  };
 
   // Go through the outputs.
   for (unsigned I = 0, E = S->getNumOutputs(); I != E; ++I) {
     Names.push_back(S->getOutputIdentifier(I));
 
-    // No need to transform the constraint literal.
-    Constraints.push_back(S->getOutputConstraintLiteral(I));
+    ExprResult Result = RebuildString(S->getOutputConstraintExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+
+    Constraints.push_back(Result.get());
 
     // Transform the output expr.
     Expr *OutputExpr = S->getOutputExpr(I);
-    ExprResult Result = getDerived().TransformExpr(OutputExpr);
+    Result = getDerived().TransformExpr(OutputExpr);
     if (Result.isInvalid())
       return StmtError();
 
@@ -8574,12 +8598,15 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
   for (unsigned I = 0, E = S->getNumInputs(); I != E; ++I) {
     Names.push_back(S->getInputIdentifier(I));
 
-    // No need to transform the constraint literal.
-    Constraints.push_back(S->getInputConstraintLiteral(I));
+    ExprResult Result = RebuildString(S->getInputConstraintExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+
+    Constraints.push_back(Result.get());
 
     // Transform the input expr.
     Expr *InputExpr = S->getInputExpr(I);
-    ExprResult Result = getDerived().TransformExpr(InputExpr);
+    Result = getDerived().TransformExpr(InputExpr);
     if (Result.isInvalid())
       return StmtError();
 
@@ -8598,15 +8625,22 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
     ExprsChanged |= Result.get() != S->getLabelExpr(I);
     Exprs.push_back(Result.get());
   }
+
+  // Go through the clobbers.
+  for (unsigned I = 0, E = S->getNumClobbers(); I != E; ++I) {
+    ExprResult Result = RebuildString(S->getClobberExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+    Clobbers.push_back(Result.get());
+  }
+
+  ExprResult AsmString = RebuildString(S->getAsmStringExpr());
+  if (AsmString.isInvalid())
+    return StmtError();
+
   if (!getDerived().AlwaysRebuild() && !ExprsChanged)
     return S;
 
-  // Go through the clobbers.
-  for (unsigned I = 0, E = S->getNumClobbers(); I != E; ++I)
-    Clobbers.push_back(S->getClobberStringLiteral(I));
-
-  // No need to transform the asm string literal.
-  AsmString = S->getAsmString();
   return getDerived().RebuildGCCAsmStmt(S->getAsmLoc(), S->isSimple(),
                                         S->isVolatile(), S->getNumOutputs(),
                                         S->getNumInputs(), Names.data(),
@@ -10827,6 +10861,12 @@ OMPClause *TreeTransform<Derived>::TransformOMPAtomicDefaultMemOrderClause(
 }
 
 template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPSelfMapsClause(OMPSelfMapsClause *C) {
+  llvm_unreachable("self_maps clause cannot appear in dependent context");
+}
+
+template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPAtClause(OMPAtClause *C) {
   return getDerived().RebuildOMPAtClause(C->getAtKind(), C->getAtKindKwLoc(),
                                          C->getBeginLoc(), C->getLParenLoc(),
@@ -10955,8 +10995,8 @@ TreeTransform<Derived>::TransformOMPReductionClause(OMPReductionClause *C) {
       UnresolvedReductions.push_back(nullptr);
   }
   return getDerived().RebuildOMPReductionClause(
-      Vars, C->getModifier(), C->getBeginLoc(), C->getLParenLoc(),
-      C->getModifierLoc(), C->getColonLoc(), C->getEndLoc(),
+      Vars, C->getModifier(), C->getOriginalSharingModifier(), C->getBeginLoc(),
+      C->getLParenLoc(), C->getModifierLoc(), C->getColonLoc(), C->getEndLoc(),
       ReductionIdScopeSpec, NameInfo, UnresolvedReductions);
 }
 
@@ -11865,6 +11905,16 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitDeviceResidentClause(
     const OpenACCDeviceResidentClause &C) {
   llvm_unreachable("device_resident clause not valid unless a decl transform");
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitNoHostClause(
+    const OpenACCNoHostClause &C) {
+  llvm_unreachable("nohost  clause not valid unless a decl transform");
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitBindClause(
+    const OpenACCBindClause &C) {
+  llvm_unreachable("bind clause not valid unless a decl transform");
 }
 
 template <typename Derived>
@@ -16992,12 +17042,11 @@ TreeTransform<Derived>::RebuildReferenceType(QualType ReferentType,
                                     Sigil, getDerived().getBaseEntity());
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildMemberPointerType(QualType PointeeType,
-                                                 QualType ClassType,
-                                                 SourceLocation Sigil) {
-  return SemaRef.BuildMemberPointerType(PointeeType, ClassType, Sigil,
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildMemberPointerType(
+    QualType PointeeType, NestedNameSpecifier *Qualifier, CXXRecordDecl *Cls,
+    SourceLocation Sigil) {
+  return SemaRef.BuildMemberPointerType(PointeeType, Qualifier, Cls, Sigil,
                                         getDerived().getBaseEntity());
 }
 

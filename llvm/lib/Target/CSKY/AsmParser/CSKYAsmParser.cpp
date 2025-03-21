@@ -1205,7 +1205,7 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
     }
     Res = V;
   } else
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
 
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
@@ -1277,7 +1277,7 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;
@@ -1352,7 +1352,7 @@ ParseStatus CSKYAsmParser::parseConstpoolSymbol(OperandVector &Operands) {
     }
     Res = V;
   } else {
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
   }
 
   MCBinaryExpr::Opcode Opcode;

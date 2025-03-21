@@ -9,7 +9,7 @@ define dso_local void @t0(ptr %a) {
 
 ; CHECK-LABEL: llvm.func @llvm.aarch64.ldxr.p0(!llvm.ptr)
 ; CHECK-LABEL: llvm.func @t0
-; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr) -> i64
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr {llvm.elementtype = i8}) -> i64
 ; CHECK:   llvm.return
 ; CHECK: }
 

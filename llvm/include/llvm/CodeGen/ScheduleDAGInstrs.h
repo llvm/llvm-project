@@ -51,15 +51,15 @@ namespace llvm {
 
   /// An individual mapping from virtual register number to SUnit.
   struct VReg2SUnit {
-    unsigned VirtReg;
+    Register VirtReg;
     LaneBitmask LaneMask;
     SUnit *SU;
 
-    VReg2SUnit(unsigned VReg, LaneBitmask LaneMask, SUnit *SU)
+    VReg2SUnit(Register VReg, LaneBitmask LaneMask, SUnit *SU)
       : VirtReg(VReg), LaneMask(LaneMask), SU(SU) {}
 
     unsigned getSparseSetIndex() const {
-      return Register(VirtReg).virtRegIndex();
+      return VirtReg.virtRegIndex();
     }
   };
 
@@ -67,7 +67,7 @@ namespace llvm {
   struct VReg2SUnitOperIdx : public VReg2SUnit {
     unsigned OperandIndex;
 
-    VReg2SUnitOperIdx(unsigned VReg, LaneBitmask LaneMask,
+    VReg2SUnitOperIdx(Register VReg, LaneBitmask LaneMask,
                       unsigned OperandIndex, SUnit *SU)
       : VReg2SUnit(VReg, LaneMask, SU), OperandIndex(OperandIndex) {}
   };

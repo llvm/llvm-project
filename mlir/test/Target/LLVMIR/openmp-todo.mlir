@@ -105,21 +105,6 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : !llvm.ptr
-
-llvm.func @distribute_private(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.distribute operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
-  omp.distribute private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @ordered_region_par_level_simd() {
   // expected-error@below {{not yet implemented: Unhandled clause parallelization-level in omp.ordered.region operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.ordered.region}}
@@ -301,17 +286,6 @@ llvm.func @target_device(%x : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause device in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target device(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @target_has_device_addr(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause has_device_addr in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target has_device_addr(%x : !llvm.ptr) {
     omp.terminator
   }
   llvm.return

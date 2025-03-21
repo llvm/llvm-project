@@ -20,6 +20,7 @@
 #include "clang/Analysis/FlowSensitive/CachedConstAccessorsLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
@@ -71,12 +72,17 @@ private:
       TransferMatchSwitch;
 };
 
+/// Diagnostic information for an unchecked optional access.
+struct UncheckedOptionalAccessDiagnostic {
+  CharSourceRange Range;
+};
+
 class UncheckedOptionalAccessDiagnoser {
 public:
   UncheckedOptionalAccessDiagnoser(
       UncheckedOptionalAccessModelOptions Options = {});
 
-  llvm::SmallVector<SourceLocation>
+  llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
   operator()(const CFGElement &Elt, ASTContext &Ctx,
              const TransferStateForDiagnostics<UncheckedOptionalAccessLattice>
                  &State) {
@@ -84,7 +90,8 @@ public:
   }
 
 private:
-  CFGMatchSwitch<const Environment, llvm::SmallVector<SourceLocation>>
+  CFGMatchSwitch<const Environment,
+                 llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>
       DiagnoseMatchSwitch;
 };
 
