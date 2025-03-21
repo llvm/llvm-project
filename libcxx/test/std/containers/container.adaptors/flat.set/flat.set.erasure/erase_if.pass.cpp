@@ -48,15 +48,21 @@ void test0(
   assert(s == make<M>(expected));
 }
 
+struct NotBool {
+  bool b;
+  explicit operator bool() const { return b; }
+};
+
 template <class S>
 void test_one() {
   // Test all the plausible signatures for this predicate.
-  auto is1   = [](typename S::const_reference v) { return v == 1; };
-  auto is2   = [](typename S::value_type v) { return v == 2; };
-  auto is3   = [](const typename S::value_type& v) { return v == 3; };
-  auto is4   = [](auto v) { return v == 4; };
-  auto True  = [](const auto&) { return true; };
-  auto False = [](auto&&) { return false; };
+  auto is1        = [](typename S::const_reference v) { return v == 1; };
+  auto is2        = [](typename S::value_type v) { return v == 2; };
+  auto is3        = [](const typename S::value_type& v) { return v == 3; };
+  auto is4        = [](auto v) { return v == 4; };
+  auto True       = [](const auto&) { return true; };
+  auto False      = [](auto&&) { return false; };
+  auto nonBoolIs1 = [](const auto& v) { return NotBool{v == 1}; };
 
   test0<S>({}, is1, {}, 0);
 
@@ -74,6 +80,8 @@ void test_one() {
 
   test0<S>({1, 2, 3}, True, {}, 3);
   test0<S>({1, 2, 3}, False, {1, 2, 3}, 0);
+
+  test0<S>({1, 2, 3}, nonBoolIs1, {2, 3}, 1);
 }
 
 void test() {

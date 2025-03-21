@@ -119,6 +119,14 @@ void test_one() {
     assert(p == std::make_pair(m.begin() + 2, true));
     assert(std::ranges::equal(m, expected));
   }
+  {
+    // was empty
+    M m;
+    std::same_as<std::pair<typename M::iterator, bool>> auto p = m.insert(3);
+    assert(p == std::make_pair(m.begin(), true));
+    M expected2 = {3};
+    assert(std::ranges::equal(m, expected2));
+  }
 }
 
 void test() {

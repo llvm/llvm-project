@@ -72,18 +72,27 @@ void test_one() {
 template <class KeyContainer>
 void test_transparent_comparator() {
   using M = std::flat_set<std::string, TransparentComparator, KeyContainer>;
-  M m     = {"alpha", "beta", "epsilon", "eta", "gamma"};
-  ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), typename M::size_type);
+  {
+    M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
+    ASSERT_SAME_TYPE(decltype(m.erase(Transparent<std::string>{"abc"})), typename M::size_type);
 
-  auto n = m.erase(Transparent<std::string>{"epsilon"});
-  assert(n == 1);
+    auto n = m.erase(Transparent<std::string>{"epsilon"});
+    assert(n == 1);
 
-  M expected = {"alpha", "beta", "eta", "gamma"};
-  assert(m == expected);
+    M expected = {"alpha", "beta", "eta", "gamma"};
+    assert(m == expected);
 
-  auto n2 = m.erase(Transparent<std::string>{"aaa"});
-  assert(n2 == 0);
-  assert(m == expected);
+    auto n2 = m.erase(Transparent<std::string>{"aaa"});
+    assert(n2 == 0);
+    assert(m == expected);
+  }
+  {
+    // was empty
+    M m;
+    auto n = m.erase(Transparent<std::string>{"epsilon"});
+    assert(n == 0);
+    assert(m.empty());
+  }
 }
 
 void test() {

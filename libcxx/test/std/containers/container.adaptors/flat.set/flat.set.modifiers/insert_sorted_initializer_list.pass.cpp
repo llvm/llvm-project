@@ -27,15 +27,24 @@ void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   using V   = Key;
-  M m       = {1, 1, 1, 3, 3, 3};
-  m.insert(std::sorted_unique, {0, 1, 2, 4});
-  assert(m.size() == 5);
-  assert(std::distance(m.begin(), m.end()) == 5);
-  assert(*m.begin() == V(0));
-  assert(*std::next(m.begin()) == V(1));
-  assert(*std::next(m.begin(), 2) == V(2));
-  assert(*std::next(m.begin(), 3) == V(3));
-  assert(*std::next(m.begin(), 4) == V(4));
+  {
+    M m = {1, 1, 1, 3, 3, 3};
+    m.insert(std::sorted_unique, {0, 1, 2, 4});
+    assert(m.size() == 5);
+    assert(std::distance(m.begin(), m.end()) == 5);
+    assert(*m.begin() == V(0));
+    assert(*std::next(m.begin()) == V(1));
+    assert(*std::next(m.begin(), 2) == V(2));
+    assert(*std::next(m.begin(), 3) == V(3));
+    assert(*std::next(m.begin(), 4) == V(4));
+  }
+  {
+    // empty
+    M m;
+    m.insert(std::sorted_unique, {0, 1, 2, 4});
+    M expected = {0, 1, 2, 4};
+    assert(m == expected);
+  }
 }
 
 void test() {

@@ -57,6 +57,13 @@ void test_one() {
     assert(std::as_const(m).count(8) == 1);
     assert(std::as_const(m).count(9) == 0);
   }
+  {
+    // empty
+    using M = std::flat_set<Key, std::less<>, KeyContainer>;
+    M m;
+    assert(m.count(0) == 0);
+    assert(m.count(1) == 0);
+  }
 }
 
 void test() {

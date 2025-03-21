@@ -68,6 +68,10 @@ void test_one() {
   n = m.erase(5);
   assert(n == 1);
   assert(m.empty());
+  // was empty
+  n = m.erase(5);
+  assert(n == 0);
+  assert(m.empty());
 }
 
 void test() {

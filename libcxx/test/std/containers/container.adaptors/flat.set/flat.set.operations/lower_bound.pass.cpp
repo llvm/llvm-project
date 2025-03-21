@@ -58,6 +58,12 @@ void test_one() {
     assert(std::as_const(m).lower_bound(8) == m.begin());
     assert(std::as_const(m).lower_bound(9) == m.begin());
   }
+  {
+    // empty
+    using M = std::flat_set<Key, std::less<>, KeyContainer>;
+    M m;
+    assert(m.lower_bound(0) == m.end());
+  }
 }
 
 void test() {

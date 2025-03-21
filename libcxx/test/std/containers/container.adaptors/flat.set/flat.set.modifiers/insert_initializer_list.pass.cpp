@@ -28,24 +28,43 @@ void test_one() {
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   using V   = typename M::value_type;
 
-  M m = {1, 1, 1, 3, 3, 3};
-  m.insert({
-      4,
-      4,
-      4,
-      1,
-      1,
-      1,
-      2,
-      2,
-      2,
-  });
-  assert(m.size() == 4);
-  assert(std::distance(m.begin(), m.end()) == 4);
-  assert(*m.begin() == V(1));
-  assert(*std::next(m.begin()) == V(2));
-  assert(*std::next(m.begin(), 2) == V(3));
-  assert(*std::next(m.begin(), 3) == V(4));
+  {
+    M m = {1, 1, 1, 3, 3, 3};
+    m.insert({
+        4,
+        4,
+        4,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+    });
+    assert(m.size() == 4);
+    assert(std::distance(m.begin(), m.end()) == 4);
+    assert(*m.begin() == V(1));
+    assert(*std::next(m.begin()) == V(2));
+    assert(*std::next(m.begin(), 2) == V(3));
+    assert(*std::next(m.begin(), 3) == V(4));
+  }
+  {
+    // was empty
+    M m;
+    m.insert({
+        4,
+        4,
+        4,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+    });
+    M expected = {1, 2, 4};
+    assert(m == expected);
+  }
 }
 
 void test() {

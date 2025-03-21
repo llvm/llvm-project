@@ -75,6 +75,12 @@ void test_one() {
   assert(m.size() == 0);
   assert(i4 == m.begin());
   assert(i4 == m.end());
+
+  // was empty
+  std::same_as<I> decltype(auto) i5 = m.erase(m.cbegin(), m.cend());
+  assert(m.size() == 0);
+  assert(i5 == m.begin());
+  assert(i5 == m.end());
 }
 
 void test() {

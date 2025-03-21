@@ -37,18 +37,25 @@ template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
-
-  M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
-  ASSERT_SAME_TYPE(decltype(m.count(Transparent<std::string>{"abc"})), typename M::size_type);
-  ASSERT_SAME_TYPE(decltype(std::as_const(m).count(Transparent<std::string>{"b"})), typename M::size_type);
-  assert(m.count(Transparent<std::string>{"alpha"}) == 1);
-  assert(m.count(Transparent<std::string>{"beta"}) == 1);
-  assert(m.count(Transparent<std::string>{"epsilon"}) == 1);
-  assert(m.count(Transparent<std::string>{"eta"}) == 1);
-  assert(m.count(Transparent<std::string>{"gamma"}) == 1);
-  assert(m.count(Transparent<std::string>{"al"}) == 0);
-  assert(m.count(Transparent<std::string>{""}) == 0);
-  assert(m.count(Transparent<std::string>{"g"}) == 0);
+  {
+    M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
+    ASSERT_SAME_TYPE(decltype(m.count(Transparent<std::string>{"abc"})), typename M::size_type);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).count(Transparent<std::string>{"b"})), typename M::size_type);
+    assert(m.count(Transparent<std::string>{"alpha"}) == 1);
+    assert(m.count(Transparent<std::string>{"beta"}) == 1);
+    assert(m.count(Transparent<std::string>{"epsilon"}) == 1);
+    assert(m.count(Transparent<std::string>{"eta"}) == 1);
+    assert(m.count(Transparent<std::string>{"gamma"}) == 1);
+    assert(m.count(Transparent<std::string>{"al"}) == 0);
+    assert(m.count(Transparent<std::string>{""}) == 0);
+    assert(m.count(Transparent<std::string>{"g"}) == 0);
+  }
+  {
+    // empty
+    M m;
+    assert(m.count(Transparent<std::string>{"alpha"}) == 0);
+    assert(m.count(Transparent<std::string>{"beta"}) == 0);
+  }
 }
 
 void test() {

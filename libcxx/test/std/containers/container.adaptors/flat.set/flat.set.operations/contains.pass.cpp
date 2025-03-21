@@ -57,6 +57,13 @@ void test_one() {
     m.clear();
     assert(!m.contains(1));
   }
+  {
+    // empty
+    using M = std::flat_set<Key, std::less<>, KeyContainer>;
+    M m;
+    assert(!m.contains(0));
+    assert(!m.contains(1));
+  }
 }
 
 void test() {

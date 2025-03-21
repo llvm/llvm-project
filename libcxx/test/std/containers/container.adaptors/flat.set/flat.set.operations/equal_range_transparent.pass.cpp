@@ -39,42 +39,51 @@ void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
-  using R        = std::pair<typename M::iterator, typename M::iterator>;
-  using CR       = std::pair<typename M::const_iterator, typename M::const_iterator>;
-  M m            = {"alpha", "beta", "epsilon", "eta", "gamma"};
-  const auto& cm = m;
-  ASSERT_SAME_TYPE(decltype(m.equal_range(Transparent<std::string>{"abc"})), R);
-  ASSERT_SAME_TYPE(decltype(std::as_const(m).equal_range(Transparent<std::string>{"b"})), CR);
+  using R  = std::pair<typename M::iterator, typename M::iterator>;
+  using CR = std::pair<typename M::const_iterator, typename M::const_iterator>;
 
-  auto test_found = [&](auto&& map, const std::string& expected_key) {
+  auto test_found = [](auto&& map, const std::string& expected_key) {
     auto [first, last] = map.equal_range(Transparent<std::string>{expected_key});
     assert(last - first == 1);
     assert(*first == expected_key);
   };
 
-  auto test_not_found = [&](auto&& map, const std::string& expected_key, long expected_offset) {
+  auto test_not_found = [](auto&& map, const std::string& expected_key, long expected_offset) {
     auto [first, last] = map.equal_range(Transparent<std::string>{expected_key});
     assert(first == last);
-    assert(first - m.begin() == expected_offset);
+    assert(first - map.begin() == expected_offset);
   };
+  {
+    M m            = {"alpha", "beta", "epsilon", "eta", "gamma"};
+    const auto& cm = m;
+    ASSERT_SAME_TYPE(decltype(m.equal_range(Transparent<std::string>{"abc"})), R);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).equal_range(Transparent<std::string>{"b"})), CR);
 
-  test_found(m, "alpha");
-  test_found(m, "beta");
-  test_found(m, "epsilon");
-  test_found(m, "eta");
-  test_found(m, "gamma");
-  test_found(cm, "alpha");
-  test_found(cm, "beta");
-  test_found(cm, "epsilon");
-  test_found(cm, "eta");
-  test_found(cm, "gamma");
+    test_found(m, "alpha");
+    test_found(m, "beta");
+    test_found(m, "epsilon");
+    test_found(m, "eta");
+    test_found(m, "gamma");
+    test_found(cm, "alpha");
+    test_found(cm, "beta");
+    test_found(cm, "epsilon");
+    test_found(cm, "eta");
+    test_found(cm, "gamma");
 
-  test_not_found(m, "charlie", 2);
-  test_not_found(m, "aaa", 0);
-  test_not_found(m, "zzz", 5);
-  test_not_found(cm, "charlie", 2);
-  test_not_found(cm, "aaa", 0);
-  test_not_found(cm, "zzz", 5);
+    test_not_found(m, "charlie", 2);
+    test_not_found(m, "aaa", 0);
+    test_not_found(m, "zzz", 5);
+    test_not_found(cm, "charlie", 2);
+    test_not_found(cm, "aaa", 0);
+    test_not_found(cm, "zzz", 5);
+  }
+  {
+    // empty
+    M m;
+    const auto& cm = m;
+    test_not_found(m, "aaa", 0);
+    test_not_found(cm, "charlie", 0);
+  }
 }
 
 void test() {

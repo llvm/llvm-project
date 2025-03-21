@@ -38,17 +38,25 @@ void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
-  M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
-  ASSERT_SAME_TYPE(decltype(m.contains(Transparent<std::string>{"abc"})), bool);
-  ASSERT_SAME_TYPE(decltype(std::as_const(m).contains(Transparent<std::string>{"b"})), bool);
-  assert(m.contains(Transparent<std::string>{"alpha"}) == true);
-  assert(m.contains(Transparent<std::string>{"beta"}) == true);
-  assert(m.contains(Transparent<std::string>{"epsilon"}) == true);
-  assert(m.contains(Transparent<std::string>{"eta"}) == true);
-  assert(m.contains(Transparent<std::string>{"gamma"}) == true);
-  assert(m.contains(Transparent<std::string>{"al"}) == false);
-  assert(m.contains(Transparent<std::string>{""}) == false);
-  assert(m.contains(Transparent<std::string>{"g"}) == false);
+  {
+    M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
+    ASSERT_SAME_TYPE(decltype(m.contains(Transparent<std::string>{"abc"})), bool);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).contains(Transparent<std::string>{"b"})), bool);
+    assert(m.contains(Transparent<std::string>{"alpha"}) == true);
+    assert(m.contains(Transparent<std::string>{"beta"}) == true);
+    assert(m.contains(Transparent<std::string>{"epsilon"}) == true);
+    assert(m.contains(Transparent<std::string>{"eta"}) == true);
+    assert(m.contains(Transparent<std::string>{"gamma"}) == true);
+    assert(m.contains(Transparent<std::string>{"al"}) == false);
+    assert(m.contains(Transparent<std::string>{""}) == false);
+    assert(m.contains(Transparent<std::string>{"g"}) == false);
+  }
+  {
+    // empty
+    M m;
+    assert(m.contains(Transparent<std::string>{"gamma"}) == false);
+    assert(m.contains(Transparent<std::string>{"al"}) == false);
+  }
 }
 
 void test() {

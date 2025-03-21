@@ -39,33 +39,41 @@ void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
-  M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
+  {
+    M m = {"alpha", "beta", "epsilon", "eta", "gamma"};
 
-  const auto& cm = m;
-  ASSERT_SAME_TYPE(decltype(m.find(Transparent<std::string>{"abc"})), typename M::iterator);
-  ASSERT_SAME_TYPE(decltype(std::as_const(m).find(Transparent<std::string>{"b"})), typename M::const_iterator);
+    const auto& cm = m;
+    ASSERT_SAME_TYPE(decltype(m.find(Transparent<std::string>{"abc"})), typename M::iterator);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).find(Transparent<std::string>{"b"})), typename M::const_iterator);
 
-  auto test_find = [&](auto&& map, const std::string& expected_key, long expected_offset) {
-    auto iter = map.find(Transparent<std::string>{expected_key});
-    assert(iter - map.begin() == expected_offset);
-  };
+    auto test_find = [](auto&& map, const std::string& expected_key, long expected_offset) {
+      auto iter = map.find(Transparent<std::string>{expected_key});
+      assert(iter - map.begin() == expected_offset);
+    };
 
-  test_find(m, "alpha", 0);
-  test_find(m, "beta", 1);
-  test_find(m, "epsilon", 2);
-  test_find(m, "eta", 3);
-  test_find(m, "gamma", 4);
-  test_find(m, "charlie", 5);
-  test_find(m, "aaa", 5);
-  test_find(m, "zzz", 5);
-  test_find(cm, "alpha", 0);
-  test_find(cm, "beta", 1);
-  test_find(cm, "epsilon", 2);
-  test_find(cm, "eta", 3);
-  test_find(cm, "gamma", 4);
-  test_find(cm, "charlie", 5);
-  test_find(cm, "aaa", 5);
-  test_find(cm, "zzz", 5);
+    test_find(m, "alpha", 0);
+    test_find(m, "beta", 1);
+    test_find(m, "epsilon", 2);
+    test_find(m, "eta", 3);
+    test_find(m, "gamma", 4);
+    test_find(m, "charlie", 5);
+    test_find(m, "aaa", 5);
+    test_find(m, "zzz", 5);
+    test_find(cm, "alpha", 0);
+    test_find(cm, "beta", 1);
+    test_find(cm, "epsilon", 2);
+    test_find(cm, "eta", 3);
+    test_find(cm, "gamma", 4);
+    test_find(cm, "charlie", 5);
+    test_find(cm, "aaa", 5);
+    test_find(cm, "zzz", 5);
+  }
+  {
+    // empty
+    M m;
+    auto iter = m.find(Transparent<std::string>{"a"});
+    assert(iter == m.end());
+  }
 }
 
 void test() {

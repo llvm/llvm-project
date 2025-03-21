@@ -65,6 +65,13 @@ void test_one() {
     assert(std::as_const(m).equal_range(8) == std::pair(m.cbegin(), m.cbegin() + 1));
     assert(std::as_const(m).equal_range(9) == std::pair(m.cbegin(), m.cbegin()));
   }
+  {
+    // empty
+    using M = std::flat_set<Key, std::less<>, KeyContainer>;
+    M m;
+    auto end = m.end();
+    assert(m.equal_range(0) == std::pair(end, end));
+  }
 }
 
 void test() {

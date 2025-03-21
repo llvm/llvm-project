@@ -39,39 +39,47 @@ void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, TransparentComparator, KeyContainer>;
 
-  M m            = {"alpha", "beta", "epsilon", "eta", "gamma"};
-  const auto& cm = m;
-  ASSERT_SAME_TYPE(decltype(m.lower_bound(Transparent<std::string>{"abc"})), typename M::iterator);
-  ASSERT_SAME_TYPE(decltype(std::as_const(m).lower_bound(Transparent<std::string>{"b"})), typename M::const_iterator);
+  {
+    M m            = {"alpha", "beta", "epsilon", "eta", "gamma"};
+    const auto& cm = m;
+    ASSERT_SAME_TYPE(decltype(m.lower_bound(Transparent<std::string>{"abc"})), typename M::iterator);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).lower_bound(Transparent<std::string>{"b"})), typename M::const_iterator);
 
-  auto test_lower_bound = [&](auto&& map, const std::string& expected_key, long expected_offset) {
-    auto iter = map.lower_bound(Transparent<std::string>{expected_key});
-    assert(iter - map.begin() == expected_offset);
-  };
+    auto test_lower_bound = [&](auto&& map, const std::string& expected_key, long expected_offset) {
+      auto iter = map.lower_bound(Transparent<std::string>{expected_key});
+      assert(iter - map.begin() == expected_offset);
+    };
 
-  test_lower_bound(m, "abc", 0);
-  test_lower_bound(m, "alpha", 0);
-  test_lower_bound(m, "beta", 1);
-  test_lower_bound(m, "bets", 2);
-  test_lower_bound(m, "charlie", 2);
-  test_lower_bound(m, "echo", 2);
-  test_lower_bound(m, "epsilon", 2);
-  test_lower_bound(m, "eta", 3);
-  test_lower_bound(m, "gamma", 4);
-  test_lower_bound(m, "golf", 5);
-  test_lower_bound(m, "zzz", 5);
+    test_lower_bound(m, "abc", 0);
+    test_lower_bound(m, "alpha", 0);
+    test_lower_bound(m, "beta", 1);
+    test_lower_bound(m, "bets", 2);
+    test_lower_bound(m, "charlie", 2);
+    test_lower_bound(m, "echo", 2);
+    test_lower_bound(m, "epsilon", 2);
+    test_lower_bound(m, "eta", 3);
+    test_lower_bound(m, "gamma", 4);
+    test_lower_bound(m, "golf", 5);
+    test_lower_bound(m, "zzz", 5);
 
-  test_lower_bound(cm, "abc", 0);
-  test_lower_bound(cm, "alpha", 0);
-  test_lower_bound(cm, "beta", 1);
-  test_lower_bound(cm, "bets", 2);
-  test_lower_bound(cm, "charlie", 2);
-  test_lower_bound(cm, "echo", 2);
-  test_lower_bound(cm, "epsilon", 2);
-  test_lower_bound(cm, "eta", 3);
-  test_lower_bound(cm, "gamma", 4);
-  test_lower_bound(cm, "golf", 5);
-  test_lower_bound(cm, "zzz", 5);
+    test_lower_bound(cm, "abc", 0);
+    test_lower_bound(cm, "alpha", 0);
+    test_lower_bound(cm, "beta", 1);
+    test_lower_bound(cm, "bets", 2);
+    test_lower_bound(cm, "charlie", 2);
+    test_lower_bound(cm, "echo", 2);
+    test_lower_bound(cm, "epsilon", 2);
+    test_lower_bound(cm, "eta", 3);
+    test_lower_bound(cm, "gamma", 4);
+    test_lower_bound(cm, "golf", 5);
+    test_lower_bound(cm, "zzz", 5);
+  }
+  {
+    // empty
+    M m;
+    auto iter = m.lower_bound(Transparent<std::string>{"a"});
+    assert(iter == m.end());
+  }
 }
 
 void test() {

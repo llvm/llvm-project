@@ -30,65 +30,75 @@
 using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
 
-void test_containers() {
-  std::deque<int, test_allocator<int>> ks({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 42));
-  std::deque<int, test_allocator<int>> sorted_ks({1, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
-  const int expected[] = {1, 2, 3, INT_MAX};
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(ks.begin(), ks.end(), &mr);
-    std::flat_set s(std::move(pks), &mr2);
-
-    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::less<int>, std::pmr::deque<int>>);
-    assert(std::ranges::equal(s, expected));
-    auto keys = std::move(s).extract();
-    assert(keys.get_allocator().resource() == &mr2);
-  }
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(sorted_ks.begin(), sorted_ks.end(), &mr);
-    std::flat_set s(std::sorted_unique, std::move(pks), &mr2);
-
-    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::less<int>, std::pmr::deque<int>>);
-    assert(std::ranges::equal(s, expected));
-    auto keys = std::move(s).extract();
-    assert(keys.get_allocator().resource() == &mr2);
-  }
-}
-
-void test_containers_compare() {
-  std::deque<int, test_allocator<int>> ks({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 42));
-  std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 1}, test_allocator<int>(0, 42));
-  const int expected[] = {INT_MAX, 3, 2, 1};
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(ks.begin(), ks.end(), &mr);
-    std::flat_set s(std::move(pks), std::greater<int>(), &mr2);
-
-    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::greater<int>, std::pmr::deque<int>>);
-    assert(std::ranges::equal(s, expected));
-    auto keys = std::move(s).extract();
-    assert(keys.get_allocator().resource() == &mr2);
-  }
-  {
-    std::pmr::monotonic_buffer_resource mr;
-    std::pmr::monotonic_buffer_resource mr2;
-    std::pmr::deque<int> pks(sorted_ks.begin(), sorted_ks.end(), &mr);
-    std::flat_set s(std::sorted_unique, std::move(pks), std::greater<int>(), &mr2);
-
-    ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::greater<int>, std::pmr::deque<int>>);
-    assert(std::ranges::equal(s, expected));
-    auto keys = std::move(s).extract();
-    assert(keys.get_allocator().resource() == &mr2);
-  }
-}
-
 int main(int, char**) {
-  test_containers();
-  test_containers_compare();
+  {
+    std::deque<int, test_allocator<int>> ks({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 42));
+    std::deque<int, test_allocator<int>> sorted_ks({1, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
+    const int expected[] = {1, 2, 3, INT_MAX};
+    {
+      // template<class KeyContainer, class Allocator>
+      // flat_set(KeyContainer, Allocator)
+      //   -> flat_set<typename KeyContainer::value_type,
+      //               less<typename KeyContainer::value_type>, KeyContainer>;
+      std::pmr::monotonic_buffer_resource mr;
+      std::pmr::monotonic_buffer_resource mr2;
+      std::pmr::deque<int> pks(ks.begin(), ks.end(), &mr);
+      std::flat_set s(std::move(pks), &mr2);
+
+      ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::less<int>, std::pmr::deque<int>>);
+      assert(std::ranges::equal(s, expected));
+      auto keys = std::move(s).extract();
+      assert(keys.get_allocator().resource() == &mr2);
+    }
+    {
+      // template<class KeyContainer, class Allocator>
+      // flat_set(sorted_unique_t, KeyContainer, Allocator)
+      //   -> flat_set<typename KeyContainer::value_type,
+      //               less<typename KeyContainer::value_type>, KeyContainer>;
+      std::pmr::monotonic_buffer_resource mr;
+      std::pmr::monotonic_buffer_resource mr2;
+      std::pmr::deque<int> pks(sorted_ks.begin(), sorted_ks.end(), &mr);
+      std::flat_set s(std::sorted_unique, std::move(pks), &mr2);
+
+      ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::less<int>, std::pmr::deque<int>>);
+      assert(std::ranges::equal(s, expected));
+      auto keys = std::move(s).extract();
+      assert(keys.get_allocator().resource() == &mr2);
+    }
+  }
+  {
+    std::deque<int, test_allocator<int>> ks({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 42));
+    std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 1}, test_allocator<int>(0, 42));
+    const int expected[] = {INT_MAX, 3, 2, 1};
+    {
+      // template<class KeyContainer, class Compare, class Allocator>
+      // flat_set(KeyContainer, Compare, Allocator)
+      //   -> flat_set<typename KeyContainer::value_type, Compare, KeyContainer>;
+      std::pmr::monotonic_buffer_resource mr;
+      std::pmr::monotonic_buffer_resource mr2;
+      std::pmr::deque<int> pks(ks.begin(), ks.end(), &mr);
+      std::flat_set s(std::move(pks), std::greater<int>(), &mr2);
+
+      ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::greater<int>, std::pmr::deque<int>>);
+      assert(std::ranges::equal(s, expected));
+      auto keys = std::move(s).extract();
+      assert(keys.get_allocator().resource() == &mr2);
+    }
+    {
+      // template<class KeyContainer, class Compare, class Allocator>
+      // flat_set(sorted_unique_t, KeyContainer, Compare, Allocator)
+      //   -> flat_set<typename KeyContainer::value_type, Compare, KeyContainer>;
+      std::pmr::monotonic_buffer_resource mr;
+      std::pmr::monotonic_buffer_resource mr2;
+      std::pmr::deque<int> pks(sorted_ks.begin(), sorted_ks.end(), &mr);
+      std::flat_set s(std::sorted_unique, std::move(pks), std::greater<int>(), &mr2);
+
+      ASSERT_SAME_TYPE(decltype(s), std::flat_set<int, std::greater<int>, std::pmr::deque<int>>);
+      assert(std::ranges::equal(s, expected));
+      auto keys = std::move(s).extract();
+      assert(keys.get_allocator().resource() == &mr2);
+    }
+  }
 
   return 0;
 }

@@ -34,7 +34,15 @@ template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
-
+  {
+    // was empty
+    M m;
+    KeyContainer new_keys = {7, 8};
+    auto expected_keys    = new_keys;
+    m.replace(std::move(new_keys));
+    assert(m.size() == 2);
+    assert(std::ranges::equal(m, expected_keys));
+  }
   M m                   = M({1, 2, 3});
   KeyContainer new_keys = {7, 8};
   auto expected_keys    = new_keys;

@@ -73,6 +73,14 @@ void test_one() {
     m.insert_range(ar);
     assert((m == M{21, 42, 43, 15, 37, 18}));
   }
+  {
+    // was empty
+    using M = std::flat_set<Key, std::less<Key>, KeyContainer>;
+    M m;
+    int ar[] = {3, 1, 4, 1, 5, 9};
+    m.insert_range(ar);
+    assert((m == M{1, 3, 4, 5, 9}));
+  }
 }
 
 void test() {

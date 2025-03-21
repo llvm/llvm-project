@@ -28,19 +28,26 @@ template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<>, KeyContainer>;
-  M m       = {1, 2, 4, 5, 8};
-  ASSERT_SAME_TYPE(decltype(m.find(0)), typename M::iterator);
-  ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), typename M::const_iterator);
-  assert(m.find(0) == m.end());
-  assert(m.find(1) == m.begin());
-  assert(m.find(2) == m.begin() + 1);
-  assert(m.find(3) == m.end());
-  assert(m.find(4) == m.begin() + 2);
-  assert(m.find(5) == m.begin() + 3);
-  assert(m.find(6) == m.end());
-  assert(m.find(7) == m.end());
-  assert(std::as_const(m).find(8) == m.begin() + 4);
-  assert(std::as_const(m).find(9) == m.end());
+  {
+    M m = {1, 2, 4, 5, 8};
+    ASSERT_SAME_TYPE(decltype(m.find(0)), typename M::iterator);
+    ASSERT_SAME_TYPE(decltype(std::as_const(m).find(0)), typename M::const_iterator);
+    assert(m.find(0) == m.end());
+    assert(m.find(1) == m.begin());
+    assert(m.find(2) == m.begin() + 1);
+    assert(m.find(3) == m.end());
+    assert(m.find(4) == m.begin() + 2);
+    assert(m.find(5) == m.begin() + 3);
+    assert(m.find(6) == m.end());
+    assert(m.find(7) == m.end());
+    assert(std::as_const(m).find(8) == m.begin() + 4);
+    assert(std::as_const(m).find(9) == m.end());
+  }
+  {
+    // empty
+    M m;
+    assert(m.find(0) == m.end());
+  }
 }
 
 void test() {

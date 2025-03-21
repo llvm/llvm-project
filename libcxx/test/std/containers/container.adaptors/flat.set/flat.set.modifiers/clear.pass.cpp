@@ -41,13 +41,21 @@ template <class KeyContainer>
 void test_one() {
   using Key = typename KeyContainer::value_type;
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
-
-  M m = {1, 2, 3, 4, 5};
-  assert(m.size() == 5);
-  ASSERT_NOEXCEPT(m.clear());
-  ASSERT_SAME_TYPE(decltype(m.clear()), void);
-  m.clear();
-  assert(m.size() == 0);
+  {
+    M m = {1, 2, 3, 4, 5};
+    assert(m.size() == 5);
+    ASSERT_NOEXCEPT(m.clear());
+    ASSERT_SAME_TYPE(decltype(m.clear()), void);
+    m.clear();
+    assert(m.size() == 0);
+  }
+  {
+    // was empty
+    M m;
+    assert(m.size() == 0);
+    m.clear();
+    assert(m.size() == 0);
+  }
 }
 
 void test() {

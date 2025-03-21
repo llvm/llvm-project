@@ -35,14 +35,24 @@ static_assert(!CanExtract<std::flat_set<int> const&&>);
 template <class KeyContainer>
 void test_one() {
   using M = std::flat_set<int, std::less<int>, KeyContainer>;
-  M m     = M({1, 2, 3});
+  {
+    M m = M({1, 2, 3});
 
-  std::same_as<KeyContainer> auto keys = std::move(m).extract();
+    std::same_as<KeyContainer> auto keys = std::move(m).extract();
 
-  auto expected_keys = {1, 2, 3};
-  assert(std::ranges::equal(keys, expected_keys));
-  check_invariant(m);
-  LIBCPP_ASSERT(m.empty());
+    auto expected_keys = {1, 2, 3};
+    assert(std::ranges::equal(keys, expected_keys));
+    check_invariant(m);
+    LIBCPP_ASSERT(m.empty());
+  }
+  {
+    // was empty
+    M m;
+    assert(m.empty());
+    auto keys = std::move(m).extract();
+    assert(keys.empty());
+    LIBCPP_ASSERT(m.empty());
+  }
 }
 
 void test() {
