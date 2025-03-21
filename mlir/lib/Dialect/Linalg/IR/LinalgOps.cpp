@@ -803,7 +803,7 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
           rewriter, loc, addMap, {std::get<0>(p), std::get<1>(p)}));
     }
 
-    RankedTensorType srcPadType = srcPadOp.getSourceType();
+    ShapedType srcPadType = srcPadOp.getSourceType();
     SmallVector<OpFoldResult, 4> newSizes;
     for (int i = 0, e = srcPadType.getRank(); i < e; ++i) {
       if (srcPadType.isDynamicDim(i)) {
@@ -4434,9 +4434,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
     return op->emitError("invalid zero tile factor");
 
   // Verify inner_dims_pos and outer_dims_perm.
-  RankedTensorType unpackedType = (std::is_same<OpTy, PackOp>::value)
-                                      ? packOrUnPack.getSourceType()
-                                      : packOrUnPack.getDestType();
+  ShapedType unpackedType = (std::is_same<OpTy, PackOp>::value)
+                                ? packOrUnPack.getSourceType()
+                                : packOrUnPack.getDestType();
   size_t unpackedRank = unpackedType.getRank();
   ArrayRef<int64_t> innerDimsPos = packOrUnPack.getInnerDimsPos();
   ArrayRef<int64_t> outerDimPerm = packOrUnPack.getOuterDimsPerm();
@@ -4748,7 +4748,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
 
 /// Get the expected packed type based on source type, tile factors, position of
 /// the inner tiles and permutation of the outer tiled loop.
-RankedTensorType PackOp::inferPackedType(RankedTensorType sourceType,
+RankedTensorType PackOp::inferPackedType(ShapedType sourceType,
                                          ArrayRef<int64_t> innerTileSizes,
                                          ArrayRef<int64_t> innerDimsPos,
                                          ArrayRef<int64_t> outerDimsPerm) {
@@ -4943,7 +4943,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
           rewriter.create<tensor::CastOp>(loc, newSrcType, packOp.getSource());
     }
     Value dest = packOp.getDest();
-    RankedTensorType originalResultType = packOp.getDestType();
+    ShapedType originalResultType = packOp.getDestType();
     bool needUpdateDestType = (destShape != originalResultType.getShape());
     if (needUpdateDestType) {
       auto newDestType = packOp.getDestType().clone(destShape);
@@ -4953,7 +4953,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     rewriter.modifyOpInPlace(packOp, [&] {
       packOp.getSourceMutable().assign(source);
       packOp.getDestMutable().assign(dest);
-      packOp.getResult().setType(cast<RankedTensorType>(dest.getType()));
+      packOp.getResult().setType(cast<ShapedType>(dest.getType()));
     });
     // Insert a cast if needed
     if (needUpdateDestType) {
@@ -4969,8 +4969,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
 }
 
 template <typename PackOrUnpackOp>
-static bool isLikePadUnPad(PackOrUnpackOp packOp,
-                           RankedTensorType packedTensorType) {
+static bool isLikePadUnPad(PackOrUnpackOp packOp, ShapedType packedTensorType) {
   static_assert(std::is_same<PackOrUnpackOp, PackOp>::value ||
                     std::is_same<PackOrUnpackOp, UnPackOp>::value,
                 "Function meant for pack/unpack");
@@ -5002,8 +5001,7 @@ static bool isLikePadUnPad(PackOrUnpackOp packOp,
 }
 
 bool PackOp::isLikePad() {
-  auto packedTensorType =
-      llvm::cast<RankedTensorType>((*this)->getResultTypes().front());
+  auto packedTensorType = llvm::dyn_cast<ShapedType>((*this)->getResultTypes().front());
   return isLikePadUnPad(*this, packedTensorType);
 }
 
@@ -5038,6 +5036,9 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
   LogicalResult matchAndRewrite(PackOp op,
                                 PatternRewriter &rewriter) const override {
     if (!tensor::hasFoldableTensorCastOperand(op))
+      return failure();
+
+    if (!op.hasPureTensorSemantics())
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
@@ -5274,7 +5275,7 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
 }
 
 bool UnPackOp::isLikeUnPad() {
-  RankedTensorType packedTensorType = getSourceType();
+  ShapedType packedTensorType = getSourceType();
   return isLikePadUnPad(*this, packedTensorType);
 }
 
@@ -5306,6 +5307,9 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
   LogicalResult matchAndRewrite(UnPackOp op,
                                 PatternRewriter &rewriter) const override {
     if (!tensor::hasFoldableTensorCastOperand(op))
+      return failure();
+
+    if (!op.hasPureTensorSemantics())
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
