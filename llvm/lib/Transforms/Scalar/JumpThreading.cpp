@@ -1525,10 +1525,14 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
   // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 = CondCmp->getOperand(0) == CondCmp ? nullptr :
-          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL);
-      Constant *Op1 = CondCmp->getOperand(1) == CondCmp ? nullptr :
-          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL);
+      Constant *Op0 = CondCmp->getOperand(0) == CondCmp
+                          ? nullptr
+                          : evaluateOnPredecessorEdge(
+                                BB, PredPredBB, CondCmp->getOperand(0), DL);
+      Constant *Op1 = CondCmp->getOperand(1) == CondCmp
+                          ? nullptr
+                          : evaluateOnPredecessorEdge(
+                                BB, PredPredBB, CondCmp->getOperand(1), DL);
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
                                                Op1, DL);
