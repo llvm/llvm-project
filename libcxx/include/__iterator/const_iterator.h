@@ -78,26 +78,9 @@ using __iter_const_rvalue_reference_t _LIBCPP_NODEBUG =
     common_reference_t<const iter_value_t<_Iter>&&, iter_rvalue_reference_t<_Iter>>;
 
 template <class _Iter>
-struct __basic_const_iterator_concept {
-  // clang-format off
-  using iterator_concept =
-    conditional_t<contiguous_iterator<_Iter>,
-      contiguous_iterator_tag,
-    conditional_t<random_access_iterator<_Iter>,
-      random_access_iterator_tag,
-    conditional_t<bidirectional_iterator<_Iter>,
-      bidirectional_iterator_tag,
-    conditional_t<forward_iterator<_Iter>,
-      forward_iterator_tag,
-    // else
-      input_iterator_tag>>>>;
-  // clang-format on
-};
-
-template <class _Iter>
-struct __basic_const_iterator_category : __basic_const_iterator_concept<_Iter> {};
+struct __basic_const_iterator_category {};
 template <forward_iterator _Iter>
-struct __basic_const_iterator_category<_Iter> : __basic_const_iterator_concept<_Iter> {
+struct __basic_const_iterator_category<_Iter> {
   using iterator_category = std::iterator_traits<_Iter>::iterator_category;
 };
 
@@ -111,6 +94,19 @@ class _LIBCPP_TEMPLATE_VIS basic_const_iterator : public __basic_const_iterator_
 public:
   using value_type      = iter_value_t<_Iter>;
   using difference_type = iter_difference_t<_Iter>;
+  // clang-format off
+  using iterator_concept =
+    conditional_t<contiguous_iterator<_Iter>,
+      contiguous_iterator_tag,
+    conditional_t<random_access_iterator<_Iter>,
+      random_access_iterator_tag,
+    conditional_t<bidirectional_iterator<_Iter>,
+      bidirectional_iterator_tag,
+    conditional_t<forward_iterator<_Iter>,
+      forward_iterator_tag,
+    // else
+      input_iterator_tag>>>>;
+  // clang-format on
 
   _LIBCPP_HIDE_FROM_ABI basic_const_iterator()
     requires default_initializable<_Iter>
