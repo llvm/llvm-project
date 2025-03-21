@@ -71,7 +71,7 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = std::make_unique<VPlan>(L);
+    auto Plan = std::make_unique<VPlan>(L, IntegerType::get(*Ctx, 64));
     VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
     HCFGBuilder.buildHierarchicalCFG();
     VPlanTransforms::introduceTopLevelVectorLoopRegion(
@@ -91,7 +91,8 @@ protected:
   }
 
   VPlan &getPlan(VPValue *TC = nullptr) {
-    Plans.push_back(std::make_unique<VPlan>(&*ScalarHeader, TC));
+    Plans.push_back(
+        std::make_unique<VPlan>(&*ScalarHeader, TC, IntegerType::get(C, 64)));
     return *Plans.back();
   }
 };
