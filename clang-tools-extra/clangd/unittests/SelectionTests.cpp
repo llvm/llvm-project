@@ -695,6 +695,7 @@ TEST(SelectionTest, Selected) {
       )cpp",
       R"cpp( $C[[^$C[[int]] a^]]; )cpp",
       R"cpp( $C[[^$C[[int]] a = $C[[5]]^]]; )cpp",
+      R"cpp( int x = [[2 ^+ $C[[2]]^]]; )cpp",
   };
   for (const char *C : Cases) {
     Annotations Test(C);
