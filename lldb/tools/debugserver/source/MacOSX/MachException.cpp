@@ -23,17 +23,17 @@
 #include <sys/types.h>
 
 static void AppendExceptionData(std::vector<mach_exception_data_type_t> &out,
-                                mach_exception_data_t Data,
-                                mach_msg_type_number_t Count) {
-  mach_exception_data_type_t Buf;
-  for (mach_msg_type_number_t i = 0; i < Count; ++i) {
+                                mach_exception_data_t data,
+                                mach_msg_type_number_t count) {
+  mach_exception_data_type_t buf;
+  for (mach_msg_type_number_t i = 0; i < count; ++i) {
     // The input Data we receive need not be aligned correctly.
     // Perform an unaligned copy by pretending we're dealing with
     // a char* buffer. This is required to work around UBSAN/ASAN
     // "misaligned address" errors.
-    auto *src = reinterpret_cast<char *>(Data + i);
-    memcpy(&Buf, src, sizeof(mach_exception_data_type_t));
-    out.push_back(Buf);
+    auto *src = reinterpret_cast<char *>(data + i);
+    memcpy(&buf, src, sizeof(mach_exception_data_type_t));
+    out.push_back(buf);
   }
 }
 
