@@ -127,8 +127,9 @@ def OpModuleProcessed: Op<330, (outs), (ins StringImm:$process, variable_ops),
 
 def OpDecorate: Op<71, (outs), (ins ANY:$target, Decoration:$dec, variable_ops),
                   "OpDecorate $target $dec">;
-def OpMemberDecorate: Op<72, (outs), (ins TYPE:$t, i32imm:$m, Decoration:$d, variable_ops),
-                  "OpMemberDecorate $t $m $d">;
+def OpMemberDecorate
+    : Op<72, (outs), (ins TYPE:$t, i32imm:$m, Decoration:$d, variable_ops),
+         "OpMemberDecorate $t $m $d", []>;
 
 // TODO Currently some deprecated opcodes are missing: OpDecorationGroup,
 // OpGroupDecorate and OpGroupMemberDecorate

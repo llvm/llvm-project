@@ -12,12 +12,12 @@ declare target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handle
 ; CHECK: OpDecorate [[BufferVar:%.+]] DescriptorSet 0
 ; CHECK: OpDecorate [[BufferVar]] Binding 0
 ; CHECK: OpDecorate [[BufferType:%.+]] Block
+; CHECK: OpMemberDecorate [[BufferType]] 0 Offset 0
 ; CHECK: OpMemberDecorate [[BufferType]] 0 NonWritable
-; CHECK-DISABLE: OpMemberDecorate [[RWBufferType]] 0 Offset 0 // The 0 at the end is not output for some reason
 ; CHECK: OpDecorate [[RWBufferVar:%.+]] DescriptorSet 0
 ; CHECK: OpDecorate [[RWBufferVar]] Binding 1
 ; CHECK: OpDecorate [[RWBufferType:%.+]] Block
-; CHECK-DISABLE: OpMemberDecorate [[BufferType]] 0 Offset 0 //  Same as above
+; CHECK: OpMemberDecorate [[RWBufferType]] 0 Offset 0
 
 
 ; CHECK: [[int:%[0-9]+]] = OpTypeInt 32 0
