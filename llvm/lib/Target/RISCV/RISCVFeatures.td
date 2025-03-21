@@ -820,6 +820,16 @@ def FeatureStdExtZvksc
 def FeatureStdExtZvksg
     : RISCVExtension<1, 0, "shorthand for 'Zvks' and 'Zvkg'",
                      [FeatureStdExtZvks, FeatureStdExtZvkg]>;
+
+// Vector quad widening dot product
+
+def FeatureStdExtZvqdotq
+    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
+                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
@@ -1373,6 +1383,14 @@ def HasVendorXqciint
     : Predicate<"Subtarget->hasVendorXqciint()">,
       AssemblerPredicate<(all_of FeatureVendorXqciint),
                          "'Xqciint' (Qualcomm uC Interrupts Extension)">;
+
+def FeatureVendorXqcilb
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Long Branch Extension",
+                                 [FeatureStdExtZca]>;
+
+def HasVendorXqcilb : Predicate<"Subtarget->hasVendorXqcilb()">,
+                      AssemblerPredicate<(all_of FeatureVendorXqcilb),
+                         "'Xqcilb' (Qualcomm uC Long Branch Extension)">;
 
 def FeatureVendorXqcili
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load Large Immediate Extension",
