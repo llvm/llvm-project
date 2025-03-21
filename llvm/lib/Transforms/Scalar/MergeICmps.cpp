@@ -288,15 +288,16 @@ bool Comparison::operator<(const Comparison& Other) const {
 // Represents multiple comparisons inside of a single basic block.
 // This happens if multiple basic blocks have previously been merged into a single using a select node.
 class IntraCmpChain {
-  std::vector<Comparison*> CmpChain;
+  // TODO: this could probably be a unique-ptr but current impl relies on some copies
+  std::vector<std::shared_ptr<Comparison>> CmpChain;
 
 public:
-  IntraCmpChain(Comparison* C) : CmpChain{C} {}
+  IntraCmpChain(std::shared_ptr<Comparison> C) : CmpChain{C} {}
   IntraCmpChain combine(const IntraCmpChain OtherChain) {
     CmpChain.insert(CmpChain.end(), OtherChain.CmpChain.begin(), OtherChain.CmpChain.end());
     return *this;
   }
-  std::vector<Comparison*> getCmpChain() const {
+  std::vector<std::shared_ptr<Comparison>> getCmpChain() const {
     return CmpChain;
   }
 };
@@ -305,10 +306,10 @@ public:
 // A basic block that contains one or more comparisons.
 class MultBCECmpBlock {
  public:
-  MultBCECmpBlock(std::vector<Comparison*> Cmps, BasicBlock *BB, InstructionSet BlockInsts)
+  MultBCECmpBlock(std::vector<std::shared_ptr<Comparison>> Cmps, BasicBlock *BB, InstructionSet BlockInsts)
       : BB(BB), BlockInsts(std::move(BlockInsts)), Cmps(std::move(Cmps)) {}
 
-  std::vector<Comparison*> getCmps() {
+  std::vector<std::shared_ptr<Comparison>> getCmps() {
     return Cmps;
   }
 
@@ -331,7 +332,7 @@ class MultBCECmpBlock {
   InstructionSet BlockInsts;
 
 private:
-  std::vector<Comparison*> Cmps;
+  std::vector<std::shared_ptr<Comparison>> Cmps;
 };
 
 // A basic block with single a comparison between two BCE atoms.
@@ -342,13 +343,13 @@ private:
 class SingleBCECmpBlock {
  public:
   SingleBCECmpBlock(MultBCECmpBlock M, unsigned I, unsigned OrigOrder)
-      : BB(M.BB), OrigOrder(OrigOrder), Cmp(M.getCmps()[I]) {}
+      : BB(M.BB), OrigOrder(OrigOrder), Cmp(std::move(M.getCmps()[I])) {}
 
   SingleBCECmpBlock(MultBCECmpBlock M, unsigned I, unsigned OrigOrder, llvm::SmallVector<Instruction *, 4> SplitInsts)
-      : BB(M.BB), OrigOrder(OrigOrder), RequireSplit(true), Cmp(M.getCmps()[I]), SplitInsts(SplitInsts)  {}
+      : BB(M.BB), OrigOrder(OrigOrder), RequireSplit(true), Cmp(std::move(M.getCmps()[I])), SplitInsts(SplitInsts)  {}
 
   const BCEAtom* Lhs() const { return Cmp->getLoads().first; }
-  const Comparison* getCmp() const { return Cmp; }
+  const Comparison* getCmp() const { return Cmp.get(); }
 
   bool operator<(const SingleBCECmpBlock &O) const {
     return *Cmp < *O.Cmp;
@@ -367,7 +368,7 @@ class SingleBCECmpBlock {
   bool RequireSplit = false;
 
 private:
-  Comparison* Cmp;
+  std::shared_ptr<Comparison> Cmp;
   llvm::SmallVector<Instruction *, 4> SplitInsts;
 };
 
@@ -382,7 +383,7 @@ bool MultBCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
       return (Inst->getParent() != LI->getParent() || !Inst->comesBefore(LI)) &&
              isModSet(AA.getModRefInfo(Inst, MemoryLocation::get(LI)));
     };
-    for (auto* Cmp : Cmps) {
+    for (auto& Cmp : Cmps) {
       auto [Lhs,Rhs] = Cmp->getLoads();
       if (MayClobber(Lhs->LoadI) || (Rhs && MayClobber((*Rhs)->LoadI)))
         return false;
@@ -426,7 +427,7 @@ bool MultBCECmpBlock::doesOtherWork() const {
 
 // Visit the given comparison. If this is a comparison between two valid
 // BCE atoms, or between a BCE atom and a constant, returns the comparison.
-std::optional<Comparison*> visitICmp(const ICmpInst *const CmpI,
+std::optional<std::shared_ptr<Comparison>> visitICmp(const ICmpInst *const CmpI,
                                 const ICmpInst::Predicate ExpectedPredicate,
                                 BaseIdentifier &BaseId, InstructionSet *BlockInsts) {
   // The comparison can only be used once:
@@ -456,12 +457,12 @@ std::optional<Comparison*> visitICmp(const ICmpInst *const CmpI,
 
   BlockInsts->insert(CmpI);
   if (auto const& Const = dyn_cast<Constant>(RhsOperand))
-    return new BCEConstCmp(std::move(Lhs), Const, SizeBits, CmpI);
+    return std::make_shared<BCEConstCmp>(BCEConstCmp(std::move(Lhs), Const, SizeBits, CmpI));
 
   auto Rhs = visitICmpLoadOperand(RhsOperand, BaseId, BlockInsts);
   if (!Rhs.BaseId)
     return std::nullopt;
-  return new BCECmp(std::move(Lhs), std::move(Rhs), SizeBits, CmpI);
+  return std::make_shared<BCECmp>(BCECmp(std::move(Lhs), std::move(Rhs), SizeBits, CmpI));
 }
 
 // Chain of comparisons inside a single basic block connected using `select` nodes.
@@ -494,8 +495,12 @@ std::optional<IntraCmpChain> visitSelect(const SelectInst *const SelectI,
 
 std::optional<IntraCmpChain> visitComparison(Value *Cond,
             ICmpInst::Predicate ExpectedPredicate,BaseIdentifier &BaseId, InstructionSet *BlockInsts) {
-  if (auto *CmpI = dyn_cast<ICmpInst>(Cond))
-    return visitICmp(CmpI, ExpectedPredicate, BaseId, BlockInsts);
+  if (auto *CmpI = dyn_cast<ICmpInst>(Cond)) {
+    auto CmpVisit = visitICmp(CmpI, ExpectedPredicate, BaseId, BlockInsts);
+    if (!CmpVisit)
+      return std::nullopt;
+    return IntraCmpChain(*CmpVisit);
+  }
   if (auto *SelectI = dyn_cast<SelectInst>(Cond))
     return visitSelect(SelectI, ExpectedPredicate, BaseId, BlockInsts);
 
