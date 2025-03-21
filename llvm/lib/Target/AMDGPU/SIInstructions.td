@@ -2308,7 +2308,7 @@ let True16Predicate = UseRealTrue16Insts in {
   foreach vt = [f16, bf16] in {
     def : GCNPat <
       (VGPRImm<(vt fpimm)>:$imm),
-      (V_MOV_B16_t16_e64 0, $imm, 0)
+      (V_MOV_B16_t16_e64 0, (vt (bitcast_fpimm_to_i16 $imm)), 0)
     >;
   }
 }

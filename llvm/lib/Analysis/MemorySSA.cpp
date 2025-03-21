@@ -1573,7 +1573,7 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
     // the loop, to limit the scope of the renaming.
     SmallVector<BasicBlock *> ExitBlocks;
     L->getExitBlocks(ExitBlocks);
-    Visited.insert(ExitBlocks.begin(), ExitBlocks.end());
+    Visited.insert_range(ExitBlocks);
     renamePass(DT->getNode(L->getLoopPreheader()), LiveOnEntryDef.get(),
                Visited);
   } else {

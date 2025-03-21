@@ -10,11 +10,13 @@
 #define LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "DAPLog.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBError.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <type_traits>
@@ -118,20 +120,38 @@ class RequestHandler : public BaseRequestHandler {
       std::string parse_failure;
       llvm::raw_string_ostream OS(parse_failure);
       root.printErrorContext(request.arguments, OS);
+
+      protocol::ErrorMessage error_message;
+      error_message.format = parse_failure;
+
+      protocol::ErrorResponseBody body;
+      body.error = error_message;
+
       response.success = false;
-      response.message = parse_failure;
+      response.body = std::move(body);
+
       dap.Send(response);
       return;
     }
 
-    auto body = Run(arguments);
-    // FIXME: Add a dedicated DAPError for enhanced errors that are
-    // user-visibile.
+    llvm::Expected<Body> body = Run(arguments);
     if (auto Err = body.takeError()) {
+      protocol::ErrorMessage error_message;
+      error_message.sendTelemetry = false;
+      if (llvm::Error unhandled = llvm::handleErrors(
+              std::move(Err), [&](const DAPError &E) -> llvm::Error {
+                error_message.format = E.getMessage();
+                error_message.showUser = E.getShowUser();
+                error_message.id = E.convertToErrorCode().value();
+                error_message.url = E.getURL();
+                error_message.urlLabel = E.getURLLabel();
+                return llvm::Error::success();
+              }))
+        error_message.format = llvm::toString(std::move(unhandled));
+      protocol::ErrorResponseBody body;
+      body.error = error_message;
       response.success = false;
-      // FIXME: Build ErrorMessage based on error details instead of using the
-      // 'message' field.
-      response.message = llvm::toString(std::move(Err));
+      response.body = std::move(body);
     } else {
       response.success = true;
       if constexpr (!std::is_same_v<Body, std::monostate>)

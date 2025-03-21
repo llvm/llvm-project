@@ -3322,7 +3322,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
     SmallDenseSet<StringRef, 4> OperandsSet;
-    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
+    OperandsSet.insert_range(ArgsCopy);
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");

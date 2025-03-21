@@ -266,7 +266,7 @@ gpu::GPUFuncOp mlir::outlineKernelFunc(gpu::LaunchOp launchOp,
                                        StringRef kernelFnName,
                                        llvm::SmallVectorImpl<Value> &operands) {
   DenseSet<Value> inputOperandSet;
-  inputOperandSet.insert(operands.begin(), operands.end());
+  inputOperandSet.insert_range(operands);
   SetVector<Value> operandSet(operands.begin(), operands.end());
   auto funcOp = outlineKernelFuncImpl(launchOp, kernelFnName, operandSet);
   for (auto operand : operandSet) {

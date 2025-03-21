@@ -1768,19 +1768,21 @@ static void hoistConditionalLoadsStores(
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
   // Not handle volatile or atomic.
+  bool IsStore = false;
   if (auto *L = dyn_cast<LoadInst>(I)) {
     if (!L->isSimple())
       return false;
   } else if (auto *S = dyn_cast<StoreInst>(I)) {
     if (!S->isSimple())
       return false;
+    IsStore = true;
   } else
     return false;
 
   // llvm.masked.load/store use i32 for alignment while load/store use i64.
   // That's why we have the alignment limitation.
   // FIXME: Update the prototype of the intrinsics?
-  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
+  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I), IsStore) &&
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 

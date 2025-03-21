@@ -148,6 +148,10 @@ C23 Feature Support
   better diagnostic behavior for the ``va_start()`` macro in C23 and later.
   This also updates the definition of ``va_start()`` in ``<stdarg.h>`` to use
   the new builtin. Fixes #GH124031.
+- Implemented `WG14 N2819 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2819.pdf>`_
+  which clarified that a compound literal used within a function prototype is
+  treated as if the compound literal were within the body rather than at file
+  scope.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -350,6 +354,7 @@ Bug Fixes to C++ Support
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
 - Clang was previously coalescing volatile writes to members of volatile base class subobjects.
   The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
+- Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
 
