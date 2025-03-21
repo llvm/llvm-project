@@ -59,8 +59,10 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   return nullptr;
 }
 
-ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
-  return Modules.lookup(File);
+ModuleFile *ModuleManager::lookup(FileEntryRef File) const {
+  llvm::SmallString<128> NormalizedFileName = File.getName();
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  return Modules.lookup(NormalizedFileName);
 }
 
 std::unique_ptr<llvm::MemoryBuffer>
@@ -107,61 +109,74 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                          std::string &ErrorStr) {
   Module = nullptr;
 
-  // Look for the file entry. This only fails if the expected size or
-  // modification time differ.
-  OptionalFileEntryRef Entry;
-  if (Type == MK_ExplicitModule || Type == MK_PrebuiltModule) {
-    // If we're not expecting to pull this file out of the module cache, it
-    // might have a different mtime due to being moved across filesystems in
-    // a distributed build. The size must still match, though. (As must the
-    // contents, but we can't check that.)
-    ExpectedModTime = 0;
-  }
-  // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
-  // when using an ASTFileSignature.
-  if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = "module file has a different size or mtime than expected";
-    return OutOfDate;
-  }
-
-  if (!Entry) {
-    ErrorStr = "module file not found";
-    return Missing;
-  }
-
-  // The ModuleManager's use of FileEntry nodes as the keys for its map of
-  // loaded modules is less than ideal. Uniqueness for FileEntry nodes is
-  // maintained by FileManager, which in turn uses inode numbers on hosts
-  // that support that. When coupled with the module cache's proclivity for
-  // turning over and deleting stale PCMs, this means entries for different
-  // module files can wind up reusing the same underlying inode. When this
-  // happens, subsequent accesses to the Modules map will disagree on the
-  // ModuleFile associated with a given file. In general, it is not sufficient
-  // to resolve this conundrum with a type like FileEntryRef that stores the
-  // name of the FileEntry node on first access because of path canonicalization
-  // issues. However, the paths constructed for implicit module builds are
-  // fully under Clang's control. We *can*, therefore, rely on their structure
-  // being consistent across operating systems and across subsequent accesses
-  // to the Modules map.
-  auto implicitModuleNamesMatch = [](ModuleKind Kind, const ModuleFile *MF,
-                                     FileEntryRef Entry) -> bool {
-    if (Kind != MK_ImplicitModule)
-      return true;
-    return Entry.getName() == MF->FileName;
-  };
-
   // Check whether we already loaded this module, before
-  if (ModuleFile *ModuleEntry = Modules.lookup(*Entry)) {
-    if (implicitModuleNamesMatch(Type, ModuleEntry, *Entry)) {
-      // Check the stored signature.
-      if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-        return OutOfDate;
+  llvm::SmallString<128> NormalizedFileName = FileName;
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  if (ModuleFile *ModuleEntry = Modules.lookup(NormalizedFileName)) {
+    // Check the stored signature.
+    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
+      return OutOfDate;
 
-      Module = ModuleEntry;
-      updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
-      return AlreadyLoaded;
-    }
+    Module = ModuleEntry;
+    updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
+    return AlreadyLoaded;
   }
+
+  OptionalFileEntryRef Entry;
+  llvm::MemoryBuffer *ModuleBuffer = nullptr;
+
+  // Load the contents of the module
+  if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
+    // The buffer was already provided for us.
+    ModuleBuffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        FileName, std::move(Buffer));
+  } else if (llvm::MemoryBuffer *Buffer =
+                 getModuleCache().getInMemoryModuleCache().lookupPCM(
+                     FileName)) {
+    ModuleBuffer = Buffer;
+  } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
+                 FileName)) {
+    // Report that the module is out of date, since we tried (and failed) to
+    // import it earlier.
+    return OutOfDate;
+  } else {
+    Entry = FileName == "-"
+                ? expectedToOptional(FileMgr.getSTDIN())
+                : FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
+                                             /*CacheFailure=*/false);
+    if (!Entry) {
+      ErrorStr = "module file not found";
+      return Missing;
+    }
+
+    // Get a buffer of the file and close the file descriptor when done.
+    // The file is volatile because in a parallel build we expect multiple
+    // compiler processes to use the same module file rebuilding it if needed.
+    //
+    // RequiresNullTerminator is false because module files don't need it, and
+    // this allows the file to still be mmapped.
+    auto Buf = FileMgr.getBufferForFile(*Entry, /*IsVolatile=*/true,
+                                        /*RequiresNullTerminator=*/false);
+
+    if (!Buf) {
+      ErrorStr = Buf.getError().message();
+      return Missing;
+    }
+
+    if ((ExpectedSize && ExpectedSize != Entry->getSize()) ||
+        (ExpectedModTime && ExpectedModTime != Entry->getModificationTime())) {
+      ErrorStr = "module file has a different size or mtime than expected";
+      return OutOfDate;
+    }
+
+    ModuleBuffer = &getModuleCache().getInMemoryModuleCache().addPCM(
+        FileName, std::move(*Buf));
+  }
+
+  // TODO: Make it so that ModuleFile is not tied to a FileEntry.
+  if (!Entry && !((Entry = FileMgr.getVirtualFileRef(FileName, ExpectedSize,
+                                                     ExpectedModTime))))
+    return Missing;
 
   // Allocate a new module.
   auto NewModule = std::make_unique<ModuleFile>(Type, *Entry, Generation);
@@ -180,46 +195,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
           llvm::sys::toTimeT(Status.getLastModificationTime());
   }
 
-  // Load the contents of the module
-  if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
-    // The buffer was already provided for us.
-    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
-        FileName, std::move(Buffer));
-    // Since the cached buffer is reused, it is safe to close the file
-    // descriptor that was opened while stat()ing the PCM in
-    // lookupModuleFile() above, it won't be needed any longer.
-    Entry->closeFile();
-  } else if (llvm::MemoryBuffer *Buffer =
-                 getModuleCache().getInMemoryModuleCache().lookupPCM(
-                     FileName)) {
-    NewModule->Buffer = Buffer;
-    // As above, the file descriptor is no longer needed.
-    Entry->closeFile();
-  } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
-                 FileName)) {
-    // Report that the module is out of date, since we tried (and failed) to
-    // import it earlier.
-    Entry->closeFile();
-    return OutOfDate;
-  } else {
-    // Get a buffer of the file and close the file descriptor when done.
-    // The file is volatile because in a parallel build we expect multiple
-    // compiler processes to use the same module file rebuilding it if needed.
-    //
-    // RequiresNullTerminator is false because module files don't need it, and
-    // this allows the file to still be mmapped.
-    auto Buf = FileMgr.getBufferForFile(NewModule->File,
-                                        /*IsVolatile=*/true,
-                                        /*RequiresNullTerminator=*/false);
-
-    if (!Buf) {
-      ErrorStr = Buf.getError().message();
-      return Missing;
-    }
-
-    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addPCM(
-        FileName, std::move(*Buf));
-  }
+  NewModule->Buffer = ModuleBuffer;
 
   // Initialize the stream.
   NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
@@ -231,7 +207,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return OutOfDate;
 
   // We're keeping this module.  Store it everywhere.
-  Module = Modules[*Entry] = NewModule.get();
+  Module = Modules[NormalizedFileName] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
@@ -277,7 +253,7 @@ void ModuleManager::removeModules(ModuleIterator First) {
 
   // Delete the modules.
   for (ModuleIterator victim = First; victim != Last; ++victim)
-    Modules.erase(victim->File);
+    Modules.erase(victim->File.getName());
 
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
 }
@@ -434,29 +410,6 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
   }
 
   returnVisitState(std::move(State));
-}
-
-bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
-                                     time_t ExpectedModTime,
-                                     OptionalFileEntryRef &File) {
-  if (FileName == "-") {
-    File = expectedToOptional(FileMgr.getSTDIN());
-    return false;
-  }
-
-  // Open the file immediately to ensure there is no race between stat'ing and
-  // opening the file.
-  File = FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
-                                    /*CacheFailure=*/false);
-
-  if (File &&
-      ((ExpectedSize && ExpectedSize != File->getSize()) ||
-       (ExpectedModTime && ExpectedModTime != File->getModificationTime())))
-    // Do not destroy File, as it may be referenced. If we need to rebuild it,
-    // it will be destroyed by removeModules.
-    return true;
-
-  return false;
 }
 
 #ifndef NDEBUG
