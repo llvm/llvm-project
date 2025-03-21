@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -233,3 +234,32 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   unsigned NReserved = RC->getNumRegs() - NAllocatableRegs;
   return RegPressureSetLimit - TRI->getRegClassWeight(RC).RegWeight * NReserved;
 }
+
+INITIALIZE_PASS(MachineRegisterClassInfoWrapperPass, "machine-reg-class-info",
+                "Machine Register Class Info Analysis", true, true)
+
+MachineRegisterClassAnalysis::Result
+MachineRegisterClassAnalysis::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &) {
+  RegisterClassInfo RCI;
+  RCI.runOnMachineFunction(MF);
+  return RCI;
+}
+
+char MachineRegisterClassInfoWrapperPass::ID = 0;
+
+MachineRegisterClassInfoWrapperPass::MachineRegisterClassInfoWrapperPass()
+    : MachineFunctionPass(ID), RCI() {
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeMachineRegisterClassInfoWrapperPassPass(Registry);
+}
+
+bool MachineRegisterClassInfoWrapperPass::runOnMachineFunction(
+    MachineFunction &MF) {
+  RCI.runOnMachineFunction(MF);
+  return false;
+}
+
+void MachineRegisterClassInfoWrapperPass::anchor() {}
+
+AnalysisKey MachineRegisterClassAnalysis::Key;

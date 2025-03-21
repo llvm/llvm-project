@@ -38,7 +38,7 @@ private:
   MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   /// List of undefined register reads in this block in forward order.
   std::vector<std::pair<MachineInstr *, unsigned>> UndefReads;
@@ -57,6 +57,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<ReachingDefAnalysis>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -101,7 +102,9 @@ private:
 #define DEBUG_TYPE "break-false-deps"
 
 char BreakFalseDeps::ID = 0;
-INITIALIZE_PASS_BEGIN(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
+INITIALIZE_PASS_BEGIN(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
 INITIALIZE_PASS_END(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
 
@@ -153,7 +156,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   // max clearance or clearance higher than Pref.
   unsigned MaxClearance = 0;
   unsigned MaxClearanceReg = OriginalReg;
-  ArrayRef<MCPhysReg> Order = RegClassInfo.getOrder(OpRC);
+  ArrayRef<MCPhysReg> Order = RegClassInfo->getOrder(OpRC);
   for (MCPhysReg Reg : Order) {
     unsigned Clearance = RDA->getClearance(MI, Reg);
     if (Clearance <= MaxClearance)
@@ -285,8 +288,7 @@ bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   RDA = &getAnalysis<ReachingDefAnalysis>();
-
-  RegClassInfo.runOnMachineFunction(mf);
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 

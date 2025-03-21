@@ -146,13 +146,7 @@ struct MachineSchedContext {
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
-
   RegisterClassInfo *RegClassInfo;
-
-  MachineSchedContext();
-  MachineSchedContext &operator=(const MachineSchedContext &other) = delete;
-  MachineSchedContext(const MachineSchedContext &other) = delete;
-  virtual ~MachineSchedContext();
 };
 
 /// MachineSchedRegistry provides a selection of available machine instruction

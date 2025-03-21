@@ -19,12 +19,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
+
+class MachineRegisterClassAnalysis;
 
 class RegisterClassInfo {
   struct RCInfo {
@@ -89,6 +93,14 @@ public:
   /// before any other methods are used.
   void runOnMachineFunction(const MachineFunction &MF);
 
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &) {
+    // Check whether the analysis has been explicitly invalidated. Otherwise,
+    // it's stateless and remains preserved.
+    auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
+    return !PAC.preservedWhenStateless();
+  }
+
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
   unsigned getNumAllocatableRegs(const TargetRegisterClass *RC) const {
@@ -151,6 +163,39 @@ public:
 
 protected:
   unsigned computePSetLimit(unsigned Idx) const;
+};
+
+class MachineRegisterClassAnalysis
+    : public AnalysisInfoMixin<MachineRegisterClassAnalysis> {
+  friend AnalysisInfoMixin<MachineRegisterClassAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = RegisterClassInfo;
+
+  Result run(MachineFunction &, MachineFunctionAnalysisManager &);
+};
+
+class MachineRegisterClassInfoWrapperPass : public MachineFunctionPass {
+  virtual void anchor();
+
+  RegisterClassInfo RCI;
+
+public:
+  static char ID;
+
+  MachineRegisterClassInfoWrapperPass();
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  RegisterClassInfo &getRCI() { return RCI; }
+  const RegisterClassInfo &getRCI() const { return RCI; }
 };
 
 } // end namespace llvm
