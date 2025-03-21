@@ -31,16 +31,17 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 
 #include <any>
 #include <cstdint>
@@ -5464,8 +5465,10 @@ static void updateDebugInfoForDeclareTargetVariables(
   }
 }
 
-// This function adds DIOp based expressions in declare target function to
-// generate valid debug info for AMDGPU.
+// This function handle any adjustments needed in declare target function to
+// generate valid debug info for AMDGPU. It does 2 main things:
+// 1. Add alloca for arguments passed by reference.
+// 2. Add DIOp based expressions
 
 static void updateDebugInfoForDeclareTargetFunctions(
     llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
@@ -5475,23 +5478,80 @@ static void updateDebugInfoForDeclareTargetFunctions(
   if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
     return;
 
-  auto UpdateDebugRecord = [&](auto *DR) {
+  llvm::IRBuilderBase &builder = ompBuilder->Builder;
+  llvm::OpenMPIRBuilder::InsertPointTy curInsert = builder.saveIP();
+  unsigned int allocaAS = M.getDataLayout().getAllocaAddrSpace();
+  unsigned int defaultAS = M.getDataLayout().getProgramAddressSpace();
+
+  builder.SetInsertPoint(Fn->getEntryBlock().getFirstInsertionPt());
+
+  llvm::Type *PtrTy = builder.getPtrTy(defaultAS);
+  llvm::Type *AllocaPtrTy = builder.getPtrTy(allocaAS);
+  llvm::DIExprBuilder EB(Fn->getContext());
+  EB.append<llvm::DIOp::Arg>(0u, AllocaPtrTy);
+  EB.append<llvm::DIOp::Deref>(PtrTy);
+  EB.append<llvm::DIOp::Deref>(PtrTy);
+  llvm::DIExpression *Expr = EB.intoExpression();
+
+  // flang does not generate allocas for the arguments that are passed by ref.
+  // When the Argument is the location, the quality of the debug information is
+  // poor. The variables are defines on very few addresses and show up as
+  // optimized in most places. One of the reason is the interaction of DI-Op
+  // based ops and regular ones.
+  // Generating alloca seems like the best thing which is done in the loop
+  // below. The users are updated accordingly.
+  for (auto &Arg : Fn->args()) {
+    if (Arg.getType()->isPointerTy()) {
+      llvm::Value *V = builder.CreateAlloca(Arg.getType(), allocaAS, nullptr);
+      if (allocaAS != defaultAS)
+        V = ompBuilder->Builder.CreateAddrSpaceCast(
+            V, builder.getPtrTy(defaultAS));
+      llvm::StoreInst *Store = builder.CreateStore(&Arg, V);
+      llvm::Value *Load = builder.CreateLoad(Arg.getType(), V);
+      llvm::SmallVector<llvm::DbgVariableIntrinsic *> DbgUsers;
+      llvm::SmallVector<llvm::DbgVariableRecord *> DPUsers;
+      llvm::findDbgUsers(DbgUsers, &Arg, &DPUsers);
+      for (auto *DVI : DbgUsers) {
+        DVI->replaceVariableLocationOp(&Arg, V);
+        DVI->setExpression(Expr);
+      }
+      for (auto *DVR : DPUsers) {
+        DVR->replaceVariableLocationOp(&Arg, V);
+        DVR->setExpression(Expr);
+      }
+      Arg.replaceUsesWithIf(Load, [&](const llvm::Use &U) -> bool {
+        // We dont want to replace Arg from the store we created above.
+        if (const auto *SI = dyn_cast<llvm::StoreInst>(U.getUser()))
+          return SI != Store;
+        return true;
+      });
+    }
+  }
+  builder.restoreIP(curInsert);
+
+  auto AddExpression = [&](auto *DR) {
+    llvm::DIExpression *Old = DR->getExpression();
+    // Skip if an expression is already present.
+    if ((Old != nullptr) && (Old->getNumElements() != 0))
+      return;
     for (auto Loc : DR->location_ops()) {
-      llvm::DIExprBuilder ExprBuilder(Fn->getContext());
       llvm::Type *Ty = Loc->getType();
       if (auto *Ref = dyn_cast<llvm::AddrSpaceCastInst>(Loc))
         Ty = Ref->getPointerOperand()->getType();
-      ExprBuilder.append<llvm::DIOp::Arg>(0u, Ty);
-      ExprBuilder.append<llvm::DIOp::Deref>(Loc->getType());
-      DR->setExpression(ExprBuilder.intoExpression());
+      llvm::DIExprBuilder EB(Fn->getContext());
+      EB.append<llvm::DIOp::Arg>(0u, Ty);
+      EB.append<llvm::DIOp::Deref>(Loc->getType());
+      DR->setExpression(EB.intoExpression());
+      break;
     }
   };
+
   for (llvm::Instruction &I : instructions(Fn)) {
     if (auto *DDI = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
-      UpdateDebugRecord(DDI);
+      AddExpression(DDI);
 
     for (llvm::DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
-      UpdateDebugRecord(&DVR);
+      AddExpression(&DVR);
   }
 }
 

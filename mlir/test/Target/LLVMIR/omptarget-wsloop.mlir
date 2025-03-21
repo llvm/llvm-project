@@ -38,8 +38,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: define void @[[FUNC0:.*]](ptr %[[ARG0:.*]])
 // CHECK:   %[[STRUCTARG:.*]] = alloca { ptr }, align 8, addrspace(5)
 // CHECK:   %[[STRUCTARG_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[STRUCTARG]] to ptr
+// CHECK:   %[[AL:[0-9]+]] = alloca{{.*}}
+// CHECK:   %[[CAST:[0-9]+]] = addrspacecast ptr addrspace(5) %[[AL]]
+// CHECK:   store ptr %[[ARG0]], ptr %[[CAST]]{{.*}}
+// CHECK:   %[[LOAD:[0-9]+]] = load ptr, ptr %[[CAST]]{{.*}}
 // CHECK:   %[[GEP:.*]] = getelementptr { ptr }, ptr %[[STRUCTARG_ASCAST]], i32 0, i32 0
-// CHECK:   store ptr %[[ARG0]], ptr %[[GEP]], align 8
+// CHECK:   store ptr %[[LOAD]], ptr %[[GEP]], align 8
 // CHECK:   %[[NUM_THREADS:.*]] = call i32 @omp_get_num_threads()
 // CHECK:   call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), ptr @[[LOOP_BODY_FN:.*]], ptr %[[STRUCTARG_ASCAST]], i32 9, i32 %[[NUM_THREADS]], i32 0)
 
