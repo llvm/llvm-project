@@ -54,6 +54,10 @@ ABI Changes in This Version
 
 - Return larger CXX records in memory instead of using AVX registers. Code compiled with older clang will be incompatible with newer version of the clang unless -fclang-abi-compat=20 is provided. (#GH120670)
 
+- Fixed Microsoft layout of pointer-to-members of classes when the layout is needed
+  directly or indirectly by the base classes of a class. These should use the most
+  general unspecified inheritance layout. Also affects -fcomplete-member-pointers.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 

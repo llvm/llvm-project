@@ -2889,9 +2889,6 @@ BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
   if (!Class)
     return true;
 
-  // We haven't yet attached the base specifiers.
-  Class->setIsParsingBaseSpecifiers();
-
   // We do not support any C++11 attributes on base-specifiers yet.
   // Diagnose any attributes we see.
   for (const ParsedAttr &AL : Attributes) {
@@ -2952,6 +2949,16 @@ NoteIndirectBases(ASTContext &Context, IndirectBaseSet &Set,
         // If we've not already seen it, recurse.
         NoteIndirectBases(Context, Set, Base);
     }
+  }
+}
+
+void Sema::SetParsingBaseSpecifiers(Decl *ClassDecl, bool To) {
+  if (ClassDecl) {
+    AdjustDeclIfTemplate(ClassDecl);
+    auto *RD = cast<CXXRecordDecl>(ClassDecl);
+    assert(RD->isParsingBaseSpecifiers() != To &&
+           "Unexpected state for isParsingBaseSpecifiers()");
+    RD->setIsParsingBaseSpecifiers(To);
   }
 }
 

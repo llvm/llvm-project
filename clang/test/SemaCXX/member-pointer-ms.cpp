@@ -215,6 +215,14 @@ struct NewUnspecified;
 SingleTemplate<void (IncSingle::*)()> tmpl_single;
 UnspecTemplate<void (NewUnspecified::*)()> tmpl_unspec;
 
+// Member pointers used in base specifiers force an unspecified inheritance model
+struct MemPtrInBase : UnspecTemplate<void (MemPtrInBase::*)()> {};
+#ifdef VMB
+struct __single_inheritance SpecifiedMemPtrInBase;
+struct SpecifiedMemPtrInBase : SingleTemplate<void (SpecifiedMemPtrInBase::*)()> {};
+struct __single_inheritance SpecifiedMemPtrInBase2 : SingleTemplate<void (SpecifiedMemPtrInBase2::*)()> {};
+#endif
+
 struct NewUnspecified { };
 
 static_assert(sizeof(void (NewUnspecified::*)()) == kUnspecifiedFunctionSize, "");
