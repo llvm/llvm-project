@@ -335,15 +335,19 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
       if (&BB == &F->getEntryBlock() || DTU->isBBPendingDeletion(&BB))
         continue;
 
-      if (pred_empty(&BB) && !preserveLoopPreHeader(&BB)) {
+      if (SmallVector<BasicBlock *, 32> Unreachable =
+              unreachableFromBB(&BB, DTU.get());
+          !Unreachable.empty()) {
         // When processBlock makes BB unreachable it doesn't bother to fix up
         // the instructions in it. We must remove BB to prevent invalid IR.
-        LLVM_DEBUG(dbgs() << "  JT: Deleting dead block '" << BB.getName()
-                          << "' with terminator: " << *BB.getTerminator()
-                          << '\n');
-        LoopHeaders.erase(&BB);
-        LVI->eraseBlock(&BB);
-        DeleteDeadBlock(&BB, DTU.get());
+        for (BasicBlock *UBB : Unreachable) {
+          LLVM_DEBUG(dbgs()
+                     << "  JT: Deleting dead block '" << UBB->getName()
+                     << "' with terminator: " << *UBB->getTerminator() << '\n');
+          LoopHeaders.erase(UBB);
+          LVI->eraseBlock(UBB);
+        }
+        DeleteDeadBlocks(Unreachable, DTU.get());
         Changed = ChangedSinceLastAnalysisUpdate = true;
         continue;
       }
@@ -379,6 +383,26 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
 
   LoopHeaders.clear();
   return EverChanged;
+}
+
+SmallVector<BasicBlock *, 32>
+JumpThreadingPass::unreachableFromBB(BasicBlock *BB, DomTreeUpdater *DTU) {
+  if (BB->isEntryBlock() || DTU->isBBPendingDeletion(BB))
+    return {};
+
+  SmallVector<BasicBlock *, 32> Unreachable({BB});
+  SmallPtrSet<BasicBlock *, 32> Seen({BB});
+
+  for (unsigned U = 0; U < Unreachable.size(); ++U) {
+    for (BasicBlock *Pred : predecessors(Unreachable[U])) {
+      if (Pred->isEntryBlock())
+        return {};
+      if (Seen.insert(Pred).second && !DTU->isBBPendingDeletion(Pred))
+        Unreachable.push_back(Pred);
+    }
+  }
+
+  return Unreachable;
 }
 
 // Replace uses of Cond with ToVal when safe to do so. If all uses are
@@ -1212,41 +1236,6 @@ static bool isOpDefinedInBlock(Value *Op, BasicBlock *BB) {
     if (OpInst->getParent() == BB)
       return true;
   return false;
-}
-
-// Check if BB is a loop pre-header and if it has to be preserved to avoid
-// invalid IR.
-bool JumpThreadingPass::preserveLoopPreHeader(BasicBlock *BB) {
-  BasicBlock *Succ = BB->getUniqueSuccessor();
-  // Check if BB is a pre-header
-  if (!LoopHeaders.contains(Succ))
-    return false;
-  // Check for each PHI node in Succ if it uses BB.
-  // For each PHI node fulfilling this check, check if it is used by one of its
-  // operands, so if there is a circular use. Only verify this for non-PHI
-  // instructions since self-references are OK for PHIs. And only verify this
-  // for instructions that are defined in BB.
-  // If we find corresponding instructions, preserve the pre-header because
-  // otherwise, the PHI node may become constant and may be removed, which could
-  // lead to a circular reference.
-  return llvm::any_of(Succ->phis(), [BB](PHINode &PHI) {
-    if (PHI.getBasicBlockIndex(BB) == -1)
-      return false;
-    bool HasValueDefinedInPreHeader = false;
-    bool HasPotentialSelfReference = false;
-    for (Value *Op : PHI.operand_values()) {
-      Instruction *Inst = dyn_cast<Instruction>(Op);
-      if (!Inst)
-        continue;
-      if (isOpDefinedInBlock(Op, BB))
-        HasValueDefinedInPreHeader = true;
-      else if (!isa<PHINode>(Inst) &&
-             llvm::any_of(Inst->operand_values(),
-                          [&PHI](Value *V) { return V == &PHI; }))
-        HasPotentialSelfReference = true;
-    }
-    return HasValueDefinedInPreHeader && HasPotentialSelfReference;
-  });
 }
 
 /// simplifyPartiallyRedundantLoad - If LoadI is an obviously partially

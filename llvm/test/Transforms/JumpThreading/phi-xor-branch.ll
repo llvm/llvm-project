@@ -5,14 +5,7 @@
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[DUMMY:%.*]] = phi i16 [ 0, [[LOOP:%.*]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 0, 1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i1 false, [[XOR]]
-; CHECK-NEXT:    br i1 [[XOR]], label [[LOOP]], label [[EXIT]]
-; CHECK:       exit:
+; CHECK-NEXT:  exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -12,12 +12,6 @@ define void @unreachable_single_bb_loop() {
 ; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB8]]
-; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP]], 1
-; CHECK-NEXT:    switch i1 [[TMP4]], label [[BB2:%.*]] [
-; CHECK-NEXT:      i1 false, label [[BB8]]
-; CHECK-NEXT:      i1 true, label [[BB8]]
-; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
@@ -52,14 +46,6 @@ define void @unreachable_multi_bbs_loop() {
 ; CHECK-NEXT:    [[TMP:%.*]] = call i32 @a()
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB8:%.*]], label [[BB8]]
-; CHECK:       bb3:
-; CHECK-NEXT:    br label [[BB2:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP]], 1
-; CHECK-NEXT:    switch i1 [[TMP4]], label [[BB3:%.*]] [
-; CHECK-NEXT:      i1 false, label [[BB8]]
-; CHECK-NEXT:      i1 true, label [[BB8]]
-; CHECK-NEXT:    ]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
@@ -99,10 +85,6 @@ define void @PR48362(i1 %arg) {
 ; CHECK-LABEL: @PR48362(
 ; CHECK-NEXT:  cleanup.cont1500:
 ; CHECK-NEXT:    unreachable
-; CHECK:       if.end1733:
-; CHECK-NEXT:    [[I82:%.*]] = load i32, ptr undef, align 1
-; CHECK-NEXT:    [[TOBOOL1731_NOT:%.*]] = icmp eq i32 [[I82]], 0
-; CHECK-NEXT:    br label [[IF_END1733:%.*]]
 ;
 cleanup1491:                                      ; preds = %for.body1140
   switch i32 0, label %cleanup2343.loopexit4 [
@@ -189,26 +171,9 @@ cleanup2343.loopexit4:                            ; preds = %cleanup1491
 
 define i32 @constant_phi_leads_to_self_reference(ptr %ptr) {
 ; CHECK-LABEL: @constant_phi_leads_to_self_reference(
+; CHECK-NEXT:  F6:
 ; CHECK-NEXT:    [[A9:%.*]] = alloca i1, align 1
-; CHECK-NEXT:    br label [[F6:%.*]]
-; CHECK:       T3:
-; CHECK-NEXT:    [[L6:%.*]] = phi i1 [ [[L6_PR:%.*]], [[T4:%.*]] ], [ [[C4:%.*]], [[BB6:%.*]] ]
-; CHECK-NEXT:    br label [[BB5:%.*]]
-; CHECK:       BB5:
-; CHECK-NEXT:    [[L10:%.*]] = load i1, ptr [[A9]], align 1
-; CHECK-NEXT:    br i1 [[L10]], label [[BB6]], label [[F6]]
-; CHECK:       BB6:
-; CHECK-NEXT:    [[LGV3:%.*]] = load i1, ptr [[PTR:%.*]], align 1
-; CHECK-NEXT:    [[C4]] = icmp sle i1 [[L6]], true
-; CHECK-NEXT:    store i1 [[C4]], ptr [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[L6]], label [[F6]], label [[T3:%.*]]
-; CHECK:       T4:
-; CHECK-NEXT:    [[L6_PR]] = load i1, ptr [[PTR]], align 1
-; CHECK-NEXT:    br label [[T3]]
-; CHECK:       F6:
 ; CHECK-NEXT:    ret i32 0
-; CHECK:       F7:
-; CHECK-NEXT:    br label [[BB5]]
 ;
   %A9 = alloca i1, align 1
   br i1 false, label %BB4, label %F6
@@ -219,7 +184,7 @@ BB4:                                              ; preds = %0
 F1:                                               ; preds = %BB4
   br i1 false, label %T4, label %T3
 
-  T3:                                               ; preds = %T4, %BB6, %F1
+T3:                                               ; preds = %T4, %BB6, %F1
   %L6 = load i1, ptr %ptr, align 1
   br label %BB5
 
@@ -241,6 +206,6 @@ F6:                                               ; preds = %BB6, %BB5, %BB4, %0
 
 F7:                                               ; No predecessors!
   br label %BB5
-  }
+}
 
 !0 = !{!"branch_weights", i32 2146410443, i32 1073205}
