@@ -5010,11 +5010,8 @@ LoopVectorizationCostModel::calculateRegisterUsage(
           if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
             continue;
           if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
-              Phi && Phi->getUnderlyingInstr()) {
-            if (auto *PhiNode = dyn_cast<PHINode>(Phi->getUnderlyingInstr());
-                PhiNode && isInLoopReduction(PhiNode))
+              Phi && Phi->isInLoop())
               continue;
-          }
           if (isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
                   VPScalarIVStepsRecipe>(R) ||
               (isa<VPInstruction>(R) &&
