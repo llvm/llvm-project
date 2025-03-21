@@ -111,7 +111,7 @@ void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer,
 
   ParseAST(*S.get(), PrintStats, SkipFunctionBodies);
 }
-
+// is this specific to clang fronend? what about if some other frontend wants to do this? where do the frontends diverge and what parts are common?
 void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   // Collect global stats on Decls/Stmts (until we have a module streamer).
   if (PrintStats) {
@@ -131,7 +131,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
 
   std::unique_ptr<Parser> ParseOP(
       new Parser(S.getPreprocessor(), S, SkipFunctionBodies));
-  Parser &P = *ParseOP.get();
+  Parser &P = *ParseOP.get(); // we have the AST and now we are getting a parser which will parse that ast. 
 
   llvm::CrashRecoveryContextCleanupRegistrar<const void, ResetStackCleanup>
       CleanupPrettyStack(llvm::SavePrettyStackState());
@@ -161,12 +161,12 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
       }
       return M;
     });
-    P.Initialize();
+    P.Initialize(); // this sets up the parser and gets the first token i guess?
     Parser::DeclGroupPtrTy ADecl;
     Sema::ModuleImportState ImportState;
     EnterExpressionEvaluationContext PotentiallyEvaluated(
         S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-
+// I think translational unit decls are the top level decls. everything else is counted as a "sub-decl"/ other type of decl. so this loop works for each translational unit. i guess. 
     for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
          AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
       // If we got a null return and something *was* parsed, ignore it.  This
@@ -191,7 +191,7 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   finalize(S.TemplateInstCallbacks, S);
 
   std::swap(OldCollectStats, S.CollectStats);
-  if (PrintStats) {
+  if (true) {
     llvm::errs() << "\nSTATISTICS:\n";
     if (HaveLexer) P.getActions().PrintStats();
     S.getASTContext().PrintStats();

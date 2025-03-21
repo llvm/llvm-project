@@ -62,7 +62,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
                                      : getContext().LongLongTy))
       return getNaturalAlignIndirect(RetTy,
                                      getDataLayout().getAllocaAddrSpace());
-
+// what is a promotable integer type?
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
 }

@@ -112,7 +112,7 @@ unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
 
 void AMDGPUABIInfo::computeInfo(CGFunctionInfo &FI) const {
   llvm::CallingConv::ID CC = FI.getCallingConvention();
-
+// what is this, this is important. 
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
