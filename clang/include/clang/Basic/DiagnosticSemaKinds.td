@@ -6975,10 +6975,8 @@ def err_illegal_decl_mempointer_to_reference : Error<
   "'%0' declared as a member pointer to a reference of type %1">;
 def err_illegal_decl_mempointer_to_void : Error<
   "'%0' declared as a member pointer to void">;
-def err_illegal_decl_mempointer_in_nonclass : Error<
-  "'%0' does not point into a class">;
-def err_mempointer_in_nonclass_type : Error<
-  "member pointer refers into non-class type %0">;
+def err_illegal_decl_mempointer_in_nonclass
+    : Error<"'%0' does not point into a class">;
 def err_reference_to_void : Error<"cannot form a reference to 'void'">;
 def err_nonfunction_block_type : Error<
   "block pointer to non-function type is invalid">;
@@ -13040,6 +13038,16 @@ def err_acc_magic_static_in_routine
 def err_acc_duplicate_bind
     : Error<"multiple 'routine' directives with 'bind' clauses are not "
             "permitted to refer to the same function">;
+def err_acc_duplicate_unnamed_bind
+    : Error<"OpenACC 'bind' clause on a declaration must bind to the same name "
+            "as previous bind clauses">;
+def warn_acc_confusing_routine_name
+    : Warning<"OpenACC 'routine' directive with a name refers to a function "
+              "with the same name as the function on the following line; this "
+              "may be unintended">,
+      InGroup<DiagGroup<"openacc-confusing-routine-name">>;
+def err_acc_decl_for_routine
+    : Error<"expected function or lambda declaration for 'routine' construct">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

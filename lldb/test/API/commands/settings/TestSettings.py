@@ -1022,7 +1022,7 @@ class SettingsCommandTestCase(TestBase):
         path2 = os.path.join(self.getSourceDir(), "tmp2")
         self.runCmd("settings set %s '%s' '%s'" % (setting_path, path1, path2))
         settings_json = self.get_setting_json(setting_path)
-        self.assertEqual(settings_json, setting_value)
+        self.assertEqual(settings_json, [path1, path2])
 
         # Test OptionValueFormatEntity
         setting_value = """thread #${thread.index}{, name = \\'${thread.name}\\

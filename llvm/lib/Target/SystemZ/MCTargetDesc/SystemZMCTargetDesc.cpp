@@ -8,6 +8,7 @@
 
 #include "SystemZMCTargetDesc.h"
 #include "SystemZGNUInstPrinter.h"
+#include "SystemZHLASMAsmStreamer.h"
 #include "SystemZHLASMInstPrinter.h"
 #include "SystemZMCAsmInfo.h"
 #include "SystemZTargetStreamer.h"
@@ -21,6 +22,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -33,6 +35,12 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "SystemZGenRegisterInfo.inc"
+
+// Temporary option to assist with the migration to a new HLASMAsmStreamer on
+// z/OS
+static cl::opt<bool> GNUAsOnzOSCL("emit-gnuas-syntax-on-zos",
+                                  cl::desc("Emit GNU Assembly Syntax on z/OS."),
+                                  cl::init(true));
 
 const unsigned SystemZMC::GR32Regs[16] = {
     SystemZ::R0L,  SystemZ::R1L,  SystemZ::R2L,  SystemZ::R3L,
@@ -212,12 +220,33 @@ public:
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint) {
-  return new SystemZTargetAsmStreamer(S, OS);
+  if (S.getContext().getTargetTriple().isOSzOS())
+    return new SystemZTargetHLASMStreamer(S, OS);
+  else
+    return new SystemZTargetAsmStreamer(S, OS);
+}
+
+static MCStreamer *createAsmStreamer(MCContext &Ctx,
+                                     std::unique_ptr<formatted_raw_ostream> OS,
+                                     MCInstPrinter *IP,
+                                     std::unique_ptr<MCCodeEmitter> CE,
+                                     std::unique_ptr<MCAsmBackend> TAB) {
+
+  auto TT = Ctx.getTargetTriple();
+  if (TT.isOSzOS() && !GNUAsOnzOSCL)
+    return new SystemZHLASMAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
+                                       std::move(TAB));
+
+  return llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
+                                 std::move(TAB));
 }
 
 static MCTargetStreamer *
 createObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  return new SystemZTargetELFStreamer(S);
+  if (S.getContext().getTargetTriple().isOSzOS())
+    return new SystemZTargetGOFFStreamer(S);
+  else
+    return new SystemZTargetELFStreamer(S);
 }
 
 static MCTargetStreamer *
@@ -259,6 +288,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
                                         createSystemZMCInstPrinter);
 
   // Register the asm streamer.
+  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(), createAsmStreamer);
+
+  // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),
                                             createAsmTargetStreamer);
 
