@@ -103,3 +103,7 @@ void mutable_copy() {
     @"Content-Type": @"text/html",
   }.mutableCopy);
 }
+
+void string_copy(NSString *str) {
+  RetainPtr<NSString> copy = adoptNS(str.copy);
+}

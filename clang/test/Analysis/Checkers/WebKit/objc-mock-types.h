@@ -108,6 +108,7 @@ __attribute__((objc_root_class))
 - (NSString *)stringByAppendingString:(NSString *)aString;
 - ( const char *)UTF8String;
 - (id)initWithUTF8String:(const char *)nullTerminatedCString;
+- (NSString *)copy;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
