@@ -181,13 +181,7 @@ bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
   if (!module)
     return false;
   *module_name = module->full_name();
-  // On AIX, the address for the data in the object is the same with the runtime one.
-  // So, we don't need to sub the base address.
-#if SANITIZER_AIX
-  *module_offset = address;
-#else
   *module_offset = address - module->base_address();
-#endif
   *module_arch = module->arch();
   return true;
 }

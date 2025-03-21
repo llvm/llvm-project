@@ -36,7 +36,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#if SANITIZER_FREEBSD || SANITIZER_AIX
+#  if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
 #undef MAP_NORESERVE
@@ -438,21 +438,21 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
 // Uses fixed_addr for now.
 // Will use offset instead once we've implemented this function for real.
 uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size, const char *name) {
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   return fixed_addr;
-#else
+#  else
   return reinterpret_cast<uptr>(
       MmapFixedOrDieOnFatalError(fixed_addr, size, name));
-#endif
+#  endif
 }
 
 uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size,
                                     const char *name) {
-#if SANITIZER_AIX
+#  if SANITIZER_AIX
   return fixed_addr;
-#else
+#  else
   return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size, name));
-#endif
+#  endif
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {

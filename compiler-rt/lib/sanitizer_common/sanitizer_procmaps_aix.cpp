@@ -15,8 +15,8 @@
 #  include <stdio.h>
 
 #  include "sanitizer_common.h"
-#  include "sanitizer_procmaps.h"
 #  include "sanitizer_file.h"
+#  include "sanitizer_procmaps.h"
 
 namespace __sanitizer {
 
@@ -148,8 +148,8 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
       if (!NameEnd)
         NameEnd = next_line - 1;
 
-      uptr len = Min((uptr)(NameEnd - data_.current),
-                     segment->filename_size - 1);
+      uptr len =
+          Min((uptr)(NameEnd - data_.current), segment->filename_size - 1);
       internal_strncpy(segment->filename, data_.current, len);
       segment->filename[len] = 0;
 
@@ -191,7 +191,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
               Min((uptr)(internal_strlen(LibName)), segment->filename_size - 1);
           internal_strncpy(segment->filename, LibName, len);
           segment->filename[len] = 0;
-	  found = true;
+          found = true;
         }
         CHECK(found);
       }
