@@ -41,7 +41,6 @@ public:
     VK_TLSDESC_LOAD_LO,
     VK_TLSDESC_ADD_LO,
     VK_TLSDESC_CALL,
-    VK_Invalid // Must be the last item
   };
 
 private:
@@ -82,7 +81,7 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static Specifier getSpecifierForName(StringRef name);
+  static std::optional<Specifier> getSpecifierForName(StringRef name);
   static StringRef getSpecifierName(Specifier Kind);
 };
 
