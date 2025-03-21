@@ -728,7 +728,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   RecoverableKinds |= AlwaysRecoverable;
   RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
-
+  if ((TrappingKinds & SanitizerKind::Undefined) &&
+      !(Kinds & SanitizerKind::Undefined))
+    llvm::errs() << "Warning: -fsanitize-trap=undefined ignored\n";
   TrappingKinds &= Kinds;
   RecoverableKinds &= ~TrappingKinds;
 
