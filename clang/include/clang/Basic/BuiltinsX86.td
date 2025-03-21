@@ -5006,7 +5006,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vcvt2ps2phx256_mask : X86Builtin<"_Vector<16, _Float16>(_Vector<8, float>, _Vector<8, float>, _Vector<16, _Float16>, unsigned short, _Constant int)">;
+  def vcvt2ps2phx256_mask : X86Builtin<"_Vector<16, _Float16>(_Vector<8, float>, _Vector<8, float>, _Vector<16, _Float16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
