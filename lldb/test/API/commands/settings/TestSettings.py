@@ -1016,6 +1016,13 @@ class SettingsCommandTestCase(TestBase):
         settings_json = self.get_setting_json(setting_path)
         self.assertEqual(settings_json, setting_value)
 
+        # Test OptionValueFileSpec and OptionValueFileSpecList
+        setting_path = "target.debug-file-search-paths"
+        setting_value = ["/tmp" "/tmp2"]
+        self.runCmd("settings set %s %s" % (setting_path, " ".join(setting_value)))
+        settings_json = self.get_setting_json(setting_path)
+        self.assertEqual(settings_json, setting_value)
+
         # Test OptionValueFormatEntity
         setting_value = """thread #${thread.index}{, name = \\'${thread.name}\\
         '}{, queue = ${ansi.fg.green}\\'${thread.queue}\\'${ansi.normal}}{,
