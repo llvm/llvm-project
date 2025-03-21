@@ -344,6 +344,8 @@ KEYWORD(_Task                       , KEYALL)
 KEYWORD(_Exception                  , KEYALL)
 KEYWORD(_When                       , KEYALL)
 KEYWORD(_Monitor                    , KEYALL)
+KEYWORD(_Mutex                      , KEYALL)
+KEYWORD(_Nomutex                    , KEYALL)
 KEYWORD(_Else                       , KEYALL)
 KEYWORD(_Select                     , KEYALL)
 // Note, C2y removed support for _Imaginary; we retain it as a keyword because
