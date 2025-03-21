@@ -11,15 +11,6 @@
 
 #include "CodeGenFunction.h"
 
-using llvm::Value;
-using llvm::Function;
-using llvm::AtomicOrdering;
-using clang::SmallVector;
-using clang::CallExpr;
-using clang::QualType;
-using clang::CodeGen::Address;
-using clang::CodeGen::CodeGenFunction;
-
 // Many of MSVC builtins are on x64, ARM and AArch64; to avoid repeating code,
 // we handle them here.
 enum class clang::CodeGen::CodeGenFunction::MSVCIntrin {
@@ -69,39 +60,46 @@ enum class clang::CodeGen::CodeGenFunction::MSVCIntrin {
 // matching the argument type. It is assumed that only the first argument is
 // overloaded.
 template <unsigned N>
-Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
-                                        const CallExpr *E,
-                                        unsigned IntrinsicID,
-                                        llvm::StringRef Name = "") {
+llvm::Value *emitBuiltinWithOneOverloadedType(clang::CodeGen::CodeGenFunction &CGF,
+                                              const clang::CallExpr *E,
+                                              unsigned IntrinsicID,
+                                              llvm::StringRef Name = "") {
   static_assert(N, "expect non-empty argument");
-  SmallVector<Value *, N> Args;
+  clang::SmallVector<llvm::Value *, N> Args;
   for (unsigned I = 0; I < N; ++I)
     Args.push_back(CGF.EmitScalarExpr(E->getArg(I)));
-  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
+  llvm::Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
   return CGF.Builder.CreateCall(F, Args, Name);
 }
 
-Value *emitUnaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
-                                const CallExpr *E, unsigned IntrinsicID,
-                                unsigned ConstrainedIntrinsicID);
+llvm::Value *emitUnaryMaybeConstrainedFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
+                                                const clang::CallExpr *E,
+                                                unsigned IntrinsicID,
+                                                unsigned ConstrainedIntrinsicID);
 
-Value *EmitToInt(CodeGenFunction &CGF, llvm::Value *V,
-                 QualType T, llvm::IntegerType *IntType);
+llvm::Value *EmitToInt(clang::CodeGen::CodeGenFunction &CGF, llvm::Value *V,
+                       clang::QualType T, llvm::IntegerType *IntType);
 
-Value *EmitFromInt(CodeGenFunction &CGF, llvm::Value *V,
-                   QualType T, llvm::Type *ResultType);
+llvm::Value *EmitFromInt(clang::CodeGen::CodeGenFunction &CGF, llvm::Value *V,
+                         clang::QualType T, llvm::Type *ResultType);
 
-Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E);
+clang::CodeGen::Address CheckAtomicAlignment(clang::CodeGen::CodeGenFunction &CGF,
+                                             const clang::CallExpr *E);
 
-Value *MakeBinaryAtomicValue(
-    CodeGenFunction &CGF, llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
-    AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent);
+llvm::Value *MakeBinaryAtomicValue(clang::CodeGen::CodeGenFunction &CGF,
+                                   llvm::AtomicRMWInst::BinOp Kind,
+                                   const clang::CallExpr *E,
+                                   llvm::AtomicOrdering Ordering =
+                                      llvm::AtomicOrdering::SequentiallyConsistent);
 
-Value *EmitOverflowIntrinsic(CodeGenFunction &CGF,
-                             const llvm::Intrinsic::ID IntrinsicID,
-                             Value *X, Value *Y, Value *&Carry);
+llvm::Value *EmitOverflowIntrinsic(clang::CodeGen::CodeGenFunction &CGF,
+                                   const llvm::Intrinsic::ID IntrinsicID,
+                                   llvm::Value *X,
+                                   llvm::Value *Y,
+                                   llvm::Value *&Carry);
 
-Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
-                                     bool ReturnBool);
+llvm::Value *MakeAtomicCmpXchgValue(clang::CodeGen::CodeGenFunction &CGF,
+                                    const clang::CallExpr *E,
+                                    bool ReturnBool);
 
 #endif

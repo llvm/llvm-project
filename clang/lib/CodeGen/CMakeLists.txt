@@ -61,16 +61,6 @@ add_clang_library(clangCodeGen
   CGAtomic.cpp
   CGBlocks.cpp
   CGBuiltin.cpp
-  TargetBuiltins/AArch64.cpp
-  TargetBuiltins/AMDGPU.cpp
-  TargetBuiltins/Hexagon.cpp
-  TargetBuiltins/NVPTX.cpp
-  TargetBuiltins/PPC.cpp
-  TargetBuiltins/RISCV.cpp
-  TargetBuiltins/SPIR.cpp
-  TargetBuiltins/SystemZ.cpp
-  TargetBuiltins/WebAssembly.cpp
-  TargetBuiltins/X86.cpp
   CGCUDANV.cpp
   CGCUDARuntime.cpp
   CGCXX.cpp
@@ -125,6 +115,16 @@ add_clang_library(clangCodeGen
   PatternInit.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
+  TargetBuiltins/AArch64.cpp
+  TargetBuiltins/AMDGPU.cpp
+  TargetBuiltins/Hexagon.cpp
+  TargetBuiltins/NVPTX.cpp
+  TargetBuiltins/PPC.cpp
+  TargetBuiltins/RISCV.cpp
+  TargetBuiltins/SPIR.cpp
+  TargetBuiltins/SystemZ.cpp
+  TargetBuiltins/WebAssembly.cpp
+  TargetBuiltins/X86.cpp
   TargetInfo.cpp
   Targets/AArch64.cpp
   Targets/AMDGPU.cpp
