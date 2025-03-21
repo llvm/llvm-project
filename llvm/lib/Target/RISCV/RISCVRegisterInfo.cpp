@@ -234,7 +234,8 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
         IsPrologueOrEpilogue && ST.preferVsetvliOverReadVLENB();
     if (UseVsetvliRatherThanVlenb && (NumOfVReg == 1 || NumOfVReg == 2 ||
                                       NumOfVReg == 4 || NumOfVReg == 8)) {
-      BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadMulVLENB), ScratchReg)
+      BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENBViaVSETVLIX0),
+              ScratchReg)
           .addImm(NumOfVReg)
           .setMIFlag(Flag);
       BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
@@ -243,7 +244,8 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
           .setMIFlag(Flag);
     } else {
       if (UseVsetvliRatherThanVlenb)
-        BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadMulVLENB), ScratchReg)
+        BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENBViaVSETVLIX0),
+                ScratchReg)
             .addImm(1)
             .setMIFlag(Flag);
       else
