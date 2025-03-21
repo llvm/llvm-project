@@ -3566,7 +3566,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
           Instruction::Load, NewLoad->getType(), NewLoad->getAlign(),
           NewLoad->getPointerAddressSpace(), CostKind);
 
-      using UseEntry = std::pair<ShuffleVectorInst*, std::vector<int>>;
+      using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       auto NewUses = SmallVector<UseEntry, 4u>();
       auto SizeDiff = OldSize - NewSize;
 
@@ -3581,10 +3581,10 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
           NewMask.push_back(Index >= int(OldSize) ? Index - SizeDiff : Index);
 
         // Update costs.
-        OldCost += TTI.getShuffleCost(
-            TTI::SK_PermuteSingleSrc, VecTy, OldMask, CostKind);
-        NewCost += TTI.getShuffleCost(
-            TTI::SK_PermuteSingleSrc, NewVecTy, NewMask, CostKind);
+        OldCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, OldMask,
+                                      CostKind);
+        NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, NewVecTy,
+                                      NewMask, CostKind);
       }
 
       if (OldCost < NewCost || !NewCost.isValid()) {
