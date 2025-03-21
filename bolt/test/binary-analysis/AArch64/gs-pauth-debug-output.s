@@ -118,20 +118,16 @@ clobber:
 // CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: W30 , Insts: [0](0x{{[0-9a-f]+}} )>)
 // CHECK-NEXT:  PacRetAnalysis::ComputeNext(   ret     x30, pacret-state<NonAutClobRegs: W30 , Insts: [0](0x{{[0-9a-f]+}} )>)
 // CHECK-NEXT:   .. result: (pacret-state<NonAutClobRegs: W30 , Insts: [0](0x{{[0-9a-f]+}} )>)
-// CHECK-NEXT:  After PacRetAnalysis:
+// CHECK-NEXT:  After detailed PacRetAnalysis:
 // CHECK-NEXT: Binary Function "clobber"  {
 // ...
 // CHECK:      End of Function "clobber"
 
 // The analysis was re-computed with register tracking, as an issue was found in this function.
-// Re-checking the instructions:
+// Iterating over the reports and attaching clobbering info:
 
 // CHECK-EMPTY:
-// CHECK-NEXT:   Found RET inst:     00000000:         ret # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
-// CHECK-NEXT:     RetReg: LR
-// CHECK-NEXT:     Authenticated reg: (none)
-// CHECK-NEXT:     NonAutClobRegs at Ret: W30
-// CHECK-NEXT:     Intersection with RetReg: W30
+// CHECK-NEXT:   Attaching clobbering info to:     00000000:         ret # PacRetAnalysis: pacret-state<NonAutClobRegs: BitVector, Insts: [0](0x{{[0-9a-f]+}} )>
 
 
 // CHECK-LABEL:Analyzing in function main, AllocatorId 1

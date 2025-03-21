@@ -52,6 +52,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atan
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: atan2
     standards:
       - stdc
