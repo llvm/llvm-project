@@ -5,6 +5,8 @@ define void @func(i8 zeroext %p_44) nounwind {
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:  return:
 ; CHECK-NEXT:    ret void
+; CHECK:       for.inc46:
+; CHECK-NEXT:    br label [[FOR_INC46:%.*]]
 ;
 entry:
   br i1 false, label %for.cond2, label %if.end50

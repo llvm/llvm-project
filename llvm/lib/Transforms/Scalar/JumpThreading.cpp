@@ -335,19 +335,15 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
       if (&BB == &F->getEntryBlock() || DTU->isBBPendingDeletion(&BB))
         continue;
 
-      if (SmallVector<BasicBlock *, 32> Unreachable =
-              unreachableFromBB(&BB, DTU.get());
-          !Unreachable.empty()) {
+      if (pred_empty(&BB)) {
         // When processBlock makes BB unreachable it doesn't bother to fix up
         // the instructions in it. We must remove BB to prevent invalid IR.
-        for (BasicBlock *UBB : Unreachable) {
-          LLVM_DEBUG(dbgs()
-                     << "  JT: Deleting dead block '" << UBB->getName()
-                     << "' with terminator: " << *UBB->getTerminator() << '\n');
-          LoopHeaders.erase(UBB);
-          LVI->eraseBlock(UBB);
-        }
-        DeleteDeadBlocks(Unreachable, DTU.get());
+        LLVM_DEBUG(dbgs() << "  JT: Deleting dead block '" << BB.getName()
+                          << "' with terminator: " << *BB.getTerminator()
+                          << '\n');
+        LoopHeaders.erase(&BB);
+        LVI->eraseBlock(&BB);
+        DeleteDeadBlock(&BB, DTU.get());
         Changed = ChangedSinceLastAnalysisUpdate = true;
         continue;
       }
@@ -383,26 +379,6 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
 
   LoopHeaders.clear();
   return EverChanged;
-}
-
-SmallVector<BasicBlock *, 32>
-JumpThreadingPass::unreachableFromBB(BasicBlock *BB, DomTreeUpdater *DTU) {
-  if (BB->isEntryBlock() || DTU->isBBPendingDeletion(BB))
-    return {};
-
-  SmallVector<BasicBlock *, 32> Unreachable({BB});
-  SmallPtrSet<BasicBlock *, 32> Seen({BB});
-
-  for (unsigned U = 0; U < Unreachable.size(); ++U) {
-    for (BasicBlock *Pred : predecessors(Unreachable[U])) {
-      if (Pred->isEntryBlock())
-        return {};
-      if (Seen.insert(Pred).second && !DTU->isBBPendingDeletion(Pred))
-        Unreachable.push_back(Pred);
-    }
-  }
-
-  return Unreachable;
 }
 
 // Replace uses of Cond with ToVal when safe to do so. If all uses are

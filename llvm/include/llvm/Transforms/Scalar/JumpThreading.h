@@ -169,12 +169,6 @@ public:
   bool processGuards(BasicBlock *BB);
   bool threadGuard(BasicBlock *BB, IntrinsicInst *Guard, BranchInst *BI);
 
-  // Determine unreachability with a possibly not up-to-date DominatorTree.
-  // If BB is unreachable, return a list of BB and all its predecessors.
-  // Otherwise, return an empty list.
-  SmallVector<BasicBlock *, 32> unreachableFromBB(BasicBlock *BB,
-                                                  DomTreeUpdater *DTU);
-
 private:
   BasicBlock *splitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
                               const char *Suffix);
