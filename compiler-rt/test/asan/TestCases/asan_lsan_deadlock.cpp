@@ -31,8 +31,6 @@
 #include <thread>
 #include <unistd.h>
 
-std::mutex in;
-
 void Watchdog() {
   // Safety mechanism: Turn infinite deadlock into finite test failure
   usleep(10000000);
@@ -44,6 +42,7 @@ void Watchdog() {
 
 int main(int argc, char **argv) {
   int arr[1] = {0};
+  std::mutex in;
   in.lock();
 
   std::thread w(Watchdog);
