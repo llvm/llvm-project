@@ -20,6 +20,10 @@
 #include "cuda_bf16.h"
 #include "cuda_fp16.h"
 
+#if MLIR_ENABLE_CUDA_RUNNER_RT == 1
+#include "cuda_runtime.h"
+#endif
+
 #ifdef MLIR_ENABLE_CUDA_CUSPARSE
 #include "cusparse.h"
 #ifdef MLIR_ENABLE_CUDA_CUSPARSELT
@@ -40,6 +44,16 @@
       return;                                                                  \
     const char *name = nullptr;                                                \
     cuGetErrorName(result, &name);                                             \
+    if (!name)                                                                 \
+      name = "<unknown>";                                                      \
+    fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
+  }(expr)
+
+#define CUDART_REPORT_IF_ERROR(expr)                                           \
+  [](cudaError_t result) {                                                     \
+    if (!result)                                                               \
+      return;                                                                  \
+    const char *name = cudaGetErrorName(result);                               \
     if (!name)                                                                 \
       name = "<unknown>";                                                      \
     fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
@@ -89,6 +103,14 @@ public:
   ScopedContext() {
     // Static reference to CUDA primary context for device ordinal
     // defaultDevice.
+#if MLIR_ENABLE_CUDA_RUNNER_RT == 1
+    static int rt_init = []() {
+      CUDART_REPORT_IF_ERROR(cudaInitDevice(defaultDevice, 0, 0));
+      return 0;
+    }();
+    (void)rt_init;
+    CUDART_REPORT_IF_ERROR(cudaSetDevice(defaultDevice));
+#else
     static CUcontext context = [] {
       CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
       CUcontext ctx;
@@ -99,9 +121,14 @@ public:
     }();
 
     CUDA_REPORT_IF_ERROR(cuCtxPushCurrent(context));
+#endif
   }
 
-  ~ScopedContext() { CUDA_REPORT_IF_ERROR(cuCtxPopCurrent(nullptr)); }
+  ~ScopedContext() {
+#if MLIR_ENABLE_CUDA_RUNNER_RT == 0
+    CUDA_REPORT_IF_ERROR(cuCtxPopCurrent(nullptr));
+#endif
+  }
 };
 
 #ifdef MLIR_ENABLE_CUDA_CUSPARSE
@@ -194,6 +221,25 @@ mgpuLaunchKernel(CUfunction function, intptr_t gridX, intptr_t gridY,
                                       blockY, blockZ, smem, stream, params,
                                       extra));
 }
+
+// The wrapper uses intptr_t instead of CUDA's unsigned int to match
+// the type of MLIR's index type. This avoids the need for casts in the
+// generated MLIR code.
+#if MLIR_ENABLE_CUDA_RUNNER_RT == 1
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuLaunchKernelRT(void *function, intptr_t gridX, intptr_t gridY,
+                   intptr_t gridZ, intptr_t blockX, intptr_t blockY,
+                   intptr_t blockZ, int32_t smem, CUstream stream,
+                   void **params, void **extra, size_t /*paramsCount*/) {
+  debug_print("Launching kernel, grid=%ld,%ld,%ld, "
+              "threads: %ld, %ld, %ld, "
+              "smem: %dkb\n",
+              gridX, gridY, gridZ, blockX, blockY, blockZ, smem);
+  CUDART_REPORT_IF_ERROR(cudaLaunchKernel(function, dim3(gridX, gridY, gridZ),
+                                          dim3(blockX, blockY, blockZ), params,
+                                          smem, stream));
+}
+#endif
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUstream mgpuStreamCreate() {
   ScopedContext scopedContext;
