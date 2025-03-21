@@ -211,8 +211,9 @@ endfunction()
 #  * ALIASES <string> ...
 #      List of aliases
 #  * INTERNAL_LINK_DEPENDENCIES <string> ...
-#      A list of extra bytecode files to link into the builtin library. Symbols
-#      from these link dependencies will be internalized during linking.
+#      A list of extra bytecode file's targets. The bitcode files will be linked
+#      into the builtin library. Symbols from these link dependencies will be
+#      internalized during linking.
 function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
@@ -313,8 +314,8 @@ function(add_libclc_builtin_set)
       INTERNALIZE
       TARGET ${builtins_link_lib_tgt}
       INPUTS $<TARGET_PROPERTY:${builtins_link_lib_tmp_tgt},TARGET_FILE>
-        ${ARG_INTERNAL_LINK_DEPENDENCIES}
-      DEPENDENCIES ${builtins_link_lib_tmp_tgt}
+        $<TARGET_PROPERTY:${ARG_INTERNAL_LINK_DEPENDENCIES},TARGET_FILE>
+      DEPENDENCIES ${builtins_link_lib_tmp_tgt} ${ARG_INTERNAL_LINK_DEPENDENCIES}
     )
   endif()
 
