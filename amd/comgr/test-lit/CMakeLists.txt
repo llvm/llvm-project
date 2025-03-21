@@ -42,5 +42,6 @@ add_comgr_lit_binary(source-to-bc-with-dev-libs c)
 add_comgr_lit_binary(spirv-translator c)
 add_comgr_lit_binary(compile-minimal-test c)
 add_comgr_lit_binary(spirv-to-reloc c)
+add_comgr_lit_binary(unbundle c)
 
 add_dependencies(check-comgr test-lit)
