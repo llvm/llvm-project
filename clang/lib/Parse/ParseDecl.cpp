@@ -3128,6 +3128,8 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
         TagName="exception" ; FixitTagName = "exception "; TagKind=tok::kw__Exception; break;
       case DeclSpec::TST_monitor:
         TagName="monitor" ; FixitTagName = "monitor "; TagKind=tok::kw__Monitor; break;
+      case DeclSpec::TST_event:
+        TagName="event" ; FixitTagName = "event "; TagKind=tok::kw__Event; break;
     }
 
     if (TagName) {
@@ -4696,6 +4698,7 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw__Task:
     case tok::kw__Exception:
     case tok::kw__Monitor:
+    case tok::kw__Event:
     case tok::kw_struct:
     case tok::kw___interface:
     case tok::kw_union: {

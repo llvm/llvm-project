@@ -3167,6 +3167,8 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
     return ElaboratedTypeKeyword::Exception;
   case TST_monitor:
     return ElaboratedTypeKeyword::Monitor;
+  case TST_event:
+    return ElaboratedTypeKeyword::Event;
   case TST_class:
     return ElaboratedTypeKeyword::Class;
   case TST_struct:
@@ -3191,6 +3193,8 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
     return TagTypeKind::Exception;
   case TST_monitor:
     return TagTypeKind::Monitor;
+  case TST_event:
+    return TagTypeKind::Event;
   case TST_class:
     return TagTypeKind::Class;
   case TST_struct:
@@ -3219,6 +3223,8 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
     return ElaboratedTypeKeyword::Exception;
   case TagTypeKind::Monitor:
     return ElaboratedTypeKeyword::Monitor;
+  case TagTypeKind::Event:
+    return ElaboratedTypeKeyword::Event;
   case TagTypeKind::Struct:
     return ElaboratedTypeKeyword::Struct;
   case TagTypeKind::Interface:
@@ -3244,6 +3250,8 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
     return TagTypeKind::Exception;
   case ElaboratedTypeKeyword::Monitor:
     return TagTypeKind::Monitor;
+  case ElaboratedTypeKeyword::Event:
+    return TagTypeKind::Event;
   case ElaboratedTypeKeyword::Struct:
     return TagTypeKind::Struct;
   case ElaboratedTypeKeyword::Interface:
@@ -3270,6 +3278,7 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
   case ElaboratedTypeKeyword::Exception:
   case ElaboratedTypeKeyword::Task:
   case ElaboratedTypeKeyword::Monitor:
+  case ElaboratedTypeKeyword::Event:
   case ElaboratedTypeKeyword::Struct:
   case ElaboratedTypeKeyword::Interface:
   case ElaboratedTypeKeyword::Union:
@@ -3303,6 +3312,8 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
     return "_Exception";
   case ElaboratedTypeKeyword::Monitor:
     return "_Monitor";
+  case ElaboratedTypeKeyword::Event:
+    return "_Event";
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");

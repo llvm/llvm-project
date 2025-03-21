@@ -532,6 +532,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       case TagTypeKind::Coroutine:
       case TagTypeKind::Task:
       case TagTypeKind::Monitor:
+      case TagTypeKind::Event:
       case TagTypeKind::Exception:
       case TagTypeKind::Struct:
         Out << "@ST";
@@ -552,6 +553,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
       case TagTypeKind::Class:
       case TagTypeKind::Coroutine:
       case TagTypeKind::Task:
+      case TagTypeKind::Event:
       case TagTypeKind::Struct:
         Out << "@SP";
         break;
@@ -571,6 +573,7 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
     case TagTypeKind::Class:
     case TagTypeKind::Coroutine:
     case TagTypeKind::Task:
+    case TagTypeKind::Event:
     case TagTypeKind::Struct:
       Out << "@S";
       break;

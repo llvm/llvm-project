@@ -1734,6 +1734,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       TagType = DeclSpec::TST_exception;
   else if (TagTokKind == tok::kw__Monitor)
       TagType = DeclSpec::TST_monitor;
+  else if (TagTokKind == tok::kw__Event)
+      TagType = DeclSpec::TST_event;
     
   else {
     assert(TagTokKind == tok::kw_union && "Not a class specifier");
@@ -3764,11 +3766,15 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                          SourceLocation AttrFixitLoc,
                                          ParsedAttributes &Attrs,
                                          unsigned TagType, Decl *TagDecl) {
-  assert((TagType == DeclSpec::TST_struct ||
-          TagType == DeclSpec::TST_interface ||
-          TagType == DeclSpec::TST_union || TagType == DeclSpec::TST_class ||
-          TagType == DeclSpec::TST_coroutine || TagType == DeclSpec::TST_task ||
-          TagType == DeclSpec::TST_exception || TagType == DeclSpec::TST_monitor)
+  assert((TagType == DeclSpec::TST_struct 
+          || TagType == DeclSpec::TST_interface 
+          || TagType == DeclSpec::TST_union 
+          || TagType == DeclSpec::TST_class 
+          || TagType == DeclSpec::TST_coroutine 
+          || TagType == DeclSpec::TST_task 
+          || TagType == DeclSpec::TST_exception 
+          || TagType == DeclSpec::TST_monitor 
+          || TagType == DeclSpec::TST_event)
           && "Invalid TagType!");
 
   llvm::TimeTraceScope TimeScope("ParseClass", [&]() {
@@ -3946,9 +3952,12 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   // HLSL: In HLSL members of a class are public by default.
   AccessSpecifier CurAS;
   if ((
-    TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_coroutine || 
-    TagType == DeclSpec::TST_task || TagType == DeclSpec::TST_exception || 
-    TagType == DeclSpec::TST_monitor) && !getLangOpts().HLSL
+    TagType == DeclSpec::TST_class 
+    || TagType == DeclSpec::TST_coroutine 
+    || TagType == DeclSpec::TST_task 
+    || TagType == DeclSpec::TST_exception 
+    || TagType == DeclSpec::TST_monitor
+    || TagType == DeclSpec::TST_event) && !getLangOpts().HLSL
   )
     CurAS = AS_private;
   else

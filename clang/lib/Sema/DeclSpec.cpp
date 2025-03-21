@@ -354,6 +354,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_task:
     case TST_exception:
     case TST_monitor:
+    case TST_event:
     case TST_decimal128:
     case TST_decimal32:
     case TST_decimal64:
@@ -593,6 +594,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_task:        return "task";
   case DeclSpec::TST_exception:   return "exception";
   case DeclSpec::TST_monitor:     return "monitor";
+  case DeclSpec::TST_event:       return "event";
   case DeclSpec::TST_union:       return "union";
   case DeclSpec::TST_struct:      return "struct";
   case DeclSpec::TST_interface:   return "__interface";

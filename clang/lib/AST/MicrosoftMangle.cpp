@@ -3248,6 +3248,7 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
   case TagTypeKind::Task:
   case TagTypeKind::Exception:
   case TagTypeKind::Monitor:
+  case TagTypeKind::Event:
     Out << 'V';
     break;
   case TagTypeKind::Enum:

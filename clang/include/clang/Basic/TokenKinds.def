@@ -336,6 +336,7 @@ KEYWORD(_Atomic                     , KEYALL|KEYNOOPENCL)
 KEYWORD(_Bool                       , KEYNOCXX)
 KEYWORD(_Complex                    , KEYALL)
 KEYWORD(_Generic                    , KEYALL)
+// uC++ tokens
 KEYWORD(_Coroutine                  , KEYALL)
 KEYWORD(_Accept                     , KEYALL)
 KEYWORD(or                          , KEYALL)
@@ -347,6 +348,7 @@ KEYWORD(_Monitor                    , KEYALL)
 KEYWORD(_Mutex                      , KEYALL)
 KEYWORD(_Nomutex                    , KEYALL)
 KEYWORD(_Else                       , KEYALL)
+KEYWORD(_Event                      , KEYALL)
 KEYWORD(_Select                     , KEYALL)
 // Note, C2y removed support for _Imaginary; we retain it as a keyword because
 // 1) it's a reserved identifier, so we're allowed to steal it, 2) there's no

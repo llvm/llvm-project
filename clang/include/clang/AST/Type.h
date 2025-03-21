@@ -6870,6 +6870,9 @@ enum class ElaboratedTypeKeyword {
 
   /// The "Exception" keyword also introduces elaborated-type specifier
   Exception,
+  
+  /// The "Exception" keyword also introduces elaborated-type specifier
+  Event,
 
   /// No keyword precedes the qualified type name.
   None
@@ -6902,7 +6905,10 @@ enum class TagTypeKind {
   Exception,
 
   /// The "_Monitor" keyword
-  Monitor
+  Monitor,
+  
+  /// The "_Monitor" keyword
+  Event
 };
 
 /// A helper class for Type nodes having an ElaboratedTypeKeyword.
