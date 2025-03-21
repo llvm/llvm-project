@@ -266,6 +266,10 @@ struct IntrinsicLibrary {
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
   void genFree(mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genFseek(std::optional<mlir::Type>,
+                              mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genFtell(std::optional<mlir::Type>,
+                              mlir::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
