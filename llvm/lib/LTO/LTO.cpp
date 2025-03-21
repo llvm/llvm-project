@@ -1435,6 +1435,8 @@ Error ThinBackendProc::emitFiles(
 }
 
 namespace {
+// Base class for ThinLTO backends that perform code generation and insert the
+// generated files back into the link.
 class CGThinBackend : public ThinBackendProc {
 protected:
   AddStreamFn AddStream;
