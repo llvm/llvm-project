@@ -1078,6 +1078,11 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
   std::replace(RootPathEscaped.begin(), RootPathEscaped.end(), '\\', '/');
   OS << "var RootPath = \"" << RootPathEscaped << "\";\n";
 
+  llvm::SmallString<128> Base(CDCtx.Base);
+  std::string BaseEscaped = Base.str().str();
+  std::replace(BaseEscaped.begin(), BaseEscaped.end(), '\\', '/');
+  OS << "var Base = \"" << BaseEscaped << "\";\n";
+
   CDCtx.Idx.sort();
   llvm::json::OStream J(OS, 2);
   std::function<void(Index)> IndexToJSON = [&](const Index &I) {
