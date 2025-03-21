@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringMap.h"
 
 using llvm::hlsl::ResourceClass;
-using llvm::hlsl::ResourceKind;
 
 namespace clang {
 
@@ -73,7 +72,7 @@ public:
                     AccessSpecifier Access = AccessSpecifier::AS_private);
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV, bool RawBuffer,
+  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 

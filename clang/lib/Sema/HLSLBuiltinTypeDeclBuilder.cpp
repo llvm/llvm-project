@@ -577,7 +577,7 @@ BuiltinTypeDeclBuilder::addMemberVariable(StringRef Name, QualType Type,
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC, ResourceKind RK,
+BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC,
                                         bool IsROV, bool RawBuffer,
                                         AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
@@ -595,10 +595,9 @@ BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC, ResourceKind RK,
       ElementTypeInfo
           ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
           : nullptr};
-  Attr *ResourceAttr = HLSLResourceAttr::CreateImplicit(Ctx, RK);
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                        AttributedResTy))
-    addMemberVariable("__handle", AttributedResTy, {ResourceAttr}, Access);
+    addMemberVariable("__handle", AttributedResTy, {}, Access);
   return *this;
 }
 
