@@ -1530,7 +1530,7 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  const ConstantInt *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
+  auto *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
   if (!CmpZero || !CmpZero->isZero())
     return nullptr;
 
