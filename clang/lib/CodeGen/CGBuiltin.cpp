@@ -19532,6 +19532,21 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         getDotProductIntrinsic(CGM.getHLSLRuntime(), VecTy0->getElementType()),
         {Op0, Op1}, nullptr, "hlsl.dot");
   }
+  case Builtin::BI__builtin_hlsl_dot2add: {
+    llvm::Triple::ArchType Arch = CGM.getTarget().getTriple().getArch();
+    if (Arch != llvm::Triple::dxil) {
+      llvm_unreachable("Intrinsic dot2add can be executed as a builtin only on dxil");
+    }
+    Value *A = EmitScalarExpr(E->getArg(0));
+    Value *B = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+
+    //llvm::Intrinsic::dx_##IntrinsicPostfix
+    Intrinsic::ID ID = llvm ::Intrinsic::dx_dot2add;
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/C->getType(), ID, ArrayRef<Value *>{A, B, C}, nullptr,
+        "hlsl.dot2add");
+  }
   case Builtin::BI__builtin_hlsl_dot4add_i8packed: {
     Value *A = EmitScalarExpr(E->getArg(0));
     Value *B = EmitScalarExpr(E->getArg(1));
