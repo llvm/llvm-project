@@ -407,7 +407,6 @@ enum NodeType : unsigned {
   RI_VZIPEVEN_VL,
   RI_VZIPODD_VL,
   RI_VZIP2A_VL,
-  RI_VZIP2B_VL,
   RI_VUNZIP2A_VL,
   RI_VUNZIP2B_VL,
 
