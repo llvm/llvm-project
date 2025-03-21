@@ -394,6 +394,9 @@ endif()
 set(LIBOMP_USE_HIER_SCHED FALSE CACHE BOOL
   "Hierarchical scheduling support?")
 
+# Enable compilation of global task throttling
+set(LIBOMP_KMP_TASK_THROTTLING_GLOBAL FALSE CACHE BOOL "A global task counter to bound tasking memory usage")
+
 # Setting final library name
 set(LIBOMP_DEFAULT_LIB_NAME libomp)
 if(${PROFILE_LIBRARY})
@@ -455,6 +458,7 @@ if(${OPENMP_STANDALONE_BUILD})
   libomp_say("Use quad precision   -- ${LIBOMP_USE_QUAD_PRECISION}")
   libomp_say("Use Hwloc library    -- ${LIBOMP_USE_HWLOC}")
   libomp_say("Use OMPX-taskgraph   -- ${LIBOMP_OMPX_TASKGRAPH}")
+  libomp_say("Use Task Throttling Global -- ${LIBOMP_KMP_TASK_THROTTLING_GLOBAL}")
 endif()
 
 add_subdirectory(src)
