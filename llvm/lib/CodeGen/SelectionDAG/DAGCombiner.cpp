@@ -13949,8 +13949,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       // If the trunc wasn't legal, try to fold to (sext_inreg (anyext x))
       if ((!LegalTypes || TLI.isTypeLegal(VT))) {
         SDValue ExtSrc = DAG.getAnyExtOrTrunc(N00, DL, VT);
-        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT,
-                           {ExtSrc, N0->getOperand(1)});
+        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ExtSrc,
+                           N0->getOperand(1));
       }
     }
   }
