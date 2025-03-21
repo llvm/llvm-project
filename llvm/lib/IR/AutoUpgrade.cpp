@@ -645,8 +645,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
 
   if (Name == "thread.pointer") {
     // '(arm|aarch64).thread.pointer'.
-    NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                              Intrinsic::thread_pointer);
+    NewFn = Intrinsic::getOrInsertDeclaration(
+        F->getParent(), Intrinsic::thread_pointer, F->getReturnType());
     return true;
   }
 
@@ -1415,6 +1415,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   case 's':
     if (Name == "stackprotectorcheck") {
       NewFn = nullptr;
+      return true;
+    }
+    break;
+
+  case 't':
+    if (Name == "thread.pointer") {
+      NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::thread_pointer, F->getReturnType());
       return true;
     }
     break;

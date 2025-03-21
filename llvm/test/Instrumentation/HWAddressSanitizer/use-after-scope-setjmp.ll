@@ -12,7 +12,7 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-LABEL: define dso_local noundef i1 @_Z6targetv
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer()
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer.p0()
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
