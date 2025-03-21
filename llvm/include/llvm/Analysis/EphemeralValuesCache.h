@@ -23,35 +23,13 @@ class Function;
 class AssumptionCache;
 class Value;
 
-/// A cache of ephemeral values within a function.
-class EphemeralValuesCache {
-  SmallPtrSet<const Value *, 32> EphValues;
-  Function &F;
-  AssumptionCache &AC;
-  bool Collected = false;
-
-  void collectEphemeralValues();
-
-public:
-  EphemeralValuesCache(Function &F, AssumptionCache &AC) : F(F), AC(AC) {}
-  void clear() {
-    EphValues.clear();
-    Collected = false;
-  }
-  const SmallPtrSetImpl<const Value *> &ephValues() {
-    if (!Collected)
-      collectEphemeralValues();
-    return EphValues;
-  }
-};
-
 class EphemeralValuesAnalysis
     : public AnalysisInfoMixin<EphemeralValuesAnalysis> {
   friend AnalysisInfoMixin<EphemeralValuesAnalysis>;
   static AnalysisKey Key;
 
 public:
-  using Result = EphemeralValuesCache;
+  using Result = SmallPtrSet<const Value *, 32>;
   Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
