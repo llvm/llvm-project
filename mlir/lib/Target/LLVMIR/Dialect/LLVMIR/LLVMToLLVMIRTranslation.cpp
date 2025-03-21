@@ -545,10 +545,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     else
       llvmValue = moduleTranslation.lookupFunction(function.getName());
 
-    auto gv = dyn_cast_or_null<llvm::GlobalValue>(llvmValue);
-    assert(gv && "expected LLVM IR global value");
-    moduleTranslation.mapValue(dsoLocalEquivalentOp.getResult(),
-                               llvm::DSOLocalEquivalent::get(gv));
+    moduleTranslation.mapValue(
+        dsoLocalEquivalentOp.getResult(),
+        llvm::DSOLocalEquivalent::get(cast<llvm::GlobalValue>(llvmValue)));
     return success();
   }
 
