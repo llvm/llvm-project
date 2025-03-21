@@ -1224,28 +1224,28 @@ bool LoopInterchangeProfitability::isProfitable(
     RuleOrder[2] = RuleTy::PerInstrOrderCost;
   }
 
-  std::optional<bool> ShouldInterchange;
+  std::optional<bool> shouldInterchange;
   for (RuleTy RT : RuleOrder) {
     switch (RT) {
     case RuleTy::PerLoopCacheAnalysis:
-      ShouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
+      shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
       break;
     case RuleTy::PerInstrOrderCost:
-      ShouldInterchange = isProfitablePerInstrOrderCost();
+      shouldInterchange = isProfitablePerInstrOrderCost();
       break;
     case RuleTy::ForVectorization:
-      ShouldInterchange =
+      shouldInterchange =
           isProfitableForVectorization(InnerLoopId, OuterLoopId, DepMatrix);
       break;
     }
 
     // If this rule could determine the profitability, don't call subsequent
     // rules.
-    if (ShouldInterchange.has_value())
+    if (shouldInterchange.has_value())
       break;
   }
 
-  if (!ShouldInterchange.has_value()) {
+  if (!shouldInterchange.has_value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
                                       InnerLoop->getStartLoc(),
@@ -1254,7 +1254,7 @@ bool LoopInterchangeProfitability::isProfitable(
                 "interchange.";
     });
     return false;
-  } else if (!ShouldInterchange.value()) {
+  } else if (!shouldInterchange.value()) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "InterchangeNotProfitable",
                                       InnerLoop->getStartLoc(),
