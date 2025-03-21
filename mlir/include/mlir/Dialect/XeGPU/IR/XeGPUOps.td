@@ -571,7 +571,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
   let hasVerifier = 1;
 }
 
-def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [MemoryEffects<[MemRead]>]> {
+def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", []> {
   let summary = "prefetches a set of scattered data points to cache";
 
   let description = [{
