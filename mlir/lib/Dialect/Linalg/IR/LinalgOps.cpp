@@ -4250,17 +4250,36 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   SmallVector<Value> yields;
   Value result;
 
+  TypeFn castVal = TypeFn::cast_signed;
+  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
+    return attr.getName() == "cast";
+  });
+
+  if (castIter != attrs.end()) {
+    if (auto attr = llvm::dyn_cast<TypeFnAttr>(castIter->getValue()))
+      castVal = attr.getValue();
+  }
+
   if (arityGroup == ElementwiseArityGroup::Unary) {
-    result = helper.buildUnaryFn(kind.unaryFn, block.getArgument(0));
+    Value val0 = helper.buildTypeFn(castVal, block.getArgument(1).getType(),
+                                    block.getArgument(0));
+    result = helper.buildUnaryFn(kind.unaryFn, val0);
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
-    result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
-                                  block.getArgument(1));
+    Value val0 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
+                                    block.getArgument(0));
+    Value val1 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
+                                    block.getArgument(1));
+    result = helper.buildBinaryFn(kind.binaryFn, val0, val1);
 
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
-    result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
-                                   block.getArgument(1), block.getArgument(2));
-
+    // select op's select-arg (block arg 0) must remain bool.
+    Value val1 = helper.buildTypeFn(castVal, block.getArgument(3).getType(),
+                                    block.getArgument(1));
+    Value val2 = helper.buildTypeFn(castVal, block.getArgument(3).getType(),
+                                    block.getArgument(2));
+    result =
+        helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0), val1, val2);
   } else
     assert(false && "found unhandled category in elemwise");
 
