@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -36,6 +37,7 @@
 #include <numeric>
 #include <queue>
 #include <set>
+#include <tuple>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -3692,10 +3694,13 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
-// If `I` is a load instruction, used only by shufflevector instructions with
-// poison values, attempt to shrink the load to only the lanes being used.
+// Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
-  auto *OldLoad = dyn_cast<LoadInst>(&I);
+  auto *InputShuffle = dyn_cast<ShuffleVectorInst>(&I);
+  if (!InputShuffle)
+    return {};
+
+  auto *OldLoad = dyn_cast<LoadInst>(InputShuffle->getOperand(0u));
   if (!OldLoad || !OldLoad->isSimple())
     return false;
 
@@ -3731,7 +3736,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       auto NumElems = int(Op0Ty->getNumElements());
 
       for (auto Index : Mask) {
-        if (Index >= 0 && Index < NumElems) {
+        if (Index >= 0) {
+          Index %= NumElems;
           OutputRange.first = std::min(Index, OutputRange.first);
           OutputRange.second = std::max(Index, OutputRange.second);
         }
@@ -3760,7 +3766,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
           Builder.CreateAlignedLoad(NewVecTy, PtrOp, OldLoad->getAlign()));
       NewLoad->copyMetadata(I);
 
-      // Compare cost of old and new ops.
+      // Calculate costs of old and new ops.
       auto OldCost = TTI.getMemoryOpCost(
           Instruction::Load, OldLoad->getType(), OldLoad->getAlign(),
           OldLoad->getPointerAddressSpace(), CostKind);
@@ -3768,14 +3774,25 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
           Instruction::Load, NewLoad->getType(), NewLoad->getAlign(),
           NewLoad->getPointerAddressSpace(), CostKind);
 
+      using UseEntry = std::pair<ShuffleVectorInst*, std::vector<int>>;
+      auto NewUses = SmallVector<UseEntry, 4u>();
+      auto SizeDiff = OldSize - NewSize;
+
       for (auto &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
-        auto Mask = Shuffle->getShuffleMask();
+        auto OldMask = Shuffle->getShuffleMask();
 
-        OldCost +=
-            TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, Mask, CostKind);
-        NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, NewVecTy, Mask,
-                                      CostKind);
+        // Create entry for new use.
+        NewUses.push_back({Shuffle, {}});
+        auto &NewMask = NewUses.back().second;
+        for (auto Index : OldMask)
+          NewMask.push_back(Index >= int(OldSize) ? Index - SizeDiff : Index);
+
+        // Update costs.
+        OldCost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc, VecTy, OldMask, CostKind);
+        NewCost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc, NewVecTy, NewMask, CostKind);
       }
 
       if (OldCost < NewCost || !NewCost.isValid()) {
@@ -3783,14 +3800,15 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return false;
       }
 
-      // Replace all users.
-      for (auto &Use : I.uses()) {
-        auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+      // Replace all uses.
+      for (auto &Use : NewUses) {
+        auto *Shuffle = Use.first;
+        auto &NewMask = Use.second;
 
         Builder.SetInsertPoint(Shuffle);
         Builder.SetCurrentDebugLocation(Shuffle->getDebugLoc());
         auto *NewShuffle = Builder.CreateShuffleVector(
-            NewLoad, PoisonValue::get(NewVecTy), Shuffle->getShuffleMask());
+            NewLoad, PoisonValue::get(NewVecTy), NewMask);
 
         replaceValue(*Shuffle, *NewShuffle);
       }
@@ -3876,6 +3894,7 @@ bool VectorCombine::run() {
         MadeChange |= foldShuffleOfIntrinsics(I);
         MadeChange |= foldSelectShuffle(I);
         MadeChange |= foldShuffleToIdentity(I);
+        MadeChange |= shrinkLoadForShuffles(I);
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
@@ -3884,9 +3903,6 @@ bool VectorCombine::run() {
       case Instruction::Or:
       case Instruction::Xor:
         MadeChange |= foldBitOpOfBitcasts(I);
-        break;
-      case Instruction::Load:
-        MadeChange |= shrinkLoadForShuffles(I);
         break;
       default:
         MadeChange |= shrinkType(I);
