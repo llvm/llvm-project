@@ -10,7 +10,7 @@ types:
 enums: []
 functions: []
 objects:
-  - object_name: efi_system_table
+  - object_name: __llvm_libc_efi_system_table
     object_type: EFI_SYSTEM_TABLE *
-  - object_name: efi_image_handle
+  - object_name: __llvm_libc_efi_image_handle
     object_type: EFI_HANDLE

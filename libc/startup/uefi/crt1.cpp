@@ -1,10 +1,10 @@
-//===-- Implementation of crt for UEFI ----------------------------------===//
+//===-- Implementation of crt for UEFI ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "include/llvm-libc-macros/stdlib-macros.h"
 #include "include/llvm-libc-types/EFI_HANDLE.h"
@@ -12,18 +12,21 @@
 #include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
 #include "src/__support/macros/config.h"
 
-EFI_HANDLE efi_image_handle;
-EFI_SYSTEM_TABLE *efi_system_table;
+extern "C" {
+EFI_HANDLE __llvm_libc_efi_image_handle;
+EFI_SYSTEM_TABLE *__llvm_libc_efi_system_table;
 
-extern "C" int main(int argc, char **argv, char **envp);
+int main(int argc, char **argv, char **envp);
 
-extern "C" EFI_STATUS EfiMain(EFI_HANDLE ImageHandle,
-                              EFI_SYSTEM_TABLE *SystemTable) {
-  efi_image_handle = ImageHandle;
-  efi_system_table = SystemTable;
+EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
+  __llvm_libc_efi_image_handle = ImageHandle;
+  __llvm_libc_efi_system_table = SystemTable;
 
-  main(0, NULL, NULL);
+  // TODO: we need the EFI_SHELL_PROTOCOL, malloc, free, and UTF16 -> UTF8
+  // conversion.
+  main(0, nullptr, nullptr);
 
   // TODO: convert the return value of main to EFI_STATUS
   return 0; // TODO: EFI_SUCCESS
+}
 }
