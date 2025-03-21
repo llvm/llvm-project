@@ -1,4 +1,4 @@
-//===- bolt/Passes/NonPacProtectedRetAnalysis.h -----------------*- C++ -*-===//
+//===- bolt/Passes/PAuthGadgetScanner.h -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef BOLT_PASSES_NONPACPROTECTEDRETANALYSIS_H
-#define BOLT_PASSES_NONPACPROTECTEDRETANALYSIS_H
+#ifndef BOLT_PASSES_PAUTHGADGETSCANNER_H
+#define BOLT_PASSES_PAUTHGADGETSCANNER_H
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
@@ -173,63 +173,59 @@ struct MCInstReference {
 
 raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
-struct GeneralDiagnostic {
-  std::string Text;
-  GeneralDiagnostic(const std::string &Text) : Text(Text) {}
-  bool operator==(const GeneralDiagnostic &RHS) const {
-    return Text == RHS.Text;
-  }
-};
-
-raw_ostream &operator<<(raw_ostream &OS, const GeneralDiagnostic &Diag);
-
-namespace NonPacProtectedRetAnalysis {
-struct Annotation {
-  MCInstReference RetInst;
-  Annotation(MCInstReference RetInst) : RetInst(RetInst) {}
-  virtual bool operator==(const Annotation &RHS) const {
-    return RetInst == RHS.RetInst;
-  }
-  Annotation &operator=(const Annotation &Other) {
-    if (this == &Other)
-      return *this;
-    RetInst = Other.RetInst;
-    return *this;
-  }
-  virtual ~Annotation() {}
-  virtual void generateReport(raw_ostream &OS,
-                              const BinaryContext &BC) const = 0;
-};
-
-struct Gadget : public Annotation {
-  std::vector<MCInstReference> OverwritingRetRegInst;
-  virtual bool operator==(const Gadget &RHS) const {
-    return Annotation::operator==(RHS) &&
-           OverwritingRetRegInst == RHS.OverwritingRetRegInst;
-  }
-  Gadget(MCInstReference RetInst,
-         const std::vector<MCInstReference> &OverwritingRetRegInst)
-      : Annotation(RetInst), OverwritingRetRegInst(OverwritingRetRegInst) {}
-  virtual void generateReport(raw_ostream &OS,
-                              const BinaryContext &BC) const override;
-};
-
-struct GenDiag : public Annotation {
-  GeneralDiagnostic Diag;
-  virtual bool operator==(const GenDiag &RHS) const {
-    return Annotation::operator==(RHS) && Diag == RHS.Diag;
-  }
-  GenDiag(MCInstReference RetInst, const std::string &Text)
-      : Annotation(RetInst), Diag(Text) {}
-  virtual void generateReport(raw_ostream &OS,
-                              const BinaryContext &BC) const override;
-};
+namespace PAuthGadgetScanner {
 
 class PacRetAnalysis;
+struct State;
+
+/// Description of a gadget kind that can be detected. Intended to be
+/// statically allocated to be attached to reports by reference.
+class GadgetKind {
+  const char *Description;
+
+public:
+  GadgetKind(const char *Description) : Description(Description) {}
+
+  const StringRef getDescription() const { return Description; }
+};
+
+/// Base report located at some instruction, without any additional information.
+struct Report {
+  MCInstReference Location;
+
+  Report(MCInstReference Location) : Location(Location) {}
+  virtual ~Report() {}
+
+  virtual void generateReport(raw_ostream &OS,
+                              const BinaryContext &BC) const = 0;
+
+  void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
+                      StringRef IssueKind) const;
+};
+
+struct GadgetReport : public Report {
+  const GadgetKind &Kind;
+  std::vector<MCInstReference> OverwritingInstrs;
+
+  GadgetReport(const GadgetKind &Kind, MCInstReference Location,
+               std::vector<MCInstReference> OverwritingInstrs)
+      : Report(Location), Kind(Kind), OverwritingInstrs(OverwritingInstrs) {}
+
+  void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
+};
+
+/// Report with a free-form message attached.
+struct GenericReport : public Report {
+  std::string Text;
+  GenericReport(MCInstReference Location, const std::string &Text)
+      : Report(Location), Text(Text) {}
+  virtual void generateReport(raw_ostream &OS,
+                              const BinaryContext &BC) const override;
+};
 
 struct FunctionAnalysisResult {
   SmallSet<MCPhysReg, 1> RegistersAffected;
-  std::vector<std::shared_ptr<Annotation>> Diagnostics;
+  std::vector<std::shared_ptr<Report>> Diagnostics;
 };
 
 class Analysis : public BinaryFunctionPass {
@@ -245,13 +241,13 @@ class Analysis : public BinaryFunctionPass {
 public:
   explicit Analysis() : BinaryFunctionPass(false) {}
 
-  const char *getName() const override { return "non-pac-protected-rets"; }
+  const char *getName() const override { return "pauth-gadget-scanner"; }
 
   /// Pass entry point
   Error runOnFunctions(BinaryContext &BC) override;
 };
 
-} // namespace NonPacProtectedRetAnalysis
+} // namespace PAuthGadgetScanner
 } // namespace bolt
 } // namespace llvm
 
