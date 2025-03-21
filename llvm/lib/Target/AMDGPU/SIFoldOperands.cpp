@@ -1454,6 +1454,11 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
     if (!SubstOp || !SubstOp->isReg())
       return false;
 
+    // Do not substitute +0/-0 imm with register from comparison.
+    if ((CmpValImm == 0 || CmpValImm == 0xffffffff80000000) &&
+        AMDGPU::isSISrcFPOperand(PredI->getDesc(), SubstOp->getOperandNo()))
+      return false;
+
     LLVM_DEBUG(dbgs() << "Folded " << MI << " into ");
     SrcOp->setReg(SubstOp->getReg());
     LLVM_DEBUG(dbgs() << MI);

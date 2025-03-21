@@ -2,29 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck %s -check-prefix=GFX9
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030  < %s | FileCheck %s -check-prefix=GFX10
 
-define bfloat @bf16_oeq_v_i(bfloat %arg, bfloat %arg1) {
-; GFX9-LABEL: bf16_oeq_v_i:
-; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GFX9-NEXT:    s_mov_b32 s4, 0x42420000
-; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, s4, v2
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-LABEL: bf16_oeq_v_i:
-; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GFX10-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0x42420000, v2
-; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
-; GFX10-NEXT:    s_setpc_b64 s[30:31]
-bb:
-  %fcmp = fcmp oeq bfloat %arg, 0xR4242
-  %select = select i1 %fcmp, bfloat %arg, bfloat %arg1
-  ret bfloat %select
-}
-
 define float @f32_oeq_v_i(float %arg, float %arg1) {
 ; GFX9-LABEL: f32_oeq_v_i:
 ; GFX9:       ; %bb.0: ; %bb
@@ -439,4 +416,182 @@ bb:
   %fcmp = fcmp oeq half %arg, 0.000000e+00
   %select = select i1 %fcmp, half %arg, half %arg1
   ret half %select
+}
+
+define float @f32_oeq_negz_i(float %arg, float %arg1) {
+; GFX9-LABEL: f32_oeq_negz_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_brev_b32 s4, 1
+; GFX9-NEXT:    v_bfrev_b32_e32 v2, 1
+; GFX9-NEXT:    v_cmp_neq_f32_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f32_oeq_negz_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0x80000000, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x80000000, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq float %arg, -0.000000e+00
+  %select = select i1 %fcmp, float -0.000000e+00, float %arg1
+  ret float %select
+}
+
+define float @f32_oeq_negz_z(float %arg, float %arg1) {
+; GFX9-LABEL: f32_oeq_negz_z:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_brev_b32 s4, 1
+; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f32_oeq_negz_z:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0x80000000, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq float %arg, -0.000000e+00
+  %select = select i1 %fcmp, float %arg, float %arg1
+  ret float %select
+}
+
+define half @f16_oeq_negz_i(half %arg, half %arg1) {
+; GFX9-LABEL: f16_oeq_negz_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x8000
+; GFX9-NEXT:    v_cmp_neq_f16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f16_oeq_negz_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_neq_f16_e32 vcc_lo, 0x8000, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x8000, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq half %arg, -0.000000e+00
+  %select = select i1 %fcmp, half -0.000000e+00, half %arg1
+  ret half %select
+}
+
+define half @f16_oeq_negz_z(half %arg, half %arg1) {
+; GFX9-LABEL: f16_oeq_negz_z:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x8000
+; GFX9-NEXT:    v_cmp_eq_f16_e32 vcc, s4, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f16_oeq_negz_z:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_f16_e32 vcc_lo, 0x8000, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq half %arg, -0.000000e+00
+  %select = select i1 %fcmp, half %arg, half %arg1
+  ret half %select
+}
+
+define double @f64_oeq_z_i(double %arg, double %arg1) {
+; GFX9-LABEL: f64_oeq_z_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_neq_f64_e32 vcc, 0, v[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f64_oeq_z_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_neq_f64_e32 vcc_lo, 0, v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq double %arg, 0.000000e+00
+  %select = select i1 %fcmp, double 0.000000e+00, double %arg1
+  ret double %select
+}
+
+define double @f64_oeq_z_z(double %arg, double %arg1) {
+; GFX9-LABEL: f64_oeq_z_z:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_cmp_eq_f64_e32 vcc, 0, v[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f64_oeq_z_z:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq double %arg, 0.000000e+00
+  %select = select i1 %fcmp, double %arg, double %arg1
+  ret double %select
+}
+
+define double @f64_oeq_negz_i(double %arg, double %arg1) {
+; GFX9-LABEL: f64_oeq_negz_i:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0
+; GFX9-NEXT:    s_brev_b32 s5, 1
+; GFX9-NEXT:    v_cmp_neq_f64_e32 vcc, s[4:5], v[0:1]
+; GFX9-NEXT:    v_bfrev_b32_e32 v1, 1
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f64_oeq_negz_i:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_neq_f64_e32 vcc_lo, 0x80000000, v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x80000000, v3, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq double %arg, -0.000000e+00
+  %select = select i1 %fcmp, double -0.000000e+00, double %arg1
+  ret double %select
+}
+
+define double @f64_oeq_negz_z(double %arg, double %arg1) {
+; GFX9-LABEL: f64_oeq_negz_z:
+; GFX9:       ; %bb.0: ; %bb
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0
+; GFX9-NEXT:    s_brev_b32 s5, 1
+; GFX9-NEXT:    v_cmp_eq_f64_e32 vcc, s[4:5], v[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: f64_oeq_negz_z:
+; GFX10:       ; %bb.0: ; %bb
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0x80000000, v[0:1]
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %fcmp = fcmp oeq double %arg, -0.000000e+00
+  %select = select i1 %fcmp, double %arg, double %arg1
+  ret double %select
 }
