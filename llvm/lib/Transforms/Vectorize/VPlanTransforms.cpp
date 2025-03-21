@@ -30,9 +30,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 
-#define LV_NAME "loop-vectorize"
-#define DEBUG_TYPE LV_NAME
-
 using namespace llvm;
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
@@ -2364,7 +2361,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
-  auto Narrow = [](VPRecipeBase *R) -> VPValue * {
+  auto NarrowOp = [](VPRecipeBase *R) -> VPValue * {
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
       // process one original iteration.
@@ -2392,11 +2389,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (auto *Lane0 = dyn_cast<VPWidenRecipe>(
             StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
       for (unsigned Idx = 0, E = Lane0->getNumOperands(); Idx != E; ++Idx)
-        Lane0->setOperand(Idx,
-                          Narrow(Lane0->getOperand(Idx)->getDefiningRecipe()));
+        Lane0->setOperand(
+            Idx, NarrowOp(Lane0->getOperand(Idx)->getDefiningRecipe()));
       Res = Lane0;
     } else {
-      Res = Narrow(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+      Res = NarrowOp(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
     }
 
     auto *S = new VPWidenStoreRecipe(
