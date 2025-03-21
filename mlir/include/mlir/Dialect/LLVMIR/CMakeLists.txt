@@ -54,6 +54,12 @@ mlir_tablegen(BasicPtxBuilderInterface.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRBasicPtxBuilderInterfaceIncGen)
 add_dependencies(mlir-headers MLIRBasicPtxBuilderInterfaceIncGen)
 
+set(LLVM_TARGET_DEFINITIONS NVVMTraits.td)
+mlir_tablegen(NVVMTraits.h.inc -gen-op-interface-decls)
+mlir_tablegen(NVVMTraits.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRNVVMTraitsIncGen)
+add_dependencies(mlir-headers MLIRNVVMTraitsIncGen)
+
 add_mlir_dialect(NVVMOps nvvm)
 add_mlir_doc(NVVMOps NVVMDialect Dialects/ -gen-dialect-doc -dialect=nvvm)
 set(LLVM_TARGET_DEFINITIONS NVVMOps.td)

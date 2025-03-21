@@ -18,6 +18,7 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1552,7 +1553,7 @@ LogicalResult
 NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
                        StringRef features, DictionaryAttr flags,
-                       ArrayAttr files) {
+                       ArrayAttr files, bool verifyTarget) {
   if (optLevel < 0 || optLevel > 3) {
     emitError() << "The optimization level must be a number between 0 and 3.";
     return failure();
@@ -1571,6 +1572,30 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     emitError() << "All the elements in the `link` array must be strings.";
     return failure();
   }
+  return success();
+}
+
+LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
+  if (!getVerifyTarget())
+    return success();
+
+  auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
+  if (!gpuModuleOp)
+    return emitError(gpuModule->getLoc(),
+                     "NVVM target attribute must be attached to a GPU module");
+
+  NVVMCheckSMVersion targetSMVersion(getChip());
+  gpuModuleOp->walk([&](Operation *op) {
+    if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
+      NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
+      if (!requirement.isCompatible(targetSMVersion)) {
+        op->emitOpError() << "is not supported on " << getChip();
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+
   return success();
 }
 
