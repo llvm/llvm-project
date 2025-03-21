@@ -1516,8 +1516,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   SmallVector<Instruction *, 4> LifetimeMarkers;
   SmallSet<Instruction *, 4> NoAliasInstrs;
   bool SrcNotDom = false;
-  SmallSet<Instruction *, 4> SrcAllocaInstUsers;
-  SmallSet<Instruction *, 4> DestAllocaInstUsers;
+  SmallSet<Instruction *, 4> OptimizedAllocaInstUsers;
 
   // Recursively track the user and check whether modified alias exist.
   auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
@@ -1571,7 +1570,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
               continue;
             }
           }
-          if (UI != Store && UI->hasMetadata(LLVMContext::MD_tbaa))
+          if (UI != Store && (UI->hasMetadata(LLVMContext::MD_tbaa) ||
+                              UI->hasMetadata(LLVMContext::MD_tbaa_struct)))
             AllocaInstUsersWithTBAA.insert(UI);
           if (UI->hasMetadata(LLVMContext::MD_noalias))
             NoAliasInstrs.insert(UI);
@@ -1626,7 +1626,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   };
 
   if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback,
-                                 DestAllocaInstUsers))
+                                 OptimizedAllocaInstUsers))
     return false;
   // Bailout if Dest may have any ModRef before Store.
   if (!ReachabilityWorklist.empty() &&
@@ -1653,7 +1653,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   };
 
   if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback,
-                                 SrcAllocaInstUsers))
+                                 OptimizedAllocaInstUsers))
     return false;
 
   // We can do the transformation. First, move the SrcAlloca to the start of the
@@ -1687,12 +1687,10 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   for (Instruction *I : NoAliasInstrs)
     I->setMetadata(LLVMContext::MD_noalias, nullptr);
 
-  // If we merge two allocas we need to uniform alias tags as well
-  if (!SrcAllocaInstUsers.empty()) {
-    MDNode *mergeTBAA =
-        (*SrcAllocaInstUsers.begin())->getMetadata(LLVMContext::MD_tbaa);
-    for (Instruction *It : DestAllocaInstUsers)
-      It->setMetadata(LLVMContext::MD_tbaa, mergeTBAA);
+  // Remove !tbaa and !tbaa_struct from the metadata, since they are invalid.
+  for (Instruction *I : OptimizedAllocaInstUsers) {
+    I->setMetadata(LLVMContext::MD_tbaa, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
   LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");

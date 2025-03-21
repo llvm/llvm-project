@@ -4,70 +4,74 @@
 define void @test() local_unnamed_addr {
 ; CHECK-LABEL: define void @test() local_unnamed_addr {
 ; CHECK-NEXT:    [[TEST_ARRAY_B:%.*]] = alloca [31 x float], align 4
-; CHECK-NEXT:    br label %[[INIT_LOOP:.*]]
-; CHECK:       [[INIT_LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[INIT_LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TEST_ARRAY_B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float 0x3E6AA51880000000, ptr [[TMP1]], align 4, !tbaa [[TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[DOTPREHEADER55_PREHEADER:.*]], label %[[INIT_LOOP]]
-; CHECK:       [[_PREHEADER55_PREHEADER:.*:]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV73:%.*]] = phi i64 [ 0, %[[DOTPREHEADER55_PREHEADER]] ], [ [[INDVARS_IV_NEXT74:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT74]] = add nuw nsw i64 [[INDVARS_IV73]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TEST_ARRAY_B]], i64 [[INDVARS_IV73]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[EXITCOND76_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT74]], 32
-; CHECK-NEXT:    br i1 [[EXITCOND76_NOT]], label %[[LOOP]], [[DOT_CRIT_EDGE56:label %.*]]
-; CHECK:       [[__CRIT_EDGE56:.*:]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TEST_ARRAY_B]], i64 1
+; CHECK-NEXT:    store float 0x3E6AA51880000000, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TEST_ARRAY_B]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %test_array_a = alloca [31 x float], align 4
   %test_array_b = alloca [31 x float], align 4
-  br label %init_loop
-
-init_loop:
-  %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %init_loop ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %1 = getelementptr float, ptr %test_array_b, i64 %indvars.iv
-  store float 0x3E6AA51880000000, ptr %1, align 4, !tbaa !12
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 32
-  br i1 %exitcond.not, label %.preheader55.preheader, label %init_loop
-
-.preheader55.preheader:
+  %1 = getelementptr float, ptr %test_array_b, i64 1
+  store float 0x3E6AA51880000000, ptr %1, align 4, !tbaa !4
   call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(124) %test_array_a, ptr noundef nonnull align 4 dereferenceable(124) %test_array_b, i64 124, i1 false)
-  br label %loop
-
-loop:                                              ; preds = %.preheader, %211
-  %indvars.iv73 = phi i64 [ 0, %.preheader55.preheader ], [ %indvars.iv.next74, %loop ]
-  %indvars.iv.next74 = add nuw nsw i64 %indvars.iv73, 1
-  %2 = getelementptr float, ptr %test_array_a, i64 %indvars.iv73
-  %3 = load float, ptr %2, align 4, !tbaa !31
-  %exitcond76.not = icmp eq i64 %indvars.iv.next74, 32
-  br i1 %exitcond76.not, label %loop, label %._crit_edge56
-
-._crit_edge56:                                    ; preds = %loop, %._crit_edge
+  %2 = getelementptr float, ptr %test_array_a, i64 1
+  %3 = load float, ptr %2, align 4, !tbaa !7
   ret void
 }
 
-; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg)
+%struct.Outer = type { float, double, %struct.Inner }
+%struct.Inner = type { i32, float }
 
-!7 = !{!"any data access", !8, i64 0}
-!8 = !{!"any access", !9, i64 0}
-!9 = !{!"Flang function root test"}
-!12 = !{!13, !13, i64 0}
-!13 = !{!"allocated data/test_array_a", !14, i64 0}
-!14 = !{!"allocated data", !7, i64 0}
-!31 = !{!32, !32, i64 0}
-!32 = !{!"allocated data/test_array_b", !14, i64 0}
-;.
-; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
-; CHECK: [[META1]] = !{!"allocated data/test_array_a", [[META2:![0-9]+]], i64 0}
-; CHECK: [[META2]] = !{!"allocated data", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"any data access", [[META4:![0-9]+]], i64 0}
-; CHECK: [[META4]] = !{!"any access", [[META5:![0-9]+]], i64 0}
-; CHECK: [[META5]] = !{!"Flang function root test"}
-;.
+; Function Attrs: nounwind uwtable
+define dso_local float @f() {
+; CHECK-LABEL: define dso_local float @f() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TEST1:%.*]] = alloca [[STRUCT_OUTER:%.*]], align 8
+; CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER]], ptr [[TEST1]], i32 0, i32 0
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[F]], align 8
+; CHECK-NEXT:    [[F1:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER]], ptr [[TEST1]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F1]], align 8
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], 2.000000e+00
+; CHECK-NEXT:    store float [[ADD]], ptr [[F1]], align 8
+; CHECK-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER]], ptr [[TEST1]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[F2]], align 8
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+entry:
+  %test = alloca %struct.Outer, align 8
+  %test1 = alloca %struct.Outer, align 8
+  %f = getelementptr inbounds nuw %struct.Outer, ptr %test1, i32 0, i32 0
+  store float 0.000000e+00, ptr %f, align 8, !tbaa !9
+  %inner_a = getelementptr inbounds nuw %struct.Outer, ptr %test1, i32 0, i32 2
+  %i = getelementptr inbounds nuw %struct.Inner, ptr %inner_a, i32 0, i32 0
+  store i32 0, ptr %i, align 8, !tbaa !17
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %test, ptr align 8 %test1, i64 24, i1 false)
+  %f1 = getelementptr inbounds nuw %struct.Outer, ptr %test, i32 0, i32 0
+  %0 = load float, ptr %f1, align 8, !tbaa !9
+  %add = fadd float %0, 2.000000e+00
+  store float %add, ptr %f1, align 8, !tbaa !9
+  %f2 = getelementptr inbounds nuw %struct.Outer, ptr %test, i32 0, i32 0
+  %1 = load float, ptr %f2, align 8, !tbaa !9
+  ret float %1
+}
+
+!1 = !{!"any data access", !2, i64 0}
+!2 = !{!"any access", !3, i64 0}
+!3 = !{!"Flang function root test"}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"allocated data/test_array_a", !6, i64 0}
+!6 = !{!"allocated data", !1, i64 0}
+!7 = !{!8, !8, i64 0}
+!8 = !{!"allocated data/test_array_b", !6, i64 0}
+!9 = !{!10, !11, i64 0}
+!10 = !{!"Outer", !11, i64 0, !14, i64 8, !15, i64 16}
+!11 = !{!"float", !12, i64 0}
+!12 = !{!"omnipotent char", !13, i64 0}
+!13 = !{!"Simple C/C++ TBAA"}
+!14 = !{!"double", !12, i64 0}
+!15 = !{!"Inner", !16, i64 0, !11, i64 4}
+!16 = !{!"int", !12, i64 0}
+!17 = !{!10, !16, i64 16}
+
+
