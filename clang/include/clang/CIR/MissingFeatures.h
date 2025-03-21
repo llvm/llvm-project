@@ -89,6 +89,7 @@ struct MissingFeatures {
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
+  static bool generateDebugInfo() { return false; }
 
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
@@ -103,6 +104,17 @@ struct MissingFeatures {
   static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
+
+  // Future CIR operations
+  static bool labelOp() { return false; }
+  static bool brCondOp() { return false; }
+  static bool switchOp() { return false; }
+  static bool tryOp() { return false; }
+  static bool selectOp() { return false; }
+  static bool complexCreateOp() { return false; }
+  static bool complexRealOp() { return false; }
+  static bool complexImagOp() { return false; }
+  static bool callOp() { return false; }
 };
 
 } // namespace cir
