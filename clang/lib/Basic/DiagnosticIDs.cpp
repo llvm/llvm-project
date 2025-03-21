@@ -780,8 +780,8 @@ unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
 
   // We encode the standard version such that C++98 < C++11 < C++14 etc. The
   // actual numbers don't really matter for this, but the definitions of the
-  // compat diags in the Tablegen file uses the standard version, so we base
-  // our encoding on that.
+  // compat diags in the Tablegen file use the standard version number (i.e.
+  // 98, 11, 14, etc.), so we base the encoding here on that.
 #define DIAG_COMPAT_IDS_BEGIN()
 #define DIAG_COMPAT_IDS_END()
 #define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                        \
