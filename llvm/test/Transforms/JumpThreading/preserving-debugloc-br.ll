@@ -16,7 +16,7 @@ define i32 @process_block_branch(i32 %action) #0 !dbg !5 {
 ; CHECK-NEXT:      i32 0, label %[[IF_THEN]]
 ; CHECK-NEXT:    ], !dbg [[DBG8:![0-9]+]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    ret i32 0, !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    ret i32 undef, !dbg [[DBG9:![0-9]+]]
 ;
 entry:
   switch i32 %action, label %lor.rhs [
@@ -25,7 +25,7 @@ entry:
   ], !dbg !8
 
 if.then:                                          ; preds = %for.cond, %lor.end, %entry
-  ret i32 0, !dbg !9
+  ret i32 undef, !dbg !9
 
 lor.rhs:                                          ; preds = %entry
   br label %lor.end, !dbg !10
