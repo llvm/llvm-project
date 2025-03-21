@@ -87,7 +87,7 @@ void asuint(double4, out uint4, out uint4);
 /// \fn int16_t asint16(T X)
 /// \brief Interprets the bit pattern of \a X as an 16-bit integer.
 /// \param X The input value.
-  
+
 #ifdef __HLSL_ENABLE_16_BIT
 
 template <typename T, int N>
@@ -108,6 +108,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
   return __detail::bit_cast<int16_t, T>(F);
 }
 #endif
+
 //===----------------------------------------------------------------------===//
 // asuint16 builtins
 //===----------------------------------------------------------------------===//
@@ -115,6 +116,7 @@ constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
 /// \fn uint16_t asuint16(T X)
 /// \brief Interprets the bit pattern of \a X as an 16-bit unsigned integer.
 /// \param X The input value.
+
 #ifdef __HLSL_ENABLE_16_BIT
 
 template <typename T, int N>
