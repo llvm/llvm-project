@@ -30,20 +30,16 @@ void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
 
 void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
-  auto scope = builder.create<cir::ScopeOp>(
+  mlir::OpBuilder::InsertPoint scopeInsPt;
+  builder.create<cir::ScopeOp>(
       scopeLoc, [&](mlir::OpBuilder &b, mlir::Type &type, mlir::Location loc) {
-        emitCompoundStmtWithoutScope(s);
+        scopeInsPt = b.saveInsertionPoint();
       });
-
-  // This code to insert a cir.yield at the end of the scope is temporary until
-  // CIRGenFunction::LexicalScope::cleanup() is upstreamed.
-  if (!scope.getRegion().empty()) {
-    mlir::Block &lastBlock = scope.getRegion().back();
-    if (lastBlock.empty() || !lastBlock.mightHaveTerminator() ||
-        !lastBlock.getTerminator()->hasTrait<mlir::OpTrait::IsTerminator>()) {
-      builder.setInsertionPointToEnd(&lastBlock);
-      builder.create<cir::YieldOp>(getLoc(s.getEndLoc()));
-    }
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(scopeInsPt);
+    LexicalScope lexScope(*this, scopeLoc, builder.getInsertionBlock());
+    emitCompoundStmtWithoutScope(s);
   }
 }
 
@@ -251,16 +247,15 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
                                "named return value optimization");
   } else if (!rv) {
     // No return expression. Do nothing.
-    // TODO(CIR): In the future when function returns are fully implemented,
-    // this section will do nothing.  But for now a ReturnOp is necessary.
-    builder.create<ReturnOp>(loc);
   } else if (rv->getType()->isVoidType()) {
     // Make sure not to return anything, but evaluate the expression
     // for side effects.
     if (rv) {
       emitAnyExpr(rv);
     }
-  } else if (fnRetTy->isReferenceType()) {
+  } else if (cast<FunctionDecl>(curGD.getDecl())
+                 ->getReturnType()
+                 ->isReferenceType()) {
     getCIRGenModule().errorNYI(s.getSourceRange(),
                                "function return type that is a reference");
   } else {
@@ -269,7 +264,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     case cir::TEK_Scalar:
       value = emitScalarExpr(rv);
       if (value) { // Change this to an assert once emitScalarExpr is complete
-        builder.create<ReturnOp>(loc, llvm::ArrayRef(value));
+        builder.CIRBaseBuilderTy::createStore(loc, value, *fnRetAlloca);
       }
       break;
     default:
@@ -278,6 +273,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
       break;
     }
   }
+
+  auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  builder.create<cir::BrOp>(loc, retBlock);
+  builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
 }

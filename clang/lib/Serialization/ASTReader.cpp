@@ -10825,7 +10825,8 @@ void ASTReader::FinishedDeserializing() {
     {
       // Guard variable to avoid recursively entering the process of passing
       // decls to consumer.
-      SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer, false);
+      SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                                 /*NewValue=*/false);
 
       // Propagate exception specification and deduced type updates along
       // redeclaration chains.
@@ -11757,6 +11758,12 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
       Vars.push_back(Record.readSubExpr());
     C->setInscanCopyArrayElems(Vars);
   }
+  unsigned NumFlags = Record.readInt();
+  SmallVector<bool, 16> Flags;
+  Flags.reserve(NumFlags);
+  for (unsigned I : llvm::seq<unsigned>(NumFlags))
+    Flags.push_back(Record.readInt());
+  C->setPrivateVariableReductionFlags(Flags);
 }
 
 void OMPClauseReader::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {

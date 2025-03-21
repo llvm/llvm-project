@@ -1094,10 +1094,10 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "Has v_prng_b32 instruction"
 >;
 
-def FeatureBVHDualInst : SubtargetFeature<"bvh-dual-inst",
-  "HasBVHDualInst",
+def FeatureBVHDualAndBVH8Insts : SubtargetFeature<"bvh-dual-bvh-8-insts",
+  "HasBVHDualAndBVH8Insts",
   "true",
-  "Has image_bvh_dual_intersect_ray instruction"
+  "Has image_bvh_dual_intersect_ray and image_bvh8_intersect_ray instructions"
 >;
 
 //===------------------------------------------------------------===//
@@ -1857,7 +1857,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualInst
+   FeatureBVHDualAndBVH8Insts
    ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2513,8 +2513,8 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
 
-def HasBVHDualInst : Predicate<"Subtarget->hasBVHDualInst()">,
-  AssemblerPredicate<(all_of FeatureBVHDualInst)>;
+def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
+  AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

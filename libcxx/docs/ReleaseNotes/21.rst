@@ -43,6 +43,7 @@ Implemented Papers
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 - P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
 - P2278R4: ``cbegin`` should always return a constant iterator (`Github <https://github.com/llvm/llvm-project/issues/105201>`__)
+- P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
 - P2836R1: ``std::basic_const_iterator`` should follow its underlying type's convertibility (`Github <https://github.com/llvm/llvm-project/issues/105406>`__)
 
 Improvements and New Features
