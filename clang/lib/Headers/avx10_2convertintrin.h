@@ -45,40 +45,23 @@ _mm_maskz_cvtx2ps_ph(__mmask8 __U, __m128 __A, __m128 __B) {
 static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_cvtx2ps_ph(__m256 __A,
                                                                   __m256 __B) {
   return (__m256h)__builtin_ia32_vcvt2ps2phx256_mask(
-      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)(-1),
-      _MM_FROUND_CUR_DIRECTION);
+      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)(-1));
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
 _mm256_mask_cvtx2ps_ph(__m256h __W, __mmask16 __U, __m256 __A, __m256 __B) {
   return (__m256h)__builtin_ia32_vcvt2ps2phx256_mask(
-      (__v8sf)__A, (__v8sf)__B, (__v16hf)__W, (__mmask16)__U,
-      _MM_FROUND_CUR_DIRECTION);
+      (__v8sf)__A, (__v8sf)__B, (__v16hf)__W, (__mmask16)__U);
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
   return (__m256h)__builtin_ia32_vcvt2ps2phx256_mask(
-      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)__U,
-      _MM_FROUND_CUR_DIRECTION);
+      (__v8sf)__A, (__v8sf)__B, (__v16hf)_mm256_setzero_ph(), (__mmask16)__U);
 }
 
-#define _mm256_cvtx_round2ps_ph(A, B, R)                                       \
-  ((__m256h)__builtin_ia32_vcvt2ps2phx256_mask(                                \
-      (__v8sf)(A), (__v8sf)(B), (__v16hf)_mm256_undefined_ph(),                \
-      (__mmask16)(-1), (const int)(R)))
-
-#define _mm256_mask_cvtx_round2ps_ph(W, U, A, B, R)                            \
-  ((__m256h)__builtin_ia32_vcvt2ps2phx256_mask(                                \
-      (__v8sf)(A), (__v8sf)(B), (__v16hf)(W), (__mmask16)(U), (const int)(R)))
-
-#define _mm256_maskz_cvtx_round2ps_ph(U, A, B, R)                              \
-  ((__m256h)__builtin_ia32_vcvt2ps2phx256_mask(                                \
-      (__v8sf)(A), (__v8sf)(B), (__v16hf)(_mm256_setzero_ph()),                \
-      (__mmask16)(U), (const int)(R)))
-
-static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_cvtbiasph_bf8(__m128i __A,
-                                                                  __m128h __B) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128
+_mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
   return (__m128i)__builtin_ia32_vcvtbiasph2bf8_128_mask(
       (__v16qi)__A, (__v8hf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
 }

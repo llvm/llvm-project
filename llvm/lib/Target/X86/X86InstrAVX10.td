@@ -771,12 +771,6 @@ multiclass avx10_cvt2ps2ph<bits<8> opc, string OpcodeStr,
                                  _SrcVTInfo.info128>,
                 EVEX_V128, EVEX_CD8<32, CD8VF>;
   }
-
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-    defm Z256 : avx10_cvt2ps2ph_rc<opc, OpcodeStr, sched.YMM,
-                                   _SrcVTInfo.info256, _DstVTInfo.info256,
-                                   OpNodeRnd>;
-  }
 }
 
 defm VCVT2PS2PHX : avx10_cvt2ps2ph<0x67, "vcvt2ps2phx",

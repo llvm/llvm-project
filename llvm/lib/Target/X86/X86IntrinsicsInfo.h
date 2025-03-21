@@ -440,7 +440,7 @@ static const IntrinsicData IntrinsicsWithoutChain[] = {
     X86_INTRINSIC_DATA(avx10_mask_vcvt2ps2phx_128, INTR_TYPE_2OP_MASK,
                        X86ISD::VFPROUND2, 0),
     X86_INTRINSIC_DATA(avx10_mask_vcvt2ps2phx_256, INTR_TYPE_2OP_MASK,
-                       X86ISD::VFPROUND2, X86ISD::VFPROUND2_RND),
+                       X86ISD::VFPROUND2, 0),
     X86_INTRINSIC_DATA(avx10_mask_vcvt2ps2phx_512, INTR_TYPE_2OP_MASK,
                        X86ISD::VFPROUND2, X86ISD::VFPROUND2_RND),
     X86_INTRINSIC_DATA(avx10_mask_vcvtbiasph2bf8128, TRUNCATE2_TO_REG,
