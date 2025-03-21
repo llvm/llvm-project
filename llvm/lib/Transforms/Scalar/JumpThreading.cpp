@@ -1519,11 +1519,15 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
   }
 
   // If we have a CmpInst, try to fold it for each incoming edge into PredBB.
+  // Note that during the execution of the pass, phi nodes may become constant
+  // and may be removed, which can lead to self-referencing instructions in
+  // code that becomes unreachable. Consequently, we need to handle those
+  // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 =
+      Constant *Op0 = CondCmp->getOperand(0) == CondCmp ? nullptr :
           evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL);
-      Constant *Op1 =
+      Constant *Op1 = CondCmp->getOperand(1) == CondCmp ? nullptr :
           evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL);
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
