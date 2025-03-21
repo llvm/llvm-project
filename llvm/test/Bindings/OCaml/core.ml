@@ -1443,7 +1443,7 @@ let test_builder () =
   end
 
 (* End-of-file checks for things like metdata and attributes.
- * CHECK: !llvm.module.flags = !1
+ * CHECK: !llvm.module.flags = !{!1}
  * CHECK: !0 = !{i32 0, !"global test metadata"}
  * CHECK: !1 = !{i32 1, !"Debug Info Version", i32 3}
  * CHECK: !2 = !{i32 1, !"metadata test"}
