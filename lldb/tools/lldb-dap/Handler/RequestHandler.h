@@ -43,6 +43,8 @@ public:
 
   virtual ~BaseRequestHandler() = default;
 
+  void Run(const protocol::Request &);
+
   virtual void operator()(const protocol::Request &request) const = 0;
 
   virtual llvm::StringMap<bool> GetCapabilities() const { return {}; }

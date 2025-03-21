@@ -403,6 +403,9 @@ struct DAP {
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
+  /// Checks if the request is cancelled.
+  bool IsCancelled(const protocol::Request &);
+
   /// Clears the cancel request from the set of tracked cancel requests.
   void ClearCancelRequest(const protocol::CancelArguments &);
 

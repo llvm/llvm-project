@@ -47,6 +47,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -69,15 +70,6 @@ const char DEV_NULL[] = "nul";
 const char DEV_NULL[] = "/dev/null";
 #endif
 } // namespace
-
-static Response CancelledResponse(int64_t seq, std::string command) {
-  Response response;
-  response.request_seq = seq;
-  response.command = command;
-  response.success = false;
-  response.message = Response::Message::cancelled;
-  return response;
-}
 
 namespace lldb_dap {
 
@@ -253,11 +245,17 @@ void DAP::SendJSON(const llvm::json::Value &json) {
 }
 
 void DAP::Send(const Message &message) {
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> this should be handled in RequestHandler<>::operator().
   if (auto *resp = std::get_if<Response>(&message);
       resp && debugger.InterruptRequested()) {
     // If the debugger was interrupted, convert this response into a 'cancelled'
     // response because we might have a partial result.
-    Response cancelled = CancelledResponse(resp->request_seq, resp->command);
+    Response cancelled{/*request_seq=*/resp->request_seq,
+                       /*command=*/resp->command,
+                       /*success=*/false,
+                       /*message=*/Response::Message::cancelled,
+                       /*body=*/std::nullopt};
     if (llvm::Error err = transport.Write(cancelled))
       DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
                     transport.GetClientName());
@@ -711,20 +709,9 @@ bool DAP::HandleObject(const Message &M) {
       m_active_request = nullptr;
     });
 
-    {
-      // If there is a pending cancelled request, preempt the request and mark
-      // it cancelled.
-      std::lock_guard<std::mutex> lock(m_cancelled_requests_mutex);
-      if (m_cancelled_requests.find(req->seq) != m_cancelled_requests.end()) {
-        Response cancelled = CancelledResponse(req->seq, req->command);
-        Send(cancelled);
-        return true;
-      }
-    }
-
     auto handler_pos = request_handlers.find(req->command);
     if (handler_pos != request_handlers.end()) {
-      (*handler_pos->second)(*req);
+      handler_pos->second->Run(*req);
       return true; // Success
     }
 
@@ -823,6 +810,11 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   disconnecting = true;
 
   return ToError(error);
+}
+
+bool DAP::IsCancelled(const protocol::Request &req) {
+  std::lock_guard<std::mutex> lock(m_cancelled_requests_mutex);
+  return m_cancelled_requests.find(req.seq) != m_cancelled_requests.end();
 }
 
 void DAP::ClearCancelRequest(const CancelArguments &args) {
