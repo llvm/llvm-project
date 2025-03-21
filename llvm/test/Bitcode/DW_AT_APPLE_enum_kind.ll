@@ -1,6 +1,5 @@
-; RUN: llc < %s -filetype=obj -o %t
-; RUN: llvm-dwarfdump -v %t | FileCheck %s
-;
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s --check-prefix=CHECK-METADATA
+
 ; C++ source to regenerate:
 ; enum __attribute__((enum_extensibility(open))) OpenEnum {
 ;   oe1
@@ -12,20 +11,8 @@
 ; 
 ; $ clang++ -O0 -g debug-info-enum-kind.cpp -c
 
-; CHECK: .debug_abbrev contents:
-
-; CHECK: [3] DW_TAG_enumeration_type DW_CHILDREN_yes
-; CHECK: DW_AT_APPLE_enum_kind   DW_FORM_data1
-
-; CHECK: .debug_info contents:
-
-; CHECK: DW_TAG_enumeration_type [3]
-; CHECK-DAG: DW_AT_name {{.*}} string = "OpenEnum"
-; CHECK-DAG: DW_AT_APPLE_enum_kind [DW_FORM_data1]  (DW_APPLE_ENUM_KIND_Open)
-
-; CHECK: DW_TAG_enumeration_type [3]
-; CHECK-DAG: DW_AT_name {{.*}} string = "ClosedEnum"
-; CHECK-DAG: DW_AT_APPLE_enum_kind [DW_FORM_data1]  (DW_APPLE_ENUM_KIND_Closed)
+; CHECK-METADATA: enumKind: DW_APPLE_ENUM_KIND_Open
+; CHECK-METADATA: enumKind: DW_APPLE_ENUM_KIND_Closed
 
 source_filename = "enum.cpp"
 target triple = "arm64-apple-macosx"
