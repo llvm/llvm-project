@@ -6,6 +6,7 @@ import os
 import sys
 import re
 import platform
+import shutil
 import subprocess
 
 import lit.util
@@ -345,7 +346,7 @@ def enable_ptxas(ptxas_executable):
 
 
 ptxas_executable = (
-    os.environ.get("LLVM_PTXAS_EXECUTABLE", None) or config.ptxas_executable
+    os.environ.get("LLVM_PTXAS_EXECUTABLE", None) or config.ptxas_executable or shutil.which("ptxas")
 )
 if ptxas_executable:
     enable_ptxas(ptxas_executable)
