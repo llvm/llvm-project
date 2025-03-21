@@ -1633,7 +1633,7 @@ bool RISCVTargetLowering::shouldExpandGetVectorLength(EVT TripCountVT,
 
   // The maximum VF is for the smallest element width with LMUL=8.
   // VF must be a power of 2.
-  unsigned MaxVF = (RISCV::RVVBitsPerBlock / 8) * 8;
+  unsigned MaxVF = RISCV::RVVBytesPerBlock * 8;
   return VF > MaxVF || !isPowerOf2_32(VF);
 }
 
@@ -22713,7 +22713,7 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
 
   // If the minimum VLEN is less than RISCV::RVVBitsPerBlock we don't support
   // fixed vectors.
-  if (MinVLenInBytes <= RISCV::RVVBitsPerBlock / 8)
+  if (MinVLenInBytes <= RISCV::RVVBytesPerBlock)
     return MVT::Other;
 
   // Prefer i8 for non-zero memset as it allows us to avoid materializing
