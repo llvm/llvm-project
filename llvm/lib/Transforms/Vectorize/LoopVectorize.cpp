@@ -1022,6 +1022,12 @@ public:
     SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
   };
 
+  /// \return Returns information about the register usages of the loop for the
+  /// given plan and vectorization factors.
+  SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
+  calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                         const TargetTransformInfo &TTI);
+
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
@@ -4994,6 +5000,12 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
                 VPBranchOnMaskRecipe>(R))
           continue;
+          if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
+              Phi && Phi->getUnderlyingInstr()) {
+            if (auto *PhiNode = dyn_cast<PHINode>(Phi->getUnderlyingInstr());
+                PhiNode && CM.isInLoopReduction(PhiNode))
+              continue;
+          }
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
