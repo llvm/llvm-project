@@ -661,3 +661,48 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:            cmpeq_nxv16i8_ptest_with_register_class_mismatch
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: ppr }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32 }
+liveins:
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_nxv16i8_ptest_with_register_class_mismatch
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
+    ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr = PTRUE_B 31, implicit $vg
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:ppr_3b = COPY [[PTRUE_B]]
+    ; CHECK-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[COPY2]], [[COPY]], [[COPY1]], implicit-def $nzcv
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $wzr
+    ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY3]], $wzr, 0, implicit $nzcv
+    ; CHECK-NEXT: $w0 = COPY [[CSINCWr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %1:zpr = COPY $z0
+    %2:zpr = COPY $z1
+    %0:ppr = PTRUE_B 31, implicit $vg
+    %3:ppr_3b = COPY %0
+    %4:ppr = CMPEQ_PPzZZ_B %3, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, killed %4, implicit-def $nzcv
+    %5:gpr32 = COPY $wzr
+    %6:gpr32 = CSINCWr %5, $wzr, 0, implicit $nzcv
+    $w0 = COPY %6
+    RET_ReallyLR implicit $w0
+
+...
