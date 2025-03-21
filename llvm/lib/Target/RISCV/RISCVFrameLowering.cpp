@@ -526,7 +526,7 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
   // Get VLEN in TargetReg
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   Register TargetReg = RISCV::X6;
-  uint32_t NumOfVReg = Amount / (RISCV::RVVBitsPerBlock / 8);
+  uint32_t NumOfVReg = Amount / RISCV::RVVBytesPerBlock;
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoReadVLENB), TargetReg)
       .setMIFlag(Flag);
   TII->mulImm(MF, MBB, MBBI, DL, TargetReg, NumOfVReg, Flag);
@@ -1544,11 +1544,11 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
     // ObjectSize in bytes.
     int64_t ObjectSize = MFI.getObjectSize(FI);
     auto ObjectAlign =
-        std::max(Align(RISCV::RVVBitsPerBlock / 8), MFI.getObjectAlign(FI));
+        std::max(Align(RISCV::RVVBytesPerBlock), MFI.getObjectAlign(FI));
     // If the data type is the fractional vector type, reserve one vector
     // register for it.
-    if (ObjectSize < (RISCV::RVVBitsPerBlock / 8))
-      ObjectSize = (RISCV::RVVBitsPerBlock / 8);
+    if (ObjectSize < RISCV::RVVBytesPerBlock)
+      ObjectSize = RISCV::RVVBytesPerBlock;
     Offset = alignTo(Offset + ObjectSize, ObjectAlign);
     MFI.setObjectOffset(FI, -Offset);
     // Update the maximum alignment of the RVV stack section
