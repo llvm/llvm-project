@@ -41,9 +41,6 @@ public:
   bool relaxOnce(int pass) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   void finalizeRelax(int passes) const override;
-
-private:
-  void tlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // end anonymous namespace
 
@@ -1019,8 +1016,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
 //                                      # otherwise,    src = $zero
 //
 // When relaxation enables, redundant NOPs can be removed.
-void LoongArch::tlsIeToLe(uint8_t *loc, const Relocation &rel,
-                          uint64_t val) const {
+static void tlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   assert(isInt<32>(val) &&
          "val exceeds the range of medium code model in tlsIeToLe");
 
