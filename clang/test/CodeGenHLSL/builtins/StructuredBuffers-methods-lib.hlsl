@@ -36,8 +36,8 @@ export void TestAppend(float value) {
 // CHECK: define void @_Z10TestAppendf(float noundef nofpclass(nan inf) %value)
 // CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %value.addr, align 4
 // CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i8 1)
-// CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %[[INDEX]])
-// CHECK-DXIL: store float %[[VALUE]], ptr %[[RESPTR]], align 4
+// CHECK-DXIL: %[[RESPTR:.*]] = call ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %[[INDEX]])
+// CHECK-DXIL: store float %[[VALUE]], ptr addrspace(1) %[[RESPTR]], align 4
 
 export float TestConsume() {
     return CSB.Consume();
@@ -45,8 +45,8 @@ export float TestConsume() {
 
 // CHECK: define noundef nofpclass(nan inf) float @_Z11TestConsumev()
 // CHECK-DXIL: %[[INDEX:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %1, i8 -1)
-// CHECK-DXIL: %[[RESPTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %0, i32 %[[INDEX]])
-// CHECK-DXIL: %[[VALUE:.*]] = load float, ptr %[[RESPTR]], align 4
+// CHECK-DXIL: %[[RESPTR:.*]] = call ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %0, i32 %[[INDEX]])
+// CHECK-DXIL: %[[VALUE:.*]] = load float, ptr addrspace(1) %[[RESPTR]], align 4
 // CHECK-DXIL: ret float %[[VALUE]]
 
 export float TestLoad() {
@@ -54,11 +54,11 @@ export float TestLoad() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @_Z8TestLoadv()
-// CHECK: %[[PTR1:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %{{[0-9]+}})
-// CHECK: %[[VALUE1:.*]] = load float, ptr %[[PTR1]]
-// CHECK: %[[PTR2:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0) %{{[0-9]+}}, i32 %{{[0-9]+}})
-// CHECK: %[[VALUE2:.*]] = load float, ptr %[[PTR2]]
+// CHECK: %[[PTR1:.*]] = call ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %{{[0-9]+}}, i32 %{{[0-9]+}})
+// CHECK: %[[VALUE1:.*]] = load float, ptr addrspace(1) %[[PTR1]]
+// CHECK: %[[PTR2:.*]] = call ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0) %{{[0-9]+}}, i32 %{{[0-9]+}})
+// CHECK: %[[VALUE2:.*]] = load float, ptr addrspace(1) %[[PTR2]]
 
 // CHECK: declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
-// CHECK: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i32)
-// CHECK: declare ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0), i32)
+// CHECK: declare ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i32)
+// CHECK: declare ptr addrspace(1) @llvm.dx.resource.getpointer.p1.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0), i32)
