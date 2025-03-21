@@ -4841,11 +4841,8 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
                 VPBranchOnMaskRecipe>(R))
           continue;
           if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
-              Phi && Phi->getUnderlyingInstr()) {
-            if (auto *PhiNode = dyn_cast<PHINode>(Phi->getUnderlyingInstr());
-                PhiNode && CM.isInLoopReduction(PhiNode))
+              Phi && Phi->isInLoop())
               continue;
-          }
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
