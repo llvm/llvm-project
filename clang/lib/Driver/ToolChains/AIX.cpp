@@ -127,8 +127,15 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Force static linking when "-static" is present.
-  if (Args.hasArg(options::OPT_static))
+  if (Args.hasArg(options::OPT_static)) {
     CmdArgs.push_back("-bnso");
+    // The folllowing linker options are needed to statically link to the
+    // shared libflang_rt.runtime.a on AIX
+    CmdArgs.push_back("-bI:/usr/lib/syscalls.exp");
+    CmdArgs.push_back("-bI:/usr/lib/aio.exp");
+    CmdArgs.push_back("-bI:/usr/lib/threads.exp");
+    CmdArgs.push_back("-lcrypt");
+  }
 
   // Add options for shared libraries.
   if (Args.hasArg(options::OPT_shared)) {
