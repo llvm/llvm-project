@@ -1667,10 +1667,11 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5));
   case Match_InvalidUImm5GE6Plus1:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 6, (1 << 5));
-  case Match_InvalidUImm5Slist:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 5) - 1,
-        "immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31 in the range ");
+  case Match_InvalidUImm5Slist: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc,
+                 "immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31");
+  }
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
   case Match_InvalidUImm7:

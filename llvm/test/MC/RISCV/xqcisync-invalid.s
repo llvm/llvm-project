@@ -69,7 +69,7 @@ qc.syncwl
 qc.syncwl  1
 
 
-# CHECK-PLUS: :[[@LINE+1]]:11: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31 in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+1]]:11: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31
 qc.c.sync 45
 
 # CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
@@ -82,7 +82,7 @@ qc.c.sync
 qc.c.sync 8
 
 
-# CHECK-PLUS: :[[@LINE+1]]:12: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31 in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+1]]:12: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31
 qc.c.syncr 56
 
 # CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
@@ -95,7 +95,7 @@ qc.c.syncr
 qc.c.syncr   8
 
 
-# CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31 in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31
 qc.c.syncwf 88
 
 # CHECK: :[[@LINE+1]]:16: error: invalid operand for instruction
@@ -108,7 +108,7 @@ qc.c.syncwf
 qc.c.syncwf  31
 
 
-# CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31 in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+1]]:13: error: immediate must be one of: 0, 1, 2, 4, 8, 15, 16, 31
 qc.c.syncwl 99
 
 # CHECK: :[[@LINE+1]]:17: error: invalid operand for instruction
