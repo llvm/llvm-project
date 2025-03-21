@@ -1253,7 +1253,10 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     Type type = convertType(dsoLocalEquivalent->getType());
     return builder
         .create<DSOLocalEquivalentOp>(
-            loc, type, dsoLocalEquivalent->getGlobalValue()->getName())
+            loc, type,
+            FlatSymbolRefAttr::get(
+                builder.getContext(),
+                dsoLocalEquivalent->getGlobalValue()->getName()))
         .getResult();
   }
 

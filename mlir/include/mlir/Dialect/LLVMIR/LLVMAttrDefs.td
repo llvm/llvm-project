@@ -1220,8 +1220,8 @@ def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 /// Folded into from LLVM::DSOLocalEquivalentOp.
 def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
                                             "dso_local_equivalent"> {
-  let parameters = (ins "StringAttr":$name);
-  let assemblyFormat = "$name";
+  let parameters = (ins "FlatSymbolRefAttr":$sym);
+  let assemblyFormat = "$sym";
 }
 
 //===----------------------------------------------------------------------===//
