@@ -128,7 +128,6 @@
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
 ; CHECK-NEXT:       RISC-V Landing Pad Setup
-; CHECK-NEXT:       RISC-V VMV0 Elimination
 ; CHECK-NEXT:       Detect Dead Lanes
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
@@ -141,6 +140,7 @@
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler
+; CHECK-NEXT:       RISC-V VMV0 Elimination
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Debug Variable Analysis
 ; CHECK-NEXT:       Live Stack Slot Analysis

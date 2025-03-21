@@ -13744,11 +13744,11 @@ define <32 x i8> @mgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %m
 ; RV64V-NEXT:    vslidedown.vi v8, v8, 16
 ; RV64V-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV64V-NEXT:    vluxei64.v v10, (a0), v16, v0.t
+; RV64V-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64V-NEXT:    vsext.vf8 v16, v8
 ; RV64V-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64V-NEXT:    vslidedown.vi v0, v0, 2
-; RV64V-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV64V-NEXT:    vsext.vf8 v16, v8
-; RV64V-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
+; RV64V-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV64V-NEXT:    vluxei64.v v12, (a0), v16, v0.t
 ; RV64V-NEXT:    li a0, 32
 ; RV64V-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
@@ -14278,8 +14278,8 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a1, -512
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v0, 5
 ; RV32-NEXT:    vmv.v.x v8, a1
+; RV32-NEXT:    vmv.v.i v0, 5
 ; RV32-NEXT:    vmerge.vim v8, v8, 0, v0
 ; RV32-NEXT:    vluxei32.v v8, (a0), v8
 ; RV32-NEXT:    ret
@@ -14287,10 +14287,11 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 ; RV64V-LABEL: mgather_narrow_edge_case:
 ; RV64V:       # %bb.0:
 ; RV64V-NEXT:    li a1, -512
+; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64V-NEXT:    vmv.v.x v8, a1
 ; RV64V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV64V-NEXT:    vmv.v.i v0, 5
 ; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64V-NEXT:    vmv.v.x v8, a1
 ; RV64V-NEXT:    vmerge.vim v10, v8, 0, v0
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64V-NEXT:    vluxei64.v v8, (a0), v10
@@ -14301,8 +14302,8 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 ; RV64ZVE32F-NEXT:    lw a1, -512(a0)
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 5
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 5
 ; RV64ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i32, ptr %base, <4 x i8>  <i8 0, i8 128, i8 0, i8 128>
@@ -14374,8 +14375,8 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV32-NEXT:    vslide1down.vx v9, v9, a5
 ; RV32-NEXT:    vslide1down.vx v10, v8, a3
 ; RV32-NEXT:    vslide1down.vx v8, v9, a6
-; RV32-NEXT:    vmv.v.i v0, 15
 ; RV32-NEXT:    vslide1down.vx v8, v8, a7
+; RV32-NEXT:    vmv.v.i v0, 15
 ; RV32-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -14449,8 +14450,8 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV64V-NEXT:    vmv.v.x v8, a3
 ; RV64V-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64V-NEXT:    vslide1down.vx v8, v8, a1
-; RV64V-NEXT:    vmv.v.i v0, 15
 ; RV64V-NEXT:    vslide1down.vx v8, v8, a2
+; RV64V-NEXT:    vmv.v.i v0, 15
 ; RV64V-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; RV64V-NEXT:    addi sp, s0, -128
 ; RV64V-NEXT:    .cfi_def_cfa sp, 128
@@ -14481,31 +14482,31 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV64ZVE32F-NEXT:    lbu t1, 20(a0)
 ; RV64ZVE32F-NEXT:    lbu t2, 21(a0)
 ; RV64ZVE32F-NEXT:    slli a6, a6, 8
-; RV64ZVE32F-NEXT:    or a5, a6, a5
 ; RV64ZVE32F-NEXT:    slli t0, t0, 8
 ; RV64ZVE32F-NEXT:    slli a4, a4, 8
-; RV64ZVE32F-NEXT:    slli t2, t2, 8
+; RV64ZVE32F-NEXT:    or a5, a6, a5
 ; RV64ZVE32F-NEXT:    or a6, t0, a7
 ; RV64ZVE32F-NEXT:    or a2, a4, a2
 ; RV64ZVE32F-NEXT:    lbu a4, 24(a0)
 ; RV64ZVE32F-NEXT:    lbu a7, 25(a0)
-; RV64ZVE32F-NEXT:    or t0, t2, t1
-; RV64ZVE32F-NEXT:    lbu t1, 28(a0)
+; RV64ZVE32F-NEXT:    lbu t0, 28(a0)
 ; RV64ZVE32F-NEXT:    lbu a0, 29(a0)
+; RV64ZVE32F-NEXT:    slli t2, t2, 8
+; RV64ZVE32F-NEXT:    or t1, t2, t1
 ; RV64ZVE32F-NEXT:    slli a7, a7, 8
 ; RV64ZVE32F-NEXT:    or a4, a7, a4
-; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    slli a0, a0, 8
-; RV64ZVE32F-NEXT:    or a0, a0, t1
+; RV64ZVE32F-NEXT:    or a0, a0, t0
+; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a2
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
-; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, t0
+; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, t1
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a6
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -14540,7 +14541,6 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 24(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 26(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
@@ -14549,6 +14549,7 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13>
@@ -14585,7 +14586,6 @@ define <8 x i16> @mgather_strided_2xSEW_with_offset(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 28(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 30(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
@@ -14594,6 +14594,7 @@ define <8 x i16> @mgather_strided_2xSEW_with_offset(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 2, i64 3, i64 6, i64 7, i64 10, i64 11, i64 14, i64 15>
@@ -14624,21 +14625,21 @@ define <8 x i16> @mgather_reverse_unit_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a1, 24(a0)
 ; RV64ZVE32F-NEXT:    lh a2, 26(a0)
 ; RV64ZVE32F-NEXT:    lh a3, 28(a0)
-; RV64ZVE32F-NEXT:    lh a4, 30(a0)
-; RV64ZVE32F-NEXT:    lh a5, 16(a0)
-; RV64ZVE32F-NEXT:    lh a6, 18(a0)
-; RV64ZVE32F-NEXT:    lh a7, 20(a0)
+; RV64ZVE32F-NEXT:    lh a4, 16(a0)
+; RV64ZVE32F-NEXT:    lh a5, 18(a0)
+; RV64ZVE32F-NEXT:    lh a6, 20(a0)
+; RV64ZVE32F-NEXT:    lh a7, 30(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 22(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a3
-; RV64ZVE32F-NEXT:    vmv.v.x v9, a7
-; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a4
+; RV64ZVE32F-NEXT:    vmv.v.x v9, a6
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a0
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a5
+; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a2
-; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a6
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a5
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 14, i64 15, i64 12, i64 13, i64 10, i64 11, i64 8, i64 9>
@@ -14669,21 +14670,21 @@ define <8 x i16> @mgather_reverse_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a1, 20(a0)
 ; RV64ZVE32F-NEXT:    lh a2, 22(a0)
 ; RV64ZVE32F-NEXT:    lh a3, 28(a0)
-; RV64ZVE32F-NEXT:    lh a4, 30(a0)
-; RV64ZVE32F-NEXT:    lh a5, 4(a0)
-; RV64ZVE32F-NEXT:    lh a6, 6(a0)
-; RV64ZVE32F-NEXT:    lh a7, 12(a0)
+; RV64ZVE32F-NEXT:    lh a4, 4(a0)
+; RV64ZVE32F-NEXT:    lh a5, 6(a0)
+; RV64ZVE32F-NEXT:    lh a6, 12(a0)
+; RV64ZVE32F-NEXT:    lh a7, 30(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 14(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a3
-; RV64ZVE32F-NEXT:    vmv.v.x v9, a7
-; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a4
+; RV64ZVE32F-NEXT:    vmv.v.x v9, a6
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a0
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a5
+; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a2
-; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a6
+; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a5
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 14, i64 15, i64 10, i64 11, i64 6, i64 7, i64 2, i64 3>
@@ -14719,7 +14720,6 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 4(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 6(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a5
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a1
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a6
@@ -14728,6 +14728,7 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 2, i32 3>
@@ -14766,7 +14767,6 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 4(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 6(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a5
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a1
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a6
@@ -14775,6 +14775,7 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 9, i32 10, i32 4, i32 5, i32 2, i32 3>
@@ -14813,7 +14814,6 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned2(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a6, 18(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 20(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
@@ -14822,6 +14822,7 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned2(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a2
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a0
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a3
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 1, i32 2, i32 9, i32 10, i32 4, i32 5, i32 2, i32 3>
@@ -14864,7 +14865,6 @@ define <8 x i16> @mgather_gather_4xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 20(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 22(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
@@ -14873,6 +14873,7 @@ define <8 x i16> @mgather_gather_4xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
@@ -14912,7 +14913,6 @@ define <8 x i16> @mgather_gather_4xSEW_partial_align(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 20(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 22(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
@@ -14921,6 +14921,7 @@ define <8 x i16> @mgather_gather_4xSEW_partial_align(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
@@ -14969,7 +14970,6 @@ define <8 x i16> @mgather_shuffle_rotate(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 4(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 6(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
@@ -14978,6 +14978,7 @@ define <8 x i16> @mgather_shuffle_rotate(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a4
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3>
@@ -15017,7 +15018,6 @@ define <8 x i16> @mgather_shuffle_vrgather(ptr %base) {
 ; RV64ZVE32F-NEXT:    lh a7, 12(a0)
 ; RV64ZVE32F-NEXT:    lh a0, 14(a0)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
-; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
 ; RV64ZVE32F-NEXT:    vmv.v.x v9, a5
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
@@ -15026,6 +15026,7 @@ define <8 x i16> @mgather_shuffle_vrgather(ptr %base) {
 ; RV64ZVE32F-NEXT:    vslide1down.vx v9, v9, a7
 ; RV64ZVE32F-NEXT:    vslide1down.vx v10, v8, a2
 ; RV64ZVE32F-NEXT:    vslide1down.vx v8, v9, a0
+; RV64ZVE32F-NEXT:    vmv.v.i v0, 15
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v10, 4, v0.t
 ; RV64ZVE32F-NEXT:    ret
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 0, i64 2, i64 3, i64 1, i64 4, i64 5, i64 6, i64 7>

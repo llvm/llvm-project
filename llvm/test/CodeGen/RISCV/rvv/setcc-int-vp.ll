@@ -2233,8 +2233,8 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:    sltu a4, a2, a5
 ; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vl8re32.v v8, (a0)
-; CHECK-NEXT:    vslidedown.vx v0, v0, a1
 ; CHECK-NEXT:    and a4, a4, a5
+; CHECK-NEXT:    vslidedown.vx v0, v0, a1
 ; CHECK-NEXT:    vsetvli zero, a4, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v6, v16, v24, v0.t
 ; CHECK-NEXT:    bltu a2, a3, .LBB189_2

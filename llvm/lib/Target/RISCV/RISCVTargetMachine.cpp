@@ -445,6 +445,7 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
+  addPass(createRISCVVMV0EliminationPass());
   addPass(createRVVRegAllocPass(false));
   addPass(createRISCVInsertVSETVLIPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
@@ -454,6 +455,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteFast() {
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
+  addPass(createRISCVVMV0EliminationPass());
   addPass(createRVVRegAllocPass(true));
   addPass(createVirtRegRewriter(false));
   addPass(createRISCVInsertVSETVLIPass());
@@ -618,8 +620,6 @@ void RISCVPassConfig::addPreRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
-
-  addPass(createRISCVVMV0EliminationPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {

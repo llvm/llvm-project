@@ -11,10 +11,10 @@ define void @vector_interleave_store_nxv32i1_nxv16i1(<vscale x 16 x i1> %a, <vsc
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0

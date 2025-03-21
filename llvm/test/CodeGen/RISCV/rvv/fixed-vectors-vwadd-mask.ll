@@ -5,13 +5,12 @@
 define <8 x i64> @vwadd_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vwadd_wv_mask_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v16, v8
 ; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
-; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
-; CHECK-NEXT:    vwadd.wv v8, v8, v16, v0.t
+; CHECK-NEXT:    vwadd.wv v12, v12, v8, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
     %mask = icmp slt <8 x i32> %x, <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
     %a = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> zeroinitializer
@@ -23,13 +22,12 @@ define <8 x i64> @vwadd_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 define <8 x i64> @vwaddu_wv_mask_v8i32(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vwaddu_wv_mask_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v16, v8
 ; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
-; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
-; CHECK-NEXT:    vwaddu.wv v8, v8, v16, v0.t
+; CHECK-NEXT:    vwaddu.wv v12, v12, v8, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
     %mask = icmp slt <8 x i32> %x, <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
     %a = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> zeroinitializer
@@ -60,13 +58,12 @@ define <8 x i64> @vwaddu_vv_mask_v8i32(<8 x i32> %x, <8 x i32> %y) {
 define <8 x i64> @vwadd_wv_mask_v8i32_commutative(<8 x i32> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vwadd_wv_mask_v8i32_commutative:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v16, v8
 ; CHECK-NEXT:    li a0, 42
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmslt.vx v0, v8, a0
-; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, mu
-; CHECK-NEXT:    vwadd.wv v8, v8, v16, v0.t
+; CHECK-NEXT:    vwadd.wv v12, v12, v8, v0.t
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
     %mask = icmp slt <8 x i32> %x, <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
     %a = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> zeroinitializer

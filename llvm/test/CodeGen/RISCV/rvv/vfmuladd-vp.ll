@@ -1155,8 +1155,8 @@ define <vscale x 16 x double> @vfma_vv_nxv16f64(<vscale x 16 x double> %va, <vsc
 ; CHECK-NEXT:    vl8re64.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    and a0, a7, a6
+; CHECK-NEXT:    vslidedown.vx v0, v0, a3
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    li a3, 24
 ; CHECK-NEXT:    mul a2, a2, a3
