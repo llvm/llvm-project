@@ -766,9 +766,12 @@ static bool isPairRelaxable(ArrayRef<Relocation> relocs, size_t i) {
 // Relax code sequence.
 // From:
 //   pcalau12i     $a0, %pc_hi20(sym) | %ld_pc_hi20(sym)  | %gd_pc_hi20(sym)
+//                    | %desc_pc_hi20(sym)
 //   addi.w/d $a0, $a0, %pc_lo12(sym) | %got_pc_lo12(sym) | %got_pc_lo12(sym)
+//                    | %desc_pc_lo12(sym)
 // To:
-//   pcaddi $a0, %pc_lo12(sym) | %got_pc_lo12(sym) | %got_pc_lo12(sym)
+//   pcaddi        $a0, %pc_lo12(sym) | %got_pc_lo12(sym) | %got_pc_lo12(sym)
+//                    | %desc_pcrel_20(sym)
 //
 // From:
 //   pcalau12i $a0, %got_pc_hi20(sym_got)
@@ -786,7 +789,9 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
         (rHi20.type == R_LARCH_TLS_GD_PC_HI20 &&
          rLo12.type == R_LARCH_GOT_PC_LO12) ||
         (rHi20.type == R_LARCH_TLS_LD_PC_HI20 &&
-         rLo12.type == R_LARCH_GOT_PC_LO12)))
+         rLo12.type == R_LARCH_GOT_PC_LO12) ||
+        (rHi20.type == R_LARCH_TLS_DESC_PC_HI20 &&
+         rLo12.type == R_LARCH_TLS_DESC_PC_LO12)))
     return;
 
   // GOT references to absolute symbols can't be relaxed to use pcaddi in
@@ -808,6 +813,8 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     dest = rHi20.sym->getVA(ctx);
   else if (rHi20.expr == RE_LOONGARCH_TLSGD_PAGE_PC)
     dest = ctx.in.got->getGlobalDynAddr(*rHi20.sym);
+  else if (rHi20.expr == RE_LOONGARCH_TLSDESC_PAGE_PC)
+    dest = ctx.in.got->getTlsDescAddr(*rHi20.sym);
   else {
     Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc) << "unknown expr ("
              << rHi20.expr << ") against symbol " << rHi20.sym
@@ -841,6 +848,8 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_GD_PCREL20_S2;
   else if (rHi20.type == R_LARCH_TLS_LD_PC_HI20)
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_LD_PCREL20_S2;
+  else if (rHi20.type == R_LARCH_TLS_DESC_PC_HI20)
+    sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_DESC_PCREL20_S2;
   else
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
   sec.relaxAux->writes.push_back(insn(PCADDI, getD5(nextInsn), 0, 0));
@@ -947,6 +956,7 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_LARCH_GOT_PC_HI20:
     case R_LARCH_TLS_GD_PC_HI20:
     case R_LARCH_TLS_LD_PC_HI20:
+    case R_LARCH_TLS_DESC_PC_HI20:
       // The overflow check for i+2 will be carried out in isPairRelaxable.
       if (isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
@@ -1080,6 +1090,11 @@ void LoongArch::finalizeRelax(int passes) const {
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
             r.expr = R_TLSGD_PC;
+            break;
+          case R_LARCH_TLS_DESC_PCREL20_S2:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            r.expr = R_TLSDESC_PC;
             break;
           default:
             llvm_unreachable("unsupported type");
