@@ -1518,6 +1518,33 @@ static void verifyDiagnosticWording(const Record &Diag) {
   // runs into odd situations like [[clang::warn_unused_result]],
   // #pragma clang, or --unwindlib=libgcc.
 }
+
+/// ClangDiagsCompatEnumsEmitter - Emit an enumeration that maps a
+/// 'compatibility diagnostic id' to a set of 2 regular diagnostic
+/// ids to simplify emitting compatibility warnings.
+void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
+                                      llvm::raw_ostream &OS,
+                                      const std::string &Component) {
+  ArrayRef<const Record *> Ids =
+      Records.getAllDerivedDefinitions("CompatWarningId");
+  for (const Record &R : make_pointee_range(Ids)) {
+    if (!Component.empty() && Component != R.getValueAsString("Component"))
+      continue;
+
+    StringRef CompatDiagName = R.getValueAsString("Name");
+    StringRef Diag = R.getValueAsString("Diag");
+    StringRef DiagPre = R.getValueAsString("DiagPre");
+    int64_t CXXStdVer = R.getValueAsInt("Std");
+
+    // FIXME: We sometimes define multiple compat diagnostics with the same
+    // name, e.g. 'constexpr_body_invalid_stmt' exists for C++14/20/23. It would
+    // be nice if we could combine all of them into a single compatibility diag
+    // id.
+    OS << "DIAG_COMPAT_ENUM(" << CompatDiagName << "," << CXXStdVer << ","
+       << Diag << "," << DiagPre << ")\n";
+  }
+}
+
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing
 /// declarations of Clang diagnostic enums for selects.
 void clang::EmitClangDiagsEnums(const RecordKeeper &Records, raw_ostream &OS,

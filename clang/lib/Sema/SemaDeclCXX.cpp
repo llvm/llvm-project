@@ -2421,22 +2421,13 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         (Cxx1yLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus17))
       return false;
   } else if (Cxx2bLoc.isValid()) {
-    SemaRef.Diag(Cxx2bLoc,
-                 SemaRef.getLangOpts().CPlusPlus23
-                     ? diag::compat_cxx23_constexpr_body_invalid_stmt
-                     : diag::compat_pre_cxx23_constexpr_body_invalid_stmt)
+    SemaRef.DiagCompat(Cxx2bLoc, diag_compat::cxx23_constexpr_body_invalid_stmt)
         << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx2aLoc.isValid()) {
-    SemaRef.Diag(Cxx2aLoc,
-                 SemaRef.getLangOpts().CPlusPlus20
-                     ? diag::compat_cxx20_constexpr_body_invalid_stmt
-                     : diag::compat_pre_cxx20_constexpr_body_invalid_stmt)
+    SemaRef.DiagCompat(Cxx2aLoc, diag_compat::cxx20_constexpr_body_invalid_stmt)
         << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx1yLoc.isValid()) {
-    SemaRef.Diag(Cxx1yLoc,
-                 SemaRef.getLangOpts().CPlusPlus14
-                     ? diag::compat_cxx14_constexpr_body_invalid_stmt
-                     : diag::compat_pre_cxx14_constexpr_body_invalid_stmt)
+    SemaRef.DiagCompat(Cxx1yLoc, diag_compat::cxx14_constexpr_body_invalid_stmt)
         << isa<CXXConstructorDecl>(Dcl);
   }
 
@@ -17824,9 +17815,7 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
           << FixItHint::CreateInsertion(getLocForEndOfToken(FriendLoc),
                                         InsertionText);
     } else {
-      Diag(FriendLoc, getLangOpts().CPlusPlus11
-                          ? diag::compat_cxx11_nonclass_type_friend
-                          : diag::compat_pre_cxx11_nonclass_type_friend)
+      DiagCompat(FriendLoc, diag_compat::nonclass_type_friend)
           << T << DS.getSourceRange();
     }
   }

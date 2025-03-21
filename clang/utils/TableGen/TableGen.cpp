@@ -48,6 +48,7 @@ enum ActionType {
   GenClangBasicWriter,
   GenClangBuiltins,
   GenClangBuiltinTemplates,
+  GenClangDiagsCompatEnums,
   GenClangDiagsDefs,
   GenClangDiagsEnums,
   GenClangDiagGroups,
@@ -176,6 +177,8 @@ cl::opt<ActionType> Action(
                    "Generate clang builtins list"),
         clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
                    "Generate clang builtins list"),
+        clEnumValN(GenClangDiagsCompatEnums, "gen-clang-diags-compat-enums",
+                   "Generate Clang diagnostic compatibility enums"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
         clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
@@ -398,6 +401,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangBuiltinTemplates:
     EmitClangBuiltinTemplates(Records, OS);
+    break;
+  case GenClangDiagsCompatEnums:
+    EmitClangDiagsCompatEnums(Records, OS, ClangComponent);
     break;
   case GenClangDiagsDefs:
     EmitClangDiagsDefs(Records, OS, ClangComponent);

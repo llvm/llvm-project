@@ -8,6 +8,11 @@ macro(clang_diag_gen component)
     -gen-clang-diags-enums -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component}Enums)
+
+  clang_tablegen(Diagnostic${component}CompatEnums.inc
+    -gen-clang-diags-compat-enums -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}CompatEnums)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)

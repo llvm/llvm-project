@@ -63,6 +63,10 @@ enum TokenKind : unsigned short;
 
 } // namespace tok
 
+namespace diag_compat {
+enum SemaCompatDiagId : unsigned;
+} // namespace diag_compat
+
 /// Annotates a diagnostic with some code that should be
 /// inserted, removed, or replaced to fix the problem.
 ///
@@ -1794,6 +1798,7 @@ void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
+unsigned GetCompatDiagId(const LangOptions& LangOpts, unsigned CompatDiagId);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

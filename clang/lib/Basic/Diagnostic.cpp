@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticDriver.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
+#include <clang/Basic/LangOptions.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -1337,6 +1339,47 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
 
   // Append the type tree to the end of the diagnostics.
   OutStr.append(Tree.begin(), Tree.end());
+}
+
+unsigned clang::GetCompatDiagId(const LangOptions &LangOpts,
+                                unsigned CompatDiagId) {
+  struct CompatDiag {
+    unsigned StdVer;
+    unsigned DiagId;
+    unsigned PreDiagId;
+  };
+
+  // We encode the standard version such that C++98 < C++11 < C++14 etc. The
+  // actual numbers don't really matter for this, but the definitions of the
+  // compat diags in the Tablegen file uses the standard version, so we base
+  // our encoding on that.
+#define DIAG_COMPAT_ENUM(Name, Std, Diag, DiagPre)                             \
+  {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
+  static constexpr CompatDiag Diags[] {
+#include "clang/Basic/DiagnosticSemaCompatEnums.inc"
+  };
+#undef DIAG_COMPAT_ENUM
+
+  assert(CompatDiagId < std::size(Diags) && "Invalid compat diag id");
+
+  unsigned StdVer = [&] {
+    if (LangOpts.CPlusPlus26)
+      return 2026;
+    if (LangOpts.CPlusPlus23)
+      return 2023;
+    if (LangOpts.CPlusPlus20)
+      return 2020;
+    if (LangOpts.CPlusPlus17)
+      return 2017;
+    if (LangOpts.CPlusPlus14)
+      return 2014;
+    if (LangOpts.CPlusPlus11)
+      return 2011;
+    return 1998;
+  }();
+
+  const CompatDiag& D = Diags[CompatDiagId];
+  return StdVer >= D.StdVer ? D.DiagId : D.PreDiagId;
 }
 
 StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,

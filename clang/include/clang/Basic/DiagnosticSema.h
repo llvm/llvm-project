@@ -35,7 +35,16 @@ enum {
 #undef DIAG_ENUM_END
 #undef DIAG_ENUM_ITEM
 #undef DIAG_ENUM
+
 } // end namespace diag
+
+namespace diag_compat {
+#define DIAG_COMPAT_ENUM(name, ...) name,
+enum SemaCompatDiagId : unsigned {
+#include "clang/Basic/DiagnosticSemaCompatEnums.inc"
+};
+#undef DIAG_COMPAT_ENUM
+} // end namespace diag_compat
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTICSEMA_H
