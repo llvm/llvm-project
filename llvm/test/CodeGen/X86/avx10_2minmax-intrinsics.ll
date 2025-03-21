@@ -429,7 +429,7 @@ define <8 x float >@test_int_x86_vminmaxps256(<8 x float> %A, <8 x float> %B) no
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxps $127, %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7d,0x28,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <8 x float> @llvm.x86.avx10.mask.vminmaxps256(<8 x float> %A, <8 x float> %B, i32 127, <8 x float> undef, i8 -1)
+  %ret = call <8 x float> @llvm.x86.avx10.mask.vminmaxps256(<8 x float> %A, <8 x float> %B, i32 127, <8 x float> poison, i8 -1)
   ret <8 x float> %ret
 }
 
@@ -475,7 +475,7 @@ define <2 x double>@test_int_x86_vminmaxsd(<2 x double> %A, <2 x double> %B) nou
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxsd $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x08,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> undef, i8 -1, i32 4)
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> poison, i8 -1, i32 4)
   ret <2 x double> %ret
 }
 
@@ -523,7 +523,7 @@ define <2 x double>@test_int_x86_vminmaxsd_round(<2 x double> %A, <2 x double> %
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxsd $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> undef, i8 -1, i32 8)
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> poison, i8 -1, i32 8)
   ret <2 x double> %ret
 }
 
@@ -573,7 +573,7 @@ define <8 x half>@test_int_x86_vminmaxsh(<8 x half> %A, <8 x half> %B) nounwind 
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxsh $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7c,0x08,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> undef, i8 -1, i32 4)
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> poison, i8 -1, i32 4)
   ret <8 x half> %ret
 }
 
@@ -621,7 +621,7 @@ define <8 x half>@test_int_x86_vminmaxsh_round(<8 x half> %A, <8 x half> %B) nou
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxsh $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7c,0x18,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> undef, i8 -1, i32 8)
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> poison, i8 -1, i32 8)
   ret <8 x half> %ret
 }
 
@@ -671,7 +671,7 @@ define <4 x float>@test_int_x86_vminmaxss(<4 x float> %A, <4 x float> %B) nounwi
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxss $127, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7d,0x08,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> undef, i8 -1, i32 4)
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> poison, i8 -1, i32 4)
   ret <4 x float> %ret
 }
 
@@ -719,7 +719,7 @@ define <4 x float>@test_int_x86_vminmaxss_round(<4 x float> %A, <4 x float> %B) 
 ; X86:       # %bb.0:
 ; X86-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0x7d,0x18,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> undef, i8 -1, i32 8)
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> poison, i8 -1, i32 8)
   ret <4 x float> %ret
 }
 
