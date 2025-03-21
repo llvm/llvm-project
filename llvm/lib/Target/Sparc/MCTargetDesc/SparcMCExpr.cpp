@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
@@ -181,73 +182,12 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::VariantKind Kind) {
 }
 
 bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm,
-                                            const MCFixup *Fixup) const {
-  return getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup);
-}
-
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expr!");
-    break;
-
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-
-}
-
-void SparcMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch(getKind()) {
-  default: return;
-  case VK_Sparc_TLS_GD_CALL:
-  case VK_Sparc_TLS_LDM_CALL: {
-    // The corresponding relocations reference __tls_get_addr, as they call it,
-    // but this is only implicit; we must explicitly add it to our symbol table
-    // to bind it for these uses.
-    MCSymbol *Symbol = Asm.getContext().getOrCreateSymbol("__tls_get_addr");
-    Asm.registerSymbol(*Symbol);
-    auto ELFSymbol = cast<MCSymbolELF>(Symbol);
-    if (!ELFSymbol->isBindingSet())
-      ELFSymbol->setBinding(ELF::STB_GLOBAL);
-    [[fallthrough]];
-  }
-  case VK_Sparc_TLS_GD_HI22:
-  case VK_Sparc_TLS_GD_LO10:
-  case VK_Sparc_TLS_GD_ADD:
-  case VK_Sparc_TLS_LDM_HI22:
-  case VK_Sparc_TLS_LDM_LO10:
-  case VK_Sparc_TLS_LDM_ADD:
-  case VK_Sparc_TLS_LDO_HIX22:
-  case VK_Sparc_TLS_LDO_LOX10:
-  case VK_Sparc_TLS_LDO_ADD:
-  case VK_Sparc_TLS_IE_HI22:
-  case VK_Sparc_TLS_IE_LO10:
-  case VK_Sparc_TLS_IE_LD:
-  case VK_Sparc_TLS_IE_LDX:
-  case VK_Sparc_TLS_IE_ADD:
-  case VK_Sparc_TLS_LE_HIX22:
-  case VK_Sparc_TLS_LE_LOX10: break;
-  }
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
+                                            const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  return true;
 }
 
 void SparcMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

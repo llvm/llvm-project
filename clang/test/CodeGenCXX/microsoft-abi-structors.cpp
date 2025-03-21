@@ -52,8 +52,7 @@ struct C {
 // DTORS:        store ptr %{{.*}}, ptr %[[RETVAL:retval]]
 // DTORS:        %[[SHOULD_DELETE_VALUE:[0-9a-z._]+]] = load i32, ptr %[[SHOULD_DELETE_VAR]]
 // DTORS:        call x86_thiscallcc void @"??1C@basic@@UAE@XZ"(ptr {{[^,]*}} %[[THIS:[0-9a-z]+]])
-// DTORS-NEXT:   %[[AND:[0-9]+]] = and i32 %[[SHOULD_DELETE_VALUE]], 1
-// DTORS-NEXT:   %[[CONDITION:[0-9]+]] = icmp eq i32 %[[AND]], 0
+// DTORS-NEXT:   %[[CONDITION:[0-9]+]] = icmp eq i32 %[[SHOULD_DELETE_VALUE]], 0
 // DTORS-NEXT:   br i1 %[[CONDITION]], label %[[CONTINUE_LABEL:[0-9a-z._]+]], label %[[CALL_DELETE_LABEL:[0-9a-z._]+]]
 //
 // DTORS:      [[CALL_DELETE_LABEL]]
@@ -167,7 +166,7 @@ void foo() {
 // DTORS2-LABEL: define linkonce_odr dso_local x86_thiscallcc ptr @"??_EC@dtor_in_second_nvbase@@W3AEPAXI@Z"(ptr %this, i32 %should_call_delete)
 //      Do an adjustment from B* to C*.
 // DTORS2:   getelementptr i8, ptr %{{.*}}, i32 -4
-// DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc ptr @"??_EC@dtor_in_second_nvbase@@UAEPAXI@Z"
+// DTORS2:   %[[CALL:.*]] = tail call x86_thiscallcc ptr @"??_GC@dtor_in_second_nvbase@@UAEPAXI@Z"
 // DTORS2:   ret ptr %[[CALL]]
 }
 

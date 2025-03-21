@@ -126,6 +126,19 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
           Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None) &&
          "Should only be expression-level modifiers here");
 
+  switch (SymLoc) {
+  case AArch64MCExpr::VK_DTPREL:
+  case AArch64MCExpr::VK_GOTTPREL:
+  case AArch64MCExpr::VK_TPREL:
+  case AArch64MCExpr::VK_TLSDESC:
+  case AArch64MCExpr::VK_TLSDESC_AUTH:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
   if (IsPCRel) {
     switch (Kind) {
     case FK_Data_1:

@@ -1291,40 +1291,38 @@ struct TypeIdSummary {
 };
 
 class CfiFunctionIndex {
-  std::set<std::string, std::less<>> Index;
+  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>> Index;
+  using IndexIterator =
+      DenseMap<GlobalValue::GUID,
+               std::set<std::string, std::less<>>>::const_iterator;
+  using NestedIterator = std::set<std::string, std::less<>>::const_iterator;
 
 public:
-  class GUIDIterator
-      : public iterator_adaptor_base<
-            GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
-            std::forward_iterator_tag, GlobalValue::GUID> {
-    using base = iterator_adaptor_base<
-        GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
-        std::forward_iterator_tag, GlobalValue::GUID>;
+  // Iterates keys of the DenseMap.
+  class GUIDIterator : public iterator_adaptor_base<GUIDIterator, IndexIterator,
+                                                    std::forward_iterator_tag,
+                                                    GlobalValue::GUID> {
+    using base = GUIDIterator::iterator_adaptor_base;
 
   public:
     GUIDIterator() = default;
-    explicit GUIDIterator(std::set<std::string, std::less<>>::const_iterator I)
-        : base(std::move(I)) {}
+    explicit GUIDIterator(IndexIterator I) : base(I) {}
 
-    GlobalValue::GUID operator*() const {
-      return GlobalValue::getGUID(
-          GlobalValue::dropLLVMManglingEscape(*this->wrapped()));
-    }
+    GlobalValue::GUID operator*() const { return this->wrapped()->first; }
   };
 
   CfiFunctionIndex() = default;
-  template <typename It> CfiFunctionIndex(It B, It E) : Index(B, E) {}
-
-  std::set<std::string, std::less<>>::const_iterator begin() const {
-    return Index.begin();
+  template <typename It> CfiFunctionIndex(It B, It E) {
+    for (; B != E; ++B)
+      emplace(*B);
   }
 
-  std::set<std::string, std::less<>>::const_iterator end() const {
-    return Index.end();
+  std::vector<StringRef> symbols() const {
+    std::vector<StringRef> Symbols;
+    for (auto &[GUID, Syms] : Index)
+      Symbols.insert(Symbols.end(), Syms.begin(), Syms.end());
+    return Symbols;
   }
-
-  std::vector<StringRef> symbols() const { return {begin(), end()}; }
 
   GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
   GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
@@ -1332,11 +1330,30 @@ public:
     return make_range(guid_begin(), guid_end());
   }
 
-  template <typename... Args> void emplace(Args &&...A) {
-    Index.emplace(std::forward<Args>(A)...);
+  iterator_range<NestedIterator> forGuid(GlobalValue::GUID GUID) const {
+    auto I = Index.find(GUID);
+    if (I == Index.end())
+      return make_range(NestedIterator{}, NestedIterator{});
+    return make_range(I->second.begin(), I->second.end());
   }
 
-  size_t count(StringRef S) const { return Index.count(S); }
+  template <typename... Args> void emplace(Args &&...A) {
+    StringRef S(std::forward<Args>(A)...);
+    GlobalValue::GUID GUID =
+        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    Index[GUID].emplace(S);
+  }
+
+  size_t count(StringRef S) const {
+    GlobalValue::GUID GUID =
+        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S));
+    auto I = Index.find(GUID);
+    if (I == Index.end())
+      return 0;
+    return I->second.count(S);
+  }
+
+  bool empty() const { return Index.empty(); }
 };
 
 /// 160 bits SHA1

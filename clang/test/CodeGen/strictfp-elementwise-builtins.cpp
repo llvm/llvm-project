@@ -127,6 +127,16 @@ float4 strict_elementwise_exp2(float4 a) {
   return __builtin_elementwise_exp2(a);
 }
 
+// CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_exp10Dv4_f
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ELT_EXP10:%.*]] = tail call <4 x float> @llvm.exp10.v4f32(<4 x float> [[A]]) #[[ATTR4]]
+// CHECK-NEXT:    ret <4 x float> [[ELT_EXP10]]
+//
+float4 strict_elementwise_exp10(float4 a) {
+  return __builtin_elementwise_exp10(a);
+}
+
 // CHECK-LABEL: define dso_local noundef <4 x float> @_Z24strict_elementwise_floorDv4_f
 // CHECK-SAME: (<4 x float> noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  entry:

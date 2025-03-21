@@ -4,8 +4,8 @@
 ; RUN: %if ptxas-12.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx86 | %ptxas-verify -arch=sm_100 %}
 ; RUN: %if ptxas-12.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100 -mattr=+ptx86 --nvptx-short-ptr | %ptxas-verify -arch=sm_100 %}
 
-declare void @llvm.nvvm.st.bulk(ptr addrspace(1), i64, i64)
-define void @st_bulk(ptr addrspace(1) %dest_addr, i64 %size) {
+declare void @llvm.nvvm.st.bulk(ptr, i64, i64)
+define void @st_bulk(ptr %dest_addr, i64 %size) {
 ; CHECK-LABEL: st_bulk(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
@@ -15,7 +15,7 @@ define void @st_bulk(ptr addrspace(1) %dest_addr, i64 %size) {
 ; CHECK-NEXT:    ld.param.u64 %rd2, [st_bulk_param_1];
 ; CHECK-NEXT:    st.bulk [%rd1], %rd2, 0;
 ; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.st.bulk(ptr addrspace(1) %dest_addr, i64 %size, i64 0)
+  call void @llvm.nvvm.st.bulk(ptr %dest_addr, i64 %size, i64 0)
   ret void
 }
 
