@@ -600,6 +600,7 @@ public:
   ModRefInfo getModRefInfo(const Instruction *I,
                            const std::optional<MemoryLocation> &OptLoc,
                            AAQueryInfo &AAQIP);
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2);
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,
                                 AAQueryInfo &AAQIP);
