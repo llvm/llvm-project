@@ -431,8 +431,9 @@ bool SystemZTTIImpl::areInlineCompatible(const Function *Caller,
   const FeatureBitset &CalleeBits =
       TM.getSubtargetImpl(*Callee)->getFeatureBits();
 
-  // Check that targets features from the callee are subset of the caller's.
-  return CalleeBits < CallerBits;
+  // Check that target features from the callee are subset or
+  // equal to the caller's features.
+  return (CalleeBits == CallerBits) || (CalleeBits < CallerBits);
 }
 
 unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
