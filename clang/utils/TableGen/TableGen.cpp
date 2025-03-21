@@ -178,7 +178,7 @@ cl::opt<ActionType> Action(
         clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
                    "Generate clang builtins list"),
         clEnumValN(GenClangDiagsCompatIDs, "gen-clang-diags-compat-ids",
-                   "Generate Clang diagnostic compatibility enums"),
+                   "Generate Clang diagnostic compatibility ids"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
         clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
