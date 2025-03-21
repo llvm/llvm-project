@@ -13,14 +13,17 @@ define void @foo(i32 %i) nounwind {
 ; CHECK-NEXT:    ori $a1, $zero, 5
 ; CHECK-NEXT:    bne $a0, $a1, .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %if.then
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: # %if.then2
-; CHECK-NEXT:    bl %plt(bar)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(bar)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:  .LBB0_4: # %if.end3
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    b %plt(bar)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(bar)
+; CHECK-NEXT:    jr $t8
 entry:
   switch i32 %i, label %if.end3 [
     i32 5, label %if.then
@@ -46,9 +49,11 @@ define void @foo_tail(i1 %i) nounwind {
 ; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    beqz $a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    b %plt(bar)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(bar)
+; CHECK-NEXT:    jr $t8
 ; CHECK-NEXT:  .LBB1_2: # %if.else
-; CHECK-NEXT:    b %plt(bar)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(bar)
+; CHECK-NEXT:    jr $t8
 entry:
   br i1 %i, label %if.then, label %if.else
 

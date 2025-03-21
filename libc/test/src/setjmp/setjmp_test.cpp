@@ -27,7 +27,7 @@ TEST(LlvmLibcSetJmpTest, SetAndJumpBack) {
   // The first time setjmp is called, it should return 0.
   // Subsequent calls will return the value passed to jump_back below.
   if (LIBC_NAMESPACE::setjmp(buf) <= MAX_LOOP) {
-    ++n;
+    n = n + 1;
     jump_back(buf, n);
   }
   ASSERT_EQ(longjmp_called, n);

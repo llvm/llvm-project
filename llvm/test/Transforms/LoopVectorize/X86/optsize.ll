@@ -375,8 +375,8 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT3]], <64 x i32> poison, <64 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <64 x i32> <i32 0, i32 -72, i32 -144, i32 -216, i32 -288, i32 -360, i32 -432, i32 -504, i32 -576, i32 -648, i32 -720, i32 -792, i32 -864, i32 -936, i32 -1008, i32 -1080, i32 -1152, i32 -1224, i32 -1296, i32 -1368, i32 -1440, i32 -1512, i32 -1584, i32 -1656, i32 -1728, i32 -1800, i32 -1872, i32 -1944, i32 -2016, i32 -2088, i32 -2160, i32 -2232, i32 -2304, i32 -2376, i32 -2448, i32 -2520, i32 -2592, i32 -2664, i32 -2736, i32 -2808, i32 -2880, i32 -2952, i32 -3024, i32 -3096, i32 -3168, i32 -3240, i32 -3312, i32 -3384, i32 -3456, i32 -3528, i32 -3600, i32 -3672, i32 -3744, i32 -3816, i32 -3888, i32 -3960, i32 -4032, i32 -4104, i32 -4176, i32 -4248, i32 -4320, i32 -4392, i32 -4464, i32 -4536>
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <64 x i32> poison, i32 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <64 x i32> [[BROADCAST_SPLATINSERT]], <64 x i32> poison, <64 x i32> zeroinitializer
@@ -421,8 +421,8 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT3]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AUTOVF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AUTOVF:       vector.body:
-; AUTOVF-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; AUTOVF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AUTOVF-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <8 x i32> <i32 0, i32 -72, i32 -144, i32 -216, i32 -288, i32 -360, i32 -432, i32 -504>
 ; AUTOVF-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[INDEX]], i64 0
 ; AUTOVF-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer

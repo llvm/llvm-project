@@ -4,7 +4,8 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqciac < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-EXT %s
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.c.muliadd x5, x10, 4
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -17,7 +18,8 @@ qc.c.muliadd x10, x15, 32
 qc.c.muliadd x10, x15, 20
 
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.muliadd x0, x10, 1048577
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -30,7 +32,8 @@ qc.muliadd x10, x15, 8589934592
 qc.muliadd x10, x15, 577
 
 
-# CHECK: :[[@LINE+1]]:11: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
 qc.shladd 0, x10, 1048577
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction

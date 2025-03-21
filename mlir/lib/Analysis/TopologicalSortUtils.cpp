@@ -159,7 +159,7 @@ SetVector<Block *> mlir::getBlocksSortedByDominance(Region &region) {
   for (Block &b : region) {
     if (blocks.count(&b) == 0) {
       llvm::ReversePostOrderTraversal<Block *> traversal(&b);
-      blocks.insert(traversal.begin(), traversal.end());
+      blocks.insert_range(traversal);
     }
   }
   assert(blocks.size() == region.getBlocks().size() &&
@@ -222,7 +222,7 @@ private:
       }
     }
     auto firstRange = llvm::make_first_range(regionCounts);
-    ancestorRegions.insert(firstRange.begin(), firstRange.end());
+    ancestorRegions.insert_range(firstRange);
     return res;
   }
 

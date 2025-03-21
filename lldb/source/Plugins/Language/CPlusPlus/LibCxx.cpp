@@ -309,11 +309,6 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "__ptr_")
@@ -412,11 +407,6 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
@@ -430,12 +420,6 @@ size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
 
 bool lldb_private::formatters::LibcxxContainerSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  if (valobj.IsPointerType()) {
-    uint64_t value = valobj.GetValueAsUnsigned(0);
-    if (!value)
-      return false;
-    stream.Printf("0x%016" PRIx64 " ", value);
-  }
   return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
                                        nullptr, nullptr, &valobj, false, false);
 }
@@ -517,8 +501,8 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     // likely that the string isn't initialized and we're reading garbage.
     ExecutionContext exe_ctx(location_sp->GetExecutionContextRef());
     const std::optional<uint64_t> max_bytes =
-        location_sp->GetCompilerType().GetByteSize(
-            exe_ctx.GetBestExecutionContextScope());
+        llvm::expectedToOptional(location_sp->GetCompilerType().GetByteSize(
+            exe_ctx.GetBestExecutionContextScope()));
     if (!max_bytes || size > *max_bytes)
       return {};
 

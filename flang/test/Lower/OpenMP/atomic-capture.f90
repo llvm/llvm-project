@@ -17,12 +17,12 @@ program OmpAtomicCapture
 
 !CHECK: %[[VAL_Y_LOADED:.*]] = fir.load %[[VAL_X_DECLARE]]#0 : !fir.ref<i32>
 !CHECK: omp.atomic.capture hint(uncontended) {
-!CHECK: omp.atomic.update %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK: %[[TEMP:.*]] = arith.muli %[[VAL_Y_LOADED]], %[[ARG]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-!CHECK: omp.atomic.read %[[VAL_X_DECLARE]]#1 = %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
+!CHECK: omp.atomic.read %[[VAL_X_DECLARE]]#0 = %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK: }
     !$omp atomic hint(omp_sync_hint_uncontended) capture
         y = x * y 
@@ -36,8 +36,8 @@ program OmpAtomicCapture
 !CHECK: %[[NO_REASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
 !CHECK: %[[ADD:.*]] = arith.addi  %[[VAL_20]], %[[NO_REASSOC]] : i32
 !CHECK: omp.atomic.capture hint(nonspeculative) memory_order(acquire) {
-!CHECK:   omp.atomic.read %[[VAL_X_DECLARE]]#1 = %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
-!CHECK:   omp.atomic.write %[[VAL_Y_DECLARE]]#1 = %[[ADD]] : !fir.ref<i32>, i32
+!CHECK:   omp.atomic.read %[[VAL_X_DECLARE]]#0 = %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
+!CHECK:   omp.atomic.write %[[VAL_Y_DECLARE]]#0 = %[[ADD]] : !fir.ref<i32>, i32
 !CHECK: }
 !CHECK: return
 !CHECK: }
@@ -68,10 +68,10 @@ subroutine pointers_in_atomic_capture()
     integer, pointer :: a, b
     integer, target :: c, d
 
-!CHECK: %[[EMBOX:.*]] = fir.embox %[[VAL_C_DECLARE]]#1 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
-!CHECK: fir.store %[[EMBOX]] to %[[VAL_A_DECLARE]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
-!CHECK: %[[EMBOX:.*]] = fir.embox %[[VAL_D_DECLARE]]#1 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
-!CHECK: fir.store %[[EMBOX]] to %[[VAL_B_DECLARE]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[EMBOX:.*]] = fir.embox %[[VAL_C_DECLARE]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+!CHECK: fir.store %[[EMBOX]] to %[[VAL_A_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!CHECK: %[[EMBOX:.*]] = fir.embox %[[VAL_D_DECLARE]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+!CHECK: fir.store %[[EMBOX]] to %[[VAL_B_DECLARE]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
     a=>c
     b=>d
 

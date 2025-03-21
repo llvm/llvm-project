@@ -218,7 +218,14 @@ public:
 
   bool GetpPacketSupported(lldb::tid_t tid);
 
-  bool GetxPacketSupported();
+  enum class xPacketState {
+    Unimplemented,
+    Prefixed, // Successful responses start with a 'b' character. This is the
+              // style used by GDB.
+    Bare,     // No prefix, packets starts with the memory being read. This is
+              // LLDB's original style.
+  };
+  xPacketState GetxPacketState();
 
   bool GetVAttachOrWaitSupported();
 
@@ -545,7 +552,6 @@ protected:
   LazyBool m_attach_or_wait_reply = eLazyBoolCalculate;
   LazyBool m_prepare_for_reg_writing_reply = eLazyBoolCalculate;
   LazyBool m_supports_p = eLazyBoolCalculate;
-  LazyBool m_supports_x = eLazyBoolCalculate;
   LazyBool m_avoid_g_packets = eLazyBoolCalculate;
   LazyBool m_supports_QSaveRegisterState = eLazyBoolCalculate;
   LazyBool m_supports_qXfer_auxv_read = eLazyBoolCalculate;
@@ -565,6 +571,7 @@ protected:
   LazyBool m_supports_memory_tagging = eLazyBoolCalculate;
   LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
   LazyBool m_uses_native_signals = eLazyBoolCalculate;
+  std::optional<xPacketState> m_x_packet_state;
   LazyBool m_supports_reverse_continue = eLazyBoolCalculate;
   LazyBool m_supports_reverse_step = eLazyBoolCalculate;
 

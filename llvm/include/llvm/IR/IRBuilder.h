@@ -1005,23 +1005,27 @@ public:
                             const Twine &Name = "");
 
   /// Create call to the minnum intrinsic.
-  Value *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_minnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maxnum intrinsic.
-  Value *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMaxNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_maxnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the minimum intrinsic.
@@ -1059,6 +1063,19 @@ public:
     assert(!IsFPConstrained && "TODO: Support strictfp");
     return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
                            {Src, Exp}, FMFSource, Name);
+  }
+
+  /// Create call to the fma intrinsic.
+  Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
+                   FMFSource FMFSource = {}, const Twine &Name = "") {
+    if (IsFPConstrained) {
+      return CreateConstrainedFPIntrinsic(
+          Intrinsic::experimental_constrained_fma, {Factor1->getType()},
+          {Factor1, Factor2, Summand}, FMFSource, Name);
+    }
+
+    return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
+                           {Factor1, Factor2, Summand}, FMFSource, Name);
   }
 
   /// Create a call to the arithmetic_fence intrinsic.
@@ -1718,6 +1735,17 @@ public:
       Accum = CreateLogicalOr(Accum, Ops[i]);
     return Accum;
   }
+
+  /// This function is like @ref CreateIntrinsic for constrained fp
+  /// intrinsics. It sets the rounding mode and exception behavior of
+  /// the created intrinsic call according to \p Rounding and \p
+  /// Except and it sets \p FPMathTag as the 'fpmath' metadata, using
+  /// defaults if a value equals nullopt/null.
+  CallInst *CreateConstrainedFPIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+      FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag = nullptr,
+      std::optional<RoundingMode> Rounding = std::nullopt,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
@@ -2684,6 +2712,10 @@ public:
   CallInst *CreateAlignmentAssumption(const DataLayout &DL, Value *PtrValue,
                                       Value *Alignment,
                                       Value *OffsetValue = nullptr);
+
+  /// Create an assume intrinsic call that represents an dereferencable
+  /// assumption on the provided pointer.
+  CallInst *CreateDereferenceableAssumption(Value *PtrValue, Value *SizeValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting
@@ -2708,11 +2740,16 @@ private:
   InserterTy Inserter;
 
 public:
-  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter = InserterTy(),
+  IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter,
             MDNode *FPMathTag = nullptr,
             ArrayRef<OperandBundleDef> OpBundles = {})
       : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
         Folder(Folder), Inserter(Inserter) {}
+
+  IRBuilder(LLVMContext &C, FolderTy Folder, MDNode *FPMathTag = nullptr,
+            ArrayRef<OperandBundleDef> OpBundles = {})
+      : IRBuilderBase(C, this->Folder, this->Inserter, FPMathTag, OpBundles),
+        Folder(Folder) {}
 
   explicit IRBuilder(LLVMContext &C, MDNode *FPMathTag = nullptr,
                      ArrayRef<OperandBundleDef> OpBundles = {})

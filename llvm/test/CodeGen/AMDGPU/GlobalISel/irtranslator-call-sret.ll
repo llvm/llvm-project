@@ -71,8 +71,8 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   ; GCN-NEXT:   %46:_(p5) = nuw nusw G_PTR_ADD [[FRAME_INDEX1]], [[C2]](s32)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[FRAME_INDEX1]](p5) :: (dereferenceable load (s8) from %ir.out.val, addrspace 5)
   ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %46(p5) :: (dereferenceable load (s32) from %ir.out.gep1, addrspace 5)
-  ; GCN-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) undef`, addrspace 1)
-  ; GCN-NEXT:   G_STORE [[LOAD1]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; GCN-NEXT:   G_STORE [[LOAD]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, addrspace 1)
+  ; GCN-NEXT:   G_STORE [[LOAD1]](s32), [[DEF]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %in.val = alloca { i8, i32 }, align 4, addrspace(5)
   %out.val = alloca { i8, i32 }, align 4, addrspace(5)
@@ -85,8 +85,8 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   %out.gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %out.val, i32 0, i32 1
   %out.val0 = load i8, ptr addrspace(5) %out.gep0
   %out.val1 = load i32, ptr addrspace(5) %out.gep1
-  store volatile i8 %out.val0, ptr addrspace(1) undef
-  store volatile i32 %out.val1, ptr addrspace(1) undef
+  store volatile i8 %out.val0, ptr addrspace(1) poison
+  store volatile i32 %out.val1, ptr addrspace(1) poison
   ret void
 }
 

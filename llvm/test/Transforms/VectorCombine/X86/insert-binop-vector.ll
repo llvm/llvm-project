@@ -6,10 +6,10 @@
 
 define <2 x double> @insert1_v2f64_f64_fdiv(<2 x double> %v0, <2 x double> %v1, double %s0, double %s1) {
 ; CHECK-LABEL: @insert1_v2f64_f64_fdiv(
-; CHECK-NEXT:    [[S:%.*]] = fdiv double [[S0:%.*]], [[S1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fdiv <2 x double> [[TMP1:%.*]], [[TMP2:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <2 x double> [[R]], double [[S]], i32 1
-; CHECK-NEXT:    ret <2 x double> [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[V0:%.*]], double [[S0:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[V1:%.*]], double [[S1:%.*]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = fdiv <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %s = fdiv double %s0, %s1
   %v = fdiv <2 x double> %v0, %v1
@@ -17,12 +17,25 @@ define <2 x double> @insert1_v2f64_f64_fdiv(<2 x double> %v0, <2 x double> %v1, 
   ret <2 x double> %r
 }
 
+; SSE2 has no fast v4i32 insertelement
 define <4 x i32> @insert0_v4i32_i32_add(<4 x i32> %v0, <4 x i32> %v1, i32 %s0, i32 %s1) {
-; CHECK-LABEL: @insert0_v4i32_i32_add(
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[S0:%.*]], [[S1:%.*]]
-; CHECK-NEXT:    [[V:%.*]] = add <4 x i32> [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> [[V]], i32 [[S]], i32 0
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; SSE2-LABEL: @insert0_v4i32_i32_add(
+; SSE2-NEXT:    [[S:%.*]] = add i32 [[S0:%.*]], [[S1:%.*]]
+; SSE2-NEXT:    [[V:%.*]] = add <4 x i32> [[V0:%.*]], [[V1:%.*]]
+; SSE2-NEXT:    [[R:%.*]] = insertelement <4 x i32> [[V]], i32 [[S]], i32 0
+; SSE2-NEXT:    ret <4 x i32> [[R]]
+;
+; SSE4-LABEL: @insert0_v4i32_i32_add(
+; SSE4-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[V0:%.*]], i32 [[S0:%.*]], i64 0
+; SSE4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[V1:%.*]], i32 [[S1:%.*]], i64 0
+; SSE4-NEXT:    [[R:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
+; SSE4-NEXT:    ret <4 x i32> [[R]]
+;
+; AVX-LABEL: @insert0_v4i32_i32_add(
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[V0:%.*]], i32 [[S0:%.*]], i64 0
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[V1:%.*]], i32 [[S1:%.*]], i64 0
+; AVX-NEXT:    [[R:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    ret <4 x i32> [[R]]
 ;
   %s = add i32 %s0, %s1
   %v = add <4 x i32> %v0, %v1
@@ -30,12 +43,19 @@ define <4 x i32> @insert0_v4i32_i32_add(<4 x i32> %v0, <4 x i32> %v1, i32 %s0, i
   ret <4 x i32> %r
 }
 
+; AVX expensive insertion into upper 128-bit vector
 define <16 x i16> @insert9_v16i16_i16_add(<16 x i16> %v0, <16 x i16> %v1, i16 %s0, i16 %s1) {
-; CHECK-LABEL: @insert9_v16i16_i16_add(
-; CHECK-NEXT:    [[S:%.*]] = add i16 [[S0:%.*]], [[S1:%.*]]
-; CHECK-NEXT:    [[V:%.*]] = add <16 x i16> [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <16 x i16> [[V]], i16 [[S]], i32 9
-; CHECK-NEXT:    ret <16 x i16> [[R]]
+; SSE-LABEL: @insert9_v16i16_i16_add(
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <16 x i16> [[V0:%.*]], i16 [[S0:%.*]], i64 9
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <16 x i16> [[V1:%.*]], i16 [[S1:%.*]], i64 9
+; SSE-NEXT:    [[R:%.*]] = add <16 x i16> [[TMP1]], [[TMP2]]
+; SSE-NEXT:    ret <16 x i16> [[R]]
+;
+; AVX-LABEL: @insert9_v16i16_i16_add(
+; AVX-NEXT:    [[S:%.*]] = add i16 [[S0:%.*]], [[S1:%.*]]
+; AVX-NEXT:    [[V:%.*]] = add <16 x i16> [[V0:%.*]], [[V1:%.*]]
+; AVX-NEXT:    [[R:%.*]] = insertelement <16 x i16> [[V]], i16 [[S]], i32 9
+; AVX-NEXT:    ret <16 x i16> [[R]]
 ;
   %s = add i16 %s0, %s1
   %v = add <16 x i16> %v0, %v1
@@ -46,10 +66,10 @@ define <16 x i16> @insert9_v16i16_i16_add(<16 x i16> %v0, <16 x i16> %v1, i16 %s
 ; Merge flags
 define <4 x float> @insert0_v4f32_f32_fadd_common_flags(<4 x float> %v0, <4 x float> %v1, float %s0, float %s1) {
 ; CHECK-LABEL: @insert0_v4f32_f32_fadd_common_flags(
-; CHECK-NEXT:    [[S:%.*]] = fadd fast float [[S0:%.*]], [[S1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fadd fast <4 x float> [[TMP1:%.*]], [[TMP2:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R]], float [[S]], i32 0
-; CHECK-NEXT:    ret <4 x float> [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[V0:%.*]], float [[S0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[V1:%.*]], float [[S1:%.*]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = fadd fast <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %s = fadd fast float %s0, %s1
   %v = fadd fast <4 x float> %v0, %v1
@@ -60,9 +80,9 @@ define <4 x float> @insert0_v4f32_f32_fadd_common_flags(<4 x float> %v0, <4 x fl
 ; Merge (shared) flags
 define <4 x float> @insert1_v4f32_f32_fsub_mixed_flags(<4 x float> %v0, <4 x float> %v1, float %s0, float %s1) {
 ; CHECK-LABEL: @insert1_v4f32_f32_fsub_mixed_flags(
-; CHECK-NEXT:    [[S:%.*]] = fsub nnan nsz float [[S0:%.*]], [[S1:%.*]]
-; CHECK-NEXT:    [[V:%.*]] = fsub nnan ninf <4 x float> [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[V]], float [[S]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[V0:%.*]], float [[S0:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[V1:%.*]], float [[S1:%.*]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %s = fsub nnan nsz float %s0, %s1
@@ -133,8 +153,3 @@ define <2 x double> @insert0_v2f64_f64_fadd_fsub(<2 x double> %v0, <2 x double> 
   ret <2 x double> %r
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}
-; SSE: {{.*}}
-; SSE2: {{.*}}
-; SSE4: {{.*}}

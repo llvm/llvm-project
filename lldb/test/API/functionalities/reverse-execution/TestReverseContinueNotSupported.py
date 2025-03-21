@@ -22,8 +22,12 @@ class TestReverseContinueNotSupported(TestBase):
 
         # This will fail gracefully.
         status = process.ContinueInDirection(lldb.eRunReverse)
-        self.assertFailure(
-            status, "error: gdb-remote does not support reverse execution of processes"
+        self.assertFailure(status)
+        # Where gdb-remote is used this starts with "error: gdb-remote" but on Windows it says "error: windows".
+        self.assertTrue(
+            status.GetCString().endswith(
+                " does not support reverse execution of processes"
+            )
         )
 
         self.assertSuccess(process.ContinueInDirection(lldb.eRunForward))

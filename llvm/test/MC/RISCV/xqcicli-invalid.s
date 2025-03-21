@@ -4,13 +4,16 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcicli < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
-# CHECK: :[[@LINE+1]]:9: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.lieq x0, x4, x6, 10
 
-# CHECK: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:13: error: invalid operand for instruction
 qc.lieq x2, x0, x6, 10
 
-# CHECK: :[[@LINE+1]]:17: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:17: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
 qc.lieq x2, x4, x0, 10
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -23,13 +26,16 @@ qc.lieq x2, x4, x6, 40
 qc.lieq x2, x4, x6, 10
 
 
-# CHECK: :[[@LINE+1]]:9: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.lige x0, x8, x20, 2
 
-# CHECK: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:13: error: invalid operand for instruction
 qc.lige x4, x0, x20, 2
 
-# CHECK: :[[@LINE+1]]:17: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:17: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
 qc.lige x4, x8, x0, 2
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -42,13 +48,16 @@ qc.lige x4, x8, x20, -18
 qc.lige x4, x8, x20, 2
 
 
-# CHECK: :[[@LINE+1]]:9: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.lilt x0, x9, x10, 3
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.lilt x19, x0, x10, 3
 
-# CHECK: :[[@LINE+1]]:18: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:18: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:18: error: invalid operand for instruction
 qc.lilt x19, x9, x0, 3
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -61,13 +70,16 @@ qc.lilt x19, x9, x10, 39
 qc.lilt x19, x9, x10, 3
 
 
-# CHECK: :[[@LINE+1]]:9: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.line x0, x14, x6, 10
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.line x18, x0, x6, 10
 
-# CHECK: :[[@LINE+1]]:19: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:19: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:19: error: invalid operand for instruction
 qc.line x18, x14, x0, 10
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -80,13 +92,16 @@ qc.line x18, x14, x6, 100
 qc.line x18, x14, x6, 10
 
 
-# CHECK: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.ligeu x0, x4, x6, 10
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.ligeu x2, x0, x6, 10
 
-# CHECK: :[[@LINE+1]]:18: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:18: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:18: error: invalid operand for instruction
 qc.ligeu x2, x4, x0, 10
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -99,13 +114,16 @@ qc.ligeu x2, x4, x6, 70
 qc.ligeu x2, x4, x6, 10
 
 
-# CHECK: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.liltu x0, x19, x12, 13
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.liltu x1, x0, x12, 13
 
-# CHECK: :[[@LINE+1]]:19: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:19: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:19: error: invalid operand for instruction
 qc.liltu x1, x19, x0, 13
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -118,10 +136,12 @@ qc.liltu x1, x19, x12, 73
 qc.liltu x1, x19, x12, 13
 
 
-# CHECK: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.lieqi x0, x1, 15, 12
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.lieqi x7, x0, 15, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -137,10 +157,12 @@ qc.lieqi x7, x1, 15, -22
 qc.lieqi x7, x1, 15, 12
 
 
-# CHECK: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.ligei x0, x11, -4, 9
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.ligei x17, x0, -4, 9
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -156,10 +178,12 @@ qc.ligei x17, x11, -4, 59
 qc.ligei x17, x11, -4, 9
 
 
-# CHECK: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.lilti x0, x11, -14, 2
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.lilti x9, x0, -14, 2
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -175,10 +199,12 @@ qc.lilti x9, x11, -14, 52
 qc.lilti x9, x11, -14, 2
 
 
-# CHECK: :[[@LINE+1]]:10: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.linei x0, x1, 10, 12
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.linei x5, x0, 10, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -194,10 +220,12 @@ qc.linei x5, x1, 10, 124
 qc.linei x5, x1, 10, 12
 
 
-# CHECK: :[[@LINE+1]]:11: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
 qc.ligeui x0, x12, 7, -12
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.ligeui x2, x0, 7, -12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -213,10 +241,12 @@ qc.ligeui x2, x12, 7, -17
 qc.ligeui x2, x12, 7, -12
 
 
-# CHECK: :[[@LINE+1]]:11: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:11: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
 qc.liltui x0, x25, 31, 12
 
-# CHECK: :[[@LINE+1]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding zero (x0)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.liltui x3, x0, 31, 12
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction

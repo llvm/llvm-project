@@ -487,10 +487,10 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   for (auto *arg : directives.args) {
     switch (arg->getOption().getID()) {
     case OPT_aligncomm:
-      parseAligncomm(arg->getValue());
+      file->symtab.parseAligncomm(arg->getValue());
       break;
     case OPT_alternatename:
-      parseAlternateName(arg->getValue());
+      file->symtab.parseAlternateName(arg->getValue());
       break;
     case OPT_defaultlib:
       if (std::optional<StringRef> path = findLibIfNew(arg->getValue()))
@@ -786,6 +786,13 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
                                       path))
       searchPaths.push_back(saver().save(path));
   }
+
+  // Libraries specified by `/nodefaultlib:` may not be found in incomplete
+  // search paths before lld infers a machine type from input files.
+  std::set<std::string> noDefaultLibs;
+  for (const std::string &path : ctx.config.noDefaultLibs)
+    noDefaultLibs.insert(findLib(path).lower());
+  ctx.config.noDefaultLibs = noDefaultLibs;
 }
 
 // Parses LIB environment which contains a list of search paths.
@@ -1382,43 +1389,46 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (!ctx.config.dll)
       return;
 
-    if (!ctx.symtab.exports.empty())
+    if (ctx.symtab.hadExplicitExports ||
+        (ctx.hybridSymtab && ctx.hybridSymtab->hadExplicitExports))
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
       return;
   }
 
-  AutoExporter exporter(ctx, excludedSymbols);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    AutoExporter exporter(symtab, excludedSymbols);
 
-  for (auto *arg : args.filtered(OPT_wholearchive_file))
-    if (std::optional<StringRef> path = findFile(arg->getValue()))
-      exporter.addWholeArchive(*path);
+    for (auto *arg : args.filtered(OPT_wholearchive_file))
+      if (std::optional<StringRef> path = findFile(arg->getValue()))
+        exporter.addWholeArchive(*path);
 
-  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
-    SmallVector<StringRef, 2> vec;
-    StringRef(arg->getValue()).split(vec, ',');
-    for (StringRef sym : vec)
-      exporter.addExcludedSymbol(ctx.symtab.mangle(sym));
-  }
-
-  ctx.symtab.forEachSymbol([&](Symbol *s) {
-    auto *def = dyn_cast<Defined>(s);
-    if (!exporter.shouldExport(def))
-      return;
-
-    if (!def->isGCRoot) {
-      def->isGCRoot = true;
-      ctx.config.gcroot.push_back(def);
+    for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+      SmallVector<StringRef, 2> vec;
+      StringRef(arg->getValue()).split(vec, ',');
+      for (StringRef sym : vec)
+        exporter.addExcludedSymbol(symtab.mangle(sym));
     }
 
-    Export e;
-    e.name = def->getName();
-    e.sym = def;
-    if (Chunk *c = def->getChunk())
-      if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
-        e.data = true;
-    s->isUsedInRegularObj = true;
-    ctx.symtab.exports.push_back(e);
+    symtab.forEachSymbol([&](Symbol *s) {
+      auto *def = dyn_cast<Defined>(s);
+      if (!exporter.shouldExport(def))
+        return;
+
+      if (!def->isGCRoot) {
+        def->isGCRoot = true;
+        ctx.config.gcroot.push_back(def);
+      }
+
+      Export e;
+      e.name = def->getName();
+      e.sym = def;
+      if (Chunk *c = def->getChunk())
+        if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+          e.data = true;
+      s->isUsedInRegularObj = true;
+      symtab.exports.push_back(e);
+    });
   });
 }
 
@@ -1893,7 +1903,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /alternatename
   for (auto *arg : args.filtered(OPT_alternatename))
-    parseAlternateName(arg->getValue());
+    mainSymtab.parseAlternateName(arg->getValue());
 
   // Handle /include
   for (auto *arg : args.filtered(OPT_incl))
@@ -2047,7 +2057,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /aligncomm
   for (auto *arg : args.filtered(OPT_aligncomm))
-    parseAligncomm(arg->getValue());
+    mainSymtab.parseAligncomm(arg->getValue());
 
   // Handle /manifestdependency.
   for (auto *arg : args.filtered(OPT_manifestdependency))
@@ -2512,32 +2522,30 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
           if (e.source != ExportSource::Directives)
             e.symbolName = symtab.mangleMaybe(e.sym);
         }
-      });
 
-      // Add weak aliases. Weak aliases is a mechanism to give remaining
-      // undefined symbols final chance to be resolved successfully.
-      for (auto pair : config->alternateNames) {
-        StringRef from = pair.first;
-        StringRef to = pair.second;
-        Symbol *sym = ctx.symtab.find(from);
-        if (!sym)
-          continue;
-        if (auto *u = dyn_cast<Undefined>(sym)) {
-          if (u->weakAlias) {
-            // On ARM64EC, anti-dependency aliases are treated as undefined
-            // symbols unless a demangled symbol aliases a defined one, which is
-            // part of the implementation.
-            if (!isArm64EC(ctx.config.machine) || !u->isAntiDep)
-              continue;
-            if (!isa<Undefined>(u->weakAlias) &&
-                !isArm64ECMangledFunctionName(u->getName()))
-              continue;
+        // Add weak aliases. Weak aliases is a mechanism to give remaining
+        // undefined symbols final chance to be resolved successfully.
+        for (auto pair : symtab.alternateNames) {
+          StringRef from = pair.first;
+          StringRef to = pair.second;
+          Symbol *sym = symtab.find(from);
+          if (!sym)
+            continue;
+          if (auto *u = dyn_cast<Undefined>(sym)) {
+            if (u->weakAlias) {
+              // On ARM64EC, anti-dependency aliases are treated as undefined
+              // symbols unless a demangled symbol aliases a defined one, which
+              // is part of the implementation.
+              if (!symtab.isEC() || !u->isAntiDep)
+                continue;
+              if (!isa<Undefined>(u->weakAlias) &&
+                  !isArm64ECMangledFunctionName(u->getName()))
+                continue;
+            }
+            u->setWeakAlias(symtab.addUndefined(to));
           }
-          u->setWeakAlias(ctx.symtab.addUndefined(to));
         }
-      }
 
-      ctx.forEachSymtab([&](SymbolTable &symtab) {
         // If any inputs are bitcode files, the LTO code generator may create
         // references to library functions that are not explicit in the bitcode
         // file's symbol table. If any of those library functions are defined in
@@ -2554,27 +2562,30 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         // it.
         if (symtab.findUnderscore("_load_config_used"))
           symtab.addGCRoot(symtab.mangle("_load_config_used"));
-      });
 
-      if (args.hasArg(OPT_include_optional)) {
-        // Handle /includeoptional
-        for (auto *arg : args.filtered(OPT_include_optional))
-          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
-            ctx.symtab.addGCRoot(arg->getValue());
-      }
+        if (args.hasArg(OPT_include_optional)) {
+          // Handle /includeoptional
+          for (auto *arg : args.filtered(OPT_include_optional))
+            if (isa_and_nonnull<LazyArchive>(symtab.find(arg->getValue())))
+              symtab.addGCRoot(arg->getValue());
+        }
+      });
     } while (run());
   }
 
   // Handle /includeglob
   for (StringRef pat : args::getStrings(args, OPT_incl_glob))
-    ctx.symtab.addUndefinedGlob(pat);
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { symtab.addUndefinedGlob(pat); });
 
   // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
-  // Load more object files that might be needed for wrapped symbols.
-  if (!wrapped.empty())
-    while (run())
-      ;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    addWrappedSymbols(symtab, args);
+    // Load more object files that might be needed for wrapped symbols.
+    if (!symtab.wrapped.empty())
+      while (run())
+        ;
+  });
 
   if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.
@@ -2597,7 +2608,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // If it ends up pulling in more object files from static libraries,
     // (and maybe doing more stdcall fixups along the way), this would need
     // to loop these two calls.
-    ctx.symtab.loadMinGWSymbols();
+    ctx.forEachSymtab([](SymbolTable &symtab) { symtab.loadMinGWSymbols(); });
     run();
   }
 
@@ -2644,8 +2655,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   run();
 
   // Apply symbol renames for -wrap.
-  if (!wrapped.empty())
-    wrapSymbols(ctx, wrapped);
+  ctx.forEachSymtab([](SymbolTable &symtab) {
+    if (!symtab.wrapped.empty())
+      wrapSymbols(symtab);
+  });
 
   if (isArm64EC(config->machine))
     createECExportThunks();
@@ -2692,28 +2705,30 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /output-def (MinGW specific).
   if (auto *arg = args.getLastArg(OPT_output_def))
-    writeDefFile(ctx, arg->getValue(), ctx.symtab.exports);
+    writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
 
   // Set extra alignment for .comm symbols
-  for (auto pair : config->alignComm) {
-    StringRef name = pair.first;
-    uint32_t alignment = pair.second;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    for (auto pair : symtab.alignComm) {
+      StringRef name = pair.first;
+      uint32_t alignment = pair.second;
 
-    Symbol *sym = ctx.symtab.find(name);
-    if (!sym) {
-      Warn(ctx) << "/aligncomm symbol " << name << " not found";
-      continue;
+      Symbol *sym = symtab.find(name);
+      if (!sym) {
+        Warn(ctx) << "/aligncomm symbol " << name << " not found";
+        continue;
+      }
+
+      // If the symbol isn't common, it must have been replaced with a regular
+      // symbol, which will carry its own alignment.
+      auto *dc = dyn_cast<DefinedCommon>(sym);
+      if (!dc)
+        continue;
+
+      CommonChunk *c = dc->getChunk();
+      c->setAlignment(std::max(c->getAlignment(), alignment));
     }
-
-    // If the symbol isn't common, it must have been replaced with a regular
-    // symbol, which will carry its own alignment.
-    auto *dc = dyn_cast<DefinedCommon>(sym);
-    if (!dc)
-      continue;
-
-    CommonChunk *c = dc->getChunk();
-    c->setAlignment(std::max(c->getAlignment(), alignment));
-  }
+  });
 
   // Windows specific -- Create an embedded or side-by-side manifest.
   // /manifestdependency: enables /manifest unless an explicit /manifest:no is
@@ -2761,14 +2776,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // For now, just manually try to retain the known possible personality
       // functions. This doesn't bring in more object files, but only marks
       // functions that already have been included to be retained.
-      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
-                            "rust_eh_personality"}) {
-        Defined *d = dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore(n));
-        if (d && !d->isGCRoot) {
-          d->isGCRoot = true;
-          config->gcroot.push_back(d);
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
+                              "rust_eh_personality"}) {
+          Defined *d = dyn_cast_or_null<Defined>(symtab.findUnderscore(n));
+          if (d && !d->isGCRoot) {
+            d->isGCRoot = true;
+            config->gcroot.push_back(d);
+          }
         }
-      }
+      });
     }
 
     markLive(ctx);

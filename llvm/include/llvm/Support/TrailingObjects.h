@@ -46,7 +46,6 @@
 #ifndef LLVM_SUPPORT_TRAILINGOBJECTS_H
 #define LLVM_SUPPORT_TRAILINGOBJECTS_H
 
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"

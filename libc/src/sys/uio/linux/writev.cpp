@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/sys/uio/writev.h"
+#include "hdr/types/ssize_t.h"
+#include "hdr/types/struct_iovec.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"

@@ -3,7 +3,7 @@
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
@@ -14,7 +14,7 @@
 // RUN:   -analyzer-checker=optin.taint.GenericTaint \
 // RUN:   -analyzer-checker=optin.taint.TaintedDiv \
 // RUN:   -analyzer-checker=core \
-// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config \
 // RUN:     optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml

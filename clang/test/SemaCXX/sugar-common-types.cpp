@@ -44,7 +44,7 @@ template <class T> struct S1 {
 };
 
 N t10 = 0 ? S1<X1>() : S1<Y1>(); // expected-error {{from 'S1<B1>' (aka 'S1<int>')}}
-N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<int>::S2<B2>' (aka 'S2<void>')}}
+N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<B1>::S2<B2>' (aka 'S2<void>')}}
 
 template <class T> using Al = S1<T>;
 
@@ -88,7 +88,7 @@ N t19 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::Y)){};
 // expected-error@-1 {{rvalue of type 'B1' (aka 'int')}}
 
 N t20 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::X)){};
-// expected-error@-1 {{rvalue of type '__underlying_type(Enums::X)' (aka 'int')}}
+// expected-error@-1 {{rvalue of type '__underlying_type(EnumsB::X)' (aka 'int')}}
 
 using QX = const SB1 *;
 using QY = const ::SB1 *;

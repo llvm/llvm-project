@@ -220,7 +220,8 @@ private:
     // Non simply contiguous ref require a fir.box to carry the byte stride.
     if (mlir::isa<fir::SequenceType>(resultValueType) &&
         !Fortran::evaluate::IsSimplyContiguous(
-            designatorNode, getConverter().getFoldingContext()))
+            designatorNode, getConverter().getFoldingContext(),
+            /*namedConstantSectionsAreAlwaysContiguous=*/false))
       return fir::BoxType::get(resultValueType);
     // Other designators can be handled as raw addresses.
     return fir::ReferenceType::get(resultValueType);

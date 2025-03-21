@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -262,7 +263,11 @@ void StmtPrinter::VisitNullStmt(NullStmt *Node) {
 void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   Indent();
   PrintRawDeclStmt(Node);
-  OS << ";" << NL;
+  // Certain pragma declarations shouldn't have a semi-colon after them.
+  if (!Node->isSingleDecl() ||
+      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+    OS << ";";
+  OS << NL;
 }
 
 void StmtPrinter::VisitCompoundStmt(CompoundStmt *Node) {
@@ -502,7 +507,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     OS << "goto ";
 
   OS << "(";
-  VisitStringLiteral(Node->getAsmString());
+  Visit(Node->getAsmStringExpr());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
@@ -519,7 +524,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getOutputConstraintLiteral(i));
+    Visit(Node->getOutputConstraintExpr(i));
     OS << " (";
     Visit(Node->getOutputExpr(i));
     OS << ")";
@@ -540,7 +545,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getInputConstraintLiteral(i));
+    Visit(Node->getInputConstraintExpr(i));
     OS << " (";
     Visit(Node->getInputExpr(i));
     OS << ")";
@@ -554,7 +559,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     if (i != 0)
       OS << ", ";
 
-    VisitStringLiteral(Node->getClobberStringLiteral(i));
+    Visit(Node->getClobberExpr(i));
   }
 
   // Labels
@@ -761,6 +766,11 @@ void StmtPrinter::VisitOMPSimdDirective(OMPSimdDirective *Node) {
 
 void StmtPrinter::VisitOMPTileDirective(OMPTileDirective *Node) {
   Indent() << "#pragma omp tile";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPStripeDirective(OMPStripeDirective *Node) {
+  Indent() << "#pragma omp stripe";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1240,6 +1250,28 @@ void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
 
   PrintOpenACCClauseList(S);
   OS << '\n';
+}
+
+void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  Indent() << "#pragma acc atomic";
+
+  if (S->getAtomicKind() != OpenACCAtomicKind::None)
+    OS << " " << S->getAtomicKind();
+
+  OS << '\n';
+  PrintStmt(S->getAssociatedStmt());
+}
+
+void StmtPrinter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
+  Indent() << "#pragma acc cache(";
+  if (S->hasReadOnly())
+    OS << "readonly: ";
+
+  llvm::interleaveComma(S->getVarList(), OS, [&](const Expr *E) {
+    E->printPretty(OS, nullptr, Policy);
+  });
+
+  OS << ")\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1967,7 +1999,6 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \
@@ -2595,15 +2626,6 @@ void StmtPrinter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   OS << "]";
 }
 
-void StmtPrinter::VisitResolvedUnexpandedPackExpr(
-    ResolvedUnexpandedPackExpr *E) {
-  OS << "<<resolved pack(";
-  llvm::interleave(
-      E->getExprs().begin(), E->getExprs().end(),
-      [this](auto *X) { PrintExpr(X); }, [this] { OS << ", "; });
-  OS << ")>>";
-}
-
 void StmtPrinter::VisitSubstNonTypeTemplateParmPackExpr(
                                        SubstNonTypeTemplateParmPackExpr *Node) {
   OS << *Node->getParameterPack();
@@ -2637,10 +2659,8 @@ void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
 }
 
 void StmtPrinter::VisitCXXParenListInitExpr(CXXParenListInitExpr *Node) {
-  OS << "(";
-  llvm::interleaveComma(Node->getInitExprs(), OS,
+  llvm::interleaveComma(Node->getUserSpecifiedInitExprs(), OS,
                         [&](Expr *E) { PrintExpr(E); });
-  OS << ")";
 }
 
 void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {

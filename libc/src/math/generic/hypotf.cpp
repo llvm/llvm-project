@@ -55,7 +55,7 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
 
   // These squares are exact.
   double a_sq = ad * ad;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   double sum_sq = fputil::multiply_add(bd, bd, a_sq);
 #else
   double b_sq = bd * bd;
@@ -72,7 +72,7 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
     double r_d = result.get_val();
 
     // Perform rounding correction.
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     double sum_sq_lo = fputil::multiply_add(bd, bd, a_sq - sum_sq);
     double err = sum_sq_lo - fputil::multiply_add(r_d, r_d, -sum_sq);
 #else

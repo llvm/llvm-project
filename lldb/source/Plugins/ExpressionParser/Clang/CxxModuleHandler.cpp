@@ -280,7 +280,8 @@ std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
       new_class_template->getDeclContext(),
       new_class_template->getTemplatedDecl()->getLocation(),
       new_class_template->getLocation(), new_class_template, imported_args,
-      nullptr);
+      td->hasStrictPackMatch(),
+      /*PrevDecl=*/nullptr);
 
   new_class_template->AddSpecialization(result, InsertPos);
   if (new_class_template->isOutOfLine())

@@ -3322,7 +3322,7 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
     SmallDenseSet<StringRef, 4> OperandsSet;
-    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
+    OperandsSet.insert_range(ArgsCopy);
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
@@ -4139,23 +4139,19 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 
   // If requested by the target, guess any undefined properties.
   if (Target.guessInstructionProperties()) {
-    for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-      CodeGenInstruction *InstInfo =
-          const_cast<CodeGenInstruction *>(Instructions[i]);
+    for (const CodeGenInstruction *InstInfo : Instructions) {
       if (InstInfo->InferredFrom)
         continue;
       // The mayLoad and mayStore flags default to false.
       // Conservatively assume hasSideEffects if it wasn't explicit.
       if (InstInfo->hasSideEffects_Unset)
-        InstInfo->hasSideEffects = true;
+        const_cast<CodeGenInstruction *>(InstInfo)->hasSideEffects = true;
     }
     return;
   }
 
   // Complain about any flags that are still undefined.
-  for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
-    CodeGenInstruction *InstInfo =
-        const_cast<CodeGenInstruction *>(Instructions[i]);
+  for (const CodeGenInstruction *InstInfo : Instructions) {
     if (InstInfo->InferredFrom)
       continue;
     if (InstInfo->hasSideEffects_Unset)

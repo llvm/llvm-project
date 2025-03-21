@@ -163,6 +163,73 @@ Symbols:
         StabInfoIndex:          44
         StabSectNum:            55
 
+  - Name:               bstat
+    Value:              0x0
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_BSTAT
+
+  - Name:               cfun
+    Value:              0x0
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_FUN
+
+  - Name:               stsym
+    Value:              0x05
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_STSYM
+
+  - Name:               bincl
+    Value:              0x06
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_BINCL
+
+  - Name:               eincl
+    Value:              0x06
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_EINCL
+
+  - Name:               lsym
+    Value:              0x07
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_LSYM
+
+  - Name:               psym
+    Value:              0x07
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_PSYM
+
+  - Name:               rsym
+    Value:              0x08
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_RSYM
+
+  - Name:               rpsym
+    Value:              0x08
+    Section:            N_DEBUG
+    Type:               0x00
+    StorageClass:       C_RPSYM
+
+  - Name:               ecoml
+    Value:              0x09
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_ECOML
+
+  - Name:               cinfo
+    Value:              0x02
+    Section:            .text
+    Type:               0x00
+    StorageClass:       C_INFO
+
+
 # SYMBOL32:      Symbols [
 # SYMBOL32-NEXT:   Symbol {
 # SYMBOL32-NEXT:     Index: 0
@@ -367,5 +434,104 @@ Symbols:
 # SYMBOL32-NEXT:       StabInfoIndex: 0x2C
 # SYMBOL32-NEXT:       StabSectNum: 0x37
 # SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 25
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (SymbolTableIndex): 0x0
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_BSTAT (0x8F)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 26
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (OffsetInCSect): 0x0
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_FUN (0x8E)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 27
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (OffsetInCSect): 0x5
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_STSYM (0x85)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 28
+# SYMBOL32-NEXT:     Name: bincl
+# SYMBOL32-NEXT:     Value (OffsetInFile): 0x6
+# SYMBOL32-NEXT:     Section: .text
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_BINCL (0x6C)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 29
+# SYMBOL32-NEXT:     Name: eincl
+# SYMBOL32-NEXT:     Value (OffsetInFile): 0x6
+# SYMBOL32-NEXT:     Section: .text
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_EINCL (0x6D)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 30
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (OffsetRelToStackFrame): 0x7
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_LSYM (0x81)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 31
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (OffsetRelToStackFrame): 0x7
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_PSYM (0x82)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 32
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (RegisterNumber): 0x8
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_RSYM (0x83)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 33
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (RegisterNumber): 0x8
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_RPSYM (0x84)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 34
+# SYMBOL32-NEXT:     Name: Unimplemented Debug Name
+# SYMBOL32-NEXT:     Value (OffsetInCommBlock): 0x9
+# SYMBOL32-NEXT:     Section: .text
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_ECOML (0x88)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 35
+# SYMBOL32-NEXT:     Name: cinfo
+# SYMBOL32-NEXT:     Value (OffsetInCommentSection): 0x2
+# SYMBOL32-NEXT:     Section: .text
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_INFO (0x6E)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 0
 # SYMBOL32-NEXT:   }
 # SYMBOL32-NEXT: ]

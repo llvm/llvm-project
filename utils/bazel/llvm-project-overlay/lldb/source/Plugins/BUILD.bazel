@@ -16,7 +16,7 @@ cc_library(
     name = "PluginClangCommon",
     srcs = glob(["Language/ClangCommon/*.cpp"]),
     hdrs = glob(["Language/ClangCommon/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//clang:basic",
         "//clang:lex",
@@ -31,7 +31,7 @@ cc_library(
 cc_library(
     name = "PluginObjCLanguageHeaders",
     hdrs = glob(["Language/ObjC/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginClangCommon",
         ":PluginExpressionParserClangHeaders",
@@ -42,7 +42,7 @@ cc_library(
 cc_library(
     name = "PluginObjCLanguage",
     srcs = glob(["Language/ObjC/*.cpp"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginAppleObjCRuntime",
         ":PluginExpressionParserClangHeaders",
@@ -65,7 +65,7 @@ cc_library(
 cc_library(
     name = "PluginTypeSystemClangHeaders",
     hdrs = glob(["TypeSystem/Clang/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginExpressionParserClangHeaders",
         "//clang:frontend",
@@ -77,7 +77,7 @@ cc_library(
     name = "PluginCPPRuntime",
     srcs = glob(["LanguageRuntime/CPlusPlus/*.cpp"]),
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:CoreHeaders",
         "//lldb:Headers",
@@ -92,7 +92,7 @@ cc_library(
     name = "PluginObjCRuntime",
     srcs = glob(["LanguageRuntime/ObjC/*.cpp"]),
     hdrs = glob(["LanguageRuntime/ObjC/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginTypeSystemClangHeaders",
         "//clang:ast",
@@ -110,7 +110,7 @@ cc_library(
     name = "PluginAppleObjCRuntime",
     srcs = glob(["LanguageRuntime/ObjC/AppleObjCRuntime/*.cpp"]),
     hdrs = glob(["LanguageRuntime/ObjC/AppleObjCRuntime/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginCPPRuntime",
         ":PluginExpressionParserClangHeaders",
@@ -162,7 +162,7 @@ cc_library(
 cc_library(
     name = "PluginExpressionParserClangHeaders",
     hdrs = glob(["ExpressionParser/Clang/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:CoreHeaders",
         "//lldb:DataFormattersHeaders",
@@ -172,7 +172,7 @@ cc_library(
 cc_library(
     name = "PluginExpressionParserClang",
     srcs = glob(["ExpressionParser/Clang/*.cpp"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
@@ -233,7 +233,7 @@ gentbl_cc_library(
 cc_library(
     name = "PluginPlatformMacOSXObjCXXHeaders",
     hdrs = glob(["Platform/MacOSX/objcxx/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -270,7 +270,7 @@ cc_library(
                "//conditions:default": [],
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     tags = ["nobuildkite"],
     deps = [
         ":PlatformMacOSXProperties",
@@ -319,7 +319,7 @@ gentbl_cc_library(
 cc_library(
     name = "PluginSymbolFileDWARFHeaders",
     hdrs = glob(["SymbolFile/DWARF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginTypeSystemClangHeaders",
         "//lldb:Core",
@@ -358,7 +358,7 @@ cc_library(
     name = "PluginProcessUtility",
     srcs = glob(["Process/Utility/*.cpp"]),
     hdrs = glob(["Process/Utility/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:BreakpointHeaders",
         "//lldb:Core",
@@ -378,7 +378,7 @@ cc_library(
     name = "PluginObjectFilePDB",
     srcs = glob(["ObjectFile/PDB/*.cpp"]),
     hdrs = glob(["ObjectFile/PDB/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:SymbolHeaders",
@@ -392,7 +392,7 @@ cc_library(
 cc_library(
     name = "PluginSymbolFileNativePDBHeaders",
     hdrs = glob(["SymbolFile/NativePDB/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = ["//lldb:Core"],
 )
 
@@ -425,7 +425,7 @@ cc_library(
 cc_library(
     name = "PluginSymbolFilePDBHeaders",
     hdrs = glob(["SymbolFile/PDB/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = ["//lldb:Core"],
 )
 
@@ -475,7 +475,7 @@ cc_library(
     hdrs = glob(["Process/gdb-remote/*.h"]) + [
         "Process/gdb-remote/GDBRemoteErrno.def",
     ],
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         ":ProcessGDBRemoteProperties",
@@ -501,7 +501,7 @@ cc_library(
     name = "PluginObjectContainerMachOArchive",
     srcs = glob(["ObjectContainer/Universal-Mach-O/*.cpp"]),
     hdrs = glob(["ObjectContainer/Universal-Mach-O/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -517,7 +517,7 @@ cc_library(
     name = "PluginObjectContainerBSDArchive",
     srcs = glob(["ObjectContainer/BSD-Archive/*.cpp"]),
     hdrs = glob(["ObjectContainer/BSD-Archive/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -533,7 +533,7 @@ cc_library(
     name = "PluginObjectContainerMachOFileset",
     srcs = glob(["ObjectContainer/Mach-O-Fileset/*.cpp"]),
     hdrs = glob(["ObjectContainer/Mach-O-Fileset/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -567,7 +567,7 @@ cc_library(
     name = "PluginStructuredDataDarwinLog",
     srcs = glob(["StructuredData/DarwinLog/*.cpp"]),
     hdrs = glob(["StructuredData/DarwinLog/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":StructuredDataDarwinLogProperties",
         "//lldb:Breakpoint",
@@ -585,7 +585,7 @@ cc_library(
     name = "PluginTraceCommon",
     srcs = glob(["Trace/common/*.cpp"]),
     hdrs = glob(["Trace/common/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -598,7 +598,7 @@ cc_library(
     name = "PluginPlatformPOSIX",
     srcs = glob(["Platform/POSIX/*.cpp"]),
     hdrs = glob(["Platform/POSIX/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginPlatformGDB",
         ":PluginTypeSystemClang",
@@ -636,7 +636,7 @@ cc_library(
     name = "PluginPlatformQemuUser",
     srcs = glob(["Platform/QemuUser/*.cpp"]),
     hdrs = glob(["Platform/QemuUser/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PlatformQemuUserProperties",
         ":PluginProcessGDBRemote",
@@ -653,7 +653,7 @@ cc_library(
     name = "PluginPlatformGDB",
     srcs = glob(["Platform/gdb-server/*.cpp"]),
     hdrs = glob(["Platform/gdb-server/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessGDBRemote",
         ":PluginProcessUtility",
@@ -671,7 +671,7 @@ cc_library(
     name = "PluginPlatformLinux",
     srcs = glob(["Platform/Linux/*.cpp"]),
     hdrs = glob(["Platform/Linux/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginPlatformPOSIX",
         ":PluginTypeSystemClangHeaders",
@@ -709,7 +709,7 @@ cc_library(
     name = "PluginPlatformAndroid",
     srcs = glob(["Platform/Android/*.cpp"]),
     hdrs = glob(["Platform/Android/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PlatformAndroidProperties",
         ":PluginPlatformGDB",
@@ -727,7 +727,7 @@ cc_library(
     name = "PluginPlatformWindows",
     srcs = glob(["Platform/Windows/*.cpp"]),
     hdrs = glob(["Platform/Windows/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginPlatformGDB",
         ":PluginTypeSystemClangHeaders",
@@ -746,12 +746,15 @@ cc_library(
     name = "PluginMemoryHistoryASan",
     srcs = glob(["MemoryHistory/asan/*.cpp"]),
     hdrs = glob(["MemoryHistory/asan/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
+        ":PluginInstrumentationRuntimeUtility",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Headers",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
     ],
@@ -761,7 +764,7 @@ cc_library(
     name = "PluginClangREPL",
     srcs = glob(["REPL/Clang/*.cpp"]),
     hdrs = glob(["REPL/Clang/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginCPPRuntime",
         ":PluginClangCommon",
@@ -780,7 +783,7 @@ cc_library(
     name = "PluginSymbolVendorWasm",
     srcs = glob(["SymbolVendor/wasm/*.cpp"]),
     hdrs = glob(["SymbolVendor/wasm/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
@@ -797,7 +800,7 @@ cc_library(
     name = "PluginSymbolVendorMacOSX",
     srcs = glob(["SymbolVendor/MacOSX/*.cpp"]),
     hdrs = glob(["SymbolVendor/MacOSX/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileMachO",
         "//lldb:Core",
@@ -814,7 +817,7 @@ cc_library(
     name = "PluginSymbolVendorPECOFF",
     srcs = glob(["SymbolVendor/PECOFF/*.cpp"]),
     hdrs = glob(["SymbolVendor/PECOFF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFilePECOFF",
         "//lldb:Core",
@@ -831,7 +834,7 @@ cc_library(
     name = "PluginSymbolVendorELF",
     srcs = glob(["SymbolVendor/ELF/*.cpp"]),
     hdrs = glob(["SymbolVendor/ELF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileELF",
         "//lldb:Core",
@@ -848,7 +851,7 @@ cc_library(
     name = "PluginObjCPlusPlusLanguage",
     srcs = glob(["Language/ObjCPlusPlus/*.cpp"]),
     hdrs = glob(["Language/ObjCPlusPlus/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginClangCommon",
         "//lldb:Core",
@@ -862,7 +865,7 @@ cc_library(
 cc_library(
     name = "PluginCPlusPlusLanguageHeaders",
     hdrs = glob(["Language/CPlusPlus/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginClangCommon",
         ":PluginExpressionParserClangHeaders",
@@ -873,7 +876,7 @@ cc_library(
 cc_library(
     name = "PluginCPlusPlusLanguage",
     srcs = glob(["Language/CPlusPlus/*.cpp"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
@@ -915,7 +918,7 @@ cc_library(
     name = "PluginTraceExporterCTF",
     srcs = glob(["TraceExporter/ctf/*.cpp"]),
     hdrs = glob(["TraceExporter/ctf/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginTraceExporterCommon",
         ":TraceExporterCTFOptions",
@@ -932,7 +935,7 @@ cc_library(
     name = "PluginTraceExporterCommon",
     srcs = glob(["TraceExporter/common/*.cpp"]),
     hdrs = glob(["TraceExporter/common/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:SymbolHeaders",
@@ -946,7 +949,7 @@ cc_library(
     name = "PluginABIPowerPC",
     srcs = glob(["ABI/PowerPC/*.cpp"]),
     hdrs = glob(["ABI/PowerPC/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         ":PluginTypeSystemClang",
@@ -969,7 +972,7 @@ cc_library(
     name = "PluginABIHexagon",
     srcs = glob(["ABI/Hexagon/*.cpp"]),
     hdrs = glob(["ABI/Hexagon/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -987,7 +990,7 @@ cc_library(
     name = "PluginABIMips",
     srcs = glob(["ABI/Mips/*.cpp"]),
     hdrs = glob(["ABI/Mips/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1005,7 +1008,7 @@ cc_library(
     name = "PluginABIMSP430",
     srcs = glob(["ABI/MSP430/*.cpp"]),
     hdrs = glob(["ABI/MSP430/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1023,7 +1026,7 @@ cc_library(
     name = "PluginABIX86",
     srcs = glob(["ABI/X86/*.cpp"]),
     hdrs = glob(["ABI/X86/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1041,7 +1044,7 @@ cc_library(
     name = "PluginABIARM",
     srcs = glob(["ABI/ARM/*.cpp"]),
     hdrs = glob(["ABI/ARM/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1061,7 +1064,7 @@ cc_library(
     name = "PluginABIARC",
     srcs = glob(["ABI/ARC/*.cpp"]),
     hdrs = glob(["ABI/ARC/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1081,7 +1084,7 @@ cc_library(
     name = "PluginABIRISCV",
     srcs = glob(["ABI/RISCV/*.cpp"]),
     hdrs = glob(["ABI/RISCV/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1101,7 +1104,7 @@ cc_library(
     name = "PluginABISystemZ",
     srcs = glob(["ABI/SystemZ/*.cpp"]),
     hdrs = glob(["ABI/SystemZ/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1119,7 +1122,7 @@ cc_library(
     name = "PluginABIAArch64",
     srcs = glob(["ABI/AArch64/*.cpp"]),
     hdrs = glob(["ABI/AArch64/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1137,13 +1140,13 @@ cc_library(
 cc_library(
     name = "PluginDynamicLoaderPosixDYLDHeaders",
     hdrs = glob(["DynamicLoader/POSIX-DYLD/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
 )
 
 cc_library(
     name = "PluginDynamicLoaderPosixDYLD",
     srcs = glob(["DynamicLoader/POSIX-DYLD/*.cpp"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginProcessElfCore",
@@ -1164,7 +1167,7 @@ cc_library(
     name = "PluginDynamicLoaderWindowsDYLD",
     srcs = glob(["DynamicLoader/Windows-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/Windows-DYLD/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1179,7 +1182,7 @@ cc_library(
     name = "PluginDynamicLoaderHexagonDYLD",
     srcs = glob(["DynamicLoader/Hexagon-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/Hexagon-DYLD/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -1196,7 +1199,7 @@ cc_library(
     name = "PluginDynamicLoaderWasmDYLD",
     srcs = glob(["DynamicLoader/wasm-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/wasm-DYLD/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
@@ -1210,7 +1213,7 @@ cc_library(
     name = "PluginDynamicLoaderStatic",
     srcs = glob(["DynamicLoader/Static/*.cpp"]),
     hdrs = glob(["DynamicLoader/Static/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -1244,7 +1247,7 @@ cc_library(
     name = "PluginDynamicLoaderMacOSXDYLD",
     srcs = glob(["DynamicLoader/MacOSX-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/MacOSX-DYLD/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":DynamicLoaderMacOSXDYLDProperties",
         ":PluginObjCRuntime",
@@ -1285,13 +1288,13 @@ gentbl_cc_library(
 cc_library(
     name = "PluginDynamicLoaderDarwinKernelHeaders",
     hdrs = glob(["DynamicLoader/Darwin-Kernel/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
 )
 
 cc_library(
     name = "PluginDynamicLoaderDarwinKernel",
     srcs = glob(["DynamicLoader/Darwin-Kernel/*.cpp"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     tags = ["nobuildkite"],
     deps = [
         ":DynamicLoaderDarwinKernelProperties",
@@ -1314,7 +1317,7 @@ cc_library(
     name = "PluginArchitecturePPC64",
     srcs = glob(["Architecture/PPC64/*.cpp"]),
     hdrs = glob(["Architecture/PPC64/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1330,7 +1333,7 @@ cc_library(
     name = "PluginArchitectureMips",
     srcs = glob(["Architecture/Mips/*.cpp"]),
     hdrs = glob(["Architecture/Mips/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:SymbolHeaders",
@@ -1344,7 +1347,7 @@ cc_library(
     name = "PluginArchitectureArm",
     srcs = glob(["Architecture/Arm/*.cpp"]),
     hdrs = glob(["Architecture/Arm/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1358,7 +1361,7 @@ cc_library(
     name = "PluginArchitectureAArch64",
     srcs = glob(["Architecture/AArch64/*.cpp"]),
     hdrs = glob(["Architecture/AArch64/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1372,7 +1375,7 @@ cc_library(
     name = "PluginDisassemblerLLVMC",
     srcs = glob(["Disassembler/LLVMC/*.cpp"]),
     hdrs = glob(["Disassembler/LLVMC/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Symbol",
@@ -1391,7 +1394,7 @@ cc_library(
     name = "PluginSymbolFileSymtab",
     srcs = glob(["SymbolFile/Symtab/*.cpp"]),
     hdrs = glob(["SymbolFile/Symtab/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Symbol",
@@ -1404,7 +1407,7 @@ cc_library(
     name = "PluginSymbolFileCTF",
     srcs = glob(["SymbolFile/CTF/*.cpp"]),
     hdrs = glob(["SymbolFile/CTF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginExpressionParserClangHeaders",
         ":PluginTypeSystemClangHeaders",
@@ -1424,7 +1427,7 @@ cc_library(
     name = "PluginSymbolFileJSON",
     srcs = glob(["SymbolFile/JSON/*.cpp"]),
     hdrs = glob(["SymbolFile/JSON/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileJSON",
         "//lldb:Core",
@@ -1439,7 +1442,7 @@ cc_library(
     name = "PluginSymbolFileBreakpad",
     srcs = glob(["SymbolFile/Breakpad/*.cpp"]),
     hdrs = glob(["SymbolFile/Breakpad/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileBreakpad",
         "//lldb:Core",
@@ -1455,7 +1458,7 @@ cc_library(
     name = "PluginInstructionPPC64",
     srcs = glob(["Instruction/PPC64/*.cpp"]),
     hdrs = glob(["Instruction/PPC64/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1470,7 +1473,7 @@ cc_library(
     name = "PluginInstructionLoongArch",
     srcs = glob(["Instruction/LoongArch/*.cpp"]),
     hdrs = glob(["Instruction/LoongArch/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1486,7 +1489,7 @@ cc_library(
     name = "PluginInstructionMIPS",
     srcs = glob(["Instruction/MIPS/*.cpp"]),
     hdrs = glob(["Instruction/MIPS/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1505,7 +1508,7 @@ cc_library(
     name = "PluginInstructionMIPS64",
     srcs = glob(["Instruction/MIPS64/*.cpp"]),
     hdrs = glob(["Instruction/MIPS64/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1524,7 +1527,7 @@ cc_library(
     name = "PluginInstructionARM",
     srcs = glob(["Instruction/ARM/*.cpp"]),
     hdrs = glob(["Instruction/ARM/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1544,7 +1547,7 @@ cc_library(
     name = "PluginInstructionRISCV",
     srcs = glob(["Instruction/RISCV/*.cpp"]),
     hdrs = glob(["Instruction/RISCV/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1560,7 +1563,7 @@ cc_library(
     name = "PluginInstructionARM64",
     srcs = glob(["Instruction/ARM64/*.cpp"]),
     hdrs = glob(["Instruction/ARM64/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1576,7 +1579,7 @@ cc_library(
     name = "PluginInstrumentationRuntimeASanLibsanitizers",
     srcs = glob(["InstrumentationRuntime/ASanLibsanitizers/*.cpp"]),
     hdrs = glob(["InstrumentationRuntime/ASanLibsanitizers/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginInstrumentationRuntimeUtility",
         "//lldb:Breakpoint",
@@ -1593,7 +1596,7 @@ cc_library(
     name = "PluginInstrumentationRuntimeTSan",
     srcs = glob(["InstrumentationRuntime/TSan/*.cpp"]),
     hdrs = glob(["InstrumentationRuntime/TSan/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
@@ -1614,7 +1617,7 @@ cc_library(
     name = "PluginInstrumentationRuntimeASan",
     srcs = glob(["InstrumentationRuntime/ASan/*.cpp"]),
     hdrs = glob(["InstrumentationRuntime/ASan/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginInstrumentationRuntimeUtility",
         "//lldb:Breakpoint",
@@ -1631,7 +1634,7 @@ cc_library(
     name = "PluginInstrumentationRuntimeMainThreadChecker",
     srcs = glob(["InstrumentationRuntime/MainThreadChecker/*.cpp"]),
     hdrs = glob(["InstrumentationRuntime/MainThreadChecker/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
@@ -1651,7 +1654,7 @@ cc_library(
     name = "PluginInstrumentationRuntimeUBSan",
     srcs = glob(["InstrumentationRuntime/UBSan/*.cpp"]),
     hdrs = glob(["InstrumentationRuntime/UBSan/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
@@ -1672,14 +1675,17 @@ cc_library(
     name = "PluginInstrumentationRuntimeUtility",
     srcs = glob(["InstrumentationRuntime/Utility/*.cpp"]),
     hdrs = glob(["InstrumentationRuntime/Utility/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
+        "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:Target",
         "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityHeaders",
     ],
 )
 
@@ -1705,7 +1711,7 @@ cc_library(
     name = "PluginJITLoaderGDB",
     srcs = glob(["JITLoader/GDB/*.cpp"]),
     hdrs = glob(["JITLoader/GDB/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":JITLoaderGDBProperties",
         ":PluginObjectFileMachO",
@@ -1725,7 +1731,7 @@ cc_library(
     name = "PluginSymbolLocatorDefault",
     srcs = glob(["SymbolLocator/Default/*.cpp"]),
     hdrs = glob(["SymbolLocator/Default/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
@@ -1761,7 +1767,7 @@ cc_library(
     name = "PluginSymbolLocatorDebuginfod",
     srcs = glob(["SymbolLocator/Debuginfod/*.cpp"]),
     hdrs = glob(["SymbolLocator/Debuginfod/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":SymbolLocatorDebuginfodProperties",
         "//lldb:Core",
@@ -1779,7 +1785,7 @@ cc_library(
     name = "PluginSymbolLocatorDebugSymbols",
     srcs = glob(["SymbolLocator/DebugSymbols/*.cpp"]),
     hdrs = glob(["SymbolLocator/DebugSymbols/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     tags = ["nobuildkite"],
     deps = [
         ":PluginObjectFileWasm",
@@ -1799,7 +1805,7 @@ cc_library(
 #     name = "PluginOperatingSystemPython",
 #     srcs = glob(["OperatingSystem/Python/*.cpp"]),
 #     hdrs = glob(["OperatingSystem/Python/*.h"]),
-#     include_prefix = "Plugins",
+#     includes = [".."],
 #     deps = [
 #         "//lldb:Core",
 #         "//lldb:Interpreter",
@@ -1812,7 +1818,7 @@ cc_library(
 #     name = "PluginScriptInterpreterPythonInterfaces",
 #     srcs = glob(["ScriptInterpreter/Python/Interfaces/*.cpp"]),
 #     hdrs = glob(["ScriptInterpreter/Python/Interfaces/*.h"]),
-#     include_prefix = "Plugins",
+#     includes = [".."],
 #     deps = [
 #         "//lldb:Core",
 #         "//lldb:Host",
@@ -1825,7 +1831,7 @@ cc_library(
 # cc_library(
 #     name = "PluginScriptInterpreterPythonHeaders",
 #     hdrs = glob(["ScriptInterpreter/Python/*.h"]),
-#     include_prefix = "Plugins",
+#     includes = [".."],
 #     deps = [
 #         "//lldb:Host",
 #     ],
@@ -1838,7 +1844,7 @@ cc_library(
 #         # Must be kept in sync with WORKSPACE python version
 #         'LLDB_PYTHON_RELATIVE_LIBDIR=\\"lib/python3.11/site-packages\\"',
 #     ],
-#     include_prefix = "Plugins",
+#     includes = [".."],
 #     deps = [
 #         "//lldb:Breakpoint",
 #         "//lldb:Core",
@@ -1856,7 +1862,7 @@ cc_library(
 #     name = "PluginScriptInterpreterLua",
 #     srcs = glob(["ScriptInterpreter/Lua/*.cpp"]),
 #     hdrs = glob(["ScriptInterpreter/Lua/*.h"]),
-#     include_prefix = "Plugins",
+#     includes = [".."],
 #     deps = [
 #         "//lldb:Core",
 #         "//lldb:Interpreter",
@@ -1867,7 +1873,7 @@ cc_library(
     name = "PluginScriptInterpreterNone",
     srcs = glob(["ScriptInterpreter/None/*.cpp"]),
     hdrs = glob(["ScriptInterpreter/None/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:InterpreterHeaders",
@@ -1880,7 +1886,7 @@ cc_library(
     name = "PluginSystemRuntimeMacOSX",
     srcs = glob(["SystemRuntime/MacOSX/*.cpp"]),
     hdrs = glob(["SystemRuntime/MacOSX/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         ":PluginTypeSystemClang",
@@ -1902,7 +1908,7 @@ cc_library(
     name = "PluginObjectFileCOFF",
     srcs = glob(["ObjectFile/COFF/*.cpp"]),
     hdrs = glob(["ObjectFile/COFF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -1919,7 +1925,7 @@ cc_library(
     name = "PluginObjectFileWasm",
     srcs = glob(["ObjectFile/wasm/*.cpp"]),
     hdrs = glob(["ObjectFile/wasm/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -1936,7 +1942,7 @@ cc_library(
     name = "PluginObjectFileJSON",
     srcs = glob(["ObjectFile/JSON/*.cpp"]),
     hdrs = glob(["ObjectFile/JSON/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Host",
@@ -1951,7 +1957,7 @@ cc_library(
     name = "PluginObjectFilePlaceholder",
     srcs = glob(["ObjectFile/Placeholder/*.cpp"]),
     hdrs = glob(["ObjectFile/Placeholder/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -1968,7 +1974,7 @@ cc_library(
     name = "PluginObjectFileMachO",
     srcs = glob(["ObjectFile/Mach-O/*.cpp"]),
     hdrs = glob(["ObjectFile/Mach-O/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
@@ -1986,7 +1992,7 @@ cc_library(
     name = "PluginObjectFileMinidump",
     srcs = glob(["ObjectFile/Minidump/*.cpp"]),
     hdrs = glob(["ObjectFile/Minidump/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessMinidump",
         ":PluginProcessUtility",
@@ -2027,7 +2033,7 @@ cc_library(
     name = "PluginObjectFilePECOFF",
     srcs = glob(["ObjectFile/PECOFF/*.cpp"]),
     hdrs = glob(["ObjectFile/PECOFF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":ObjectFilePECOFFProperties",
         ":PluginProcessUtility",
@@ -2050,7 +2056,7 @@ cc_library(
     name = "PluginObjectFileBreakpad",
     srcs = glob(["ObjectFile/Breakpad/*.cpp"]),
     hdrs = glob(["ObjectFile/Breakpad/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -2067,7 +2073,7 @@ cc_library(
     name = "PluginObjectFileELF",
     srcs = glob(["ObjectFile/ELF/*.cpp"]),
     hdrs = glob(["ObjectFile/ELF/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -2087,7 +2093,7 @@ cc_library(
     name = "PluginUnwindAssemblyX86",
     srcs = glob(["UnwindAssembly/x86/*.cpp"]),
     hdrs = glob(["UnwindAssembly/x86/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -2105,7 +2111,7 @@ cc_library(
     name = "PluginUnwindAssemblyInstEmulation",
     srcs = glob(["UnwindAssembly/InstEmulation/*.cpp"]),
     hdrs = glob(["UnwindAssembly/InstEmulation/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         "//lldb:Core",
         "//lldb:Headers",
@@ -2121,7 +2127,7 @@ cc_library(
     name = "PluginProcessPOSIX",
     srcs = glob(["Process/POSIX/*.cpp"]),
     hdrs = glob(["Process/POSIX/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginProcessUtility",
         "//lldb:Headers",
@@ -2137,7 +2143,7 @@ cc_library(
     name = "PluginProcessLinux",
     srcs = glob(["Process/Linux/*.cpp"]),
     hdrs = glob(["Process/Linux/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -2160,8 +2166,9 @@ cc_library(
     name = "PluginScriptedProcess",
     srcs = glob(["Process/scripted/*.cpp"]),
     hdrs = glob(["Process/scripted/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Host",
@@ -2176,7 +2183,7 @@ cc_library(
     name = "PluginProcessMachCore",
     srcs = glob(["Process/mach-core/*.cpp"]),
     hdrs = glob(["Process/mach-core/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     tags = ["nobuildkite"],
     deps = [
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -2201,7 +2208,7 @@ cc_library(
     name = "PluginProcessElfCore",
     srcs = glob(["Process/elf-core/*.cpp"]),
     hdrs = glob(["Process/elf-core/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
         ":PluginObjectFileELF",
@@ -2237,7 +2244,7 @@ cc_library(
     name = "PluginProcessMacOSXKernel",
     srcs = glob(["Process/MacOSX-Kernel/*.cpp"]),
     hdrs = glob(["Process/MacOSX-Kernel/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -2267,7 +2274,7 @@ cc_library(
     name = "PluginProcessMinidump",
     srcs = glob(["Process/minidump/*.cpp"]),
     hdrs = glob(["Process/minidump/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLD",
         ":PluginDynamicLoaderPosixDYLDHeaders",
@@ -2291,7 +2298,7 @@ cc_library(
     name = "PluginCXXItaniumABI",
     srcs = glob(["LanguageRuntime/CPlusPlus/ItaniumABI/*.cpp"]),
     hdrs = glob(["LanguageRuntime/CPlusPlus/ItaniumABI/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginCPPRuntime",
         ":PluginTypeSystemClang",
@@ -2314,7 +2321,7 @@ cc_library(
     name = "PluginGNUstepObjCRuntime",
     srcs = glob(["LanguageRuntime/ObjC/GNUstepObjCRuntime/*.cpp"]),
     hdrs = glob(["LanguageRuntime/ObjC/GNUstepObjCRuntime/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginExpressionParserClang",
         ":PluginObjCRuntime",
@@ -2337,7 +2344,7 @@ cc_library(
     name = "PluginRegisterTypeBuilderClang",
     srcs = glob(["RegisterTypeBuilder/*.cpp"]),
     hdrs = glob(["RegisterTypeBuilder/*.h"]),
-    include_prefix = "Plugins",
+    includes = [".."],
     deps = [
         ":PluginTypeSystemClangHeaders",
         "//clang:ast",
@@ -2375,5 +2382,5 @@ LLDB_PLUGIN(SymbolVendorMacOSX)
 cc_library(
     name = "PluginsConfig",
     hdrs = [":plugins_config_gen"],
-    include_prefix = "Plugins",
+    includes = [".."],
 )

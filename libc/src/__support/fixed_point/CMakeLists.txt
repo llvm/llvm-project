@@ -19,6 +19,7 @@ add_header_library(
     libc.src.__support.macros.optimization
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.math_extras
 )
 

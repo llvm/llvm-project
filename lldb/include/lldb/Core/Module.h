@@ -608,7 +608,11 @@ public:
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
                                     Stream *feedback_strm = nullptr);
 
-  Symtab *GetSymtab();
+  /// Get the module's symbol table
+  ///
+  /// If the symbol table has already been loaded, this function returns it.
+  /// Otherwise, it will only be loaded when can_create is true.
+  Symtab *GetSymtab(bool can_create = true);
 
   /// Get a reference to the UUID value contained in this object.
   ///

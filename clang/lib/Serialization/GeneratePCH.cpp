@@ -23,7 +23,7 @@
 using namespace clang;
 
 PCHGenerator::PCHGenerator(
-    Preprocessor &PP, InMemoryModuleCache &ModuleCache, StringRef OutputFile,
+    Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
     StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
@@ -31,7 +31,7 @@ PCHGenerator::PCHGenerator(
     bool GeneratingReducedBMI)
     : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
       Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
-      Writer(Stream, this->Buffer->Data, ModuleCache, Extensions,
+      Writer(Stream, this->Buffer->Data, ModCache, Extensions,
              IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors),
       ShouldCacheASTInMemory(ShouldCacheASTInMemory) {
@@ -100,12 +100,12 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
 void PCHGenerator::anchor() {}
 
 CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
-                                             InMemoryModuleCache &ModuleCache,
+                                             ModuleCache &ModCache,
                                              StringRef OutputFile,
                                              bool GeneratingReducedBMI,
                                              bool AllowASTWithErrors)
     : PCHGenerator(
-          PP, ModuleCache, OutputFile, llvm::StringRef(),
+          PP, ModCache, OutputFile, llvm::StringRef(),
           std::make_shared<PCHBuffer>(),
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
           AllowASTWithErrors, /*IncludeTimestamps=*/false,

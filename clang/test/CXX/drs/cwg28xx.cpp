@@ -150,7 +150,7 @@ struct A {
   // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
   template<typename U>
   friend struct Ts...[0]::C;
-  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]::' for friend template declaration is not supported; ignoring this friend declaration}}
+  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]' for friend template declaration is not supported; ignoring this friend declaration}}
 };
 
 #endif

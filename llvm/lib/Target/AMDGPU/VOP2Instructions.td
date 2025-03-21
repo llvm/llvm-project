@@ -418,12 +418,27 @@ def VOP_MADMK_F16_fake16 : VOP_MADMK <f16> {
 }
 def VOP_MADMK_F32 : VOP_MADMK <f32>;
 
+// Returns the vreg register class to use for sources of VOP3 instructions for the
+// given VT.
+class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
+   RegisterOperand ret =
+   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
+         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
+         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+         !eq(VT.Size, 16)  : !if(IsTrue16,
+                                 !if(IsFake16, RegisterOperand<VGPR_32>,
+                                               RegisterOperand<VGPR_16>),
+                                 RegisterOperand<VGPR_32>),
+         1                 : RegisterOperand<VGPR_32>);
+}
+
 // FIXME: Remove src2_modifiers. It isn't used, so is wasting memory
 // and processing time but it makes it easier to convert to mad.
 class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, vt0]> {
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1, getVregSrcForVT<Src2VT>.ret:$src2);
   // Src2 must accept the same operand types as vdst, namely VGPRs only
-  let Src2RC64 = getVOP3VRegSrcForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
+  let Src2RC64 = getVOP3VRegForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
   let Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
@@ -748,7 +763,7 @@ def VOP2e_I16_I16_I16_I1_fake16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
 }
 
 def VOP_READLANE : VOPProfile<[i32, i32, i32, untyped]> {
-  let Outs32 = (outs SReg_32:$vdst);
+  let Outs32 = (outs SReg_32_XM0:$vdst);
   let Outs64 = Outs32;
   let Ins32 = (ins VRegOrLdsSrc_32:$src0, SCSrc_b32:$src1);
   let Ins64 = Ins32;

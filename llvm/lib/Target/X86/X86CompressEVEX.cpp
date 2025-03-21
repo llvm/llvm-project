@@ -83,7 +83,7 @@ public:
 char CompressEVEXPass::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
-  auto isHiRegIdx = [](unsigned Reg) {
+  auto isHiRegIdx = [](MCRegister Reg) {
     // Check for XMM register with indexes between 16 - 31.
     if (Reg >= X86::XMM16 && Reg <= X86::XMM31)
       return true;
@@ -102,7 +102,7 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
     if (!MO.isReg())
       continue;
 
-    Register Reg = MO.getReg();
+    MCRegister Reg = MO.getReg().asMCReg();
     assert(!X86II::isZMMReg(Reg) &&
            "ZMM instructions should not be in the EVEX->VEX tables");
     if (isHiRegIdx(Reg))

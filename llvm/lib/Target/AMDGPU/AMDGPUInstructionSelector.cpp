@@ -782,7 +782,7 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
     return true;
 
   // TODO: This should probably be a combine somewhere
-  // (build_vector $src0, undef)  -> copy $src0
+  // (build_vector $src0, undef) -> copy $src0
   MachineInstr *Src1Def = getDefIgnoringCopies(Src1, *MRI);
   if (Src1Def->getOpcode() == AMDGPU::G_IMPLICIT_DEF) {
     MI.setDesc(TII.get(AMDGPU::COPY));
@@ -1190,6 +1190,12 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
+  case Intrinsic::amdgcn_dead: {
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+    I.removeOperand(1); // drop intrinsic ID
+    return RBI.constrainGenericRegister(I.getOperand(0).getReg(),
+                                        AMDGPU::VGPR_32RegClass, *MRI);
+  }
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1207,9 +1213,8 @@ static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size,
                           unsigned FakeS16Opc, unsigned S32Opc,
                           unsigned S64Opc) {
     if (Size == 16)
-      // FIXME-TRUE16 use TrueS16Opc when realtrue16 is supported for CMP code
       return ST.hasTrue16BitInsts()
-                 ? ST.useRealTrue16Insts() ? FakeS16Opc : FakeS16Opc
+                 ? ST.useRealTrue16Insts() ? TrueS16Opc : FakeS16Opc
                  : S16Opc;
     if (Size == 32)
       return S32Opc;
@@ -1473,10 +1478,21 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   if (Opcode == -1)
     return false;
 
-  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode),
-            I.getOperand(0).getReg())
-            .add(I.getOperand(2))
-            .add(I.getOperand(3));
+  MachineInstrBuilder ICmp;
+  // t16 instructions
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers)) {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .addImm(0)
+               .add(I.getOperand(2))
+               .addImm(0)
+               .add(I.getOperand(3))
+               .addImm(0); // op_sel
+  } else {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .add(I.getOperand(2))
+               .add(I.getOperand(3));
+  }
+
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
   bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
@@ -1998,9 +2014,9 @@ static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
   if (TexFailCtrl)
     IsTexFail = true;
 
-  TFE = (TexFailCtrl & 0x1) ? true : false;
+  TFE = TexFailCtrl & 0x1;
   TexFailCtrl &= ~(uint64_t)0x1;
-  LWE = (TexFailCtrl & 0x2) ? true : false;
+  LWE = TexFailCtrl & 0x2;
   TexFailCtrl &= ~(uint64_t)0x2;
 
   return TexFailCtrl == 0;
@@ -2261,7 +2277,21 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   Register Data1 = MI.getOperand(5).getReg();
   unsigned Offset = MI.getOperand(6).getImm();
 
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::DS_BVH_STACK_RTN_B32), Dst0)
+  unsigned Opc;
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP1_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP2_RTN_B64;
+    break;
+  }
+
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), Dst0)
                  .addDef(Dst1)
                  .addUse(Addr)
                  .addUse(Data0)
@@ -2316,11 +2346,12 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     }
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     return selectDSBvhStackIntrinsic(I);
-  case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
-  case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
@@ -3564,11 +3595,14 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
-  MI.setDesc(TII.get(MI.getOperand(1).getImm()));
-  MI.removeOperand(1);
+bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
+    MachineInstr &MI) const {
+  unsigned OpcodeOpIdx =
+      MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ? 1 : 3;
+  MI.setDesc(TII.get(MI.getOperand(OpcodeOpIdx).getImm()));
+  MI.removeOperand(OpcodeOpIdx);
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
-  return true;
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 // FIXME: This should be removed and let the patterns select. We just need the
@@ -4082,8 +4116,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-    return selectBVHIntrinsic(I);
+  case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
+    return selectBVHIntersectRayIntrinsic(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
@@ -4296,7 +4332,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   // TODO: Handle G_FSUB 0 as fneg
 
   // TODO: Match op_sel through g_build_vector_trunc and g_shuffle_vector.
-  (void)IsDOT; // DOTs do not use OPSEL on gfx940+, check ST.hasDOTOpSelHazard()
+  (void)IsDOT; // DOTs do not use OPSEL on gfx942+, check ST.hasDOTOpSelHazard()
 
   // Packed instructions do not have abs modifiers.
   Mods |= SISrcMods::OP_SEL_1;
@@ -4592,6 +4628,7 @@ AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   }};
 }
 
+// FIXME-TRUE16 remove when fake16 is removed
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVINTERPMods(MachineOperand &Root) const {
   Register Src;
@@ -5923,8 +5960,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
-    case Intrinsic::amdgcn_s_barrier_join:
-      return AMDGPU::S_BARRIER_JOIN_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -5932,8 +5967,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
-    case Intrinsic::amdgcn_s_barrier_join:
-      return AMDGPU::S_BARRIER_JOIN_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };
@@ -5984,11 +6017,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(TmpReg4);
   constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
 
-  unsigned Opc = IntrID == Intrinsic::amdgcn_s_barrier_init
-                     ? AMDGPU::S_BARRIER_INIT_M0
-                     : AMDGPU::S_BARRIER_SIGNAL_M0;
   MachineInstrBuilder MIB;
-  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+  MIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_M0));
 
   I.eraseFromParent();
   return true;

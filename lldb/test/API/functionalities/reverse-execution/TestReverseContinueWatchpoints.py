@@ -10,10 +10,12 @@ from lldbsuite.test import lldbutil
 
 class TestReverseContinueWatchpoints(ReverseTestBase):
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_watchpoint(self):
         self.reverse_continue_watchpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_watchpoint_async(self):
         self.reverse_continue_watchpoint_internal(async_mode=True)
 
@@ -58,10 +60,12 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
         )
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_watchpoint(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_watchpoint_async(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=True)
 
@@ -97,7 +101,7 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
         ready to reverse-execute.
         """
         self.build()
-        target = self.dbg.CreateTarget("")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         process = self.connect(target)
 
         # Record execution from the start of the function "start_recording"
@@ -105,6 +109,7 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
         # interval that we record as small as possible to minimize the run-time
         # of our single-stepping recorder.
         start_recording_bkpt = target.BreakpointCreateByName("start_recording", None)
+        self.assertTrue(start_recording_bkpt.GetNumLocations() > 0)
         initial_threads = lldbutil.continue_to_breakpoint(process, start_recording_bkpt)
         self.assertEqual(len(initial_threads), 1)
         target.BreakpointDelete(start_recording_bkpt.GetID())
@@ -118,6 +123,7 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
 
         self.start_recording()
         stop_recording_bkpt = target.BreakpointCreateByName("stop_recording", None)
+        self.assertTrue(stop_recording_bkpt.GetNumLocations() > 0)
         lldbutil.continue_to_breakpoint(process, stop_recording_bkpt)
         target.BreakpointDelete(stop_recording_bkpt.GetID())
         self.stop_recording()

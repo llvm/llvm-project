@@ -25,11 +25,13 @@
 #include "test_macros.h"
 
 template <class Container, class Range>
-concept HasFromRangeCtr = requires (Range&& range) {
+concept HasFromRangeCtr = requires(Range&& range) {
   Container(std::from_range, std::forward<Range>(range));
   Container(std::from_range, std::forward<Range>(range), std::less<typename Container::key_type>());
-  Container(std::from_range, std::forward<Range>(range), std::less<typename Container::key_type>(),
-      std::allocator<typename Container::value_type>());
+  Container(std::from_range,
+            std::forward<Range>(range),
+            std::less<typename Container::key_type>(),
+            std::allocator<typename Container::value_type>());
   Container(std::from_range, std::forward<Range>(range), std::allocator<typename Container::value_type>());
 };
 
@@ -50,7 +52,7 @@ constexpr bool test_map_constraints() {
   return true;
 }
 
-template <template <class ...> class Container,
+template <template <class...> class Container,
           class K,
           class V,
           class Iter,
@@ -100,13 +102,7 @@ void test_associative_map_with_input(std::vector<ValueType>&& input) {
   }
 }
 
-template <template <class ...> class Container,
-          class K,
-          class V,
-          class Iter,
-          class Sent,
-          class Comp,
-          class Alloc>
+template <template <class...> class Container, class K, class V, class Iter, class Sent, class Comp, class Alloc>
 void test_associative_map() {
   auto test_with_input = &test_associative_map_with_input<Container, K, V, Iter, Sent, Comp, Alloc>;
 
@@ -118,7 +114,7 @@ void test_associative_map() {
   test_with_input({{1, 2}});
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_associative_map_move_only() {
   std::pair<const int, MoveOnly> input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
@@ -126,17 +122,15 @@ void test_associative_map_move_only() {
   [[maybe_unused]] Container<int, MoveOnly> c(std::from_range, in);
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_map_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using K = int;
   using V = ThrowingCopy<3>;
 
-  V::throwing_enabled = false;
-  std::pair<const K, V> in[5] = {
-    {1, {}}, {2, {}}, {3, {}}, {4, {}}, {5, {}}
-  };
-  V::throwing_enabled = true;
+  V::throwing_enabled         = false;
+  std::pair<const K, V> in[5] = {{1, {}}, {2, {}}, {3, {}}, {4, {}}, {5, {}}};
+  V::throwing_enabled         = true;
   V::reset();
 
   try {
@@ -150,13 +144,11 @@ void test_map_exception_safety_throwing_copy() {
 #endif
 }
 
-template <template <class ...> class Container, class K, class V>
+template <template <class...> class Container, class K, class V>
 void test_map_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using ValueType = std::pair<const K, V>;
-  ValueType in[] = {
-    ValueType{K{1}, V{1}}
-  };
+  ValueType in[]  = {ValueType{K{1}, V{1}}};
 
   try {
     ThrowingAllocator<ValueType> alloc;
@@ -172,11 +164,13 @@ void test_map_exception_safety_throwing_allocator() {
 }
 
 template <class Container, class Range>
-concept SetHasFromRangeCtr = requires (Range&& range) {
+concept SetHasFromRangeCtr = requires(Range&& range) {
   Container(std::from_range, std::forward<Range>(range));
   Container(std::from_range, std::forward<Range>(range), std::less<typename Container::value_type>());
-  Container(std::from_range, std::forward<Range>(range), std::less<typename Container::value_type>(),
-      std::allocator<typename Container::value_type>());
+  Container(std::from_range,
+            std::forward<Range>(range),
+            std::less<typename Container::value_type>(),
+            std::allocator<typename Container::value_type>());
   Container(std::from_range, std::forward<Range>(range), std::allocator<typename Container::value_type>());
 };
 
@@ -194,12 +188,7 @@ constexpr bool test_set_constraints() {
   return true;
 }
 
-template <template <class ...> class Container,
-          class T,
-          class Iter,
-          class Sent,
-          class Comp,
-          class Alloc>
+template <template <class...> class Container, class T, class Iter, class Sent, class Comp, class Alloc>
 void test_associative_set_with_input(std::vector<T>&& input) {
   { // (range)
     std::ranges::subrange in(Iter(input.data()), Sent(Iter(input.data() + input.size())));
@@ -242,12 +231,7 @@ void test_associative_set_with_input(std::vector<T>&& input) {
   }
 }
 
-template <template <class ...> class Container,
-          class T,
-          class Iter,
-          class Sent,
-          class Comp,
-          class Alloc>
+template <template <class...> class Container, class T, class Iter, class Sent, class Comp, class Alloc>
 void test_associative_set() {
   auto test_with_input = &test_associative_set_with_input<Container, T, Iter, Sent, Comp, Alloc>;
 
@@ -259,7 +243,7 @@ void test_associative_set() {
   test_with_input({5});
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_associative_set_move_only() {
   MoveOnly input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
@@ -267,7 +251,7 @@ void test_associative_set_move_only() {
   [[maybe_unused]] Container<MoveOnly> c(std::from_range, in);
 }
 
-template <template <class ...> class Container>
+template <template <class...> class Container>
 void test_set_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   using T = ThrowingCopy<3>;
@@ -285,7 +269,7 @@ void test_set_exception_safety_throwing_copy() {
 #endif
 }
 
-template <template <class ...> class Container, class T>
+template <template <class...> class Container, class T>
 void test_set_exception_safety_throwing_allocator() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   T in[] = {1, 2};

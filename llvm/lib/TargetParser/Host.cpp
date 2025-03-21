@@ -493,6 +493,7 @@ StringRef sys::detail::getHostCPUNameForRISCV(StringRef ProcCpuinfoContent) {
   }
 
   return StringSwitch<const char *>(UArch)
+      .Case("eswin,eic770x", "sifive-p550")
       .Case("sifive,u74-mc", "sifive-u74")
       .Case("sifive,bullet0", "sifive-u74")
       .Default("");

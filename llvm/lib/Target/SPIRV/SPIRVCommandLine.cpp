@@ -53,6 +53,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_INTEL_subgroups},
         {"SPV_INTEL_media_block_io",
          SPIRV::Extension::Extension::SPV_INTEL_media_block_io},
+        {"SPV_INTEL_memory_access_aliasing",
+         SPIRV::Extension::Extension::SPV_INTEL_memory_access_aliasing},
         {"SPV_INTEL_joint_matrix",
          SPIRV::Extension::Extension::SPV_INTEL_joint_matrix},
         {"SPV_KHR_uniform_group_instructions",
@@ -71,6 +73,8 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::SPV_KHR_linkonce_odr},
         {"SPV_INTEL_inline_assembly",
          SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
+        {"SPV_INTEL_bindless_images",
+         SPIRV::Extension::Extension::SPV_INTEL_bindless_images},
         {"SPV_INTEL_bfloat16_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
         {"SPV_KHR_subgroup_rotate",
@@ -84,7 +88,11 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_cooperative_matrix",
          SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
         {"SPV_KHR_non_semantic_info",
-         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info}};
+         SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+        {"SPV_INTEL_long_composites",
+         SPIRV::Extension::Extension::SPV_INTEL_long_composites},
+        {"SPV_INTEL_fp_max_error",
+         SPIRV::Extension::Extension::SPV_INTEL_fp_max_error}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,

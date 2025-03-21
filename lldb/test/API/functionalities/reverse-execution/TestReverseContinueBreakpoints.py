@@ -10,10 +10,12 @@ from lldbsuite.test import lldbutil
 
 class TestReverseContinueBreakpoints(ReverseTestBase):
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue(self):
         self.reverse_continue_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_async(self):
         self.reverse_continue_internal(async_mode=True)
 
@@ -42,10 +44,12 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertEqual(process.GetExitStatus(), 0)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_breakpoint(self):
         self.reverse_continue_breakpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_breakpoint_async(self):
         self.reverse_continue_breakpoint_internal(async_mode=True)
 
@@ -63,10 +67,12 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertEqual(threads_now, initial_threads)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_breakpoint(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_reverse_continue_skip_breakpoint_async(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=True)
 
@@ -91,10 +97,12 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         )
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_continue_preserves_direction(self):
         self.continue_preserves_direction_internal(async_mode=False)
 
     @skipIfRemote
+    @skipIf(macos_version=["<", "15.0"])
     def test_continue_preserves_direction_asyhc(self):
         self.continue_preserves_direction_internal(async_mode=True)
 
@@ -128,7 +136,7 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         ready to reverse-execute.
         """
         self.build()
-        target = self.dbg.CreateTarget("")
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         process = self.connect(target)
 
         # Record execution from the start of the function "start_recording"
@@ -136,11 +144,13 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         # interval that we record as small as possible to minimize the run-time
         # of our single-stepping recorder.
         start_recording_bkpt = target.BreakpointCreateByName("start_recording", None)
+        self.assertTrue(start_recording_bkpt.GetNumLocations() > 0)
         initial_threads = lldbutil.continue_to_breakpoint(process, start_recording_bkpt)
         self.assertEqual(len(initial_threads), 1)
         target.BreakpointDelete(start_recording_bkpt.GetID())
         self.start_recording()
         stop_recording_bkpt = target.BreakpointCreateByName("stop_recording", None)
+        self.assertTrue(stop_recording_bkpt.GetNumLocations() > 0)
         lldbutil.continue_to_breakpoint(process, stop_recording_bkpt)
         target.BreakpointDelete(stop_recording_bkpt.GetID())
         self.stop_recording()

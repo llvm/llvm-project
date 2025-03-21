@@ -9,8 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
@@ -49,15 +48,14 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   if (this->TargetTriple.isOSBinFormatMachO())
     GlobalManglingPrefix = '_';
 
-  this->BootstrapSymbols[rt::RegisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
-  this->BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
-      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
+  addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
 
 #ifdef __APPLE__
-  this->UnwindInfoMgr = UnwindInfoManager::TryCreate();
-  if (this->UnwindInfoMgr)
-    this->UnwindInfoMgr->addBootstrapSymbols(this->BootstrapSymbols);
+  // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
+  //        the ORC runtime is loaded. We'll need a way to document this and
+  //        allow clients to choose.
+  if (UnwindInfoManager::TryEnable())
+    UnwindInfoManager::addBootstrapSymbols(this->BootstrapSymbols);
 #endif // __APPLE__
 }
 

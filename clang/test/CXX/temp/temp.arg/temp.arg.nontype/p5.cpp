@@ -64,7 +64,7 @@ namespace pointer_to_object_parameters {
   A2<&an_X> *a13_2;
   A2<(&an_X)> *a13_3;
 #if __cplusplus < 201103L
-  // expected-warning@-2 {{address non-type template argument cannot be surrounded by parentheses}}
+  // expected-warning@-2 {{parentheses around address non-type template argument are a C++11 extension}}
 #endif
 
   // PR6244

@@ -109,7 +109,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
-else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+else()
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
   extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")

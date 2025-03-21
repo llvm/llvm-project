@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_SMALLSET_H
 #define LLVM_ADT_SMALLSET_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -188,6 +189,10 @@ public:
   void insert(IterT I, IterT E) {
     for (; I != E; ++I)
       insert(*I);
+  }
+
+  template <typename Range> void insert_range(Range &&R) {
+    insert(adl_begin(R), adl_end(R));
   }
 
   bool erase(const T &V) {
