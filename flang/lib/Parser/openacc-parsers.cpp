@@ -234,12 +234,12 @@ TYPE_PARSER(startAccLine >> sourced(construct<AccEndBlockDirective>("END"_tok >>
 
 TYPE_PARSER(construct<OpenACCBlockConstruct>(
     Parser<AccBeginBlockDirective>{} / endAccLine, block,
-    // NB, This allows mismatched directives, but semantics checks that they match.
+    // NB, This allows mismatched directives, but semantics checks that they
+    // match.
     recovery(withMessage("expected OpenACC end block directive"_err_en_US,
                  attempt(Parser<AccEndBlockDirective>{} / endAccLine)),
-        construct<AccEndBlockDirective>(
-            construct<AccBlockDirective>(pure(
-                llvm::acc::Directive::ACCD_data))))))
+        construct<AccEndBlockDirective>(construct<AccBlockDirective>(
+            pure(llvm::acc::Directive::ACCD_data))))))
 
 // Standalone constructs
 TYPE_PARSER(construct<OpenACCStandaloneConstruct>(

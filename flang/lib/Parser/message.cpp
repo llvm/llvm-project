@@ -283,7 +283,7 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
   // Refers to whether the attachment in the loop below is a context, but can't
-  // be declared inside the loop because the previous iteration's 
+  // be declared inside the loop because the previous iteration's
   // attachment->attachmentIsContext_ indicates this.
   bool isContext{attachmentIsContext_};
   int contextsEmitted{0};
