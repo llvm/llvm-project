@@ -1684,17 +1684,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
   for (auto mapOp : mapVars) {
     if (!mapOp.getDefiningOp())
-      emitError(op->getLoc(), "missing map operation");
+      return emitError(op->getLoc(), "missing map operation");
 
     if (auto mapInfoOp =
             mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
-      if (!mapInfoOp.getMapType().has_value())
-        emitError(op->getLoc(), "missing map type for map operand");
-
-      if (!mapInfoOp.getMapCaptureType().has_value())
-        emitError(op->getLoc(), "missing map capture type for map operand");
-
-      uint64_t mapTypeBits = mapInfoOp.getMapType().value();
+      uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
           mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
@@ -1751,14 +1745,9 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
         to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
       }
-
-      if (mapInfoOp.getMapperId() &&
-          !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
-              mapInfoOp, mapInfoOp.getMapperIdAttr())) {
-        return emitError(op->getLoc(), "invalid mapper id");
-      }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
-      emitError(op->getLoc(), "map argument is not a map entry operation");
+      return emitError(op->getLoc(),
+                       "map argument is not a map entry operation");
     }
   }
 
@@ -1779,6 +1768,20 @@ static LogicalResult verifyPrivateVarsMapping(TargetOp targetOp) {
       static_cast<int64_t>(privateVars.size()))
     return emitError(targetOp.getLoc(), "sizes of `private` operand range and "
                                         "`private_maps` attribute mismatch");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MapInfoOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MapInfoOp::verify() {
+  if (getMapperId() &&
+      !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+          *this, getMapperIdAttr())) {
+    return emitError("invalid mapper id");
+  }
 
   return success();
 }
