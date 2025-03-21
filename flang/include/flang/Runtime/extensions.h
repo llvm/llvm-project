@@ -75,5 +75,8 @@ int RTNAME(Chdir)(const char *name);
 // GNU extension function IERRNO()
 int FORTRAN_PROCEDURE_NAME(ierrno)();
 
+// GNU extension subroutine PERROR(STRING)
+void FORTRAN_PROCEDURE_NAME(perror)(const char *str);
+
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
