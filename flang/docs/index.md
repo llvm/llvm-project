@@ -75,6 +75,7 @@ on how to get in touch with us and to learn more about the current status.
    OpenMP-semantics
    OptionComparison
    Overview
+   ParallelMultiImageFortranRuntime
    ParameterizedDerivedTypes
    ParserCombinators
    Parsing
