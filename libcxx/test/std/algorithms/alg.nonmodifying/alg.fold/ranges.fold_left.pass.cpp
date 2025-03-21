@@ -8,24 +8,17 @@
 
 // <algorithm>
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// template<input_iterator I, sentinel_for<I> S, class T,
+//   indirectly-binary-left-foldable<T, I> F>
+// constexpr auto fold_left(I first, S last, T init, F f);                                      // since C++23
+
+// template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
+// constexpr auto fold_left(R&& r, T init, F f);                                                // since C++23
+
+// REQUIRES: std-at-least-c++23
 
 // MSVC warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
-
-// template<input_iterator I, sentinel_for<I> S, class T,
-//          indirectly-binary-left-foldable<T, I> F>
-//   constexpr see below ranges::fold_left_with_iter(I first, S last, T init, F f);
-//
-// template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
-//   constexpr see below ranges::fold_left_with_iter(R&& r, T init, F f);
-
-// template<input_iterator I, sentinel_for<I> S, class T,
-//          indirectly-binary-left-foldable<T, I> F>
-//   constexpr see below ranges::fold_left(I first, S last, T init, F f);
-//
-// template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
-//   constexpr see below ranges::fold_left(R&& r, T init, F f);
 
 #include <algorithm>
 #include <cassert>
@@ -39,7 +32,6 @@
 #include <string_view>
 #include <string>
 #include <vector>
-#include <optional>
 
 #include "test_macros.h"
 #include "test_range.h"
@@ -50,17 +42,9 @@
 #  include <sstream>
 #endif
 
-using std::ranges::fold_left;
-using std::ranges::fold_left_first;
-using std::ranges::fold_left_first_with_iter;
-using std::ranges::fold_left_with_iter;
-
 template <class Result, class Range, class T>
 concept is_in_value_result =
     std::same_as<Result, std::ranges::fold_left_with_iter_result<std::ranges::iterator_t<Range>, T>>;
-
-template <class Result, class T>
-concept is_dangling_with = std::same_as<Result, std::ranges::fold_left_with_iter_result<std::ranges::dangling, T>>;
 
 struct Integer {
   int value;
@@ -76,77 +60,18 @@ template <std::ranges::input_range R, class T, class F, std::equality_comparable
   requires std::copyable<R>
 constexpr void check_iterator(R& r, T const& init, F f, Expected const& expected) {
   {
-    is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r.begin(), r.end(), init, f);
-    assert(result.in == r.end());
-    assert(result.value == expected);
-  }
-
-  {
-    auto telemetry                                        = invocable_telemetry();
-    auto f2                                               = invocable_with_telemetry(f, telemetry);
-    is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r.begin(), r.end(), init, f2);
-    assert(result.in == r.end());
-    assert(result.value == expected);
-    assert(telemetry.invocations == std::ranges::distance(r));
-    assert(telemetry.moves == 0);
-    assert(telemetry.copies == 1);
-  }
-
-  {
-    std::same_as<Expected> decltype(auto) result = fold_left(r.begin(), r.end(), init, f);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(r.begin(), r.end(), init, f);
     assert(result == expected);
   }
 
   {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
-    std::same_as<Expected> decltype(auto) result = fold_left(r.begin(), r.end(), init, f2);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(r.begin(), r.end(), init, f2);
     assert(result == expected);
     assert(telemetry.invocations == std::ranges::distance(r));
     assert(telemetry.moves == 0);
     assert(telemetry.copies == 1);
-  }
-}
-
-template <std::ranges::input_range R, class F, std::equality_comparable Expected>
-  requires std::copyable<R>
-constexpr void check_iterator(R& r, F f, std::optional<Expected> const& expected) {
-  {
-    is_in_value_result<R, std::optional<Expected>> decltype(auto) result =
-        fold_left_first_with_iter(r.begin(), r.end(), f);
-    assert(result.in == r.end());
-    assert(result.value == expected);
-  }
-
-  {
-    auto telemetry = invocable_telemetry();
-    auto f2        = invocable_with_telemetry(f, telemetry);
-    is_in_value_result<R, std::optional<Expected>> decltype(auto) result =
-        fold_left_first_with_iter(r.begin(), r.end(), f2);
-    assert(result.in == r.end());
-    assert(result.value == expected);
-    if (result.value.has_value()) {
-      assert(telemetry.invocations == std::ranges::distance(r) - 1);
-      assert(telemetry.moves == 0);
-      assert(telemetry.copies == 1);
-    }
-  }
-
-  {
-    std::same_as<std::optional<Expected>> decltype(auto) result = fold_left_first(r.begin(), r.end(), f);
-    assert(result == expected);
-  }
-
-  {
-    auto telemetry                                              = invocable_telemetry();
-    auto f2                                                     = invocable_with_telemetry(f, telemetry);
-    std::same_as<std::optional<Expected>> decltype(auto) result = fold_left_first(r.begin(), r.end(), f2);
-    assert(result == expected);
-    if (result.has_value()) {
-      assert(telemetry.invocations == std::ranges::distance(r) - 1);
-      assert(telemetry.moves == 0);
-      assert(telemetry.copies == 1);
-    }
   }
 }
 
@@ -154,15 +79,9 @@ template <std::ranges::input_range R, class T, class F, std::equality_comparable
   requires std::copyable<R>
 constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expected) {
   {
-    is_in_value_result<R, Expected> decltype(auto) result = fold_left_with_iter(r, init, f);
-    assert(result.in == r.end());
-    assert(result.value == expected);
-  }
-
-  {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
-    std::same_as<Expected> decltype(auto) result = fold_left(r, init, f2);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(r, init, f2);
     assert(result == expected);
     assert(telemetry.invocations == std::ranges::distance(r));
     assert(telemetry.moves == 0);
@@ -170,14 +89,14 @@ constexpr void check_lvalue_range(R& r, T const& init, F f, Expected const& expe
   }
 
   {
-    std::same_as<Expected> decltype(auto) result = fold_left(r, init, f);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(r, init, f);
     assert(result == expected);
   }
 
   {
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
-    std::same_as<Expected> decltype(auto) result = fold_left(r, init, f2);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(r, init, f2);
     assert(result == expected);
     assert(telemetry.invocations == std::ranges::distance(r));
     assert(telemetry.moves == 0);
@@ -189,25 +108,8 @@ template <std::ranges::input_range R, class T, class F, std::equality_comparable
   requires std::copyable<R>
 constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expected) {
   {
-    auto r2                                          = r;
-    is_dangling_with<Expected> decltype(auto) result = fold_left_with_iter(std::move(r2), init, f);
-    assert(result.value == expected);
-  }
-
-  {
-    auto telemetry                                   = invocable_telemetry();
-    auto f2                                          = invocable_with_telemetry(f, telemetry);
-    auto r2                                          = r;
-    is_dangling_with<Expected> decltype(auto) result = fold_left_with_iter(std::move(r2), init, f2);
-    assert(result.value == expected);
-    assert(telemetry.invocations == std::ranges::distance(r));
-    assert(telemetry.moves == 0);
-    assert(telemetry.copies == 1);
-  }
-
-  {
     auto r2                                      = r;
-    std::same_as<Expected> decltype(auto) result = fold_left(std::move(r2), init, f);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(std::move(r2), init, f);
     assert(result == expected);
   }
 
@@ -215,7 +117,7 @@ constexpr void check_rvalue_range(R& r, T const& init, F f, Expected const& expe
     auto telemetry                               = invocable_telemetry();
     auto f2                                      = invocable_with_telemetry(f, telemetry);
     auto r2                                      = r;
-    std::same_as<Expected> decltype(auto) result = fold_left(std::move(r2), init, f2);
+    std::same_as<Expected> decltype(auto) result = std::ranges::fold_left(std::move(r2), init, f2);
     assert(result == expected);
     assert(telemetry.invocations == std::ranges::distance(r));
     assert(telemetry.moves == 0);
@@ -231,29 +133,19 @@ constexpr void check(R r, T const& init, F f, Expected const& expected) {
   check_rvalue_range(r, init, f, expected);
 }
 
-template <std::ranges::input_range R, class F, std::equality_comparable Expected>
-  requires std::copyable<R>
-constexpr void check(R r, F f, std::optional<Expected> const& expected) {
-  check_iterator(r, f, expected);
-}
-
 constexpr void empty_range_test_case() {
   auto const data = std::vector<int>{};
   check(data, 100, std::plus(), 100);
   check(data, -100, std::multiplies(), -100);
-  check(data, std::plus(), std::optional<int>());
 
   check(data | std::views::take_while([](auto) { return false; }), 1.23, std::plus(), 1.23);
   check(data, Integer(52), &Integer::plus, Integer(52));
-  check(data | std::views::take_while([](auto) { return false; }), std::plus(), std::optional<int>());
 }
 
 constexpr void common_range_test_case() {
   auto const data = std::vector<int>{1, 2, 3, 4};
   check(data, 0, std::plus(), triangular_sum(data));
   check(data, 1, std::multiplies(), factorial(data.back()));
-  check(data, std::plus(), std::optional(triangular_sum(data)));
-  check(data, std::multiplies(), std::optional(factorial(data.back())));
 
   auto multiply_with_prev = [n = 1](auto const x, auto const y) mutable {
     auto const result = x * y * n;
@@ -261,7 +153,6 @@ constexpr void common_range_test_case() {
     return static_cast<std::size_t>(result);
   };
   check(data, 1, multiply_with_prev, factorial(data.size()) * factorial(data.size() - 1));
-  check(data, multiply_with_prev, std::optional(factorial(data.size()) * factorial(data.size() - 1)));
 
   auto fib = [n = 1](auto x, auto) mutable {
     auto old_x = x;
@@ -293,7 +184,6 @@ constexpr void non_common_range_test_case() {
     auto data  = std::vector<std::string>{"five", "three", "two", "six", "one", "four"};
     auto range = data | std::views::transform(parse);
     check(range, 0, std::plus(), triangular_sum(range));
-    check(range, std::plus(), std::optional(triangular_sum(range)));
   }
 
   {
@@ -305,7 +195,6 @@ constexpr void non_common_range_test_case() {
     auto range =
         std::views::lazy_split(data, ' ') | std::views::transform(to_string_view) | std::views::transform(parse);
     check(range, 0, std::plus(), triangular_sum(range));
-    check(range, std::plus(), std::optional(triangular_sum(range)));
   }
 }
 
@@ -327,32 +216,13 @@ void runtime_only_test_case() {
     {
       auto input = std::istringstream(raw_data);
       auto data  = std::views::istream<std::string>(input);
-      is_in_value_result<std::ranges::basic_istream_view<std::string, char>, std::string> decltype(auto) result =
-          fold_left_with_iter(data.begin(), data.end(), init, std::plus());
-
-      assert(result.in == data.end());
-      assert(result.value == expected);
+      assert(std::ranges::fold_left(data.begin(), data.end(), init, std::plus()) == expected);
     }
 
     {
       auto input = std::istringstream(raw_data);
       auto data  = std::views::istream<std::string>(input);
-      is_in_value_result<std::ranges::basic_istream_view<std::string, char>, std::string> decltype(auto) result =
-          fold_left_with_iter(data, init, std::plus());
-      assert(result.in == data.end());
-      assert(result.value == expected);
-    }
-
-    {
-      auto input = std::istringstream(raw_data);
-      auto data  = std::views::istream<std::string>(input);
-      assert(fold_left(data.begin(), data.end(), init, std::plus()) == expected);
-    }
-
-    {
-      auto input = std::istringstream(raw_data);
-      auto data  = std::views::istream<std::string>(input);
-      assert(fold_left(data, init, std::plus()) == expected);
+      assert(std::ranges::fold_left(data, init, std::plus()) == expected);
     }
   }
 #endif
