@@ -28,64 +28,80 @@ namespace looputils {
 /// Stores info needed about the induction/iteration variable for each `do
 /// concurrent` in a loop nest.
 struct InductionVariableInfo {
+  InductionVariableInfo(fir::DoLoopOp doLoop) { populateInfo(doLoop); }
+
   /// The operation allocating memory for iteration variable.
   mlir::Operation *iterVarMemDef;
+  /// the operation(s) updating the iteration variable with the current
+  /// iteration number.
+  llvm::SmallVector<mlir::Operation *, 2> indVarUpdateOps;
+
+private:
+  /// For the \p doLoop parameter, find the following:
+  ///
+  /// 1. The operation that declares its iteration variable or allocates memory
+  /// for it. For example, give the following loop:
+  /// ```
+  ///   ...
+  ///   %i:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : ...
+  ///   ...
+  ///   fir.do_loop %ind_var = %lb to %ub step %s unordered {
+  ///     %ind_var_conv = fir.convert %ind_var : (index) -> i32
+  ///     fir.store %ind_var_conv to %i#1 : !fir.ref<i32>
+  ///     ...
+  ///   }
+  /// ```
+  ///
+  /// This function sets the `iterVarMemDef` member to the `hlfir.declare` op
+  /// for `%i`.
+  ///
+  /// 2. The operation(s) that update the loop's iteration variable from its
+  /// induction variable. For the above example, the `indVarUpdateOps` is
+  /// populated with the first 2 ops in the loop's body.
+  ///
+  /// Note: The current implementation is dependent on how flang emits loop
+  /// bodies; which is sufficient for the current simple test/use cases. If this
+  /// proves to be insufficient, this should be made more generic.
+  void populateInfo(fir::DoLoopOp doLoop) {
+    mlir::Value result = nullptr;
+
+    // Checks if a StoreOp is updating the memref of the loop's iteration
+    // variable.
+    auto isStoringIV = [&](fir::StoreOp storeOp) {
+      // Direct store into the IV memref.
+      if (storeOp.getValue() == doLoop.getInductionVar()) {
+        indVarUpdateOps.push_back(storeOp);
+        return true;
+      }
+
+      // Indirect store into the IV memref.
+      if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(
+              storeOp.getValue().getDefiningOp())) {
+        if (convertOp.getOperand() == doLoop.getInductionVar()) {
+          indVarUpdateOps.push_back(convertOp);
+          indVarUpdateOps.push_back(storeOp);
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    for (mlir::Operation &op : doLoop) {
+      if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op))
+        if (isStoringIV(storeOp)) {
+          result = storeOp.getMemref();
+          break;
+        }
+    }
+
+    assert(result != nullptr && result.getDefiningOp() != nullptr);
+    iterVarMemDef = result.getDefiningOp();
+  }
 };
 
 using LoopNestToIndVarMap =
     llvm::MapVector<fir::DoLoopOp, InductionVariableInfo>;
-
-/// For the \p doLoop parameter, find the operation that declares its iteration
-/// variable or allocates memory for it.
-///
-/// For example, give the following loop:
-/// ```
-///   ...
-///   %i:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : ...
-///   ...
-///   fir.do_loop %ind_var = %lb to %ub step %s unordered {
-///     %ind_var_conv = fir.convert %ind_var : (index) -> i32
-///     fir.store %ind_var_conv to %i#1 : !fir.ref<i32>
-///     ...
-///   }
-/// ```
-///
-/// This function returns the `hlfir.declare` op for `%i`.
-///
-/// Note: The current implementation is dependent on how flang emits loop
-/// bodies; which is sufficient for the current simple test/use cases. If this
-/// proves to be insufficient, this should be made more generic.
-mlir::Operation *findLoopIterationVarMemDecl(fir::DoLoopOp doLoop) {
-  mlir::Value result = nullptr;
-
-  // Checks if a StoreOp is updating the memref of the loop's iteration
-  // variable.
-  auto isStoringIV = [&](fir::StoreOp storeOp) {
-    // Direct store into the IV memref.
-    if (storeOp.getValue() == doLoop.getInductionVar())
-      return true;
-
-    // Indirect store into the IV memref.
-    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(
-            storeOp.getValue().getDefiningOp())) {
-      if (convertOp.getOperand() == doLoop.getInductionVar())
-        return true;
-    }
-
-    return false;
-  };
-
-  for (mlir::Operation &op : doLoop) {
-    if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op))
-      if (isStoringIV(storeOp)) {
-        result = storeOp.getMemref();
-        break;
-      }
-  }
-
-  assert(result != nullptr && result.getDefiningOp() != nullptr);
-  return result.getDefiningOp();
-}
 
 /// Loop \p innerLoop is considered perfectly-nested inside \p outerLoop iff
 /// there are no operations in \p outerloop's body other than:
@@ -181,10 +197,7 @@ mlir::LogicalResult collectLoopNest(fir::DoLoopOp currentLoop,
   assert(currentLoop.getUnordered());
 
   while (true) {
-    loopNest.insert(
-        {currentLoop,
-         InductionVariableInfo{findLoopIterationVarMemDecl(currentLoop)}});
-
+    loopNest.insert({currentLoop, InductionVariableInfo(currentLoop)});
     llvm::SmallVector<fir::DoLoopOp> unorderedLoops;
 
     for (auto nestedLoop : currentLoop.getRegion().getOps<fir::DoLoopOp>())
@@ -209,6 +222,96 @@ mlir::LogicalResult collectLoopNest(fir::DoLoopOp currentLoop,
   }
 
   return mlir::success();
+}
+
+/// Prepares the `fir.do_loop` nest to be easily mapped to OpenMP. In
+/// particular, this function would take this input IR:
+/// ```
+/// fir.do_loop %i_iv = %i_lb to %i_ub step %i_step unordered {
+///   fir.store %i_iv to %i#1 : !fir.ref<i32>
+///   %j_lb = arith.constant 1 : i32
+///   %j_ub = arith.constant 10 : i32
+///   %j_step = arith.constant 1 : index
+///
+///   fir.do_loop %j_iv = %j_lb to %j_ub step %j_step unordered {
+///     fir.store %j_iv to %j#1 : !fir.ref<i32>
+///     ...
+///   }
+/// }
+/// ```
+///
+/// into the following form (using generic op form since the result is
+/// technically an invalid `fir.do_loop` op:
+///
+/// ```
+/// "fir.do_loop"(%i_lb, %i_ub, %i_step) <{unordered}> ({
+/// ^bb0(%i_iv: index):
+///   %j_lb = "arith.constant"() <{value = 1 : i32}> : () -> i32
+///   %j_ub = "arith.constant"() <{value = 10 : i32}> : () -> i32
+///   %j_step = "arith.constant"() <{value = 1 : index}> : () -> index
+///
+///   "fir.do_loop"(%j_lb, %j_ub, %j_step) <{unordered}> ({
+///   ^bb0(%new_i_iv: index, %new_j_iv: index):
+///     "fir.store"(%new_i_iv, %i#1) : (i32, !fir.ref<i32>) -> ()
+///     "fir.store"(%new_j_iv, %j#1) : (i32, !fir.ref<i32>) -> ()
+///     ...
+///   })
+/// ```
+///
+/// What happened to the loop nest is the following:
+///
+/// * the innermost loop's entry block was updated from having one operand to
+///   having `n` operands where `n` is the number of loops in the nest,
+///
+/// * the outer loop(s)' ops that update the IVs were sank inside the innermost
+///   loop (see the `"fir.store"(%new_i_iv, %i#1)` op above),
+///
+/// * the innermost loop's entry block's arguments were mapped in order from the
+///   outermost to the innermost IV.
+///
+/// With this IR change, we can directly inline the innermost loop's region into
+/// the newly generated `omp.loop_nest` op.
+///
+/// Note that this function has a pre-condition that \p loopNest consists of
+/// perfectly nested loops; i.e. there are no in-between ops between 2 nested
+/// loops except for the ops to setup the inner loop's LB, UB, and step. These
+/// ops are handled/cloned by `genLoopNestClauseOps(..)`.
+void sinkLoopIVArgs(mlir::ConversionPatternRewriter &rewriter,
+                    looputils::LoopNestToIndVarMap &loopNest) {
+  if (loopNest.size() <= 1)
+    return;
+
+  fir::DoLoopOp innermostLoop = loopNest.back().first;
+  mlir::Operation &innermostFirstOp = innermostLoop.getRegion().front().front();
+
+  llvm::SmallVector<mlir::Type> argTypes;
+  llvm::SmallVector<mlir::Location> argLocs;
+
+  for (auto &[doLoop, indVarInfo] : llvm::drop_end(loopNest)) {
+    // Sink the IV update ops to the innermost loop. We need to do for all loops
+    // except for the innermost one, hence the `drop_end` usage above.
+    for (mlir::Operation *op : indVarInfo.indVarUpdateOps)
+      op->moveBefore(&innermostFirstOp);
+
+    argTypes.push_back(doLoop.getInductionVar().getType());
+    argLocs.push_back(doLoop.getInductionVar().getLoc());
+  }
+
+  mlir::Region &innermmostRegion = innermostLoop.getRegion();
+  // Extend the innermost entry block with arguments to represent the outer IVs.
+  innermmostRegion.addArguments(argTypes, argLocs);
+
+  unsigned idx = 1;
+  // In reverse, remap the IVs of the loop nest from the old values to the new
+  // ones. We do that in reverse since the first argument before this loop is
+  // the old IV for the innermost loop. Therefore, we want to replace it first
+  // before the old value (1st argument in the block) is remapped to be the IV
+  // of the outermost loop in the nest.
+  for (auto &[doLoop, _] : llvm::reverse(loopNest)) {
+    doLoop.getInductionVar().replaceAllUsesWith(
+        innermmostRegion.getArgument(innermmostRegion.getNumArguments() - idx));
+    ++idx;
+  }
 }
 } // namespace looputils
 
@@ -236,6 +339,7 @@ public:
                         "Some `do concurent` loops are not perfectly-nested. "
                         "These will be serialized.");
 
+    looputils::sinkLoopIVArgs(rewriter, loopNest);
     mlir::IRMapping mapper;
     genParallelOp(doLoop.getLoc(), rewriter, loopNest, mapper);
     mlir::omp::LoopNestOperands loopNestClauseOps;
