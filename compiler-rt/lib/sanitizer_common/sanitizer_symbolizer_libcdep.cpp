@@ -475,6 +475,7 @@ const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
     Report("WARNING: Command buffer too small");
     return nullptr;
   }
+
   return symbolizer_process_->SendCommand(buffer_);
 }
 
