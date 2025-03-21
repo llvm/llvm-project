@@ -33,6 +33,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -311,11 +312,6 @@ public:
   void setToExitState(SGMapLattice *lattice) override {
     (void)lattice->meet(SGMap());
   }
-
-  LogicalResult initialize(Operation *top) override {
-    llvm::errs() << "SGMapPropagation::initialize\n";
-    return success();
-  }
 };
 } // namespace
 
@@ -586,8 +582,8 @@ class RunSGMapPropagation {
 public:
   RunSGMapPropagation(Operation *op) : target(op) {
     SymbolTableCollection symbolTable;
-    // solver.load<DeadCodeAnalysis>();
-    // solver.load<SparseConstantPropagation>();
+    solver.load<DeadCodeAnalysis>();
+    solver.load<SparseConstantPropagation>();
     solver.load<SGMapPropagation>(symbolTable);
     (void)solver.initializeAndRun(op);
   }
@@ -660,7 +656,7 @@ void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
-void attachLayoutAttributeToUsers(Value v, Attribute layout) {
+void attachLayoutAttributeToUsers(Value v, xegpu::SGMapAttr layout) {
   for (OpOperand &user : v.getUses()) {
     Operation *owner = user.getOwner();
     unsigned operandNumber = user.getOperandNumber();
@@ -668,11 +664,11 @@ void attachLayoutAttributeToUsers(Value v, Attribute layout) {
     /// attribute.
     if (auto dpasOp = dyn_cast<xegpu::DpasOp>(owner)) {
       if (operandNumber == 0)
-        dpasOp->setAttr("sg_map_a", layout);
+        dpasOp.setSgMapAAttr(layout);
       else if (operandNumber == 1)
-        dpasOp->setAttr("sg_map_b", layout);
+        dpasOp.setSgMapBAttr(layout);
       else if (operandNumber == 2)
-        dpasOp->setAttr("sg_map_c", layout);
+        dpasOp.setSgMapCAttr(layout);
       continue;
     }
     /// For every other user, use a generic attribute name.
@@ -686,7 +682,7 @@ attachLayoutAttributes(Operation *top,
                        llvm::function_ref<SGMap(Value)> getPropagatedLayout) {
   llvm::errs() << "op name : " << top->getName() << "\n";
   /// Helper to convert SGMap to xegpu::SGMapAttr.
-  auto getSGMapForResult = [&](Value r) -> Attribute {
+  auto getSGMapForResult = [&](Value r) -> xegpu::SGMapAttr {
     auto layout = getPropagatedLayout(r);
     if (!layout.isAssigned())
       return {};
@@ -1137,28 +1133,25 @@ SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
 
   auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
   unsigned operandIdx = operand->getOperandNumber();
-  xegpu::SGMapAttr sgMapA =
-      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_a"));
-  xegpu::SGMapAttr sgMapB =
-      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_b"));
-  xegpu::SGMapAttr sgMapResult =
-      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_c"));
-  if (!sgMapA || !sgMapB || !sgMapResult)
+  xegpu::SGMapAttr sgMapA = dpasOp.getSgMapAAttr();
+  xegpu::SGMapAttr sgMapB = dpasOp.getSgMapBAttr();
+  xegpu::SGMapAttr sgMapOut = dpasOp->getAttrOfType<xegpu::SGMapAttr>("r0");
+  if (!sgMapA || !sgMapB || !sgMapOut)
     return rewriter.notifyMatchFailure(
-        dpasOp, "the xegpu::Dpas op lacks sg_map attribute for A, B or result");
+        dpasOp, "the xegpu::Dpas op lacks sg_map attribute for A, B or output");
 
   auto distributedLhsTypeOrFailure =
       getDistributedVectorType(sgMapA, dpasOp.getLhsType());
   auto distributedRhsTypeOrFailure =
       getDistributedVectorType(sgMapB, dpasOp.getRhsType());
   auto distributedResultTypeOrFailure =
-      getDistributedVectorType(sgMapResult, dpasOp.getResultType());
+      getDistributedVectorType(sgMapOut, dpasOp.getResultType());
   if (failed(distributedLhsTypeOrFailure) ||
       failed(distributedRhsTypeOrFailure) ||
       failed(distributedResultTypeOrFailure))
     return rewriter.notifyMatchFailure(
         dpasOp,
-        "Failed to distribute the A, B or result types in xegpu::Dpas op");
+        "Failed to distribute the A, B or output types in xegpu::Dpas op");
 
   llvm::SmallVector<Value, 3> newYieldValues{dpasOp.getLhs(), dpasOp.getRhs()};
   llvm::SmallVector<Type, 3> newYieldTypes{distributedLhsTypeOrFailure.value(),
@@ -1175,15 +1168,15 @@ SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
 
   // Create a new dpas op outside the warp op.
   rewriter.setInsertionPointAfter(newWarpOp);
-  auto newDpasOp = cast<xegpu::DpasOp>(*dpasOp.clone());
-  newDpasOp.getLhsMutable().assign(newWarpOp.getResult(newRetIndices[0]));
-  newDpasOp.getRhsMutable().assign(newWarpOp.getResult(newRetIndices[1]));
-  if (dpasOp.getAcc())
-    newDpasOp.getAccMutable().assign(newWarpOp.getResult(newRetIndices[2]));
-  newDpasOp->getOpResult(0).setType(distributedResultTypeOrFailure.value());
+  SmallVector<Value> newDpasOperands;
+  for (auto i : newRetIndices) {
+    newDpasOperands.push_back(newWarpOp.getResult(i));
+  }
+  auto newDpasOp = rewriter.create<xegpu::DpasOp>(
+      newWarpOp->getLoc(), distributedResultTypeOrFailure.value(),
+      newDpasOperands, dpasOp->getAttrs());
   Value disributedVal = newWarpOp.getResult(operandIdx);
   rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
-
   return success();
 }
 
