@@ -92,7 +92,7 @@ OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
       IsOperatingSystemPluginThread(old_thread))
     return old_thread;
 
-  std::string name = llvm::formatv("Swift Task {0:x}", task_id);
+  std::string name = llvm::formatv("Swift Task {0}", task_id);
   llvm::StringRef queue_name = "";
   return std::make_shared<ThreadMemory>(*m_process, masked_task_id, name,
                                         queue_name,
