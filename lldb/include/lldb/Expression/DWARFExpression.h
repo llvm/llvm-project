@@ -43,9 +43,8 @@ public:
     virtual uint16_t GetVersion() const = 0;
     virtual dw_addr_t GetBaseAddress() const = 0;
     virtual uint8_t GetAddressByteSize() const = 0;
-    virtual llvm::Error GetDIEBitSizeAndSign(uint64_t die_offset,
-                                             uint64_t &bit_size,
-                                             bool &sign) = 0;
+    virtual llvm::Expected<std::pair<uint64_t, bool>>
+    GetDIEBitSizeAndSign(uint64_t relative_die_offset) const = 0;
     virtual dw_addr_t ReadAddressFromDebugAddrSection(uint32_t index) const = 0;
     virtual lldb::offset_t
     GetVendorDWARFOpcodeSize(const DataExtractor &data,

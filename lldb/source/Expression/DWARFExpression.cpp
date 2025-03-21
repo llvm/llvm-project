@@ -2149,10 +2149,10 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // DESCRIPTION: Pop the top stack element, convert it to a
     // different type, and push the result.
     case DW_OP_convert: {
-      const uint64_t die_offset = opcodes.GetULEB128(&offset);
+      const uint64_t relative_die_offset = opcodes.GetULEB128(&offset);
       uint64_t bit_size;
       bool sign;
-      if (die_offset == 0) {
+      if (relative_die_offset == 0) {
         // The generic type has the size of an address on the target
         // machine and an unspecified signedness. Scalar has no
         // "unspecified signedness", so we use unsigned types.
@@ -2163,10 +2163,12 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         if (!bit_size)
           return llvm::createStringError("unspecified architecture");
       } else {
-        if (llvm::Error err =
-                const_cast<DWARFExpression::Delegate *>(dwarf_cu)
-                    ->GetDIEBitSizeAndSign(die_offset, bit_size, sign))
-          return err;
+        auto bit_size_sign_or_err =
+            dwarf_cu->GetDIEBitSizeAndSign(relative_die_offset);
+        if (!bit_size_sign_or_err)
+          return bit_size_sign_or_err.takeError();
+        bit_size = bit_size_sign_or_err->first;
+        sign = bit_size_sign_or_err->second;
       }
       Scalar &top = stack.back().ResolveValue(exe_ctx);
       top.TruncOrExtendTo(bit_size, sign);

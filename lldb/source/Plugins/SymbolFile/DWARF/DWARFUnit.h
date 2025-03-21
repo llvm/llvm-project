@@ -39,7 +39,7 @@ enum DWARFProducer {
   eProducerOther
 };
 
-class DWARFUnit : public UserID, public DWARFExpression::Delegate {
+class DWARFUnit : public DWARFExpression::Delegate, public UserID {
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 
@@ -153,8 +153,8 @@ public:
   /// error or if the attribute is not present.
   llvm::StringRef PeekDIEName(dw_offset_t die_offset);
 
-  llvm::Error GetDIEBitSizeAndSign(uint64_t die_offset, uint64_t &bit_size,
-                                   bool &sign) override;
+  llvm::Expected<std::pair<uint64_t, bool>>
+  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override;
 
   lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
                                           const lldb::offset_t data_offset,
@@ -165,7 +165,7 @@ public:
                               std::vector<Value> &stack) const override;
 
   bool ParseDWARFLocationList(const DataExtractor &data,
-                              DWARFExpressionList *loc_list) const;
+                              DWARFExpressionList &loc_list) const;
 
   DWARFUnit &GetNonSkeletonUnit();
 
