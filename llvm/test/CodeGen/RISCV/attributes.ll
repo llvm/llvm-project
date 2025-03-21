@@ -65,6 +65,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-svukte %s -o - | FileCheck --check-prefixes=CHECK,RV32SVUKTE %s
 ; RUN: llc -mtriple=riscv32 -mattr=+svvptc %s -o - | FileCheck --check-prefixes=CHECK,RV32SVVPTC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+svinval %s -o - | FileCheck --check-prefixes=CHECK,RV32SVINVAL %s
+; RUN: llc -mtriple=riscv32 -mattr=+svrsw60t59b %s -o - | FileCheck --check-prefixes=CHECK,RV32SVRSW60T59B %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xcvalu %s -o - | FileCheck --check-prefix=RV32XCVALU %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xcvbitmanip %s -o - | FileCheck --check-prefix=RV32XCVBITMANIP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+xcvelw %s -o - | FileCheck --check-prefix=RV32XCVELW %s
@@ -230,6 +231,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-svukte %s -o - | FileCheck --check-prefixes=CHECK,RV64SVUKTE %s
 ; RUN: llc -mtriple=riscv64 -mattr=+svvptc %s -o - | FileCheck --check-prefixes=CHECK,RV64SVVPTC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+svinval %s -o - | FileCheck --check-prefixes=CHECK,RV64SVINVAL %s
+; RUN: llc -mtriple=riscv64 -mattr=+svrsw60t59b %s -o - | FileCheck --check-prefixes=CHECK,RV64SVRSW60T59B %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops %s -o - | FileCheck --check-prefixes=CHECK,RV64XVENTANACONDOPS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xsfvfwmaccqqq %s -o - | FileCheck --check-prefix=RV64XSFVFWMACCQQQ %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadba %s -o - | FileCheck --check-prefixes=CHECK,RV64XTHEADBA %s
@@ -394,6 +396,7 @@
 ; RV32SVPBMT: .attribute 5, "rv32i2p1_svpbmt1p0"
 ; RV32SVUKTE: .attribute 5, "rv32i2p1_svukte0p3"
 ; RV32SVVPTC: .attribute 5, "rv32i2p1_svvptc1p0"
+; RV32SVRSW60T59B: .attribute 5, "rv32i2p1_svrsw60t59b1p0"
 ; RV32SVINVAL: .attribute 5, "rv32i2p1_svinval1p0"
 ; RV32XCVALU: .attribute 5, "rv32i2p1_xcvalu1p0"
 ; RV32XCVBITMANIP: .attribute 5, "rv32i2p1_xcvbitmanip1p0"
@@ -560,6 +563,7 @@
 ; RV64SVPBMT: .attribute 5, "rv64i2p1_svpbmt1p0"
 ; RV64SVUKTE: .attribute 5, "rv64i2p1_svukte0p3"
 ; RV64SVVPTC: .attribute 5, "rv64i2p1_svvptc1p0"
+; RV64SVRSW60T59B: .attribute 5, "rv64i2p1_svrsw60t59b1p0"
 ; RV64SVINVAL: .attribute 5, "rv64i2p1_svinval1p0"
 ; RV64XVENTANACONDOPS: .attribute 5, "rv64i2p1_xventanacondops1p0"
 ; RV64XSFVFWMACCQQQ: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0_xsfvfwmaccqqq1p0"

@@ -984,6 +984,10 @@ def FeatureStdExtSvvptc
     : RISCVExtension<1, 0,
                      "Obviating Memory-Management Instructions after Marking PTEs Valid">;
 
+def FeatureStdExtSvrsw60t59b
+    : RISCVExtension<1, 0,
+                     "PTE Reserved-for-Software Bits 60-59">;
+
 def FeatureStdExtSha
     : RISCVExtension<1, 0, "Augmented Hypervisor",
                      [FeatureStdExtH, FeatureStdExtSsstateen, FeatureStdExtShcounterenw,
