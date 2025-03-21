@@ -232,7 +232,7 @@ bool SSAUpdaterBulk::simplifyPass(SmallVectorImpl<PHINode *> &Worklist) {
   auto findEquivalentPHI = [](PHINode *PHI) -> Value * {
     BasicBlock *BB = PHI->getParent();
     for (auto &OtherPHI : BB->phis()) {
-      if (PHI != &OtherPHI && PHI->isIdenticalToWhenDefined(&OtherPHI)) 
+      if (PHI != &OtherPHI && PHI->isIdenticalToWhenDefined(&OtherPHI))
         return &OtherPHI;
     }
     return nullptr;
