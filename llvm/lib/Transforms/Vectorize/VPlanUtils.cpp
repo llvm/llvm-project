@@ -111,7 +111,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case<VPScalarCastRecipe, VPWidenCastRecipe>([](const auto *R) {
+      .Case<VPInstruction>([](const auto *VPI) {
+        return Instruction::isCast(VPI->getOpcode())
+                   ? all_of(VPI->operands(), isUniformAcrossVFsAndUFs)
+                   : false;
+      })
+      .Case<VPWidenCastRecipe>([](const auto *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })
