@@ -3,6 +3,7 @@
 //CHECK-LABEL: define {{.*}}test_ints
 //CHECK-SAME: {{.*}}(i16 {{.*}} [[VAL:%.*]]){{.*}}
 // CHECK-NOT: bitcast
+//CHECK: entry:
 // CHECK: ret i16 [[VAL]]
 uint16_t test_int(int16_t p0)
 {
@@ -12,6 +13,7 @@ uint16_t test_int(int16_t p0)
 //CHECK-LABEL: define {{.*}}test_uint
 //CHECK-SAME: {{.*}}(i16 {{.*}} [[VAL:%.*]]){{.*}}
 //CHECK-NOT: bitcast
+//CHECK: entry:
 //CHECK-NEXT: ret i16 [[VAL]]
 uint16_t test_uint(uint16_t p0)
 {
@@ -30,6 +32,7 @@ uint16_t test_half(half p0)
 //CHECK-LABEL: define {{.*}}test_vector_int
 //CHECK-SAME: {{.*}}(<4 x i16> {{.*}} [[VAL:%.*]]){{.*}}
 //CHECK-NOT: bitcast
+//CHECK: entry:
 //CHECK-NEXT: ret <4 x i16> [[VAL]]
 uint16_t4 test_vector_int(int16_t4 p0)
 {
@@ -39,6 +42,7 @@ uint16_t4 test_vector_int(int16_t4 p0)
 //CHECK-LABEL: define {{.*}}test_vector_uint
 //CHECK-SAME: {{.*}}(<4 x i16> {{.*}} [[VAL:%.*]]){{.*}}
 //CHECK-NOT: bitcast
+//CHECK: entry:
 //CHECK-NEXT: ret <4 x i16> [[VAL]]
 uint16_t4 test_vector_uint(uint16_t4 p0)
 {
