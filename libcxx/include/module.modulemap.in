@@ -235,6 +235,10 @@ module std_core [system] {
       header "__type_traits/is_nothrow_destructible.h"
       export std_core.type_traits.integral_constant
     }
+    module is_nothrow_relocatable {
+      header "__type_traits/is_nothrow_relocatable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_null_pointer {
       header "__type_traits/is_null_pointer.h"
       export std_core.type_traits.integral_constant
@@ -1641,6 +1645,7 @@ module std [system] {
     }
     module allocator_arg_t                    { header "__memory/allocator_arg_t.h" }
     module allocator_destructor               { header "__memory/allocator_destructor.h" }
+    module allocator_relocation               { header "__memory/allocator_relocation.h" }
     module allocator_traits                   { header "__memory/allocator_traits.h" }
     module array_cookie                       { header "__memory/array_cookie.h" }
     module assume_aligned                     { header "__memory/assume_aligned.h" }
@@ -1663,6 +1668,7 @@ module std [system] {
       export std.algorithm.in_out_result
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
+    module relocate_at                        { header "__memory/relocate_at.h" }
     module shared_count                       { header "__memory/shared_count.h" }
     module shared_ptr                         { header "__memory/shared_ptr.h" }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
@@ -1674,6 +1680,9 @@ module std [system] {
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
       export std.utility.pair
+    }
+    module uninitialized_relocate {
+      header "__memory/uninitialized_relocate.h"
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"

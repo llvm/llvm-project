@@ -851,7 +851,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v) {
   __annotate_delete();
   auto __new_begin = __v.__begin_ - (__end_ - __begin_);
-  std::__uninitialized_allocator_relocate(
+  std::__uninitialized_allocator_relocate_strong(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__end_), std::__to_address(__new_begin));
   __v.__begin_ = __new_begin;
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
@@ -874,13 +874,13 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 
   // Relocate [__p, __end_) first to avoid having a hole in [__begin_, __end_)
   // in case something in [__begin_, __p) throws.
-  std::__uninitialized_allocator_relocate(
+  std::__uninitialized_allocator_relocate_strong(
       this->__alloc_, std::__to_address(__p), std::__to_address(__end_), std::__to_address(__v.__end_));
   __v.__end_ += (__end_ - __p);
   __end_           = __p; // The objects in [__p, __end_) have been destroyed by relocating them.
   auto __new_begin = __v.__begin_ - (__p - __begin_);
 
-  std::__uninitialized_allocator_relocate(
+  std::__uninitialized_allocator_relocate_strong(
       this->__alloc_, std::__to_address(__begin_), std::__to_address(__p), std::__to_address(__new_begin));
   __v.__begin_ = __new_begin;
   __end_       = __begin_; // All the objects have been destroyed by relocating them.
@@ -1311,12 +1311,12 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
     __split_buffer<value_type, allocator_type&> __merged(
         __recommend(size() + __v.size()), __off, __alloc_); // has `__off` positions available at the front
-    std::__uninitialized_allocator_relocate(
+    std::__uninitialized_allocator_relocate_strong(
         __alloc_, std::__to_address(__old_last), std::__to_address(this->__end_), std::__to_address(__merged.__end_));
     __guard.__complete(); // Release the guard once objects in [__old_last_, __end_) have been successfully relocated.
     __merged.__end_ += this->__end_ - __old_last;
     this->__end_ = __old_last;
-    std::__uninitialized_allocator_relocate(
+    std::__uninitialized_allocator_relocate_strong(
         __alloc_, std::__to_address(__v.__begin_), std::__to_address(__v.__end_), std::__to_address(__merged.__end_));
     __merged.__end_ += __v.size();
     __v.__end_ = __v.__begin_;
