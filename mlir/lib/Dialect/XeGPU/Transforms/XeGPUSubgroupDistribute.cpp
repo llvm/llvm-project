@@ -745,7 +745,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
 
   LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
                                 PatternRewriter &rewriter) const override {
-    /// If the function all ready moved inside a warp_execute_on_lane0, skip.
+    /// If the function already moved inside a warp_execute_on_lane0, skip.
     if (llvm::any_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::WarpExecuteOnLane0Op>(op);
         }))
@@ -771,7 +771,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
     rewriter.create<gpu::YieldOp>(origRetunOp.getLoc(),
                                   origRetunOp.getOperands());
     rewriter.eraseOp(origRetunOp);
-    /// Move the original function body to the warp body.
+    /// Move the original function body to the WarpExecuteOnLane0Op body.
     rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
                                 warpOp.getBodyRegion().begin());
     rewriter.eraseBlock(&warpBodyBlock);
