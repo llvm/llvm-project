@@ -810,9 +810,7 @@ mlir::Type hlfir::getVariableElementType(hlfir::Entity variable) {
     return fir::BoxType::get(eleTy);
   }
   const bool isVolatile = fir::isa_volatile_ref_type(variable.getType());
-  auto newty = fir::ReferenceType::get(eleTy, isVolatile);
-  llvm::dbgs() << __FILE__ << ":" << __LINE__ << "\n" << variable << " " << variable.getType() << " newty:" << newty << " isvol:" << isVolatile << "\n";
-  return newty;
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type hlfir::getEntityElementType(hlfir::Entity entity) {

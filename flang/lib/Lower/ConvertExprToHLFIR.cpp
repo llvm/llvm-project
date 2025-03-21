@@ -224,8 +224,7 @@ private:
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
       return fir::BoxType::get(resultValueType);
 
-    // TODO: handle async references
-    bool isVolatile = false, isAsync = false;
+    bool isVolatile = false;
 
     // Check if the base type is volatile
     if (partInfo.base.has_value()) {
@@ -247,13 +246,13 @@ private:
       if (isVolatileSymbol(designatorNode.GetLastSymbol()))
         isVolatile = true;
     }
-    
+
     // If it's a reference to a ref, account for it
     if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(resultValueType))
       resultValueType = refTy.getEleTy();
 
     // Other designators can be handled as raw addresses.
-    return fir::ReferenceType::get(resultValueType, isVolatile, isAsync);
+    return fir::ReferenceType::get(resultValueType, isVolatile);
   }
 
   template <typename T>
@@ -298,7 +297,6 @@ private:
         partInfo.componentName, partInfo.componentShape, partInfo.subscripts,
         partInfo.substring, partInfo.complexPart, partInfo.resultShape,
         partInfo.typeParams, attributes);
-    llvm::dbgs() << __FILE__ << ":" << __LINE__ << "\n" << designate << "\n" << designatorType << "\n";
     if (auto elementalAddrOp = getVectorSubscriptElementAddrOp())
       builder.setInsertionPoint(*elementalAddrOp);
     return mlir::cast<fir::FortranVariableOpInterface>(
@@ -1829,7 +1827,6 @@ private:
             /*complexPart=*/std::nullopt,
             /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
             fir::FortranVariableFlagsAttr{});
-        llvm::dbgs() << __LINE__ << " " << newParent << "\n";
         currentParent = hlfir::EntityWithAttributes{newParent};
       }
       valuesAndParents.emplace_back(
@@ -1853,6 +1850,7 @@ private:
       assert(compType && "failed to retrieve component type");
       mlir::Value compShape =
           designatorBuilder.genComponentShape(sym, compType);
+      mlir::Type designatorType = builder.getRefType(compType, isVolatile);
 
       mlir::Type fieldElemType = hlfir::getFortranElementType(compType);
       llvm::SmallVector<mlir::Value, 1> typeParams;
@@ -1873,7 +1871,6 @@ private:
       // Convert component symbol attributes to variable attributes.
       fir::FortranVariableFlagsAttr attrs =
           Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
-      mlir::Type designatorType = builder.getRefType(compType, isVolatile);
 
       // Get the component designator.
       auto lhs = builder.create<hlfir::DesignateOp>(
@@ -1882,7 +1879,6 @@ private:
           /*substring=*/mlir::ValueRange{},
           /*complexPart=*/std::nullopt,
           /*shape=*/compShape, typeParams, attrs);
-      llvm::dbgs() << __LINE__ << " " << lhs << "\n";
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {

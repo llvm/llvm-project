@@ -366,23 +366,20 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
 
   let parameters = (ins
     "mlir::Type":$eleTy,
-    DefaultValuedParameter<"bool", "false">:$isVol,
-    DefaultValuedParameter<"bool", "false">:$isAsync);
+    DefaultValuedParameter<"bool", "false">:$isVol);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVol, CArg<"bool", "false">:$isAsync), [{
-      return Base::get(elementType.getContext(), elementType, isVol, isAsync);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVol), [{
+      return Base::get(elementType.getContext(), elementType, isVol);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
     bool isVolatile() const { return (bool)getIsVol(); }
-    bool isAsync() const { return (bool)getIsAsync(); }
     static llvm::StringRef getVolatileKeyword() { return "volatile"; }
-    static llvm::StringRef getAsyncKeyword() { return "async"; }
   }];
 
   let genVerifyDecl = 1;

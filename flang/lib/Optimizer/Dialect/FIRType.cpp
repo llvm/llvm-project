@@ -1057,41 +1057,39 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
 // ReferenceType
 //===----------------------------------------------------------------------===//
 
-// `ref` `<` type (, volatile)? (, async)? `>`
+// `ref` `<` type (`, volatile` $volatile^)? (`, async` $async^)? `>`
 mlir::Type fir::ReferenceType::parse(mlir::AsmParser &parser) {
   if (parser.parseLess())
     return {};
+
   mlir::Type eleTy;
   if (parser.parseType(eleTy))
     return {};
+
   bool isVolatile = false;
-  bool isAsync = false;
-  while (parser.parseOptionalComma()) {
+  if (parser.parseOptionalComma()) {
     if (parser.parseOptionalKeyword(getVolatileKeyword())) {
       isVolatile = true;
-    } else if (parser.parseOptionalKeyword(getAsyncKeyword())) {
-      isAsync = true;
     } else {
       return {};
     }
   }
+
   if (parser.parseGreater())
     return {};
-  return ReferenceType::get(eleTy, isVolatile, isAsync);
+  return ReferenceType::get(eleTy, isVolatile);
 }
 
 void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy();
   if (isVolatile())
     printer << ", volatile";
-  if (isAsync())
-    printer << ", async";
   printer << '>';
 }
 
 llvm::LogicalResult fir::ReferenceType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type eleTy, bool isVolatile, bool isAsync) {
+    mlir::Type eleTy, bool isVolatile) {
   if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
                 ReferenceType, TypeDescType>(eleTy))
     return emitError() << "cannot build a reference to type: " << eleTy << '\n';
