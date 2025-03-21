@@ -265,7 +265,7 @@ Language Selection and Mode Options
  environment. Note that a freestanding build still requires linking against a C
  Standard Library which supports the freestanding interfaces for the specified
  language mode and target environment. This includes functions like `memcpy`,
- `memmove`, `memset` and `memcmp`.
+ `memmove`, and `memset`.
 
 .. option:: -fno-builtin
 
