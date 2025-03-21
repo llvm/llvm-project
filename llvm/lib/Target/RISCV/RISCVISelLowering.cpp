@@ -4913,8 +4913,7 @@ static SDValue lowerVIZIP(unsigned Opc, SDValue Op0, SDValue Op1,
                           const SDLoc &DL, SelectionDAG &DAG,
                           const RISCVSubtarget &Subtarget) {
   assert(RISCVISD::RI_VZIPEVEN_VL == Opc || RISCVISD::RI_VZIPODD_VL == Opc ||
-         RISCVISD::RI_VZIP2A_VL == Opc || RISCVISD::RI_VUNZIP2A_VL == Opc ||
-         RISCVISD::RI_VUNZIP2B_VL == Opc);
+         RISCVISD::RI_VZIP2A_VL == Opc);
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
 
   MVT VT = Op0.getSimpleValueType();
@@ -5452,7 +5451,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
   MVT XLenVT = Subtarget.getXLenVT();
   MVT VT = Op.getSimpleValueType();
-  EVT ElemVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
@@ -5625,24 +5623,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  // If this is an e64 deinterleave(2) (possibly with two distinct sources)
-  // match to the vunzip2a/vunzip2b.
-  unsigned Index = 0;
-  if (Subtarget.hasVendorXRivosVizip() && ElemVT == MVT::i64 &&
-      ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, 2, Index) &&
-      1 < count_if(Mask, [](int Idx) { return Idx != -1; })) {
-    MVT HalfVT = VT.getHalfNumVectorElementsVT();
-    unsigned Opc =
-        Index == 0 ? RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
-    V1 = lowerVIZIP(Opc, V1, DAG.getUNDEF(VT), DL, DAG, Subtarget);
-    V2 = lowerVIZIP(Opc, V2, DAG.getUNDEF(VT), DL, DAG, Subtarget);
-
-    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
-                     DAG.getVectorIdxConstant(0, DL));
-    V2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V2,
-                     DAG.getVectorIdxConstant(0, DL));
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, V1, V2);
-  }
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlideup(DL, VT, V1, V2, Mask, Subtarget, DAG))
@@ -6821,7 +6801,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 132 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 130 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
@@ -6845,7 +6825,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 132 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 130 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
@@ -21873,8 +21853,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RI_VZIPEVEN_VL)
   NODE_NAME_CASE(RI_VZIPODD_VL)
   NODE_NAME_CASE(RI_VZIP2A_VL)
-  NODE_NAME_CASE(RI_VUNZIP2A_VL)
-  NODE_NAME_CASE(RI_VUNZIP2B_VL)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)
