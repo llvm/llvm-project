@@ -636,8 +636,6 @@ public:
   bool AtomicFineGrainedMemory = false;
   bool AtomicIgnoreDenormalMode = false;
 
-  bool IsOffloadingTarget = false;
-
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -841,7 +839,10 @@ public:
     return EM;
   }
 
-  bool isOffloadingTarget() const { return IsOffloadingTarget; }
+  /// True when compiling for an offloading target device.
+  bool isTargetDevice() const {
+    return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
+  }
 };
 
 /// Floating point control options
