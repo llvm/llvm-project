@@ -158,30 +158,33 @@ def XeGPU_ScopeWG:   I32EnumAttrCase<"WG", 0, "wg">;      // workgroup level cod
 def XeGPU_ScopeSG:   I32EnumAttrCase<"SG", 1, "sg">;      // subgroup level code
 def XeGPU_ScopeWI:   I32EnumAttrCase<"WI", 2, "wi">;      // simt level code
 
-def XeGPU_ScopeEnums : I32EnumAttr<"Scope", "enumerate of scope",
+def XeGPU_ScopeEnums : I32EnumAttr<"Scope", "enumeration of scope",
   [XeGPU_ScopeWG,XeGPU_ScopeSG,XeGPU_ScopeWI]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::xegpu";
 }
 
 def XeGPU_ScopeAttr
-  : EnumAttr<XeGPU_Dialect,XeGPU_ScopeEnums, "Stage"> {
-    let summary = [{Describe the stage of lowering progress}];
+  : EnumAttr<XeGPU_Dialect, XeGPU_ScopeEnums, "Scope"> {
+    let summary = [{Describe the programming scope of the IR}];
     let assemblyFormat = "``$value";
 }
 
 def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let summary = [{
-    Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
+    Describes the data distribution to subgroups and work-items for a tensor
+    specified by the tensor descriptor.
   }];
   let description = [{
-    XeGPU operations leverages LayoutAttr to distribute data across work-item. It is specified in tensor_descs
-    upon the tensor description creation. LayoutAttr contains the following parameters.
+    XeGPU operations leverages LayoutAttr to distribute data across subgroups and workitems.
+    It is specified in tensor_descs upon the tensor description creation. LayoutAttr contains
+    the following parameters.
 
-    * scope: specifies the scope of current code. It can be either wg (workgroup), sg (subgroup) or wi (workitem).
-             it is hard required for subgroup, but optional for workgroup and wi. By default, if a LayoutAttr
-             contains sg_layout and sg_data, it will be treated as workgroup code; and if it only contains
-             wi_layout and wi_data, it will be considered as workitem level.
+    * scope: Specifies the scope of the current code, which can be either wg (workgroup), sg (subgroup),
+            or wi (workitem). It is mandatory for subgroup-level programming and optional for workgroup
+            and workitem-level programming. By default, if a LayoutAttr includes sg_layout and sg_data,
+            it will be treated as workgroup level. Similarly, if it only includes wi_layout and wi_data,
+            it will be considered as workitem level.
     * sg_layout: [optional] specifies the total number of subgroups and their layout in a workgroup.
     * sg_data: [optional] specifies the data size accessed per subgroup.
     * order: [optional] specifies the dimension order used to linearize n-d sbugroup ids to 1-d.
@@ -189,16 +192,19 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     * wi_layout: [required] specifies the total number of work-items and their layout in a subgroup
     * wi_data: [required] specifies the data size accessed per work-item for a single distribution.
 
-    `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
-    which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
-    The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+    `wi_data[0] * wi_data[1]` can be greater than 1, indicating that each work item operates on multiple
+    elements. These elements are eventually lowered to a "SIMT-flavor" vector, such as a SPIR-V vector or
+    an LLVM vector, or packed into a storage data type. The multiple elements specified by wi_data must
+    come from a single dimension and be contiguous in memory along either dimension.
 
     E.g., #xegpu.layout<wi_layout = [1, 16], wi_data = [1, 1]>
-    In this example, the subgroup has 16 work items in wi_layout=[1, 16], each accessing 1 element as specified by wi_data=[1, 1].
+    In this example, the subgroup consists of 16 work items arranged as wi_layout=[1, 16], with
+    each work item accessing a single element as defined by wi_data=[1, 1].
 
     E.g., #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], wi_layout = [1, 16], wi_data = [1, 1]>
-    In this example, the layout representing a workgroup work distribution. A workgroup has 8 subgroups organized as 2x4 layout.
-    and each subgroup accesses a 16x16 block per instruction, which is further disbributed to 16 work items as described above.
+    In this example, the layout represents a workgroup distribution. A workgroup consists of 8 subgroups
+    arranged in a 2x4 layout. Each subgroup accesses a 16x16 block per instruction, which is further
+    distributed to 16 work items as described above.
 
   }];
   let parameters = (ins

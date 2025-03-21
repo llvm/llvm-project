@@ -593,25 +593,25 @@ LogicalResult DpasOp::verify() {
   auto rhsShape = getRhsType().getShape();
   auto resShape = getResultType().getShape();
 
-  auto layoutA = getALayoutAttr();
-  auto layoutB = getBLayoutAttr();
-  auto layoutC = getCLayoutAttr();
+  auto aLayout = getALayoutAttr();
+  auto bLayout = getBLayoutAttr();
+  auto cLayout = getCLayoutAttr();
 
   // make sure the layout attribute is either set for every available
   // operand or simply not set at all. C is special, since ACC is optional.
   // If they are all set, they also should be in the same scope.
   auto isValidSet = [&]() {
-    bool result = (layoutA != nullptr) ^ (layoutB != nullptr);
+    bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
     if (hasAcc()) {
-      result |= (layoutA != nullptr) ^ (layoutC != nullptr);
+      result |= (aLayout != nullptr) ^ (cLayout != nullptr);
     }
     result = !result;
 
-    if (layoutA) {
-      auto scope = layoutA.getScope();
-      result &= layoutB ? scope == layoutB.getScope() : false;
+    if (aLayout) {
+      auto scope = aLayout.getScope();
+      result &= bLayout ? scope == bLayout.getScope() : false;
       if (hasAcc())
-        result &= layoutC ? scope == layoutC.getScope() : false;
+        result &= cLayout ? scope == cLayout.getScope() : false;
     }
     return result;
   };
@@ -621,15 +621,15 @@ LogicalResult DpasOp::verify() {
         "layout attributes should be either set for all operands (for SIMT "
         "code) or not set at all (for SIMD code).");
 
-  // query the scope from layoutA (a valid setting).
-  if (layoutA && layoutA.isForWorkItemLevel()) {
+  // query the scope from aLayout (a valid setting).
+  if (aLayout && aLayout.isForWorkItemLevel()) {
     // In SIMT mode, All data fragments must be 2D
     if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
       return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
 
-    auto wiLayoutA = layoutA.getWiLayout();
-    auto wiLayoutB = layoutB.getWiLayout();
-    auto wiLayoutC = layoutC.getWiLayout();
+    auto wiLayoutA = aLayout.getWiLayout();
+    auto wiLayoutB = bLayout.getWiLayout();
+    auto wiLayoutC = cLayout.getWiLayout();
     // Obtain the expanded shapes of the operands and result using wi_layout.
     // NOTE: For B, get rid of the packed dimension for the expanded shape.
     SmallVector<int64_t> expandedShapeA = {lhsShape[0] * wiLayoutA[0],
