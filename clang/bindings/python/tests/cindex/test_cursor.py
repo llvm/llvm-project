@@ -997,6 +997,20 @@ int count(int a, int b){
         self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), False)
         self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")
 
+    def test_hash(self):
+        def accumulate_cursors(cursor: Cursor, all_cursors: list[Cursor]):
+            all_cursors.append(cursor)
+            for child in cursor.get_children():
+                all_cursors = accumulate_cursors(child, all_cursors)
+            return all_cursors
+
+        tu = get_tu(kInput)
+        all_cursors = accumulate_cursors(tu.cursor, [])
+        cursor_hashes = set()
+        for cursor in all_cursors:
+            self.assertNotIn(hash(cursor), cursor_hashes)
+            cursor_hashes.add(hash(cursor))
+
     def test_has_attrs(self):
         tu = get_tu(
             """
@@ -1012,20 +1026,6 @@ struct B {};
         B = get_cursor(tu, "B")
         self.assertTrue(A.get_definition().has_attrs())
         self.assertFalse(B.get_definition().has_attrs())
-
-    def test_hash(self):
-        def accumulate_cursors(cursor: Cursor, all_cursors: list[Cursor]):
-            all_cursors.append(cursor)
-            for child in cursor.get_children():
-                all_cursors = accumulate_cursors(child, all_cursors)
-            return all_cursors
-
-        tu = get_tu(kInput)
-        all_cursors = accumulate_cursors(tu.cursor, [])
-        cursor_hashes = set()
-        for cursor in all_cursors:
-            self.assertNotIn(hash(cursor), cursor_hashes)
-            cursor_hashes.add(hash(cursor))
 
     def test_specialized_template(self):
         tu = get_tu(kTemplateArgTest, lang="cpp")
