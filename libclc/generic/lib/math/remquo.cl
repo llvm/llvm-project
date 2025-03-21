@@ -1,5 +1,5 @@
 #include <clc/clc.h>
-#include <math/clc_remquo.h>
+#include <clc/math/clc_remquo.h>
 
 #define __CLC_BODY <remquo.inc>
 #define __CLC_ADDRESS_SPACE global
