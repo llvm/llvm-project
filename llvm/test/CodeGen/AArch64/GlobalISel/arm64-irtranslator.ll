@@ -462,9 +462,7 @@ next:
 ; CHECK-LABEL: name: constant_int_start
 ; CHECK: [[TWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
 ; CHECK: [[ANSWER:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
-; CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TWO]], [[ANSWER]]
-; CHECK: $w0 = COPY [[ADD]]
-; CHECK-NEXT: RET_ReallyLR implicit $w0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_CONSTANT i32 44
 define i32 @constant_int_start() {
   %res = add i32 2, 42
   ret i32 %res
