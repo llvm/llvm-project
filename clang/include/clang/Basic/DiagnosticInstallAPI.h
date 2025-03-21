@@ -35,5 +35,15 @@ enum {
 #undef DIAG_ENUM_ITEM
 #undef DIAG_ENUM
 } // namespace diag
+
+namespace diag_compat {
+#define DIAG_COMPAT_ENUM_BEGIN() enum {
+#define DIAG_COMPAT_ENUM_END() };
+#define DIAG_COMPAT_ENUM(IDX, NAME, ...) NAME = IDX,
+#include "clang/Basic/DiagnosticInstallAPICompatEnums.inc"
+#undef DIAG_COMPAT_ENUM
+#undef DIAG_COMPAT_ENUM_BEGIN
+#undef DIAG_COMPAT_ENUM_END
+} // end namespace diag_compat
 } // namespace clang
 #endif // LLVM_CLANG_BASIC_DIAGNOSTICINSTALLAPI_H

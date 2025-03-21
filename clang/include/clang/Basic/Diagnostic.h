@@ -63,10 +63,6 @@ enum TokenKind : unsigned short;
 
 } // namespace tok
 
-namespace diag_compat {
-enum SemaCompatDiagId : unsigned;
-} // namespace diag_compat
-
 /// Annotates a diagnostic with some code that should be
 /// inserted, removed, or replaced to fix the problem.
 ///

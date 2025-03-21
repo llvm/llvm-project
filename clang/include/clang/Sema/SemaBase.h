@@ -220,8 +220,7 @@ public:
                              bool DeferHint = false);
 
   /// Emit a compatibility diagnostic.
-  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc,
-                                   diag_compat::SemaCompatDiagId CompatDiagId,
+  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId,
                                    bool DeferHint = false);
 
   /// Build a partial diagnostic.

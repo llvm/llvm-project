@@ -1527,8 +1527,11 @@ void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
                                       const std::string &Component) {
   ArrayRef<const Record *> Ids =
       Records.getAllDerivedDefinitions("CompatWarningId");
-  for (const Record &R : make_pointee_range(Ids)) {
-    if (!Component.empty() && Component != R.getValueAsString("Component"))
+
+  StringRef PrevComponent = "";
+  for (auto [I, R] : enumerate(make_pointee_range(Ids))) {
+    StringRef DiagComponent = R.getValueAsString("Component");
+    if (!Component.empty() && Component != DiagComponent)
       continue;
 
     StringRef CompatDiagName = R.getValueAsString("Name");
@@ -1536,13 +1539,25 @@ void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
     StringRef DiagPre = R.getValueAsString("DiagPre");
     int64_t CXXStdVer = R.getValueAsInt("Std");
 
+    // We don't want to create empty enums since some compilers (including Clang)
+    // warn about that, so these macros are used to avoid having to unconditionally
+    // write 'enum {' and '};' in the headers.
+    if (PrevComponent != DiagComponent) {
+      if (!PrevComponent.empty()) OS << "DIAG_COMPAT_ENUM_END()\n";
+      OS << "DIAG_COMPAT_ENUM_BEGIN()\n";
+      PrevComponent = DiagComponent;
+    }
+
     // FIXME: We sometimes define multiple compat diagnostics with the same
     // name, e.g. 'constexpr_body_invalid_stmt' exists for C++14/20/23. It would
     // be nice if we could combine all of them into a single compatibility diag
     // id.
-    OS << "DIAG_COMPAT_ENUM(" << CompatDiagName << "," << CXXStdVer << ","
-       << Diag << "," << DiagPre << ")\n";
+    OS << "DIAG_COMPAT_ENUM(" << I << ",";
+    OS << CompatDiagName << "," << CXXStdVer << "," << Diag << "," << DiagPre;
+    OS << ")\n";
   }
+
+  if (!PrevComponent.empty()) OS << "DIAG_COMPAT_ENUM_END()\n";
 }
 
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing

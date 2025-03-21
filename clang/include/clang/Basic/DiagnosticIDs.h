@@ -104,6 +104,16 @@ namespace clang {
     };
   }
 
+namespace diag_compat {
+#define DIAG_COMPAT_ENUM_BEGIN() enum {
+#define DIAG_COMPAT_ENUM_END() };
+#define DIAG_COMPAT_ENUM(IDX, NAME, ...) NAME = IDX,
+#include "clang/Basic/DiagnosticCommonCompatEnums.inc"
+#undef DIAG_COMPAT_ENUM
+#undef DIAG_COMPAT_ENUM_BEGIN
+#undef DIAG_COMPAT_ENUM_END
+  } // end namespace diag_compat
+
 class DiagnosticMapping {
   LLVM_PREFERRED_TYPE(diag::Severity)
   unsigned Severity : 3;
