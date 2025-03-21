@@ -332,6 +332,10 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
     }
 
     if (isPrimitiveType(T)) {
+      if (I->isUnnamedBitField()) {
+        IsAnyFieldInitialized = true;
+        continue;
+      }
       if (isPrimitiveUninit(V)) {
         if (addFieldToUninits(LocalChain.add(RegularField(FR))))
           ContainsUninitField = true;
