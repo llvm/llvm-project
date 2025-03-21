@@ -5769,10 +5769,11 @@ public:
 
   /// Determine whether the type \p Derived is a C++ class that is
   /// derived from the type \p Base.
+  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                     CXXRecordDecl *Base, CXXBasePaths &Paths);
+  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                     CXXRecordDecl *Base);
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base);
-
-  /// Determine whether the type \p Derived is a C++ class that is
-  /// derived from the type \p Base.
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
                      CXXBasePaths &Paths);
 
