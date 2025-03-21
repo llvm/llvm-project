@@ -389,27 +389,24 @@ bool UnwindPlan::Row::operator==(const UnwindPlan::Row &rhs) const {
          m_register_locations == rhs.m_register_locations;
 }
 
-void UnwindPlan::AppendRow(const UnwindPlan::RowSP &row_sp) {
-  if (m_row_list.empty() ||
-      m_row_list.back()->GetOffset() != row_sp->GetOffset())
-    m_row_list.push_back(row_sp);
+void UnwindPlan::AppendRow(Row row) {
+  if (m_row_list.empty() || m_row_list.back()->GetOffset() != row.GetOffset())
+    m_row_list.push_back(std::make_shared<Row>(std::move(row)));
   else
-    m_row_list.back() = row_sp;
+    *m_row_list.back() = std::move(row);
 }
 
-void UnwindPlan::InsertRow(const UnwindPlan::RowSP &row_sp,
-                           bool replace_existing) {
+void UnwindPlan::InsertRow(Row row, bool replace_existing) {
   collection::iterator it = m_row_list.begin();
   while (it != m_row_list.end()) {
-    RowSP row = *it;
-    if (row->GetOffset() >= row_sp->GetOffset())
+    if ((*it)->GetOffset() >= row.GetOffset())
       break;
     it++;
   }
-  if (it == m_row_list.end() || (*it)->GetOffset() != row_sp->GetOffset())
-    m_row_list.insert(it, row_sp);
+  if (it == m_row_list.end() || (*it)->GetOffset() != row.GetOffset())
+    m_row_list.insert(it, std::make_shared<Row>(std::move(row)));
   else if (replace_existing)
-    *it = row_sp;
+    **it = std::move(row);
 }
 
 const UnwindPlan::Row *UnwindPlan::GetRowForFunctionOffset(int offset) const {
