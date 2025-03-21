@@ -90,6 +90,7 @@ void asuint(double4, out uint4, out uint4);
 #ifdef __HLSL_ENABLE_16_BIT
 
 template <typename T, int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
@@ -99,6 +100,7 @@ asuint16(vector<T, N> V) {
 }
 
 template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
