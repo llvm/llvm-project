@@ -2928,9 +2928,9 @@ llvm::Constant *MicrosoftCXXABI::EmitMemberPointer(const APValue &MP,
 
   if (!MemberPointerPath.empty()) {
     const CXXRecordDecl *SrcRD = cast<CXXRecordDecl>(MPD->getDeclContext());
+    const Type *SrcRecTy = Ctx.getTypeDeclType(SrcRD).getTypePtr();
     const MemberPointerType *SrcTy =
-        Ctx.getMemberPointerType(DstTy->getPointeeType(), /*Qualifier=*/nullptr,
-                                 SrcRD)
+        Ctx.getMemberPointerType(DstTy->getPointeeType(), SrcRecTy)
             ->castAs<MemberPointerType>();
 
     bool DerivedMember = MP.isMemberPointerToDerivedMember();
@@ -3945,8 +3945,7 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   // for "int A::*" and separately storing the const qualifier.
   if (const auto *MPTy = T->getAs<MemberPointerType>())
     T = Context.getMemberPointerType(PointeeType.getUnqualifiedType(),
-                                     MPTy->getQualifier(),
-                                     MPTy->getMostRecentCXXRecordDecl());
+                                     MPTy->getClass());
 
   // Pointer types like "const int * const *" are represented by having RTTI
   // for "const int **" and separately storing the const qualifier.
