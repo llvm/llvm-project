@@ -61,81 +61,19 @@ constexpr uint8_t RecContinued = Flags(7, 1, 1);
 
 // Flag: This record is a continuation.
 constexpr uint8_t RecContinuation = Flags(6, 1, 1);
-
-// The GOFFOstream is responsible to write the data into the fixed physical
-// records of the format. A user of this class announces the begin of a new
-// logical record. While writing the payload, the physical records are created
-// for the data. Possible fill bytes at the end of a physical record are written
-// automatically. In principle, the GOFFOstream is agnostic of the endianness of
-// the payload. However, it also supports writing data in big endian byte order.
-//
-// The physical records use the flag field to indicate if the there is a
-// successor and predecessor record. To be able to set these flags while
-// writing, the basic implementation idea is to always buffer the last seen
-// physical record.
-class GOFFOstream {
-  /// The underlying raw_pwrite_stream.
-  raw_pwrite_stream &OS;
-
-  /// The number of logical records emitted so far.
-  uint32_t LogicalRecords = 0;
-
-  /// The number of physical records emitted so far.
-  uint32_t PhysicalRecords = 0;
-
-  /// The size of the buffer. Same as the payload size of a physical record.
-  static constexpr uint8_t BufferSize = GOFF::PayloadLength;
-
-  /// Current position in buffer.
-  char *BufferPtr = Buffer;
-
-  /// Static allocated buffer for the stream.
-  char Buffer[BufferSize];
-
-  /// The type of the current logical record, and the flags (aka continued and
-  /// continuation indicators) for the previous (physical) record.
-  uint8_t TypeAndFlags = 0;
-
-public:
-  GOFFOstream(raw_pwrite_stream &OS);
-  ~GOFFOstream();
-
-  raw_pwrite_stream &getOS() { return OS; }
-  size_t getWrittenSize() const { return PhysicalRecords * GOFF::RecordLength; }
-  uint32_t getNumLogicalRecords() { return LogicalRecords; }
-
-  /// Write the specified bytes.
-  void write(const char *Ptr, size_t Size);
-
-  /// Write zeroes, up to a maximum of 16 bytes.
-  void write_zeros(unsigned NumZeros);
-
-  /// Support for endian-specific data.
-  template <typename value_type> void writebe(value_type Value) {
-    Value =
-        support::endian::byte_swap<value_type>(Value, llvm::endianness::big);
-    write((const char *)&Value, sizeof(value_type));
-  }
-
-  /// Begin a new logical record. Implies finalizing the previous record.
-  void newRecord(GOFF::RecordType Type);
-
-  /// Ends a logical record.
-  void finalizeRecord();
-
-private:
-  /// Updates the continued/continuation flags, and writes the record prefix of
-  /// a physical record.
-  void updateFlagsAndWritePrefix(bool IsContinued);
-
-  /// Returns the remaining size in the buffer.
-  size_t getRemainingSize();
-};
 } // namespace
 
 GOFFOstream::GOFFOstream(raw_pwrite_stream &OS) : OS(OS) {}
 
 GOFFOstream::~GOFFOstream() { finalizeRecord(); }
+
+raw_pwrite_stream &GOFFOstream::getOS() { return OS; }
+
+size_t GOFFOstream::getWrittenSize() const {
+  return PhysicalRecords * GOFF::RecordLength;
+}
+
+uint32_t GOFFOstream::getNumLogicalRecords() { return LogicalRecords; }
 
 void GOFFOstream::updateFlagsAndWritePrefix(bool IsContinued) {
   // Update the flags based on the previous state and the flag IsContinued.
@@ -222,35 +160,10 @@ void GOFFOstream::finalizeRecord() {
   BufferPtr = Buffer;
 }
 
-namespace {
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm)
+    : OS(OS), Asm(Asm) {}
 
-class GOFFObjectWriter : public MCObjectWriter {
-  // The target specific GOFF writer instance.
-  std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
-
-  // The stream used to write the GOFF records.
-  GOFFOstream OS;
-
-public:
-  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
-                   raw_pwrite_stream &OS)
-      : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
-
-  ~GOFFObjectWriter() override {}
-
-  // Write GOFF records.
-  void writeHeader();
-  void writeEnd();
-
-  // Implementation of the MCObjectWriter interface.
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override {}
-  uint64_t writeObject(MCAssembler &Asm) override;
-};
-} // end anonymous namespace
-
-void GOFFObjectWriter::writeHeader() {
+void GOFFWriter::writeHeader() {
   OS.newRecord(GOFF::RT_HDR);
   OS.write_zeros(1);       // Reserved
   OS.writebe<uint32_t>(0); // Target Hardware Environment
@@ -264,7 +177,7 @@ void GOFFObjectWriter::writeHeader() {
   OS.write_zeros(6);       // Reserved
 }
 
-void GOFFObjectWriter::writeEnd() {
+void GOFFWriter::writeEnd() {
   uint8_t F = GOFF::END_EPR_None;
   uint8_t AMODE = 0;
   uint32_t ESDID = 0;
@@ -282,7 +195,7 @@ void GOFFObjectWriter::writeEnd() {
   OS.writebe<uint32_t>(ESDID); // ESDID (of entry point)
 }
 
-uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t GOFFWriter::writeObject() {
   writeHeader();
   writeEnd();
 
@@ -293,6 +206,35 @@ uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
                     << " logical records.");
 
   return OS.getWrittenSize();
+}
+
+namespace {
+
+class GOFFObjectWriter : public MCObjectWriter {
+  // The target specific GOFF writer instance.
+  std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
+
+  // The stream used to write the GOFF records.
+  raw_pwrite_stream &OS;
+
+public:
+  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                   raw_pwrite_stream &OS)
+      : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
+
+  ~GOFFObjectWriter() override {}
+
+  // Implementation of the MCObjectWriter interface.
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override {}
+  uint64_t writeObject(MCAssembler &Asm) override;
+};
+} // end anonymous namespace
+
+uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
+  uint64_t Size = GOFFWriter(OS, Asm).writeObject();
+  return Size;
 }
 
 std::unique_ptr<MCObjectWriter>
