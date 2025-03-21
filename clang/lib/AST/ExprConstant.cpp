@@ -7385,8 +7385,13 @@ class APValueToBufferConverter {
       for (size_t I = 0, E = CXXRD->getNumBases(); I != E; ++I) {
         const CXXBaseSpecifier &BS = CXXRD->bases_begin()[I];
         CXXRecordDecl *BaseDecl = BS.getType()->getAsCXXRecordDecl();
+        const APValue &Base = Val.getStructBase(I);
 
-        if (!visitRecord(Val.getStructBase(I), BS.getType(),
+        // Can happen in error cases.
+        if (!Base.isStruct())
+          return false;
+
+        if (!visitRecord(Base, BS.getType(),
                          Layout.getBaseClassOffset(BaseDecl) + Offset))
           return false;
       }
