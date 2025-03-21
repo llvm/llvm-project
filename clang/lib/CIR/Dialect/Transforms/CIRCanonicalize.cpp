@@ -126,7 +126,7 @@ void CIRCanonicalizePass::runOnOperation() {
     assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
     // CastOp and UnaryOp are here to perform a manual `fold` in
-    // applyOpPatternsGreedily.    
+    // applyOpPatternsGreedily.
     if (isa<BrOp, BrCondOp, ScopeOp, CastOp, UnaryOp>(op))
       ops.push_back(op);
   });
