@@ -1,6 +1,7 @@
-; RUN: clang++ %s -c -g -emit-llvm -o %t.bc
-; RUN: llc %t.bc -filetype=obj -o %t.o
-; RUN: llvm-dwarfdump -v %t.o | FileCheck %s
+; RUN: llc < %s -filetype=obj -o %t
+; RUN: llvm-dwarfdump -v %t | FileCheck %s
+;
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s --check-prefix=CHECK-METADATA
 
 ; C++ source to regenerate:
 ; enum __attribute__((enum_extensibility(open))) OpenEnum {
@@ -13,6 +14,8 @@
 ; 
 ; $ clang++ -O0 -g debug-info-enum-kind.cpp -c
 
+; CHECK-METADATA: enumKind: DW_APPLE_ENUM_KIND_Open
+; CHECK-METADATA: enumKind: DW_APPLE_ENUM_KIND_Closed
 
 ; CHECK: .debug_abbrev contents:
 
