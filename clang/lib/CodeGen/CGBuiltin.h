@@ -1,4 +1,4 @@
-//===-- CGBuiltin.h - LLVM CodeGen wrappers for llvm::Value* ------*- C++ -*-===//
+//===------ CGBuiltin.h - Emit LLVM Code for builtins ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,13 +11,18 @@
 
 #include "CodeGenFunction.h"
 
-using namespace clang;
-using namespace CodeGen;
-using namespace llvm;
+using llvm::Value;
+using llvm::Function;
+using llvm::AtomicOrdering;
+using clang::SmallVector;
+using clang::CallExpr;
+using clang::QualType;
+using clang::CodeGen::Address;
+using clang::CodeGen::CodeGenFunction;
 
 // Many of MSVC builtins are on x64, ARM and AArch64; to avoid repeating code,
 // we handle them here.
-enum class CodeGenFunction::MSVCIntrin {
+enum class clang::CodeGen::CodeGenFunction::MSVCIntrin {
   _BitScanForward,
   _BitScanReverse,
   _InterlockedAnd,
@@ -64,10 +69,10 @@ enum class CodeGenFunction::MSVCIntrin {
 // matching the argument type. It is assumed that only the first argument is
 // overloaded.
 template <unsigned N>
-static Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
-                                               const CallExpr *E,
-                                               unsigned IntrinsicID,
-                                               llvm::StringRef Name = "") {
+Value *emitBuiltinWithOneOverloadedType(CodeGenFunction &CGF,
+                                        const CallExpr *E,
+                                        unsigned IntrinsicID,
+                                        llvm::StringRef Name = "") {
   static_assert(N, "expect non-empty argument");
   SmallVector<Value *, N> Args;
   for (unsigned I = 0; I < N; ++I)
