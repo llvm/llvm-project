@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticError.h"
@@ -40,7 +39,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <clang/Basic/LangOptions.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
