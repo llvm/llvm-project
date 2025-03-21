@@ -197,7 +197,7 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
          "Expected expression as third input to TP-relative add");
 
   const RISCVMCExpr *Expr = dyn_cast<RISCVMCExpr>(SrcSymbol.getExpr());
-  assert(Expr && Expr->getKind() == RISCVMCExpr::VK_TPREL_ADD &&
+  assert(Expr && Expr->getSpecifier() == RISCVMCExpr::VK_TPREL_ADD &&
          "Expected tprel_add relocation on TP-relative symbol");
 
   // Emit the correct tprel_add relocation for the symbol.
@@ -441,7 +441,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   if (Kind == MCExpr::Target) {
     const RISCVMCExpr *RVExpr = cast<RISCVMCExpr>(Expr);
 
-    switch (RVExpr->getKind()) {
+    switch (RVExpr->getSpecifier()) {
     case RISCVMCExpr::VK_None:
     case RISCVMCExpr::VK_Invalid:
     case RISCVMCExpr::VK_32_PCREL:

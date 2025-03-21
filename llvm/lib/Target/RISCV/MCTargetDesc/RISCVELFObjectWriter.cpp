@@ -130,7 +130,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target &&
-        cast<RISCVMCExpr>(Expr)->getKind() == RISCVMCExpr::VK_32_PCREL)
+        cast<RISCVMCExpr>(Expr)->getSpecifier() == RISCVMCExpr::VK_32_PCREL)
       return ELF::R_RISCV_32_PCREL;
     if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOTPCREL)
       return ELF::R_RISCV_GOT32_PCREL;

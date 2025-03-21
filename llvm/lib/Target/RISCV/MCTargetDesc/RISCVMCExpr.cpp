@@ -27,18 +27,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscvmcexpr"
 
-const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, VariantKind Kind,
+const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
                                        MCContext &Ctx) {
-  return new (Ctx) RISCVMCExpr(Expr, Kind);
+  return new (Ctx) RISCVMCExpr(Expr, S);
 }
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  VariantKind Kind = getKind();
-  bool HasVariant =
-      ((Kind != VK_None) && (Kind != VK_CALL) && (Kind != VK_CALL_PLT));
+  Specifier S = getSpecifier();
+  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT));
 
   if (HasVariant)
-    OS << '%' << getVariantKindName(getKind()) << '(';
+    OS << '%' << getSpecifierName(S) << '(';
   Expr->print(OS, MAI);
   if (HasVariant)
     OS << ')';
@@ -93,18 +92,18 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
+                     getSpecifier());
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? getKind() == VK_None : true;
+  return Res.getSymB() ? getSpecifier() == VK_None : true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
 }
 
-RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
-  return StringSwitch<RISCVMCExpr::VariantKind>(name)
+RISCVMCExpr::Specifier RISCVMCExpr::getSpecifierForName(StringRef name) {
+  return StringSwitch<RISCVMCExpr::Specifier>(name)
       .Case("lo", VK_LO)
       .Case("hi", VK_HI)
       .Case("pcrel_lo", VK_PCREL_LO)
@@ -122,8 +121,8 @@ RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
       .Default(VK_Invalid);
 }
 
-StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
-  switch (Kind) {
+StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
+  switch (S) {
   case VK_Invalid:
   case VK_None:
     llvm_unreachable("Invalid ELF symbol kind");
@@ -167,7 +166,7 @@ StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
 
 bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
-  if (Kind != VK_LO && Kind != VK_HI)
+  if (specifier != VK_LO && specifier != VK_HI)
     return false;
 
   if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
@@ -181,7 +180,7 @@ bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
 }
 
 int64_t RISCVMCExpr::evaluateAsInt64(int64_t Value) const {
-  switch (Kind) {
+  switch (specifier) {
   default:
     llvm_unreachable("Invalid kind");
   case VK_LO:
