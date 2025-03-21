@@ -423,8 +423,15 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
 
+  /// Vector used to track whether a condition is constant folded.
+  MCDCRecord::ResultVector CondResults;
+
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
+
+  /// All possible Test Vectors for the boolean expression derived from
+  /// binary decision diagran of the expression.
+  MCDCRecord::TestVectors TestVectors;
 
   /// Storage for ExecVectors
   /// ExecVectors is the alias of its 0th element.
@@ -449,6 +456,7 @@ public:
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
+        CondResults(NumConditions, MCDCRecord::CondResult::MCDC_Normal),
         IndependencePairs(NumConditions), ExecVectors(ExecVectorsByCond[false]),
         IsVersion11(IsVersion11) {}
 
@@ -472,6 +480,7 @@ private:
 
       assert(TVIdx < SavedNodes[ID].Width);
       assert(TVIdxs.insert(NextTVIdx).second && "Duplicate TVIdx");
+      TestVectors.push_back({TV, MCDCCond});
 
       if (!Bitmap[IsVersion11
                       ? DecisionParams.BitmapIdx * CHAR_BIT + TV.getIndex()
@@ -499,7 +508,6 @@ private:
     buildTestVector(TV, 0, 0);
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
-
     // Fill ExecVectors order by False items and True items.
     // ExecVectors is the alias of ExecVectorsByCond[false], so
     // Append ExecVectorsByCond[true] on it.
@@ -508,29 +516,102 @@ private:
                        std::make_move_iterator(ExecVectorsT.end()));
   }
 
+  void findCoverablePairs(const MCDCRecord::CondIDMap &PosToID) {
+    llvm::SmallVector<unsigned> FoldedCondPos;
+    for (unsigned I = 0; I < CondResults.size(); ++I) {
+      if (CondResults[I] == MCDCRecord::MCDC_Constant ||
+          CondResults[I] == MCDCRecord::MCDC_Unreachable) {
+        FoldedCondPos.push_back(I);
+      }
+    }
+    if (FoldedCondPos.empty()) {
+      return;
+    }
+    std::array<MCDCRecord::TestVectors, 2> PracticalTestVectorsByCond;
+    for (const auto &TVWithCond : TestVectors) {
+      const bool Practical =
+          llvm::all_of(FoldedCondPos, [&](const unsigned &Pos) {
+            const auto &[TV, Cond] = TVWithCond;
+            const auto ID = PosToID.at(Pos);
+            if (TV[ID] == MCDCRecord::MCDC_DontCare) {
+              return true;
+            }
+            if (CondResults[Pos] == MCDCRecord::MCDC_Constant) {
+              const auto ConstantValue = Branches[Pos]->Count.isZero()
+                                             ? MCDCRecord::MCDC_False
+                                             : MCDCRecord::MCDC_True;
+              if (TV[ID] == ConstantValue) {
+                return true;
+              }
+            }
+            return false;
+          });
+
+      if (Practical) {
+        PracticalTestVectorsByCond[TVWithCond.second].push_back(TVWithCond);
+      }
+    }
+
+    // If a condition:
+    // - is uncoverable, all test vectors in exact one element of
+    // `PracticalTestVectorsByCond` show it is `DontCare`;
+    // - is unreachable, all test vectors in both elements of
+    // `PracticalTestVectorsByCond` show it is `DontCare`;
+    //
+    // Otherwise, the condition is coverable as long as it has not been marked
+    // as constant or unreachable before.
+    for (unsigned Pos = 0; Pos < Branches.size(); ++Pos) {
+      if (CondResults[Pos] != MCDCRecord::MCDC_Normal) {
+        continue;
+      }
+      const auto ID = PosToID.at(Pos);
+      unsigned InaccessibleCondCount =
+          llvm::count_if(PracticalTestVectorsByCond,
+                         [=](const MCDCRecord::TestVectors &TestVectors) {
+                           for (const auto &[TV, Cond] : TestVectors) {
+                             if (TV[ID] != MCDCRecord::MCDC_DontCare) {
+                               return false;
+                             }
+                           }
+                           return true;
+                         });
+      switch (InaccessibleCondCount) {
+      case 1:
+        CondResults[Pos] = MCDCRecord::CondResult::MCDC_Uncoverable;
+        break;
+      case 2:
+        CondResults[Pos] = MCDCRecord::CondResult::MCDC_Unreachable;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
 public:
   /// Process the MC/DC Record in order to produce a result for a boolean
   /// expression. This process includes tracking the conditions that comprise
   /// the decision region, calculating the list of all possible test vectors,
   /// marking the executed test vectors, and then finding an Independence Pair
   /// out of the executed test vectors for each condition in the boolean
-  /// expression. A condition is tracked to ensure that its ID can be mapped to
-  /// its ordinal position in the boolean expression. The condition's source
-  /// location is also tracked, as well as whether it is constant folded (in
-  /// which case it is excuded from the metric).
+  /// expression. A condition is tracked to ensure that its ID can be mapped
+  /// to its ordinal position in the boolean expression. The condition's
+  /// source location is also tracked, as well as whether it is constant
+  /// folded (in which case it is excuded from the metric).
   MCDCRecord processMCDCRecord() {
     MCDCRecord::CondIDMap PosToID;
     MCDCRecord::LineColPairMap CondLoc;
 
     // Walk the Record's BranchRegions (representing Conditions) in order to:
-    // - Hash the condition based on its corresponding ID. This will be used to
+    // - Hash the condition based on its corresponding ID. This will be used
+    // to
     //   calculate the test vectors.
     // - Keep a map of the condition's ordinal position (1, 2, 3, 4) to its
     //   actual ID.  This will be used to visualize the conditions in the
     //   correct order.
     // - Keep track of the condition source location. This will be used to
     //   visualize where the condition is.
-    // - Record whether the condition is constant folded so that we exclude it
+    // - Record whether the condition is folded so that we exclude it
     //   from being measured.
     for (auto [I, B] : enumerate(Branches)) {
       const auto &BranchParams = B->getBranchParams();
@@ -538,14 +619,25 @@ public:
       CondLoc[I] = B->startLoc();
       Folded[false][I] = B->FalseCount.isZero();
       Folded[true][I] = B->Count.isZero();
+      if (B->Count.isZero() && B->FalseCount.isZero()) {
+        CondResults[I] = MCDCRecord::CondResult::MCDC_Unreachable;
+      } else if (B->Count.isZero() || B->FalseCount.isZero()) {
+        CondResults[I] = MCDCRecord::CondResult::MCDC_Constant;
+      }
+      ++I;
     }
 
     // Using Profile Bitmap from runtime, mark the executed test vectors.
     findExecutedTestVectors();
 
+    // Identify all conditions making no difference on outcome of the decision.
+    findCoverablePairs(PosToID);
+
     // Record Test vectors, executed vectors, and independence pairs.
-    return MCDCRecord(Region, std::move(ExecVectors), std::move(Folded),
-                      std::move(PosToID), std::move(CondLoc));
+    return MCDCRecord(Region, std::move(ExecVectors),
+                      std::move(IndependencePairs), std::move(Folded),
+                      std::move(CondResults), std::move(PosToID),
+                      std::move(CondLoc));
   }
 };
 
@@ -637,6 +729,8 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
   unsigned MaxCounterID = 0;
   for (const auto &Region : Record.MappingRegions) {
     MaxCounterID = std::max(MaxCounterID, Ctx.getMaxCounterID(Region.Count));
+    MaxCounterID =
+        std::max(MaxCounterID, Ctx.getMaxCounterID(Region.FalseCount));
   }
   return MaxCounterID;
 }
@@ -933,8 +1027,8 @@ Error CoverageMapping::loadFunctionRecord(
   }
 
   // Don't create records for (filenames, function) pairs we've already seen.
-  auto FilenamesHash = hash_combine_range(Record.Filenames.begin(),
-                                          Record.Filenames.end());
+  auto FilenamesHash =
+      hash_combine_range(Record.Filenames.begin(), Record.Filenames.end());
   if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
     return Error::success();
 
@@ -987,12 +1081,11 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
 
 // If E is a no_data_found error, returns success. Otherwise returns E.
 static Error handleMaybeNoDataFoundError(Error E) {
-  return handleErrors(
-      std::move(E), [](const CoverageMapError &CME) {
-        if (CME.get() == coveragemap_error::no_data_found)
-          return static_cast<Error>(Error::success());
-        return make_error<CoverageMapError>(CME.get(), CME.getMessage());
-      });
+  return handleErrors(std::move(E), [](const CoverageMapError &CME) {
+    if (CME.get() == coveragemap_error::no_data_found)
+      return static_cast<Error>(Error::success());
+    return make_error<CoverageMapError>(CME.get(), CME.getMessage());
+  });
 }
 
 Error CoverageMapping::loadFromFile(
@@ -1084,7 +1177,7 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
         std::string Path = std::move(*PathOpt);
         StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
         if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
-                                  *Coverage, DataFound))
+                                   *Coverage, DataFound))
           return std::move(E);
       } else if (CheckBinaryIDs) {
         return createFileError(
@@ -1178,9 +1271,9 @@ class SegmentBuilder {
     // emit closing segments in sorted order.
     auto CompletedRegionsIt = ActiveRegions.begin() + FirstCompletedRegion;
     std::stable_sort(CompletedRegionsIt, ActiveRegions.end(),
-                      [](const CountedRegion *L, const CountedRegion *R) {
-                        return L->endLoc() < R->endLoc();
-                      });
+                     [](const CountedRegion *L, const CountedRegion *R) {
+                       return L->endLoc() < R->endLoc();
+                     });
 
     // Emit segments for all completed regions.
     for (unsigned I = FirstCompletedRegion + 1, E = ActiveRegions.size(); I < E;

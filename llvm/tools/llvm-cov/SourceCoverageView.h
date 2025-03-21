@@ -161,9 +161,6 @@ class SourceCoverageView {
   /// A memory buffer backing the source on display.
   const MemoryBuffer &File;
 
-  /// Various options to guide the coverage renderer.
-  const CoverageViewOptions &Options;
-
   /// Complete coverage information about the source on display.
   CoverageData CoverageInfo;
 
@@ -194,6 +191,9 @@ protected:
   };
 
   using CoverageSegmentArray = ArrayRef<const CoverageSegment *>;
+
+  /// Various options to guide the coverage renderer.
+  const CoverageViewOptions &Options;
 
   /// @name Rendering Interface
   /// @{
