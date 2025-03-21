@@ -1,4 +1,4 @@
-//===- bolt/Passes/NonPacProtectedRetAnalysis.cpp -------------------------===//
+//===- bolt/Passes/PAuthGadgetScanner.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
+#include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/DataflowAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
@@ -20,7 +20,7 @@
 #include "llvm/Support/Format.h"
 #include <memory>
 
-#define DEBUG_TYPE "bolt-nonpacprotectedret"
+#define DEBUG_TYPE "bolt-pauth-scanner"
 
 namespace llvm {
 namespace bolt {
@@ -57,7 +57,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
   llvm_unreachable("");
 }
 
-namespace NonPacProtectedRetAnalysis {
+namespace PAuthGadgetScanner {
 
 [[maybe_unused]] static void traceInst(const BinaryContext &BC, StringRef Label,
                                        const MCInst &MI) {
@@ -395,7 +395,7 @@ Analysis::computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
       if (BC.MIB->isReturn(Inst)) {
         ErrorOr<MCPhysReg> MaybeRetReg = BC.MIB->getRegUsedAsRetDest(Inst);
         if (MaybeRetReg.getError()) {
-          Result.Diagnostics.push_back(std::make_shared<GenDiag>(
+          Result.Diagnostics.push_back(std::make_shared<GenericReport>(
               MCInstInBBReference(&BB, I),
               "Warning: pac-ret analysis could not analyze this return "
               "instruction"));
@@ -416,9 +416,10 @@ Analysis::computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
         LLVM_DEBUG(
             { traceRegMask(BC, "Intersection with RetReg", UsedDirtyRegs); });
         if (UsedDirtyRegs.any()) {
+          static const GadgetKind RetKind("non-protected ret found");
           // This return instruction needs to be reported
-          Result.Diagnostics.push_back(std::make_shared<Gadget>(
-              MCInstInBBReference(&BB, I),
+          Result.Diagnostics.push_back(std::make_shared<GadgetReport>(
+              RetKind, MCInstInBBReference(&BB, I),
               PRA.getLastClobberingInsts(Inst, BF, UsedDirtyRegs)));
           for (MCPhysReg RetRegWithGadget : UsedDirtyRegs.set_bits())
             Result.RegistersAffected.insert(RetRegWithGadget);
@@ -480,54 +481,61 @@ static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
 
 static void reportFoundGadgetInSingleBBSingleOverwInst(
     raw_ostream &OS, const BinaryContext &BC, const MCInstReference OverwInst,
-    const MCInstReference RetInst) {
-  BinaryBasicBlock *BB = RetInst.getBasicBlock();
+    const MCInstReference Location) {
+  BinaryBasicBlock *BB = Location.getBasicBlock();
   assert(OverwInst.ParentKind == MCInstReference::BasicBlockParent);
-  assert(RetInst.ParentKind == MCInstReference::BasicBlockParent);
+  assert(Location.ParentKind == MCInstReference::BasicBlockParent);
   MCInstInBBReference OverwInstBB = OverwInst.U.BBRef;
   if (BB == OverwInstBB.BB) {
     // overwriting inst and ret instruction are in the same basic block.
-    assert(OverwInstBB.BBIndex < RetInst.U.BBRef.BBIndex);
+    assert(OverwInstBB.BBIndex < Location.U.BBRef.BBIndex);
     OS << "  This happens in the following basic block:\n";
     printBB(BC, BB);
   }
 }
 
-void Gadget::generateReport(raw_ostream &OS, const BinaryContext &BC) const {
-  GenDiag(RetInst, "non-protected ret found").generateReport(OS, BC);
+void Report::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
+                            StringRef IssueKind) const {
+  BinaryFunction *BF = Location.getFunction();
+  BinaryBasicBlock *BB = Location.getBasicBlock();
 
-  BinaryFunction *BF = RetInst.getFunction();
-  OS << "  The " << OverwritingRetRegInst.size()
-     << " instructions that write to the return register after any "
-        "authentication are:\n";
-  // Sort by address to ensure output is deterministic.
-  std::vector<MCInstReference> ORRI = OverwritingRetRegInst;
-  llvm::sort(ORRI, [](const MCInstReference &A, const MCInstReference &B) {
-    return A.getAddress() < B.getAddress();
-  });
-  for (unsigned I = 0; I < ORRI.size(); ++I) {
-    MCInstReference InstRef = ORRI[I];
-    OS << "  " << (I + 1) << ". ";
-    BC.printInstruction(OS, InstRef, InstRef.getAddress(), BF);
-  };
-  if (OverwritingRetRegInst.size() == 1) {
-    const MCInstReference OverwInst = OverwritingRetRegInst[0];
-    assert(OverwInst.ParentKind == MCInstReference::BasicBlockParent);
-    reportFoundGadgetInSingleBBSingleOverwInst(OS, BC, OverwInst, RetInst);
-  }
-}
-
-void GenDiag::generateReport(raw_ostream &OS, const BinaryContext &BC) const {
-  BinaryFunction *BF = RetInst.getFunction();
-  BinaryBasicBlock *BB = RetInst.getBasicBlock();
-
-  OS << "\nGS-PACRET: " << Diag.Text;
+  OS << "\nGS-PAUTH: " << IssueKind;
   OS << " in function " << BF->getPrintName();
   if (BB)
     OS << ", basic block " << BB->getName();
-  OS << ", at address " << llvm::format("%x", RetInst.getAddress()) << "\n";
-  OS << "  The return instruction is ";
-  BC.printInstruction(OS, RetInst, RetInst.getAddress(), BF);
+  OS << ", at address " << llvm::format("%x", Location.getAddress()) << "\n";
+  OS << "  The instruction is ";
+  BC.printInstruction(OS, Location, Location.getAddress(), BF);
+}
+
+void GadgetReport::generateReport(raw_ostream &OS,
+                                  const BinaryContext &BC) const {
+  printBasicInfo(OS, BC, Kind.getDescription());
+
+  BinaryFunction *BF = Location.getFunction();
+  OS << "  The " << OverwritingInstrs.size()
+     << " instructions that write to the affected registers after any "
+        "authentication are:\n";
+  // Sort by address to ensure output is deterministic.
+  std::vector<MCInstReference> OI = OverwritingInstrs;
+  llvm::sort(OI, [](const MCInstReference &A, const MCInstReference &B) {
+    return A.getAddress() < B.getAddress();
+  });
+  for (unsigned I = 0; I < OI.size(); ++I) {
+    MCInstReference InstRef = OI[I];
+    OS << "  " << (I + 1) << ". ";
+    BC.printInstruction(OS, InstRef, InstRef.getAddress(), BF);
+  };
+  if (OverwritingInstrs.size() == 1) {
+    const MCInstReference OverwInst = OverwritingInstrs[0];
+    assert(OverwInst.ParentKind == MCInstReference::BasicBlockParent);
+    reportFoundGadgetInSingleBBSingleOverwInst(OS, BC, OverwInst, Location);
+  }
+}
+
+void GenericReport::generateReport(raw_ostream &OS,
+                                   const BinaryContext &BC) const {
+  printBasicInfo(OS, BC, Text);
 }
 
 Error Analysis::runOnFunctions(BinaryContext &BC) {
@@ -542,17 +550,16 @@ Error Analysis::runOnFunctions(BinaryContext &BC) {
 
   ParallelUtilities::runOnEachFunctionWithUniqueAllocId(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
-      SkipFunc, "NonPacProtectedRetAnalysis");
+      SkipFunc, "PAuthGadgetScanner");
 
   for (BinaryFunction *BF : BC.getAllBinaryFunctions())
     if (AnalysisResults.count(BF) > 0) {
-      for (const std::shared_ptr<Annotation> &A :
-           AnalysisResults[BF].Diagnostics)
-        A->generateReport(outs(), BC);
+      for (const std::shared_ptr<Report> &R : AnalysisResults[BF].Diagnostics)
+        R->generateReport(outs(), BC);
     }
   return Error::success();
 }
 
-} // namespace NonPacProtectedRetAnalysis
+} // namespace PAuthGadgetScanner
 } // namespace bolt
 } // namespace llvm
