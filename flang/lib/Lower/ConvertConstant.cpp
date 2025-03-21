@@ -370,7 +370,7 @@ static mlir::Value genStructureComponentInit(
       /*typeParams=*/mlir::ValueRange{} /*TODO*/);
 
   if (Fortran::semantics::IsAllocatable(sym)) {
-    if (!Fortran::evaluate::IsNullPointer(expr)) {
+    if (!Fortran::evaluate::IsNullPointerOrAllocatable(&expr)) {
       fir::emitFatalError(loc, "constant structure constructor with an "
                                "allocatable component value that is not NULL");
     } else {
@@ -414,7 +414,7 @@ static mlir::Value genStructureComponentInit(
   // must fall through to genConstantValue() below.
   if (Fortran::semantics::IsBuiltinCPtr(sym) && sym.Rank() == 0 &&
       (Fortran::evaluate::GetLastSymbol(expr) ||
-       Fortran::evaluate::IsNullPointer(expr))) {
+       Fortran::evaluate::IsNullPointer(&expr))) {
     // Builtin c_ptr and c_funptr have special handling because designators
     // and NULL() are handled as initial values for them as an extension
     // (otherwise only c_ptr_null/c_funptr_null are allowed and these are

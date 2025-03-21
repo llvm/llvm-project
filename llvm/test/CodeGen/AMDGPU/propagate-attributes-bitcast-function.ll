@@ -10,7 +10,7 @@
 define void @foo1(i32 %x) #1 {
 entry:
   %cc = icmp eq i32 %x, 0
-  store volatile i1 %cc, ptr undef
+  store volatile i1 %cc, ptr poison
   ret void
 }
 

@@ -62,6 +62,23 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   return isArrayOf<TBAATagAttr>(op, tags);
 }
 
+//===----------------------------------------------------------------------===//
+// DereferenceableOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::LLVM::detail::verifyDereferenceableOpInterface(Operation *op) {
+  auto iface = cast<DereferenceableOpInterface>(op);
+
+  if (auto derefAttr = iface.getDereferenceableOrNull())
+    if (op->getNumResults() != 1 ||
+        !mlir::isa<LLVMPointerType>(op->getResult(0).getType()))
+      return op->emitOpError(
+          "expected op to return a single LLVM pointer type");
+
+  return success();
+}
+
 SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
   return {getPtr()};
 }

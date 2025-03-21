@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -150,7 +151,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Neither symbol can be modified.
-    if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
+    if (getSpecifier(Target.getSymA()) != X86MCExpr::VK_None) {
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
       return;
@@ -265,10 +266,10 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       return;
     }
 
-    MCSymbolRefExpr::VariantKind Modifier = Target.getSymA()->getKind();
+    auto Specifier = getSpecifier(Target.getSymA());
     if (IsPCRel) {
       if (IsRIPRel) {
-        if (Modifier == MCSymbolRefExpr::VK_GOTPCREL) {
+        if (Specifier == X86MCExpr::VK_GOTPCREL) {
           // x86_64 distinguishes movq foo@GOTPCREL so that the linker can
           // rewrite the movq to an leaq at link time if the symbol ends up in
           // the same linkage unit.
@@ -276,9 +277,9 @@ void X86MachObjectWriter::RecordX86_64Relocation(
             Type = MachO::X86_64_RELOC_GOT_LOAD;
           else
             Type = MachO::X86_64_RELOC_GOT;
-        }  else if (Modifier == MCSymbolRefExpr::VK_TLVP) {
+        } else if (Specifier == X86MCExpr::VK_TLVP) {
           Type = MachO::X86_64_RELOC_TLV;
-        }  else if (Modifier != MCSymbolRefExpr::VK_None) {
+        } else if (Specifier != X86MCExpr::VK_None) {
           Asm.getContext().reportError(
               Fixup.getLoc(), "unsupported symbol modifier in relocation");
           return;
@@ -306,7 +307,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
           }
         }
       } else {
-        if (Modifier != MCSymbolRefExpr::VK_None) {
+        if (Specifier != X86MCExpr::VK_None) {
           Asm.getContext().reportError(
               Fixup.getLoc(),
               "unsupported symbol modifier in branch relocation");
@@ -316,20 +317,20 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         Type = MachO::X86_64_RELOC_BRANCH;
       }
     } else {
-      if (Modifier == MCSymbolRefExpr::VK_GOT) {
+      if (Specifier == X86MCExpr::VK_GOT) {
         Type = MachO::X86_64_RELOC_GOT;
-      } else if (Modifier == MCSymbolRefExpr::VK_GOTPCREL) {
+      } else if (Specifier == X86MCExpr::VK_GOTPCREL) {
         // GOTPCREL is allowed as a modifier on non-PCrel instructions, in which
         // case all we do is set the PCrel bit in the relocation entry; this is
         // used with exception handling, for example. The source is required to
         // include any necessary offset directly.
         Type = MachO::X86_64_RELOC_GOT;
         IsPCRel = 1;
-      } else if (Modifier == MCSymbolRefExpr::VK_TLVP) {
+      } else if (Specifier == X86MCExpr::VK_TLVP) {
         Asm.getContext().reportError(
             Fixup.getLoc(), "TLVP symbol modifier should have been rip-rel");
         return;
-      } else if (Modifier != MCSymbolRefExpr::VK_None) {
+      } else if (Specifier != X86MCExpr::VK_None) {
         Asm.getContext().reportError(
             Fixup.getLoc(), "unsupported symbol modifier in relocation");
         return;
@@ -462,7 +463,7 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
                                                MCValue Target,
                                                uint64_t &FixedValue) {
   const MCSymbolRefExpr *SymA = Target.getSymA();
-  assert(SymA->getKind() == MCSymbolRefExpr::VK_TLVP && !is64Bit() &&
+  assert(getSpecifier(SymA) == X86MCExpr::VK_TLVP && !is64Bit() &&
          "Should only be called with a 32-bit TLVP relocation!");
 
   unsigned Log2Size = getFixupKindLog2Size(Fixup.getKind());
@@ -505,7 +506,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
 
   // If this is a 32-bit TLVP reloc it's handled a bit differently.
   if (Target.getSymA() &&
-      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_TLVP) {
+      getSpecifier(Target.getSymA()) == X86MCExpr::VK_TLVP) {
     recordTLVPRelocation(Writer, Asm, Fragment, Fixup, Target, FixedValue);
     return;
   }

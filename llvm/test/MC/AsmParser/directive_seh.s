@@ -49,9 +49,13 @@ func:
 # CHECK: .seh_startchained
 # CHECK: .seh_endprologue
 # CHECK: .seh_endchained
+    .seh_startepilogue
+# CHECK: .seh_startepilogue
     lea (%rbx), %rsp
     pop %rbx
     addq $24, %rsp
+    .seh_endepilogue
+# CHECK: .seh_endepilogue
     ret
     .seh_endproc
 # CHECK: .seh_endproc

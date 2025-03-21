@@ -43,21 +43,63 @@ def testLocationAttr():
 
 run(testLocationAttr)
 
+
 # CHECK-LABEL: TEST: testFileLineCol
 def testFileLineCol():
     with Context() as ctx:
-        loc = Location.file("foo.txt", 123, 56)
-        range = Location.file("foo.txt", 123, 56, 123, 100)
+        loc = Location.file("foo1.txt", 123, 56)
+        range = Location.file("foo2.txt", 123, 56, 124, 100)
+
     ctx = None
     gc.collect()
-    # CHECK: file str: loc("foo.txt":123:56)
+
+    # CHECK: file str: loc("foo1.txt":123:56)
     print("file str:", str(loc))
-    # CHECK: file repr: loc("foo.txt":123:56)
+    # CHECK: file repr: loc("foo1.txt":123:56)
     print("file repr:", repr(loc))
-    # CHECK: file range str: loc("foo.txt":123:56 to :100)
+    # CHECK: file range str: loc("foo2.txt":123:56 to 124:100)
     print("file range str:", str(range))
-    # CHECK: file range repr: loc("foo.txt":123:56 to :100)
+    # CHECK: file range repr: loc("foo2.txt":123:56 to 124:100)
     print("file range repr:", repr(range))
+
+    assert loc.is_a_file()
+    assert not loc.is_a_name()
+    assert not loc.is_a_callsite()
+    assert not loc.is_a_fused()
+
+    # CHECK: file filename: foo1.txt
+    print("file filename:", loc.filename)
+    # CHECK: file start_line: 123
+    print("file start_line:", loc.start_line)
+    # CHECK: file start_col: 56
+    print("file start_col:", loc.start_col)
+    # CHECK: file end_line: 123
+    print("file end_line:", loc.end_line)
+    # CHECK: file end_col: 56
+    print("file end_col:", loc.end_col)
+
+    assert range.is_a_file()
+    # CHECK: file filename: foo2.txt
+    print("file filename:", range.filename)
+    # CHECK: file start_line: 123
+    print("file start_line:", range.start_line)
+    # CHECK: file start_col: 56
+    print("file start_col:", range.start_col)
+    # CHECK: file end_line: 124
+    print("file end_line:", range.end_line)
+    # CHECK: file end_col: 100
+    print("file end_col:", range.end_col)
+
+    with Context() as ctx:
+        ctx.allow_unregistered_dialects = True
+        loc = Location.file("foo3.txt", 127, 61)
+        with loc:
+            i32 = IntegerType.get_signless(32)
+            module = Module.create()
+            with InsertionPoint(module.body):
+                new_value = Operation.create("custom.op1", results=[i32]).result
+                # CHECK: new_value location: loc("foo3.txt":127:61)
+                print("new_value location: ", new_value.location)
 
 
 run(testFileLineCol)
@@ -67,17 +109,31 @@ run(testFileLineCol)
 def testName():
     with Context() as ctx:
         loc = Location.name("nombre")
-        locWithChildLoc = Location.name("naam", loc)
+        loc_with_child_loc = Location.name("naam", loc)
+
     ctx = None
     gc.collect()
-    # CHECK: file str: loc("nombre")
-    print("file str:", str(loc))
-    # CHECK: file repr: loc("nombre")
-    print("file repr:", repr(loc))
-    # CHECK: file str: loc("naam"("nombre"))
-    print("file str:", str(locWithChildLoc))
-    # CHECK: file repr: loc("naam"("nombre"))
-    print("file repr:", repr(locWithChildLoc))
+
+    # CHECK: name str: loc("nombre")
+    print("name str:", str(loc))
+    # CHECK: name repr: loc("nombre")
+    print("name repr:", repr(loc))
+    # CHECK: name str: loc("naam"("nombre"))
+    print("name str:", str(loc_with_child_loc))
+    # CHECK: name repr: loc("naam"("nombre"))
+    print("name repr:", repr(loc_with_child_loc))
+
+    assert loc.is_a_name()
+    # CHECK: name name_str: nombre
+    print("name name_str:", loc.name_str)
+    # CHECK: name child_loc: loc(unknown)
+    print("name child_loc:", loc.child_loc)
+
+    assert loc_with_child_loc.is_a_name()
+    # CHECK: name name_str: naam
+    print("name name_str:", loc_with_child_loc.name_str)
+    # CHECK: name child_loc_with_child_loc: loc("nombre")
+    print("name child_loc_with_child_loc:", loc_with_child_loc.child_loc)
 
 
 run(testName)
@@ -91,10 +147,17 @@ def testCallSite():
             [Location.file("util.foo", 379, 21), Location.file("main.foo", 100, 63)],
         )
     ctx = None
-    # CHECK: file str: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
-    print("file str:", str(loc))
-    # CHECK: file repr: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
-    print("file repr:", repr(loc))
+    # CHECK: callsite str: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+    print("callsite str:", str(loc))
+    # CHECK: callsite repr: loc(callsite("foo.text":123:45 at callsite("util.foo":379:21 at "main.foo":100:63))
+    print("callsite repr:", repr(loc))
+
+    assert loc.is_a_callsite()
+
+    # CHECK: callsite callee: loc("foo.text":123:45)
+    print("callsite callee:", loc.callee)
+    # CHECK: callsite caller: loc(callsite("util.foo":379:21 at "main.foo":100:63))
+    print("callsite caller:", loc.caller)
 
 
 run(testCallSite)
@@ -112,31 +175,56 @@ def testFused():
         loc_empty = Location.fused([])
         loc_empty_attr = Location.fused([], attr)
         loc_single_attr = Location.fused([Location.name("apple")], attr)
+
     ctx = None
-    # CHECK: file str: loc("apple")
-    print("file str:", str(loc_single))
-    # CHECK: file repr: loc("apple")
-    print("file repr:", repr(loc_single))
-    # CHECK: file str: loc(fused["apple", "banana"])
-    print("file str:", str(loc))
-    # CHECK: file repr: loc(fused["apple", "banana"])
-    print("file repr:", repr(loc))
-    # CHECK: file str: loc(fused<"sauteed">["carrot", "potatoes"])
-    print("file str:", str(loc_attr))
-    # CHECK: file repr: loc(fused<"sauteed">["carrot", "potatoes"])
-    print("file repr:", repr(loc_attr))
-    # CHECK: file str: loc(unknown)
-    print("file str:", str(loc_empty))
-    # CHECK: file repr: loc(unknown)
-    print("file repr:", repr(loc_empty))
-    # CHECK: file str: loc(fused<"sauteed">[unknown])
-    print("file str:", str(loc_empty_attr))
-    # CHECK: file repr: loc(fused<"sauteed">[unknown])
-    print("file repr:", repr(loc_empty_attr))
-    # CHECK: file str: loc(fused<"sauteed">["apple"])
-    print("file str:", str(loc_single_attr))
-    # CHECK: file repr: loc(fused<"sauteed">["apple"])
-    print("file repr:", repr(loc_single_attr))
+
+    assert not loc_single.is_a_fused()
+    # CHECK: fused str: loc("apple")
+    print("fused str:", str(loc_single))
+    # CHECK: fused repr: loc("apple")
+    print("fused repr:", repr(loc_single))
+    # # CHECK: fused locations: []
+    print("fused locations:", loc_single.locations)
+
+    assert loc.is_a_fused()
+    # CHECK: fused str: loc(fused["apple", "banana"])
+    print("fused str:", str(loc))
+    # CHECK: fused repr: loc(fused["apple", "banana"])
+    print("fused repr:", repr(loc))
+    # CHECK: fused locations: [loc("apple"), loc("banana")]
+    print("fused locations:", loc.locations)
+
+    assert loc_attr.is_a_fused()
+    # CHECK: fused str: loc(fused<"sauteed">["carrot", "potatoes"])
+    print("fused str:", str(loc_attr))
+    # CHECK: fused repr: loc(fused<"sauteed">["carrot", "potatoes"])
+    print("fused repr:", repr(loc_attr))
+    # CHECK: fused locations: [loc("carrot"), loc("potatoes")]
+    print("fused locations:", loc_attr.locations)
+
+    assert not loc_empty.is_a_fused()
+    # CHECK: fused str: loc(unknown)
+    print("fused str:", str(loc_empty))
+    # CHECK: fused repr: loc(unknown)
+    print("fused repr:", repr(loc_empty))
+    # CHECK: fused locations: []
+    print("fused locations:", loc_empty.locations)
+
+    assert loc_empty_attr.is_a_fused()
+    # CHECK: fused str: loc(fused<"sauteed">[unknown])
+    print("fused str:", str(loc_empty_attr))
+    # CHECK: fused repr: loc(fused<"sauteed">[unknown])
+    print("fused repr:", repr(loc_empty_attr))
+    # CHECK: fused locations: [loc(unknown)]
+    print("fused locations:", loc_empty_attr.locations)
+
+    assert loc_single_attr.is_a_fused()
+    # CHECK: fused str: loc(fused<"sauteed">["apple"])
+    print("fused str:", str(loc_single_attr))
+    # CHECK: fused repr: loc(fused<"sauteed">["apple"])
+    print("fused repr:", repr(loc_single_attr))
+    # CHECK: fused locations: [loc("apple")]
+    print("fused locations:", loc_single_attr.locations)
 
 
 run(testFused)

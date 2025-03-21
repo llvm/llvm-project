@@ -9,11 +9,11 @@
 #ifndef LLVM_SUPPORT_HEXAGONATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_HEXAGONATTRIBUTEPARSER_H
 
-#include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/HexagonAttributes.h"
 
 namespace llvm {
-class HexagonAttributeParser : public ELFAttributeParser {
+class HexagonAttributeParser : public ELFCompactAttrParser {
   struct DisplayHandler {
     HexagonAttrs::AttrType Attribute;
     Error (HexagonAttributeParser::*Routine)(unsigned);
@@ -25,11 +25,11 @@ class HexagonAttributeParser : public ELFAttributeParser {
 
 public:
   HexagonAttributeParser(ScopedPrinter *SP)
-      : ELFAttributeParser(SP, HexagonAttrs::getHexagonAttributeTags(),
-                           "hexagon") {}
+      : ELFCompactAttrParser(SP, HexagonAttrs::getHexagonAttributeTags(),
+                             "hexagon") {}
   HexagonAttributeParser()
-      : ELFAttributeParser(HexagonAttrs::getHexagonAttributeTags(), "hexagon") {
-  }
+      : ELFCompactAttrParser(HexagonAttrs::getHexagonAttributeTags(),
+                             "hexagon") {}
 };
 
 } // namespace llvm

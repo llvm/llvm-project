@@ -196,8 +196,7 @@ template <class AttrElementT,
               function_ref<std::optional<ElementValueT>(ElementValueT)>>
 Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
                                       CalculationT &&calculate) {
-  assert(operands.size() == 1 && "unary op takes one operands");
-  if (!operands[0])
+  if (!llvm::getSingleElement(operands))
     return {};
 
   static_assert(
@@ -268,8 +267,7 @@ template <
     class CalculationT = function_ref<TargetElementValueT(ElementValueT, bool)>>
 Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
                           CalculationT &&calculate) {
-  assert(operands.size() == 1 && "Cast op takes one operand");
-  if (!operands[0])
+  if (!llvm::getSingleElement(operands))
     return {};
 
   static_assert(

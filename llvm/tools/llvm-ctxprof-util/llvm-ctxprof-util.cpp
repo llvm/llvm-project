@@ -74,7 +74,7 @@ Error convertToYaml() {
   if (EC)
     return createStringError(EC, "failed to open output");
   PGOCtxProfileReader Reader(BufOrError.get()->getBuffer());
-  auto Prof = Reader.loadContexts();
+  auto Prof = Reader.loadProfiles();
   if (!Prof)
     return Prof.takeError();
   llvm::convertCtxProfToYaml(Out, *Prof);

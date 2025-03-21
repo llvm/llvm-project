@@ -405,6 +405,19 @@ uarch           : sifive,u74-mc
   EXPECT_EQ(
       sys::detail::getHostCPUNameForRISCV("uarch           : sifive,bullet0\n"),
       "sifive-u74");
+
+  const StringRef SifiveP550MCProcCPUInfo = R"(
+processor       : 0
+hart            : 2
+isa             : rv64imafdch_zicsr_zifencei_zba_zbb_sscofpmf
+mmu             : sv48
+uarch           : eswin,eic770x
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForRISCV(SifiveP550MCProcCPUInfo),
+            "sifive-p550");
+  EXPECT_EQ(
+      sys::detail::getHostCPUNameForRISCV("uarch           : eswin,eic770x\n"),
+      "sifive-p550");
 }
 
 static bool runAndGetCommandOutput(

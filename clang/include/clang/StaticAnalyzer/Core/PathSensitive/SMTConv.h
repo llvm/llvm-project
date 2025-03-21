@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a set of functions to create SMT expressions
+//  This file defines a set of functions to create SMT expressions.
 //
 //===----------------------------------------------------------------------===//
 

@@ -714,22 +714,6 @@ static void __kmp_task_start(kmp_int32 gtid, kmp_task_t *task,
 
 #if OMPT_SUPPORT
 //------------------------------------------------------------------------------
-// __ompt_task_init:
-//   Initialize OMPT fields maintained by a task. This will only be called after
-//   ompt_start_tool, so we already know whether ompt is enabled or not.
-
-static inline void __ompt_task_init(kmp_taskdata_t *task, int tid) {
-  // The calls to __ompt_task_init already have the ompt_enabled condition.
-  task->ompt_task_info.task_data.value = 0;
-  task->ompt_task_info.frame.exit_frame = ompt_data_none;
-  task->ompt_task_info.frame.enter_frame = ompt_data_none;
-  task->ompt_task_info.frame.exit_frame_flags =
-      ompt_frame_runtime | ompt_frame_framepointer;
-  task->ompt_task_info.frame.enter_frame_flags =
-      ompt_frame_runtime | ompt_frame_framepointer;
-  task->ompt_task_info.dispatch_chunk.start = 0;
-  task->ompt_task_info.dispatch_chunk.iterations = 0;
-}
 
 // __ompt_task_start:
 //   Build and trigger task-begin event
@@ -804,7 +788,7 @@ static void __kmpc_omp_task_begin_if0_template(ident_t *loc_ref, kmp_int32 gtid,
           taskdata->ompt_task_info.frame.exit_frame.ptr = frame_address;
       current_task->ompt_task_info.frame.enter_frame_flags =
           taskdata->ompt_task_info.frame.exit_frame_flags =
-              ompt_frame_application | ompt_frame_framepointer;
+              OMPT_FRAME_FLAGS_APP;
     }
     if (ompt_enabled.ompt_callback_task_create) {
       ompt_task_info_t *parent_info = &(current_task->ompt_task_info);
@@ -1268,8 +1252,7 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
     ompt_frame_t *ompt_frame;
     __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
     ompt_frame->enter_frame = ompt_data_none;
-    ompt_frame->enter_frame_flags =
-        ompt_frame_runtime | ompt_frame_framepointer;
+    ompt_frame->enter_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
   }
 #endif
 
@@ -1673,7 +1656,8 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
       (task_entry != (kmp_routine_entry_t)__kmp_taskloop_task)) {
     taskdata->is_taskgraph = 1;
     taskdata->tdg = __kmp_global_tdgs[__kmp_curr_tdg_idx];
-    taskdata->td_task_id = KMP_ATOMIC_INC(&__kmp_tdg_task_id);
+    taskdata->td_task_id = KMP_GEN_TASK_ID();
+    taskdata->td_tdg_task_id = KMP_ATOMIC_INC(&__kmp_tdg_task_id);
   }
 #endif
   KA_TRACE(20, ("__kmp_task_alloc(exit): T#%d created task %p parent=%p\n",
@@ -2010,6 +1994,7 @@ kmp_int32 __kmpc_omp_task_parts(ident_t *loc_ref, kmp_int32 gtid,
 #if OMPT_SUPPORT
   if (UNLIKELY(ompt_enabled.enabled)) {
     parent->ompt_task_info.frame.enter_frame = ompt_data_none;
+    parent->ompt_task_info.frame.enter_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
   }
 #endif
   return TASK_CURRENT_NOT_QUEUED;
@@ -2035,11 +2020,11 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
     kmp_tdg_info_t *tdg = new_taskdata->tdg;
     // extend the record_map if needed
-    if (new_taskdata->td_task_id >= new_taskdata->tdg->map_size) {
+    if (new_taskdata->td_tdg_task_id >= new_taskdata->tdg->map_size) {
       __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
       // map_size could have been updated by another thread if recursive
       // taskloop
-      if (new_taskdata->td_task_id >= tdg->map_size) {
+      if (new_taskdata->td_tdg_task_id >= tdg->map_size) {
         kmp_uint old_size = tdg->map_size;
         kmp_uint new_size = old_size * 2;
         kmp_node_info_t *old_record = tdg->record_map;
@@ -2068,9 +2053,9 @@ kmp_int32 __kmp_omp_task(kmp_int32 gtid, kmp_task_t *new_task,
       __kmp_release_bootstrap_lock(&tdg->graph_lock);
     }
     // record a task
-    if (tdg->record_map[new_taskdata->td_task_id].task == nullptr) {
-      tdg->record_map[new_taskdata->td_task_id].task = new_task;
-      tdg->record_map[new_taskdata->td_task_id].parent_task =
+    if (tdg->record_map[new_taskdata->td_tdg_task_id].task == nullptr) {
+      tdg->record_map[new_taskdata->td_tdg_task_id].task = new_task;
+      tdg->record_map[new_taskdata->td_tdg_task_id].parent_task =
           new_taskdata->td_parent;
       KMP_ATOMIC_INC(&tdg->num_tasks);
     }
@@ -4697,14 +4682,11 @@ kmp_task_t *__kmp_task_dup_alloc(kmp_info_t *thread, kmp_task_t *task_src
 
   // Initialize new task (only specific fields not affected by memcpy)
 #if OMPX_TASKGRAPH
-  if (!taskdata->is_taskgraph || taskloop_recur)
-    taskdata->td_task_id = KMP_GEN_TASK_ID();
-  else if (taskdata->is_taskgraph &&
-           __kmp_tdg_is_recording(taskdata_src->tdg->tdg_status))
-    taskdata->td_task_id = KMP_ATOMIC_INC(&__kmp_tdg_task_id);
-#else
-  taskdata->td_task_id = KMP_GEN_TASK_ID();
+  if (taskdata->is_taskgraph && !taskloop_recur &&
+      __kmp_tdg_is_recording(taskdata_src->tdg->tdg_status))
+    taskdata->td_tdg_task_id = KMP_ATOMIC_INC(&__kmp_tdg_task_id);
 #endif
+  taskdata->td_task_id = KMP_GEN_TASK_ID();
   if (task->shareds != NULL) { // need setup shareds pointer
     shareds_offset = (char *)task_src->shareds - (char *)taskdata_src;
     task->shareds = &((char *)taskdata)[shareds_offset];

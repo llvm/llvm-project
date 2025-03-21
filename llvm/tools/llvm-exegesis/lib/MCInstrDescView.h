@@ -72,6 +72,7 @@ struct Operand {
   bool isVariable() const;
   bool isMemory() const;
   bool isImmediate() const;
+  bool isEarlyClobber() const;
   unsigned getIndex() const;
   unsigned getTiedToIndex() const;
   unsigned getVariableIndex() const;
@@ -82,6 +83,7 @@ struct Operand {
   // Please use the accessors above and not the following fields.
   std::optional<uint8_t> Index;
   bool IsDef = false;
+  bool IsEarlyClobber = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const MCOperandInfo *Info = nullptr;              // Set for Explicit Op.
   std::optional<uint8_t> TiedToIndex;               // Set for Reg&Explicit Op.
@@ -114,6 +116,8 @@ struct Instruction {
   Instruction(Instruction &&) = delete;
   Instruction &operator=(const Instruction &) = delete;
   Instruction &operator=(Instruction &&) = delete;
+
+  unsigned getOpcode() const { return Description.getOpcode(); }
 
   // Returns the Operand linked to this Variable.
   // In case the Variable is tied, the primary (i.e. Def) Operand is returned.

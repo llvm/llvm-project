@@ -234,9 +234,9 @@ entry:
 ; CHECK: {{buffer|flat}}_store_byte [[STORE]],
 define amdgpu_kernel void @i1_input_phys_vgpr() {
 entry:
-  %val = load i1, ptr addrspace(1) undef
+  %val = load i1, ptr addrspace(1) poison
   %cc = call i1 asm sideeffect "; use $1, def $0 ", "={v1}, {v0}"(i1 %val)
-  store i1 %cc, ptr addrspace(1) undef
+  store i1 %cc, ptr addrspace(1) poison
   ret void
 }
 
@@ -249,8 +249,8 @@ entry:
 ; CHECK-NEXT: ASMSTART
 define amdgpu_kernel void @i1_input_phys_vgpr_x2() {
 entry:
-  %val0 = load volatile i1, ptr addrspace(1) undef
-  %val1 = load volatile i1, ptr addrspace(1) undef
+  %val0 = load volatile i1, ptr addrspace(1) poison
+  %val1 = load volatile i1, ptr addrspace(1) poison
   call void asm sideeffect "; use $0 $1 ", "{v0}, {v1}"(i1 %val0, i1 %val1)
   ret void
 }
@@ -265,7 +265,7 @@ entry:
   %def0 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %def1 = call i32 asm sideeffect "; def $0 ", "={v0}"()
   %add = shl i32 %def0, %def1
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -307,7 +307,7 @@ false:
   br label %exit
 
 exit:
-  %s1 = phi { i64, i64} [ undef, %entry ], [ %s0, %false]
+  %s1 = phi { i64, i64} [ poison, %entry ], [ %s0, %false]
   %v0 = extractvalue { i64, i64 } %s1, 0
   %v1 = extractvalue { i64, i64 } %s1, 1
   tail call void asm sideeffect "; use $0", "v"(i64 %v0)

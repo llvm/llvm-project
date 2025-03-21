@@ -75,10 +75,6 @@ class CodeGenVTables {
                             bool vtableHasLocalLinkage,
                             bool isCompleteDtor) const;
 
-  bool useRelativeLayout() const;
-
-  llvm::Type *getVTableComponentType() const;
-
 public:
   /// Add vtable components for the given vtable layout to the given
   /// global initializer.
@@ -151,6 +147,12 @@ public:
 
   /// Specify a global should not be instrumented with hwasan.
   void RemoveHwasanMetadata(llvm::GlobalValue *GV) const;
+
+  /// Return the type used as components for a vtable.
+  llvm::Type *getVTableComponentType() const;
+
+  /// Return true if the relative vtable layout is used.
+  bool useRelativeLayout() const;
 };
 
 } // end namespace CodeGen

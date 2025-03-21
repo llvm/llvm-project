@@ -186,9 +186,8 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                          ->getValue()
                          ->getUniqueInteger()
                          .getZExtValue();
-    Streamer.emitCGProfileEntry(
-        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
-        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+    Streamer.emitCGProfileEntry(MCSymbolRefExpr::create(From, C),
+                                MCSymbolRefExpr::create(To, C), Count);
   }
 }
 
@@ -348,6 +347,12 @@ TargetLoweringObjectFile::SectionForGlobal(const GlobalObject *GO,
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
+  return getSectionForJumpTable(F, TM, /*JTE=*/nullptr);
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
+    const Function &F, const TargetMachine &TM,
+    const MachineJumpTableEntry *JTE) const {
   Align Alignment(1);
   return getSectionForConstant(F.getDataLayout(),
                                SectionKind::getReadOnly(), /*C=*/nullptr,

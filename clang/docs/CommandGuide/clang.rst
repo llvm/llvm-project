@@ -733,16 +733,19 @@ ENVIRONMENT
 
 .. envvar:: CPATH
 
-  If this environment variable is present, it is treated as a delimited list of
-  paths to be added to the default system include path list. The delimiter is
-  the platform dependent delimiter, as used in the PATH environment variable.
-
-  Empty components in the environment variable are ignored.
+  This environment variable specifies additional (non-system) header search
+  paths to be used to find included header files. These paths are searched after
+  paths specified with the :option:`-I\<directory\>` option, but before any
+  system header search paths. Paths are delimited by the platform dependent
+  delimiter as used in the ``PATH`` environment variable. Empty entries in the
+  delimited path list, including those at the beginning or end of the list, are
+  treated as specifying the compiler's current working directory.
 
 .. envvar:: C_INCLUDE_PATH, OBJC_INCLUDE_PATH, CPLUS_INCLUDE_PATH, OBJCPLUS_INCLUDE_PATH
 
-  These environment variables specify additional paths, as for :envvar:`CPATH`, which are
-  only used when processing the appropriate language.
+  These environment variables specify additional system header file search
+  paths to be used when processing the corresponding language. Search paths are
+  delimited as for the :envvar:`CPATH` environment variable.
 
 .. envvar:: MACOSX_DEPLOYMENT_TARGET
 

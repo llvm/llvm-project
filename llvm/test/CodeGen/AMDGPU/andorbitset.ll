@@ -106,8 +106,8 @@ define amdgpu_kernel void @s_set_midbit(ptr addrspace(1) %out, i32 %in) {
 @gv = external addrspace(1) global i32
 
 ; Make sure there's no verifier error with an undef source.
-define void @bitset_verifier_error() local_unnamed_addr #0 {
-; SI-LABEL: bitset_verifier_error:
+define void @bitset_verifier_error_freeze_poison() local_unnamed_addr #0 {
+; SI-LABEL: bitset_verifier_error_freeze_poison:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    s_getpc_b64 s[4:5]
@@ -128,13 +128,40 @@ define void @bitset_verifier_error() local_unnamed_addr #0 {
 ; SI-NEXT:  ; %bb.1: ; %bb5
 ; SI-NEXT:  .LBB6_2: ; %bb6
 bb:
-  %i = call float @llvm.fabs.f32(float undef) #0
+  %undef0 = freeze float poison
+  %i = call float @llvm.fabs.f32(float %undef0) #0
   %i1 = bitcast float %i to i32
   store i32 %i1, ptr addrspace(1) @gv
   br label %bb2
 
 bb2:
-  %i3 = call float @llvm.fabs.f32(float undef) #0
+  %undef1 = freeze float poison
+  %i3 = call float @llvm.fabs.f32(float %undef1) #0
+  %i4 = fcmp fast ult float %i3, 0x3FEFF7CEE0000000
+  br i1 %i4, label %bb5, label %bb6
+
+bb5:
+  unreachable
+
+bb6:
+  unreachable
+}
+
+define void @bitset_verifier_error_poison() local_unnamed_addr #0 {
+; SI-LABEL: bitset_verifier_error_poison:
+; SI:       ; %bb.0: ; %bb
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_cbranch_scc1 .LBB7_2
+; SI-NEXT:  ; %bb.1: ; %bb5
+; SI-NEXT:  .LBB7_2: ; %bb6
+bb:
+  %i = call float @llvm.fabs.f32(float poison) #0
+  %i1 = bitcast float %i to i32
+  store i32 %i1, ptr addrspace(1) @gv
+  br label %bb2
+
+bb2:
+  %i3 = call float @llvm.fabs.f32(float poison) #0
   %i4 = fcmp fast ult float %i3, 0x3FEFF7CEE0000000
   br i1 %i4, label %bb5, label %bb6
 

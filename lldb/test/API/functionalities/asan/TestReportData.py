@@ -20,6 +20,7 @@ class AsanTestReportDataCase(TestBase):
         self.asan_tests()
 
     @skipIf(oslist=no_match(["macosx"]))
+    @skipIf(bugnumber="rdar://144997976")
     def test_libsanitizers_asan(self):
         try:
             self.build(make_targets=["libsanitizers"])

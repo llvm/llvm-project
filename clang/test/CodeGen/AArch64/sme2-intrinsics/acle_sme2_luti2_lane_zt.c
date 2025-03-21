@@ -52,6 +52,19 @@ svuint16_t test_svluti2_lane_zt_u16(svuint8_t zn) __arm_streaming __arm_in("zt0"
   return svluti2_lane_zt_u16(0, zn, 15);
 }
 
+// CHECK-LABEL: @test_svluti2_lane_zt_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sme.luti2.lane.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 15)
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z24test_svluti2_lane_zt_mf8u11__SVUint8_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sme.luti2.lane.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[ZN:%.*]], i32 15)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+svmfloat8_t test_svluti2_lane_zt_mf8(svuint8_t zn) __arm_streaming __arm_in("zt0") {
+  return svluti2_lane_zt_mf8(0, zn, 15);
+}
 
 // CHECK-LABEL: @test_svluti2_lane_zt_s16(
 // CHECK-NEXT:  entry:

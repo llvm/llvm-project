@@ -1,3 +1,4 @@
+! REQUIRES: x86_64-registered-target
 ! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPproduct_test(

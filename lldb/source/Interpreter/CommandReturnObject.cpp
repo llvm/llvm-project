@@ -147,7 +147,8 @@ void CommandReturnObject::SetError(llvm::Error error) {
   }
 }
 
-std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
+std::string
+CommandReturnObject::GetInlineDiagnosticString(unsigned indent) const {
   StreamString diag_stream(m_colors);
   RenderDiagnosticDetails(diag_stream, indent, true, m_diagnostics);
   // Duplex the diagnostics to the secondary stream (but not inlined).
@@ -157,7 +158,7 @@ std::string CommandReturnObject::GetInlineDiagnosticString(unsigned indent) {
   return diag_stream.GetString().str();
 }
 
-std::string CommandReturnObject::GetErrorString(bool with_diagnostics) {
+std::string CommandReturnObject::GetErrorString(bool with_diagnostics) const {
   StreamString stream(m_colors);
   if (with_diagnostics)
     RenderDiagnosticDetails(stream, std::nullopt, false, m_diagnostics);

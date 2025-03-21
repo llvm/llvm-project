@@ -58,6 +58,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/type_identity.h>
+#include <__utility/declval.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
@@ -84,9 +85,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class _LIBCPP_TEMPLATE_VIS vector {
-private:
-  typedef allocator<_Tp> __default_allocator_type;
-
 public:
   //
   // Types
@@ -558,7 +556,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__alloc_, __n);
     __begin_          = __allocation.ptr;
     __end_            = __allocation.ptr;
@@ -604,6 +602,30 @@ private:
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n);
+
+  template <class _Iterator,
+            __enable_if_t<!is_same<decltype(*std::declval<_Iterator&>())&&, value_type&&>::value, int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
+    for (pointer __end_position = __position + __n; __position != __end_position; ++__position, (void)++__first) {
+      __temp_value<value_type, _Allocator> __tmp(this->__alloc_, *__first);
+      *__position = std::move(__tmp.get());
+    }
+  }
+
+  template <class _Iterator,
+            __enable_if_t<is_same<decltype(*std::declval<_Iterator&>())&&, value_type&&>::value, int> = 0>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __insert_assign_n_unchecked(_Iterator __first, difference_type __n, pointer __position) {
+#if _LIBCPP_STD_VER >= 23
+    if constexpr (!forward_iterator<_Iterator>) { // Handles input-only sized ranges for insert_range
+      ranges::copy_n(std::move(__first), __n, __position);
+    } else
+#endif
+    {
+      std::copy_n(__first, __n, __position);
+    }
+  }
 
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
@@ -783,14 +805,18 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
-  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) _NOEXCEPT {
-#ifndef _LIBCPP_CXX03_LANG
-    if constexpr (is_pointer<pointer>::value) {
-      if (!__libcpp_is_constant_evaluated()) {
-        return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
-      }
+  template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
+    if (!__libcpp_is_constant_evaluated()) {
+      return static_cast<pointer>(__builtin_assume_aligned(__p, _LIBCPP_ALIGNOF(decltype(*__p))));
     }
-#endif
+    return __p;
+  }
+
+  template <class _Ptr = pointer, __enable_if_t<!is_pointer<_Ptr>::value, int> = 0>
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
   }
 };
@@ -1321,19 +1347,12 @@ vector<_Tp, _Allocator>::__insert_with_size(
           __construct_at_end(__m, __last, __n - __dx);
           if (__dx > 0) {
             __move_range(__p, __old_last, __p + __n);
-            std::copy(__first, __m, __p);
+            __insert_assign_n_unchecked(__first, __dx, __p);
           }
         }
       } else {
         __move_range(__p, __old_last, __p + __n);
-#if _LIBCPP_STD_VER >= 23
-        if constexpr (!forward_iterator<_Iterator>) {
-          ranges::copy_n(std::move(__first), __n, __p);
-        } else
-#endif
-        {
-          std::copy_n(__first, __n, __p);
-        }
+        __insert_assign_n_unchecked(std::move(__first), __n, __p);
       }
     } else {
       __split_buffer<value_type, allocator_type&> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);

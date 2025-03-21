@@ -13,11 +13,12 @@
 // template<random_access_iterator I, sentinel_for<I> S, class Comp = ranges::less,
 //         class Proj = identity>
 //   requires sortable<I, Comp, Proj>
-//   I ranges::stable_sort(I first, S last, Comp comp = {}, Proj proj = {});                 // since C++20
+//   constexpr I                                                                             // constexpr since C++26
+//     ranges::stable_sort(I first, S last, Comp comp = {}, Proj proj = {});                 // since C++20
 //
 // template<random_access_range R, class Comp = ranges::less, class Proj = identity>
 //   requires sortable<iterator_t<R>, Comp, Proj>
-//   borrowed_iterator_t<R>
+//   constexpr borrowed_iterator_t<R>                                                        // constexpr since C++26
 //     ranges::stable_sort(R&& r, Comp comp = {}, Proj proj = {});                           // since C++20
 
 #include <algorithm>
@@ -57,7 +58,7 @@ static_assert(!HasStableSortR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasStableSortR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
 template <class Iter, class Sent, std::size_t N>
-void test_one(std::array<int, N> input, std::array<int, N> expected) {
+TEST_CONSTEXPR_CXX26 void test_one(std::array<int, N> input, std::array<int, N> expected) {
   { // (iterator, sentinel) overload.
     auto sorted = input;
     auto b = Iter(sorted.data());
@@ -81,7 +82,7 @@ void test_one(std::array<int, N> input, std::array<int, N> expected) {
 }
 
 template <class Iter, class Sent>
-void test_iterators_2() {
+TEST_CONSTEXPR_CXX26 void test_iterators_2() {
   // Empty sequence.
   test_one<Iter, Sent, 0>({}, {});
   // 1-element sequence.
@@ -105,25 +106,25 @@ void test_iterators_2() {
 }
 
 template <class Iter>
-void test_iterators_1() {
+TEST_CONSTEXPR_CXX26 void test_iterators_1() {
   test_iterators_2<Iter, Iter>();
   test_iterators_2<Iter, sentinel_wrapper<Iter>>();
 }
 
-void test_iterators() {
+TEST_CONSTEXPR_CXX26 void test_iterators() {
   test_iterators_1<random_access_iterator<int*>>();
   test_iterators_1<contiguous_iterator<int*>>();
   test_iterators_1<int*>();
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_iterators();
 
   struct OrderedValue {
     int value;
     double original_order;
     bool operator==(const OrderedValue&) const = default;
-    auto operator<=>(const OrderedValue& rhs) const { return value <=> rhs.value; }
+    TEST_CONSTEXPR_CXX26 auto operator<=>(const OrderedValue& rhs) const { return value <=> rhs.value; }
   };
 
   { // The sort is stable (equivalent elements remain in the same order).
@@ -214,10 +215,10 @@ void test() {
   { // `std::invoke` is used in the implementation.
     struct S {
       int i;
-      S(int i_) : i(i_) {}
+      TEST_CONSTEXPR_CXX26 S(int i_) : i(i_) {}
 
-      bool comparator(const S& rhs) const { return i < rhs.i; }
-      const S& projection() const { return *this; }
+      TEST_CONSTEXPR_CXX26 bool comparator(const S& rhs) const { return i < rhs.i; }
+      TEST_CONSTEXPR_CXX26 const S& projection() const { return *this; }
 
       bool operator==(const S&) const = default;
     };
@@ -242,8 +243,6 @@ void test() {
         std::ranges::stable_sort(std::array{1, 2, 3});
   }
 
-  // TODO: Enable the tests once the implementation switched to use iter_move/iter_swap
-  /*
   { // ProxyIterator
     {
       std::array in = {2, 1, 3};
@@ -260,12 +259,15 @@ void test() {
       assert((in == std::array{1, 2, 3}));
     }
   }
-  */
+
+  return true;
 }
 
 int main(int, char**) {
   test();
-  // Note: `stable_sort` is not `constexpr`.
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

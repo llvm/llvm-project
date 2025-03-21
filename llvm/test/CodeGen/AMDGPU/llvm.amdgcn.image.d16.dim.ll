@@ -36,7 +36,7 @@ main_body:
 define amdgpu_ps <2 x float> @image_load_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 main_body:
   %tex = call <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
-  %ext = shufflevector <3 x half> %tex, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ext = shufflevector <3 x half> %tex, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %r = bitcast <4 x half> %ext to <2 x float>
   ret <2 x float> %r
 }
@@ -90,7 +90,7 @@ main_body:
 define amdgpu_ps <2 x float> @image_load_3d_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32 %r) {
 main_body:
   %tex = call <3 x half> @llvm.amdgcn.image.load.3d.v3f16.i32(i32 7, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
-  %ext = shufflevector <3 x half> %tex, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ext = shufflevector <3 x half> %tex, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %res = bitcast <4 x half> %ext to <2 x float>
   ret <2 x float> %res
 }
@@ -129,7 +129,7 @@ main_body:
 define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, <2 x float> %in) {
 main_body:
   %r = bitcast <2 x float> %in to <4 x half>
-  %data = shufflevector <4 x half> %r, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %data = shufflevector <4 x half> %r, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
   call void @llvm.amdgcn.image.store.2d.v3f16.i32(<3 x half> %data, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }

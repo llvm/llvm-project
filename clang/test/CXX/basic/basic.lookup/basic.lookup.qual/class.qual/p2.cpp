@@ -190,7 +190,7 @@ namespace InhCtor {
   }
   struct DerivedFromNS : NS::NS {
     // No special case unless the NNS names a class.
-    using InhCtor::NS::NS; // expected-error {{using declaration in class refers into 'InhCtor::NS::', which is not a class}}
+    using InhCtor::NS::NS; // expected-error {{using declaration in class refers into 'InhCtor::NS', which is not a class}}
 
   };
 

@@ -2567,7 +2567,8 @@ bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI,
     SrcReg = OriginalSrcReg;
   LLT DstTy = MRI.getType(DstReg);
   return mi_match(SrcReg, MRI,
-                  m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))));
+                  m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy)))) &&
+         canReplaceReg(DstReg, Reg, MRI);
 }
 
 bool CombinerHelper::matchCombineZextTrunc(MachineInstr &MI,
@@ -2577,7 +2578,8 @@ bool CombinerHelper::matchCombineZextTrunc(MachineInstr &MI,
   Register SrcReg = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(DstReg);
   if (mi_match(SrcReg, MRI,
-               m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy))))) {
+               m_GTrunc(m_all_of(m_Reg(Reg), m_SpecificType(DstTy)))) &&
+      canReplaceReg(DstReg, Reg, MRI)) {
     unsigned DstSize = DstTy.getScalarSizeInBits();
     unsigned SrcSize = MRI.getType(SrcReg).getScalarSizeInBits();
     return KB->getKnownBits(Reg).countMinLeadingZeros() >= DstSize - SrcSize;
@@ -5641,6 +5643,7 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   Register RHS = MI.getOperand(2).getReg();
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
+  LLT RHSTy = MRI.getType(RHS);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   auto MatchPow2ExceptOne = [&](const Constant *C) {
     if (auto *CI = dyn_cast<ConstantInt>(C))
@@ -5649,7 +5652,10 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   };
   if (!matchUnaryPredicate(MRI, RHS, MatchPow2ExceptOne, false))
     return false;
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}});
+  // We need to check both G_LSHR and G_CTLZ because the combine uses G_CTLZ to
+  // get log base 2, and it is not always legal for on a target.
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}}) &&
+         isLegalOrBeforeLegalizer({TargetOpcode::G_CTLZ, {RHSTy, RHSTy}});
 }
 
 void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {
@@ -6595,8 +6601,9 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
 static std::optional<unsigned>
 getMinUselessShift(KnownBits ValueKB, unsigned Opcode,
                    std::optional<int64_t> &Result) {
-  assert(Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
-         Opcode == TargetOpcode::G_ASHR && "Expect G_SHL, G_LSHR or G_ASHR.");
+  assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
+          Opcode == TargetOpcode::G_ASHR) &&
+         "Expect G_SHL, G_LSHR or G_ASHR.");
   auto SignificantBits = 0;
   switch (Opcode) {
   case TargetOpcode::G_SHL:

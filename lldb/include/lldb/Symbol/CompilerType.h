@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/Utility/Scalar.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
@@ -390,9 +391,9 @@ public:
   struct IntegralTemplateArgument;
 
   /// Return the size of the type in bytes.
-  std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
+  llvm::Expected<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
-  std::optional<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+  llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
   lldb::Encoding GetEncoding(uint64_t &count) const;
 
@@ -544,7 +545,7 @@ bool operator==(const CompilerType &lhs, const CompilerType &rhs);
 bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 
 struct CompilerType::IntegralTemplateArgument {
-  llvm::APSInt value;
+  Scalar value;
   CompilerType type;
 };
 

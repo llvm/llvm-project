@@ -15,14 +15,12 @@
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 namespace atomic {
 
 enum OrderingTy {
   relaxed = __ATOMIC_RELAXED,
-  aquire = __ATOMIC_ACQUIRE,
+  acquire = __ATOMIC_ACQUIRE,
   release = __ATOMIC_RELEASE,
   acq_rel = __ATOMIC_ACQ_REL,
   seq_cst = __ATOMIC_SEQ_CST,
@@ -219,7 +217,5 @@ void system(atomic::OrderingTy Ordering);
 } // namespace fence
 
 } // namespace ompx
-
-#pragma omp end declare target
 
 #endif

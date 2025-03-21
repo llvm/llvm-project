@@ -19,7 +19,6 @@
 
 using range = std::unordered_multiset<int>;
 
-
 static_assert(std::same_as<std::ranges::iterator_t<range>, range::iterator>);
 static_assert(std::ranges::common_range<range>);
 static_assert(std::ranges::forward_range<range>);

@@ -2,8 +2,8 @@
 ; RUN: opt -S -passes=instcombine < %s 2>&1 | FileCheck %s
 
 
-define i8 @umax_of_add_nuw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw(
+define i8 @umax_of_add_nuw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
@@ -11,6 +11,19 @@ define i8 @umax_of_add_nuw(i8 %a, i8 %b, i8 %c) {
 ;
   %add1 = add nuw i8 %b, %a
   %add2 = add nuw i8 %c, %a
+  %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @umax_of_add_nuw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_l(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nuw i8 %a, %b
+  %add2 = add nuw i8 %a, %c
   %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
   ret i8 %max
 }
@@ -22,14 +35,14 @@ define i8 @umax_of_add_nuw_comm(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
-  %add1 = add nuw i8 %a, %b
+  %add1 = add nuw i8 %b, %a
   %add2 = add nuw i8 %a, %c
   %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
   ret i8 %max
 }
 
-define i8 @umax_of_add_nuw_nsw_lhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_lhs(
+define i8 @umax_of_add_nuw_nsw_lhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_lhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
@@ -41,11 +54,11 @@ define i8 @umax_of_add_nuw_nsw_lhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @umax_of_add_nuw_nsw_lhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_lhs_comm(
+define i8 @umax_of_add_nuw_nsw_lhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_lhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = add nuw nsw i8 %a, %b
@@ -54,8 +67,21 @@ define i8 @umax_of_add_nuw_nsw_lhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @umax_of_add_nuw_nsw_rhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_rhs(
+define i8 @umax_of_add_nuw_nsw_lhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_lhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nuw nsw i8 %a, %b
+  %add2 = add nuw i8 %c, %a
+  %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @umax_of_add_nuw_nsw_rhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_rhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
@@ -67,11 +93,11 @@ define i8 @umax_of_add_nuw_nsw_rhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @umax_of_add_nuw_nsw_rhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_rhs_comm(
+define i8 @umax_of_add_nuw_nsw_rhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_rhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = add nuw i8 %a, %b
@@ -80,8 +106,21 @@ define i8 @umax_of_add_nuw_nsw_rhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @umax_of_add_nuw_nsw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw(
+define i8 @umax_of_add_nuw_nsw_rhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_rhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nuw i8 %b, %a
+  %add2 = add nuw nsw i8 %a, %c
+  %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @umax_of_add_nuw_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
@@ -93,15 +132,28 @@ define i8 @umax_of_add_nuw_nsw(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @umax_of_add_nuw_nsw_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_comm(
+define i8 @umax_of_add_nuw_nsw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = add nuw nsw i8 %a, %b
   %add2 = add nuw nsw i8 %a, %c
+  %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @umax_of_add_nuw_nsw_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umax_of_add_nuw_nsw_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nuw nsw i8 %a, %b
+  %add2 = add nuw nsw i8 %c, %a
   %max = call i8 @llvm.umax.i8(i8 %add1, i8 %add2)
   ret i8 %max
 }
@@ -136,8 +188,8 @@ define i8 @umax_of_add(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @umin_of_add_nuw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw(
+define i8 @umin_of_add_nuw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
@@ -145,6 +197,19 @@ define i8 @umin_of_add_nuw(i8 %a, i8 %b, i8 %c) {
 ;
   %add1 = add nuw i8 %b, %a
   %add2 = add nuw i8 %c, %a
+  %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @umin_of_add_nuw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_l(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nuw i8 %a, %b
+  %add2 = add nuw i8 %a, %c
   %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }
@@ -156,14 +221,14 @@ define i8 @umin_of_add_nuw_comm(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
-  %add1 = add nuw i8 %a, %b
+  %add1 = add nuw i8 %b, %a
   %add2 = add nuw i8 %a, %c
   %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }
 
-define i8 @umin_of_add_nuw_nsw_lhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_lhs(
+define i8 @umin_of_add_nuw_nsw_lhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_lhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
@@ -175,11 +240,11 @@ define i8 @umin_of_add_nuw_nsw_lhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @umin_of_add_nuw_nsw_lhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_lhs_comm(
+define i8 @umin_of_add_nuw_nsw_lhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_lhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = add nuw nsw i8 %a, %b
@@ -188,8 +253,21 @@ define i8 @umin_of_add_nuw_nsw_lhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @umin_of_add_nuw_nsw_rhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_rhs(
+define i8 @umin_of_add_nuw_nsw_lhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_lhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nuw nsw i8 %a, %b
+  %add2 = add nuw i8 %c, %a
+  %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @umin_of_add_nuw_nsw_rhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_rhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
@@ -201,11 +279,11 @@ define i8 @umin_of_add_nuw_nsw_rhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @umin_of_add_nuw_nsw_rhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_rhs_comm(
+define i8 @umin_of_add_nuw_nsw_rhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_rhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = add nuw i8 %a, %b
@@ -214,8 +292,21 @@ define i8 @umin_of_add_nuw_nsw_rhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @umin_of_add_nuw_nsw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw(
+define i8 @umin_of_add_nuw_nsw_rhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_rhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nuw i8 %b, %a
+  %add2 = add nuw nsw i8 %a, %c
+  %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @umin_of_add_nuw_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
@@ -227,15 +318,28 @@ define i8 @umin_of_add_nuw_nsw(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @umin_of_add_nuw_nsw_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_comm(
+define i8 @umin_of_add_nuw_nsw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = add nuw nsw i8 %a, %b
   %add2 = add nuw nsw i8 %a, %c
+  %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @umin_of_add_nuw_nsw_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @umin_of_add_nuw_nsw_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nuw nsw i8 %a, %b
+  %add2 = add nuw nsw i8 %c, %a
   %min = call i8 @llvm.umin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }
@@ -285,8 +389,8 @@ define i8 @smax_of_add_nuw(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw(
+define i8 @smax_of_add_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
@@ -294,6 +398,19 @@ define i8 @smax_of_add_nsw(i8 %a, i8 %b, i8 %c) {
 ;
   %add1 = add nsw i8 %b, %a
   %add2 = add nsw i8 %c, %a
+  %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @smax_of_add_nsw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_l(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nsw i8 %a, %b
+  %add2 = add nsw i8 %a, %c
   %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
   ret i8 %max
 }
@@ -305,14 +422,14 @@ define i8 @smax_of_add_nsw_comm(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
-  %add1 = add nsw i8 %a, %b
+  %add1 = add nsw i8 %b, %a
   %add2 = add nsw i8 %a, %c
   %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw_nuw_lhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_lhs(
+define i8 @smax_of_add_nsw_nuw_lhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_lhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
@@ -324,11 +441,11 @@ define i8 @smax_of_add_nsw_nuw_lhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw_nuw_lhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_lhs_comm(
+define i8 @smax_of_add_nsw_nuw_lhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_lhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = add nsw nuw i8 %a, %b
@@ -337,8 +454,21 @@ define i8 @smax_of_add_nsw_nuw_lhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw_nuw_rhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_rhs(
+define i8 @smax_of_add_nsw_nuw_lhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_lhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nuw nsw i8 %a, %b
+  %add2 = add nsw i8 %c, %a
+  %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @smax_of_add_nsw_nuw_rhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_rhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
@@ -350,11 +480,11 @@ define i8 @smax_of_add_nsw_nuw_rhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw_nuw_rhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_rhs_comm(
+define i8 @smax_of_add_nsw_nuw_rhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_rhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = add nsw i8 %a, %b
@@ -363,8 +493,21 @@ define i8 @smax_of_add_nsw_nuw_rhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw_nuw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw(
+define i8 @smax_of_add_nsw_nuw_rhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_rhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nsw i8 %b, %a
+  %add2 = add nsw nuw i8 %a, %c
+  %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @smax_of_add_nsw_nuw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
@@ -376,15 +519,28 @@ define i8 @smax_of_add_nsw_nuw(i8 %a, i8 %b, i8 %c) {
   ret i8 %max
 }
 
-define i8 @smax_of_add_nsw_nuw_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_comm(
+define i8 @smax_of_add_nsw_nuw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MAX]]
 ;
   %add1 = add nsw nuw i8 %a, %b
   %add2 = add nsw nuw i8 %a, %c
+  %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
+  ret i8 %max
+}
+
+define i8 @smax_of_add_nsw_nuw_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smax_of_add_nsw_nuw_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MAX:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add1 = add nsw nuw i8 %a, %b
+  %add2 = add nsw nuw i8 %c, %a
   %max = call i8 @llvm.smax.i8(i8 %add1, i8 %add2)
   ret i8 %max
 }
@@ -419,8 +575,8 @@ define i8 @smin_of_add_nuw(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw(
+define i8 @smin_of_add_nsw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
@@ -428,6 +584,19 @@ define i8 @smin_of_add_nsw(i8 %a, i8 %b, i8 %c) {
 ;
   %add1 = add nsw i8 %b, %a
   %add2 = add nsw i8 %c, %a
+  %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @smin_of_add_nsw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_l(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nsw i8 %a, %b
+  %add2 = add nsw i8 %a, %c
   %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }
@@ -439,14 +608,14 @@ define i8 @smin_of_add_nsw_comm(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
-  %add1 = add nsw i8 %a, %b
+  %add1 = add nsw i8 %b, %a
   %add2 = add nsw i8 %a, %c
   %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw_nuw_lhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_lhs(
+define i8 @smin_of_add_nsw_nuw_lhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_lhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
@@ -458,11 +627,11 @@ define i8 @smin_of_add_nsw_nuw_lhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw_nuw_lhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_lhs_comm(
+define i8 @smin_of_add_nsw_nuw_lhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_lhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = add nsw nuw i8 %a, %b
@@ -471,8 +640,22 @@ define i8 @smin_of_add_nsw_nuw_lhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw_nuw_rhs(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_rhs(
+define i8 @smin_of_add_nsw_nuw_lhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_lhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i8 [[A]], [[B]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw i8 [[C]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i8 @llvm.smin.i8(i8 [[ADD1]], i8 [[ADD2]])
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nsw nuw i8 %a, %b
+  %add2 = add nuw i8 %c, %a
+  %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @smin_of_add_nsw_nuw_rhs_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_rhs_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
@@ -484,11 +667,11 @@ define i8 @smin_of_add_nsw_nuw_rhs(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw_nuw_rhs_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_rhs_comm(
+define i8 @smin_of_add_nsw_nuw_rhs_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_rhs_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = add nsw i8 %a, %b
@@ -497,8 +680,22 @@ define i8 @smin_of_add_nsw_nuw_rhs_comm(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw_nuw(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw(
+define i8 @smin_of_add_nsw_nuw_rhs_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_rhs_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nsw i8 %b, %a
+  %add2 = add nsw nuw i8 %a, %c
+  %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+
+define i8 @smin_of_add_nsw_nuw_r(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_r(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
 ; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
@@ -510,15 +707,28 @@ define i8 @smin_of_add_nsw_nuw(i8 %a, i8 %b, i8 %c) {
   ret i8 %min
 }
 
-define i8 @smin_of_add_nsw_nuw_comm(i8 %a, i8 %b, i8 %c) {
-; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_comm(
+define i8 @smin_of_add_nsw_nuw_l(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_l(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
-; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[MIN]]
 ;
   %add1 = add nsw nuw i8 %a, %b
   %add2 = add nsw nuw i8 %a, %c
+  %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
+  ret i8 %min
+}
+
+define i8 @smin_of_add_nsw_nuw_comm(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: define i8 @smin_of_add_nsw_nuw_comm(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[B]], i8 [[C]])
+; CHECK-NEXT:    [[MIN:%.*]] = add nuw nsw i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MIN]]
+;
+  %add1 = add nsw nuw i8 %a, %b
+  %add2 = add nsw nuw i8 %c, %a
   %min = call i8 @llvm.smin.i8(i8 %add1, i8 %add2)
   ret i8 %min
 }

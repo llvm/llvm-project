@@ -30,6 +30,7 @@ Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
     Flags:   [ SHF_ALLOC ]
+    Link:    1
     Entries:
      - Tag:   DT_NEEDED
        Value: 0x1
@@ -37,6 +38,7 @@ Sections:
        Value: 0x0
   - Name:            .gnu.version_d
     Type:            SHT_GNU_verdef
+    AddressAlign:    4
     Entries:
       - Version:         1
         Flags:           1

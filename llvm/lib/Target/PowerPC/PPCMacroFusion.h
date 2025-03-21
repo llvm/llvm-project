@@ -20,7 +20,7 @@ namespace llvm {
 
 /// Note that you have to add:
 ///   DAG.addMutation(createPowerPCMacroFusionDAGMutation());
-/// to PPCPassConfig::createMachineScheduler() to have an effect.
+/// to PPCTargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation> createPowerPCMacroFusionDAGMutation();
 } // llvm
 

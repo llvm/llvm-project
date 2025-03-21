@@ -701,6 +701,18 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(M68kRTD);
       TCALLINGCONV(PreserveNone);
       TCALLINGCONV(RISCVVectorCall);
+      TCALLINGCONV(RISCVVLSCall_32);
+      TCALLINGCONV(RISCVVLSCall_64);
+      TCALLINGCONV(RISCVVLSCall_128);
+      TCALLINGCONV(RISCVVLSCall_256);
+      TCALLINGCONV(RISCVVLSCall_512);
+      TCALLINGCONV(RISCVVLSCall_1024);
+      TCALLINGCONV(RISCVVLSCall_2048);
+      TCALLINGCONV(RISCVVLSCall_4096);
+      TCALLINGCONV(RISCVVLSCall_8192);
+      TCALLINGCONV(RISCVVLSCall_16384);
+      TCALLINGCONV(RISCVVLSCall_32768);
+      TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
     case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
     case CC_OpenCLKernel: return CXCallingConv_Unexposed;
