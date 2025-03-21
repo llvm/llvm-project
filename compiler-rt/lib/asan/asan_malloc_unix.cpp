@@ -1,4 +1,4 @@
-//===-- asan_malloc_linux.cpp ---------------------------------------------===//
+//===-- asan_malloc_unix.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 //
 // This file is a part of AddressSanitizer, an address sanity checker.
 //
-// Linux-specific malloc interception.
+// Unix-like-specific malloc interception.
 // We simply define functions like malloc, free, realloc, etc.
 // They will replace the corresponding libc functions automagically.
 //===----------------------------------------------------------------------===//
