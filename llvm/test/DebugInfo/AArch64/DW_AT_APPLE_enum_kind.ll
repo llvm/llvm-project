@@ -1,6 +1,6 @@
 ; RUN: llc < %s -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -v %t | FileCheck %s
-;
+
 ; C++ source to regenerate:
 ; enum __attribute__((enum_extensibility(open))) OpenEnum {
 ;   oe1
@@ -11,6 +11,7 @@
 ; } ce;
 ; 
 ; $ clang++ -O0 -g debug-info-enum-kind.cpp -c
+
 
 ; CHECK: .debug_abbrev contents:
 
