@@ -31,7 +31,7 @@ static void AppendExceptionData(std::vector<mach_exception_data_type_t> &out,
     // Perform an unaligned copy by pretending we're dealing with
     // a char* buffer. This is required to work around UBSAN/ASAN
     // "misaligned address" errors.
-    auto * src = reinterpret_cast<char*>(Data + i);
+    auto *src = reinterpret_cast<char *>(Data + i);
     memcpy(&Buf, src, sizeof(mach_exception_data_type_t));
     out.push_back(Buf);
   }
