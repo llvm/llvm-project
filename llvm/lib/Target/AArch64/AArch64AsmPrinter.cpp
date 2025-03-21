@@ -226,15 +226,11 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>();
-    if (PSIW) {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
       PSI = &PSIW->getPSI();
-    }
-
-    auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>();
-    if (SDPIW) {
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
       SDPI = &SDPIW->getStaticDataProfileInfo();
-    }
 
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();

@@ -2770,20 +2770,16 @@ namespace {
 } // end anonymous namespace
 
 StringRef AsmPrinter::getConstantSectionSuffix(const Constant *C) const {
-  SmallString<8> SectionNameSuffix;
-  if (TM.Options.EnableStaticDataPartitioning) {
-    if (C && SDPI && PSI) {
-      auto Count = SDPI->getConstantProfileCount(C);
-      if (Count) {
-        if (PSI->isHotCount(*Count)) {
-          SectionNameSuffix.append("hot");
-        } else if (PSI->isColdCount(*Count) && !SDPI->hasUnknownCount(C)) {
-          SectionNameSuffix.append("unlikely");
-        }
-      }
+  if (TM.Options.EnableStaticDataPartitioning && C && SDPI && PSI) {
+    if (auto Count = SDPI->getConstantProfileCount(C)) {
+      if (PSI->isHotCount(*Count))
+        return "hot";
+
+      if (PSI->isColdCount(*Count) && !SDPI->hasUnknownCount(C))
+        return "unlikely";
     }
   }
-  return SectionNameSuffix.str();
+  return "";
 }
 
 /// EmitConstantPool - Print to the current output stream assembly

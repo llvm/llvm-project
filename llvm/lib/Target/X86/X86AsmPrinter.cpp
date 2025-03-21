@@ -62,15 +62,11 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
-  auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>();
-  if (PSIW) {
+  if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
     PSI = &PSIW->getPSI();
-  }
-
-  auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>();
-  if (SDPIW) {
+  if (auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
     SDPI = &SDPIW->getStaticDataProfileInfo();
-  }
+
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
   SMShadowTracker.startFunction(MF);

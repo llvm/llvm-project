@@ -393,7 +393,9 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
   // is empty.
   if (SectionPrefix.empty())
     return getSectionForConstant(DL, Kind, C, Alignment);
-  report_fatal_error("Unimplemented");
+  report_fatal_error(
+      "TargetLoweringObjectFile::getSectionForConstant that "
+      "accepts SectionPrefix is not implemented for the object file format");
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(

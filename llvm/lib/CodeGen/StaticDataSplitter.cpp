@@ -58,6 +58,12 @@ class StaticDataSplitter : public MachineFunctionPass {
   // .data.rel.ro} sections.
   bool inStaticDataSection(const GlobalVariable *GV, const TargetMachine &TM);
 
+    // Returns the constant if the operand refers to a global variable or constant
+  // that gets lowered to static data sections. Otherwise, return nullptr.
+  const Constant *getConstant(const MachineOperand &Op,
+                              const TargetMachine &TM,
+                              const MachineConstantPool *MCP);
+
   // Use profiles to partition static data.
   bool partitionStaticDataWithProfiles(MachineFunction &MF);
 
@@ -68,11 +74,6 @@ class StaticDataSplitter : public MachineFunctionPass {
   void updateStatsWithoutProfiles(const MachineFunction &MF);
 
   void annotateStaticDataWithoutProfiles(const MachineFunction &MF);
-
-  // Returns the constant if the operand refers to a global variable or constant
-  // that gets lowered to static data sections. Otherwise, return nullptr.
-  const Constant *getConstant(const MachineOperand &Op, const TargetMachine &TM,
-                              const MachineConstantPool *MCP);
 
 public:
   static char ID;
@@ -89,6 +90,11 @@ public:
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<StaticDataProfileInfoWrapperPass>();
+    // This pass does not modify any required analysis results except
+    // StaticDataProfileInfoWrapperPass, but StaticDataProfileInfoWrapperPass
+    // is made an immutable pass that it won't be re-scheduled by pass manager
+    // anyway. So mark setPreservesAll() here for faster compile time.
+    AU.setPreservesAll();
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -127,7 +133,7 @@ StaticDataSplitter::getConstant(const MachineOperand &Op,
   if (Op.isGlobal()) {
     // Find global variables with local linkage.
     const GlobalVariable *GV = getLocalLinkageGlobalVariable(Op.getGlobal());
-    // Skip 'special' global variables conservatively because they are
+    // Skip 'llvm.'-prefixed global variables conservatively because they are
     // often handled specially, and skip those not in static data
     // sections.
     if (!GV || GV->getName().starts_with("llvm.") ||
@@ -150,7 +156,15 @@ StaticDataSplitter::getConstant(const MachineOperand &Op,
 }
 
 bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
-  int NumChangedJumpTables = 0;
+  // If any of the static data (jump tables, global variables, constant pools)
+  // are captured by the analysis, set `Changed` to true. Note this pass won't
+  // invalidate any analysis pass (see `getAnalysisUsage` above), so the main
+  // purpose of tracking and conveying the change (to pass manager) is
+  // informative as opposed to invalidating any analysis results. As an example
+  // of where this information is useful, `PMDataManager::dumpPassInfo` will
+  // only dump pass info if a local change happens, otherwise a pass appears as
+  // "skipped".
+  bool Changed = false;
 
   MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
 
@@ -161,11 +175,10 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
   // usages in the same loop.
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
+      std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
       for (const MachineOperand &Op : I.operands()) {
         if (!Op.isJTI() && !Op.isGlobal() && !Op.isCPI())
           continue;
-
-        std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
 
         if (Op.isJTI()) {
           assert(MJTI != nullptr && "Jump table info is not available.");
@@ -182,16 +195,16 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
           if (Count && PSI->isColdCount(*Count))
             Hotness = MachineFunctionDataHotness::Cold;
 
-          if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
-            ++NumChangedJumpTables;
+          Changed |= MJTI->updateJumpTableEntryHotness(JTI, Hotness);
         } else if (const Constant *C =
                        getConstant(Op, MF.getTarget(), MF.getConstantPool())) {
           SDPI->addConstantProfileCount(C, Count);
+          Changed = true;
         }
       }
     }
   }
-  return NumChangedJumpTables > 0;
+  return Changed;
 }
 
 const GlobalVariable *
@@ -231,16 +244,11 @@ void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
 
 void StaticDataSplitter::annotateStaticDataWithoutProfiles(
     const MachineFunction &MF) {
-  for (const auto &MBB : MF) {
-    for (const MachineInstr &I : MBB) {
-      for (const MachineOperand &Op : I.operands()) {
-        const Constant *C =
-            getConstant(Op, MF.getTarget(), MF.getConstantPool());
-        if (C)
+  for (const auto &MBB : MF)
+    for (const MachineInstr &I : MBB)
+      for (const MachineOperand &Op : I.operands())
+        if (const Constant *C = getConstant(Op, MF.getTarget(), MF.getConstantPool()))
           SDPI->addConstantProfileCount(C, std::nullopt);
-      }
-    }
-  }
 }
 
 void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
