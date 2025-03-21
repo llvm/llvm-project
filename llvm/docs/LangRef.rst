@@ -3145,7 +3145,7 @@ as follows:
     denotes the default address space 0. The value of ``n`` must be
     in the range [1,2^24). The fifth parameter ``<sentinel>`` specifies the
     sentinel value of the pointer for the corresponding address space. It
-    currently accepts two values: ``0`` for an all-zero value and ``f`` for a
+    currently accepts two values: ``z`` for an all-zero value and ``f`` for a
     full-bit set value. The default sentinel pointer value is all-zero.
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit

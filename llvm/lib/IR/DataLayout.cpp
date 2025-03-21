@@ -302,8 +302,8 @@ static Error parseSentinelValue(StringRef Str, APInt &V) {
   if (Str.empty())
     return createStringError("sentinel value component cannot be empty");
   if (Str.size() != 1)
-    return createStringError("sentinel value component must be a '0' or 'f'");
-  if (Str[0] == '0') {
+    return createStringError("sentinel value component must be a 'z' or 'f'");
+  if (Str[0] == 'z') {
     V.clearAllBits();
     return Error::success();
   }
@@ -311,7 +311,7 @@ static Error parseSentinelValue(StringRef Str, APInt &V) {
     V.setAllBits();
     return Error::success();
   }
-  return createStringError("sentinel value component must be a '0' or 'f'");
+  return createStringError("sentinel value component must be a 'z' or 'f'");
 }
 
 /// Attempts to parse an alignment component of a specification.

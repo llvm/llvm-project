@@ -408,7 +408,7 @@ TEST(DataLayout, ParsePointerSpec) {
        {"p:32:32:32:32:a", "p0:32:32:32:32:ab", "p42:32:32:32:32:123"})
     EXPECT_THAT_EXPECTED(
         DataLayout::parse(Str),
-        FailedWithMessage("sentinel value component must be a '0' or 'f'"));
+        FailedWithMessage("sentinel value component must be a 'z' or 'f'"));
 
   for (StringRef Str :
        {"p:32:32:32:32:", "p0:32:32:32:32:", "p42:32:32:32:32:"})
