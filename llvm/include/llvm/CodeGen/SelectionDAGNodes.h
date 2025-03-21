@@ -697,9 +697,6 @@ public:
     return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
   }
 
-  /// Return true if the type of the node type poison.
-  bool isPoison() const { return NodeType == ISD::POISON; }
-
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
 
