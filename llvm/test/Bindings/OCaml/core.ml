@@ -439,7 +439,7 @@ let test_global_values () =
   (* CHECK: GVal07{{.*}}!test !{{.*}}
    * See metadata check at the end of the file.
    *)
-  group "metdata";
+  group "metadata";
   let g = define_global "GVal07" zero32 m in
   let md_string = mdstring context "global test metadata" in
   let md_node = mdnode context [| zero32; md_string |] |> value_as_metadata in
