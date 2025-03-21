@@ -155,7 +155,7 @@ RUN <<EOF
   sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 1)).1.0
   sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 1))
   sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 1)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 1))
-  # For CI transistions.
+  # For CI transitions.
   sudo /tmp/ce-infra/bin/ce_install install compilers/c++/x86/gcc $((GCC_HEAD_VERSION - 2)).1.0
   sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/gcc /usr/bin/gcc-$((GCC_HEAD_VERSION - 2))
   sudo ln -s /opt/compiler-explorer/gcc-$((GCC_HEAD_VERSION - 2)).1.0/bin/g++ /usr/bin/g++-$((GCC_HEAD_VERSION - 2))
