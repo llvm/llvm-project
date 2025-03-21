@@ -9,7 +9,7 @@
 // constexpr auto size()
 // constexpr auto size() const
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// REQUIRES: std-at-least-c++23
 
 #include <cassert>
 #include <cstddef>
