@@ -4055,7 +4055,7 @@ add_entrypoint_object(
 )
 
 add_header_library(
-  atan_util
+  atan_utils
   HDRS
     atan_utils.h
   DEPENDS
@@ -4090,7 +4090,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
-    .atan_util
+    .atan_utils
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
@@ -4123,9 +4123,8 @@ add_entrypoint_object(
     atan2.cpp
   HDRS
     ../atan2.h
-    atan_utils.h
   DEPENDS
-    .atan_util
+    .atan_utils
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
