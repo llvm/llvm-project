@@ -77,6 +77,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 
   if (num_attributes > 0) {
     uint32_t i;
+    bool has_specification_of = false;
     for (i = 0; i < num_attributes; ++i) {
       const dw_attr_t attr = attributes.AttributeAtIndex(i);
       DWARFFormValue form_value;
@@ -95,9 +96,38 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         case DW_AT_name:
           name.SetCString(form_value.AsCString());
           break;
+        case DW_AT_specification:
+          has_specification_of = true;
+          break;
         case DW_AT_linkage_name:
-        case DW_AT_MIPS_linkage_name:
+        case DW_AT_MIPS_linkage_name: {
           mangled_name.SetCString(form_value.AsCString());
+          auto HasSpecificationOf = [&](){
+            if (has_specification_of)
+              return true;
+            for (uint32_t j = i+1; j < num_attributes; ++j)
+              if (attributes.AttributeAtIndex(j) == DW_AT_specification)
+                return true;
+            return false;
+          };
+          // Is this a sized container with a specification?  If yes,
+          // the linkage name we just got is the one of the
+          // specification die, which would be the unsubsituted
+          // type. The child contains the linkage name of the
+          // specialized type.  We should define appropriate DWARF for
+          // this instead of relying on this heuristic.
+          if (die.Tag() == DW_TAG_structure_type && die.HasChildren() &&
+              HasSpecificationOf()) {
+            DWARFDIE member_die = die.GetFirstChild();
+            if (member_die.Tag() != DW_TAG_member || member_die.GetName())
+              break;
+            if (DWARFDIE inner_type_die =
+                    member_die.GetAttributeValueAsReferenceDIE(DW_AT_type))
+              if (const char *s = inner_type_die.GetAttributeValueAsString(
+                      DW_AT_name, nullptr))
+                mangled_name.SetCString(s);
+          }
+          }
           break;
         case DW_AT_byte_size:
           dwarf_byte_size = form_value.Unsigned();
@@ -106,7 +136,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
           if (die.Tag() == DW_TAG_const_type)
             // This is how let bindings are represented. This doesn't
             // change the underlying Swift type.
-            return ParseTypeFromDWARF(sc, die.GetReferencedDIE(attr),
+            return ParseTypeFromDWARF(sc, form_value.Reference(),
                                       type_is_new_ptr);
           break;
         default:
