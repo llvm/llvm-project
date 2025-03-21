@@ -2452,9 +2452,6 @@ int main()
 // CHECK-NEXT:          }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         {
-// CHECK-NEXT:          "id": "0x0"
-// CHECK-NEXT:         },
-// CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "TemplateTypeParmType",
 // CHECK-NEXT:          "type": {
@@ -3228,3 +3225,4 @@ int main()
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
+

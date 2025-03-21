@@ -2086,7 +2086,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
     // an inheritance model, even if it's inside an unused typedef.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
-        if (!MPTy->getQualifier()->isDependent())
+        if (!MPTy->getClass()->isDependentType())
           (void)isCompleteType(Loc, T);
 
   } else {
@@ -2685,9 +2685,8 @@ QualType Sema::BuildFunctionType(QualType T,
   return Context.getFunctionType(T, ParamTypes, EPI);
 }
 
-QualType Sema::BuildMemberPointerType(QualType T,
-                                      NestedNameSpecifier *Qualifier,
-                                      CXXRecordDecl *Cls, SourceLocation Loc,
+QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
+                                      SourceLocation Loc,
                                       DeclarationName Entity) {
   // Verify that we're not building a pointer to pointer to function with
   // exception specification.
@@ -2707,6 +2706,11 @@ QualType Sema::BuildMemberPointerType(QualType T,
   if (T->isVoidType()) {
     Diag(Loc, diag::err_illegal_decl_mempointer_to_void)
       << getPrintableNameForEntity(Entity);
+    return QualType();
+  }
+
+  if (!Class->isDependentType() && !Class->isRecordType()) {
+    Diag(Loc, diag::err_mempointer_in_nonclass_type) << Class;
     return QualType();
   }
 
@@ -2730,7 +2734,7 @@ QualType Sema::BuildMemberPointerType(QualType T,
   if (T->isFunctionType())
     adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor, Loc);
 
-  return Context.getMemberPointerType(T, Qualifier, Cls);
+  return Context.getMemberPointerType(T, Class.getTypePtr());
 }
 
 QualType Sema::BuildBlockPointerType(QualType T,
@@ -5334,6 +5338,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::MemberPointer: {
       // The scope spec must refer to a class, or be dependent.
       CXXScopeSpec &SS = DeclType.Mem.Scope();
+      QualType ClsType;
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::MemberPointer, DeclType.Loc,
@@ -5343,22 +5348,56 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (SS.isInvalid()) {
         // Avoid emitting extra errors if we already errored on the scope.
         D.setInvalidType(true);
-        AreDeclaratorChunksValid = false;
-      } else if (auto *RD =
-                     dyn_cast_or_null<CXXRecordDecl>(S.computeDeclContext(SS));
-                 RD || S.isDependentScopeSpecifier(SS)) {
-        T = S.BuildMemberPointerType(T, SS.getScopeRep(), RD, DeclType.Loc,
-                                     D.getIdentifier());
+      } else if (S.isDependentScopeSpecifier(SS) ||
+                 isa_and_nonnull<CXXRecordDecl>(S.computeDeclContext(SS))) {
+        NestedNameSpecifier *NNS = SS.getScopeRep();
+        NestedNameSpecifier *NNSPrefix = NNS->getPrefix();
+        switch (NNS->getKind()) {
+        case NestedNameSpecifier::Identifier:
+          ClsType = Context.getDependentNameType(
+              ElaboratedTypeKeyword::None, NNSPrefix, NNS->getAsIdentifier());
+          break;
+
+        case NestedNameSpecifier::Namespace:
+        case NestedNameSpecifier::NamespaceAlias:
+        case NestedNameSpecifier::Global:
+        case NestedNameSpecifier::Super:
+          llvm_unreachable("Nested-name-specifier must name a type");
+
+        case NestedNameSpecifier::TypeSpec:
+        case NestedNameSpecifier::TypeSpecWithTemplate:
+          const Type *NNSType = NNS->getAsType();
+          ClsType = QualType(NNSType, 0);
+          // Note: if the NNS has a prefix and ClsType is a nondependent
+          // TemplateSpecializationType or a RecordType, then the NNS prefix is
+          // NOT included in ClsType; hence we wrap ClsType into an
+          // ElaboratedType. NOTE: in particular, no wrap occurs if ClsType
+          // already is an Elaborated, DependentName, or
+          // DependentTemplateSpecialization.
+          if (isa<DependentTemplateSpecializationType>(NNSType)) {
+            // FIXME: Rebuild DependentTemplateSpecializationType, adding the
+            // Prefix.
+          } else if (isa<TemplateSpecializationType, RecordType>(NNSType)) {
+            // Either the dependent case (TemplateSpecializationType), or the
+            // non-dependent one (RecordType).
+            ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
+                                                NNSPrefix, ClsType);
+          }
+          break;
+        }
       } else {
         S.Diag(DeclType.Mem.Scope().getBeginLoc(),
              diag::err_illegal_decl_mempointer_in_nonclass)
           << (D.getIdentifier() ? D.getIdentifier()->getName() : "type name")
           << DeclType.Mem.Scope().getRange();
         D.setInvalidType(true);
-        AreDeclaratorChunksValid = false;
-        // FIXME: Maybe we could model these as as a MemberPointerType with a
-        // non-dependent, non-class qualifier anyway.
       }
+
+      if (!ClsType.isNull())
+        T = S.BuildMemberPointerType(T, ClsType, DeclType.Loc,
+                                     D.getIdentifier());
+      else
+        AreDeclaratorChunksValid = false;
 
       if (T.isNull()) {
         T = Context.IntTy;
@@ -6145,8 +6184,48 @@ namespace {
     }
     void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::MemberPointer);
+      const CXXScopeSpec& SS = Chunk.Mem.Scope();
+      NestedNameSpecifierLoc NNSLoc = SS.getWithLocInContext(Context);
+
+      const Type* ClsTy = TL.getClass();
+      QualType ClsQT = QualType(ClsTy, 0);
+      TypeSourceInfo *ClsTInfo = Context.CreateTypeSourceInfo(ClsQT, 0);
+      // Now copy source location info into the type loc component.
+      TypeLoc ClsTL = ClsTInfo->getTypeLoc();
+      switch (NNSLoc.getNestedNameSpecifier()->getKind()) {
+      case NestedNameSpecifier::Identifier:
+        assert(isa<DependentNameType>(ClsTy) && "Unexpected TypeLoc");
+        {
+          DependentNameTypeLoc DNTLoc = ClsTL.castAs<DependentNameTypeLoc>();
+          DNTLoc.setElaboratedKeywordLoc(SourceLocation());
+          DNTLoc.setQualifierLoc(NNSLoc.getPrefix());
+          DNTLoc.setNameLoc(NNSLoc.getLocalBeginLoc());
+        }
+        break;
+
+      case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
+        if (isa<ElaboratedType>(ClsTy)) {
+          ElaboratedTypeLoc ETLoc = ClsTL.castAs<ElaboratedTypeLoc>();
+          ETLoc.setElaboratedKeywordLoc(SourceLocation());
+          ETLoc.setQualifierLoc(NNSLoc.getPrefix());
+          TypeLoc NamedTL = ETLoc.getNamedTypeLoc();
+          NamedTL.initializeFullCopy(NNSLoc.getTypeLoc());
+        } else {
+          ClsTL.initializeFullCopy(NNSLoc.getTypeLoc());
+        }
+        break;
+
+      case NestedNameSpecifier::Namespace:
+      case NestedNameSpecifier::NamespaceAlias:
+      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Super:
+        llvm_unreachable("Nested-name-specifier must name a type");
+      }
+
+      // Finally fill in MemberPointerLocInfo fields.
       TL.setStarLoc(Chunk.Mem.StarLoc);
-      TL.setQualifierLoc(Chunk.Mem.Scope().getWithLocInContext(Context));
+      TL.setClassTInfo(ClsTInfo);
     }
     void VisitLValueReferenceTypeLoc(LValueReferenceTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::Reference);
@@ -6975,8 +7054,7 @@ namespace {
       case MemberPointer: {
         const MemberPointerType *OldMPT = cast<MemberPointerType>(Old);
         QualType New = wrap(C, OldMPT->getPointeeType(), I);
-        return C.getMemberPointerType(New, OldMPT->getQualifier(),
-                                      OldMPT->getMostRecentCXXRecordDecl());
+        return C.getMemberPointerType(New, OldMPT->getClass());
       }
 
       case Reference: {
@@ -9255,17 +9333,17 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //         "Can't ask whether a dependent type is complete");
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
-    if (!MPTy->getQualifier()->isDependent()) {
-      QualType T = Context.getTypeDeclType(MPTy->getMostRecentCXXRecordDecl());
+    if (!MPTy->getClass()->isDependentType()) {
       if (getLangOpts().CompleteMemberPointers &&
-          !MPTy->getMostRecentCXXRecordDecl()->isBeingDefined() &&
-          RequireCompleteType(Loc, T, Kind, diag::err_memptr_incomplete))
+          !MPTy->getClass()->getAsCXXRecordDecl()->isBeingDefined() &&
+          RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), Kind,
+                              diag::err_memptr_incomplete))
         return true;
 
       // We lock in the inheritance model once somebody has asked us to ensure
       // that a pointer-to-member type is complete.
       if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-        (void)isCompleteType(Loc, T);
+        (void)isCompleteType(Loc, QualType(MPTy->getClass(), 0));
         assignInheritanceModel(*this, MPTy->getMostRecentCXXRecordDecl());
       }
     }
