@@ -12985,6 +12985,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     assert(Src.isInt());
     return Success((Src.getInt() & (Alignment - 1)) == 0 ? 1 : 0, E);
   }
+  case Builtin::BI__builtin_is_modifiable_lvalue: {
+    const Expr *Arg = E->getArg(0);
+    SpeculativeEvaluationRAII SpeculativeEval(Info);
+    IgnoreSideEffectsRAII Fold(Info);
+
+    SourceLocation OrigLoc = Arg->getExprLoc();
+    bool IsLValue = Arg->IgnoreCasts()->isModifiableLvalue(
+                        Info.Ctx, &OrigLoc) == Expr::MLV_Valid;
+    return Success(IsLValue, E);
+  }
   case Builtin::BI__builtin_align_up: {
     APValue Src;
     APSInt Alignment;
