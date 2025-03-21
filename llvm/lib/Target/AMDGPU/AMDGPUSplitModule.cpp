@@ -569,7 +569,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
-        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
+        DirectCallees.insert_range(KnownCallees);
     }
 
     Node &N = getNode(Cache, Fn);
@@ -1553,17 +1553,17 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
       } else if (!Owned) {
-        switch (Lock.waitForUnlock()) {
-        case LockFileManager::Res_Success:
+        switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+        case WaitForUnlockResult::Success:
           break;
-        case LockFileManager::Res_OwnerDied:
+        case WaitForUnlockResult::OwnerDied:
           continue; // try again to get the lock.
-        case LockFileManager::Res_Timeout:
+        case WaitForUnlockResult::Timeout:
           LLVM_DEBUG(
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Lock.unsafeRemoveLockFile();
+          Lock.unsafeMaybeUnlock();
           break; // give up
         }
       }

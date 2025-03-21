@@ -872,13 +872,13 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef castedName,
 
   os << "{\n";
   if (op.getDialect().usePropertiesForAttributes()) {
-    os.indent() << formatv("auto tblgen_attr = {0}.getProperties().{1}();\n",
-                           castedName, op.getGetterName(namedAttr->name));
-  } else {
     os.indent() << formatv(
-        "auto tblgen_attr = {0}->getAttrOfType<{1}>(\"{2}\");"
-        "(void)tblgen_attr;\n",
-        castedName, attr.getStorageType(), namedAttr->name);
+        "[[maybe_unused]] auto tblgen_attr = {0}.getProperties().{1}();\n",
+        castedName, op.getGetterName(namedAttr->name));
+  } else {
+    os.indent() << formatv("[[maybe_unused]] auto tblgen_attr = "
+                           "{0}->getAttrOfType<{1}>(\"{2}\");\n",
+                           castedName, attr.getStorageType(), namedAttr->name);
   }
 
   // TODO: This should use getter method to avoid duplication.

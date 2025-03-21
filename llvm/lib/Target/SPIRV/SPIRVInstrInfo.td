@@ -25,6 +25,9 @@ let isCodeGenOnly=1 in {
   def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins vpID:$src)>;
 }
 
+def UNKNOWN_type
+    : UnknownOp<(outs TYPE:$type), (ins i32imm:$opcode, variable_ops), " ">;
+
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
 
 def assigntype : SDNode<"SPIRVISD::AssignType", SPVTypeBin>;

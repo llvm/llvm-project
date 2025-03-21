@@ -3,7 +3,8 @@
 // RUN:     misc-const-correctness.AllowedTypes: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$;qualified::Type;::fully::QualifiedType;ConstTemplate', \
 // RUN:     misc-const-correctness.TransformPointersAsValues: true, \
 // RUN:     misc-const-correctness.TransformReferences: true, \
-// RUN:     misc-const-correctness.WarnPointersAsValues: true } \
+// RUN:     misc-const-correctness.WarnPointersAsValues: true, \
+// RUN:     misc-const-correctness.WarnPointersAsPointers: false } \
 // RUN:   }" -- -fno-delayed-template-parsing
 
 struct SmartPointer {

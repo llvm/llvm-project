@@ -894,8 +894,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, MemPtr1->getPointeeType(),
                                   MemPtr2->getPointeeType()))
       return false;
-    if (!IsStructurallyEquivalent(Context, QualType(MemPtr1->getClass(), 0),
-                                  QualType(MemPtr2->getClass(), 0)))
+    if (!IsStructurallyEquivalent(Context, MemPtr1->getQualifier(),
+                                  MemPtr2->getQualifier()))
+      return false;
+    if (!IsStructurallyEquivalent(Context,
+                                  MemPtr1->getMostRecentCXXRecordDecl(),
+                                  MemPtr2->getMostRecentCXXRecordDecl()))
       return false;
     break;
   }

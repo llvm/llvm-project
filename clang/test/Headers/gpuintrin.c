@@ -33,6 +33,7 @@ __gpu_kernel void foo() {
   __gpu_lane_id();
   __gpu_lane_mask();
   __gpu_read_first_lane_u32(-1, -1);
+  __gpu_read_first_lane_u64(-1, -1);
   __gpu_ballot(-1, 1);
   __gpu_sync_threads();
   __gpu_sync_lane(-1);
@@ -64,12 +65,13 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:    [[CALL17:%.*]] = call i32 @__gpu_lane_id() #[[ATTR7]]
 // AMDGPU-NEXT:    [[CALL18:%.*]] = call i64 @__gpu_lane_mask() #[[ATTR7]]
 // AMDGPU-NEXT:    [[CALL19:%.*]] = call i32 @__gpu_read_first_lane_u32(i64 noundef -1, i32 noundef -1) #[[ATTR7]]
-// AMDGPU-NEXT:    [[CALL20:%.*]] = call i64 @__gpu_ballot(i64 noundef -1, i1 noundef zeroext true) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CALL20:%.*]] = call i64 @__gpu_read_first_lane_u64(i64 noundef -1, i64 noundef -1) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CALL21:%.*]] = call i64 @__gpu_ballot(i64 noundef -1, i1 noundef zeroext true) #[[ATTR7]]
 // AMDGPU-NEXT:    call void @__gpu_sync_threads() #[[ATTR7]]
 // AMDGPU-NEXT:    call void @__gpu_sync_lane(i64 noundef -1) #[[ATTR7]]
-// AMDGPU-NEXT:    [[CALL21:%.*]] = call i32 @__gpu_shuffle_idx_u32(i64 noundef -1, i32 noundef -1, i32 noundef -1, i32 noundef 0) #[[ATTR7]]
-// AMDGPU-NEXT:    [[CALL22:%.*]] = call i64 @__gpu_first_lane_id(i64 noundef -1) #[[ATTR7]]
-// AMDGPU-NEXT:    [[CALL23:%.*]] = call zeroext i1 @__gpu_is_first_in_lane(i64 noundef -1) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CALL22:%.*]] = call i32 @__gpu_shuffle_idx_u32(i64 noundef -1, i32 noundef -1, i32 noundef -1, i32 noundef 0) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CALL23:%.*]] = call i64 @__gpu_first_lane_id(i64 noundef -1) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CALL24:%.*]] = call zeroext i1 @__gpu_is_first_in_lane(i64 noundef -1) #[[ATTR7]]
 // AMDGPU-NEXT:    call void @__gpu_exit() #[[ATTR8:[0-9]+]]
 // AMDGPU-NEXT:    unreachable
 //
@@ -388,6 +390,43 @@ __gpu_kernel void foo() {
 // AMDGPU-NEXT:    ret i32 [[TMP1]]
 //
 //
+// AMDGPU-LABEL: define internal i64 @__gpu_read_first_lane_u64(
+// AMDGPU-SAME: i64 noundef [[__LANE_MASK:%.*]], i64 noundef [[__X:%.*]]) #[[ATTR0]] {
+// AMDGPU-NEXT:  [[ENTRY:.*:]]
+// AMDGPU-NEXT:    [[RETVAL:%.*]] = alloca i64, align 8, addrspace(5)
+// AMDGPU-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// AMDGPU-NEXT:    [[__X_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// AMDGPU-NEXT:    [[__HI:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGPU-NEXT:    [[__LO:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGPU-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// AMDGPU-NEXT:    [[__LANE_MASK_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[__LANE_MASK_ADDR]] to ptr
+// AMDGPU-NEXT:    [[__X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR]] to ptr
+// AMDGPU-NEXT:    [[__HI_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[__HI]] to ptr
+// AMDGPU-NEXT:    [[__LO_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[__LO]] to ptr
+// AMDGPU-NEXT:    store i64 [[__LANE_MASK]], ptr [[__LANE_MASK_ADDR_ASCAST]], align 8
+// AMDGPU-NEXT:    store i64 [[__X]], ptr [[__X_ADDR_ASCAST]], align 8
+// AMDGPU-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__X_ADDR_ASCAST]], align 8
+// AMDGPU-NEXT:    [[SHR:%.*]] = lshr i64 [[TMP0]], 32
+// AMDGPU-NEXT:    [[CONV:%.*]] = trunc i64 [[SHR]] to i32
+// AMDGPU-NEXT:    store i32 [[CONV]], ptr [[__HI_ASCAST]], align 4
+// AMDGPU-NEXT:    [[TMP1:%.*]] = load i64, ptr [[__X_ADDR_ASCAST]], align 8
+// AMDGPU-NEXT:    [[AND:%.*]] = and i64 [[TMP1]], 4294967295
+// AMDGPU-NEXT:    [[CONV1:%.*]] = trunc i64 [[AND]] to i32
+// AMDGPU-NEXT:    store i32 [[CONV1]], ptr [[__LO_ASCAST]], align 4
+// AMDGPU-NEXT:    [[TMP2:%.*]] = load i64, ptr [[__LANE_MASK_ADDR_ASCAST]], align 8
+// AMDGPU-NEXT:    [[TMP3:%.*]] = load i32, ptr [[__HI_ASCAST]], align 4
+// AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP2]], i32 noundef [[TMP3]]) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CONV2:%.*]] = zext i32 [[CALL]] to i64
+// AMDGPU-NEXT:    [[SHL:%.*]] = shl i64 [[CONV2]], 32
+// AMDGPU-NEXT:    [[TMP4:%.*]] = load i64, ptr [[__LANE_MASK_ADDR_ASCAST]], align 8
+// AMDGPU-NEXT:    [[TMP5:%.*]] = load i32, ptr [[__LO_ASCAST]], align 4
+// AMDGPU-NEXT:    [[CALL3:%.*]] = call i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP4]], i32 noundef [[TMP5]]) #[[ATTR7]]
+// AMDGPU-NEXT:    [[CONV4:%.*]] = zext i32 [[CALL3]] to i64
+// AMDGPU-NEXT:    [[AND5:%.*]] = and i64 [[CONV4]], 4294967295
+// AMDGPU-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[AND5]]
+// AMDGPU-NEXT:    ret i64 [[OR]]
+//
+//
 // AMDGPU-LABEL: define internal i64 @__gpu_ballot(
 // AMDGPU-SAME: i64 noundef [[__LANE_MASK:%.*]], i1 noundef zeroext [[__X:%.*]]) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
@@ -525,12 +564,13 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:    [[CALL17:%.*]] = call i32 @__gpu_lane_id() #[[ATTR6]]
 // NVPTX-NEXT:    [[CALL18:%.*]] = call i64 @__gpu_lane_mask() #[[ATTR6]]
 // NVPTX-NEXT:    [[CALL19:%.*]] = call i32 @__gpu_read_first_lane_u32(i64 noundef -1, i32 noundef -1) #[[ATTR6]]
-// NVPTX-NEXT:    [[CALL20:%.*]] = call i64 @__gpu_ballot(i64 noundef -1, i1 noundef zeroext true) #[[ATTR6]]
+// NVPTX-NEXT:    [[CALL20:%.*]] = call i64 @__gpu_read_first_lane_u64(i64 noundef -1, i64 noundef -1) #[[ATTR6]]
+// NVPTX-NEXT:    [[CALL21:%.*]] = call i64 @__gpu_ballot(i64 noundef -1, i1 noundef zeroext true) #[[ATTR6]]
 // NVPTX-NEXT:    call void @__gpu_sync_threads() #[[ATTR6]]
 // NVPTX-NEXT:    call void @__gpu_sync_lane(i64 noundef -1) #[[ATTR6]]
-// NVPTX-NEXT:    [[CALL21:%.*]] = call i32 @__gpu_shuffle_idx_u32(i64 noundef -1, i32 noundef -1, i32 noundef -1, i32 noundef 0) #[[ATTR6]]
-// NVPTX-NEXT:    [[CALL22:%.*]] = call i64 @__gpu_first_lane_id(i64 noundef -1) #[[ATTR6]]
-// NVPTX-NEXT:    [[CALL23:%.*]] = call zeroext i1 @__gpu_is_first_in_lane(i64 noundef -1) #[[ATTR6]]
+// NVPTX-NEXT:    [[CALL22:%.*]] = call i32 @__gpu_shuffle_idx_u32(i64 noundef -1, i32 noundef -1, i32 noundef -1, i32 noundef 0) #[[ATTR6]]
+// NVPTX-NEXT:    [[CALL23:%.*]] = call i64 @__gpu_first_lane_id(i64 noundef -1) #[[ATTR6]]
+// NVPTX-NEXT:    [[CALL24:%.*]] = call zeroext i1 @__gpu_is_first_in_lane(i64 noundef -1) #[[ATTR6]]
 // NVPTX-NEXT:    call void @__gpu_exit() #[[ATTR7:[0-9]+]]
 // NVPTX-NEXT:    unreachable
 //
@@ -791,6 +831,37 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:    [[SUB1:%.*]] = sub i32 [[CALL]], 1
 // NVPTX-NEXT:    [[TMP7:%.*]] = call i32 @llvm.nvvm.shfl.sync.idx.i32(i32 [[TMP4]], i32 [[TMP5]], i32 [[TMP6]], i32 [[SUB1]])
 // NVPTX-NEXT:    ret i32 [[TMP7]]
+//
+//
+// NVPTX-LABEL: define internal i64 @__gpu_read_first_lane_u64(
+// NVPTX-SAME: i64 noundef [[__LANE_MASK:%.*]], i64 noundef [[__X:%.*]]) #[[ATTR0]] {
+// NVPTX-NEXT:  [[ENTRY:.*:]]
+// NVPTX-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// NVPTX-NEXT:    [[__X_ADDR:%.*]] = alloca i64, align 8
+// NVPTX-NEXT:    [[__HI:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    [[__LO:%.*]] = alloca i32, align 4
+// NVPTX-NEXT:    store i64 [[__LANE_MASK]], ptr [[__LANE_MASK_ADDR]], align 8
+// NVPTX-NEXT:    store i64 [[__X]], ptr [[__X_ADDR]], align 8
+// NVPTX-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__X_ADDR]], align 8
+// NVPTX-NEXT:    [[SHR:%.*]] = lshr i64 [[TMP0]], 32
+// NVPTX-NEXT:    [[CONV:%.*]] = trunc i64 [[SHR]] to i32
+// NVPTX-NEXT:    store i32 [[CONV]], ptr [[__HI]], align 4
+// NVPTX-NEXT:    [[TMP1:%.*]] = load i64, ptr [[__X_ADDR]], align 8
+// NVPTX-NEXT:    [[AND:%.*]] = and i64 [[TMP1]], 4294967295
+// NVPTX-NEXT:    [[CONV1:%.*]] = trunc i64 [[AND]] to i32
+// NVPTX-NEXT:    store i32 [[CONV1]], ptr [[__LO]], align 4
+// NVPTX-NEXT:    [[TMP2:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// NVPTX-NEXT:    [[TMP3:%.*]] = load i32, ptr [[__HI]], align 4
+// NVPTX-NEXT:    [[CALL:%.*]] = call i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP2]], i32 noundef [[TMP3]]) #[[ATTR6]]
+// NVPTX-NEXT:    [[CONV2:%.*]] = zext i32 [[CALL]] to i64
+// NVPTX-NEXT:    [[SHL:%.*]] = shl i64 [[CONV2]], 32
+// NVPTX-NEXT:    [[TMP4:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// NVPTX-NEXT:    [[TMP5:%.*]] = load i32, ptr [[__LO]], align 4
+// NVPTX-NEXT:    [[CALL3:%.*]] = call i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP4]], i32 noundef [[TMP5]]) #[[ATTR6]]
+// NVPTX-NEXT:    [[CONV4:%.*]] = zext i32 [[CALL3]] to i64
+// NVPTX-NEXT:    [[AND5:%.*]] = and i64 [[CONV4]], 4294967295
+// NVPTX-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[AND5]]
+// NVPTX-NEXT:    ret i64 [[OR]]
 //
 //
 // NVPTX-LABEL: define internal i64 @__gpu_ballot(

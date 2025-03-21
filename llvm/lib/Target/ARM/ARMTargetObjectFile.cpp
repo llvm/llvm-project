@@ -28,6 +28,11 @@ using namespace dwarf;
 //                               ELF Target
 //===----------------------------------------------------------------------===//
 
+ARMElfTargetObjectFile::ARMElfTargetObjectFile() {
+  PLTRelativeVariantKind = MCSymbolRefExpr::VK_ARM_PREL31;
+  SupportIndirectSymViaGOTPCRel = true;
+}
+
 void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
                                         const TargetMachine &TM) {
   const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);

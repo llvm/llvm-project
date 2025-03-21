@@ -26,11 +26,11 @@ bb:
 ; GCN:     global_store_dwordx4 v[{{[0-9]*[02468]:[0-9]*[13579]}}], v[{{[0-9]*[02468]:[0-9]*[13579]}}]
 define amdgpu_kernel void @test_vector_creation() #0 {
 entry:
-  %tmp231 = load <4 x i16>, ptr addrspace(1) undef, align 2
+  %tmp231 = load <4 x i16>, ptr addrspace(1) poison, align 2
   %vext466 = shufflevector <4 x i16> %tmp231, <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
   %vecinit467 = shufflevector <8 x i16> poison, <8 x i16> %vext466, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison>
   %vecinit471 = shufflevector <8 x i16> %vecinit467, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
-  store <8 x i16> %vecinit471, ptr addrspace(1) undef, align 16
+  store <8 x i16> %vecinit471, ptr addrspace(1) poison, align 16
   ret void
 }
 

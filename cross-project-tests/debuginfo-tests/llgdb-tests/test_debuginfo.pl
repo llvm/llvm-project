@@ -56,7 +56,11 @@ my $my_debugger = $ENV{'DEBUGGER'};
 if (!$my_debugger) {
     if ($use_lldb) {
         my $path = dirname(Cwd::abs_path($0));
-        $my_debugger = "/usr/bin/xcrun python3 $path/llgdb.py";
+        my $python_exec_path = $ENV{'PYTHON_EXEC_PATH'};
+        if (!$python_exec_path) {
+          $python_exec_path = 'python3';
+        }
+        $my_debugger = "LLDB_PYTHON_PATH=$ENV{'LLDB_PYTHON_PATH'} /usr/bin/xcrun $python_exec_path $path/llgdb.py";
     } else {
         $my_debugger = "gdb";
     }

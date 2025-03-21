@@ -153,26 +153,7 @@ public:
   /// Converts the LLVM intrinsic to an MLIR operation if a conversion exists.
   /// Returns failure otherwise.
   LogicalResult convertIntrinsic(OpBuilder &builder, llvm::CallInst *inst,
-                                 LLVM::ModuleImport &moduleImport) const {
-    // Lookup the dialect interface for the given intrinsic.
-    // Verify the intrinsic identifier maps to an actual intrinsic.
-    llvm::Intrinsic::ID intrinId = inst->getIntrinsicID();
-    assert(intrinId != llvm::Intrinsic::not_intrinsic);
-
-    // First lookup the intrinsic across different dialects for known
-    // supported conversions, examples include arm-neon, nvm-sve, etc.
-    Dialect *dialect = intrinsicToDialect.lookup(intrinId);
-
-    // No specialized (supported) intrinsics, attempt to generate a generic
-    // version via llvm.call_intrinsic (if available).
-    if (!dialect)
-      return convertUnregisteredIntrinsic(builder, inst, moduleImport);
-
-    // Dispatch the conversion to the dialect interface.
-    const LLVMImportDialectInterface *iface = getInterfaceFor(dialect);
-    assert(iface && "expected to find a dialect interface");
-    return iface->convertIntrinsic(builder, inst, moduleImport);
-  }
+                                 LLVM::ModuleImport &moduleImport) const;
 
   /// Returns true if the given LLVM IR intrinsic is convertible to an MLIR
   /// operation.
