@@ -229,6 +229,10 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     else
       emitCompoundStmt(cast<CompoundStmt>(*s));
     break;
+  case Stmt::ContinueStmtClass:
+    return emitContinueStmt(cast<ContinueStmt>(*s));
+  case Stmt::BreakStmtClass:
+    return emitBreakStmt(cast<BreakStmt>(*s));
   case Stmt::ReturnStmtClass:
     return emitReturnStmt(cast<ReturnStmt>(*s));
   }
@@ -311,6 +315,25 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
   builder.create<cir::BrOp>(loc, retBlock);
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
+  builder.createContinue(getLoc(s.getContinueLoc()));
+
+  // Insert the new block to continue codegen after the continue statement.
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
+  builder.createBreak(getLoc(s.getBreakLoc()));
+
+  // Insert the new block to continue codegen after the break statement.
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();

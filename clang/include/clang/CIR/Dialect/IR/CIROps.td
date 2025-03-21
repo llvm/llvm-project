@@ -570,6 +570,35 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
 }
 
 //===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : CIR_Op<"break", [Terminator]> {
+  let summary = "C/C++ `break` statement equivalent";
+  let description = [{
+    The `cir.break` operation is used to cease the control flow to the parent
+    operation, exiting its region's control flow. It is only allowed if it is
+    within a breakable operation (loops and `switch`).
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+def ContinueOp : CIR_Op<"continue", [Terminator]> {
+  let summary = "C/C++ `continue` statement equivalent";
+  let description = [{
+    The `cir.continue` operation is used to continue execution to the next
+    iteration of a loop. It is only allowed within `cir.loop` regions.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ScopeOp
 //===----------------------------------------------------------------------===//
 

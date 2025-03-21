@@ -148,23 +148,24 @@ public:
     // driver to customize the order that operations are visited.
 
     // Lower continue statements.
+    mlir::Block *dest = (step ? step : cond);
     op.walkBodySkippingNestedLoops([&](mlir::Operation *op) {
-      // When continue ops are supported, there will be a check for them here
-      // and a call to lowerTerminator(). The call to `advance()` handles the
-      // case where this is not a continue op.
-      assert(!cir::MissingFeatures::continueOp());
-      return mlir::WalkResult::advance();
+      if (!isa<cir::ContinueOp>(op))
+        return mlir::WalkResult::advance();
+
+      lowerTerminator(op, dest, rewriter);
+      return mlir::WalkResult::skip();
     });
 
     // Lower break statements.
     assert(!cir::MissingFeatures::switchOp());
     walkRegionSkipping<cir::LoopOpInterface>(
         op.getBody(), [&](mlir::Operation *op) {
-          // When break ops are supported, there will be a check for them here
-          // and a call to lowerTerminator(). The call to `advance()` handles
-          // the case where this is not a break op.
-          assert(!cir::MissingFeatures::breakOp());
-          return mlir::WalkResult::advance();
+          if (!isa<cir::BreakOp>(op))
+            return mlir::WalkResult::advance();
+
+          lowerTerminator(op, exit, rewriter);
+          return mlir::WalkResult::skip();
         });
 
     // Lower optional body region yield.

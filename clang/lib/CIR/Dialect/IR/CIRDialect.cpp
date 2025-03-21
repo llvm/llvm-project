@@ -152,6 +152,17 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
 }
 
 //===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BreakOp::verify() {
+  assert(!cir::MissingFeatures::switchOp());
+  if (!getOperation()->getParentOfType<LoopOpInterface>())
+    return emitOpError("must be within a loop");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConditionOp
 //===----------------------------------------------------------------------===//
 
@@ -239,6 +250,16 @@ LogicalResult cir::ConstantOp::verify() {
 
 OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
+}
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ContinueOp::verify() {
+  if (!getOperation()->getParentOfType<LoopOpInterface>())
+    return emitOpError("must be within a loop");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
