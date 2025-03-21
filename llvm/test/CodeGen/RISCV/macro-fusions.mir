@@ -1,7 +1,27 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+zexth-fusion,+zextw-fusion,+shifted-zextw-fusion,+ld-add-fusion \
+# RUN:   -mattr=+m,+zbb \
+# RUN:   -mattr=+lui-addi-fusion \
+# RUN:   -mattr=+auipc-addi-fusion \
+# RUN:   -mattr=+zexth-fusion \
+# RUN:   -mattr=+zextw-fusion \
+# RUN:   -mattr=+shifted-zextw-fusion \
+# RUN:   -mattr=+ld-add-fusion \
+# RUN:   -mattr=+get-lower-16bits-fusion \
+# RUN:   -mattr=+sign-extend-16bits-fusion \
+# RUN:   -mattr=+shift-n-add-fusion \
+# RUN:   -mattr=+shift-zext-by-n-fusion \
+# RUN:   -mattr=+get-second-byte-fusion \
+# RUN:   -mattr=+shift-left-four-add-fusion \
+# RUN:   -mattr=+shift-right-n-add-fusion \
+# RUN:   -mattr=+add-one-if-odd-fusion \
+# RUN:   -mattr=+add-and-extract-n-bits-fusion \
+# RUN:   -mattr=+addw-and-ext-fusion \
+# RUN:   -mattr=+logic-op-and-extract-lsb-fusion \
+# RUN:   -mattr=+logic-op-and-extract-low-16bits-fusion \
+# RUN:   -mattr=+or-cat-fusion \
+# RUN:   -mattr=+mul-7bits-with-32bit-fusion \
 # RUN:   | FileCheck %s
 
 # CHECK: lui_addi:%bb.0
@@ -172,5 +192,909 @@ body:             |
     %5:gpr = LD %3, 0
     $x10 = COPY %4
     $x11 = COPY %5
+    PseudoRET
+...
+
+# Get lower 16 bits:
+# slliw r1, r0, 16
+# srliw r1, r1, 16
+
+# CHECK: get_lower_16_bits_fusion
+# CHECK: Macro fuse: {{.*}}SLLIW - SRLIW
+---
+name: get_lower_16_bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLIW %1, 16
+    %4:gpr = XORI %2, 3
+    %5:gpr = SRLIW %3, 16
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+
+# Sign-extend a 16-bit number:
+# slliw r1, r0, 16
+# sraiw r1, r1, 16
+# CHECK: sign_extend_16bits_fusion
+# CHECK: Macro fuse: {{.*}}SLLIW - SRAIW
+---
+name: sign_extend_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLIW %1, 16
+    %4:gpr = XORI %2, 3
+    %5:gpr = SRAIW %3, 16
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+
+# These should be covered by Zba extension.
+# * shift left by one and add:
+#   slli r1, r0, 1
+#   add r1, r1, r2
+# * shift left by two and add:
+#   slli r1, r0, 2
+#   add r1, r1, r2
+# * shift left by three and add:
+#   slli r1, r0, 3
+#   add r1, r1, r2
+
+# CHECK: shift_1_add_fusion_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_1_add_fusion_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_1_add_fusion_commutable:%bb.0
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_1_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SLLI $x10, 1
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# CHECK: shift_2_add_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_2_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_2_add_fusion_commutable:%bb.0
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_2_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SLLI $x10, 1
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# CHECK: shift_3_add_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_3_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 3
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_3_add_fusion_commutable:%bb.0
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_3_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SLLI $x10, 1
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# * Shift zero-extended word left by 1:
+#   slli r1, r0, 32
+#   srli r1, r0, 31
+# * Shift zero-extended word left by 2:
+#   slli r1, r0, 32
+#   srli r1, r0, 30
+# * Shift zero-extended word left by 3:
+#   slli r1, r0, 32
+#   srli r1, r0, 29
+
+# CHECK: shift_zext_by_1_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - SRLI
+---
+name: shift_zext_by_1_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 32
+    %4:gpr = XORI %2, 3
+    %5:gpr = SRLI %3, 31
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_zext_by_2_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - SRLI
+---
+name: shift_zext_by_2_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 32
+    %4:gpr = XORI %2, 3
+    %5:gpr = SRLI %3, 30
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_zext_by_3_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - SRLI
+---
+name: shift_zext_by_3_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 32
+    %4:gpr = XORI %2, 3
+    %5:gpr = SRLI %3, 29
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# Get the second byte:
+# srli r1, r0, 8
+# andi r1, r1, 255
+
+# CHECK: get_second_byte_fusion
+# CHECK: Macro fuse: {{.*}}SRLI - ANDI
+---
+name: get_second_byte_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SRLI %1, 8
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 255
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# Shift left by four and add:
+# slli r1, r0, 4
+# add r1, r1, r2
+
+# CHECK: shift_left_four_add_fusion
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_left_four_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SLLI %1, 4
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_left_four_add_fusion_commutable
+# CHECK: Macro fuse: {{.*}}SLLI - ADD
+---
+name: shift_left_four_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SLLI $x10, 4
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# * Shift right by 29 and add:
+#   srli r1, r0, 29
+#   add r1, r1, r2
+# * Shift right by 30 and add:
+#   srli r1, r0, 30
+#   add r1, r1, r2
+# * Shift right by 31 and add:
+#   srli r1, r0, 31
+#   add r1, r1, r2
+# * Shift right by 32 and add:
+#   srli r1, r0, 32
+#   add r1, r1, r2
+
+# CHECK: shift_right_29_add_fusion
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_29_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SRLI %1, 29
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_right_29_add_fusion_commutable
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_29_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SRLI $x10, 29
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# CHECK: shift_right_30_add_fusion
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_30_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SRLI %1, 30
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_right_30_add_fusion_commutable
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_30_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SRLI $x10, 30
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# CHECK: shift_right_31_add_fusion
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_31_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SRLI %1, 31
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_right_31_add_fusion_commutable
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_31_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SRLI $x10, 31
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# CHECK: shift_right_32_add_fusion
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_32_add_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = SRLI %1, 32
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: shift_right_32_add_fusion_commutable
+# CHECK: Macro fuse: {{.*}}SRLI - ADD
+---
+name: shift_right_32_add_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = SRLI $x10, 32
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# Add one if odd, otherwise unchanged:
+# andi r1, r0, 1
+# add r1, r1, r2
+# Add one if odd (in word format), otherwise unchanged:
+# andi r1, r0, 1
+# addw r1, r1, r2
+
+# CHECK: add_one_if_odd_fusion
+# CHECK: Macro fuse: {{.*}}ANDI - ADD
+---
+name: add_one_if_odd_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADD %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_one_if_odd_fusion_commutable
+# CHECK: Macro fuse: {{.*}}ANDI - ADD
+---
+name: add_one_if_odd_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = ANDI $x10, 1
+    $x12 = XORI $x11, 3
+    $x10 = ADD $x11, $x10
+    PseudoRET
+...
+
+# CHECK: addw_one_if_odd_fusion
+# CHECK: Macro fuse: {{.*}}ANDI - ADDW
+---
+name: addw_one_if_odd_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ADDW %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: addw_one_if_odd_fusion_commutable
+# CHECK: Macro fuse: {{.*}}ANDI - ADDW
+---
+name: addw_one_if_odd_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = ANDI $x10, 1
+    $x12 = XORI $x11, 3
+    $x10 = ADDW $x11, $x10
+    PseudoRET
+...
+
+# * Add word and extract its lower 1 bit:
+#   andw r1, r1, r0
+#   andi r1, r1, 1
+# * Add word and extract its lower 8 bits:
+#   andw r1, r1, r0
+#   andi r1, r1, 255
+
+# CHECK: add_and_extract_1_bits_fusion
+# CHECK: Macro fuse: {{.*}}ADDW - ANDI
+---
+name: add_and_extract_1_bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADDW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_and_extract_8_bits_fusion
+# CHECK: Macro fuse: {{.*}}ADDW - ANDI
+---
+name: add_and_extract_8_bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADDW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 255
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# * Add word and zext.h:
+#   andw r1, r1, r0
+#   zext.h r1, r1
+# * Add word and sext.h:
+#   andw r1, r1, r0
+#   sext.h r1, r1
+
+# CHECK: addw_and_zext_fusion
+# CHECK: Macro fuse: {{.*}}ADDW - ZEXT_H_RV64
+---
+name: addw_and_zext_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADDW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: addw_and_sext_fusion
+# CHECK: Macro fuse: {{.*}}ADDW - SEXT_H
+---
+name: addw_and_sext_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ADDW %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = SEXT_H %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# Logic operation and extract its LSB:
+# <logic op> r1, r1, r0
+# andi r1, r1, 1
+
+# CHECK: and_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}AND - ANDI
+---
+name: and_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = AND %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: or_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}OR - ANDI
+---
+name: or_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = OR %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: xor_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}XOR - ANDI
+---
+name: xor_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = XOR %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: andi_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}ANDI - ANDI
+---
+name: andi_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: ori_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}ORI - ANDI
+---
+name: ori_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ORI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: xori_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}XORI - ANDI
+---
+name: xori_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = XORI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: orcb_and_extract_lsb_fusion
+# CHECK: Macro fuse: {{.*}}ORC_B - ANDI
+---
+name: orcb_and_extract_lsb_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ORC_B %1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ANDI %3, 1
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# Logic operation and extract its lower 16 bits:
+# <logic op> r1, r1, r0
+# zext.h r1, r1, 1
+
+# CHECK: and_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}AND - ZEXT_H_RV64
+---
+name: and_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = AND %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: or_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}OR - ZEXT_H_RV64
+---
+name: or_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = OR %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: xor_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}XOR - ZEXT_H_RV64
+---
+name: xor_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = XOR %1, %2
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: andi_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}ANDI - ZEXT_H_RV64
+---
+name: andi_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: ori_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}ORI - ZEXT_H_RV64
+---
+name: ori_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ORI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: xori_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}XORI - ZEXT_H_RV64
+---
+name: xori_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = XORI %1, 1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: orcb_and_extract_low_16bits_fusion
+# CHECK: Macro fuse: {{.*}}ORC_B - ZEXT_H_RV64
+---
+name: orcb_and_extract_low_16bits_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ORC_B %1
+    %4:gpr = XORI %2, 3
+    %5:gpr = ZEXT_H_RV64 %3
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# OR(Cat(src1(63, 8), 0.U(8.W)), src2):
+# andi r1, r0, -256
+# or r1, r1, r2
+
+# CHECK: or_cat_fusion
+# CHECK: Macro fuse: {{.*}}ANDI - OR
+---
+name: or_cat_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, -256
+    %4:gpr = XORI %2, 3
+    %5:gpr = OR %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: or_cat_fusion_commutable
+# CHECK: Macro fuse: {{.*}}ANDI - OR
+---
+name: or_cat_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = ANDI $x10, -256
+    $x12 = XORI $x11, 3
+    $x10 = OR $x11, $x10
+    PseudoRET
+...
+
+# Multiply 7-bit data with 32-bit data:
+# andi r1, r0, 127
+# mulw r1, r1, r2
+
+# CHECK: mul_7bits_with_32bit_fusion
+# CHECK: Macro fuse: {{.*}}ANDI - MULW
+---
+name: mul_7bits_with_32bit_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = ANDI %1, 127
+    %4:gpr = XORI %2, 3
+    %5:gpr = MULW %3, %2
+    $x10 = COPY %4
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: mul_7bits_with_32bit_fusion_commutable
+# CHECK: Macro fuse: {{.*}}ANDI - OR
+---
+name: mul_7bits_with_32bit_fusion_commutable
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+    $x10 = ANDI $x10, -256
+    $x12 = XORI $x11, 3
+    $x10 = OR $x11, $x10
     PseudoRET
 ...
