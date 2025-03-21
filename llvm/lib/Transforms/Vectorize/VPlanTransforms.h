@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
+#include "VPlanHelpers.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -178,6 +179,13 @@ struct VPlanTransforms {
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
+
+  /// This function converts initial recipes to the abstract recipes and clamps
+  /// \p Range based on cost model for following optimizations and cost
+  /// estimations. The converted abstract recipes will lower to concrete
+  /// recipies before codegen.
+  static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
 
   /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.

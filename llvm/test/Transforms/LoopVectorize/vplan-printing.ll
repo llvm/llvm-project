@@ -1200,6 +1200,148 @@ exit:
   ret i16 %for.1
 }
 
+define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+; CHECK-LABEL: 'print_extended_reduction'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<%0> = VF * UF
+; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK:      vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<%5>
+; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
+; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
+; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     WIDEN ir<%load0> = load vp<%4>
+; CHECK-NEXT:     EXTENDED-REDUCE vp<%5> = ir<%rdx> + reduce.add (ir<%load0> extended to i64)
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, ptr %x, i32 %iv
+  %load0 = load i32, ptr %arrayidx, align 4
+  %conv0 = zext i32 %load0 to i64
+  %rdx.next = add nsw i64 %rdx, %conv0
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
+  ret i64 %r.0.lcssa
+}
+
+define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+; CHECK-LABEL: 'print_mulacc'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<%0> = VF * UF
+; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK:      vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<%6>
+; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
+; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
+; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     WIDEN ir<%load0> = load vp<%4>
+; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
+; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
+; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%rdx> + reduce.add (mul nsw ir<%load0>, ir<%load1>)
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i64, ptr %x, i32 %iv
+  %load0 = load i64, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i64, ptr %y, i32 %iv
+  %load1 = load i64, ptr %arrayidx1, align 4
+  %mul = mul nsw i64 %load0, %load1
+  %rdx.next = add nsw i64 %rdx, %mul
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
+  ret i64 %r.0.lcssa
+}
+
+define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
+; CHECK-LABEL: 'print_mulacc_extended'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<%0> = VF * UF
+; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK:      vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<%6>
+; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
+; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<%3>
+; CHECK-NEXT:     vp<%4> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     WIDEN ir<%load0> = load vp<%4>
+; CHECK-NEXT:     CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<%3>
+; CHECK-NEXT:     vp<%5> = vector-pointer ir<%arrayidx1>
+; CHECK-NEXT:     WIDEN ir<%load1> = load vp<%5>
+; CHECK-NEXT:     MULACC-REDUCE vp<%6> = ir<%rdx> + reduce.add (mul nsw (ir<%load0> extended to i64), (ir<%load1> extended to i64))
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %rdx = phi i64 [ %rdx.next, %loop ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i16, ptr %x, i32 %iv
+  %load0 = load i16, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i16, ptr %y, i32 %iv
+  %load1 = load i16, ptr %arrayidx1, align 4
+  %conv0 = sext i16 %load0 to i32
+  %conv1 = sext i16 %load1 to i32
+  %mul = mul nsw i32 %conv0, %conv1
+  %conv = sext i32 %mul to i64
+  %rdx.next = add nsw i64 %rdx, %conv
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  %r.0.lcssa = phi i64 [ %rdx.next, %loop ]
+  ret i64 %r.0.lcssa
+}
+
 define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-LABEL: 'print_select_with_fastmath_flags'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1'
