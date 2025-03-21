@@ -320,7 +320,7 @@ void initializeVirtRegRewriterPass(PassRegistry &);
 void initializeWasmEHPreparePass(PassRegistry &);
 void initializeWinEHPreparePass(PassRegistry &);
 void initializeWriteBitcodePassPass(PassRegistry &);
-void initializeXRayInstrumentationPass(PassRegistry &);
+void initializeXRayInstrumentationLegacyPass(PassRegistry &);
 
 } // end namespace llvm
 
