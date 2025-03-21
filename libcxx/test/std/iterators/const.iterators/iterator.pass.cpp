@@ -73,13 +73,23 @@ constexpr bool test_p2836r1() {
   return true;
 }
 
-constexpr bool test_basic_operations() {
-  struct S {
-    int x;
-  };
-  S arr[10]                           = {};
-  std::basic_const_iterator<S*> first = arr;
-  std::basic_const_iterator<S*> last  = arr + 10;
+struct S {
+  int x;
+};
+
+template <class It>
+constexpr void test_basic_operations() {
+  S arr[10]{};
+
+  std::basic_const_iterator<It> first = It{arr};
+  std::basic_const_iterator<It> last  = It{arr + 10};
+
+  ASSERT_NOEXCEPT(first.base());
+  assert(first.base() == It{arr});
+  assert(last.base() == It{arr + 10});
+
+  static_assert(noexcept(iter_move(first)) == noexcept(std::ranges::iter_move(first.base())));
+  static_assert(noexcept(std::ranges::iter_move(first)) == noexcept(std::ranges::iter_move(first.base())));
 
   for (auto it = first; it != last; ++it) {
     (void)*it;
@@ -88,33 +98,46 @@ constexpr bool test_basic_operations() {
   }
   static_assert(!std::is_invocable_v<decltype(std::ranges::iter_swap), decltype(first), decltype(first)>);
 
-  assert(++first == arr + 1);
-  assert(--first == arr + 0);
-  assert(first++ == arr + 0);
-  assert(first-- == arr + 1);
+  if constexpr (std::bidirectional_iterator<It>) {
+    assert(++first == It{arr + 1});
+    assert(--first == It{arr + 0});
+    assert(first++ == It{arr + 0});
+    assert(first-- == It{arr + 1});
+  }
 
-  assert(first + 3 == arr + 3);
-  assert(last - 1 == arr + 9);
+  if constexpr (std::random_access_iterator<It>) {
+    assert(first + 3 == It{arr + 3});
+    assert(last - 1 == It{arr + 9});
 
-  first += 3;
-  assert(first == arr + 3);
-  first -= 2;
-  assert(first == arr + 1);
-  --first;
+    first += 3;
+    assert(first == It{arr + 3});
+    first -= 2;
+    assert(first == It{arr + 1});
+    --first;
 
-  assert(first < last);
-  assert(last > first);
-  assert(first <= last);
-  assert(last >= first);
+    assert(first < last);
+    assert(last > first);
+    assert(first <= last);
+    assert(last >= first);
 
-  assert(first < arr + 1);
-  assert(arr + 1 > first);
-  assert(first <= arr + 1);
-  assert(arr + 1 >= first);
+    assert(first < It{arr + 1});
+    assert(It{arr + 1} > first);
+    assert(first <= It{arr + 1});
+    assert(It{arr + 1} >= first);
 
-  assert((first <=> last) < 0);
-  assert((first <=> arr + 1) < 0);
-  assert((arr + 1 <=> first) > 0);
+    if constexpr (std::three_way_comparable<It>) {
+      assert((first <=> last) < 0);
+      assert((first <=> It{arr + 1}) < 0);
+      assert((It{arr + 1} <=> first) > 0);
+    }
+  }
+}
+
+constexpr bool test_basic_operations() {
+  test_basic_operations<S*>();
+  test_basic_operations<forward_iterator<S*>>();
+  test_basic_operations<bidirectional_iterator<S*>>();
+  test_basic_operations<random_access_iterator<S*>>();
 
   return true;
 }

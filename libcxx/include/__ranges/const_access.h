@@ -29,9 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
+namespace ranges {
 // [range.const]
 #  if _LIBCPP_STD_VER >= 23
-namespace ranges {
 template <input_range _Rp>
 _LIBCPP_HIDE_FROM_ABI constexpr auto& __possibly_const_range(_Rp& __rng) noexcept {
   if constexpr (input_range<const _Rp>) {
@@ -40,11 +40,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto& __possibly_const_range(_Rp& __rng) noexcep
     return __rng;
   }
 }
-} // namespace ranges
 #  endif // _LIBCPP_STD_VER >= 23
 
 // [range.access.cbegin]
-namespace ranges {
 
 template <class _Type>
 concept __const_accessible_range = (!is_rvalue_reference_v<_Type&&> || enable_borrowed_range<remove_cv_t<_Type>>);
@@ -84,18 +82,15 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto cbegin = __cbegin::__fn{};
 } // namespace __cpo
-} // namespace ranges
 
 #  if _LIBCPP_STD_VER >= 23
 // [range.range]
-namespace ranges {
 template <class _Rp>
 using const_iterator_t = decltype(ranges::cbegin(std::declval<_Rp&>()));
-} // namespace ranges
 #  endif // _LIBCPP_STD_VER >= 23
 
 // [range.access.cend]
-namespace ranges {
+
 namespace __cend {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
@@ -131,18 +126,14 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto cend = __cend::__fn{};
 } // namespace __cpo
-} // namespace ranges
 
 #  if _LIBCPP_STD_VER >= 23
 // [range.range]
-namespace ranges {
 template <class _Rp>
 using const_sentinel_t = decltype(ranges::cend(std::declval<_Rp&>()));
-} // namespace ranges
 #  endif
 
 // [range.access.crbegin]
-namespace ranges {
 namespace __crbegin {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
@@ -178,10 +169,8 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto crbegin = __crbegin::__fn{};
 } // namespace __cpo
-} // namespace ranges
 
 // [range.access.crend]
-namespace ranges {
 namespace __crend {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
@@ -217,11 +206,9 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto crend = __crend::__fn{};
 } // namespace __cpo
-} // namespace ranges
 
 // [range.prim.cdata]
 
-namespace ranges {
 namespace __cdata {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
