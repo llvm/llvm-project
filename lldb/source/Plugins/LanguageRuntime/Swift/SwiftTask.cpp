@@ -22,28 +22,6 @@ RegisterContextSP lldb_private::ThreadTask::GetRegisterContext() {
   return m_async_reg_ctx_sp;
 }
 
-llvm::Expected<std::shared_ptr<ThreadTask>>
-ThreadTask::Create(tid_t tid, addr_t async_ctx, ExecutionContext &exe_ctx) {
-  auto &process = exe_ctx.GetProcessRef();
-  auto &target = exe_ctx.GetTargetRef();
-
-  // A simplified description of AsyncContext. See swift/Task/ABI.h
-  // struct AsyncContext {
-  //   AsyncContext *Parent;                    // offset 0
-  //   TaskContinuationFunction *ResumeParent;  // offset 8
-  // };
-  // The resume function is stored at `offsetof(AsyncContext, ResumeParent)`,
-  // which is the async context's base address plus the size of a pointer.
-  uint32_t ptr_size = target.GetArchitecture().GetAddressByteSize();
-  addr_t resume_ptr = async_ctx + ptr_size;
-  Status status;
-  addr_t resume_fn = process.ReadPointerFromMemory(resume_ptr, status);
-  if (status.Fail() || resume_fn == LLDB_INVALID_ADDRESS)
-    return createStringError("failed to read task's resume function");
-
-  return std::make_shared<ThreadTask>(tid, async_ctx, resume_fn, exe_ctx);
-}
-
 RegisterContextTask::RegisterContextTask(Thread &thread,
                                          RegisterContextSP reg_info_sp,
                                          addr_t resume_fn, addr_t async_ctx)

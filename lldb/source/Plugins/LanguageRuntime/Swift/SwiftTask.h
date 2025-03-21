@@ -20,9 +20,6 @@ public:
   ThreadTask(tid_t tid, addr_t async_ctx, addr_t resume_fn,
              ExecutionContext &exe_ctx);
 
-  static llvm::Expected<std::shared_ptr<ThreadTask>>
-  Create(tid_t tid, addr_t async_ctx, ExecutionContext &exe_ctx);
-
   /// Returns a Task specific register context (RegisterContextTask).
   RegisterContextSP GetRegisterContext() override;
 

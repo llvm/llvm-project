@@ -173,6 +173,7 @@ public:
     uint32_t kind = 0;
     uint32_t enqueuePriority = 0;
     lldb::addr_t resumeAsyncContext = LLDB_INVALID_ADDRESS;
+    lldb::addr_t runJob = LLDB_INVALID_ADDRESS;
     std::vector<lldb::addr_t> childTasks;
   };
   // The default limits are copied from swift-inspect.

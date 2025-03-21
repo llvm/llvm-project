@@ -2197,8 +2197,9 @@ ThreadForTaskArgument(Args &command, ExecutionContext &exe_ctx) {
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessSP()))
     if (auto reflection_ctx = runtime->GetReflectionContext()) {
       if (auto task_info = reflection_ctx->asyncTaskInfo(task_ptr))
-        return ThreadTask::Create(task_info->id, task_info->resumeAsyncContext,
-                                  exe_ctx);
+        return std::make_shared<ThreadTask>(task_info->id,
+                                            task_info->resumeAsyncContext,
+                                            task_info->runJob, exe_ctx);
       else
         return task_info.takeError();
     }

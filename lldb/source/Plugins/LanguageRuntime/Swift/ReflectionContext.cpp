@@ -414,6 +414,7 @@ public:
     result.kind = task_info.Kind;
     result.enqueuePriority = task_info.EnqueuePriority;
     result.resumeAsyncContext = task_info.ResumeAsyncContext;
+    result.runJob = task_info.RunJob;
     for (auto child : task_info.ChildTasks)
       result.childTasks.push_back(child);
     return result;
