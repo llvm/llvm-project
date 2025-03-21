@@ -45,6 +45,7 @@ class CoverageMappingIterator {
   CoverageMappingReader *Reader;
   CoverageMappingRecord Record;
   coveragemap_error ReadErr;
+  std::string ReadErrMsg;
 
   void increment();
 
@@ -80,7 +81,7 @@ public:
   }
   Expected<CoverageMappingRecord &> operator*() {
     if (ReadErr != coveragemap_error::success) {
-      auto E = make_error<CoverageMapError>(ReadErr);
+      auto E = make_error<CoverageMapError>(ReadErr, ReadErrMsg);
       ReadErr = coveragemap_error::success;
       return std::move(E);
     }
@@ -88,7 +89,7 @@ public:
   }
   Expected<CoverageMappingRecord *> operator->() {
     if (ReadErr != coveragemap_error::success) {
-      auto E = make_error<CoverageMapError>(ReadErr);
+      auto E = make_error<CoverageMapError>(ReadErr, ReadErrMsg);
       ReadErr = coveragemap_error::success;
       return std::move(E);
     }
