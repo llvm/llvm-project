@@ -146,8 +146,7 @@ public:
       reportUseAfterFree(Name, CE, DeclWithIssue);
   }
 
-  void checkCreateOrCopyFunction(const CallExpr *CE,
-                                 const FunctionDecl *Callee,
+  void checkCreateOrCopyFunction(const CallExpr *CE, const FunctionDecl *Callee,
                                  const Decl *DeclWithIssue) const {
     if (!isCreateOrCopyFunction(Callee))
       return;
@@ -203,7 +202,7 @@ public:
 
     if (isCreateOrCopy(Arg))
       CreateOrCopyFnCall.insert(Arg); // Avoid double reporting.
-    
+
     if (Result == IsOwnedResult::Skip)
       return;
 
