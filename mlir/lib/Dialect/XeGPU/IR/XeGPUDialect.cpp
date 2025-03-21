@@ -68,73 +68,39 @@ LogicalResult ScatterTensorDescAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_SGMapAttr
+// XeGPU_LayoutAttr
 //===----------------------------------------------------------------------===//
-namespace {
-template <typename T, unsigned N>
-LogicalResult parseIntArrayField(::mlir::AsmParser &parser,
-                                 llvm::SmallVector<T, N> &result,
-                                 llvm::StringRef fieldName) {
-  if (failed(parser.parseKeyword(fieldName))) {
-    parser.emitError(parser.getCurrentLocation(),
-                     "unexpected field name. Expected " + fieldName + ".");
-    return failure();
-  }
-
-  if (failed(parser.parseEqual())) {
-    parser.emitError(parser.getCurrentLocation(), "expected '=' sign.");
-    return failure();
-  }
-
-  auto elemParser = [&]() -> llvm::ParseResult {
-    uint32_t elem = 0;
-    auto res = parser.parseInteger(elem);
-    result.push_back(elem);
-    return res;
-  };
-
-  return parser.parseCommaSeparatedList(AsmParser::Delimiter::Square,
-                                        elemParser, fieldName);
-}
-} // namespace
-
-mlir::Attribute SGMapAttr::parse(::mlir::AsmParser &parser,
-                                 ::mlir::Type attrType) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  llvm::SmallVector<uint32_t, 2> wi_layout, wi_data;
-  if (failed(parseIntArrayField(parser, wi_layout, "wi_layout")))
-    return {};
-
-  if (failed(parser.parseComma()))
-    return {};
-
-  if (failed(parseIntArrayField(parser, wi_data, "wi_data")))
-    return {};
-
-  return SGMapAttr::getChecked(
-      [&]() { return parser.emitError(parser.getNameLoc()); },
-      parser.getContext(), wi_layout, wi_data);
-}
-
-void SGMapAttr::print(::mlir::AsmPrinter &printer) const {
-  printer << "<";
-  printer.printKeywordOrString("wi_layout");
-  printer << " = [" << getWiLayout() << "], ";
-  printer.printKeywordOrString("wi_data");
-  printer << " = [" << getWiData() << "]";
-  printer << ">";
-}
-
 LogicalResult
-SGMapAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                  llvm::ArrayRef<uint32_t> wi_layout,
-                  llvm::ArrayRef<uint32_t> wi_data) {
-  if (wi_layout.size() != 2)
-    return emitError() << "expected wi_layout of size 2";
-  if (wi_data.size() != 2)
-    return emitError() << "expected wi_data of size 2";
+LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                  ScopeAttr scope,
+                  DenseI32ArrayAttr sg_layout,
+                  DenseI32ArrayAttr sg_data,
+                  DenseI32ArrayAttr order,
+                  DenseI32ArrayAttr wi_layout,
+                  DenseI32ArrayAttr wi_data) {
+
+  if (scope && scope.getValue() != Scope::WG && (sg_layout || sg_data || order)) {
+    return emitError() << "expected sg_layout, sg_data, and order being only used at workgroup level.";
+  }
+
+  if ((sg_layout != nullptr) ^ (sg_data != nullptr)) {
+    return emitError() << "expected sg_layout and sg_data being both present or both absent";
+  }
+
+  if (order) {
+    if (!sg_layout)
+      return emitError() << "expected order being used with sg_layout and sg_data.";
+    if (order.size() != sg_layout.size())
+      return emitError() << "expected order having the same rank as sg_layout and sg_data";
+  }
+
+  if (sg_layout && (sg_layout.size() != sg_data.size() || sg_layout.size() > 2)) {
+    return emitError() << "expected sg_layout and sg_data having the same rank, which is not larger than 2";
+  }
+
+  if (wi_layout.size() != wi_data.size() || wi_layout.size() > 2)
+    return emitError() << "expected wi_layout and wi_data having the same rank, which is not larger than 2";
+
   return success();
 }
 
@@ -146,7 +112,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   llvm::SmallVector<int64_t> shape;
   mlir::Type elementType;
   mlir::FailureOr<mlir::Attribute> encoding;
-  mlir::FailureOr<mlir::Attribute> sg_map;
+  mlir::FailureOr<mlir::Attribute> layout;
 
   // Parse literal '<'
   if (parser.parseLess())
@@ -169,8 +135,8 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
     mlir::Attribute attr;
     ParseResult res = parser.parseAttribute(attr);
     if (mlir::succeeded(res)) {
-      if (mlir::isa<SGMapAttr>(attr)) {
-        sg_map = attr;
+      if (mlir::isa<LayoutAttr>(attr)) {
+        layout = attr;
         continue;
       }
       if (mlir::isa<BlockTensorDescAttr, ScatterTensorDescAttr>(attr)) {
@@ -188,7 +154,7 @@ mlir::Type TensorDescType::parse(::mlir::AsmParser &parser) {
   return TensorDescType::getChecked(
       [&]() { return parser.emitError(parser.getNameLoc()); },
       parser.getContext(), shape, elementType,
-      encoding.value_or(mlir::Attribute()), sg_map.value_or(mlir::Attribute()));
+      encoding.value_or(mlir::Attribute()), layout.value_or(mlir::Attribute()));
 }
 
 void TensorDescType::print(::mlir::AsmPrinter &printer) const {
@@ -208,8 +174,8 @@ void TensorDescType::print(::mlir::AsmPrinter &printer) const {
   if (auto encoding = getEncoding())
     printer << ", " << encoding;
 
-  if (auto sg_map = getSgMap())
-    printer << ", " << sg_map;
+  if (auto layout = getLayout())
+    printer << ", " << layout;
 
   printer << ">";
 }
@@ -218,29 +184,29 @@ TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int array_length,
                                    bool boundary_check,
                                    MemorySpace memory_space,
-                                   mlir::Attribute sg_map) {
+                                   mlir::Attribute layout) {
   auto context = elementType.getContext();
   auto attr = BlockTensorDescAttr::get(context, memory_space, array_length,
                                        boundary_check);
-  return Base::get(context, shape, elementType, attr, sg_map);
+  return Base::get(context, shape, elementType, attr, layout);
 }
 
 TensorDescType TensorDescType::get(llvm::ArrayRef<int64_t> shape,
                                    mlir::Type elementType, int chunk_size,
                                    MemorySpace memory_space,
-                                   mlir::Attribute sg_map) {
+                                   mlir::Attribute layout) {
   auto context = elementType.getContext();
   auto attr = ScatterTensorDescAttr::get(context, memory_space, chunk_size);
-  return Base::get(context, shape, elementType, attr, sg_map);
+  return Base::get(context, shape, elementType, attr, layout);
 }
 
 LogicalResult TensorDescType::verify(
     llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
-    mlir::Attribute encoding, mlir::Attribute sg_map) {
+    mlir::Attribute encoding, mlir::Attribute layout) {
   size_t rank = shape.size();
   // Low-pressure types are packed in 32-bit units.
-  unsigned packingFactor = 32 / elementType.getIntOrFloatBitWidth();
+  int32_t packingFactor = 32 / elementType.getIntOrFloatBitWidth();
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
 
@@ -274,9 +240,9 @@ LogicalResult TensorDescType::verify(
       return emitError() << "SLM is not supported for 2D block tensor";
   }
 
-  if (auto sgMapAttr = llvm::dyn_cast_if_present<SGMapAttr>(sg_map)) {
-    ArrayRef<uint32_t> wiLayout = sgMapAttr.getWiLayout();
-    ArrayRef<uint32_t> wiData = sgMapAttr.getWiData();
+  if (auto layoutAttr = llvm::dyn_cast_if_present<LayoutAttr>(layout)) {
+    ArrayRef<int32_t> wiLayout = layoutAttr.getWiLayout().asArrayRef();
+    ArrayRef<int32_t> wiData = layoutAttr.getWiData().asArrayRef();
 
     if (rank == 1) {
       if (wiLayout[0] != 1 || wiData[0] != 1)
@@ -318,7 +284,7 @@ LogicalResult TensorDescType::verify(
   return success();
 }
 
-// If tensor descriptor has a sg_map attribute it is used in SIMT mode.
+// If tensor descriptor has a layout attribute it is used in SIMT mode.
 // In this mode, the distributed vector shape is determined as follows:
 // Definitions:
 //        wi_data_size = wi_data[0] × wi_data[1]
@@ -343,13 +309,13 @@ LogicalResult TensorDescType::verify(
 // Distributed vector shape must be:
 //        [n_distribution_units, wi_data_size]
 FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
-  auto sgMap = llvm::dyn_cast_if_present<SGMapAttr>(getSgMap());
-  // If no sg_map is provided, tensor desc is not used in SIMT mode.
-  if (!sgMap)
+  auto layout = llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
+  // If no layout is provided, tensor desc is not used in SIMT mode.
+  if (!layout || !layout.isForWorkItemLevel())
     return failure();
 
-  SmallVector<int64_t> wiData(sgMap.getWiData());
-  SmallVector<int64_t> wiLayout(sgMap.getWiLayout());
+  SmallVector<int64_t> wiData(layout.getWiData().asArrayRef());
+  SmallVector<int64_t> wiLayout(layout.getWiLayout().asArrayRef());
   auto tdescShape = getShape();
 
   auto wiDataSize = 1, sgSize = 1;
