@@ -1142,7 +1142,8 @@ static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,
   }
 
   // Build the template-id.
-  QualType TraitTy = S.CheckTemplateIdType(TemplateName(TraitTD), Loc, Args);
+  QualType TraitTy =
+      S.CheckTemplateIdType(nullptr, TemplateName(TraitTD), Loc, Args);
   if (TraitTy.isNull())
     return true;
   if (!S.isCompleteType(Loc, TraitTy)) {
@@ -12185,7 +12186,8 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
   return Context.getElaboratedType(
       ElaboratedTypeKeyword::None,
       NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
-      CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
+      CheckTemplateIdType(nullptr, TemplateName(StdInitializerList), Loc,
+                          Args));
 }
 
 bool Sema::isInitListConstructor(const FunctionDecl *Ctor) {

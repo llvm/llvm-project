@@ -90,7 +90,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
 
   // Build the template-id.
   QualType CoroTrait =
-      S.CheckTemplateIdType(TemplateName(CoroTraits), KwLoc, Args);
+      S.CheckTemplateIdType(nullptr, TemplateName(CoroTraits), KwLoc, Args);
   if (CoroTrait.isNull())
     return QualType();
   if (S.RequireCompleteType(KwLoc, CoroTrait,
@@ -170,7 +170,7 @@ static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
 
   // Build the template-id.
   QualType CoroHandleType =
-      S.CheckTemplateIdType(TemplateName(CoroHandle), Loc, Args);
+      S.CheckTemplateIdType(nullptr, TemplateName(CoroHandle), Loc, Args);
   if (CoroHandleType.isNull())
     return QualType();
   if (S.RequireCompleteType(Loc, CoroHandleType,

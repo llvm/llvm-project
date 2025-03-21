@@ -17330,7 +17330,8 @@ QualType TreeTransform<Derived>::RebuildTemplateSpecializationType(
                                                       TemplateName Template,
                                              SourceLocation TemplateNameLoc,
                                      TemplateArgumentListInfo &TemplateArgs) {
-  return SemaRef.CheckTemplateIdType(Template, TemplateNameLoc, TemplateArgs);
+  return SemaRef.CheckTemplateIdType(nullptr, Template, TemplateNameLoc,
+                                     TemplateArgs);
 }
 
 template<typename Derived>

@@ -3817,7 +3817,8 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
   }
 }
 
-static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
+static QualType builtinCommonTypeImpl(Sema &S, const NestedNameSpecifier *NNS,
+                                      TemplateName BaseTemplate,
                                       SourceLocation TemplateLoc,
                                       ArrayRef<TemplateArgument> Ts) {
   auto lookUpCommonType = [&](TemplateArgument T1,
@@ -3825,7 +3826,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
     // Don't bother looking for other specializations if both types are
     // builtins - users aren't allowed to specialize for them
     if (T1.getAsType()->isBuiltinType() && T2.getAsType()->isBuiltinType())
-      return builtinCommonTypeImpl(S, BaseTemplate, TemplateLoc, {T1, T2});
+      return builtinCommonTypeImpl(S, NNS, BaseTemplate, TemplateLoc, {T1, T2});
 
     TemplateArgumentListInfo Args;
     Args.addArgument(TemplateArgumentLoc(
@@ -3839,7 +3840,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     QualType BaseTemplateInst =
-        S.CheckTemplateIdType(BaseTemplate, TemplateLoc, Args);
+        S.CheckTemplateIdType(NNS, BaseTemplate, TemplateLoc, Args);
 
     if (SFINAE.hasErrorOccurred())
       return QualType();
@@ -3952,8 +3953,8 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
 }
 
 static QualType checkBuiltinTemplateIdType(
-    Sema &SemaRef, TemplateName Name, BuiltinTemplateDecl *BTD,
-    ArrayRef<TemplateArgument> SugaredConverted,
+    Sema &SemaRef, const NestedNameSpecifier *NNS, TemplateName Name,
+    BuiltinTemplateDecl *BTD, ArrayRef<TemplateArgument> SugaredConverted,
     ArrayRef<TemplateArgument> CanonicalConverted, SourceLocation TemplateLoc,
     TemplateArgumentListInfo &TemplateArgs) {
   ASTContext &Context = SemaRef.getASTContext();
@@ -4005,7 +4006,7 @@ static QualType checkBuiltinTemplateIdType(
     // The first template argument will be reused as the template decl that
     // our synthetic template arguments will be applied to.
     QualType Result =
-        SemaRef.CheckTemplateIdType(SugaredConverted[0].getAsTemplate(),
+        SemaRef.CheckTemplateIdType(NNS, SugaredConverted[0].getAsTemplate(),
                                     TemplateLoc, SyntheticTemplateArgs);
     return SemaRef.Context.getTemplateSpecializationType(
         Name, TemplateArgs.arguments(), SugaredConverted, CanonicalConverted,
@@ -4055,14 +4056,16 @@ static QualType checkBuiltinTemplateIdType(
     QualType HasNoTypeMember = SugaredConverted[2].getAsType();
     ArrayRef<TemplateArgument> Ts = SugaredConverted[3].getPackAsArray();
     QualType Result = HasNoTypeMember;
-    if (auto CT = builtinCommonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts);
+    if (auto CT =
+            builtinCommonTypeImpl(SemaRef, NNS, BaseTemplate, TemplateLoc, Ts);
         !CT.isNull()) {
       TemplateArgumentListInfo TAs;
       TAs.addArgument(TemplateArgumentLoc(
           TemplateArgument(CT), SemaRef.Context.getTrivialTypeSourceInfo(
                                     CT, TemplateArgs[1].getLocation())));
 
-      Result = SemaRef.CheckTemplateIdType(HasTypeMember, TemplateLoc, TAs);
+      Result =
+          SemaRef.CheckTemplateIdType(NNS, HasTypeMember, TemplateLoc, TAs);
     }
     return SemaRef.Context.getTemplateSpecializationType(
         Name, TemplateArgs.arguments(), SugaredConverted, CanonicalConverted,
@@ -4210,7 +4213,8 @@ Sema::findFailedBooleanCondition(Expr *Cond) {
   return { FailedCond, Description };
 }
 
-QualType Sema::CheckTemplateIdType(TemplateName Name,
+QualType Sema::CheckTemplateIdType(const NestedNameSpecifier *NNS,
+                                   TemplateName Name,
                                    SourceLocation TemplateLoc,
                                    TemplateArgumentListInfo &TemplateArgs) {
   DependentTemplateName *DTN =
@@ -4294,9 +4298,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
 
-    CanonType =
-        SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
-                  AliasTemplate->getLocation(), AliasTemplate->getDeclName());
+    QualType T = resugar(NNS, Pattern->getUnderlyingType());
+    CanonType = SubstType(T, TemplateArgLists, AliasTemplate->getLocation(),
+                          AliasTemplate->getDeclName());
     if (CanonType.isNull()) {
       // If this was enable_if and we failed to find the nested type
       // within enable_if in a SFINAE context, dig out the specific
@@ -4333,9 +4337,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
       return QualType();
     }
   } else if (auto *BTD = dyn_cast<BuiltinTemplateDecl>(Template)) {
-    return checkBuiltinTemplateIdType(*this, Name, BTD, CTAI.SugaredConverted,
-                                      CTAI.CanonicalConverted, TemplateLoc,
-                                      TemplateArgs);
+    return checkBuiltinTemplateIdType(
+        *this, NNS, Name, BTD, CTAI.SugaredConverted, CTAI.CanonicalConverted,
+        TemplateLoc, TemplateArgs);
   } else if (Name.isDependent() ||
              TemplateSpecializationType::anyDependentTemplateArguments(
                  TemplateArgs, CTAI.CanonicalConverted)) {
@@ -4579,7 +4583,8 @@ TypeResult Sema::ActOnTemplateIdType(
     return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
   }
 
-  QualType SpecTy = CheckTemplateIdType(Template, TemplateIILoc, TemplateArgs);
+  QualType SpecTy = CheckTemplateIdType(SS.getScopeRep(), Template,
+                                        TemplateIILoc, TemplateArgs);
   if (SpecTy.isNull())
     return true;
 
@@ -4661,7 +4666,8 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
 
-  QualType Result = CheckTemplateIdType(Template, TemplateLoc, TemplateArgs);
+  QualType Result = CheckTemplateIdType(SS.getScopeRep(), Template, TemplateLoc,
+                                        TemplateArgs);
   if (Result.isNull())
     return TypeResult(true);
 
@@ -11451,7 +11457,8 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     return CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
   }
 
-  QualType T = CheckTemplateIdType(Template, TemplateIILoc, TemplateArgs);
+  QualType T = CheckTemplateIdType(SS.getScopeRep(), Template, TemplateIILoc,
+                                   TemplateArgs);
   if (T.isNull())
     return true;
 

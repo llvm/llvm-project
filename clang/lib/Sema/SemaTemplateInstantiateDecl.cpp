@@ -6816,7 +6816,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
               Args.addArgument(
                   getTrivialTemplateArgumentLoc(UnpackedArg, QualType(), Loc));
           }
-          QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
+          QualType T =
+              CheckTemplateIdType(/*NNS=*/nullptr, TemplateName(TD), Loc, Args);
           // We may get a non-null type with errors, in which case
           // `getAsCXXRecordDecl` will return `nullptr`. For instance, this
           // happens when one of the template arguments is an invalid

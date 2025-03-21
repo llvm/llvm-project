@@ -124,8 +124,6 @@ using type2 = typename C<int>::type1<void>;
 // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
 // CHECK-NEXT: FunctionProtoType 0x{{[^ ]*}} 'void (int)' cdecl
 // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
-// CHECK-NEXT: SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 0 T
-// CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'C'
 // CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'int'
 } // namespace PR55886
 
@@ -136,7 +134,7 @@ template <typename... T> struct D {
   };
 };
 template struct D<float, char>::bind<int, short>;
-// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:5, col:45> col:11 bound_type 'int (int (*)(float, int), int (*)(char, short))'
+// CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:5, col:45> col:11 bound_type 'int (int (*)(float, int), int (*)(char, short))'
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (int (*)(float, int), int (*)(char, short))' cdecl
 // CHECK:      FunctionProtoType 0x{{[^ ]*}} 'int (float, int)' cdecl
 // CHECK:      SubstTemplateTypeParmType 0x{{[^ ]*}} 'float' sugar typename depth 0 index 0 ... T pack_index 1

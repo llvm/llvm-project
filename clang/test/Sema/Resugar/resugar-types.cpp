@@ -88,7 +88,7 @@ template <class E> struct foo {
 };
 using T1 = foo<Bar>::apply<char>;
 TEST_NOT(T1::type1);
-TEST_NOT(T1::type2); // FIXME: Needs resugaring on the pattern of template type aliases.
+TEST(T1::type2);
 
 using T2 = foo<int>::apply<Bar>;
 TEST(T2::type1);
@@ -106,7 +106,7 @@ template <typename... Cs> struct foo {
 };
 using T1 = foo<Bar>::bind<char>;
 TEST_NOT(T1::type1);
-TEST_NOT(T1::type2); // FIXME: Needs resugaring on the pattern of template type aliases.
+TEST(T1::type2);
 
 using T2 = foo<int>::bind<Bar>;
 TEST(T2::type1);
@@ -148,7 +148,7 @@ template <typename... Ts> using Z = Y<Ts...>;
 
 using T1 = typename foo<Z, Bar>::template bind<int>;
 TEST_NOT(typename T1::type1);
-TEST_NOT(typename T1::type2); // FIXME: Needs resugaring on the pattern of template type aliases.
+TEST(typename T1::type2);
 
 using T2 = typename foo<Z, int>::template bind<Bar>;
 TEST(typename T2::type1);
