@@ -67,7 +67,7 @@ template <class... ArgTs>
 A(ArgTs...) -> A<typename ArgTs::value_type...>;
 
 template <class... Ts>
-using AA = A<Ts...>;
+using AA = A<Ts..., Ts...>;
 
 AA a{};
 

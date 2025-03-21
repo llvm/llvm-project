@@ -1072,17 +1072,19 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
       AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
       /*NumberOfArgumentsMustMatch=*/false);
 
-  static auto IsNonDeducedArgument = [&](const DeducedTemplateArgument &TA) {
-    // The following cases indicate the template argument is non-deducible:
-    //   1. The result is null. E.g. When it comes from a default template
-    //   argument that doesn't appear in the alias declaration.
-    //   2. The template parameter is a pack and that cannot be deduced from
-    //   the arguments within the alias declaration.
-    // Non-deducible template parameters will persist in the transformed
-    // deduction guide.
-    return TA.isNull() || (TA.getKind() == TemplateArgument::Pack &&
-                           TA.pack_size() == 1 && TA.pack_begin()->isNull());
-  };
+  static std::function<bool(const TemplateArgument &TA)> IsNonDeducedArgument =
+      [](const TemplateArgument &TA) {
+        // The following cases indicate the template argument is non-deducible:
+        //   1. The result is null. E.g. When it comes from a default template
+        //   argument that doesn't appear in the alias declaration.
+        //   2. The template parameter is a pack and that cannot be deduced from
+        //   the arguments within the alias declaration.
+        // Non-deducible template parameters will persist in the transformed
+        // deduction guide.
+        return TA.isNull() ||
+               (TA.getKind() == TemplateArgument::Pack &&
+                llvm::any_of(TA.pack_elements(), IsNonDeducedArgument));
+      };
 
   SmallVector<TemplateArgument> DeducedArgs;
   SmallVector<unsigned> NonDeducedTemplateParamsInFIndex;
