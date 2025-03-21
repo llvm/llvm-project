@@ -2167,9 +2167,11 @@ DSOLocalEquivalentOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
-// DSOLocalEquivalentOp constant-folds to the global symbol name.
+/// Fold a dso_local_equivalent operation to a dedicated dso_local_equivalent
+/// attribute.
 OpFoldResult DSOLocalEquivalentOp::fold(FoldAdaptor) {
-  return getFunctionNameAttr();
+  return DSOLocalEquivalentAttr::get(getContext(),
+                                     getFunctionNameAttr().getAttr());
 }
 
 //===----------------------------------------------------------------------===//
