@@ -6484,8 +6484,8 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       ULE && ULE->hasExplicitTemplateArgs() &&
       ULE->decls_begin() == ULE->decls_end()) {
     Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus20
-                               ? diag::warn_cxx17_compat_adl_only_template_id
-                               : diag::ext_adl_only_template_id)
+                               ? diag::compat_cxx20_adl_only_template_id
+                               : diag::compat_pre_cxx20_adl_only_template_id)
         << ULE->getName();
   }
 
