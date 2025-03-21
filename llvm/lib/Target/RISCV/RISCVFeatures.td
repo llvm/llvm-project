@@ -1591,6 +1591,12 @@ def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "V
 def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                                              "true", "VXRM writes causes pipeline flush">;
 
+def TunePreferVsetvliOverReadVLENB
+    : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
+                       "PreferVsetvliOverReadVLENB",
+                       "true",
+                       "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
+
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
 // is responsible for providing any necessary __sync implementations. Code
