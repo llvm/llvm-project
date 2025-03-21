@@ -3179,8 +3179,28 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
                         << " to " << NewCycle << " Instr:" << *SU.getInstr());
     }
 
-    // There is a case where the `NewCycle` is too large to be scheduled in
-    // Stage 0. In this case, we reject the schedule.
+    // We traverse the SUs in the order of the original basic block. Computing
+    // NewCycle in this order normally works fine because all dependencies
+    // (except for loop-carried dependencies) don't violate the original order.
+    // However, an artificial dependency (e.g., added by CopyToPhiMutation) can
+    // break it. That is, there may be exist an artificial dependency from
+    // bottom to top. In such a case, NewCycle may become too large to be
+    // scheduled in Stage 0. For example, assume that Inst0 is in DNP in the
+    // following case:
+    //
+    //             |  Inst0  <-+
+    //   SU order  |           | artificial dep
+    //             |  Inst1  --+
+    //             v
+    //
+    // If Inst1 is scheduled at cycle N and is not at Stage 0, then NewCycle of
+    // Inst0 must be greater than or equal to N so that Inst0 is not be
+    // scheduled at Stage 0. In such cases, we reject this schedule at this
+    // time.
+    // FIXME: The reason for this is the existence of artificial dependencies
+    // that are contradict to the original SU order. If ignoring artificial
+    // dependencies does not affect correctness, then it is better to ignore
+    // them.
     if (FirstCycle + InitiationInterval <= NewCycle)
       return false;
 
