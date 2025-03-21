@@ -242,10 +242,7 @@ static cl::opt<enum InstructionTablesType> InstructionTablesOption(
     cl::ValueOptional);
 
 static bool shouldPrintInstructionTables(enum InstructionTablesType ITType) {
-  if (InstructionTablesOption == ITType)
-    return true;
-
-  return false;
+  return InstructionTablesOption == ITType;
 }
 
 static bool shouldPrintInstructionTables() {

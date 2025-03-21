@@ -20,8 +20,8 @@
 namespace llvm {
 namespace mca {
 
-void InstructionInfoView::getComment(const MCInst &MCI,
-                                     std::string &CommentString) const {
+  void InstructionInfoView::getComment(raw_ostream &OS,
+				       const MCInst &MCI) const {
   StringRef S = MCI.getLoc().getPointer();
   StringRef InstrStr;
   size_t Pos = 0, PosCmt = 0;
@@ -31,18 +31,17 @@ void InstructionInfoView::getComment(const MCInst &MCI,
   // specification.
   // '#' comment mark is not supported by llvm-mca
 
-  CommentString = "";
-  if (Pos = S.find("\n"); Pos != std::string::npos) {
+  if (Pos = S.find("\n"); Pos != StringRef::npos) {
     InstrStr = S.take_front(Pos);
     // C style comment
     if (((PosCmt = InstrStr.find("/*")) != StringRef::npos) &&
         ((Pos = InstrStr.find("*/")) != StringRef::npos)) {
-      CommentString = InstrStr.substr(PosCmt, Pos);
+      OS << InstrStr.substr(PosCmt, Pos);
       return;
     }
     // C++ style comment
     if ((PosCmt = InstrStr.find("//")) != StringRef::npos) {
-      CommentString = InstrStr.substr(PosCmt);
+      OS << InstrStr.substr(PosCmt);
       return;
     }
   }
@@ -88,7 +87,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
   }
 
-  SmallVector<unsigned, 16> Paddings = {0, 7, 14, 21, 28, 35};
+  SmallVector<unsigned, 16> Paddings = {0, 7, 14, 21, 28, 35, 42};
   SmallVector<StringRef, 16> Fields = {"#uOps",       "Latency",
                                        "RThroughput", "MayLoad",
                                        "MayStore",    "HasSideEffects (U)"};
@@ -96,12 +95,13 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   unsigned LastPadding = Paddings.back();
   if (PrintFullInfo) {
     Fields.push_back("Bypass Latency");
+    // Reserving 7 chars for 
     Paddings.push_back(LastPadding += 7);
     Fields.push_back("Resources (<Name> | <Name>[<ReleaseAtCycle>] | "
                      "<Name>[<AcquireAtCycle>,<ReleaseAtCycle])");
-    Paddings.push_back(LastPadding += 7);
-    Fields.push_back("LLVM Opcode Name");
     Paddings.push_back(LastPadding += 43);
+    Fields.push_back("LLVM Opcode Name");
+    Paddings.push_back(LastPadding += 27);
   }
   if (PrintBarriers) {
     Fields.push_back("LoadBarrier");
@@ -110,19 +110,12 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     Paddings.push_back(LastPadding += 7);
   }
   if (PrintEncodings) {
-    Paddings.push_back(LastPadding += 7);
-    Paddings.push_back(LastPadding += 7);
-    Paddings.push_back(LastPadding += 30);
     Fields.push_back("Encoding Size");
+    Paddings.push_back(LastPadding += 7);
     EndFields.push_back("Encodings:");
-    EndFields.push_back("Instructions:");
-  } else {
-    if (PrintFullInfo)
-      Paddings.push_back(LastPadding += 27);
-    else
-      Paddings.push_back(LastPadding += 7);
-    EndFields.push_back("Instructions:");
+    Paddings.push_back(LastPadding += 30);
   }
+  EndFields.push_back("Instructions:");
 
   FOS << "\n\nInstruction Info:\n";
   for (unsigned i = 0, N = Fields.size(); i < N; i++)
@@ -162,9 +155,9 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     if (PrintFullInfo) {
       FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
       FOS << IIVDEntry.Bypass;
-      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1]);
       FOS << IIVDEntry.Resources;
-      FOS.PadToColumn(Paddings[LastPaddingIdx += 1] + 1);
+      FOS.PadToColumn(Paddings[LastPaddingIdx += 1]);
       FOS << IIVDEntry.OpcodeName;
     }
 
@@ -187,9 +180,8 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     FOS.PadToColumn(Paddings[LastPaddingIdx += 1]);
     FOS << printInstructionString(Inst);
     if (PrintFullInfo) {
-      std::string CommentString;
-      getComment(Inst, CommentString);
-      FOS << "\t" << CommentString;
+      FOS << "\t";
+      getComment(FOS, Inst);
     }
     FOS << '\n';
   }

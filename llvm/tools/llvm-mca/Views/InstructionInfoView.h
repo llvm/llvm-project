@@ -84,7 +84,7 @@ class InstructionInfoView : public InstructionView {
 
   /// Extract comment (//, /* */) from the source assembly placed just after
   /// instruction.
-  void getComment(const llvm::MCInst &Inst, std::string &CommentString) const;
+  void getComment(raw_ostream &OS, const llvm::MCInst &Inst) const;
 
 public:
   InstructionInfoView(const llvm::MCSubtargetInfo &ST,
