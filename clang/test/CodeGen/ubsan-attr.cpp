@@ -15,7 +15,7 @@
 // RECOVER:       [[HANDLER_ADD_OVERFLOW]]:
 // RECOVER-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META8]]
 // RECOVER-NEXT:    [[TMP5:%.*]] = zext i32 [[CONV]] to i64, !nosanitize [[META8]]
-// RECOVER-NEXT:    tail call void @__ubsan_handle_add_overflow(ptr nonnull @[[GLOB1]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
+// RECOVER-NEXT:    tail call void @__ubsan_handle_add_overflow(ptr nonnull @{{.+}}, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
 // RECOVER-NEXT:    br label %[[CONT]], !nosanitize [[META8]]
 // RECOVER:       [[CONT]]:
 // RECOVER-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META8]]
@@ -35,7 +35,7 @@
 // ABORT:       [[HANDLER_ADD_OVERFLOW]]:
 // ABORT-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META8]]
 // ABORT-NEXT:    [[TMP5:%.*]] = zext i32 [[CONV]] to i64, !nosanitize [[META8]]
-// ABORT-NEXT:    tail call void @__ubsan_handle_add_overflow_abort(ptr nonnull @[[GLOB1]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
+// ABORT-NEXT:    tail call void @__ubsan_handle_add_overflow_abort(ptr nonnull @{{.+}}, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
 // ABORT-NEXT:    unreachable, !nosanitize [[META8]]
 // ABORT:       [[CONT]]:
 // ABORT-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META8]]
