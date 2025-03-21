@@ -610,10 +610,6 @@ static unsigned tryToRepresentAsInstArg(unsigned Opcode, Instruction *I) {
        I->getOpcode() == Instruction::AShr ||
        I->getOpcode() == Instruction::BitCast ||
        I->getOpcode() == Instruction::Call ||
-       // Issue with scheduling with isVectorLikeInstWithConstOps
-       // operations.
-       // I->getOpcode() == Instruction::ExtractElement ||
-       // I->getOpcode() == Instruction::ExtractValue ||
        I->getOpcode() == Instruction::ICmp ||
        I->getOpcode() == Instruction::Load ||
        I->getOpcode() == Instruction::LShr ||
@@ -1157,11 +1153,8 @@ static InstructionsState getCopyableOpcode(ArrayRef<Value *> VL,
   auto getAltOp = [Opcode, &AltOpcode, &AltOp](ArrayRef<Value *> VL) {
     for (Value *V : VL) {
       Instruction *I = cast<Instruction>(V);
-      if (I->isIntDivRem() || I->isFPDivRem())
+      if (I->isIntDivRem() || I->isFPDivRem() || isa<PHINode>(I))
         return false;
-      if (isa<PHINode>(I)) {
-        return false;
-      }
       unsigned VOpcode = I->getOpcode();
       if (VOpcode != Opcode) {
         if (AltOpcode == Opcode) {
@@ -4387,13 +4380,12 @@ private:
         // If BundleMember is a vector bundle, its operands may have been
         // reordered during buildTree(). We therefore need to get its operands
         // through the TreeEntry.
-        if (TreeEntry *TE = BundleMember->TE; TE && !TE->isAltOpCopy()) {
+        if (TreeEntry *TE = BundleMember->TE; TE && !BundleMember->IsCopy) {
           // Need to search for the lane since the tree entry can be reordered.
           auto *In = BundleMember->Inst;
           int Lane = std::distance(TE->Scalars.begin(),
                                    find(TE->Scalars, In));
           assert(Lane >= 0 && "Lane not set");
-
           // Since vectorization tree is being built recursively this assertion
           // ensures that the tree entry has all operands set before reaching
           // this code. Couple of exceptions known at the moment are extracts
@@ -7990,13 +7982,15 @@ bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                            Opcode0, Opcode1, OpcodeMask))
     return true;
   SmallVector<ValueList> Operands;
-  if (S.getMainOp()->getNumOperands() != S.getAltOp()->getNumOperands())
-    return false;
+  bool IsBinOp = isa<BinaryOperator>(S.getMainOp());
+  bool IsAltBinOp = isa<BinaryOperator>(S.getAltOp());
   for (unsigned I : seq<unsigned>(S.getMainOp()->getNumOperands())) {
     Operands.emplace_back();
     // Prepare the operand vector.
     for (Value *V : VL) {
-      if (isa<PoisonValue>(V)) {
+      if (isa<PoisonValue>(V) ||
+          (IsBinOp && !IsAltBinOp &&
+           cast<Instruction>(V)->getOpcode() == Opcode1)) {
         Operands.back().push_back(
             PoisonValue::get(S.getMainOp()->getOperand(I)->getType()));
         continue;
@@ -8716,8 +8710,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         S = InstructionsState::invalid();
       }
     }
-  } else if (VectorizeCopyable && canRepresentAsCopyable(S, VL))
+  } else if (VectorizeCopyable && canRepresentAsCopyable(S, VL)) {
     IsAltOpCopy = true;
+  }
 
   // Don't go into catchswitch blocks, which can happen with PHIs.
   // Such blocks can only have PHIs and the catchswitch.  There is no
