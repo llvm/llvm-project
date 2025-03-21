@@ -16642,13 +16642,14 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     } else
       Base = MemExpr->getBase();
 
+    QualType DeclType = Deduced ? resugar(BasePointeeType, Fn,
+                                          Deduced->asArray(), Fn->getType())
+                                : resugar(BasePointeeType, Fn->getType());
     ExprValueKind valueKind;
     QualType Type;
     if (cast<CXXMethodDecl>(Fn)->isStatic()) {
       valueKind = VK_LValue;
-      Type = Deduced ? resugar(BasePointeeType, Fn, Deduced->asArray(),
-                               Fn->getType())
-                     : resugar(BasePointeeType, Fn->getType());
+      Type = DeclType;
     } else {
       valueKind = VK_PRValue;
       Type = Context.BoundMemberTy;
@@ -16658,7 +16659,7 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         Base, MemExpr->isArrow(), MemExpr->getOperatorLoc(),
         MemExpr->getQualifierLoc(), MemExpr->getTemplateKeywordLoc(), Fn, Found,
         /*HadMultipleCandidates=*/true, MemExpr->getMemberNameInfo(), Type,
-        valueKind, OK_Ordinary, TemplateArgs, Deduced);
+        valueKind, OK_Ordinary, DeclType, TemplateArgs, Deduced);
   }
 
   llvm_unreachable("Invalid reference to overloaded function");

@@ -616,6 +616,10 @@ protected:
     LLVM_PREFERRED_TYPE(NonOdrUseReason)
     unsigned NonOdrUseReason : 2;
 
+    /// Consider a different type for the MemberDecl this MemberExpr refers to.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasResugaredDeclType : 1;
+
     /// This is the location of the -> or . in the expression.
     SourceLocation OperatorLoc;
   };

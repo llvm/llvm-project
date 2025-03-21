@@ -3263,7 +3263,7 @@ class MemberExpr final
     : public Expr,
       private llvm::TrailingObjects<MemberExpr, NestedNameSpecifierLoc,
                                     DeclAccessPair, ASTTemplateKWAndArgsInfo,
-                                    TemplateArgumentLoc> {
+                                    TemplateArgumentLoc, QualType> {
   friend class ASTReader;
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
@@ -3304,13 +3304,23 @@ class MemberExpr final
     return MemberExprBits.HasTemplateKWAndArgsInfo;
   }
 
+  size_t numTrailingObjects(OverloadToken<TemplateArgumentLoc>) const {
+    return getNumTemplateArgs();
+  }
+
+  size_t numTrailingObjects(OverloadToken<QualType>) const {
+    return HasResugaredDeclType();
+  }
+
+  static bool needsDeclTypeStorage(ValueDecl *VD, QualType DeclType);
+
   MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
              NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKWLoc,
              ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
              const DeclarationNameInfo &NameInfo,
              const TemplateArgumentListInfo *TemplateArgs,
              const TemplateArgumentList *Deduced, QualType T, ExprValueKind VK,
-             ExprObjectKind OK, NonOdrUseReason NOUR);
+             QualType DeclType, ExprObjectKind OK, NonOdrUseReason NOUR);
   MemberExpr(EmptyShell Empty)
       : Expr(MemberExprClass, Empty), Base(), MemberDecl() {}
 
@@ -3322,7 +3332,7 @@ public:
          DeclAccessPair FoundDecl, DeclarationNameInfo MemberNameInfo,
          const TemplateArgumentListInfo *TemplateArgs,
          const TemplateArgumentList *Deduced, QualType T, ExprValueKind VK,
-         ExprObjectKind OK, NonOdrUseReason NOUR);
+         QualType DeclType, ExprObjectKind OK, NonOdrUseReason NOUR);
 
   /// Create an implicit MemberExpr, with no location, qualifier, template
   /// arguments, and so on. Suitable only for non-static member access.
@@ -3333,14 +3343,15 @@ public:
     return Create(C, Base, IsArrow, SourceLocation(), NestedNameSpecifierLoc(),
                   SourceLocation(), MemberDecl,
                   DeclAccessPair::make(MemberDecl, MemberDecl->getAccess()),
-                  DeclarationNameInfo(), nullptr, /*Deduced=*/{}, T, VK, OK,
-                  NOUR_None);
+                  DeclarationNameInfo(), nullptr, /*Deduced=*/{}, T, VK,
+                  QualType(), OK, NOUR_None);
   }
 
   static MemberExpr *CreateEmpty(const ASTContext &Context, bool HasQualifier,
                                  bool HasFoundDecl,
                                  bool HasTemplateKWAndArgsInfo,
-                                 unsigned NumTemplateArgs);
+                                 unsigned NumTemplateArgs,
+                                 bool HasResugaredDeclType);
 
   void setBase(Expr *E) { Base = E; }
   Expr *getBase() const { return cast<Expr>(Base); }
@@ -3351,6 +3362,16 @@ public:
   /// static data members), a CXXMethodDecl, or an EnumConstantDecl.
   ValueDecl *getMemberDecl() const { return MemberDecl; }
   void setMemberDecl(ValueDecl *D);
+  void recomputeDependency();
+
+  bool HasResugaredDeclType() const {
+    return MemberExprBits.HasResugaredDeclType;
+  }
+  QualType getDeclType() const {
+    return HasResugaredDeclType() ? *getTrailingObjects<QualType>()
+                                  : MemberDecl->getType();
+  }
+  void setDeclType(QualType T);
 
   /// Retrieves the declaration found by lookup.
   DeclAccessPair getFoundDecl() const {

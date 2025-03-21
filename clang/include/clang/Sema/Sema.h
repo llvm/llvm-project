@@ -8707,7 +8707,8 @@ public:
       NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
       ValueDecl *Member, DeclAccessPair FoundDecl, bool HadMultipleCandidates,
       const DeclarationNameInfo &MemberNameInfo, QualType Ty, ExprValueKind VK,
-      ExprObjectKind OK, const TemplateArgumentListInfo *TemplateArgs = nullptr,
+      ExprObjectKind OK, QualType DeclType = QualType(),
+      const TemplateArgumentListInfo *TemplateArgs = nullptr,
       const TemplateArgumentList *Deduced = nullptr);
 
   // Check whether the declarations we found through a nested-name
@@ -8756,7 +8757,7 @@ public:
   ExprResult BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
                                      SourceLocation OpLoc,
                                      const NestedNameSpecifierLoc &NNS,
-                                     FieldDecl *Field, QualType FieldType,
+                                     FieldDecl *Field, QualType FieldDeclType,
                                      DeclAccessPair FoundDecl,
                                      const DeclarationNameInfo &MemberNameInfo);
 
@@ -14008,6 +14009,7 @@ public:
   QualType resugar(const Type *Base, NamedDecl *ND,
                    ArrayRef<TemplateArgument> Args, QualType T);
   QualType resugar(DeclRefExpr *DRE, ValueDecl *VD);
+  QualType resugar(MemberExpr *ME, ValueDecl *VD);
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.

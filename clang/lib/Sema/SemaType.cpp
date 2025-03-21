@@ -9627,7 +9627,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   if (const auto *ME = dyn_cast<MemberExpr>(IDExpr)) {
     if (const auto *VD = ME->getMemberDecl())
       if (isa<FieldDecl>(VD) || isa<VarDecl>(VD))
-        return VD->getType();
+        return ME->getDeclType();
   } else if (const auto *IR = dyn_cast<ObjCIvarRefExpr>(IDExpr)) {
     return IR->getDecl()->getType();
   } else if (const auto *PR = dyn_cast<ObjCPropertyRefExpr>(IDExpr)) {

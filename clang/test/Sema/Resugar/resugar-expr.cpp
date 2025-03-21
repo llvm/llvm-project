@@ -50,9 +50,8 @@ template <class A1> struct A {
   ();
 };
 
-// FIXME: resugar this
 Z x1 = decltype(A<Int>().a){}();
-// expected-error@-1 {{with an rvalue of type 'int'}}
+// expected-error@-1 {{with an rvalue of type 'Int' (aka 'int')}}
 } // namespace t5
 
 namespace t6 {

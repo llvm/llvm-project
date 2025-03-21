@@ -1064,6 +1064,7 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
   bool HasQualifier = CurrentUnpackingBits->getNextBit();
   bool HasFoundDecl = CurrentUnpackingBits->getNextBit();
   bool HasTemplateInfo = CurrentUnpackingBits->getNextBit();
+  bool HasResugaredDeclType = CurrentUnpackingBits->getNextBit();
   unsigned NumTemplateArgs = Record.readInt();
 
   E->Base = Record.readSubExpr();
@@ -1074,6 +1075,7 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
   E->MemberExprBits.HasQualifier = HasQualifier;
   E->MemberExprBits.HasFoundDecl = HasFoundDecl;
   E->MemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateInfo;
+  E->MemberExprBits.HasResugaredDeclType = HasResugaredDeclType;
   E->MemberExprBits.HadMultipleCandidates = CurrentUnpackingBits->getNextBit();
   E->MemberExprBits.NonOdrUseReason =
       CurrentUnpackingBits->getNextBits(/*Width=*/2);
@@ -1094,6 +1096,9 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
     ReadTemplateKWAndArgsInfo(
         *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
         E->getTrailingObjects<TemplateArgumentLoc>(), NumTemplateArgs);
+
+  if (HasResugaredDeclType)
+    *E->getTrailingObjects<QualType>() = Record.readQualType();
 }
 
 void ASTStmtReader::VisitObjCIsaExpr(ObjCIsaExpr *E) {
@@ -3297,9 +3302,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       bool HasQualifier = ExprMemberBits.getNextBit();
       bool HasFoundDecl = ExprMemberBits.getNextBit();
       bool HasTemplateInfo = ExprMemberBits.getNextBit();
+      bool HasResugaredDeclType = ExprMemberBits.getNextBit();
       unsigned NumTemplateArgs = Record[ASTStmtReader::NumExprFields + 1];
       S = MemberExpr::CreateEmpty(Context, HasQualifier, HasFoundDecl,
-                                  HasTemplateInfo, NumTemplateArgs);
+                                  HasTemplateInfo, NumTemplateArgs,
+                                  HasResugaredDeclType);
       break;
     }
 

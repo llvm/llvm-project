@@ -943,14 +943,14 @@ MemberExpr *Sema::BuildMemberExpr(
     Expr *Base, bool IsArrow, SourceLocation OpLoc, NestedNameSpecifierLoc NNS,
     SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
     bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
-    QualType Ty, ExprValueKind VK, ExprObjectKind OK,
+    QualType Ty, ExprValueKind VK, ExprObjectKind OK, QualType DeclType,
     const TemplateArgumentListInfo *TemplateArgs,
     const TemplateArgumentList *Deduced) {
   assert((!IsArrow || Base->isPRValue()) &&
          "-> base must be a pointer prvalue");
   MemberExpr *E = MemberExpr::Create(
       Context, Base, IsArrow, OpLoc, NNS, TemplateKWLoc, Member, FoundDecl,
-      MemberNameInfo, TemplateArgs, Deduced, Ty, VK, OK,
+      MemberNameInfo, TemplateArgs, Deduced, Ty, VK, DeclType, OK,
       getNonOdrUseReasonInCurrentContext(Member));
   E->setHadMultipleCandidates(HadMultipleCandidates);
   MarkMemberReferenced(E);
@@ -1204,13 +1204,15 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, VarType.getNonReferenceType(),
-                           VK_LValue, OK_Ordinary);
+                           VK_LValue, OK_Ordinary, VarType);
   }
 
   if (CXXMethodDecl *MemberFn = dyn_cast<CXXMethodDecl>(MemberDecl)) {
     assert(!TemplateArgs);
     NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
 
+    QualType DeclType =
+        resugar(BaseType.getTypePtr(), SS.getScopeRep(), MemberFn->getType());
     ExprValueKind valueKind;
     QualType type;
     if (MemberFn->isInstance()) {
@@ -1224,13 +1226,13 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       if (ConvertBaseExprToDiscardedValue())
         return ExprError();
       valueKind = VK_LValue;
-      type =
-          resugar(BaseType.getTypePtr(), SS.getScopeRep(), MemberFn->getType());
+      type = DeclType;
     }
 
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc,
                            MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
-                           MemberNameInfo, type, valueKind, OK_Ordinary);
+                           MemberNameInfo, type, valueKind, OK_Ordinary,
+                           DeclType);
   }
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
@@ -1244,7 +1246,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
         resugar(BaseType.getTypePtr(), SS.getScopeRep(), Enum->getType());
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc, Enum,
                            FoundDecl, /*HadMultipleCandidates=*/false,
-                           MemberNameInfo, EnumType, VK_PRValue, OK_Ordinary);
+                           MemberNameInfo, EnumType, VK_PRValue, OK_Ordinary,
+                           EnumType);
   }
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
@@ -1279,7 +1282,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, NNS, TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, VarType.getNonReferenceType(),
-                           VK_LValue, OK_Ordinary, TemplateArgs, ConvertedArgs);
+                           VK_LValue, OK_Ordinary, VarType, TemplateArgs,
+                           ConvertedArgs);
   }
 
   // We found something that we didn't expect. Complain.
@@ -1893,12 +1897,13 @@ void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
 
 ExprResult Sema::BuildFieldReferenceExpr(
     Expr *BaseExpr, bool IsArrow, SourceLocation OpLoc,
-    const NestedNameSpecifierLoc &NNS, FieldDecl *Field, QualType FieldType,
+    const NestedNameSpecifierLoc &NNS, FieldDecl *Field, QualType FieldDeclType,
     DeclAccessPair FoundDecl, const DeclarationNameInfo &MemberNameInfo) {
   // x.a is an l-value if 'a' has a reference type. Otherwise:
   // x.a is an l-value/x-value/pr-value if the base is (and note
   //   that *x is always an l-value), except that if the base isn't
   //   an ordinary object then we must have an rvalue.
+  QualType FieldType = FieldDeclType;
   ExprValueKind VK = VK_LValue;
   ExprObjectKind OK = OK_Ordinary;
   if (!IsArrow) {
@@ -1975,7 +1980,7 @@ ExprResult Sema::BuildFieldReferenceExpr(
   return BuildMemberExpr(Base.get(), IsArrow, OpLoc, NNS,
                          /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
                          /*HadMultipleCandidates=*/false, MemberNameInfo,
-                         FieldType, VK, OK);
+                         FieldType, VK, OK, FieldDeclType);
 }
 
 ExprResult

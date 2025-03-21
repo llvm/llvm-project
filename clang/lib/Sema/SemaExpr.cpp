@@ -19513,7 +19513,8 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
           ME->getQualifierLoc(), ME->getTemplateKeywordLoc(),
           ME->getMemberDecl(), ME->getFoundDecl(), ME->getMemberNameInfo(),
           CopiedTemplateArgs(ME), ME->getDeduced(), ME->getType(),
-          ME->getValueKind(), ME->getObjectKind(), ME->isNonOdrUse());
+          ME->getValueKind(), ME->getDeclType(), ME->getObjectKind(),
+          ME->isNonOdrUse());
     }
 
     if (ME->getMemberDecl()->isCXXInstanceMember())
@@ -19530,7 +19531,7 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
         S.Context, ME->getBase(), ME->isArrow(), ME->getOperatorLoc(),
         ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), ME->getMemberDecl(),
         ME->getFoundDecl(), ME->getMemberNameInfo(), CopiedTemplateArgs(ME),
-        ME->getDeduced(), ME->getType(), ME->getValueKind(),
+        ME->getDeduced(), ME->getType(), ME->getValueKind(), ME->getDeclType(),
         ME->getObjectKind(), NOUR);
   }
 
@@ -19875,17 +19876,9 @@ static void DoMarkVarDeclReferenced(
             DRE->setType(SemaRef.resugar(DRE, DRE->getDecl()));
           DRE->recomputeDependency();
         } else if (auto *ME = dyn_cast_or_null<MemberExpr>(E)) {
-          ME->setMemberDecl(ME->getMemberDecl());
-          CXXScopeSpec SS;
-          SS.Adopt(ME->getQualifierLoc());
-          assert(ME->template_arguments().size() == 0 ||
-                 ME->getDeduced() != nullptr);
-          QualType T =
-              ME->getDeduced()
-                  ? SemaRef.resugar(SS.getScopeRep(), ME->getMemberDecl(),
-                                    ME->getDeduced()->asArray(), ME->getType())
-                  : SemaRef.resugar(SS.getScopeRep(), ME->getType());
-          ME->setType(T);
+          if (ME->getType()->isUndeducedType())
+            ME->setType(SemaRef.resugar(ME, ME->getMemberDecl()));
+          ME->recomputeDependency();
         }
       } else if (FirstInstantiation) {
         SemaRef.PendingInstantiations

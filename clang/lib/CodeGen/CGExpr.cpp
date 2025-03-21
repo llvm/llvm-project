@@ -1850,7 +1850,7 @@ static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CodeGenFunction &CGF,
     return DeclRefExpr::Create(
         CGF.getContext(), NestedNameSpecifierLoc(), SourceLocation(), VD,
         /*RefersToEnclosingVariableOrCapture=*/false, ME->getExprLoc(),
-        ME->getType(), ME->getValueKind(), QualType(), nullptr, nullptr,
+        ME->getType(), ME->getValueKind(), ME->getDeclType(), nullptr, nullptr,
         nullptr, ME->isNonOdrUse());
   }
   return nullptr;

@@ -935,6 +935,17 @@ QualType Sema::resugar(DeclRefExpr *DRE, ValueDecl *VD) {
   DRE->setDeclType(NewT);
   return NewT;
 }
+QualType Sema::resugar(MemberExpr *ME, ValueDecl *VD) {
+  assert(ME->template_arguments().size() == 0 || ME->getDeduced() != nullptr);
+  const NestedNameSpecifier *NNS =
+      ME->getQualifierLoc().getNestedNameSpecifier();
+  QualType T = VD->getType();
+  QualType NewT = ME->getDeduced()
+                      ? SemaRef.resugar(NNS, VD, ME->getDeduced()->asArray(), T)
+                      : SemaRef.resugar(NNS, T);
+  ME->setDeclType(NewT);
+  return NewT;
+}
 
 /// \brief Determine whether the declaration found is acceptable as the name
 /// of a template and, if so, return that template declaration. Otherwise,
