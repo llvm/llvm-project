@@ -312,7 +312,7 @@ function(add_libclc_builtin_set)
     )
     set( internal_link_depend_files )
     foreach( tgt ${ARG_INTERNAL_LINK_DEPENDENCIES} )
-      list( APPEND internal_link_depend_files $<TARGET_PROPERTY:tgt,TARGET_FILE> )
+      list( APPEND internal_link_depend_files $<TARGET_PROPERTY:${tgt},TARGET_FILE> )
     endforeach()
     link_bc(
       INTERNALIZE
