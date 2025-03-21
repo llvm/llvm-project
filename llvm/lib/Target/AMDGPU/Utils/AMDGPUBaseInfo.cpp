@@ -34,7 +34,7 @@
 
 static llvm::cl::opt<unsigned> DefaultAMDHSACodeObjectVersion(
     "amdhsa-code-object-version", llvm::cl::Hidden,
-    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV5),
+    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV6),
     llvm::cl::desc("Set default AMDHSA Code Object Version (module flag "
                    "or asm directive still take priority if present)"));
 
