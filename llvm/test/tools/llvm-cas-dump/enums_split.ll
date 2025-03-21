@@ -1,3 +1,4 @@
+; REQUIRES: ondisk_cas
 ; RUN: rm -rf %t.casdb
 ; RUN: llc -O0 --filetype=obj --cas-backend --cas=%t.casdb --mccas-casid -o %t_DIE.casid %s
 ; RUN: llvm-cas-dump --cas=%t.casdb --casid-file %t_DIE.casid  --die-refs | FileCheck %s --check-prefix=DWARF-DIE

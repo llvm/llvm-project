@@ -1,3 +1,4 @@
+; REQUIRES: ondisk_cas
 ; RUN: llc -cas-friendly-debug-info -O0 --filetype=obj --cas-backend --cas=%t/cas --mccas-verify --mtriple=arm64-apple-darwin %s -o %t/multiple_cus.o 2>&1 | FileCheck %s --allow-empty
 ; CHECK-NOT: error in backend: CASBackend output round-trip verification error
 
