@@ -72,11 +72,11 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
-  case VPVectorPointerSC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
   case VPWidenGEPSC:

@@ -2236,7 +2236,14 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   }
 }
 
-static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
+/// Returns true if \p V used at \p Idx of a wide recipe is defined by a
+/// VPWidenLoadRecipe or VPInterleaveRecipe that can be converted to a narrower
+/// recipe. A VPWidenLoadRecipe can be narrowed to an index independent load if
+/// it feeds all the wide ops at all indices (checked by via the operands of the
+/// wide recipe at lane0, \p R0). A VPInterleaveRecipe can be narrowed to a wide
+/// load, if \p V used at index \p Idx are defined at \p Idx of the interleave
+/// group.
+static bool canNarrowLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
   auto *DefR = V->getDefiningRecipe();
   if (!DefR)
     return false;
@@ -2312,6 +2319,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (R.mayWriteToMemory() && !InterleaveR)
       return;
 
+    // All other ops are allowed, but we reject uses that cannot be converted
+    // when checking all allowed consumers (store interleave groups) below.
     if (!InterleaveR)
       continue;
 
@@ -2340,20 +2349,22 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       continue;
     }
 
-    auto *Lane0 = dyn_cast_or_null<VPWidenRecipe>(
+    // Check if all values feeding InterleaveR are matching wide recipes, which
+    // operands that can be narrowed.
+    auto *WideMember0 = dyn_cast_or_null<VPWidenRecipe>(
         InterleaveR->getStoredValues()[0]->getDefiningRecipe());
-    if (!Lane0)
+    if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
       auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
-      if (!R || R->getOpcode() != Lane0->getOpcode() || R->getNumOperands() > 2)
+      if (!R || R->getOpcode() != WideMember0->getOpcode() ||
+          R->getNumOperands() > 2)
         return;
-      if (any_of(R->operands(), [Lane0, Idx = I](VPValue *V) {
-            return !supportedLoad(Lane0, V, Idx);
+      if (any_of(R->operands(), [WideMember0, Idx = I](VPValue *V) {
+            return !canNarrowLoad(WideMember0, V, Idx);
           }))
         return;
     }
-
     StoreGroups.push_back(InterleaveR);
   }
 
@@ -2386,12 +2397,12 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res = nullptr;
-    if (auto *Lane0 = dyn_cast<VPWidenRecipe>(
+    if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(
             StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
-      for (unsigned Idx = 0, E = Lane0->getNumOperands(); Idx != E; ++Idx)
-        Lane0->setOperand(
-            Idx, NarrowOp(Lane0->getOperand(Idx)->getDefiningRecipe()));
-      Res = Lane0;
+      for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
+        WideMember0->setOperand(
+            Idx, NarrowOp(WideMember0->getOperand(Idx)->getDefiningRecipe()));
+      Res = WideMember0;
     } else {
       Res = NarrowOp(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
     }
