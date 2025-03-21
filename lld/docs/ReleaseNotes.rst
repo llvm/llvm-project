@@ -29,6 +29,8 @@ ELF Improvements
   GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
   from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
   ensuring compatibility with GNU ld linker.
+* Added ``--xosegment`` and ``--no-xosegment`` flags to control whether to place
+  XO and RX sections in the same segment. The default value is ``--no-xosegment``.
 
 * The default Hexagon architecture version in ELF object files produced by
   lld is changed to v68. This change is only effective when the version is
@@ -44,6 +46,8 @@ ELF Improvements
 
 Breaking changes
 ----------------
+* XO and RX sections are now allowed to be placed in the same segment by default.
+  Pass ``--xosegment`` to lld in order to get the old behavior back.
 
 COFF Improvements
 -----------------
