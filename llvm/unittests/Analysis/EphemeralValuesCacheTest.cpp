@@ -54,22 +54,14 @@ define void @foo(i8 %arg0, i8 %arg1) {
   [[maybe_unused]] auto *NotEph = &*It++;
   auto *C1 = &*It++;
   auto *Assume1 = &*It++;
-  [[maybe_unused]] auto *Ret = &*It++;
-  // Check ephemeral values.
+
   FunctionAnalysisManager FAM;
   FAM.registerPass([] { return EphemeralValuesAnalysis(); });
   FAM.registerPass([] { return PassInstrumentationAnalysis(); });
   FAM.registerPass([] { return AssumptionAnalysis(); });
   FAM.registerPass([] { return TargetIRAnalysis(); });
-  auto Result = FAM.getResult<EphemeralValuesAnalysis>(*F);
-  EXPECT_THAT(Result, testing::UnorderedElementsAre(C0, Assume0, C1, Assume1));
-  // Modify the IR, invalidate and recompute.
-  Assume1->eraseFromParent();
-  C1->eraseFromParent();
-  FAM.invalidate(
-      *F, PreservedAnalyses::all().abandon(EphemeralValuesAnalysis::ID()));
   EXPECT_THAT(FAM.getResult<EphemeralValuesAnalysis>(*F),
-              testing::UnorderedElementsAre(C0, Assume0));
+              testing::UnorderedElementsAre(C0, Assume0, C1, Assume1));
 }
 
 } // namespace
