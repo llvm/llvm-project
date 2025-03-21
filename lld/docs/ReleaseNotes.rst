@@ -31,6 +31,7 @@ ELF Improvements
   ensuring compatibility with GNU ld linker.
 * Added ``--xosegment`` and ``--no-xosegment`` flags to control whether to place
   XO and RX sections in the same segment. The default value is ``--no-xosegment``.
+  (`#132412 <https://github.com/llvm/llvm-project/pull/132412>`_)
 
 Breaking changes
 ----------------
