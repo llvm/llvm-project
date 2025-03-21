@@ -202,6 +202,12 @@ public:
 
   bool isAllocInit(const Expr *E) const {
     auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E);
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+      if (unsigned ExprCount = POE->getNumSemanticExprs()) {
+        auto *Expr = POE->getSemanticExpr(ExprCount - 1)->IgnoreParenCasts();
+        ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Expr);
+      }
+    }
     if (!ObjCMsgExpr)
       return false;
     auto Selector = ObjCMsgExpr->getSelector();
@@ -247,6 +253,12 @@ public:
   enum class IsOwnedResult { Unknown, Skip, Owned, NotOwned };
   IsOwnedResult isOwned(const Expr *E) const {
     while (1) {
+      if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+        if (unsigned SemanticExprCount = POE->getNumSemanticExprs()) {
+          E = POE->getSemanticExpr(SemanticExprCount - 1);
+          continue;
+        }
+      }
       if (isa<CXXNullPtrLiteralExpr>(E))
         return IsOwnedResult::NotOwned;
       if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
