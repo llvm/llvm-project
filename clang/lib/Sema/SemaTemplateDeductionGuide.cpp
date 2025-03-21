@@ -684,7 +684,8 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<TemplateArgument> DeducedArgs) {
 
   llvm::SmallBitVector ReferencedTemplateParams(TemplateParamsList->size());
-  SemaRef.MarkUsedTemplateParameters(DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  SemaRef.MarkUsedTemplateParameters(
+      DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
 
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
