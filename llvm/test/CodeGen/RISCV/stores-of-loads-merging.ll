@@ -398,8 +398,6 @@ define void @two_half(ptr %p, ptr %q) {
   ret void
 }
 
-; TODO: This one is currently a vector which is unprofitable, we should
-; use i64 instead.
 define void @two_float(ptr %p, ptr %q) {
 ; CHECK-LABEL: two_float:
 ; CHECK:       # %bb.0:
