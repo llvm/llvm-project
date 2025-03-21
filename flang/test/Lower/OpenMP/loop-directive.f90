@@ -15,7 +15,7 @@ subroutine test_no_clauses()
   ! CHECK: omp.simd private(@[[I_PRIV]] %{{.*}}#0 -> %[[ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) {{.*}} {
   ! CHECK:          %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]]
-  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:        }
   ! CHECK: }
   !$omp loop
