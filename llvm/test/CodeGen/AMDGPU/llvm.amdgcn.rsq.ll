@@ -57,7 +57,7 @@ define amdgpu_kernel void @rsq_f64_constant_100.0(ptr addrspace(1) %out) #1 {
 ; FUNC-LABEL: {{^}}rsq_undef_f32:
 ; SI-NOT: v_rsq_f32
 define amdgpu_kernel void @rsq_undef_f32(ptr addrspace(1) %out) #1 {
-  %rsq = call float @llvm.amdgcn.rsq.f32(float undef)
+  %rsq = call float @llvm.amdgcn.rsq.f32(float poison)
   store float %rsq, ptr addrspace(1) %out, align 4
   ret void
 }

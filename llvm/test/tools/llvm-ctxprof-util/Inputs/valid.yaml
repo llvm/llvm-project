@@ -1,6 +1,7 @@
 
 Contexts:
   - Guid:            1000
+    TotalRootEntryCount: 5
     Counters:        [ 1, 2, 3 ]
     Callsites:
       - [  ]
@@ -11,6 +12,7 @@ Contexts:
       - - Guid:            3000
           Counters:        [ 40, 50 ]
   - Guid:            18446744073709551612
+    TotalRootEntryCount: 45
     Counters:        [ 5, 9, 10 ]
 FlatProfiles:
   - Guid:            1234

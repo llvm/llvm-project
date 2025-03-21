@@ -145,6 +145,20 @@ function (add_flangrt_library name)
     if (Threads_FOUND) 
       target_link_libraries(${name_shared} PUBLIC Threads::Threads)
     endif ()
+
+    # Special dependencies handling for shared libraries only:
+    #
+    # flang-rt libraries must not depend on libc++/libstdc++,
+    # so set the linker language to C to avoid the unnecessary
+    # library dependence. Note that libc++/libstdc++ may still
+    # come through CMAKE_CXX_IMPLICIT_LINK_LIBRARIES.
+    set_target_properties(${name_shared} PROPERTIES LINKER_LANGUAGE C)
+    # Use --as-needed to avoid unnecessary dependencies.
+    if (LINKER_AS_NEEDED_OPT)
+      target_link_options(${name_shared} BEFORE PRIVATE
+        "${LINKER_AS_NEEDED_OPT}"
+        )
+    endif()
   endif ()
 
   if (libtargets)
