@@ -311,6 +311,11 @@ public:
   void setToExitState(SGMapLattice *lattice) override {
     (void)lattice->meet(SGMap());
   }
+
+  LogicalResult initialize(Operation *top) override {
+    llvm::errs() << "SGMapPropagation::initialize\n";
+    return success();
+  }
 };
 } // namespace
 
@@ -581,8 +586,8 @@ class RunSGMapPropagation {
 public:
   RunSGMapPropagation(Operation *op) : target(op) {
     SymbolTableCollection symbolTable;
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    // solver.load<DeadCodeAnalysis>();
+    // solver.load<SparseConstantPropagation>();
     solver.load<SGMapPropagation>(symbolTable);
     (void)solver.initializeAndRun(op);
   }
@@ -679,6 +684,7 @@ void attachLayoutAttributeToUsers(Value v, Attribute layout) {
 static LogicalResult
 attachLayoutAttributes(Operation *top,
                        llvm::function_ref<SGMap(Value)> getPropagatedLayout) {
+  llvm::errs() << "op name : " << top->getName() << "\n";
   /// Helper to convert SGMap to xegpu::SGMapAttr.
   auto getSGMapForResult = [&](Value r) -> Attribute {
     auto layout = getPropagatedLayout(r);
@@ -694,6 +700,16 @@ attachLayoutAttributes(Operation *top,
   };
   /// Attach the layout attributes to the results of the operations.
   auto walkResult = top->walk([&](Operation *op) {
+    /// For function ops, propagate the argument layout to the users.
+    if (auto func = dyn_cast<FunctionOpInterface>(op)) {
+      for (auto arg : func.getArguments()) {
+        auto sgMapAttr = getSGMapForResult(arg);
+        if (sgMapAttr) {
+          attachLayoutAttributeToUsers(arg, sgMapAttr);
+        }
+      }
+      return WalkResult::advance();
+    }
     /// If no results, move on.
     if (op->getNumResults() == 0)
       return WalkResult::advance();
