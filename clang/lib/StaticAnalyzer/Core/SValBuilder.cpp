@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
@@ -36,6 +37,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
 #include <tuple>
@@ -151,10 +153,13 @@ SValBuilder::getRegionValueSymbolVal(const TypedValueRegion *region) {
   return nonloc::SymbolVal(sym);
 }
 
-DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
-                                                   const Expr *Ex,
-                                                   const LocationContext *LCtx,
-                                                   unsigned Count) {
+/// When using this overload, the \p elemRef provided must be a \p CFGStmt.
+DefinedOrUnknownSVal
+SValBuilder::conjureSymbolVal(const void *SymbolTag,
+                              const CFGBlock::ConstCFGElementRef elemRef,
+                              const LocationContext *LCtx, unsigned Count) {
+  const Expr *Ex = dyn_cast<Expr>(elemRef->getAs<CFGStmt>()->getStmt());
+  assert(Ex && "elemRef must be a CFGStmt containing an Expr");
   QualType T = Ex->getType();
 
   if (T->isNullPtrType())
@@ -166,21 +171,19 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *SymbolTag,
   if (Ex->isGLValue())
     T = LCtx->getAnalysisDeclContext()->getASTContext().getPointerType(ExType);
 
-  return conjureSymbolVal(SymbolTag, Ex, LCtx, T, Count);
+  return conjureSymbolVal(SymbolTag, elemRef, LCtx, T, Count);
 }
 
-DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
-                                                   const Stmt *St,
-                                                   const LocationContext *LCtx,
-                                                   QualType type,
-                                                   unsigned count) {
+DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(
+    const void *symbolTag, const CFGBlock::ConstCFGElementRef elemRef,
+    const LocationContext *LCtx, QualType type, unsigned count) {
   if (type->isNullPtrType())
     return makeZeroVal(type);
 
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.conjureSymbol(St, LCtx, type, count, symbolTag);
+  SymbolRef sym = SymMgr.conjureSymbol(elemRef, LCtx, type, count, symbolTag);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -188,17 +191,17 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const void *symbolTag,
   return nonloc::SymbolVal(sym);
 }
 
-DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
-                                                   const LocationContext *LCtx,
-                                                   QualType type,
-                                                   unsigned visitCount) {
+DefinedOrUnknownSVal
+SValBuilder::conjureSymbolVal(const CFGBlock::ConstCFGElementRef elemRef,
+                              const LocationContext *LCtx, QualType type,
+                              unsigned visitCount) {
   if (type->isNullPtrType())
     return makeZeroVal(type);
 
   if (!SymbolManager::canSymbolicate(type))
     return UnknownVal();
 
-  SymbolRef sym = SymMgr.conjureSymbol(stmt, LCtx, type, visitCount);
+  SymbolRef sym = SymMgr.conjureSymbol(elemRef, LCtx, type, visitCount);
 
   if (Loc::isLocType(type))
     return loc::MemRegionVal(MemMgr.getSymbolicRegion(sym));
@@ -206,17 +209,9 @@ DefinedOrUnknownSVal SValBuilder::conjureSymbolVal(const Stmt *stmt,
   return nonloc::SymbolVal(sym);
 }
 
-DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
-                                                  const LocationContext *LCtx,
-                                                  unsigned VisitCount) {
-  QualType T = E->getType();
-  return getConjuredHeapSymbolVal(E, LCtx, T, VisitCount);
-}
-
-DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
-                                                  const LocationContext *LCtx,
-                                                  QualType type,
-                                                  unsigned VisitCount) {
+DefinedSVal SValBuilder::getConjuredHeapSymbolVal(
+    const CFGBlock::ConstCFGElementRef elemRef, const LocationContext *LCtx,
+    QualType type, unsigned VisitCount) {
   assert(Loc::isLocType(type));
   assert(SymbolManager::canSymbolicate(type));
   if (type->isNullPtrType()) {
@@ -225,7 +220,7 @@ DefinedSVal SValBuilder::getConjuredHeapSymbolVal(const Expr *E,
     return makeZeroVal(type).castAs<DefinedSVal>();
   }
 
-  SymbolRef sym = SymMgr.conjureSymbol(E, LCtx, type, VisitCount);
+  SymbolRef sym = SymMgr.conjureSymbol(elemRef, LCtx, type, VisitCount);
   return loc::MemRegionVal(MemMgr.getSymbolicHeapRegion(sym));
 }
 

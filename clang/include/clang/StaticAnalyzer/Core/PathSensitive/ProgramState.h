@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_PROGRAMSTATE_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_PROGRAMSTATE_H
 
+#include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
@@ -313,7 +314,8 @@ public:
   /// be triggered by this event.
   ///
   /// \param Regions the set of regions to be invalidated.
-  /// \param E the expression that caused the invalidation.
+  /// \param ElemRef \p CFGBlock::ConstCFGElementRef that caused the
+  /// invalidation.
   /// \param BlockCount The number of times the current basic block has been
   ///        visited.
   /// \param CausesPointerEscape the flag is set to true when the invalidation
@@ -325,16 +327,18 @@ public:
   /// \param ITraits information about special handling for particular regions
   ///        or symbols.
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<const MemRegion *> Regions, const Stmt *S,
+  invalidateRegions(ArrayRef<const MemRegion *> Regions,
+                    const CFGBlock::ConstCFGElementRef ElemRef,
                     unsigned BlockCount, const LocationContext *LCtx,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<SVal> Values, const Stmt *S, unsigned BlockCount,
-                    const LocationContext *LCtx, bool CausesPointerEscape,
-                    InvalidatedSymbols *IS = nullptr,
+  invalidateRegions(ArrayRef<SVal> Values,
+                    const CFGBlock::ConstCFGElementRef ElemRef,
+                    unsigned BlockCount, const LocationContext *LCtx,
+                    bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
