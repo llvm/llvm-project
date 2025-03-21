@@ -10,6 +10,7 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -739,51 +740,429 @@ static LogicalResult resolveLayoutConflicts(Operation *top) {
 
 namespace {
 
+///===----------------------------------------------------------------------===///
+/// SIMT Distribution Patterns
+///===----------------------------------------------------------------------===///
+
+/// Given a GPUFuncOp, this pattern creates a new GPUFuncOp and moves the body
+/// of the original GPUFuncOp to the new GPUFuncOp such that entire body is
+/// contained within a WarpExecuteOnLane0Op.
+/// Example:
+///
+/// ```
+///   gpu.func @foo(%arg0: memref<*xf16>) -> vector<8x16xf32> {
+///     ...
+///     ...
+///     gpu.yield %result: vector<8x16xf32>
+///   }
+/// ```
+/// To
+/// ```
+///   gpu.func @foo(%arg0: memref<*xf16>) -> vector<8x16xf32> {
+///     %laneid = gpu.lane_id : index
+///     %0 = gpu.warp_execute_on_lane_0(%laneid) -> vector<8x16xf32> {
+///       ...
+///       ...
+///       gpu.yield %result: vector<8x16xf32>
+///     }
+///     return %0
+///   }
 struct MoveFuncBodyToWarpExecuteOnLane0
     : public OpRewritePattern<gpu::GPUFuncOp> {
   using OpRewritePattern<gpu::GPUFuncOp>::OpRewritePattern;
-
   LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
-                                PatternRewriter &rewriter) const override {
-    /// If the function already moved inside a warp_execute_on_lane0, skip.
-    if (llvm::any_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
-          return isa<gpu::WarpExecuteOnLane0Op>(op);
-        }))
-      return failure();
-    /// Create a new function with the same signature.
-    auto newGpuFunc = rewriter.create<gpu::GPUFuncOp>(
-        gpuFuncOp.getLoc(), gpuFuncOp.getName(), gpuFuncOp.getFunctionType());
-    /// Create a WarpExecuteOnLane0Op with same arguments and results as the
-    /// original gpuFuncOp.
-    rewriter.setInsertionPointToEnd(&newGpuFunc.getFunctionBody().front());
-    auto laneId = rewriter.create<gpu::LaneIdOp>(
-        newGpuFunc.getLoc(), rewriter.getIndexType(),
-        /** upperBound = **/ mlir::IntegerAttr());
-    auto gpuFuncResultType = gpuFuncOp.getFunctionType().getResults();
-    auto warpOp = rewriter.create<gpu::WarpExecuteOnLane0Op>(
-        laneId.getLoc(), gpuFuncResultType, laneId, subgroupSize,
-        newGpuFunc.getArguments(), newGpuFunc.getArgumentTypes());
-    auto &warpBodyBlock = warpOp.getBodyRegion().front();
-    /// Replace the ReturnOp of the original gpu function with a YieldOp.
-    auto origRetunOp =
-        cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
-    rewriter.setInsertionPointAfter(origRetunOp);
-    rewriter.create<gpu::YieldOp>(origRetunOp.getLoc(),
-                                  origRetunOp.getOperands());
-    rewriter.eraseOp(origRetunOp);
-    /// Move the original function body to the WarpExecuteOnLane0Op body.
-    rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
-                                warpOp.getBodyRegion().begin());
-    rewriter.eraseBlock(&warpBodyBlock);
-    /// Insert a new ReturnOp after the WarpExecuteOnLane0Op.
-    rewriter.setInsertionPointAfter(warpOp);
-    rewriter.create<gpu::ReturnOp>(newGpuFunc.getLoc(), warpOp.getResults());
-    rewriter.replaceOp(gpuFuncOp, newGpuFunc);
-    return success();
-  }
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Clone a create_nd_tdesc feeding into vector.yield op for the enclosing
+/// `gpu.warp_execute_on_lane_0` and put it after the warp op. The warp op will
+/// still contain the original op that will not be used by the yield op (and
+/// should be cleaned up later with dce). The yield op will bypass the
+/// create_nd_tdesc's arguments. Tensor descriptor is not distributed because it
+/// is a uniform value accorss all work items within the subgroup.
+///
+/// Example:
+///
+/// ```
+///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
+///                   (!xegpu.tensor_desc<4x8xf32>) {
+///     ...
+///     %td = xegpu.create_nd_tdesc %arg0[0, 0]
+///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
+///     vector.yield %td
+///   }
+/// ```
+/// To
+/// ```
+///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     %dead = xegpu.create_nd_tdesc %arg0[0, 0]
+///               : memref<4x8xf32> -> !xegpu.tensor_desc<4x8xf32>
+///     vector.yield %arg0, %dead
+///   }
+///   %td = xegpu.create_nd_tdesc %r#0[0, 0]: memref<4x8xf32>
+///                                 -> !xegpu.tensor_desc<4x8xf32>
+///
+/// ```
+struct SubgroupOpTensorDescOp final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Sink a store_nd op at the end of enclosing `gpu.warp_execute_on_lane_0`. In
+/// case arguments for the store are passed through the warp op interface they
+/// would be propagated as returned values. Only the source vector for the store
+/// is distributed according to sg_map attribute.
+///
+/// Example:
+///
+/// ```
+///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   gpu.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     xegpu.store_nd %arg0, %arg1: vector<4x8xf32>,
+///                                 !xegpu.tensor_desc<4x8xf32>
+///   }
+/// ```
+/// To
+/// ```
+///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> () {
+///     gpu.yield %arg0, %arg1: vector<4x8xf32>, !xegpu.tensor_desc<4x8xf32>
+///   }
+///   xegpu.store_nd %r#0, %r#1: vector<4x1xf32>,
+///     !xegpu.tensor_desc<4x8xf32>
+///
+/// ```
+struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Clone a load_nd feeding into vector.yield op for the enclosing
+/// `gpu.warp_execute_on_lane_0` and put it after the warp op.
+/// The warp op will still contain the original op that will not be used by
+/// the yield op (and should be cleaned up later with dce). The yield op will
+/// bypass the load's arguments. Only the loaded vector is distributed according
+/// to sg_map attribute and, tensor descriptor types is not distributed.
+///
+/// Example:
+///
+/// ```
+///   #sg_map_8 = #xegpu.sg_map<wi_layout = [1, 8], wi_data = [1, 1]>
+///   %r = gpu.warp_execute_on_lane_0(%laneid) ->
+///                   (vector<4x1xf32>) {
+///     ...
+///     %ld = xegpu.load_nd %arg0, %arg1: !xegpu.tensor_desc<4x8xf32> ->
+///       vector<4x8xf32>
+///     gpu.yield %ld
+///   }
+/// ```
+/// To
+/// ```
+///   %r:2 = gpu.warp_execute_on_lane_0(%laneid) -> () {
+///     ...
+///     %dead = xegpu.load_nd %arg0: !xegpu.tensor_desc<4x8xf32> ->
+///     vector<4x8xf32> gpu.yield %arg0, %arg1
+///   }
+///   %ld = xegpu.load_nd %r#0: !xegpu.tensor_desc<4x8xf32> -> vector<4x1xf32>
+///
+/// ```
+struct SubgroupOpLoadNd final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const override;
+};
+
+struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const override;
 };
 
 } // namespace
+
+/// Returns the distributed vector type for a source vector type according to
+/// the wi_layout. We simply divide each dimension of tensor descriptor shape by
+/// corresponding wi_layout dimension. If array_length > 1, that is appended to
+/// the front of the disributed shape.
+/// Examples:
+/// | original vector shape | wi_layout | distributed vector shape |
+/// |-----------------------|-----------|--------------------------|
+/// | 32x16                 | [1, 16]   | 32x1                     |
+/// | 32x16                 | [2, 8]    | 16x2                     |
+/// | 2x32x16               | [1, 16]   | 2x32x1                   |
+FailureOr<VectorType> getDistributedVectorType(xegpu::SGMapAttr sgMap,
+                                               VectorType originalType) {
+  llvm::SmallVector<int64_t, 2> distributedShape;
+  if (!sgMap)
+    return failure();
+
+  auto wiLayout = sgMap.getWiLayout();
+  assert((originalType.getRank() == 2 || originalType.getRank() == 3) &&
+         "expecting 2D or 3D shape for the original vector type");
+  assert(wiLayout.size() == 2 && "expecting 2D shape for the wi layout");
+  // Original type can be 2D or 3D (array_length > 1), the last two dims are the
+  // block shape.
+  auto blockShape = originalType.getShape().take_back(2);
+  // Check if the block vector shape can be distributed evenly.
+  if (blockShape[0] % wiLayout[0] != 0 || blockShape[1] % wiLayout[1] != 0)
+    return failure();
+
+  if (originalType.getRank() == 3) {
+    distributedShape.push_back(originalType.getShape()[0]);
+  }
+  for (unsigned i = 0; i < 2; ++i) {
+    distributedShape.push_back(blockShape[i] / wiLayout[i]);
+  }
+  auto newVectorType =
+      VectorType::get(distributedShape, originalType.getElementType());
+  return newVectorType;
+}
+
+LogicalResult MoveFuncBodyToWarpExecuteOnLane0::matchAndRewrite(
+    gpu::GPUFuncOp gpuFuncOp, PatternRewriter &rewriter) const {
+  /// If the function already moved inside a warp_execute_on_lane0, skip.
+  if (llvm::any_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
+        return isa<gpu::WarpExecuteOnLane0Op>(op);
+      }))
+    return failure();
+  /// Create a new function with the same signature.
+  auto newGpuFunc = rewriter.create<gpu::GPUFuncOp>(
+      gpuFuncOp.getLoc(), gpuFuncOp.getName(), gpuFuncOp.getFunctionType());
+  /// Create a WarpExecuteOnLane0Op with same arguments and results as the
+  /// original gpuFuncOp.
+  rewriter.setInsertionPointToEnd(&newGpuFunc.getFunctionBody().front());
+  auto laneId = rewriter.create<gpu::LaneIdOp>(
+      newGpuFunc.getLoc(), rewriter.getIndexType(),
+      /** upperBound = **/ mlir::IntegerAttr());
+  auto gpuFuncResultType = gpuFuncOp.getFunctionType().getResults();
+  auto warpOp = rewriter.create<gpu::WarpExecuteOnLane0Op>(
+      laneId.getLoc(), gpuFuncResultType, laneId, subgroupSize,
+      newGpuFunc.getArguments(), newGpuFunc.getArgumentTypes());
+  auto &warpBodyBlock = warpOp.getBodyRegion().front();
+  /// Replace the ReturnOp of the original gpu function with a YieldOp.
+  auto origRetunOp =
+      cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
+  rewriter.setInsertionPointAfter(origRetunOp);
+  rewriter.create<gpu::YieldOp>(origRetunOp.getLoc(),
+                                origRetunOp.getOperands());
+  rewriter.eraseOp(origRetunOp);
+  /// Move the original function body to the WarpExecuteOnLane0Op body.
+  rewriter.inlineRegionBefore(gpuFuncOp.getBody(), warpOp.getBodyRegion(),
+                              warpOp.getBodyRegion().begin());
+  rewriter.eraseBlock(&warpBodyBlock);
+  /// Insert a new ReturnOp after the WarpExecuteOnLane0Op.
+  rewriter.setInsertionPointAfter(warpOp);
+  rewriter.create<gpu::ReturnOp>(newGpuFunc.getLoc(), warpOp.getResults());
+  rewriter.replaceOp(gpuFuncOp, newGpuFunc);
+  return success();
+}
+
+LogicalResult
+SubgroupOpStoreNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                   PatternRewriter &rewriter) const {
+  auto yield = cast<gpu::YieldOp>(
+      subgroupOp.getBodyRegion().getBlocks().begin()->getTerminator());
+  Operation *lastNode = yield->getPrevNode();
+  auto storeOp = dyn_cast_or_null<xegpu::StoreNdOp>(lastNode);
+  if (!storeOp)
+    return failure();
+
+  auto tensorDescTy = storeOp.getTensorDescType();
+  xegpu::SGMapAttr sgMap = tensorDescTy.getSGMapAttr();
+  if (!sgMap)
+    return rewriter.notifyMatchFailure(
+        storeOp, "the source tensor descriptor lacks sg_map attribute");
+
+  if (storeOp.getTensorDescType().getShape().size() != 2)
+    return rewriter.notifyMatchFailure(storeOp, "unsupported shape");
+
+  auto distributedTypeOrFailure =
+      getDistributedVectorType(sgMap, storeOp.getValueType());
+  if (failed(distributedTypeOrFailure))
+    return rewriter.notifyMatchFailure(storeOp,
+                                       "Failed to distribute the type");
+  VectorType newVectorType = distributedTypeOrFailure.value();
+
+  SmallVector<size_t> newRetIndices;
+  gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+      rewriter, subgroupOp,
+      /* new yielded values = */
+      ValueRange{storeOp.getTensorDesc(), storeOp.getValue()},
+      /* new yielded types = */
+      TypeRange{storeOp.getTensorDescType(), newVectorType}, newRetIndices);
+
+  // Create a new store op outside the warp op with the distributed vector type.
+  // Tensor descriptor is not distributed.
+  rewriter.setInsertionPointAfter(newWarpOp);
+  auto newStoreOp =
+      cast<xegpu::StoreNdOp>(rewriter.clone(*storeOp.getOperation()));
+  rewriter.eraseOp(storeOp);
+  newStoreOp.getTensorDescMutable().assign(
+      newWarpOp.getResult(newRetIndices[0]));
+  newStoreOp.getValueMutable().assign(newWarpOp.getResult(newRetIndices[1]));
+
+  return success();
+}
+
+LogicalResult
+SubgroupOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                  PatternRewriter &rewriter) const {
+  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
+    return isa<xegpu::LoadNdOp>(op) && op->hasOneUse();
+  });
+  if (!operand)
+    return rewriter.notifyMatchFailure(subgroupOp,
+                                       "warp result is not a xegpu::LoadNd op");
+
+  auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
+  xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
+  xegpu::SGMapAttr sgMap = tensorDescTy.getSGMapAttr();
+  if (!sgMap)
+    return rewriter.notifyMatchFailure(
+        loadOp, "the source tensor descriptor lacks sg_map attribute");
+
+  auto tensorDecShape = tensorDescTy.getShape();
+  if (tensorDecShape.size() != 2)
+    return rewriter.notifyMatchFailure(loadOp,
+                                       "unsupported tensor descriptor shape");
+
+  auto distributedTypeOrFailure =
+      getDistributedVectorType(sgMap, loadOp.getType());
+  if (failed(distributedTypeOrFailure))
+    return rewriter.notifyMatchFailure(loadOp, "Failed to distribute the type");
+  VectorType newVectorType = distributedTypeOrFailure.value();
+
+  unsigned operandIdx = operand->getOperandNumber();
+  SmallVector<size_t> newRetIndices;
+  gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+      rewriter, subgroupOp, /* new yielded values = */ loadOp.getTensorDesc(),
+      /* new yielded types = */ TypeRange{tensorDescTy}, newRetIndices);
+
+  // Create a new load op outside the warp op with the distributed vector type.
+  rewriter.setInsertionPointAfter(newWarpOp);
+  auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
+      loadOp.getLoc(), newVectorType, loadOp.getTensorDesc(),
+      loadOp.getPackedAttr(), loadOp.getTransposeAttr(), loadOp.getL1HintAttr(),
+      loadOp.getL2HintAttr(), loadOp.getL3HintAttr());
+
+  newLoadOp.getTensorDescMutable().assign(
+      newWarpOp.getResult(newRetIndices[0]));
+  Value distributedVal = newWarpOp.getResult(operandIdx);
+  rewriter.replaceAllUsesWith(distributedVal, newLoadOp);
+  return success();
+}
+
+LogicalResult
+SubgroupOpTensorDescOp::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                        PatternRewriter &rewriter) const {
+  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
+    return isa<xegpu::CreateNdDescOp>(op) && op->hasOneUse();
+  });
+
+  if (!operand)
+    return rewriter.notifyMatchFailure(
+        subgroupOp, "warp result is not a xegpu::CreateNdDesc op");
+  auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
+  unsigned operandIdx = operand->getOperandNumber();
+
+  auto srcTypedVal = dyn_cast<TypedValue<MemRefType>>(descOp.getSource());
+  if (!srcTypedVal)
+    return rewriter.notifyMatchFailure(
+        descOp, "expecting a memref typed value as the source");
+
+  auto descOffsets = descOp.getMixedOffsets();
+  if (descOffsets.size() != 2)
+    return rewriter.notifyMatchFailure(descOp,
+                                       "offsets size is expected to be 2");
+
+  xegpu::SGMapAttr sgMap = descOp.getType().getSGMapAttr();
+  if (!sgMap)
+    return rewriter.notifyMatchFailure(
+        descOp, "the tensor descriptor lacks sg_map attribute");
+
+  SmallVector<size_t> newRetIndices;
+  rewriter.setInsertionPoint(subgroupOp);
+  gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+      rewriter, subgroupOp, /* new yieled values = */ descOp.getSource(),
+      /* new yielded types = */ descOp.getSourceType(), newRetIndices);
+
+  rewriter.setInsertionPointAfter(newWarpOp);
+  auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
+      newWarpOp.getLoc(), descOp.getType(),
+      dyn_cast<TypedValue<MemRefType>>(newWarpOp.getResult(newRetIndices[0])),
+      descOffsets);
+
+  Value distributedVal = newWarpOp.getResult(operandIdx);
+  rewriter.replaceAllUsesWith(distributedVal, newDescOp);
+  return success();
+}
+
+LogicalResult
+SubgroupOpDpas::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
+                                PatternRewriter &rewriter) const {
+  OpOperand *operand = getWarpResult(subgroupOp, [](Operation *op) {
+    return isa<xegpu::DpasOp>(op) && op->hasOneUse();
+  });
+
+  if (!operand)
+    return rewriter.notifyMatchFailure(subgroupOp,
+                                       "warp result is not a xegpu::Dpas op");
+
+  auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
+  unsigned operandIdx = operand->getOperandNumber();
+  xegpu::SGMapAttr sgMapA =
+      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_a"));
+  xegpu::SGMapAttr sgMapB =
+      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_b"));
+  xegpu::SGMapAttr sgMapResult =
+      mlir::dyn_cast_or_null<xegpu::SGMapAttr>(dpasOp->getAttr("sg_map_out"));
+  if (!sgMapA || !sgMapB || !sgMapResult)
+    return rewriter.notifyMatchFailure(
+        dpasOp, "the xegpu::Dpas op lacks sg_map attribute for A, B or result");
+
+  auto distributedLhsTypeOrFailure =
+      getDistributedVectorType(sgMapA, dpasOp.getLhsType());
+  auto distributedRhsTypeOrFailure =
+      getDistributedVectorType(sgMapB, dpasOp.getRhsType());
+  auto distributedResultTypeOrFailure =
+      getDistributedVectorType(sgMapResult, dpasOp.getResultType());
+  if (failed(distributedLhsTypeOrFailure) ||
+      failed(distributedRhsTypeOrFailure) ||
+      failed(distributedResultTypeOrFailure))
+    return rewriter.notifyMatchFailure(
+        dpasOp,
+        "Failed to distribute the A, B or result types in xegpu::Dpas op");
+
+  llvm::SmallVector<Value, 3> newYieldValues{dpasOp.getLhs(), dpasOp.getRhs()};
+  llvm::SmallVector<Type, 3> newYieldTypes{distributedLhsTypeOrFailure.value(),
+                                           distributedRhsTypeOrFailure.value()};
+  // Dpas acc operand is optional.
+  if (dpasOp.getAcc()) {
+    newYieldValues.push_back(dpasOp.getAcc());
+    newYieldTypes.push_back(distributedResultTypeOrFailure.value());
+  }
+  // Create a new warp op without the dpas.
+  SmallVector<size_t> newRetIndices;
+  gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
+      rewriter, subgroupOp, newYieldValues, newYieldTypes, newRetIndices);
+
+  // Create a new dpas op outside the warp op.
+  rewriter.setInsertionPointAfter(newWarpOp);
+  auto newDpasOp = cast<xegpu::DpasOp>(*dpasOp.clone());
+  newDpasOp.getLhsMutable().assign(newWarpOp.getResult(newRetIndices[0]));
+  newDpasOp.getRhsMutable().assign(newWarpOp.getResult(newRetIndices[1]));
+  if (dpasOp.getAcc())
+    newDpasOp.getAccMutable().assign(newWarpOp.getResult(newRetIndices[2]));
+  newDpasOp->getOpResult(0).setType(distributedResultTypeOrFailure.value());
+  Value disributedVal = newWarpOp.getResult(operandIdx);
+  rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
+
+  return success();
+}
 
 namespace {
 struct XeGPUSubgroupDistributePass final
