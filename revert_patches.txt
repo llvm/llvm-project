@@ -20,3 +20,6 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
+needs AS patch : sergio
+231f6f86237 [MLIR][OpenMP] Improve omp.map.info verification (
+---
