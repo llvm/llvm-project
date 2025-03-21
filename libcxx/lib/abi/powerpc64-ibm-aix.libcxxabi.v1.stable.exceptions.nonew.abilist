@@ -571,7 +571,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13cinE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD1Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD2Ev', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -637,9 +636,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14cerrE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14clogE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14coutE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14stodERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14stodERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14stofERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -648,7 +644,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14stoiERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14stolERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPmi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14stolERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__14wcinE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15alignEmmRPvRm', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15ctypeIcE10table_sizeE', 'storage_mapping_class': 'RO', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15ctypeIcE13classic_tableEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
@@ -673,9 +668,6 @@
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15stollERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15stoulERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPmi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15stoulERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15wcerrE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15wclogE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
-{'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__15wcoutE', 'storage_mapping_class': 'RW', 'type': 'OBJECT'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__clocEv', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__itoa8__u32toaEjPc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
 {'import_export': 'EXP', 'is_defined': True, 'name': '_ZNSt3__16__itoa8__u64toaEmPc', 'storage_mapping_class': 'DS', 'type': 'FUNC'}
