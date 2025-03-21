@@ -21,7 +21,6 @@
 #  include <pthread.h>
 #  include <stdio.h>
 #  include <sys/mman.h>
-#  include <sys/personality.h>
 #  include <sys/resource.h>
 #  include <sys/syscall.h>
 #  include <sys/time.h>
@@ -40,6 +39,10 @@
 
 #  if SANITIZER_FREEBSD
 #    include <sys/link_elf.h>
+#  endif
+
+#  if SANITIZER_LINUX
+#    include <sys/personality.h>
 #  endif
 
 #  if SANITIZER_SOLARIS
@@ -109,6 +112,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 }
 
 void ReExecWithoutASLR() {
+#    if SANITIZER_LINUX
   // ASLR personality check.
   // Caution: 'personality' is sometimes forbidden by sandboxes, so only call
   // this function as a last resort (when the memory mapping is incompatible
@@ -137,6 +141,7 @@ void ReExecWithoutASLR() {
 
     ReExec();
   }
+#    endif
 }
 
 #  if SANITIZER_ANDROID

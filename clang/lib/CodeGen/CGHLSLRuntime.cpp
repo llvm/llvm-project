@@ -31,7 +31,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
-
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -245,12 +244,12 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::TargetExtType *TargetTy =
       cast<llvm::TargetExtType>(convertHLSLSpecificType(
           ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
-  llvm::GlobalVariable *BufGV =
-      new GlobalVariable(TargetTy, /*isConstant*/ true,
-                         GlobalValue::LinkageTypes::ExternalLinkage, nullptr,
-                         llvm::formatv("{0}{1}", BufDecl->getName(),
-                                       BufDecl->isCBuffer() ? ".cb" : ".tb"),
-                         GlobalValue::NotThreadLocal);
+  llvm::GlobalVariable *BufGV = new GlobalVariable(
+      TargetTy, /*isConstant*/ false,
+      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(TargetTy),
+      llvm::formatv("{0}{1}", BufDecl->getName(),
+                    BufDecl->isCBuffer() ? ".cb" : ".tb"),
+      GlobalValue::NotThreadLocal);
   CGM.getModule().insertGlobalVariable(BufGV);
 
   // Add globals for constant buffer elements and create metadata nodes

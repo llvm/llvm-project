@@ -31,6 +31,14 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  cir.func @unary_not(%arg0: !cir.bool) -> !cir.bool {
+    %0 = cir.unary(not, %arg0) : !cir.bool, !cir.bool
+    %1 = cir.unary(not, %0) : !cir.bool, !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // CHECK:      cir.func @unary_not(%arg0: !cir.bool) -> !cir.bool
+  // CHECK-NEXT:   cir.return %arg0 : !cir.bool
+
   cir.func @cast1(%arg0: !cir.bool) -> !cir.bool {
     %0 = cir.cast(bool_to_int, %arg0 : !cir.bool), !s32i
     %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
