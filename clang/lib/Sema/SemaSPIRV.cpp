@@ -101,6 +101,44 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     TheCall->setType(RetTy);
     break;
   }
+  case SPIRV::BI__builtin_spirv_smoothstep: {
+    if (SemaRef.checkArgCount(TheCall, 3))
+      return true;
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    auto *VTyA = ArgTyA->getAs<VectorType>();
+    if (!(ArgTyA->isScalarType() || VTyA)) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgTyA << 1;
+      return true;
+    }
+
+    ExprResult B = TheCall->getArg(1);
+    QualType ArgTyB = B.get()->getType();
+    auto *VTyB = ArgTyB->getAs<VectorType>();
+    if (!(ArgTyB->isScalarType() || VTyB)) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgTyB << 1;
+      return true;
+    }
+
+    ExprResult C = TheCall->getArg(2);
+    QualType ArgTyC = C.get()->getType();
+    auto *VTyC = ArgTyC->getAs<VectorType>();
+    if (!(ArgTyC->isScalarType() || VTyC)) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgTyC << 1;
+      return true;
+    }
+
+    QualType RetTy = ArgTyA;
+    TheCall->setType(RetTy);
+    break;
+  }
   }
   return false;
 }
