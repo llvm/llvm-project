@@ -155,8 +155,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
           : INT_MAX * static_cast<int64_t>(
                           time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
-  time_t ts = total_seconds;
-  if (ts < time_min || ts > time_max)
+  if (total_seconds < time_min || total_seconds > time_max)
     return time_utils::out_of_range();
 
   int64_t seconds =
