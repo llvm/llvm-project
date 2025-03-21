@@ -15,67 +15,66 @@ namespace llvm {
 
 class ARMMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
-    VK_ARM_None,
-    VK_ARM_HI16, // The R_ARM_MOVT_ABS relocation (:upper16: in the .s file)
-    VK_ARM_LO16, // The R_ARM_MOVW_ABS_NC relocation (:lower16: in the .s file)
+  enum Specifier {
+    VK_None,
+    VK_HI16 =
+        MCSymbolRefExpr::FirstTargetSpecifier, // The R_ARM_MOVT_ABS relocation
+                                               // (:upper16: in the .s file)
+    VK_LO16, // The R_ARM_MOVW_ABS_NC relocation (:lower16: in the .s file)
 
-    VK_ARM_HI_8_15, // The R_ARM_THM_ALU_ABS_G3    relocation (:upper8_15: in
-                    // the .s file)
-    VK_ARM_HI_0_7,  // The R_ARM_THM_ALU_ABS_G2_NC relocation (:upper0_8: in the
-                    // .s file)
-    VK_ARM_LO_8_15, // The R_ARM_THM_ALU_ABS_G1_NC relocation (:lower8_15: in
-                    // the .s file)
-    VK_ARM_LO_0_7,  // The R_ARM_THM_ALU_ABS_G0_NC relocation (:lower0_7: in the
-                    // .s file)
+    VK_HI_8_15, // The R_ARM_THM_ALU_ABS_G3    relocation (:upper8_15: in
+                // the .s file)
+    VK_HI_0_7,  // The R_ARM_THM_ALU_ABS_G2_NC relocation (:upper0_8: in the
+                // .s file)
+    VK_LO_8_15, // The R_ARM_THM_ALU_ABS_G1_NC relocation (:lower8_15: in
+                // the .s file)
+    VK_LO_0_7,  // The R_ARM_THM_ALU_ABS_G0_NC relocation (:lower0_7: in the
+                // .s file)
   };
 
 private:
-  const VariantKind Kind;
+  const Specifier specifier;
   const MCExpr *Expr;
 
-  explicit ARMMCExpr(VariantKind Kind, const MCExpr *Expr)
-      : Kind(Kind), Expr(Expr) {}
+  explicit ARMMCExpr(Specifier S, const MCExpr *Expr)
+      : specifier(S), Expr(Expr) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const ARMMCExpr *create(VariantKind Kind, const MCExpr *Expr,
-                                      MCContext &Ctx);
+  static const ARMMCExpr *create(Specifier S, const MCExpr *Expr,
+                                 MCContext &Ctx);
 
   static const ARMMCExpr *createUpper16(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_ARM_HI16, Expr, Ctx);
+    return create(VK_HI16, Expr, Ctx);
   }
 
   static const ARMMCExpr *createLower16(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_ARM_LO16, Expr, Ctx);
+    return create(VK_LO16, Expr, Ctx);
   }
 
   static const ARMMCExpr *createUpper8_15(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_ARM_HI_8_15, Expr, Ctx);
+    return create(VK_HI_8_15, Expr, Ctx);
   }
 
   static const ARMMCExpr *createUpper0_7(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_ARM_HI_0_7, Expr, Ctx);
+    return create(VK_HI_0_7, Expr, Ctx);
   }
 
   static const ARMMCExpr *createLower8_15(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_ARM_LO_8_15, Expr, Ctx);
+    return create(VK_LO_8_15, Expr, Ctx);
   }
 
   static const ARMMCExpr *createLower0_7(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_ARM_LO_0_7, Expr, Ctx);
+    return create(VK_LO_0_7, Expr, Ctx);
   }
 
   /// @}
   /// @name Accessors
   /// @{
 
-  /// getOpcode - Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
-
-  /// getSubExpr - Get the child of this expression.
+  Specifier getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
 
   /// @}
