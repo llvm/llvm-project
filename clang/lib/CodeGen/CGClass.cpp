@@ -160,9 +160,10 @@ CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
   QualType memberType = memberPtrType->getPointeeType();
   CharUnits memberAlign =
       CGM.getNaturalTypeAlignment(memberType, BaseInfo, TBAAInfo);
-  memberAlign = CGM.getDynamicOffsetAlignment(
-      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
-      memberAlign);
+  memberAlign =
+    CGM.getDynamicOffsetAlignment(base.getAlignment(),
+                            memberPtrType->getClass()->getAsCXXRecordDecl(),
+                                  memberAlign);
   return Address(ptr, ConvertTypeForMem(memberPtrType->getPointeeType()),
                  memberAlign);
 }

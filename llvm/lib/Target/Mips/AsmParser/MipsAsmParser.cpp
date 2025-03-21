@@ -6353,7 +6353,7 @@ MCRegister MipsAsmParser::getReg(int RC, int RegNo) {
 // e.g. "%lo foo", "(%lo(foo))", "%lo(foo)+1".
 const MCExpr *MipsAsmParser::parseRelocExpr() {
   auto getOp = [](StringRef Op) {
-    return StringSwitch<MipsMCExpr::MipsExprKind>(Op)
+    return StringSwitch<MipsMCExpr::Specifier>(Op)
         .Case("call16", MipsMCExpr::MEK_GOT_CALL)
         .Case("call_hi", MipsMCExpr::MEK_CALL_HI16)
         .Case("call_lo", MipsMCExpr::MEK_CALL_LO16)
@@ -6384,7 +6384,7 @@ const MCExpr *MipsAsmParser::parseRelocExpr() {
   MCAsmParser &Parser = getParser();
   StringRef Name;
   const MCExpr *Res = nullptr;
-  SmallVector<MipsMCExpr::MipsExprKind, 0> Ops;
+  SmallVector<MipsMCExpr::Specifier, 0> Ops;
   while (parseOptionalToken(AsmToken::Percent)) {
     if (Parser.parseIdentifier(Name) ||
         Parser.parseToken(AsmToken::LParen, "expected '('"))

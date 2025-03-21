@@ -40,8 +40,8 @@ llvm::createPPCXCOFFObjectWriter(bool Is64Bit) {
 
 std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     const MCValue &Target, const MCFixup &Fixup, bool IsPCRel) const {
-  const auto Modifier = Target.isAbsolute() ? PPCMCExpr::VK_None
-                                            : getVariantKind(Target.getSymA());
+  const auto Specifier =
+      Target.isAbsolute() ? PPCMCExpr::VK_None : getSpecifier(Target.getSymA());
   // People from AIX OS team says AIX link editor does not care about
   // the sign bit in the relocation entry "most" of the time.
   // The system assembler seems to set the sign bit on relocation entry
@@ -59,7 +59,7 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     report_fatal_error("Unimplemented fixup kind.");
   case PPC::fixup_ppc_half16: {
     const uint8_t SignAndSizeForHalf16 = EncodedSignednessIndicator | 15;
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       report_fatal_error("Unsupported modifier for half16 fixup.");
     case PPCMCExpr::VK_None:
@@ -78,7 +78,7 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
   case PPC::fixup_ppc_half16dq: {
     if (IsPCRel)
       report_fatal_error("Invalid PC-relative relocation.");
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       llvm_unreachable("Unsupported Modifier");
     case PPCMCExpr::VK_None:
@@ -98,7 +98,7 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
   case PPC::fixup_ppc_br24abs:
     return {XCOFF::RelocationType::R_RBA, EncodedSignednessIndicator | 25};
   case PPC::fixup_ppc_nofixup: {
-    if (Modifier == PPCMCExpr::VK_None)
+    if (Specifier == PPCMCExpr::VK_None)
       return {XCOFF::RelocationType::R_REF, 0};
     else
       llvm_unreachable("Unsupported Modifier");
@@ -108,7 +108,7 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     const uint8_t SignAndSizeForFKData =
         EncodedSignednessIndicator |
         ((unsigned)Fixup.getKind() == FK_Data_4 ? 31 : 63);
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       report_fatal_error("Unsupported modifier");
     case PPCMCExpr::VK_AIX_TLSGD:
