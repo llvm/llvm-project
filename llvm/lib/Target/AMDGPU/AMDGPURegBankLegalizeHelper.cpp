@@ -15,9 +15,12 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterBankInfo.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-regbanklegalize"
 
@@ -224,6 +227,103 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     B.buildMergeLikeInstr(MI.getOperand(0).getReg(), {Lo, Hi});
     MI.eraseFromParent();
     break;
+  }
+  case Div_BFE: {
+    Register Dst = MI.getOperand(0).getReg();
+    assert(MRI.getType(Dst) == LLT::scalar(64));
+    bool Signed = isa<GIntrinsic>(MI) ? MI.getOperand(1).getIntrinsicID() ==
+                                            Intrinsic::amdgcn_sbfe
+                                      : MI.getOpcode() == AMDGPU::G_SBFX;
+    unsigned FirstOpnd = isa<GIntrinsic>(MI) ? 2 : 1;
+    // Extract bitfield from Src, LSBit is the least-significant bit for the
+    // extraction (field offset) and Width is size of bitfield.
+    Register Src = MI.getOperand(FirstOpnd).getReg();
+    Register LSBit = MI.getOperand(FirstOpnd + 1).getReg();
+    Register Width = MI.getOperand(FirstOpnd + 2).getReg();
+    // Comments are for signed bitfield extract, similar for unsigned. x is sign
+    // bit. s is sign, l is LSB and y are remaining bits of bitfield to extract.
+
+    // Src >> LSBit Hi|Lo: x?????syyyyyyl??? -> xxxx?????syyyyyyl
+    unsigned SHROpc = Signed ? AMDGPU::G_ASHR : AMDGPU::G_LSHR;
+    auto SHRSrc = B.buildInstr(SHROpc, {{VgprRB, S64}}, {Src, LSBit});
+
+    auto ConstWidth = getIConstantVRegValWithLookThrough(Width, MRI);
+
+    // Expand to Src >> LSBit << (64 - Width) >> (64 - Width)
+    // << (64 - Width): Hi|Lo: xxxx?????syyyyyyl -> syyyyyyl000000000
+    // >> (64 - Width): Hi|Lo: syyyyyyl000000000 -> ssssssssssyyyyyyl
+    if (!ConstWidth) {
+      auto Amt = B.buildSub(VgprRB_S32, B.buildConstant(SgprRB_S32, 64), Width);
+      auto SignBit = B.buildShl({VgprRB, S64}, SHRSrc, Amt);
+      B.buildInstr(SHROpc, {Dst}, {SignBit, Amt});
+      MI.eraseFromParent();
+      return;
+    }
+
+    auto WidthImm = ConstWidth->Value.getZExtValue();
+    auto UnmergeSHRSrc = B.buildUnmerge(VgprRB_S32, SHRSrc);
+    Register SHRSrcLo = UnmergeSHRSrc.getReg(0);
+    Register SHRSrcHi = UnmergeSHRSrc.getReg(1);
+    auto Zero = B.buildConstant({VgprRB, S32}, 0);
+    unsigned BFXOpc = Signed ? AMDGPU::G_SBFX : AMDGPU::G_UBFX;
+
+    if (WidthImm <= 32) {
+      // SHRSrc Hi|Lo: ????????|???syyyl -> ????????|ssssyyyl
+      auto Lo = B.buildInstr(BFXOpc, {VgprRB_S32}, {SHRSrcLo, Zero, Width});
+      MachineInstrBuilder Hi;
+      if (Signed) {
+        // SHRSrc Hi|Lo: ????????|ssssyyyl -> ssssssss|ssssyyyl
+        Hi = B.buildAShr(VgprRB_S32, Lo, B.buildConstant(VgprRB_S32, 31));
+      } else {
+        // SHRSrc Hi|Lo: ????????|000syyyl -> 00000000|000syyyl
+        Hi = Zero;
+      }
+      B.buildMergeLikeInstr(Dst, {Lo, Hi});
+    } else {
+      auto Amt = B.buildConstant(VgprRB_S32, WidthImm - 32);
+      // SHRSrc Hi|Lo: ??????sy|yyyyyyyl -> sssssssy|yyyyyyyl
+      auto Hi = B.buildInstr(BFXOpc, {VgprRB_S32}, {SHRSrcHi, Zero, Amt});
+      B.buildMergeLikeInstr(Dst, {SHRSrcLo, Hi});
+    }
+
+    MI.eraseFromParent();
+    return;
+  }
+  case Uni_BFE: {
+    Register DstReg = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(DstReg);
+    bool Signed = isa<GIntrinsic>(MI) ? MI.getOperand(1).getIntrinsicID() ==
+                                            Intrinsic::amdgcn_sbfe
+                                      : MI.getOpcode() == AMDGPU::G_SBFX;
+    unsigned FirstOpnd = isa<GIntrinsic>(MI) ? 2 : 1;
+    Register Src = MI.getOperand(FirstOpnd).getReg();
+    Register LSBit = MI.getOperand(FirstOpnd + 1).getReg();
+    Register Width = MI.getOperand(FirstOpnd + 2).getReg();
+    // For uniform bit field extract there are 4 available instructions, but
+    // LSBit(field offset) and Width(size of bitfield) need to be packed in S32,
+    // field offset in low and size in high 16 bits.
+
+    // Src1 Hi16|Lo16 = Size|FieldOffset
+    auto Mask = B.buildConstant(SgprRB_S32, maskTrailingOnes<unsigned>(6));
+    auto FieldOffset = B.buildAnd(SgprRB_S32, LSBit, Mask);
+    auto Size = B.buildShl(SgprRB_S32, Width, B.buildConstant(SgprRB_S32, 16));
+    auto Src1 = B.buildOr(SgprRB_S32, FieldOffset, Size);
+    unsigned Opc32 = Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32;
+    unsigned Opc64 = Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64;
+    unsigned Opc = Ty == S32 ? Opc32 : Opc64;
+
+    // Select machine instruction, because of reg class constraining, insert
+    // copies from reg class to reg bank.
+    auto S_BFE = B.buildInstr(Opc, {{SgprRB, Ty}},
+                              {B.buildCopy(Ty, Src), B.buildCopy(S32, Src1)});
+    const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
+    if (!constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
+                                          *ST.getRegisterInfo(), RBI))
+      llvm_unreachable("failed to constrain BFE");
+
+    B.buildCopy(DstReg, S_BFE->getOperand(0).getReg());
+    MI.eraseFromParent();
+    return;
   }
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
