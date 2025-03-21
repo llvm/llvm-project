@@ -7366,9 +7366,8 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
     QualType FnPtrType;
     auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (Method && !Method->isStatic()) {
-      const Type *ClassType =
-          Context.getTypeDeclType(Method->getParent()).getTypePtr();
-      FnPtrType = Context.getMemberPointerType(AdjustedFnType, ClassType);
+      FnPtrType = Context.getMemberPointerType(
+          AdjustedFnType, /*Qualifier=*/nullptr, Method->getParent());
       ExprResult ER;
       {
         // Build addr_of unary op to correctly handle type checks for member
