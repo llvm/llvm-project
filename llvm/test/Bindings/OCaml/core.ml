@@ -1127,6 +1127,7 @@ let test_builder () =
 
   group "metadata"; begin
     (* CHECK: %metadata = add i32 %P1, %P2, !test !2
+     * !2 is metadata emitted at EOF.
      *)
     let i = build_add p1 p2 "metadata" atentry in
     insist ((has_metadata i) = false);
