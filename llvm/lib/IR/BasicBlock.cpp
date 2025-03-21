@@ -44,11 +44,6 @@ cl::opt<cl::boolOrDefault> PreserveInputDbgFormat(
              "contain debug records or intrinsics. Ignored in llvm-link, "
              "llvm-lto, and llvm-lto2."));
 
-bool WriteNewDbgInfoFormatToBitcode /*set default value in cl::init() below*/;
-cl::opt<bool, true> WriteNewDbgInfoFormatToBitcode2(
-    "write-experimental-debuginfo-iterators-to-bitcode", cl::Hidden,
-    cl::location(WriteNewDbgInfoFormatToBitcode), cl::init(true));
-
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
          "Tried to create a marker in a non new debug-info block!");
