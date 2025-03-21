@@ -742,6 +742,16 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   return {};
 }
 
+mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,
+                                                 QualType srcTy, QualType dstTy,
+                                                 SourceLocation loc) {
+  assert(CIRGenFunction::hasScalarEvaluationKind(srcTy) &&
+         CIRGenFunction::hasScalarEvaluationKind(dstTy) &&
+         "Invalid scalar expression to emit");
+  return ScalarExprEmitter(*this, builder)
+      .emitScalarConversion(src, srcTy, dstTy, loc);
+}
+
 /// Return the size or alignment of the type of argument of the sizeof
 /// expression as an integer.
 mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
