@@ -87,14 +87,29 @@ define <8 x float> @sitofp_i32_float(<8 x i32> %a) {
 define <8 x float> @sitofp_i64_float(<8 x i64> %a) {
 ; CHECK-LABEL: sitofp_i64_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-NEXT:    scvtf v4.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-NEXT:    scvtf v2.2d, v3.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v4.2d
-; CHECK-NEXT:    fcvtn2 v1.4s, v2.2d
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    mov x9, v2.d[1]
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x11, d2
+; CHECK-NEXT:    scvtf s0, x10
+; CHECK-NEXT:    mov x10, v3.d[1]
+; CHECK-NEXT:    scvtf s4, x8
+; CHECK-NEXT:    scvtf s5, x9
+; CHECK-NEXT:    scvtf s2, x11
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    fmov x11, d3
+; CHECK-NEXT:    mov x8, v1.d[1]
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    mov v0.s[1], v4.s[0]
+; CHECK-NEXT:    scvtf s3, x11
+; CHECK-NEXT:    mov v2.s[1], v5.s[0]
+; CHECK-NEXT:    scvtf s4, x8
+; CHECK-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-NEXT:    scvtf s1, x10
+; CHECK-NEXT:    mov v2.s[2], v3.s[0]
+; CHECK-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-NEXT:    mov v2.s[3], v1.s[0]
+; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %1 = sitofp <8 x i64> %a to <8 x float>
   ret <8 x float> %1
@@ -177,14 +192,65 @@ define <8 x float> @uitofp_i32_float(<8 x i32> %a) {
 define <8 x float> @uitofp_i64_float(<8 x i64> %a) {
 ; CHECK-LABEL: uitofp_i64_float:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    ucvtf v4.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-NEXT:    ucvtf v2.2d, v3.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v4.2d
-; CHECK-NEXT:    fcvtn2 v1.4s, v2.2d
+; CHECK-NEXT:    movi v4.2d, #0x000000ffffffff
+; CHECK-NEXT:    ushr v5.2d, v0.2d, #32
+; CHECK-NEXT:    ushr v6.2d, v2.2d, #32
+; CHECK-NEXT:    ushr v7.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v16.2d, v3.2d, #32
+; CHECK-NEXT:    mov x8, v5.d[1]
+; CHECK-NEXT:    mov x9, v6.d[1]
+; CHECK-NEXT:    fmov x10, d5
+; CHECK-NEXT:    and v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    and v2.16b, v2.16b, v4.16b
+; CHECK-NEXT:    fmov x13, d6
+; CHECK-NEXT:    fmov x12, d7
+; CHECK-NEXT:    and v1.16b, v1.16b, v4.16b
+; CHECK-NEXT:    mov x11, v7.d[1]
+; CHECK-NEXT:    scvtf s5, x10
+; CHECK-NEXT:    and v3.16b, v3.16b, v4.16b
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    scvtf s6, x8
+; CHECK-NEXT:    mov x8, v2.d[1]
+; CHECK-NEXT:    scvtf s4, x13
+; CHECK-NEXT:    scvtf s7, x9
+; CHECK-NEXT:    fmov x9, d16
+; CHECK-NEXT:    scvtf s17, x12
+; CHECK-NEXT:    fmov x12, d0
+; CHECK-NEXT:    fmov x13, d2
+; CHECK-NEXT:    scvtf s2, x10
+; CHECK-NEXT:    mov v5.s[1], v6.s[0]
+; CHECK-NEXT:    scvtf s6, x8
+; CHECK-NEXT:    scvtf s0, x12
+; CHECK-NEXT:    scvtf s18, x13
+; CHECK-NEXT:    mov x8, v16.d[1]
+; CHECK-NEXT:    mov v4.s[1], v7.s[0]
+; CHECK-NEXT:    scvtf s7, x9
+; CHECK-NEXT:    fmov x10, d1
+; CHECK-NEXT:    fmov x13, d3
+; CHECK-NEXT:    mov x9, v1.d[1]
+; CHECK-NEXT:    mov x12, v3.d[1]
+; CHECK-NEXT:    mov v5.s[2], v17.s[0]
+; CHECK-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-NEXT:    scvtf s1, x10
+; CHECK-NEXT:    mov v18.s[1], v6.s[0]
+; CHECK-NEXT:    scvtf s2, x11
+; CHECK-NEXT:    scvtf s3, x13
+; CHECK-NEXT:    mov v4.s[2], v7.s[0]
+; CHECK-NEXT:    scvtf s6, x8
+; CHECK-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    mov v5.s[3], v2.s[0]
+; CHECK-NEXT:    scvtf s2, x12
+; CHECK-NEXT:    mov v18.s[2], v3.s[0]
+; CHECK-NEXT:    mov v4.s[3], v6.s[0]
+; CHECK-NEXT:    dup v3.4s, w8
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    fmul v1.4s, v5.4s, v3.4s
+; CHECK-NEXT:    mov v18.s[3], v2.s[0]
+; CHECK-NEXT:    fmul v2.4s, v4.4s, v3.4s
+; CHECK-NEXT:    fadd v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fadd v1.4s, v2.4s, v18.4s
 ; CHECK-NEXT:    ret
   %1 = uitofp <8 x i64> %a to <8 x float>
   ret <8 x float> %1

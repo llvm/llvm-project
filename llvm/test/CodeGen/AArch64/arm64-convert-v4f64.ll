@@ -53,13 +53,40 @@ define <4 x half> @uitofp_v4i64_to_v4f16(ptr %ptr) {
 define <4 x bfloat> @uitofp_v4i64_to_v4bf16(ptr %ptr) {
 ; CHECK-LABEL: uitofp_v4i64_to_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q1, q3, [x0]
+; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-NEXT:    ushr v2.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v5.2d, v3.2d, #32
+; CHECK-NEXT:    and v1.16b, v1.16b, v0.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NEXT:    mov x8, v2.d[1]
+; CHECK-NEXT:    fmov x10, d2
+; CHECK-NEXT:    mov x9, v1.d[1]
+; CHECK-NEXT:    scvtf s4, x10
+; CHECK-NEXT:    scvtf s2, x8
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    mov x9, v5.d[1]
+; CHECK-NEXT:    scvtf s3, x8
+; CHECK-NEXT:    fmov x8, d5
+; CHECK-NEXT:    mov v4.s[1], v2.s[0]
+; CHECK-NEXT:    scvtf s2, x8
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    mov v3.s[1], v1.s[0]
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    scvtf s0, x9
+; CHECK-NEXT:    mov v4.s[2], v2.s[0]
 ; CHECK-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NEXT:    mov v3.s[2], v1.s[0]
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov w8, #1333788672 // =0x4f800000
+; CHECK-NEXT:    mov v4.s[3], v0.s[0]
+; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    mov v3.s[3], v1.s[0]
 ; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    fmul v0.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    ushr v3.4s, v0.4s, #16
 ; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b

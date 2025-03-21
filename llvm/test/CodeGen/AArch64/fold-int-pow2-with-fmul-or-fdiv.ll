@@ -260,11 +260,26 @@ define <2 x float> @fmul_pow_shl_cnt_vec_fail_expensive_cast(<2 x i64> %cnt) nou
 ; CHECK-NEON-LABEL: fmul_pow_shl_cnt_vec_fail_expensive_cast:
 ; CHECK-NEON:       // %bb.0:
 ; CHECK-NEON-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEON-NEXT:    movi v2.2d, #0x000000ffffffff
 ; CHECK-NEON-NEXT:    dup v1.2d, x8
 ; CHECK-NEON-NEXT:    ushl v0.2d, v1.2d, v0.2d
+; CHECK-NEON-NEXT:    ushr v1.2d, v0.2d, #32
+; CHECK-NEON-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEON-NEXT:    mov x8, v1.d[1]
+; CHECK-NEON-NEXT:    fmov x9, d1
+; CHECK-NEON-NEXT:    scvtf s2, x9
+; CHECK-NEON-NEXT:    mov w9, #1333788672 // =0x4f800000
+; CHECK-NEON-NEXT:    scvtf s1, x8
+; CHECK-NEON-NEXT:    mov x8, v0.d[1]
+; CHECK-NEON-NEXT:    dup v3.2s, w9
+; CHECK-NEON-NEXT:    fmov x9, d0
+; CHECK-NEON-NEXT:    scvtf s0, x8
+; CHECK-NEON-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-NEON-NEXT:    scvtf s1, x9
+; CHECK-NEON-NEXT:    fmul v2.2s, v2.2s, v3.2s
+; CHECK-NEON-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-NEON-NEXT:    fadd v0.2s, v2.2s, v1.2s
 ; CHECK-NEON-NEXT:    fmov v1.2s, #15.00000000
-; CHECK-NEON-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEON-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEON-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-NEON-NEXT:    ret
 ;

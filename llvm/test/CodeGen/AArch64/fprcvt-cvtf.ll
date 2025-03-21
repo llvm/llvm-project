@@ -210,15 +210,20 @@ define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: scvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    scvtf s0, d0
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: scvtf_f32i64_simple:
 ; CHECK-NO-FPRCVT:       // %bb.0:
 ; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NO-FPRCVT-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
+; CHECK-NO-FPRCVT-NEXT:    movi d1, #0000000000000000
+; CHECK-NO-FPRCVT-NEXT:    scvtf s0, x8
+; CHECK-NO-FPRCVT-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NO-FPRCVT-NEXT:    fmov d0, d1
 ; CHECK-NO-FPRCVT-NEXT:    ret
  %conv = sitofp <1 x i64> %x to <1 x float>
  ret <1 x float> %conv
@@ -426,15 +431,43 @@ define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: ucvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEXT:    ushr v2.2d, v0.2d, #32
+; CHECK-NEXT:    mov w9, #1333788672 // =0x4f800000
+; CHECK-NEXT:    dup v3.2s, w9
+; CHECK-NEXT:    mov x8, v2.d[1]
+; CHECK-NEXT:    scvtf s2, d2
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    scvtf s0, d0
+; CHECK-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    fmul v2.2s, v2.2s, v3.2s
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    fadd v0.2s, v2.2s, v0.2s
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: ucvtf_f32i64_simple:
 ; CHECK-NO-FPRCVT:       // %bb.0:
 ; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NO-FPRCVT-NEXT:    ushr v2.2d, v0.2d, #32
+; CHECK-NO-FPRCVT-NEXT:    mov x8, v2.d[1]
+; CHECK-NO-FPRCVT-NEXT:    fmov x9, d2
+; CHECK-NO-FPRCVT-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NO-FPRCVT-NEXT:    scvtf s2, x9
+; CHECK-NO-FPRCVT-NEXT:    mov w9, #1333788672 // =0x4f800000
+; CHECK-NO-FPRCVT-NEXT:    scvtf s1, x8
+; CHECK-NO-FPRCVT-NEXT:    mov x8, v0.d[1]
+; CHECK-NO-FPRCVT-NEXT:    dup v3.2s, w9
+; CHECK-NO-FPRCVT-NEXT:    fmov x9, d0
+; CHECK-NO-FPRCVT-NEXT:    scvtf s0, x8
+; CHECK-NO-FPRCVT-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-NO-FPRCVT-NEXT:    scvtf s1, x9
+; CHECK-NO-FPRCVT-NEXT:    fmul v2.2s, v2.2s, v3.2s
+; CHECK-NO-FPRCVT-NEXT:    mov v1.s[1], v0.s[0]
+; CHECK-NO-FPRCVT-NEXT:    fadd v0.2s, v2.2s, v1.2s
 ; CHECK-NO-FPRCVT-NEXT:    ret
  %conv = uitofp <1 x i64> %x to <1 x float>
  ret <1 x float> %conv
