@@ -10,7 +10,7 @@
 !CHECK: %[[CONST_7:.*]] = arith.constant 7 : i32
 !CHECK: {{.*}} = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[VAR_7y:.*]] = arith.muli %[[CONST_7]], {{.*}} : i32
-!CHECK: acc.atomic.write %[[X_DECL]]#1 = %[[VAR_7y]] : !fir.ref<i32>, i32
+!CHECK: acc.atomic.write %[[X_DECL]]#0 = %[[VAR_7y]] : !fir.ref<i32>, i32
 !CHECK: return
 !CHECK: }
 
@@ -49,7 +49,7 @@ end subroutine
 !CHECK: %[[R2:.*]] = fir.alloca f32 {bindc_name = "r2", uniq_name = "{{.*}}r2"}
 !CHECK: %[[R2_DECL:.*]]:2 = hlfir.declare %[[R2]] {uniq_name = "_QFatomic_write_typed_assignEr2"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
-!CHECK: acc.atomic.write %[[R2_DECL]]#1 = %[[CST]]   : !fir.ref<f32>, f32
+!CHECK: acc.atomic.write %[[R2_DECL]]#0 = %[[CST]]   : !fir.ref<f32>, f32
 
 subroutine atomic_write_typed_assign
   real :: r2
