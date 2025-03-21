@@ -99,7 +99,7 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
-static std::optional<unsigned> getNFForRVVWholeLoadStore(unsigned Opcode) {
+static std::optional<unsigned> getLMULForRVVWholeLoadStore(unsigned Opcode) {
   switch (Opcode) {
   default:
     return std::nullopt;
@@ -164,8 +164,8 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
       return Register();
     FrameIndex = MI.getOperand(1).getIndex();
     unsigned BytesPerBlock = RISCV::RVVBitsPerBlock / 8;
-    unsigned NF = *getNFForRVVWholeLoadStore(MI.getOpcode());
-    MemBytes = TypeSize::getScalable(BytesPerBlock * NF);
+    unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
+    MemBytes = TypeSize::getScalable(BytesPerBlock * LMUL);
     return MI.getOperand(0).getReg();
   }
 
@@ -215,8 +215,8 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
       return Register();
     FrameIndex = MI.getOperand(1).getIndex();
     unsigned BytesPerBlock = RISCV::RVVBitsPerBlock / 8;
-    unsigned NF = *getNFForRVVWholeLoadStore(MI.getOpcode());
-    MemBytes = TypeSize::getScalable(BytesPerBlock * NF);
+    unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
+    MemBytes = TypeSize::getScalable(BytesPerBlock * LMUL);
     return MI.getOperand(0).getReg();
   }
 
@@ -4129,7 +4129,7 @@ bool RISCV::isRVVSpill(const MachineInstr &MI) {
   // conservative.
   unsigned Opcode = MI.getOpcode();
   if (!RISCVVPseudosTable::getPseudoInfo(Opcode) &&
-      !getNFForRVVWholeLoadStore(Opcode) && !isRVVSpillForZvlsseg(Opcode))
+      !getLMULForRVVWholeLoadStore(Opcode) && !isRVVSpillForZvlsseg(Opcode))
     return false;
   return true;
 }
