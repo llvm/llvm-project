@@ -54,7 +54,7 @@ static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
 static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
                               AsmPrinter &Printer) {
   MCContext &Ctx = Printer.OutContext;
-  PPCMCExpr::VariantKind RefKind = PPCMCExpr::VK_None;
+  PPCMCExpr::Specifier RefKind = PPCMCExpr::VK_None;
 
   unsigned access = MO.getTargetFlags();
 
