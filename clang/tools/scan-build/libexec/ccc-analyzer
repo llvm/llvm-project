@@ -83,7 +83,11 @@ sub SearchInPath {
     my $opt = $ENV{$is_cxx ? 'CCC_CXX' : 'CCC_CC'};
     return $default unless defined $opt;
     my ($comp, @args) = shellwords($opt);
-    return !-x $comp && !SearchInPath($comp) ? $default : ($comp, @args);
+    if (!-x $comp && !SearchInPath($comp)) {
+      warn "Can't execute '$comp'. Falling back to '$default'.\n";
+      return $default;
+    }
+    return ($comp, @args);
   }
 }
 
