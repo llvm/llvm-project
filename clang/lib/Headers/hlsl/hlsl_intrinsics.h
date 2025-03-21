@@ -94,8 +94,7 @@ _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
-                                vector<uint16_t, N>>
-asuint16(vector<T, N> V) {
+                                vector<uint16_t, N>> asuint16(vector<T, N> V) {
   return __detail::bit_cast<uint16_t, T, N>(V);
 }
 
@@ -104,8 +103,7 @@ _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 constexpr __detail::enable_if_t<__detail::is_same<int16_t, T>::value ||
                                     __detail::is_same<uint16_t, T>::value ||
                                     __detail::is_same<half, T>::value,
-                                uint16_t>
-asuint16(T F) {
+                                uint16_t> asuint16(T F) {
   return __detail::bit_cast<uint16_t, T>(F);
 }
 #endif
