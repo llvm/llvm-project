@@ -17,6 +17,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
@@ -130,6 +131,15 @@ public:
   static bool verifyFunction(const Function *F, raw_ostream &OS) {
     const auto &LLVMF = *cast<llvm::Function>(F->Val);
     return llvm::verifyFunction(LLVMF, &OS);
+  }
+
+  /// Returns an optimization remark for \p I's location.
+  // TODO: OptimizationRemark can leak llvm IR through getRegion().
+  static OptimizationRemark getOptimizationRemark(const char *PassName,
+                                                  StringRef RemarkName,
+                                                  Instruction *I) {
+    return OptimizationRemark(PassName, RemarkName,
+                              cast<llvm::Instruction>(I->Val));
   }
 };
 
