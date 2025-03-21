@@ -99,7 +99,6 @@ public:
   }
 };
 
-
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
