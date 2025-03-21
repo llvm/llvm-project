@@ -213,6 +213,8 @@
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
 // CHECK-NEXT:     xrivosvisni          0.1       'XRivosVisni' (Rivos Vector Integer Small New)
 // CHECK-NEXT:     xrivosvizip          0.1       'XRivosVizip' (Rivos Vector Register Zips)
+// CHECK-NEXT:     xsfmclic             0.1       'XSfmclic' (SiFive CLIC Machine-mode CSRs)
+// CHECK-NEXT:     xsfsclic             0.1       'XSfsclic' (SiFive CLIC Supervisor-mode CSRs)
 // CHECK-EMPTY:
 // CHECK-NEXT: Supported Profiles
 // CHECK-NEXT:     rva20s64
