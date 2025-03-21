@@ -91,11 +91,62 @@ static Function *getOrCreateFunction(Module *M, Type *RetTy,
   return NewF;
 }
 
+enum IntelFPGAMemoryAccessesVal {
+  BurstCoalesce = 0x1,
+  CacheSizeFlag = 0x2,
+  DontStaticallyCoalesce = 0x4,
+  PrefetchFlag = 0x8
+};
+
+using DecorationsInfoVec =
+    std::vector<std::pair<unsigned, std::vector<std::string>>>;
+
+struct IntelLSUControlsInfo {
+  void setWithBitMask(unsigned ParamsBitMask) {
+    if (ParamsBitMask & IntelFPGAMemoryAccessesVal::BurstCoalesce)
+      BurstCoalesce = true;
+    if (ParamsBitMask & IntelFPGAMemoryAccessesVal::CacheSizeFlag)
+      CacheSizeInfo = 0;
+    if (ParamsBitMask & IntelFPGAMemoryAccessesVal::DontStaticallyCoalesce)
+      DontStaticallyCoalesce = true;
+    if (ParamsBitMask & IntelFPGAMemoryAccessesVal::PrefetchFlag)
+      PrefetchInfo = 0;
+  }
+
+  DecorationsInfoVec getDecorationsFromCurrentState() {
+    DecorationsInfoVec ResultVec;
+    if (BurstCoalesce)
+      ResultVec.emplace_back(SPIRV::Decoration::Decoration::BurstCoalesceINTEL,
+                             std::vector<std::string>());
+    if (DontStaticallyCoalesce)
+      ResultVec.emplace_back(
+          SPIRV::Decoration::Decoration::DontStaticallyCoalesceINTEL,
+          std::vector<std::string>());
+
+    if (CacheSizeInfo.has_value()) {
+      ResultVec.emplace_back(
+          SPIRV::Decoration::Decoration::CacheSizeINTEL,
+          std::vector<std::string>{std::to_string(CacheSizeInfo.value())});
+    }
+    if (PrefetchInfo.has_value()) {
+      ResultVec.emplace_back(
+          SPIRV::Decoration::Decoration::PrefetchINTEL,
+          std::vector<std::string>{std::to_string(PrefetchInfo.value())});
+    }
+    return ResultVec;
+  }
+
+  bool BurstCoalesce = false;
+  std::optional<unsigned> CacheSizeInfo;
+  bool DontStaticallyCoalesce = false;
+  std::optional<unsigned> PrefetchInfo;
+};
+
 static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
-  // For @llvm.memset.* intrinsic cases with constant value and length arguments
-  // are emulated via "storing" a constant array to the destination. For other
-  // cases we wrap the intrinsic in @spirv.llvm_memset_* function and expand the
-  // intrinsic to a loop via expandMemSetAsLoop().
+  // For @llvm.memset.* intrinsic cases with constant value and length
+  // arguments are emulated via "storing" a constant array to the destination.
+  // For other cases we wrap the intrinsic in @spirv.llvm_memset_* function
+  // and expand the intrinsic to a loop via expandMemSetAsLoop().
   if (auto *MSI = dyn_cast<MemSetInst>(Intrinsic))
     if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
@@ -243,7 +294,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
                                                 : SmallVector<Metadata *>{};
 }
 
-static void lowerPtrAnnotation(IntrinsicInst *II) {
+static void lowerPtrAnnotation(IntrinsicInst *II, const SPIRVSubtarget &STI) {
   LLVMContext &Ctx = II->getContext();
   Type *Int32Ty = Type::getInt32Ty(Ctx);
 
@@ -256,9 +307,76 @@ static void lowerPtrAnnotation(IntrinsicInst *II) {
   std::string Anno =
       getAnnotation(II->getArgOperand(1),
                     4 < II->arg_size() ? II->getArgOperand(4) : nullptr);
+  // messed code will correct it once it is working
+  // PARSE THE ANOTATION
+  std::regex DecorationRegex("\\{\\w([\\w:,-]|\"[^\"]*\")*\\}");
+  using RegexIterT = std::sregex_iterator;
+  RegexIterT DecorationsIt(Anno.cbegin(), Anno.cend(), DecorationRegex);
+  RegexIterT DecorationsEnd;
+  IntelLSUControlsInfo LSUControls;
+  for (; DecorationsIt != DecorationsEnd; ++DecorationsIt) {
+    std::smatch Match = *DecorationsIt;
+    std::string DecorationStr = Match.str();
+    std::string AnnotatedDecoration =
+        DecorationStr.substr(1, DecorationStr.length() - 2);
+    llvm::StringRef AnnotatedRef(AnnotatedDecoration);
+    std::pair<llvm::StringRef, llvm::StringRef> Split = AnnotatedRef.split(':');
+    llvm::StringRef Name = Split.first, ValueStr = Split.second;
 
-  // Parse the annotation.
+    bool canUseFPGA = STI.canUseExtension(
+        SPIRV::Extension::Extension::SPV_INTEL_fpga_memory_accesses);
+    if (canUseFPGA) {
+      if (Name == "params") {
+        unsigned ParamsBitMask = 0;
+        bool Failure = ValueStr.getAsInteger(10, ParamsBitMask);
+        assert(!Failure && "Non-integer LSU controls value");
+        (void)Failure;
+        LSUControls.setWithBitMask(ParamsBitMask);
+      } else if (Name == "cache-size") {
+        if (!LSUControls.CacheSizeInfo.has_value())
+          continue;
+        unsigned CacheSizeValue = 0;
+        bool Failure = ValueStr.getAsInteger(10, CacheSizeValue);
+        assert(!Failure && "Non-integer cache size value");
+        (void)Failure;
+        LSUControls.CacheSizeInfo = CacheSizeValue;
+      }
+    }
+  }
+
+  DecorationsInfoVec currentDecorations =
+      LSUControls.getDecorationsFromCurrentState();
+
   SmallVector<Metadata *> MDs = parseAnnotation(II, Anno, Ctx, Int32Ty);
+
+  for (const auto &Dec : currentDecorations) {
+    unsigned DecKind = Dec.first;
+    const std::vector<std::string> &DecValues = Dec.second;
+    SmallVector<Metadata *> metaDataItem;
+    auto Decoration = ConstantAsMetadata::get(
+        ConstantInt::get(Int32Ty, static_cast<uint32_t>(DecKind)));
+    metaDataItem.push_back(Decoration);
+    if (!DecValues.empty()) {
+      for (const auto &val : DecValues) {
+        int32_t numValue;
+        if (llvm::to_integer(val, numValue, 10)) {
+          metaDataItem.push_back(
+              ConstantAsMetadata::get(ConstantInt::get(Int32Ty, numValue)));
+        } else {
+          metaDataItem.push_back(MDString::get(Ctx, val));
+        }
+      }
+    }
+    MDs.push_back(MDNode::get(Ctx, metaDataItem));
+
+  }
+
+  // MDs.push_back(ConstantAsMetadata::get(
+  //     ConstantInt::get(Type::getInt32Ty(Ctx), DecKind)));
+  // for (const std::string &Value : DecValues) {
+  //   MDs.push_back(MDString::get(Ctx, Value));
+  // }
+  //}
 
   // If the annotation string is not parsed successfully we don't know the
   // format used and output it as a general UserSemantic decoration.
@@ -281,9 +399,9 @@ static void lowerPtrAnnotation(IntrinsicInst *II) {
 
 static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
   // Get a separate function - otherwise, we'd have to rework the CFG of the
-  // current one. Then simply replace the intrinsic uses with a call to the new
-  // function.
-  // Generate LLVM IR for  i* @spirv.llvm_fsh?_i* (i* %a, i* %b, i* %c)
+  // current one. Then simply replace the intrinsic uses with a call to the
+  // new function. Generate LLVM IR for  i* @spirv.llvm_fsh?_i* (i* %a, i* %b,
+  // i* %c)
   Module *M = FSHIntrinsic->getModule();
   FunctionType *FSHFuncTy = FSHIntrinsic->getFunctionType();
   Type *FSHRetTy = FSHFuncTy->getReturnType();
@@ -330,8 +448,8 @@ static void lowerFunnelShifts(IntrinsicInst *FSHIntrinsic) {
     // the LSBs.
     SecShift = IRB.CreateShl(FSHFunc->getArg(0), SubRotateVal);
   } else {
-    // ...and right-shift the less significant int by this number, zero-filling
-    // the MSBs.
+    // ...and right-shift the less significant int by this number,
+    // zero-filling the MSBs.
     SecShift = IRB.CreateLShr(FSHFunc->getArg(1), SubRotateVal);
   }
   // A simple binary addition of the shifted ints yields the final result.
@@ -420,7 +538,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
             II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         break;
       case Intrinsic::ptr_annotation:
-        lowerPtrAnnotation(II);
+        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
+        lowerPtrAnnotation(II, STI);
         Changed = true;
         break;
       }
