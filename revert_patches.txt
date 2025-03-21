@@ -20,10 +20,6 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-breaks ovo suite :
-b7eb01b3a15d [NFC][OpenMP][MLIR] Refactor code related to collecting privatizer info into a shared util (#131582)
-kareem
----
 needs AS patch : sergio
 231f6f86237 [MLIR][OpenMP] Improve omp.map.info verification (
 ---
