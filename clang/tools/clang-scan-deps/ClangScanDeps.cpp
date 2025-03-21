@@ -594,11 +594,12 @@ static bool handleTranslationUnitResult(
   return false;
 }
 
-static bool handleModuleResult(
-    StringRef ModuleName, llvm::Expected<ModuleDepsGraph> &MaybeModuleGraph,
-    FullDeps &FD, size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeModuleGraph) {
-    llvm::handleAllErrors(MaybeModuleGraph.takeError(),
+static bool handleModuleResult(StringRef ModuleName, llvm::Error &&Error,
+                               ModuleDepsGraph &DepsGraph, FullDeps &FD,
+                               size_t InputIndex, SharedStream &OS,
+                               SharedStream &Errs) {
+  if (Error) {
+    llvm::handleAllErrors(std::move(Error),
                           [&ModuleName, &Errs](llvm::StringError &Err) {
                             Errs.applyLocked([&](raw_ostream &OS) {
                               OS << "Error while scanning dependencies for "
@@ -608,7 +609,7 @@ static bool handleModuleResult(
                           });
     return true;
   }
-  FD.mergeDeps(std::move(*MaybeModuleGraph), InputIndex);
+  FD.mergeDeps(std::move(DepsGraph), InputIndex);
   return false;
 }
 
@@ -1027,14 +1028,14 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         StringRef NamesRef(*ModuleName);
         SmallVector<StringRef, 16> NameList;
         NamesRef.split(NameList, ",");
-        auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            NameList, Input->CommandLine, CWD,
-            AlreadySeenModules, LookupOutput);
+        auto [Error, ModuleDepsGraph] =
+            WorkerTool.getModuleDependencies(NameList, Input->CommandLine, CWD,
+                                             AlreadySeenModules, LookupOutput);
         // FIXME: Need to have better error handling logic for a list
         // of modules. Probably through some call back.
-        if (handleModuleResult(/* *ModuleName*/ NameList[0],
-                               MaybeModuleDepsGraph, *FD, LocalIndex,
-                               DependencyOS, Errs))
+        if (handleModuleResult(/* *ModuleName*/ NameList[0], std::move(Error),
+                               ModuleDepsGraph, *FD, LocalIndex, DependencyOS,
+                               Errs))
           HadErrors = true;
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;

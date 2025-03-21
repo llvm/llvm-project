@@ -146,7 +146,7 @@ public:
   /// Given a compilation context specified via the Clang driver command-line,
   /// gather modular dependencies of modules specified by the the given list of
   /// names, and return the information needed for explicit build.
-  llvm::Expected<ModuleDepsGraph>
+  std::pair<llvm::Error, ModuleDepsGraph>
   getModuleDependencies(ArrayRef<StringRef> ModuleNames,
                         const std::vector<std::string> &CommandLine,
                         StringRef CWD,

@@ -432,10 +432,11 @@ public:
 
     if (Service.getFormat() == ScanningOutputFormat::P1689)
       Action = std::make_unique<PreprocessOnlyAction>();
-    else if (ModuleNames)
+    else if (ModuleNames) {
+      ScanInstance.getDiagnostics().setFatalsAsError(true);
       Action =
           std::make_unique<GetDependenciesByModuleNameAction>(*ModuleNames);
-    else
+    } else
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
