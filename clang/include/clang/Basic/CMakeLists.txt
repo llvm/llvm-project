@@ -9,10 +9,10 @@ macro(clang_diag_gen component)
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component}Enums)
 
-  clang_tablegen(Diagnostic${component}CompatEnums.inc
-    -gen-clang-diags-compat-enums -clang-component=${component}
+  clang_tablegen(Diagnostic${component}CompatIDs.inc
+    -gen-clang-diags-compat-ids -clang-component=${component}
     SOURCE Diagnostic.td
-    TARGET ClangDiagnostic${component}CompatEnums)
+    TARGET ClangDiagnostic${component}CompatIDs)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
@@ -36,10 +36,10 @@ clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 
-clang_tablegen(DiagnosticAllCompatEnums.inc
-  -gen-clang-diags-compat-enums
+clang_tablegen(DiagnosticAllCompatIDs.inc
+  -gen-clang-diags-compat-ids
   SOURCE Diagnostic.td
-  TARGET ClangDiagnosticAllCompatEnums)
+  TARGET ClangDiagnosticAllCompatIDs)
 
 clang_tablegen(AttrList.inc -gen-clang-attr-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../

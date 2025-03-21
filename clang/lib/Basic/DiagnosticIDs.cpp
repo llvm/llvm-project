@@ -782,16 +782,16 @@ unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
   // actual numbers don't really matter for this, but the definitions of the
   // compat diags in the Tablegen file uses the standard version, so we base
   // our encoding on that.
-#define DIAG_COMPAT_ENUM_BEGIN()
-#define DIAG_COMPAT_ENUM_END()
-#define DIAG_COMPAT_ENUM(Value, Name, Std, Diag, DiagPre)                      \
+#define DIAG_COMPAT_IDS_BEGIN()
+#define DIAG_COMPAT_IDS_END()
+#define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                      \
   {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
   static constexpr CompatDiag Diags[]{
-#include "clang/Basic/DiagnosticAllCompatEnums.inc"
+#include "clang/Basic/DiagnosticAllCompatIDs.inc"
   };
-#undef DIAG_COMPAT_ENUM
-#undef DIAG_COMPAT_ENUM_BEGIN
-#undef DIAG_COMPAT_ENUM_END
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
 
   assert(CompatDiagId < std::size(Diags) && "Invalid compat diag id");
 

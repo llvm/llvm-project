@@ -1519,12 +1519,12 @@ static void verifyDiagnosticWording(const Record &Diag) {
   // #pragma clang, or --unwindlib=libgcc.
 }
 
-/// ClangDiagsCompatEnumsEmitter - Emit an enumeration that maps a
-/// 'compatibility diagnostic id' to a set of 2 regular diagnostic
-/// ids to simplify emitting compatibility warnings.
-void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
-                                      llvm::raw_ostream &OS,
-                                      const std::string &Component) {
+/// ClangDiagsCompatIDsEmitter - Emit a set of 'compatibility diagnostic ids'
+/// that map set of 2 regular diagnostic ids each and which are used to simplify
+/// emitting compatibility warnings.
+void clang::EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
+                                    llvm::raw_ostream &OS,
+                                    const std::string &Component) {
   ArrayRef<const Record *> Ids =
       Records.getAllDerivedDefinitions("CompatWarningId");
 
@@ -1544,8 +1544,8 @@ void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
     // unconditionally write 'enum {' and '};' in the headers.
     if (PrevComponent != DiagComponent) {
       if (!PrevComponent.empty())
-        OS << "DIAG_COMPAT_ENUM_END()\n";
-      OS << "DIAG_COMPAT_ENUM_BEGIN()\n";
+        OS << "DIAG_COMPAT_IDS_END()\n";
+      OS << "DIAG_COMPAT_IDS_BEGIN()\n";
       PrevComponent = DiagComponent;
     }
 
@@ -1553,13 +1553,13 @@ void clang::EmitClangDiagsCompatEnums(const llvm::RecordKeeper &Records,
     // name, e.g. 'constexpr_body_invalid_stmt' exists for C++14/20/23. It would
     // be nice if we could combine all of them into a single compatibility diag
     // id.
-    OS << "DIAG_COMPAT_ENUM(" << I << ",";
+    OS << "DIAG_COMPAT_ID(" << I << ",";
     OS << CompatDiagName << "," << CXXStdVer << "," << Diag << "," << DiagPre;
     OS << ")\n";
   }
 
   if (!PrevComponent.empty())
-    OS << "DIAG_COMPAT_ENUM_END()\n";
+    OS << "DIAG_COMPAT_IDS_END()\n";
 }
 
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing

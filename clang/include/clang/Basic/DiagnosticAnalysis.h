@@ -37,15 +37,15 @@ enum {
 } // end namespace diag
 
 namespace diag_compat {
-#define DIAG_COMPAT_ENUM_BEGIN() enum {
-#define DIAG_COMPAT_ENUM_END()                                                 \
+#define DIAG_COMPAT_IDS_BEGIN() enum {
+#define DIAG_COMPAT_IDS_END()                                                 \
   }                                                                            \
   ;
-#define DIAG_COMPAT_ENUM(IDX, NAME, ...) NAME = IDX,
-#include "clang/Basic/DiagnosticAnalysisCompatEnums.inc"
-#undef DIAG_COMPAT_ENUM
-#undef DIAG_COMPAT_ENUM_BEGIN
-#undef DIAG_COMPAT_ENUM_END
+#define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
+#include "clang/Basic/DiagnosticAnalysisCompatIDs.inc"
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
 } // end namespace diag_compat
 } // end namespace clang
 
