@@ -29,8 +29,6 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 
-#include "llvm/ADT/ScopedHashTable.h"
-
 namespace {
 class ScalarExprEmitter;
 } // namespace
@@ -62,7 +60,7 @@ public:
   using DeclMapTy = llvm::DenseMap<const clang::Decl *, Address>;
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
-  DeclMapTy LocalDeclMap;
+  DeclMapTy localDeclMap;
 
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
@@ -80,11 +78,11 @@ public:
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
 
-  mlir::Type convertTypeForMem(QualType T);
+  mlir::Type convertTypeForMem(QualType t);
 
-  mlir::Type convertType(clang::QualType T);
-  mlir::Type convertType(const TypeDecl *T) {
-    return convertType(getContext().getTypeDeclType(T));
+  mlir::Type convertType(clang::QualType t);
+  mlir::Type convertType(const TypeDecl *t) {
+    return convertType(getContext().getTypeDeclType(t));
   }
 
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
@@ -219,11 +217,22 @@ public:
 
   void emitDecl(const clang::Decl &d);
 
+  /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
+  /// detect undefined behavior when the pointer overflow sanitizer is enabled.
+  /// \p SignedIndices indicates whether any of the GEP indices are signed.
+  /// \p IsSubtraction indicates whether the expression used to form the GEP
+  /// is a subtraction.
+  mlir::Value emitCheckedInBoundsGEP(mlir::Type elemTy, mlir::Value ptr,
+                                     llvm::ArrayRef<mlir::Value> idxList,
+                                     bool signedIndices, bool isSubtraction,
+                                     SourceLocation loc);
+
   void emitScalarInit(const clang::Expr *init, mlir::Location loc,
                       LValue lvalue, bool capturedByInit = false);
 
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
+  LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
@@ -322,8 +331,8 @@ public:
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
-    assert(!LocalDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
-    LocalDeclMap.insert({vd, addr});
+    assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
+    localDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
 
@@ -332,6 +341,7 @@ public:
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
+  mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -341,7 +351,7 @@ public:
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.
   /// \param startLoc  The location of the function body.
-  void startFunction(clang::GlobalDecl gd, clang::QualType retTy,
+  void startFunction(clang::GlobalDecl gd, clang::QualType returnType,
                      cir::FuncOp fn, cir::FuncType funcType,
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);

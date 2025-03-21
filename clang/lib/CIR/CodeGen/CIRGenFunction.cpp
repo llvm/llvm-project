@@ -444,6 +444,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return LValue();
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::BinaryOperatorClass:
+    return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   }
