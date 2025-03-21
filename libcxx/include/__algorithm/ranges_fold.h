@@ -86,14 +86,12 @@ struct __fold_left_with_iter {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
     using _Up = decay_t<invoke_result_t<_Fp&, _Tp, iter_reference_t<_Ip>>>;
 
-    if (__first == __last) {
+    if (__first == __last)
       return fold_left_with_iter_result<_Ip, _Up>{std::move(__first), _Up(std::move(__init))};
-    }
 
     _Up __result = std::invoke(__f, std::move(__init), *__first);
-    for (++__first; __first != __last; ++__first) {
+    for (++__first; __first != __last; ++__first)
       __result = std::invoke(__f, std::move(__result), *__first);
-    }
 
     return fold_left_with_iter_result<_Ip, _Up>{std::move(__first), std::move(__result)};
   }
@@ -130,14 +128,12 @@ struct __fold_left_first_with_iter {
     using _Up = decltype(fold_left(std::move(__first), __last, iter_value_t<_Ip>(*__first), __f));
 
     // case of empty range
-    if (__first == __last) {
+    if (__first == __last)
       return fold_left_first_with_iter_result<_Ip, optional<_Up>>{std::move(__first), optional<_Up>()};
-    }
 
     _Up __result(*__first);
-    for (++__first; __first != __last; ++__first) {
+    for (++__first; __first != __last; ++__first)
       __result = std::invoke(__f, std::move(__result), *__first);
-    }
 
     return fold_left_first_with_iter_result<_Ip, optional<_Up>>{std::move(__first), optional<_Up>(std::move(__result))};
   }
