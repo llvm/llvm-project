@@ -142,6 +142,14 @@ private:
   lldb_private::Status AddDirectory(llvm::minidump::StreamType type,
                                     uint64_t stream_size);
   lldb::offset_t GetCurrentDataEndOffset() const;
+
+  // Read a memory region from the process and write it to the file
+  // in fixed size chunks.
+  lldb_private::Status
+  ReadWriteMemoryInChunks(lldb_private::DataBufferHeap &data_buffer,
+                          const lldb_private::CoreFileMemoryRange &range,
+                          uint64_t &bytes_read);
+
   // Stores directories to fill in later
   std::vector<llvm::minidump::Directory> m_directories;
   // When we write off the threads for the first time, we need to clean them up
