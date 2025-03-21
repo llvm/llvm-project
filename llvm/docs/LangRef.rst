@@ -24133,8 +24133,8 @@ across one vector loop iteration.
 Arguments:
 """"""""""
 
-The first two arguments have the same pointer type.
-The final one is an immediate and the result is a vector with the i1 element type.
+The first two arguments are pointers and the last argument is an immediate.
+The result is a vector with the i1 element type.
 
 Semantics:
 """"""""""
