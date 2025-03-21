@@ -8754,7 +8754,8 @@ public:
 
   ExprResult BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
                                      SourceLocation OpLoc,
-                                     const CXXScopeSpec &SS, FieldDecl *Field,
+                                     const NestedNameSpecifierLoc &NNS,
+                                     FieldDecl *Field, QualType FieldType,
                                      DeclAccessPair FoundDecl,
                                      const DeclarationNameInfo &MemberNameInfo);
 
@@ -8765,7 +8766,8 @@ public:
       const CXXScopeSpec &SS, SourceLocation nameLoc,
       IndirectFieldDecl *indirectField,
       DeclAccessPair FoundDecl = DeclAccessPair::make(nullptr, AS_none),
-      Expr *baseObjectExpr = nullptr, SourceLocation opLoc = SourceLocation());
+      Expr *baseObjectExpr = nullptr, const Type *BaseType = nullptr,
+      SourceLocation opLoc = SourceLocation());
 
 private:
   void CheckMemberAccessOfNoDeref(const MemberExpr *E);
@@ -13994,6 +13996,16 @@ public:
                                            FunctionDecl *Spaceship);
 
   QualType resugar(const NestedNameSpecifier *NNS, QualType T);
+  QualType resugar(const NestedNameSpecifier *NNS, NamedDecl *ND,
+                   ArrayRef<TemplateArgument> Args, QualType T);
+  QualType resugar(NamedDecl *ND, ArrayRef<TemplateArgument> Args, QualType T);
+  QualType resugar(const Type *Base, const NestedNameSpecifier *FieldNNS,
+                   QualType T);
+  QualType resugar(const Type *Base, const NestedNameSpecifier *FieldNNS,
+                   NamedDecl *ND, ArrayRef<TemplateArgument> Args, QualType T);
+  QualType resugar(const Type *Base, QualType T);
+  QualType resugar(const Type *Base, NamedDecl *ND,
+                   ArrayRef<TemplateArgument> Args, QualType T);
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.

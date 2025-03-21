@@ -3637,6 +3637,7 @@ static void handleCleanupAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // We're currently more strict than GCC about what function types we accept.
   // If this ever proves to be a problem it should be easy to fix.
+  // FIXME: resugar
   QualType Ty = S.Context.getPointerType(cast<VarDecl>(D)->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
   if (S.CheckAssignmentConstraints(FD->getParamDecl(0)->getLocation(),

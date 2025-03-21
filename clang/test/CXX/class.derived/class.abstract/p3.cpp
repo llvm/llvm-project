@@ -75,7 +75,7 @@ void h() {
 template<typename T> void t(T);
 void i(A &a, B &b, C &c, D &d) {
   t(a); // expected-error {{allocating an object of abstract class type 'A'}}
-  t(b); // expected-error {{allocating an object of abstract class type 'SecretlyAbstract<int>'}}
+  t(b); // expected-error {{allocating an object of abstract class type 'B' (aka 'SecretlyAbstract<int>')}}
   t(c); // expected-error {{allocating an object of abstract class type}}
   t(d); // ok, decays to pointer
 }

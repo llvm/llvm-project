@@ -1169,7 +1169,7 @@ Wrapper<S<&global2, nullptr>> W12 =
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<&global, [...]>>' to 'Wrapper<S<&global2, [...]>>'
 
 Wrapper<S<&global, &global>> W13 = MakeWrapper<S<&global, ptr>>();
-// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], nullptr>>' to 'Wrapper<S<[...], &global>>'
+// CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], ptr aka nullptr>>' to 'Wrapper<S<[...], &global>>'
 Wrapper<S<&global, ptr>> W14 = MakeWrapper<S<&global, &global>>();
 // CHECK-ELIDE-NOTREE: no viable conversion from 'Wrapper<S<[...], &global>>' to 'Wrapper<S<[...], ptr aka nullptr>>'
 }
@@ -1381,8 +1381,8 @@ namespace DefaultNonTypeArgWithDependentType {
 template <typename SizeType = int, SizeType = 0> struct A {};
 template <typename R = A<>> R bar();
 A<> &foo() { return bar(); }
-// CHECK-ELIDE-NOTREE: error: non-const lvalue reference to type 'A<...>' cannot bind to a temporary of type 'A<...>'
-// CHECK-NOELIDE-NOTREE: error: non-const lvalue reference to type 'A<int, 0>' cannot bind to a temporary of type 'A<int, 0>'
+// CHECK-ELIDE-NOTREE: error: non-const lvalue reference to type 'A<>' cannot bind to a temporary of type 'A<>'
+// CHECK-NOELIDE-NOTREE: error: non-const lvalue reference to type 'A<>' cannot bind to a temporary of type 'A<>'
 }
 
 namespace PR24587 {

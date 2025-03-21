@@ -287,7 +287,7 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
       S.BuildDeclarationNameExpr(SS, Found, /*NeedsADL=*/false);
   if (FromAddr.isInvalid())
     return ExprError();
-
+  // FIXME: resugar
   return S.BuildCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
 }
 

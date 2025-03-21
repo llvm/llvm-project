@@ -1556,6 +1556,9 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     if (FD->isUnnamedBitField())
       continue;
 
+    // FIXME: Avoid having to recreate the naming context for every field.
+    QualType FieldType = S.resugar(DecompType.getTypePtr(), FD->getType());
+
     // We have a real field to bind.
     assert(FlatBindingsItr != FlatBindings.end());
     BindingDecl *B = *(FlatBindingsItr++);
@@ -1570,7 +1573,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     if (E.isInvalid())
       return true;
     E = S.BuildFieldReferenceExpr(E.get(), /*IsArrow*/ false, Loc,
-                                  CXXScopeSpec(), FD,
+                                  NestedNameSpecifierLoc(), FD, FieldType,
                                   DeclAccessPair::make(FD, FD->getAccess()),
                                   DeclarationNameInfo(FD->getDeclName(), Loc));
     if (E.isInvalid())
@@ -1584,7 +1587,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     Qualifiers Q = DecompType.getQualifiers();
     if (FD->isMutable())
       Q.removeConst();
-    B->setBinding(S.BuildQualifiedType(FD->getType(), Loc, Q), E.get());
+    B->setBinding(S.BuildQualifiedType(FieldType, Loc, Q), E.get());
   }
 
   return false;
@@ -8637,10 +8640,13 @@ private:
 
     DeclAccessPair Found = DeclAccessPair::make(Field, Field->getAccess());
     DeclarationNameInfo NameInfo(Field->getDeclName(), Loc);
+    QualType FieldType = Field->getType();
     return {S.BuildFieldReferenceExpr(Obj.first.get(), /*IsArrow=*/false, Loc,
-                                      CXXScopeSpec(), Field, Found, NameInfo),
+                                      NestedNameSpecifierLoc(), Field,
+                                      FieldType, Found, NameInfo),
             S.BuildFieldReferenceExpr(Obj.second.get(), /*IsArrow=*/false, Loc,
-                                      CXXScopeSpec(), Field, Found, NameInfo)};
+                                      NestedNameSpecifierLoc(), Field,
+                                      FieldType, Found, NameInfo)};
   }
 
   // FIXME: When expanding a subobject, register a note in the code synthesis

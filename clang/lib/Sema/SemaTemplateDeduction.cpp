@@ -4194,6 +4194,10 @@ static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
       S.DeduceReturnType(Fn, R.Expression->getExprLoc(), /*Diagnose*/ false))
     return {};
 
+  // FIXME: get SS.
+  QualType FT =
+      Args.size() != 0 ? S.resugar(Fn, Args, Fn->getType()) : Fn->getType();
+
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Fn))
     if (Method->isImplicitObjectMemberFunction()) {
       // An instance method that's referenced in a form that doesn't
@@ -4201,12 +4205,14 @@ static QualType GetTypeOfFunction(Sema &S, const OverloadExpr::FindResult &R,
       if (!R.HasFormOfMemberPointer)
         return {};
 
-      return S.Context.getMemberPointerType(
-          Fn->getType(), /*Qualifier=*/nullptr, Method->getParent());
+      // FIXME: resugar the class type here.
+      return S.Context.getMemberPointerType(FT, /*Qualifier=*/nullptr,
+                                            Method->getParent());
     }
 
-  if (!R.IsAddressOfOperand) return Fn->getType();
-  return S.Context.getPointerType(Fn->getType());
+  if (!R.IsAddressOfOperand)
+    return FT;
+  return S.Context.getPointerType(FT);
 }
 
 /// Apply the deduction rules for overload sets.
@@ -4323,6 +4329,7 @@ ResolveOverloadForDeduction(Sema &S, TemplateParameterList *TemplateParams,
     //   treated as a non-deduced context. [...]
     if (!Match.isNull() && !S.isSameOrCompatibleFunctionType(Match, ArgType))
       return {};
+    // FIXME: resugar
     Match = ArgType;
   }
 

@@ -152,6 +152,40 @@ public:
     insert(CTSD, Info.takeSugared()->asArray());
   }
 
+  void insert(Sema &SemaRef, const NamedDecl *ND,
+              ArrayRef<TemplateArgument> Args) {
+    assert(ND != nullptr);
+    ND = cast<NamedDecl>(ND->getCanonicalDecl());
+    assert(Args.size() != 0);
+    switch (ND->getKind()) {
+    case Decl::Kind::CXXConversion:
+    case Decl::Kind::CXXMethod:
+    case Decl::Kind::Function: {
+      const auto *FD = cast<FunctionDecl>(ND);
+      assert(FD->getTemplatedKind() ==
+             FunctionDecl::TK_FunctionTemplateSpecialization);
+      return insert(FD->getPrimaryTemplate(), Args);
+    }
+    case Decl::Kind::VarTemplateSpecialization: {
+      auto STP = cast<VarTemplateSpecializationDecl>(ND)
+                     ->getSpecializedTemplateOrPartial();
+      auto *VTPSD = STP.dyn_cast<VarTemplatePartialSpecializationDecl *>();
+      if (!VTPSD)
+        return insert(cast<VarTemplateDecl *>(STP), Args);
+
+      TemplateDeductionInfo Info(SourceLocation{},
+                                 VTPSD->getTemplateParameters()->getDepth());
+      [[maybe_unused]] TemplateDeductionResult Res =
+          SemaRef.DeduceTemplateArguments(VTPSD, Args, Info);
+      assert(Res == TemplateDeductionResult::Success);
+      return insert(VTPSD, Info.takeSugared()->asArray());
+    }
+    default:
+      ND->dumpColor();
+      llvm_unreachable("Unhandled Template Kind");
+    }
+  }
+
   void insert(Sema &SemaRef, const NestedNameSpecifier *NNS) {
     for (/**/; NNS; NNS = NNS->getPrefix()) {
       switch (NNS->getKind()) {
@@ -808,6 +842,82 @@ QualType Sema::resugar(const NestedNameSpecifier *NNS, QualType T) {
   Names.insert(*this, NNS);
   if (Names.empty())
     return T;
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
+}
+
+QualType Sema::resugar(const NestedNameSpecifier *NNS, NamedDecl *ND,
+                       ArrayRef<TemplateArgument> Args, QualType T) {
+  NameMap Names;
+  Names.insert(*this, ND, Args);
+  Names.insert(*this, NNS);
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
+}
+
+QualType Sema::resugar(NamedDecl *ND, ArrayRef<TemplateArgument> Args,
+                       QualType T) {
+  NameMap Names;
+  Names.insert(*this, ND, Args);
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
+}
+
+static const NestedNameSpecifier *decomposeBaseType(const Type *&Base) {
+  if (const auto *ElTy = Base->getAs<ElaboratedType>()) {
+    Base = ElTy->getNamedType().getTypePtr();
+    return ElTy->getQualifier();
+  }
+  return nullptr;
+}
+
+QualType Sema::resugar(const Type *Base, QualType T) {
+  NameMap Names;
+  const NestedNameSpecifier *BaseNNS = decomposeBaseType(Base);
+  Names.insert(*this, Base);
+  Names.insert(*this, BaseNNS);
+  if (Names.empty())
+    return T;
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
+}
+QualType Sema::resugar(const Type *Base, NamedDecl *ND,
+                       ArrayRef<TemplateArgument> Args, QualType T) {
+  NameMap Names;
+  Names.insert(*this, ND, Args);
+  const NestedNameSpecifier *BaseNNS = decomposeBaseType(Base);
+  Names.insert(*this, Base);
+  Names.insert(*this, BaseNNS);
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
+}
+QualType Sema::resugar(const Type *Base, const NestedNameSpecifier *FieldNNS,
+                       QualType T) {
+  NameMap Names;
+  Names.insert(*this, FieldNNS);
+  const NestedNameSpecifier *BaseNNS = decomposeBaseType(Base);
+  Names.insert(*this, Base);
+  Names.insert(*this, BaseNNS);
+  if (Names.empty())
+    return T;
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
+}
+QualType Sema::resugar(const Type *Base, const NestedNameSpecifier *FieldNNS,
+                       NamedDecl *ND, ArrayRef<TemplateArgument> Args,
+                       QualType T) {
+  NameMap Names;
+  Names.insert(*this, ND, Args);
+  Names.insert(*this, FieldNNS);
+  const NestedNameSpecifier *BaseNNS = decomposeBaseType(Base);
+  Names.insert(*this, Base);
+  Names.insert(*this, BaseNNS);
 
   bool Changed = false;
   return Resugarer(*this, Names).transform(T, Changed);

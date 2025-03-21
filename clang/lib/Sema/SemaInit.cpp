@@ -10239,12 +10239,13 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     MarkFunctionReferenced(Kind.getLocation(), Best->Function);
     break;
   }
+  QualType RT = Best->Function->getReturnType();
+  // FIXME: resugar here
 
   // C++ [dcl.type.class.deduct]p1:
   //  The placeholder is replaced by the return type of the function selected
   //  by overload resolution for class template deduction.
-  QualType DeducedType =
-      SubstAutoType(TSInfo->getType(), Best->Function->getReturnType());
+  QualType DeducedType = SubstAutoType(TSInfo->getType(), RT);
   Diag(TSInfo->getTypeLoc().getBeginLoc(),
        diag::warn_cxx14_compat_class_template_argument_deduction)
       << TSInfo->getTypeLoc().getSourceRange() << 1 << DeducedType;

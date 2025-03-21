@@ -632,7 +632,8 @@ namespace preferred_name {
   };
   template<typename T> T desugar(T);
   auto it = desugar(MemberTemplate<int>::Iter<const int>());
-  int n = it; // expected-error {{no viable conversion from 'preferred_name::MemberTemplate<int>::const_iterator' to 'int'}}
+  // FIXME: We need to implement a __builtin_canonicalize_type for this ;-)
+  int n = it; // expected-error {{no viable conversion from 'MemberTemplate<int>::Iter<const int>' to 'int'}}
 
   template<int A, int B, typename ...T> struct Foo;
   template<typename ...T> using Bar = Foo<1, 2, T...>;

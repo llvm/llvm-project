@@ -1290,8 +1290,8 @@ TEST(TypeHints, Lambda) {
   assertTypeHints(R"cpp(
     void f() {
       int cap = 42;
-      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a$ret[[)]] { 
-        return a + cap + init; 
+      auto $L[[L]] = [cap, $init[[init]] = 1 + 1](int a$ret[[)]] {
+        return a + cap + init;
       };
     }
   )cpp",
@@ -1367,7 +1367,7 @@ TEST(TypeHints, StructuredBindings_TupleLike) {
 TEST(TypeHints, StructuredBindings_NoInitializer) {
   assertTypeHints(R"cpp(
     // No initializer (ill-formed).
-    // Do not show useless "NULL TYPE" hint.    
+    // Do not show useless "NULL TYPE" hint.
     auto [x, y];  /*error-ok*/
   )cpp");
 }
@@ -1670,15 +1670,16 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
     auto $end[[end]] = array.end();
   )cpp";
 
-  assertHintsWithHeader(
-      InlayHintKind::Type, VectorIntPtr, Header,
-      ExpectedHint{": int *", "no_modifier"},
-      ExpectedHint{": int **", "ptr_modifier"},
-      ExpectedHint{": int *&", "ref_modifier"},
-      ExpectedHint{": int *const &", "at"}, ExpectedHint{": int **", "data"},
-      ExpectedHint{": allocator<int *>", "allocator"},
-      ExpectedHint{": size_type", "size"}, ExpectedHint{": iterator", "begin"},
-      ExpectedHint{": non_template_iterator", "end"});
+  assertHintsWithHeader(InlayHintKind::Type, VectorIntPtr, Header,
+                        ExpectedHint{": int *", "no_modifier"},
+                        ExpectedHint{": int **", "ptr_modifier"},
+                        ExpectedHint{": int *&", "ref_modifier"},
+                        ExpectedHint{": const value_type &", "at"},
+                        ExpectedHint{": pointer", "data"},
+                        ExpectedHint{": allocator_type", "allocator"},
+                        ExpectedHint{": size_type", "size"},
+                        ExpectedHint{": iterator", "begin"},
+                        ExpectedHint{": non_template_iterator", "end"});
 
   llvm::StringRef VectorInt = R"cpp(
   vector<int> array;
@@ -1694,15 +1695,16 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   auto $end[[end]] = array.end();
   )cpp";
 
-  assertHintsWithHeader(
-      InlayHintKind::Type, VectorInt, Header,
-      ExpectedHint{": int", "no_modifier"},
-      ExpectedHint{": int *", "ptr_modifier"},
-      ExpectedHint{": int &", "ref_modifier"},
-      ExpectedHint{": const int &", "at"}, ExpectedHint{": int *", "data"},
-      ExpectedHint{": allocator<int>", "allocator"},
-      ExpectedHint{": size_type", "size"}, ExpectedHint{": iterator", "begin"},
-      ExpectedHint{": non_template_iterator", "end"});
+  assertHintsWithHeader(InlayHintKind::Type, VectorInt, Header,
+                        ExpectedHint{": int", "no_modifier"},
+                        ExpectedHint{": int *", "ptr_modifier"},
+                        ExpectedHint{": int &", "ref_modifier"},
+                        ExpectedHint{": const value_type &", "at"},
+                        ExpectedHint{": pointer", "data"},
+                        ExpectedHint{": allocator_type", "allocator"},
+                        ExpectedHint{": size_type", "size"},
+                        ExpectedHint{": iterator", "begin"},
+                        ExpectedHint{": non_template_iterator", "end"});
 
   llvm::StringRef TypeAlias = R"cpp(
   // If the type alias is not of substituted template parameter type,
@@ -1899,13 +1901,13 @@ TEST(BlockEndHints, Functions) {
       return 41;
     $foo[[}]]
 
-    template<int X> 
-    int bar() { 
+    template<int X>
+    int bar() {
       // No hint for lambda for now
-      auto f = []() { 
-        return X; 
+      auto f = []() {
+        return X;
       };
-      return f(); 
+      return f();
     $bar[[}]]
 
     // No hint because this isn't a definition
@@ -1926,7 +1928,7 @@ TEST(BlockEndHints, Methods) {
     struct Test {
       // No hint because there's no function body
       Test() = default;
-      
+
       ~Test() {
       $dtor[[}]]
 
@@ -2229,7 +2231,7 @@ TEST(BlockEndHints, TrailingSemicolon) {
   assertBlockEndHints(R"cpp(
     // The hint is placed after the trailing ';'
     struct S1 {
-    $S1[[}  ;]]   
+    $S1[[}  ;]]
 
     // The hint is always placed in the same line with the closing '}'.
     // So in this case where ';' is missing, it is attached to '}'.
@@ -2250,7 +2252,7 @@ TEST(BlockEndHints, TrailingSemicolon) {
     struct {
       int x;
     $anon[[}]]
-    
+
     s2;
   )cpp",
                       ExpectedHint{" // struct S1", "S1"},

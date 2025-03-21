@@ -3338,7 +3338,8 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
         DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
         ExprResult Res = S.BuildFieldReferenceExpr(
-            E, false, E->getBeginLoc(), CXXScopeSpec(), FD, Found, NameInfo);
+            E, false, E->getBeginLoc(), NestedNameSpecifierLoc(), FD,
+            FD->getType(), Found, NameInfo);
         if (Res.isInvalid())
           return false;
         if (!BuildInitializerList(S, Ctx, Res.get(), List, DestTypes))

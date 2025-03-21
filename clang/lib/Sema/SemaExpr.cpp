@@ -3224,6 +3224,7 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   if (!NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
       !ShouldLookupResultBeMultiVersionOverload(R))
+    // FIXME: get ConvertedArgs
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
                                     R.getRepresentativeDecl(), nullptr, nullptr,
                                     AcceptInvalidDecl);
@@ -3308,6 +3309,10 @@ ExprResult Sema::BuildDeclarationNameExpr(
   QualType type = VD->getType();
   if (type.isNull())
     return ExprError();
+  assert(!TemplateArgs || ConvertedArgs);
+  type = ConvertedArgs
+             ? resugar(SS.getScopeRep(), VD, ConvertedArgs->asArray(), type)
+             : resugar(SS.getScopeRep(), type);
   ExprValueKind valueKind = VK_PRValue;
 
   // In 'T ...V;', the type of the declaration 'V' is 'T...', but the type of
@@ -19865,10 +19870,30 @@ static void DoMarkVarDeclReferenced(
 
         // Re-set the member to trigger a recomputation of the dependence bits
         // for the expression.
-        if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E))
+        CXXScopeSpec SS;
+        if (auto *DRE = dyn_cast_or_null<DeclRefExpr>(E)) {
           DRE->setDecl(DRE->getDecl());
-        else if (auto *ME = dyn_cast_or_null<MemberExpr>(E))
+          SS.Adopt(DRE->getQualifierLoc());
+          assert(DRE->template_arguments().size() == 0 ||
+                 DRE->getConvertedArgs() != nullptr);
+          QualType T = DRE->getConvertedArgs()
+                           ? SemaRef.resugar(SS.getScopeRep(), DRE->getDecl(),
+                                             DRE->getConvertedArgs()->asArray(),
+                                             DRE->getType())
+                           : SemaRef.resugar(SS.getScopeRep(), DRE->getType());
+          DRE->setType(T);
+        } else if (auto *ME = dyn_cast_or_null<MemberExpr>(E)) {
           ME->setMemberDecl(ME->getMemberDecl());
+          SS.Adopt(ME->getQualifierLoc());
+          assert(ME->template_arguments().size() == 0 ||
+                 ME->getDeduced() != nullptr);
+          QualType T =
+              ME->getDeduced()
+                  ? SemaRef.resugar(SS.getScopeRep(), ME->getMemberDecl(),
+                                    ME->getDeduced()->asArray(), ME->getType())
+                  : SemaRef.resugar(SS.getScopeRep(), ME->getType());
+          ME->setType(T);
+        }
       } else if (FirstInstantiation) {
         SemaRef.PendingInstantiations
             .push_back(std::make_pair(Var, PointOfInstantiation));
@@ -21170,6 +21195,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
         SS.Adopt(DRE->getQualifierLoc());
         TemplateArgumentListInfo TemplateArgs;
         DRE->copyTemplateArgumentsInto(TemplateArgs);
+        // FIXME: resugar
         return BuildDeclRefExpr(
             FD, FD->getType(), VK_LValue, DRE->getNameInfo(),
             DRE->hasQualifier() ? &SS : nullptr, DRE->getFoundDecl(),

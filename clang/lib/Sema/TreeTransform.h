@@ -2931,8 +2931,10 @@ public:
       }
 
       CXXScopeSpec EmptySS;
+      // FIXME: resugar.
       return getSema().BuildFieldReferenceExpr(
-          Base, isArrow, OpLoc, EmptySS, cast<FieldDecl>(Member),
+          Base, isArrow, OpLoc, NestedNameSpecifierLoc(),
+          cast<FieldDecl>(Member), Member->getType(),
           DeclAccessPair::make(FoundDecl, FoundDecl->getAccess()),
           MemberNameInfo);
     }

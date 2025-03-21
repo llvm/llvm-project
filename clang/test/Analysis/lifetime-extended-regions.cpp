@@ -54,7 +54,7 @@ void member_access() {
   int&& x = Composite{}.x;  // extends `Composite`
   clang_analyzer_dump(x); // expected-warning-re {{&lifetime_extended_object{Composite, x, S{{[0-9]+}}}.x }}
   int&& y = create<Composite>().y; // extends `Composite`
-  clang_analyzer_dump(y); // expected-warning-re {{&lifetime_extended_object{struct Composite, y, S{{[0-9]+}}}.y }}
+  clang_analyzer_dump(y); // expected-warning-re {{&lifetime_extended_object{Composite, y, S{{[0-9]+}}}.y }}
   int&& d = Array<int>{}.front(); // dangles `Array<int>`
   clang_analyzer_dump(d); // expected-warning-re {{&Element{temp_object{Array<int>, S{{[0-9]+}}}.array,0 S64b,int} }}
 }
@@ -120,7 +120,7 @@ void aggregateWithReferences() {
   clang_analyzer_dump(viaReference);    // expected-warning-re {{&lifetime_extended_object{RefAggregate, viaReference, S{{[0-9]+}}} }}
   clang_analyzer_dump(viaReference.rx); // expected-warning-re {{&lifetime_extended_object{int, viaReference, S{{[0-9]+}}} }}
   clang_analyzer_dump(viaReference.ry); // expected-warning-re {{&lifetime_extended_object{Composite, viaReference, S{{[0-9]+}}} }}
-  
+
   // FIXME: clang currently support extending lifetime of object bound to reference members of aggregates,
   // that are created from default member initializer. But CFG and ExprEngine need to be updated to address this change.
   // The following expect warning: {{&lifetime_extended_object{Composite, defaultInitExtended, S{{[0-9]+}}} }}
@@ -140,8 +140,8 @@ void lambda() {
   // See also CWG2737 (https://cplusplus.github.io/CWG/issues/2737.html)
   auto const refExtendingCapture = [&refCapture = create<Composite const>()] {
      clang_analyzer_dump(refCapture);
-     // cpp14-warning-re@-1 {{&temp_object{const struct Composite, S{{[0-9]+}}} }}
-     // cpp17-warning-re@-2 {{&lifetime_extended_object{const struct Composite, refExtendingCapture, S{{[0-9]+}}} }}
+     // cpp14-warning-re@-1 {{&temp_object{const Composite, S{{[0-9]+}}} }}
+     // cpp17-warning-re@-2 {{&lifetime_extended_object{const Composite, refExtendingCapture, S{{[0-9]+}}} }}
   };
   refExtendingCapture();
 }

@@ -63,7 +63,7 @@ template<typename T> void foo(T&, ...);
 struct Q; // #cwg2304-Q
 void fn1(Q &data_vectors) {
   foo(data_vectors, 0);
-  // expected-error@-1 {{argument type 'cwg2304::Q' is incomplete}}
+  // expected-error@-1 {{argument type 'Q' is incomplete}}
   //   expected-note@#cwg2304-Q {{forward declaration of 'cwg2304::Q'}}
 }
 } // namespace cwg2304
@@ -91,7 +91,7 @@ struct Y {};
 struct Z : W,
   X, check_derived_from<Z, X>, // #cwg2310-X
   check_derived_from<Z, Y>, Y  // #cwg2310-Y
-{  
+{
   // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
   //        See https://github.com/llvm/llvm-project/issues/59920
 #if __cplusplus >= 201703L

@@ -2216,6 +2216,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       // We were able to resolve the address of the overloaded function,
       // so we can convert to the type of that function.
       FromType = Fn->getType();
+      // FIXME: resugar
       SCS.setFromType(FromType);
 
       // we can sometimes resolve &foo<int> regardless of ToType, so check
@@ -5218,6 +5219,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     const TemplateArgumentList *ConvertedArgs;
     if (FunctionDecl *Fn = S.ResolveAddressOfOverloadedFunction(
             Init, DeclType, false, Found, ConvertedArgs))
+      // FIXME: resugar
       T2 = Fn->getType();
   }
 
@@ -5709,6 +5711,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
         const TemplateArgumentList *ConvertedArgs;
         if (FunctionDecl *Fn = S.ResolveAddressOfOverloadedFunction(
                 Init, ToType, false, Found, ConvertedArgs))
+          // FIXME: resugar
           T2 = Fn->getType();
       }
 
@@ -13607,6 +13610,7 @@ bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
       FixOverloadedFunctionReference(E, DAP, Found, /*ConvertedArgs=*/{});
   if (Res.isInvalid())
     return false;
+  // FIXME: resugar
   Expr *Fixed = Res.get();
   if (DoFunctionPointerConversion && Fixed->getType()->isFunctionType())
     SrcExpr = DefaultFunctionArrayConversion(Fixed, /*Diagnose=*/false);
@@ -15787,13 +15791,28 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
 
     MemExpr = cast<MemberExpr>(MemExprE->IgnoreParens());
   }
-
-  QualType ResultType = Method->getReturnType();
-  ExprValueKind VK = Expr::getValueKindForType(ResultType);
-  ResultType = ResultType.getNonLValueExprType(Context);
-
   assert(Method && "Member call to something that isn't a method?");
-  const auto *Proto = Method->getType()->castAs<FunctionProtoType>();
+
+  QualType MethodType;
+  {
+    QualType BaseType = MemExpr->getBase()->getType();
+    if (MemExpr->isArrow())
+      BaseType = BaseType->castAs<PointerType>()->getPointeeType();
+    NestedNameSpecifierLoc NNS = MemExpr->getQualifierLoc();
+    // FIXME: Should we resugar the explicit template arguments as well?
+    const TemplateArgumentList *Deduced = MemExpr->getDeduced();
+    MethodType =
+        Deduced ? resugar(BaseType.getTypePtr(), NNS.getNestedNameSpecifier(),
+                          Method, Deduced->asArray(), Method->getType())
+                : resugar(BaseType.getTypePtr(), NNS.getNestedNameSpecifier(),
+                          Method->getType());
+  }
+
+  const auto *Proto = MethodType->castAs<FunctionProtoType>();
+  QualType ReturnType = Proto->getReturnType();
+
+  ExprValueKind VK = Expr::getValueKindForType(ReturnType);
+  QualType ResultType = ReturnType.getNonLValueExprType(Context);
 
   CallExpr *TheCall = nullptr;
   llvm::SmallVector<Expr *, 8> NewArgs;
@@ -15825,8 +15844,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   }
 
   // Check for a valid return type.
-  if (CheckCallReturnType(Method->getReturnType(), MemExpr->getMemberLoc(),
-                          TheCall, Method))
+  if (CheckCallReturnType(ReturnType, MemExpr->getMemberLoc(), TheCall, Method))
     return BuildRecoveryExpr(ResultType);
 
   // Convert the rest of the arguments
@@ -16521,9 +16539,18 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         // We have taken the address of a pointer to member
         // function. Perform the computation here so that we get the
         // appropriate pointer to member type.
-        QualType MemPtrType = Context.getMemberPointerType(
-            Fn->getType(), Qualifier,
-            cast<CXXRecordDecl>(Method->getDeclContext()));
+        // FIXME: get sugared class type
+        auto *Cls = cast<CXXRecordDecl>(Method->getDeclContext());
+        if (auto *RD = Qualifier->getAsRecordDecl();
+            Cls != RD && Cls->getCanonicalDecl() != RD->getCanonicalDecl())
+          // FIXME: Get type as written for the base class.
+          Qualifier = nullptr;
+        QualType Type =
+            Deduced ? resugar(Qualifier, Fn, Deduced->asArray(), Fn->getType())
+                    : resugar(Qualifier, Fn->getType());
+        QualType MemPtrType =
+            Context.getMemberPointerType(Type, Qualifier, Cls);
+
         // Under the MS ABI, lock down the inheritance model now.
         if (Context.getTargetInfo().getCXXABI().isMicrosoft())
           (void)isCompleteType(UnOp->getOperatorLoc(), MemPtrType);
@@ -16552,24 +16579,30 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       ULE->copyTemplateArgumentsInto(TemplateArgsBuffer);
       TemplateArgs = &TemplateArgsBuffer;
     }
+    NestedNameSpecifierLoc NNS = ULE->getQualifierLoc();
 
-    QualType Type = Fn->getType();
     ExprValueKind ValueKind =
         getLangOpts().CPlusPlus && !Fn->hasCXXExplicitFunctionObjectParameter()
             ? VK_LValue
             : VK_PRValue;
 
     // FIXME: Duplicated from BuildDeclarationNameExpr.
-    if (unsigned BID = Fn->getBuiltinID()) {
-      if (!Context.BuiltinInfo.isDirectlyAddressable(BID)) {
+    QualType Type;
+    {
+      unsigned BID = Fn->getBuiltinID();
+      if (BID && !Context.BuiltinInfo.isDirectlyAddressable(BID)) {
         Type = Context.BuiltinFnTy;
         ValueKind = VK_PRValue;
+      } else {
+        Type = Deduced ? resugar(NNS.getNestedNameSpecifier(), Fn,
+                                 Deduced->asArray(), Fn->getType())
+                       : resugar(NNS.getNestedNameSpecifier(), Fn->getType());
       }
     }
 
     DeclRefExpr *DRE = BuildDeclRefExpr(
-        Fn, Type, ValueKind, ULE->getNameInfo(), ULE->getQualifierLoc(),
-        Found.getDecl(), ULE->getTemplateKeywordLoc(), TemplateArgs, Deduced);
+        Fn, Type, ValueKind, ULE->getNameInfo(), NNS, Found.getDecl(),
+        ULE->getTemplateKeywordLoc(), TemplateArgs, Deduced);
     DRE->setHadMultipleCandidates(ULE->getNumDecls() > 1);
     return DRE;
   }
@@ -16581,6 +16614,10 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       MemExpr->copyTemplateArgumentsInto(TemplateArgsBuffer);
       TemplateArgs = &TemplateArgsBuffer;
     }
+    QualType BaseType = MemExpr->getBaseType();
+    const Type *BasePointeeType = BaseType->getPointeeType().getTypePtrOrNull();
+    if (!BasePointeeType)
+      BasePointeeType = BaseType.getTypePtr();
 
     Expr *Base;
 
@@ -16588,8 +16625,11 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     // implicit member access, rewrite to a simple decl ref.
     if (MemExpr->isImplicitAccess()) {
       if (cast<CXXMethodDecl>(Fn)->isStatic()) {
+        QualType Type = Deduced ? resugar(BasePointeeType, Fn,
+                                          Deduced->asArray(), Fn->getType())
+                                : resugar(BasePointeeType, Fn->getType());
         DeclRefExpr *DRE = BuildDeclRefExpr(
-            Fn, Fn->getType(), VK_LValue, MemExpr->getNameInfo(),
+            Fn, Type, VK_LValue, MemExpr->getNameInfo(),
             MemExpr->getQualifierLoc(), Found.getDecl(),
             MemExpr->getTemplateKeywordLoc(), TemplateArgs, Deduced);
         DRE->setHadMultipleCandidates(MemExpr->getNumDecls() > 1);
@@ -16598,27 +16638,28 @@ Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         SourceLocation Loc = MemExpr->getMemberLoc();
         if (MemExpr->getQualifier())
           Loc = MemExpr->getQualifierLoc().getBeginLoc();
-        Base =
-            BuildCXXThisExpr(Loc, MemExpr->getBaseType(), /*IsImplicit=*/true);
+        Base = BuildCXXThisExpr(Loc, BaseType, /*IsImplicit=*/true);
       }
     } else
       Base = MemExpr->getBase();
 
     ExprValueKind valueKind;
-    QualType type;
+    QualType Type;
     if (cast<CXXMethodDecl>(Fn)->isStatic()) {
       valueKind = VK_LValue;
-      type = Fn->getType();
+      Type = Deduced ? resugar(BasePointeeType, Fn, Deduced->asArray(),
+                               Fn->getType())
+                     : resugar(BasePointeeType, Fn->getType());
     } else {
       valueKind = VK_PRValue;
-      type = Context.BoundMemberTy;
+      Type = Context.BoundMemberTy;
     }
 
     return BuildMemberExpr(
         Base, MemExpr->isArrow(), MemExpr->getOperatorLoc(),
         MemExpr->getQualifierLoc(), MemExpr->getTemplateKeywordLoc(), Fn, Found,
-        /*HadMultipleCandidates=*/true, MemExpr->getMemberNameInfo(),
-        type, valueKind, OK_Ordinary, TemplateArgs);
+        /*HadMultipleCandidates=*/true, MemExpr->getMemberNameInfo(), Type,
+        valueKind, OK_Ordinary, TemplateArgs, Deduced);
   }
 
   llvm_unreachable("Invalid reference to overloaded function");

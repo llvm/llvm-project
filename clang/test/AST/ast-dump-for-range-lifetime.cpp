@@ -135,7 +135,7 @@ void test4() {
   // CHECK-NEXT:  |           `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
   // CHECK-NEXT:  |             `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |               `-CXXTemporaryObjectExpr {{.*}} 'A':'P2718R0::A' 'void ()'
-  for (auto e : default_arg_fn()) 
+  for (auto e : default_arg_fn())
     bar(e);
 }
 
@@ -293,17 +293,17 @@ void test8() {
   // CHECK:      -CXXForRangeStmt {{.*}}
   // CHECK-NEXT:  |-<<<NULL>>>
   // CHECK-NEXT:  |-DeclStmt {{.*}}
-  // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'const P2718R0::A &' cinit
-  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'const P2718R0::A' lvalue
-  // CHECK-NEXT:  |     `-CallExpr {{.*}} 'const P2718R0::A' lvalue
-  // CHECK-NEXT:  |       |-ImplicitCastExpr {{.*}} 'const P2718R0::A &(*)(const P2718R0::A &)' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'const P2718R0::A &(const P2718R0::A &)' lvalue Function {{.*}} 'df1' 'const P2718R0::A &(const P2718R0::A &)' (FunctionTemplate {{.*}} 'df1')
-  // CHECK-NEXT:  |       `-MaterializeTemporaryExpr {{.*}} 'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'const P2718R0::A &'
-  // CHECK-NEXT:  |         `-ImplicitCastExpr {{.*}} 'const P2718R0::A' <NoOp>
-  // CHECK-NEXT:  |           `-CXXBindTemporaryExpr {{.*}} 'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |             `-CallExpr {{.*}} 'P2718R0::A'
-  // CHECK-NEXT:  |               `-ImplicitCastExpr {{.*}} 'P2718R0::A (*)()' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |                 `-DeclRefExpr {{.*}} 'P2718R0::A ()' lvalue Function {{.*}} 'dg' 'P2718R0::A ()' (FunctionTemplate {{.*}} 'dg')
+  // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'const A &' cinit
+  // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'const A':'const P2718R0::A' lvalue
+  // CHECK-NEXT:  |     `-CallExpr {{.*}} 'const A':'const P2718R0::A' lvalue
+  // CHECK-NEXT:  |       |-ImplicitCastExpr {{.*}} 'const A &(*)(const A &)' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'const A &(const A &)' lvalue Function {{.*}} 'df1' 'const P2718R0::A &(const P2718R0::A &)' (FunctionTemplate {{.*}} 'df1')
+  // CHECK-NEXT:  |       `-MaterializeTemporaryExpr {{.*}} 'const A':'const P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'const A &'
+  // CHECK-NEXT:  |         `-ImplicitCastExpr {{.*}} 'const A':'const P2718R0::A' <NoOp>
+  // CHECK-NEXT:  |           `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |             `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |               `-ImplicitCastExpr {{.*}} 'A (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |                 `-DeclRefExpr {{.*}} 'A ()' lvalue Function {{.*}} 'dg' 'P2718R0::A ()' (FunctionTemplate {{.*}} 'dg')
   for (auto e : df1(dg<A>()))
     sum += e;
 }
@@ -319,8 +319,8 @@ void test9() {
   // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'int (&)[3]' cinit
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-CallExpr {{.*}} 'int[3]' lvalue
-  // CHECK-NEXT:  |       |-ImplicitCastExpr {{.*}} 'int (&(*)(const P2718R0::A *))[3]' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'int (&(const P2718R0::A *))[3]' lvalue Function {{.*}} 'df2' 'int (&(const P2718R0::A *))[3]' (FunctionTemplate {{.*}} 'df2')
+  // CHECK-NEXT:  |       |-ImplicitCastExpr {{.*}} 'int (&(*)(const A *))[3]' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |       | `-DeclRefExpr {{.*}} 'int (&(const A *))[3]' lvalue Function {{.*}} 'df2' 'int (&(const P2718R0::A *))[3]' (FunctionTemplate {{.*}} 'df2')
   // CHECK-NEXT:  |       `-CallExpr {{.*}} 'const A *'
   // CHECK-NEXT:  |         |-ImplicitCastExpr {{.*}} 'const A *(*)(const A &)' <FunctionToPointerDecay>
   // CHECK-NEXT:  |         | `-DeclRefExpr {{.*}} 'const A *(const A &)' lvalue Function {{.*}} 'dg2' 'const A *(const A &)'
@@ -345,9 +345,9 @@ void test10() {
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-BinaryOperator {{.*}} 'int[3]' lvalue ','
   // CHECK-NEXT:  |       |-CXXStaticCastExpr {{.*}} 'void' static_cast<void> <ToVoid>
-  // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
-  // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
+  // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue
+  // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const LockGuard &(*)(const LockGuard &)' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const LockGuard &(const LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
   // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
   // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
   // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
@@ -363,9 +363,9 @@ void test10() {
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-BinaryOperator {{.*}} 'int[3]' lvalue ','
   // CHECK-NEXT:  |       |-CStyleCastExpr {{.*}} 'void' <ToVoid>
-  // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
-  // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
+  // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue
+  // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const LockGuard &(*)(const LockGuard &)' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const LockGuard &(const LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
   // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
   // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
   // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
@@ -380,17 +380,17 @@ void test10() {
   // CHECK-NEXT:  | `-VarDecl {{.*}} implicit used __range1 'int (&)[3]' cinit
   // CHECK-NEXT:  |   `-ExprWithCleanups {{.*}} 'int[3]' lvalue
   // CHECK-NEXT:  |     `-BinaryOperator {{.*}} 'int[3]' lvalue ','
-  // CHECK-NEXT:  |       |-BinaryOperator {{.*}} 'const P2718R0::LockGuard' lvalue ','
-  // CHECK-NEXT:  |       | |-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
-  // CHECK-NEXT:  |       | | |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |       | | | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
+  // CHECK-NEXT:  |       |-BinaryOperator {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue ','
+  // CHECK-NEXT:  |       | |-CallExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue
+  // CHECK-NEXT:  |       | | |-ImplicitCastExpr {{.*}} 'const LockGuard &(*)(const LockGuard &)' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |       | | | `-DeclRefExpr {{.*}} 'const LockGuard &(const LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
   // CHECK-NEXT:  |       | | `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
   // CHECK-NEXT:  |       | |   `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
   // CHECK-NEXT:  |       | |     `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |       | |       `-CXXTemporaryObjectExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' 'void ()'
-  // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const P2718R0::LockGuard' lvalue
-  // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const P2718R0::LockGuard &(*)(const P2718R0::LockGuard &)' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
+  // CHECK-NEXT:  |       | `-CallExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue
+  // CHECK-NEXT:  |       |   |-ImplicitCastExpr {{.*}} 'const LockGuard &(*)(const LockGuard &)' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |       |   | `-DeclRefExpr {{.*}} 'const LockGuard &(const LockGuard &)' lvalue Function {{.*}} 'df1' 'const P2718R0::LockGuard &(const P2718R0::LockGuard &)' (FunctionTemplate {{.*}} 'df1')
   // CHECK-NEXT:  |       |   `-MaterializeTemporaryExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' lvalue extended by Var {{.*}} '__range1' 'int (&)[3]'
   // CHECK-NEXT:  |       |     `-ImplicitCastExpr {{.*}} 'const LockGuard':'const P2718R0::LockGuard' <NoOp>
   // CHECK-NEXT:  |       |       `-CXXBindTemporaryExpr {{.*}} 'LockGuard':'P2718R0::LockGuard' (CXXTemporary {{.*}})
@@ -403,7 +403,7 @@ void test10() {
 // Test default argument && dependent context
 template <typename T> int (&default_arg_fn2(const T & = T()))[3];
 void test11() {
-  for (auto e : default_arg_fn2<A>()) 
+  for (auto e : default_arg_fn2<A>())
     bar(e);
 }
 
@@ -441,11 +441,11 @@ void test13() {
   // CHECK-NEXT:  |                                   `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |                                       `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
-  // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'P2718R0::A' (CXXTemporary {{.*}})
-  // CHECK-NEXT:  |                                             `-CallExpr {{.*}} 'P2718R0::A'
-  // CHECK-NEXT:  |                                               `-ImplicitCastExpr {{.*}} 'P2718R0::A (*)()' <FunctionToPointerDecay>
-  // CHECK-NEXT:  |                                                 `-DeclRefExpr {{.*}} 'P2718R0::A ()' lvalue Function {{.*}} 'dg' 'P2718R0::A ()' (FunctionTemplate {{.*}} 'dg')
+  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
+  // CHECK-NEXT:  |                                             `-CallExpr {{.*}} 'A':'P2718R0::A'
+  // CHECK-NEXT:  |                                               `-ImplicitCastExpr {{.*}} 'A (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT:  |                                                 `-DeclRefExpr {{.*}} 'A ()' lvalue Function {{.*}} 'dg' 'P2718R0::A ()' (FunctionTemplate {{.*}} 'dg')
   for (auto e : dg<A>().r().g().r().g().r().g())
     bar(e);
 }
