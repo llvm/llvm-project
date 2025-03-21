@@ -284,6 +284,20 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveAnyRegQPX(unsigned Reg,
   emitARM64WinUnwindCode(Win64EH::UOP_SaveAnyRegQPX, Reg, Offset);
 }
 
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIAllocZ(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_AllocZ, 0, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveZReg(unsigned Reg,
+                                                           int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveZReg, Reg, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISavePReg(unsigned Reg,
+                                                           int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SavePReg, Reg, Offset);
+}
+
 MCStreamer *
 llvm::createAArch64WinCOFFStreamer(MCContext &Context,
                                    std::unique_ptr<MCAsmBackend> &&MAB,
