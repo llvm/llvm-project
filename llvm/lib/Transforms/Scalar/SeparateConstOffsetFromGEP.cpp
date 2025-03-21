@@ -1082,7 +1082,10 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
         RecursivelyDeleteTriviallyDeadInstructions(UserChainTail);
         RecursivelyDeleteTriviallyDeadInstructions(OldIdx);
         MayRecoverInbounds =
-            MayRecoverInbounds && computeKnownBits(NewIdx, *DL).isNonNegative();
+            MayRecoverInbounds &&
+            isKnownNonNegative(
+                NewIdx,
+                SimplifyQuery(*DL, TLI, DT, /*AC=*/nullptr, /*CXTI=*/GEP));
       }
     }
   }
