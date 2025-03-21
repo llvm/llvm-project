@@ -1868,7 +1868,8 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
   if (TypeTraitExprBits.IsBooleanTypeTrait)
     TypeTraitExprBits.Value = std::get<bool>(Value);
   else
-    *getTrailingObjects<APValue>() = std::get<APValue>(std::move(Value));
+    ::new (getTrailingObjects<APValue>())
+        APValue(std::get<APValue>(std::move(Value)));
 
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
@@ -1882,6 +1883,13 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
   assert((TypeTraitExprBits.IsBooleanTypeTrait || isValueDependent() ||
           getAPValue().isInt() || getAPValue().isAbsent()) &&
          "Only int values are supported by clang");
+}
+
+TypeTraitExpr::TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool)
+    : Expr(TypeTraitExprClass, Empty) {
+  TypeTraitExprBits.IsBooleanTypeTrait = IsStoredAsBool;
+  if (!IsStoredAsBool)
+    ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
@@ -1909,7 +1917,7 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
                                                  unsigned NumArgs) {
   void *Mem = C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(
       IsStoredAsBool ? 0 : 1, NumArgs));
-  return new (Mem) TypeTraitExpr(EmptyShell());
+  return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,

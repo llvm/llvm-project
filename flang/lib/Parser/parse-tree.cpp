@@ -337,6 +337,14 @@ llvm::omp::Clause OmpClause::Id() const {
   return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
 }
 
+const OmpArgumentList &OmpDirectiveSpecification::Arguments() const {
+  static OmpArgumentList empty{decltype(OmpArgumentList::v){}};
+  if (auto &arguments = std::get<std::optional<OmpArgumentList>>(t)) {
+    return *arguments;
+  }
+  return empty;
+}
+
 const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
   static OmpClauseList empty{decltype(OmpClauseList::v){}};
   if (auto &clauses = std::get<std::optional<OmpClauseList>>(t)) {
