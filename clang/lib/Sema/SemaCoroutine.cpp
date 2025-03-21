@@ -113,6 +113,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
   }
   // The promise type is required to be a class type.
   QualType PromiseType = S.Context.getTypeDeclType(Promise);
+  // FIXME: resugar PromiseType.
 
   auto buildElaboratedType = [&]() {
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());

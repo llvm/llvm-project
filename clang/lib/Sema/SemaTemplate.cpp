@@ -18,6 +18,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -91,6 +92,725 @@ unsigned Sema::getTemplateDepth(Scope *S) const {
   }
 
   return Depth;
+}
+
+namespace {
+
+class NameMap {
+  llvm::DenseMap<const Decl *, ArrayRef<TemplateArgument>> Map;
+
+  void insert(const Decl *AssociatedDecl, ArrayRef<TemplateArgument> Args) {
+    assert(!Args.empty());
+    Map.try_emplace(AssociatedDecl->getCanonicalDecl(), Args);
+  }
+
+public:
+  NameMap() = default;
+
+  const TemplateArgument *getArgument(const Decl *AssociatedDecl,
+                                      unsigned Index,
+                                      std::optional<unsigned> PackIndex) const {
+    auto It = Map.find(AssociatedDecl);
+    if (It == Map.end())
+      return nullptr;
+    ArrayRef<TemplateArgument> Args = It->second;
+    assert(Index < Args.size());
+    const TemplateArgument &Arg = Args[Index];
+    if (!PackIndex)
+      return &Arg;
+    ArrayRef<TemplateArgument> PackArgs = Arg.getPackAsArray();
+    assert(*PackIndex < PackArgs.size());
+    return &PackArgs[PackArgs.size() - 1 - *PackIndex];
+  }
+
+  void insert(Sema &SemaRef, const Type *T) {
+    const Type *CanonT = T->getCanonicalTypeInternal().getTypePtr();
+    if (auto TC = CanonT->getTypeClass(); TC != Type::Record) {
+      assert(TC == Type::Enum || TC == Type::InjectedClassName ||
+             T->isDependentType());
+      return;
+    }
+    const auto *TS = T->getAsNonAliasTemplateSpecializationType();
+    if (!TS)
+      return;
+    auto *CTSD = cast<ClassTemplateSpecializationDecl>(
+        cast<RecordType>(CanonT)->getDecl());
+    auto PU = CTSD->getInstantiatedFrom();
+    if (PU.isNull())
+      return;
+
+    ArrayRef<TemplateArgument> Args = TS->getConvertedArguments();
+    auto *CTPSD = PU.dyn_cast<ClassTemplatePartialSpecializationDecl *>();
+    if (!CTPSD)
+      return insert(CTSD, Args);
+    // FIXME: Don't deduce partial specialization args on resugaring.
+    TemplateParameterList *TPL = CTPSD->getTemplateParameters();
+    TemplateDeductionInfo Info(SourceLocation(), TPL->getDepth());
+    [[maybe_unused]] TemplateDeductionResult Res =
+        SemaRef.DeduceTemplateArguments(CTPSD, Args, Info);
+    assert(Res == TemplateDeductionResult::Success);
+    insert(CTSD, Info.takeSugared()->asArray());
+  }
+
+  void insert(Sema &SemaRef, const NestedNameSpecifier *NNS) {
+    for (/**/; NNS; NNS = NNS->getPrefix()) {
+      switch (NNS->getKind()) {
+      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Namespace:
+      case NestedNameSpecifier::NamespaceAlias:
+      case NestedNameSpecifier::Super:
+        return;
+      case NestedNameSpecifier::Identifier:
+        continue;
+      case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
+        insert(SemaRef, NNS->getAsType());
+        continue;
+      }
+      llvm_unreachable("Unknown NestedNameSpecifier Kind");
+    }
+  }
+
+  bool empty() const { return Map.empty(); }
+};
+
+class Resugarer {
+  Sema &SemaRef;
+  const NameMap *Names;
+  llvm::DenseMap<QualType, QualType> CacheTypes;
+
+public:
+  Resugarer(Sema &SemaRef, const NameMap &Names)
+      : SemaRef(SemaRef), Names(&Names) {}
+
+  template <class T>
+  SmallVector<T, 4> transform(ArrayRef<T> Es, bool &Changed) {
+    SmallVector<T, 4> TransformedEs(Es);
+    for (auto &E : TransformedEs)
+      E = transform(E, Changed);
+    return TransformedEs;
+  }
+
+  NestedNameSpecifier *transform(NestedNameSpecifier *NNS, bool &OutChanged) {
+    if (!NNS)
+      return NNS;
+
+    bool Changed = false;
+    switch (auto K = NNS->getKind()) {
+    case NestedNameSpecifier::Global:
+    case NestedNameSpecifier::Namespace:
+    case NestedNameSpecifier::NamespaceAlias:
+    case NestedNameSpecifier::Super:
+      return NNS;
+    case NestedNameSpecifier::Identifier: {
+      NestedNameSpecifier *Prefix = transform(NNS->getPrefix(), Changed);
+      if (!Changed)
+        return NNS;
+      OutChanged = true;
+      return NestedNameSpecifier::Create(SemaRef.Context, Prefix,
+                                         NNS->getAsIdentifier());
+    }
+    case NestedNameSpecifier::TypeSpec:
+    case NestedNameSpecifier::TypeSpecWithTemplate: {
+      const Type *T =
+          transform(QualType(NNS->getAsType(), 0), Changed).getTypePtr();
+      NestedNameSpecifier *Prefix;
+      if (const auto *ET = dyn_cast<ElaboratedType>(T)) {
+        Prefix = transform(ET->getQualifier(), Changed);
+        T = ET->getNamedType().getTypePtr();
+      } else {
+        Prefix = transform(NNS->getPrefix(), Changed);
+      }
+      if (!Changed)
+        return NNS;
+      OutChanged = true;
+      return NestedNameSpecifier::Create(
+          SemaRef.Context, Prefix,
+          K == NestedNameSpecifier::TypeSpecWithTemplate, T);
+    }
+    }
+    llvm_unreachable("Unknown NestedNameSpecifier Kind");
+  }
+
+  TemplateName transform(TemplateName TN, bool &OutChanged) {
+    auto build = [&](TemplateName NewTN) {
+      assert(SemaRef.Context.hasSameTemplateName(TN, NewTN));
+      OutChanged = true;
+      return NewTN;
+    };
+
+    bool Changed = false;
+    switch (TN.getKind()) {
+    case TemplateName::AssumedTemplate:
+    case TemplateName::OverloadedTemplate:
+    case TemplateName::Template:
+    case TemplateName::UsingTemplate:
+      return TN;
+    case TemplateName::DeducedTemplate: {
+      const auto *DTN = TN.getAsDeducedTemplateName();
+      TemplateName Underlying = transform(DTN->getUnderlying(), Changed);
+      DefaultArguments DefaultArgs = DTN->getDefaultArguments();
+      auto Args = transform(DefaultArgs.Args, Changed);
+      DefaultArgs.Args = Args;
+      if (!Changed)
+        return TN;
+      return build(
+          SemaRef.Context.getDeducedTemplateName(Underlying, DefaultArgs));
+    }
+    case TemplateName::DependentTemplate: {
+      const auto *DTN = TN.getAsDependentTemplateName();
+      NestedNameSpecifier *NNS = transform(DTN->getQualifier(), Changed);
+      if (!Changed)
+        return TN;
+      return build(
+          SemaRef.Context.getDependentTemplateName(NNS, DTN->getOperator()));
+    }
+    case TemplateName::QualifiedTemplate: {
+      const auto *QTN = TN.getAsQualifiedTemplateName();
+      NestedNameSpecifier *NNS = transform(QTN->getQualifier(), Changed);
+      TemplateName UTN = transform(QTN->getUnderlyingTemplate(), Changed);
+      if (!Changed)
+        return TN;
+      return build(SemaRef.Context.getQualifiedTemplateName(
+          NNS, QTN->hasTemplateKeyword(), UTN));
+    }
+    case TemplateName::SubstTemplateTemplateParm: {
+      const auto *STN = TN.getAsSubstTemplateTemplateParm();
+      const TemplateArgument *Arg = Names->getArgument(
+          STN->getAssociatedDecl(), STN->getIndex(), STN->getPackIndex());
+      if (!Arg)
+        return TN;
+      return build(Arg->getAsTemplate());
+    }
+    case TemplateName::SubstTemplateTemplateParmPack: {
+      const auto *STNP = TN.getAsSubstTemplateTemplateParmPack();
+      TemplateArgument Pack = transform(STNP->getArgumentPack(), Changed);
+      if (!Changed)
+        return TN;
+      return build(SemaRef.Context.getSubstTemplateTemplateParmPack(
+          Pack, STNP->getAssociatedDecl(), STNP->getIndex(), STNP->getFinal()));
+    }
+    }
+    llvm_unreachable("Unhandled TemplateName kind");
+  }
+
+  QualType buildType(QualType Orig, const Type *Ty, Qualifiers Quals) {
+    QualType NewT = SemaRef.Context.getQualifiedType(Ty, Quals);
+    assert(SemaRef.Context.hasSameType(Orig, NewT));
+    CacheTypes.find(Orig)->second = NewT;
+    return NewT;
+  }
+
+  QualType transform(QualType TT, bool &OutChanged) {
+    if (TT.isNull() || TT.isCanonical())
+      return TT;
+
+    if (auto [It, Created] = CacheTypes.try_emplace(TT, TT); !Created) {
+      QualType NewT = It->second;
+      OutChanged |= (NewT != TT);
+      return NewT;
+    }
+
+    SplitQualType ST = TT.split();
+    auto build = [&](QualType T) {
+      OutChanged = true;
+      return buildType(TT, T.getTypePtr(), ST.Quals);
+    };
+
+    bool Changed = false;
+    switch (ST.Ty->getTypeClass()) {
+    case Type::Adjusted: {
+      const auto *T = cast<AdjustedType>(ST.Ty);
+      QualType OT = transform(T->getOriginalType(), Changed);
+      // FIXME: Handle AdjustedType.
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getAdjustedType(OT, T->getAdjustedType()));
+    }
+    case Type::Atomic: {
+      const auto *T = cast<AtomicType>(ST.Ty);
+      QualType VT = transform(T->getValueType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getAtomicType(VT));
+    }
+    case Type::Attributed: {
+      const auto *T = cast<AttributedType>(ST.Ty);
+      QualType MT = transform(T->getModifiedType(), Changed);
+      // FIXME: Handle EquivalentType.
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getAttributedType(T->getAttrKind(), MT,
+                                                     T->getEquivalentType()));
+    }
+    case Type::Auto: {
+      const auto *T = cast<AutoType>(ST.Ty);
+      auto Args = transform(T->getTypeConstraintArguments(), Changed);
+      QualType DT = transform(T->getDeducedType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(
+          SemaRef.Context.getAutoType(DT, T->getKeyword(), DT.isNull(),
+                                      T->containsUnexpandedParameterPack(),
+                                      T->getTypeConstraintConcept(), Args));
+    }
+    case Type::BitInt:
+      return TT;
+    case Type::BlockPointer: {
+      const auto *T = cast<BlockPointerType>(ST.Ty);
+      QualType PT = transform(T->getPointeeType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getBlockPointerType(PT));
+    }
+    case Type::Builtin:
+      return TT;
+    case Type::BTFTagAttributed: {
+      const auto *T = cast<BTFTagAttributedType>(ST.Ty);
+      QualType WT = transform(T->getWrappedType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getBTFTagAttributedType(T->getAttr(), WT));
+    }
+    case Type::Complex: {
+      const auto *T = cast<ComplexType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getComplexType(ET));
+    }
+    case Type::ConstantArray: {
+      const auto *T = cast<ConstantArrayType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getConstantArrayType(
+          ET, T->getSize(), T->getSizeExpr(), T->getSizeModifier(),
+          T->getIndexTypeCVRQualifiers()));
+    }
+    case Type::ConstantMatrix: {
+      const auto *T = cast<ConstantMatrixType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getConstantMatrixType(ET, T->getNumRows(),
+                                                         T->getNumColumns()));
+    }
+    case Type::Decltype: {
+      const auto *T = cast<DecltypeType>(ST.Ty);
+      QualType UT = transform(T->getUnderlyingType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDecltypeType(T->getUnderlyingExpr(), UT));
+    }
+    case Type::Decayed: {
+      const auto *T = cast<DecayedType>(ST.Ty);
+      QualType OT = transform(T->getOriginalType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDecayedType(OT));
+    }
+    case Type::DeducedTemplateSpecialization: {
+      const auto *T = cast<DeducedTemplateSpecializationType>(ST.Ty);
+      TemplateName TN = transform(T->getTemplateName(), Changed);
+      QualType DT = transform(T->getDeducedType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDeducedTemplateSpecializationType(
+          TN, DT, DT.isNull()));
+    }
+    case Type::DependentAddressSpace: {
+      const auto *T = cast<DependentAddressSpaceType>(ST.Ty);
+      QualType PT = transform(T->getPointeeType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentAddressSpaceType(
+          PT, T->getAddrSpaceExpr(), T->getAttributeLoc()));
+    }
+    case Type::DependentBitInt:
+      return TT;
+    case Type::DependentName: {
+      const auto *T = cast<DependentNameType>(ST.Ty);
+      NestedNameSpecifier *NNS = transform(T->getQualifier(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentNameType(T->getKeyword(), NNS,
+                                                        T->getIdentifier()));
+    }
+    case Type::DependentSizedArray: {
+      const auto *T = cast<DependentSizedArrayType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentSizedArrayType(
+          ET, T->getSizeExpr(), T->getSizeModifier(),
+          T->getIndexTypeCVRQualifiers(), T->getBracketsRange()));
+    }
+    case Type::DependentSizedExtVector: {
+      const auto *T = cast<DependentSizedExtVectorType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentSizedExtVectorType(
+          ET, T->getSizeExpr(), T->getAttributeLoc()));
+    }
+    case Type::DependentSizedMatrix: {
+      const auto *T = cast<DependentSizedMatrixType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentSizedMatrixType(
+          ET, T->getRowExpr(), T->getColumnExpr(), T->getAttributeLoc()));
+    }
+    case Type::DependentVector: {
+      const auto *T = cast<DependentVectorType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentVectorType(
+          ET, T->getSizeExpr(), T->getAttributeLoc(), T->getVectorKind()));
+    }
+    case Type::DependentTemplateSpecialization: {
+      const auto *T = cast<DependentTemplateSpecializationType>(ST.Ty);
+      auto SpecArgs = transform(T->template_arguments(), Changed);
+      NestedNameSpecifier *NNS = transform(T->getQualifier(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getDependentTemplateSpecializationType(
+          T->getKeyword(), NNS, T->getIdentifier(), SpecArgs));
+    }
+    case Type::Elaborated: {
+      const auto *T = cast<ElaboratedType>(ST.Ty);
+      NestedNameSpecifier *NNS = transform(T->getQualifier(), Changed);
+      QualType NT = transform(T->getNamedType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getElaboratedType(T->getKeyword(), NNS, NT,
+                                                     T->getOwnedTagDecl()));
+    }
+    case Type::Enum:
+      // FIXME: Resugar.
+      return TT;
+    case Type::ExtVector: {
+      const auto *T = cast<ExtVectorType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getExtVectorType(ET, T->getNumElements()));
+    }
+    case Type::FunctionNoProto: {
+      const auto *T = cast<FunctionNoProtoType>(ST.Ty);
+      QualType RT = transform(T->getReturnType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getFunctionNoProtoType(RT, T->getExtInfo()));
+    }
+    case Type::FunctionProto: {
+      const auto *T = cast<FunctionProtoType>(ST.Ty);
+      FunctionProtoType::ExtProtoInfo EPI = T->getExtProtoInfo();
+      QualType RT = transform(T->getReturnType(), Changed);
+      auto Ps = transform(T->param_types(), Changed);
+      auto Es = transform(EPI.ExceptionSpec.Exceptions, Changed);
+      if (!Changed)
+        return TT;
+      EPI.ExceptionSpec.Exceptions = Es;
+      return build(SemaRef.Context.getFunctionType(RT, Ps, EPI));
+    }
+    case Type::IncompleteArray: {
+      const auto *T = cast<IncompleteArrayType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getIncompleteArrayType(
+          ET, T->getSizeModifier(), T->getIndexTypeCVRQualifiers()));
+    }
+    case Type::InjectedClassName: {
+      const auto *T = cast<InjectedClassNameType>(ST.Ty);
+      QualType TST = transform(T->getInjectedSpecializationType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getInjectedClassNameType(T->getDecl(), TST));
+    }
+    case Type::LValueReference: {
+      const auto *T = cast<LValueReferenceType>(ST.Ty);
+      QualType PT = transform(T->getPointeeTypeAsWritten(), Changed);
+      if (!Changed)
+        return TT;
+      return build(
+          SemaRef.Context.getLValueReferenceType(PT, T->isSpelledAsLValue()));
+    }
+    case Type::MacroQualified: {
+      const auto *T = cast<MacroQualifiedType>(ST.Ty);
+      QualType UT = transform(T->getUnderlyingType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(
+          SemaRef.Context.getMacroQualifiedType(UT, T->getMacroIdentifier()));
+    }
+    case Type::MemberPointer: {
+      const auto *T = cast<MemberPointerType>(ST.Ty);
+      NestedNameSpecifier *Qualifier = transform(T->getQualifier(), Changed);
+      QualType PT = transform(T->getPointeeType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getMemberPointerType(
+          PT, Qualifier, T->getMostRecentCXXRecordDecl()));
+    }
+    case Type::ObjCInterface:
+      return TT;
+    case Type::ObjCObject: {
+      const auto *T = cast<ObjCObjectType>(ST.Ty);
+      QualType BT = transform(T->getBaseType(), Changed);
+      auto Args = transform(T->getTypeArgs(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getObjCObjectType(
+          BT, Args, T->getProtocols(), T->isKindOfType()));
+    }
+    case Type::ObjCObjectPointer: {
+      const auto *T = cast<ObjCObjectPointerType>(ST.Ty);
+      QualType PT = transform(T->getPointeeType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getObjCObjectPointerType(PT));
+    }
+    case Type::ObjCTypeParam:
+      return TT;
+    case Type::PackExpansion: {
+      const auto *T = cast<PackExpansionType>(ST.Ty);
+      QualType P = transform(T->getPattern(), Changed);
+      if (!Changed)
+        return TT;
+      return build(
+          SemaRef.Context.getPackExpansionType(P, T->getNumExpansions()));
+    }
+    case Type::Paren: {
+      const auto *T = cast<ParenType>(ST.Ty);
+      QualType IT = transform(T->getInnerType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getParenType(IT));
+    }
+    case Type::Pipe: {
+      const auto *T = cast<PipeType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getPipeType(ET, T->isReadOnly()));
+    }
+    case Type::Pointer: {
+      const auto *T = cast<PointerType>(ST.Ty);
+      QualType PT = transform(T->getPointeeType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getPointerType(PT));
+    }
+    case Type::Record:
+      return TT;
+    case Type::RValueReference: {
+      const auto *T = cast<RValueReferenceType>(ST.Ty);
+      QualType PT = transform(T->getPointeeTypeAsWritten(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getRValueReferenceType(PT));
+    }
+    case Type::SubstTemplateTypeParm: {
+      const auto *T = cast<SubstTemplateTypeParmType>(ST.Ty);
+      const auto *Arg = Names->getArgument(T->getAssociatedDecl(),
+                                           T->getIndex(), T->getPackIndex());
+      if (!Arg)
+        return TT;
+
+      SplitQualType Replacement = Arg->getAsType().split();
+      if (ST.Quals.hasObjCLifetime())
+        Replacement.Quals.removeObjCLifetime();
+      OutChanged = true;
+      return buildType(TT, Replacement.Ty, ST.Quals + Replacement.Quals);
+    }
+    case Type::SubstTemplateTypeParmPack: {
+      const auto *T = cast<SubstTemplateTypeParmPackType>(ST.Ty);
+      TemplateArgument P = transform(T->getArgumentPack(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getSubstTemplateTypeParmPackType(
+          T->getAssociatedDecl(), T->getIndex(), T->getFinal(), P));
+    }
+    case Type::TemplateTypeParm:
+      return TT;
+    case Type::TemplateSpecialization: {
+      const auto *T = cast<TemplateSpecializationType>(ST.Ty);
+      TemplateName TN = transform(T->getTemplateName(), Changed);
+      auto SpecArgs = transform(T->getSpecifiedArguments(), Changed);
+      auto ConvertedArgs = transform(T->getConvertedArguments(), Changed);
+      QualType UT = T->desugar();
+      if (T->isTypeAlias())
+        UT = transform(UT, Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getTemplateSpecializationType(
+          TN, SpecArgs, ConvertedArgs,
+          /*CanonicalConvertedArgs=*/std::nullopt, UT));
+    }
+    case Type::Typedef: {
+      const auto *T = cast<TypedefType>(ST.Ty);
+      QualType Underlying = transform(T->desugar(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getTypedefType(T->getDecl(), Underlying));
+    }
+    case Type::TypeOfExpr:
+      // FIXME: Resugar.
+      return TT;
+    case Type::TypeOf: {
+      const auto *T = cast<TypeOfType>(ST.Ty);
+      QualType UT = transform(T->getUnmodifiedType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getTypeOfType(UT, T->getKind()));
+    }
+    case Type::UnaryTransform: {
+      const auto *T = cast<UnaryTransformType>(ST.Ty);
+      QualType UT = transform(T->getUnderlyingType(), Changed);
+      if (!Changed)
+        return TT;
+      // FIXME: Handle BaseType.
+      return build(SemaRef.Context.getUnaryTransformType(T->getBaseType(), UT,
+                                                         T->getUTTKind()));
+    }
+    case Type::UnresolvedUsing:
+      return TT;
+    case Type::Using: {
+      const auto *T = cast<UsingType>(ST.Ty);
+      QualType Underlying = transform(T->desugar(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getUsingType(T->getFoundDecl(), Underlying));
+    }
+    case Type::VariableArray: {
+      const auto *T = cast<VariableArrayType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getVariableArrayType(
+          ET, T->getSizeExpr(), T->getSizeModifier(),
+          T->getIndexTypeCVRQualifiers(), T->getBracketsRange()));
+    }
+    case Type::Vector: {
+      const auto *T = cast<VectorType>(ST.Ty);
+      QualType ET = transform(T->getElementType(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getVectorType(ET, T->getNumElements(),
+                                                 T->getVectorKind()));
+    }
+    case Type::ArrayParameter: {
+      const auto *T = cast<ArrayParameterType>(ST.Ty);
+      QualType Ty =
+          transform(T->getConstantArrayType(SemaRef.Context), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getArrayParameterType(Ty));
+    }
+    case Type::CountAttributed: {
+      const auto *T = cast<CountAttributedType>(ST.Ty);
+      QualType Ty = transform(T->desugar(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getCountAttributedType(
+          Ty, T->getCountExpr(), T->isCountInBytes(), T->isOrNull(),
+          T->getCoupledDecls()));
+    }
+    case Type::HLSLAttributedResource:
+      return TT;
+    case Type::PackIndexing: {
+      const auto *T = cast<PackIndexingType>(ST.Ty);
+      QualType Pattern = transform(T->getPattern(), Changed);
+      auto Expansions = transform(T->getExpansions(), Changed);
+      if (!Changed)
+        return TT;
+      return build(SemaRef.Context.getPackIndexingType(
+          Pattern, T->getIndexExpr(), T->isFullySubstituted(), Expansions,
+          T->getSelectedIndex()));
+    }
+    }
+    llvm_unreachable("Unhandled TypeClass");
+  }
+
+  TemplateArgument transform(TemplateArgument A, bool &OutChanged) {
+    bool Changed = false;
+    switch (auto Kind = A.getKind()) {
+    case TemplateArgument::Null:
+      llvm_unreachable("Unexpected Null TemplateArgument");
+    case TemplateArgument::Pack: {
+      ArrayRef<TemplateArgument> PackArray = A.getPackAsArray();
+      if (PackArray.empty())
+        return A;
+      auto Pack = PackArray.copy(SemaRef.Context);
+      for (auto &PA : Pack)
+        PA = transform(PA, Changed);
+      if (!Changed)
+        return A;
+      OutChanged = true;
+      return TemplateArgument(Pack);
+    }
+    case TemplateArgument::Integral:
+    case TemplateArgument::NullPtr:
+    case TemplateArgument::Declaration:
+    case TemplateArgument::StructuralValue: {
+      QualType T = transform(A.getNonTypeTemplateArgumentType(), Changed);
+      if (!Changed)
+        return A;
+      OutChanged = true;
+      switch (A.getKind()) {
+      case TemplateArgument::Integral:
+        return TemplateArgument(SemaRef.Context, A.getAsIntegral(), T);
+      case TemplateArgument::NullPtr:
+        return TemplateArgument(T, /*IsNullPtr=*/true);
+      case TemplateArgument::Declaration:
+        return TemplateArgument(A.getAsDecl(), T);
+      case TemplateArgument::StructuralValue:
+        return TemplateArgument(SemaRef.Context, T, A.getAsStructuralValue());
+      default:
+        llvm_unreachable("Not handled case");
+      }
+    }
+    case TemplateArgument::Type: {
+      QualType T = transform(A.getAsType(), Changed);
+      if (!Changed)
+        return A;
+      OutChanged = true;
+      return TemplateArgument(T);
+    }
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion: {
+      TemplateName TN = transform(A.getAsTemplateOrTemplatePattern(), Changed);
+      if (!Changed)
+        return A;
+      OutChanged = true;
+      return Kind == TemplateArgument::Template
+                 ? TemplateArgument(TN)
+                 : TemplateArgument(TN, A.getNumTemplateExpansions());
+    }
+    case TemplateArgument::Expression:
+      // FIXME: convert the type of these.
+      return A;
+    }
+    llvm_unreachable("Unexpected TemplateArgument kind");
+  }
+};
+} // namespace
+
+QualType Sema::resugar(const NestedNameSpecifier *NNS, QualType T) {
+  if (NNS == nullptr)
+    return T;
+
+  NameMap Names;
+  Names.insert(*this, NNS);
+  if (Names.empty())
+    return T;
+
+  bool Changed = false;
+  return Resugarer(*this, Names).transform(T, Changed);
 }
 
 /// \brief Determine whether the declaration found is acceptable as the name
@@ -10947,7 +11667,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
       //
       // FIXME: That's not strictly true: mem-initializer-id lookup does not
       // ignore functions, but that appears to be an oversight.
-      QualType T = getTypeDeclType(Ctx,
+      QualType T = getTypeDeclType(SS.getScopeRep(), Ctx,
                                    Keyword == ElaboratedTypeKeyword::Typename
                                        ? DiagCtorKind::Typename
                                        : DiagCtorKind::None,

@@ -2728,7 +2728,8 @@ QualType Sema::BuildMemberPointerType(QualType T,
       (Entity.getNameKind() == DeclarationName::CXXConstructorName) ||
       (Entity.getNameKind() == DeclarationName::CXXDestructorName);
   if (T->isFunctionType())
-    adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor, Loc);
+    adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor,
+                           /*IsDeduced=*/false, Loc);
 
   return Context.getMemberPointerType(T, Qualifier, Cls);
 }
@@ -8127,7 +8128,8 @@ bool Sema::hasExplicitCallingConv(QualType T) {
 }
 
 void Sema::adjustMemberFunctionCC(QualType &T, bool HasThisPointer,
-                                  bool IsCtorOrDtor, SourceLocation Loc) {
+                                  bool IsCtorOrDtor, bool IsDeduced,
+                                  SourceLocation Loc) {
   FunctionTypeUnwrapper Unwrapped(*this, T);
   const FunctionType *FT = Unwrapped.get();
   bool IsVariadic = (isa<FunctionProtoType>(FT) &&
@@ -8159,7 +8161,7 @@ void Sema::adjustMemberFunctionCC(QualType &T, bool HasThisPointer,
     if (CurCC != DefaultCC)
       return;
 
-    if (hasExplicitCallingConv(T))
+    if (!IsDeduced && hasExplicitCallingConv(T))
       return;
   }
 
@@ -9711,7 +9713,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
   }
 
   return Context.getPackIndexingType(Pattern, IndexExpr, FullySubstituted,
-                                     Expansions, Index.value_or(-1));
+                                     Expansions, Index);
 }
 
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,

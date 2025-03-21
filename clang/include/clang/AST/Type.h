@@ -643,10 +643,10 @@ public:
   void addQualifiers(Qualifiers Q) {
     // If the other set doesn't have any non-boolean qualifiers, just
     // bit-or it in.
-    if (!(Q.Mask & ~CVRMask))
+    if (!(Q.Mask & ~CVRUMask))
       Mask |= Q.Mask;
     else {
-      Mask |= (Q.Mask & CVRMask);
+      Mask |= (Q.Mask & CVRUMask);
       if (Q.hasAddressSpace())
         addAddressSpace(Q.getAddressSpace());
       if (Q.hasObjCGCAttr())
@@ -662,10 +662,10 @@ public:
   void removeQualifiers(Qualifiers Q) {
     // If the other set doesn't have any non-boolean qualifiers, just
     // bit-and the inverse in.
-    if (!(Q.Mask & ~CVRMask))
+    if (!(Q.Mask & ~CVRUMask))
       Mask &= ~Q.Mask;
     else {
-      Mask &= ~(Q.Mask & CVRMask);
+      Mask &= ~(Q.Mask & CVRUMask);
       if (getObjCGCAttr() == Q.getObjCGCAttr())
         removeObjCGCAttr();
       if (getObjCLifetime() == Q.getObjCLifetime())
@@ -805,12 +805,13 @@ private:
 
   static constexpr uint64_t UMask = 0x8;
   static constexpr uint64_t UShift = 3;
+  static constexpr uint64_t CVRUMask = CVRMask | UMask;
   static constexpr uint64_t GCAttrMask = 0x30;
   static constexpr uint64_t GCAttrShift = 4;
   static constexpr uint64_t LifetimeMask = 0x1C0;
   static constexpr uint64_t LifetimeShift = 6;
   static constexpr uint64_t AddressSpaceMask =
-      ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
+      ~(CVRUMask | GCAttrMask | LifetimeMask);
   static constexpr uint64_t AddressSpaceShift = 9;
   static constexpr uint64_t PtrAuthShift = 32;
   static constexpr uint64_t PtrAuthMask = uint64_t(0xffffffff) << PtrAuthShift;

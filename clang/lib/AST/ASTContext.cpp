@@ -6385,13 +6385,14 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
   return QualType(dt, 0);
 }
 
-QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                         bool FullySubstituted,
-                                         ArrayRef<QualType> Expansions,
-                                         int Index) const {
+QualType
+ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
+                                bool FullySubstituted,
+                                ArrayRef<QualType> Expansions,
+                                std::optional<unsigned> SelectedIndex) const {
   QualType Canonical;
-  if (FullySubstituted && Index != -1) {
-    Canonical = getCanonicalType(Expansions[Index]);
+  if (FullySubstituted && SelectedIndex) {
+    Canonical = getCanonicalType(Expansions[*SelectedIndex]);
   } else {
     llvm::FoldingSetNodeID ID;
     PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
@@ -14103,9 +14104,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::Pipe: {
     const auto *PX = cast<PipeType>(X), *PY = cast<PipeType>(Y);
     assert(PX->isReadOnly() == PY->isReadOnly());
-    auto MP = PX->isReadOnly() ? &ASTContext::getReadPipeType
-                               : &ASTContext::getWritePipeType;
-    return (Ctx.*MP)(getCommonElementType(Ctx, PX, PY));
+    return Ctx.getPipeType(getCommonElementType(Ctx, PX, PY), PX->isReadOnly());
   }
   case Type::TemplateTypeParm: {
     const auto *TX = cast<TemplateTypeParmType>(X),

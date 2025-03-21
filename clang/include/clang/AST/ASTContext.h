@@ -1319,8 +1319,6 @@ private:
 
   QualType getTypeDeclTypeSlow(const TypeDecl *Decl) const;
 
-  QualType getPipeType(QualType T, bool ReadOnly) const;
-
 public:
   /// Return the uniqued reference to the type for an address space
   /// qualified type with the specified type and address space.
@@ -1499,6 +1497,9 @@ public:
   /// Gets the struct used to keep track of the descriptor for pointer to
   /// blocks.
   QualType getBlockDescriptorType() const;
+
+  // Return a pipe type for the specified type.
+  QualType getPipeType(QualType T, bool ReadOnly) const;
 
   /// Return a read_only pipe type for the specified type.
   QualType getReadPipeType(QualType T) const;
@@ -1901,10 +1902,10 @@ public:
   /// C++11 decltype.
   QualType getDecltypeType(Expr *e, QualType UnderlyingType) const;
 
-  QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                               bool FullySubstituted = false,
-                               ArrayRef<QualType> Expansions = {},
-                               int Index = -1) const;
+  QualType getPackIndexingType(
+      QualType Pattern, Expr *IndexExpr, bool FullySubstituted = false,
+      ArrayRef<QualType> Expansions = {},
+      std::optional<unsigned> SelectedIndex = std::nullopt) const;
 
   /// Unary type transforms
   QualType getUnaryTransformType(QualType BaseType, QualType UnderlyingType,

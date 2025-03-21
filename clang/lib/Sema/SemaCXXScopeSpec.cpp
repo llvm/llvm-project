@@ -644,8 +644,9 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       return false;
     }
 
-    QualType T =
-        Context.getTypeDeclType(cast<TypeDecl>(SD->getUnderlyingDecl()));
+    QualType T = resugar(
+        SS.getScopeRep(),
+        Context.getTypeDeclType(cast<TypeDecl>(SD->getUnderlyingDecl())));
 
     if (T->isEnumeralType())
       Diag(IdInfo.IdentifierLoc, diag::warn_cxx98_compat_enum_nested_name_spec);

@@ -3193,7 +3193,8 @@ public:
   /// Returns the TypeDeclType for the given type declaration,
   /// as ASTContext::getTypeDeclType would, but
   /// performs the required semantic checks for name lookup of said entity.
-  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+  QualType getTypeDeclType(const NestedNameSpecifier *NNS,
+                           DeclContext *LookupCtx, DiagCtorKind DCK,
                            TypeDecl *TD, SourceLocation NameLoc);
 
   /// If the identifier refers to a type name within this scope,
@@ -13980,6 +13981,8 @@ public:
   FunctionDecl *SubstSpaceshipAsEqualEqual(CXXRecordDecl *RD,
                                            FunctionDecl *Spaceship);
 
+  QualType resugar(const NestedNameSpecifier *NNS, QualType T);
+
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.
   void PerformPendingInstantiations(bool LocalOnly = false,
@@ -14972,7 +14975,8 @@ public:
   /// wasn't specified explicitly.  This handles method types formed from
   /// function type typedefs and typename template arguments.
   void adjustMemberFunctionCC(QualType &T, bool HasThisPointer,
-                              bool IsCtorOrDtor, SourceLocation Loc);
+                              bool IsCtorOrDtor, bool IsDeduced,
+                              SourceLocation Loc);
 
   // Check if there is an explicit attribute, but only look through parens.
   // The intent is to look for an attribute on the current declarator, but not

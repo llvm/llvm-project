@@ -195,9 +195,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | |   |   `-ElaboratedType [[ADDR_47:0x[a-z0-9]*]] 'typename remove_reference<float &>::type' sugar
 // CHECK-NEXT: | |   |     `-TypedefType [[ADDR_48:0x[a-z0-9]*]] 'remove_reference<float &>::type' sugar
 // CHECK-NEXT: | |   |       |-Typedef [[ADDR_10]] 'type'
-// CHECK-NEXT: | |   |       `-SubstTemplateTypeParmType [[ADDR_11]] 'float' sugar class depth 0 index 0 _Tp
-// CHECK-NEXT: | |   |         |-ClassTemplateSpecialization [[ADDR_6]] 'remove_reference'
-// CHECK-NEXT: | |   |         `-BuiltinType [[ADDR_8]] 'float'
+// CHECK-NEXT: | |   |       `-BuiltinType [[ADDR_8]] 'float'
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_49:0x[a-z0-9]*]] <line:13:3, col:33>
 // CHECK-NEXT: | |     `-CXXStaticCastExpr [[ADDR_50:0x[a-z0-9]*]] <col:10, col:33> '_Up':'float' xvalue static_cast<_Up &&> <NoOp>
 // CHECK-NEXT: | |       `-DeclRefExpr [[ADDR_51:0x[a-z0-9]*]] <col:30> 'float' {{.*}}ParmVar [[ADDR_43]] '__t' 'float &'
@@ -212,9 +210,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |     |   `-ElaboratedType [[ADDR_57:0x[a-z0-9]*]] 'typename remove_reference<short &>::type' sugar
 // CHECK-NEXT: |     |     `-TypedefType [[ADDR_58:0x[a-z0-9]*]] 'remove_reference<short &>::type' sugar
 // CHECK-NEXT: |     |       |-Typedef [[ADDR_18]] 'type'
-// CHECK-NEXT: |     |       `-SubstTemplateTypeParmType [[ADDR_19]] 'short' sugar class depth 0 index 0 _Tp
-// CHECK-NEXT: |     |         |-ClassTemplateSpecialization [[ADDR_14]] 'remove_reference'
-// CHECK-NEXT: |     |         `-BuiltinType [[ADDR_16]] 'short'
+// CHECK-NEXT: |     |       `-BuiltinType [[ADDR_16]] 'short'
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_59:0x[a-z0-9]*]] <line:13:3, col:33>
 // CHECK-NEXT: |       `-CXXStaticCastExpr [[ADDR_60:0x[a-z0-9]*]] <col:10, col:33> '_Up':'short' xvalue static_cast<_Up &&> <NoOp>
 // CHECK-NEXT: |         `-DeclRefExpr [[ADDR_61:0x[a-z0-9]*]] <col:30> 'short' {{.*}}ParmVar [[ADDR_53]] '__t' 'short &'
