@@ -1020,8 +1020,7 @@ class SettingsCommandTestCase(TestBase):
         setting_path = "target.debug-file-search-paths"
         path1 = os.path.join(self.getSourceDir(), "tmp")
         path2 = os.path.join(self.getSourceDir(), "tmp2")
-        setting_value = [path1, path2]
-        self.runCmd("settings set %s %s" % (setting_path, " ".join(setting_value)))
+        self.runCmd("settings set %s '%s' '%s'" % (setting_path, path1, path2))
         settings_json = self.get_setting_json(setting_path)
         self.assertEqual(settings_json, setting_value)
 
