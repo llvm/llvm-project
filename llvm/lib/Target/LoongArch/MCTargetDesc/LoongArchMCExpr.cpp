@@ -272,6 +272,7 @@ void LoongArchMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
   case VK_TLS_GD_HI20:
   case VK_TLS_DESC_PC_HI20:
   case VK_TLS_DESC_HI20:
+  case VK_TLS_LE_HI20_R:
   case VK_TLS_LD_PCREL20_S2:
   case VK_TLS_GD_PCREL20_S2:
   case VK_TLS_DESC_PCREL20_S2:
