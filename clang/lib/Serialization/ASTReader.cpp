@@ -7103,7 +7103,7 @@ void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(readSourceLocation());
-  TL.setClassTInfo(GetTypeSourceInfo());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
 }
 
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -12869,6 +12869,12 @@ void ASTRecordReader::readOpenACCClauseList(
     MutableArrayRef<const OpenACCClause *> Clauses) {
   for (unsigned I = 0; I < Clauses.size(); ++I)
     Clauses[I] = readOpenACCClause();
+}
+
+void ASTRecordReader::readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A) {
+  unsigned NumVars = readInt();
+  A->Clauses.resize(NumVars);
+  readOpenACCClauseList(A->Clauses);
 }
 
 static unsigned getStableHashForModuleName(StringRef PrimaryModuleName) {
