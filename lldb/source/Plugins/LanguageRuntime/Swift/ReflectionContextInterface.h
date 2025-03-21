@@ -168,6 +168,7 @@ public:
     bool hasIsRunning = false;
     bool isRunning = false;
     bool isEnqueued = false;
+    bool isComplete = false;
     uint64_t id = 0;
     uint32_t kind = 0;
     uint32_t enqueuePriority = 0;

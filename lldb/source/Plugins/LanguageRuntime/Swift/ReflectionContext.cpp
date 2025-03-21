@@ -409,6 +409,7 @@ public:
     result.hasIsRunning = task_info.HasIsRunning;
     result.isRunning = task_info.IsRunning;
     result.isEnqueued = task_info.IsEnqueued;
+    result.isComplete = task_info.IsComplete;
     result.id = task_info.Id;
     result.kind = task_info.Kind;
     result.enqueuePriority = task_info.EnqueuePriority;
