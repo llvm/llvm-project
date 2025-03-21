@@ -2656,6 +2656,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cbrtf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrtf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   dmull_test
   NEED_MPFR
   SUITE
