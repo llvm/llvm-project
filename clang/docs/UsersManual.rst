@@ -1079,8 +1079,10 @@ Passing the ``-ffreestanding`` flag causes Clang to build for a freestanding
 (rather than a hosted) environment. The flag has the following effects:
 
 * the ``__STDC_HOSTED__`` predefined macro will expand to ``0``,
-* builtin functions are disabled (``-fno-builtins``), and
-* unwind tables are disabled (``fno-asynchronous-unwind-tables -fno-unwind-tables``)
+* builtin functions are disabled (``-fno-builtins``),
+* unwind tables are disabled (``fno-asynchronous-unwind-tables -fno-unwind-tables``),
+* allows ``main`` to be used as a regular function, and
+* removes implicit system header search paths and link libraries.
 
 A freestanding environment is not one which has no C standard library support.
 A conforming freestanding C standard library implementation is required. Clang
