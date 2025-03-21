@@ -1604,8 +1604,26 @@ void CodeExtractor::emitFunctionBody(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
-                                "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      LoadInst *LoadGEP =
+          new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
+                       "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      PointerType *ItemType =
+          dyn_cast<PointerType>(StructArgTy->getElementType(aggIdx));
+      if (ItemType) {
+        unsigned AddressSpace = ItemType->getAddressSpace();
+        // Use the same alignment as the one used for struct allocation.
+        unsigned AlignmentValue =
+            oldFunction->getDataLayout().getPrefTypeAlign(StructArgTy).value();
+
+        MDBuilder MDB(header->getContext());
+        LoadGEP->setMetadata(
+            LLVMContext::MD_align,
+            MDNode::get(
+                header->getContext(),
+                MDB.createConstant(ConstantInt::get(
+                    Type::getInt64Ty(header->getContext()), AlignmentValue))));
+      }
+      RewriteVal = LoadGEP;
       ++aggIdx;
     } else
       RewriteVal = &*ScalarAI++;
@@ -1799,7 +1817,8 @@ CallInst *CodeExtractor::emitReplacerCall(
 
     AllocaInst *alloca = new AllocaInst(
         output->getType(), DL.getAllocaAddrSpace(), nullptr,
-        output->getName() + ".loc", AllocaBlock->getFirstInsertionPt());
+        DL.getPrefTypeAlign(output->getType()), output->getName() + ".loc",
+        AllocaBlock->getFirstInsertionPt());
     params.push_back(alloca);
     ReloadOutputs.push_back(alloca);
   }
@@ -1807,7 +1826,8 @@ CallInst *CodeExtractor::emitReplacerCall(
   AllocaInst *Struct = nullptr;
   if (!StructValues.empty()) {
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg", AllocaBlock->getFirstInsertionPt());
+                            DL.getPrefTypeAlign(StructArgTy), "structArg",
+                            AllocaBlock->getFirstInsertionPt());
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
