@@ -47,7 +47,7 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
 
   mlir::Operation *insertPoint = &*entryBlock.begin();
 
-  for (auto alloca : allocas) {
+  for (cir::AllocaOp alloca : allocas) {
     // Preserving the `const` attribute on hoisted allocas can cause LLVM to
     // incorrectly introduce invariant group metadata in some circumstances.
     // The incubator performs some analysis to determine whether the attribute
