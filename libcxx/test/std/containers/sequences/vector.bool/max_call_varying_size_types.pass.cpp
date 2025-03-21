@@ -11,8 +11,8 @@
 
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
-// This test ensures that ambiguous calls to std::max in vector<bool> is fixed.
-// Fix https://github.com/llvm/llvm-project/issues/121713
+// This test ensures that the internal call to std::max within vector<bool> is not ambiguous under various size types.
+// Related issue: https://github.com/llvm/llvm-project/issues/121713.
 
 #include <cassert>
 #include <cstddef>
@@ -26,8 +26,6 @@
 #include "test_macros.h"
 
 TEST_CONSTEXPR_CXX20 bool tests() {
-  // The following tests are typical ways to trigger reallocations where `std::max` is used to calculate the capacity.
-  // The purpose of these tests is to ensure that the ambiguous internal calls to `std::max` have been fixed.
   {
     using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
     std::vector<bool, Alloc> c(Alloc(1));
