@@ -105,33 +105,41 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
+    // check if the all arguments have floating representation
     ExprResult A = TheCall->getArg(0);
     QualType ArgTyA = A.get()->getType();
-    auto *VTyA = ArgTyA->getAs<VectorType>();
-    if (!(ArgTyA->isScalarType() || VTyA)) {
+    if (!ArgTyA->hasFloatingRepresentation()) {
       SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_expect_any_scalar_or_vector)
-          << ArgTyA << 1;
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyA << SemaRef.Context.FloatTy << 1 << 0 << 0;
       return true;
     }
 
     ExprResult B = TheCall->getArg(1);
     QualType ArgTyB = B.get()->getType();
-    auto *VTyB = ArgTyB->getAs<VectorType>();
-    if (!(ArgTyB->isScalarType() || VTyB)) {
+    if (!ArgTyB->hasFloatingRepresentation()) {
       SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_expect_any_scalar_or_vector)
-          << ArgTyB << 1;
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyB << SemaRef.Context.FloatTy << 1 << 0 << 0;
       return true;
     }
 
     ExprResult C = TheCall->getArg(2);
     QualType ArgTyC = C.get()->getType();
-    auto *VTyC = ArgTyC->getAs<VectorType>();
-    if (!(ArgTyC->isScalarType() || VTyC)) {
+    if (!ArgTyC->hasFloatingRepresentation()) {
       SemaRef.Diag(A.get()->getBeginLoc(),
-                   diag::err_typecheck_expect_any_scalar_or_vector)
-          << ArgTyC << 1;
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyC << SemaRef.Context.FloatTy << 1 << 0 << 0;
+      return true;
+    }
+
+    // check if all arguments are of the same type
+    if (!(SemaRef.getASTContext().hasSameUnqualifiedType(ArgTyA, ArgTyB) &&
+          SemaRef.getASTContext().hasSameUnqualifiedType(ArgTyA, ArgTyC))) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vec_builtin_incompatible_vector)
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(A.get()->getBeginLoc(), C.get()->getEndLoc());
       return true;
     }
 
