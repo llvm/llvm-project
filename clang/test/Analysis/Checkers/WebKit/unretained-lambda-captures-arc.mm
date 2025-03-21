@@ -123,19 +123,23 @@ void callAsync(const WTF::Function<void()>&);
 void raw_ptr() {
   SomeObj* obj = make_obj();
   auto foo1 = [obj](){
+    // expected-warning@-1{{Captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     [obj doWork];
   };
   call(foo1);
 
   auto foo2 = [&obj](){
+    // expected-warning@-1{{Captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     [obj doWork];
   };
   auto foo3 = [&](){
     [obj doWork];
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     obj = nullptr;
   };
   auto foo4 = [=](){
     [obj doWork];
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
   
   auto cf = make_cf();
@@ -218,6 +222,7 @@ void noescape_lambda() {
     [otherObj doWork];
   }, [&](SomeObj *obj) {
     [otherObj doWork];
+    // expected-warning@-1{{Implicitly captured raw-pointer 'otherObj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
   ([&] {
     [someObj doWork];
@@ -242,11 +247,13 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
 {
   callFunction([&]() {
     [obj doWork];
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
   callFunctionOpaque([&]() {
     [obj doWork];
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
@@ -262,6 +269,7 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
 @implementation ObjWithSelf
 -(void)doWork {
   auto doWork = [&] {
+    // expected-warning@-1{{Implicitly captured raw-pointer 'self' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     someFunction();
     [delegate doWork];
   };
