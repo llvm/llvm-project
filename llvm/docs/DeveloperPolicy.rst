@@ -654,8 +654,8 @@ awareness of. For such changes, the following should be done:
   testing feedback on the changes to alert us to unacceptable breakages. The
   current list of vendor groups is:
 
-  * `Clang vendors https://github.com/orgs/llvm/teams/clang-vendors`_
-  * `libc++ vendors https://github.com/orgs/llvm/teams/libcxx-vendors`_
+  * `Clang vendors <https://github.com/orgs/llvm/teams/clang-vendors>`_
+  * `libc++ vendors <https://github.com/orgs/llvm/teams/libcxx-vendors>`_
 
   People interested in joining the vendors group can do so by clicking the
   "Join team" button on the linked github pages above.
