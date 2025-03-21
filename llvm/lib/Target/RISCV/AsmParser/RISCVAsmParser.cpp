@@ -3252,7 +3252,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
   Warning(Parser.getTok().getLoc(),
           "unknown option, expected 'push', 'pop', "
           "'rvc', 'norvc', 'arch', 'relax', 'norelax', "
-          "'exact' or 'noexact'");
+          "'exact', or 'noexact'");
   Parser.eatToEndOfStatement();
   return false;
 }
