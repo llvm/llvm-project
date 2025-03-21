@@ -11761,7 +11761,7 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
   unsigned NumFlags = Record.readInt();
   SmallVector<bool, 16> Flags;
   Flags.reserve(NumFlags);
-  for (unsigned I : llvm::seq<unsigned>(NumFlags))
+  for ([[maybe_unused]] unsigned I : llvm::seq<unsigned>(NumFlags))
     Flags.push_back(Record.readInt());
   C->setPrivateVariableReductionFlags(Flags);
 }
