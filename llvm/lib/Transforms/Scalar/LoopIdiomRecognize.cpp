@@ -1602,11 +1602,7 @@ public:
       return false;
     LoadBaseEv = LoadEv->getStart();
 
-    LLVM_DEBUG({
-      dbgs() << "pointer load scev: ";
-      LoadEv->print(outs());
-      dbgs() << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
 
     const SCEVConstant *Step =
         dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
