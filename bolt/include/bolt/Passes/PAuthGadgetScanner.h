@@ -199,18 +199,25 @@ struct Report {
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
 
+  // The two methods below are called by Analysis::computeDetailedInfo when
+  // iterating over the reports.
   virtual const ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
-  virtual void
-  setOverwritingInstrs(const std::vector<MCInstReference> &Instrs) {}
+  virtual void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) {}
 
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
 };
 
 struct GadgetReport : public Report {
+  // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
+  // The set of registers related to this gadget report (possibly empty).
   SmallVector<MCPhysReg> AffectedRegisters;
-  std::vector<MCInstReference> OverwritingInstrs;
+  // The instructions that clobber the affected registers.
+  // There is no one-to-one correspondence with AffectedRegisters: for example,
+  // the same register can be overwritten by different instructions in different
+  // preceding basic blocks.
+  SmallVector<MCInstReference> OverwritingInstrs;
 
   GadgetReport(const GadgetKind &Kind, MCInstReference Location,
                const BitVector &AffectedRegisters)
@@ -223,9 +230,8 @@ struct GadgetReport : public Report {
     return AffectedRegisters;
   }
 
-  void
-  setOverwritingInstrs(const std::vector<MCInstReference> &Instrs) override {
-    OverwritingInstrs = Instrs;
+  void setOverwritingInstrs(const ArrayRef<MCInstReference> Instrs) override {
+    OverwritingInstrs.assign(Instrs.begin(), Instrs.end());
   }
 };
 
@@ -245,8 +251,12 @@ struct FunctionAnalysisResult {
 class Analysis : public BinaryFunctionPass {
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
-  FunctionAnalysisResult
-  computeDfState(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId);
+  FunctionAnalysisResult findGadgets(BinaryFunction &BF,
+                                     MCPlusBuilder::AllocatorIdTy AllocatorId);
+
+  void computeDetailedInfo(BinaryFunction &BF,
+                           MCPlusBuilder::AllocatorIdTy AllocatorId,
+                           FunctionAnalysisResult &Result);
 
   std::map<const BinaryFunction *, FunctionAnalysisResult> AnalysisResults;
   std::mutex AnalysisResultsMutex;

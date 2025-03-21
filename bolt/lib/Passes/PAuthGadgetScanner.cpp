@@ -376,9 +376,9 @@ public:
   }
 };
 
-static std::shared_ptr<Report> tryCheckReturn(const BinaryContext &BC,
-                                              const MCInstReference &Inst,
-                                              const State &S) {
+static std::shared_ptr<Report>
+shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
+                         const State &S) {
   static const GadgetKind RetKind("non-protected ret found");
   if (!BC.MIB->isReturn(Inst))
     return nullptr;
@@ -408,8 +408,8 @@ static std::shared_ptr<Report> tryCheckReturn(const BinaryContext &BC,
 }
 
 FunctionAnalysisResult
-Analysis::computeDfState(BinaryFunction &BF,
-                         MCPlusBuilder::AllocatorIdTy AllocatorId) {
+Analysis::findGadgets(BinaryFunction &BF,
+                      MCPlusBuilder::AllocatorIdTy AllocatorId) {
   FunctionAnalysisResult Result;
 
   PacRetAnalysis PRA(BF, AllocatorId, {});
@@ -425,25 +425,25 @@ Analysis::computeDfState(BinaryFunction &BF,
       MCInstReference Inst(&BB, I);
       const State &S = *PRA.getStateAt(Inst);
 
-      if (auto Report = tryCheckReturn(BC, Inst, S))
+      if (auto Report = shouldReportReturnGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);
     }
   }
+  return Result;
+}
 
-  if (Result.Diagnostics.empty())
-    return Result;
+void Analysis::computeDetailedInfo(BinaryFunction &BF,
+                                   MCPlusBuilder::AllocatorIdTy AllocatorId,
+                                   FunctionAnalysisResult &Result) {
+  BinaryContext &BC = BF.getBinaryContext();
 
-  // Redo the analysis, but now also track which instructions last wrote
-  // to any of the registers in RetRegsWithGadgets, so that better
-  // diagnostics can be produced.
-
+  // Collect the affected registers across all gadgets found in this function.
   SmallSet<MCPhysReg, 4> RegsToTrack;
   for (auto Report : Result.Diagnostics)
-    for (MCPhysReg Reg : Report->getAffectedRegisters())
-      RegsToTrack.insert(Reg);
-
+    RegsToTrack.insert_range(Report->getAffectedRegisters());
   std::vector<MCPhysReg> RegsToTrackVec(RegsToTrack.begin(), RegsToTrack.end());
 
+  // Re-compute the analysis with register tracking.
   PacRetAnalysis PRWIA(BF, AllocatorId, RegsToTrackVec);
   PRWIA.run();
   LLVM_DEBUG({
@@ -451,14 +451,13 @@ Analysis::computeDfState(BinaryFunction &BF,
     BF.dump();
   });
 
+  // Augment gadget reports.
   for (auto Report : Result.Diagnostics) {
     LLVM_DEBUG(
         { traceInst(BC, "Attaching clobbering info to", Report->Location); });
     Report->setOverwritingInstrs(PRWIA.getLastClobberingInsts(
         Report->Location, BF, Report->getAffectedRegisters()));
   }
-
-  return Result;
 }
 
 void Analysis::runOnFunction(BinaryFunction &BF,
@@ -472,9 +471,15 @@ void Analysis::runOnFunction(BinaryFunction &BF,
   if (!BF.hasCFG())
     return;
 
-  FunctionAnalysisResult FAR = computeDfState(BF, AllocatorId);
+  FunctionAnalysisResult FAR = findGadgets(BF, AllocatorId);
   if (FAR.Diagnostics.empty())
     return;
+
+  // Redo the analysis, but now also track which instructions last wrote
+  // to any of the registers in RetRegsWithGadgets, so that better
+  // diagnostics can be produced.
+
+  computeDetailedInfo(BF, AllocatorId, FAR);
 
   // `runOnFunction` is typically getting called from multiple threads in
   // parallel. Therefore, use a lock to avoid data races when storing the
@@ -540,7 +545,7 @@ void GadgetReport::generateReport(raw_ostream &OS,
      << " instructions that write to the affected registers after any "
         "authentication are:\n";
   // Sort by address to ensure output is deterministic.
-  std::vector<MCInstReference> OI = OverwritingInstrs;
+  SmallVector<MCInstReference> OI = OverwritingInstrs;
   llvm::sort(OI, [](const MCInstReference &A, const MCInstReference &B) {
     return A.getAddress() < B.getAddress();
   });
