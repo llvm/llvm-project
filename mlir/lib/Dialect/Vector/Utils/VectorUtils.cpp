@@ -337,7 +337,8 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == readShape.size() && "expected same ranks.");
   auto maskType = VectorType::get(readShape, builder.getI1Type());
-  auto vectorType = VectorType::get(readShape, padValue.getType());
+  auto vectorType =
+      VectorType::get(readShape, cast<ScalarTypeInterface>(padValue.getType()));
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
   int64_t readRank = readShape.size();

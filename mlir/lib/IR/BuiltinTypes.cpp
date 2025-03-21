@@ -211,11 +211,12 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 bool VectorType::isValidElementType(Type t) {
-  return isValidVectorTypeElementType(t);
+  return llvm::isa<ScalarTypeInterface>(t);
 }
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 ArrayRef<int64_t> shape, Type elementType,
+                                 ArrayRef<int64_t> shape,
+                                 ScalarTypeInterface elementType,
                                  ArrayRef<bool> scalableDims) {
   if (!isValidElementType(elementType))
     return emitError()
@@ -248,7 +249,8 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
 
 VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
-  return VectorType::get(shape.value_or(getShape()), elementType,
+  return VectorType::get(shape.value_or(getShape()),
+                         llvm::cast<ScalarTypeInterface>(elementType),
                          getScalableDims());
 }
 

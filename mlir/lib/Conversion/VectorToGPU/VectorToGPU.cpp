@@ -631,7 +631,7 @@ getMmaSyncVectorOperandType(const nvgpu::FragmentElementInfo &regInfo) {
   Type elType = regInfo.registerLLVMType;
   if (auto vecType = dyn_cast<VectorType>(elType))
     elType = vecType.getElementType();
-  return VectorType::get(shape, elType);
+  return VectorType::get(shape, cast<ScalarTypeInterface>(elType));
 }
 
 /// Convert a 2D splat ConstantOp to a SubgroupMmaConstantMatrix op.
@@ -802,7 +802,8 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   // must load each element individually.
   if (!isTransposeLoad) {
     if (!isa<VectorType>(loadedElType)) {
-      loadedElType = VectorType::get({1}, loadedElType);
+      loadedElType =
+          VectorType::get({1}, cast<ScalarTypeInterface>(loadedElType));
     }
 
     for (int i = 0; i < vectorType.getShape()[0]; i++) {

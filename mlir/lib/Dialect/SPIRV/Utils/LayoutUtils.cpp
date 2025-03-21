@@ -118,7 +118,7 @@ Type VulkanLayoutUtils::decorateType(VectorType vectorType,
   // times its scalar alignment."
   size = elementSize * numElements;
   alignment = numElements == 2 ? elementAlignment * 2 : elementAlignment * 4;
-  return VectorType::get(numElements, memberType);
+  return VectorType::get(numElements, cast<ScalarTypeInterface>(memberType));
 }
 
 Type VulkanLayoutUtils::decorateType(spirv::ArrayType arrayType,

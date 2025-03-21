@@ -581,7 +581,8 @@ struct ConvertIndexCastIndexToInt final : OpConversionPattern<CastOp> {
     Type narrowTy =
         rewriter.getIntegerType(typeConverter->getMaxTargetIntBitWidth());
     if (auto vecTy = dyn_cast<VectorType>(resultType))
-      narrowTy = VectorType::get(vecTy.getShape(), narrowTy);
+      narrowTy = VectorType::get(vecTy.getShape(),
+                                 cast<ScalarTypeInterface>(narrowTy));
 
     // Sign or zero-extend the result. Let the matching conversion pattern
     // legalize the extension op.

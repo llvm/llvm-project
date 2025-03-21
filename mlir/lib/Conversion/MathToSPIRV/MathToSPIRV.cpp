@@ -154,7 +154,7 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
     if (auto vectorType = dyn_cast<VectorType>(type)) {
       assert(vectorType.getRank() == 1);
       int count = vectorType.getNumElements();
-      intType = VectorType::get(count, intType);
+      intType = VectorType::get(count, cast<ScalarTypeInterface>(intType));
 
       SmallVector<Value> signSplat(count, signMask);
       signMask =
@@ -380,7 +380,8 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     auto operandType = adaptor.getRhs().getType();
     if (auto vectorType = dyn_cast<VectorType>(operandType)) {
       auto shape = vectorType.getShape();
-      intType = VectorType::get(shape, scalarIntType);
+      intType =
+          VectorType::get(shape, cast<ScalarTypeInterface>(scalarIntType));
     }
 
     // Per GL Pow extended instruction spec:

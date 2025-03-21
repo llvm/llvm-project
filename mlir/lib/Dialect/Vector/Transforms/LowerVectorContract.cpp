@@ -1367,7 +1367,8 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   mul = rew.create<vector::ShapeCastOp>(
       loc,
       VectorType::get({lhsRows, rhsColumns},
-                      getElementTypeOrSelf(op.getAcc().getType())),
+                      cast<ScalarTypeInterface>(
+                          getElementTypeOrSelf(op.getAcc().getType()))),
       mul);
 
   // ACC must be C(m, n) or C(n, m).

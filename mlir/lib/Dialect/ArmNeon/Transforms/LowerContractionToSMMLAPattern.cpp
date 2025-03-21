@@ -162,10 +162,10 @@ public:
       Value tiledAcc =
           extractOperand(op.getAcc(), accPermutationMap, accOffsets);
 
-      auto inputElementType =
-          cast<ShapedType>(tiledLhs.getType()).getElementType();
-      auto accElementType =
-          cast<ShapedType>(tiledAcc.getType()).getElementType();
+      auto inputElementType = cast<ScalarTypeInterface>(
+          cast<ShapedType>(tiledLhs.getType()).getElementType());
+      auto accElementType = cast<ScalarTypeInterface>(
+          cast<ShapedType>(tiledAcc.getType()).getElementType());
       auto inputExpandedType = VectorType::get({2, 8}, inputElementType);
       auto outputExpandedType = VectorType::get({2, 2}, accElementType);
 

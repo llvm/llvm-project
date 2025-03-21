@@ -297,12 +297,14 @@ static VectorValue emulatedVectorLoad(OpBuilder &rewriter, Location loc,
   auto emulatedPerContainerElem = containerElemTy.getIntOrFloatBitWidth() /
                                   emulatedElemTy.getIntOrFloatBitWidth();
   auto newLoad = rewriter.create<vector::LoadOp>(
-      loc, VectorType::get(numContainerElemsToLoad, containerElemTy), base,
-      getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
+      loc,
+      VectorType::get(numContainerElemsToLoad,
+                      cast<ScalarTypeInterface>(containerElemTy)),
+      base, getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices));
   return rewriter.create<vector::BitCastOp>(
       loc,
       VectorType::get(numContainerElemsToLoad * emulatedPerContainerElem,
-                      emulatedElemTy),
+                      cast<ScalarTypeInterface>(emulatedElemTy)),
       newLoad);
 }
 
@@ -358,7 +360,8 @@ static void atomicRMW(OpBuilder &builder, Location loc,
 
   // Load the original value from memory, and cast it to the original element
   // type.
-  auto oneElemVecType = VectorType::get({1}, origValue.getType());
+  auto oneElemVecType =
+      VectorType::get({1}, cast<ScalarTypeInterface>(origValue.getType()));
   Value origVecValue = builder.create<vector::FromElementsOp>(
       loc, oneElemVecType, ValueRange{origValue});
 
@@ -378,8 +381,9 @@ static void nonAtomicRMW(OpBuilder &builder, Location loc,
                          VectorValue valueToStore, Value mask) {
   assert(valueToStore.getType().getRank() == 1 && "expected 1-D vector");
 
-  auto oneElemVecType =
-      VectorType::get({1}, linearizedMemref.getType().getElementType());
+  auto oneElemVecType = VectorType::get(
+      {1},
+      cast<ScalarTypeInterface>(linearizedMemref.getType().getElementType()));
   Value origVecValue = builder.create<vector::LoadOp>(
       loc, oneElemVecType, linearizedMemref, ValueRange{linearizedIndex});
   origVecValue = builder.create<vector::BitCastOp>(loc, valueToStore.getType(),
@@ -559,7 +563,9 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       // Basic case: storing full bytes.
       auto numElements = origElements / emulatedPerContainerElem;
       auto bitCast = rewriter.create<vector::BitCastOp>(
-          loc, VectorType::get(numElements, containerElemTy),
+          loc,
+          VectorType::get(numElements,
+                          cast<ScalarTypeInterface>(containerElemTy)),
           op.getValueToStore());
       rewriter.replaceOpWithNewOp<vector::StoreOp>(
           op, bitCast.getResult(), memrefBase,
@@ -665,7 +671,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       auto memrefElemType = getElementTypeOrSelf(memrefBase.getType());
       auto storeType = VectorType::get(
           {originType.getNumElements() / emulatedPerContainerElem},
-          memrefElemType);
+          cast<ScalarTypeInterface>(memrefElemType));
       auto bitCast = rewriter.create<vector::BitCastOp>(loc, storeType,
                                                         fullWidthStorePart);
       rewriter.create<vector::StoreOp>(loc, bitCast.getResult(), memrefBase,
@@ -794,7 +800,8 @@ struct ConvertVectorMaskedStore final
 
     auto numElements = (origElements + emulatedPerContainerElem - 1) /
                        emulatedPerContainerElem;
-    auto newType = VectorType::get(numElements, containerElemTy);
+    auto newType = VectorType::get(numElements,
+                                   cast<ScalarTypeInterface>(containerElemTy));
     auto passThru = rewriter.create<arith::ConstantOp>(
         loc, newType, rewriter.getZeroAttr(newType));
 
@@ -803,7 +810,8 @@ struct ConvertVectorMaskedStore final
         newMask.value()->getResult(0), passThru);
 
     auto newBitCastType =
-        VectorType::get(numElements * emulatedPerContainerElem, emulatedElemTy);
+        VectorType::get(numElements * emulatedPerContainerElem,
+                        cast<ScalarTypeInterface>(emulatedElemTy));
     Value valueToStore =
         rewriter.create<vector::BitCastOp>(loc, newBitCastType, newLoad);
     valueToStore = rewriter.create<arith::SelectOp>(
@@ -1032,9 +1040,11 @@ struct ConvertVectorMaskedLoad final
 
     auto numElements = llvm::divideCeil(maxIntraDataOffset + origElements,
                                         emulatedPerContainerElem);
-    auto loadType = VectorType::get(numElements, containerElemTy);
+    auto loadType = VectorType::get(numElements,
+                                    cast<ScalarTypeInterface>(containerElemTy));
     auto newBitcastType =
-        VectorType::get(numElements * emulatedPerContainerElem, emulatedElemTy);
+        VectorType::get(numElements * emulatedPerContainerElem,
+                        cast<ScalarTypeInterface>(emulatedElemTy));
 
     auto emptyVector = rewriter.create<arith::ConstantOp>(
         loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
@@ -1188,13 +1198,17 @@ struct ConvertVectorTransferRead final
                                         emulatedPerContainerElem);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        loc, VectorType::get(numElements, containerElemTy), adaptor.getSource(),
+        loc,
+        VectorType::get(numElements,
+                        cast<ScalarTypeInterface>(containerElemTy)),
+        adaptor.getSource(),
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices),
         newPadding);
 
     auto bitCast = rewriter.create<vector::BitCastOp>(
         loc,
-        VectorType::get(numElements * emulatedPerContainerElem, emulatedElemTy),
+        VectorType::get(numElements * emulatedPerContainerElem,
+                        cast<ScalarTypeInterface>(emulatedElemTy)),
         newRead);
 
     Value result = bitCast->getResult(0);

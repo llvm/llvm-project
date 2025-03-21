@@ -1480,7 +1480,10 @@ struct UnrollTransferWriteConversion
               // argument into `transfer_write` to become a scalar. We solve
               // this by broadcasting the scalar to a 0D vector.
               xferVec = b.create<vector::BroadcastOp>(
-                  loc, VectorType::get({}, extracted.getType()), extracted);
+                  loc,
+                  VectorType::get(
+                      {}, cast<ScalarTypeInterface>(extracted.getType())),
+                  extracted);
             } else {
               xferVec = extracted;
             }

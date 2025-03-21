@@ -1192,7 +1192,8 @@ struct WarpOpExtractScalar : public WarpDistributionPattern {
         return failure();
       int64_t elementsPerLane =
           extractSrcType.getShape()[0] / warpOp.getWarpSize();
-      distributedVecType = VectorType::get({elementsPerLane}, elType);
+      distributedVecType =
+          VectorType::get({elementsPerLane}, cast<ScalarTypeInterface>(elType));
     } else {
       distributedVecType = extractSrcType;
     }
@@ -1711,8 +1712,8 @@ struct WarpOpReduction : public WarpDistributionPattern {
     // Return vector that will be reduced from the WarpExecuteOnLane0Op.
     unsigned operandIndex = yieldOperand->getOperandNumber();
     SmallVector<Value> yieldValues = {reductionOp.getVector()};
-    SmallVector<Type> retTypes = {
-        VectorType::get({numElements}, reductionOp.getType())};
+    SmallVector<Type> retTypes = {VectorType::get(
+        {numElements}, cast<ScalarTypeInterface>(reductionOp.getType()))};
     if (reductionOp.getAcc()) {
       yieldValues.push_back(reductionOp.getAcc());
       retTypes.push_back(reductionOp.getAcc().getType());

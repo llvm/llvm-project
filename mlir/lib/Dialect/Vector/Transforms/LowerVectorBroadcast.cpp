@@ -112,9 +112,9 @@ public:
     //   %a = [%u, %v]
     //   ..
     //   %x = [%a,%b,%c,%d]
-    VectorType resType =
-        VectorType::get(dstType.getShape().drop_front(), eltType,
-                        dstType.getScalableDims().drop_front());
+    VectorType resType = VectorType::get(
+        dstType.getShape().drop_front(), cast<ScalarTypeInterface>(eltType),
+        dstType.getScalableDims().drop_front());
     Value result = rewriter.create<ub::PoisonOp>(loc, dstType);
     if (m == 0) {
       // Stetch at start.

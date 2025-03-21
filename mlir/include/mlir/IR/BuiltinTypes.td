@@ -85,6 +85,14 @@ class Builtin_FloatType<string name, string mnemonic,
         DeclareTypeInterfaceMethods<
             FloatTypeInterface,
             ["getFloatSemantics"] # declaredInterfaceMethods>]> {
+
+  let extraClassDeclaration = [{
+    /// Return the bitwidth of this type. This is an interface method of
+    /// ScalarTypeInterface.
+    std::optional<uint64_t> getInherentBitwidth() {
+      return static_cast<uint64_t>(::llvm::cast<FloatType>(*this).getWidth());
+    }
+  }];
 }
 
 // Float types that are cached in MLIRContext.
@@ -93,6 +101,12 @@ class Builtin_CachedFloatType<string name, string mnemonic,
     : Builtin_FloatType<name, mnemonic, declaredInterfaceMethods> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
+
+    /// Return the bitwidth of this type. This is an interface method of
+    /// ScalarTypeInterface.
+    std::optional<uint64_t> getInherentBitwidth() {
+      return static_cast<uint64_t>(::llvm::cast<FloatType>(*this).getWidth());
+    }
   }];
 }
 
@@ -447,7 +461,7 @@ def Builtin_Function : Builtin_Type<"Function", "function"> {
 // IndexType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Index : Builtin_Type<"Index", "index"> {
+def Builtin_Index : Builtin_Type<"Index", "index", [ScalarTypeInterface]> {
   let summary = "Integer-like type with unknown platform-dependent bit width";
   let description = [{
     Syntax:
@@ -467,6 +481,12 @@ def Builtin_Index : Builtin_Type<"Index", "index"> {
   let extraClassDeclaration = [{
     static IndexType get(MLIRContext *context);
 
+    /// Return the bitwidth of this type. This is an interface method of
+    /// ScalarTypeInterface.
+    std::optional<uint64_t> getInherentBitwidth() const {
+      return std::nullopt;
+    }
+
     /// Storage bit width used for IndexType by internal compiler data
     /// structures.
     static constexpr unsigned kInternalStorageBitWidth = 64;
@@ -477,7 +497,8 @@ def Builtin_Index : Builtin_Type<"Index", "index"> {
 // IntegerType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Integer : Builtin_Type<"Integer", "integer"> {
+def Builtin_Integer
+    : Builtin_Type<"Integer", "integer", [ScalarTypeInterface]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -530,6 +551,12 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer"> {
     /// bitwidth scaled by `scale`.
     /// Return null if the scaled element type cannot be represented.
     IntegerType scaleElementBitwidth(unsigned scale);
+
+    /// Return the bitwidth of this type. This is an interface method of
+    /// ScalarTypeInterface.
+    std::optional<uint64_t> getInherentBitwidth() const {
+      return static_cast<uint64_t>(getWidth());
+    }
 
     /// Integer representation maximal bitwidth.
     /// Note: This is aligned with the maximum width of llvm::IntegerType.
@@ -1249,10 +1276,6 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_VectorTypeElementType : AnyTypeOf<[AnyInteger, Index, AnyFloat]> {
-  let cppFunctionName = "isValidVectorTypeElementType";
-}
-
 def Builtin_Vector : Builtin_Type<"Vector", "vector",
     [ShapedTypeInterface, ValueSemantics], "Type"> {
   let summary = "Multi-dimensional SIMD vector type";
@@ -1303,12 +1326,12 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector",
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
-    Builtin_VectorTypeElementType:$elementType,
+    AnyScalarType:$elementType,
     ArrayRefParameter<"bool">:$scalableDims
   );
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "ArrayRef<int64_t>":$shape, "Type":$elementType,
+      "ArrayRef<int64_t>":$shape, "ScalarTypeInterface":$elementType,
       CArg<"ArrayRef<bool>", "{}">:$scalableDims
     ), [{
       // While `scalableDims` is optional, its default value should be

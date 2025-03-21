@@ -936,7 +936,8 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 static VectorType getVectorType(Type scalarTy,
                                 const VectorizationStrategy *strategy) {
   assert(!isa<VectorType>(scalarTy) && "Expected scalar type");
-  return VectorType::get(strategy->vectorSizes, scalarTy);
+  return VectorType::get(strategy->vectorSizes,
+                         cast<ScalarTypeInterface>(scalarTy));
 }
 
 /// Tries to transform a scalar constant into a vector constant. Returns the
@@ -1195,7 +1196,8 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
                                       VectorizationState &state) {
   MemRefType memRefType = loadOp.getMemRefType();
   Type elementType = memRefType.getElementType();
-  auto vectorType = VectorType::get(state.strategy->vectorSizes, elementType);
+  auto vectorType = VectorType::get(state.strategy->vectorSizes,
+                                    cast<ScalarTypeInterface>(elementType));
 
   // Replace map operands with operands from the vector loop nest.
   SmallVector<Value, 8> mapOperands;
@@ -1426,7 +1428,8 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
   SmallVector<Type, 8> vectorTypes;
   for (Value result : op->getResults())
     vectorTypes.push_back(
-        VectorType::get(state.strategy->vectorSizes, result.getType()));
+        VectorType::get(state.strategy->vectorSizes,
+                        cast<ScalarTypeInterface>(result.getType())));
 
   SmallVector<Value, 8> vectorOperands;
   for (Value operand : op->getOperands()) {
@@ -1831,7 +1834,6 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
 
   return success();
 }
-
 
 /// External utility to vectorize affine loops in 'loops' using the n-D
 /// vectorization factors in 'vectorSizes'. By default, each vectorization

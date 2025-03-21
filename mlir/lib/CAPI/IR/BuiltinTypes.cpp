@@ -364,21 +364,22 @@ bool mlirTypeIsAVector(MlirType type) {
 MlirType mlirVectorTypeGet(intptr_t rank, const int64_t *shape,
                            MlirType elementType) {
   return wrap(VectorType::get(llvm::ArrayRef(shape, static_cast<size_t>(rank)),
-                              unwrap(elementType)));
+                              cast<ScalarTypeInterface>(unwrap(elementType))));
 }
 
 MlirType mlirVectorTypeGetChecked(MlirLocation loc, intptr_t rank,
                                   const int64_t *shape, MlirType elementType) {
   return wrap(VectorType::getChecked(
       unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
-      unwrap(elementType)));
+      cast<ScalarTypeInterface>(unwrap(elementType))));
 }
 
 MlirType mlirVectorTypeGetScalable(intptr_t rank, const int64_t *shape,
                                    const bool *scalable, MlirType elementType) {
-  return wrap(VectorType::get(
-      llvm::ArrayRef(shape, static_cast<size_t>(rank)), unwrap(elementType),
-      llvm::ArrayRef(scalable, static_cast<size_t>(rank))));
+  return wrap(
+      VectorType::get(llvm::ArrayRef(shape, static_cast<size_t>(rank)),
+                      cast<ScalarTypeInterface>(unwrap(elementType)),
+                      llvm::ArrayRef(scalable, static_cast<size_t>(rank))));
 }
 
 MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
@@ -387,7 +388,7 @@ MlirType mlirVectorTypeGetScalableChecked(MlirLocation loc, intptr_t rank,
                                           MlirType elementType) {
   return wrap(VectorType::getChecked(
       unwrap(loc), llvm::ArrayRef(shape, static_cast<size_t>(rank)),
-      unwrap(elementType),
+      cast<ScalarTypeInterface>(unwrap(elementType)),
       llvm::ArrayRef(scalable, static_cast<size_t>(rank))));
 }
 

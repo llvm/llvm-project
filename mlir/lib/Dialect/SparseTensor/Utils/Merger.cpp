@@ -1236,7 +1236,8 @@ Type Merger::inferType(ExprId e, Value src) const {
   // Inspect source type. For vector types, apply the same
   // vectorization to the destination type.
   if (auto vtp = dyn_cast<VectorType>(src.getType()))
-    return VectorType::get(vtp.getNumElements(), dtp, vtp.getScalableDims());
+    return VectorType::get(vtp.getNumElements(), cast<ScalarTypeInterface>(dtp),
+                           vtp.getScalableDims());
   return dtp;
 }
 

@@ -283,7 +283,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     Type llvmWantedDataType = this->typeConverter->convertType(wantedDataType);
 
-    Type i32 = rewriter.getI32Type();
+    auto i32 = rewriter.getI32Type();
 
     // Get the type size in bytes.
     DataLayout dataLayout = DataLayout::closest(gpuOp);
@@ -560,7 +560,7 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
 
   int64_t numBits =
       vectorType.getNumElements() * elemType.getIntOrFloatBitWidth();
-  Type i32 = rewriter.getI32Type();
+  auto i32 = rewriter.getI32Type();
   Type intrinsicInType = numBits <= 32
                              ? (Type)rewriter.getIntegerType(numBits)
                              : (Type)VectorType::get(numBits / 32, i32);
@@ -1099,8 +1099,9 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
           operand =
               rewriter.create<LLVM::BitcastOp>(loc, llvmSrcIntType, operand);
         }
-        auto llvmVecType = typeConverter->convertType(mlir::VectorType::get(
-            32 / operandType.getIntOrFloatBitWidth(), llvmSrcIntType));
+        auto llvmVecType = typeConverter->convertType(
+            mlir::VectorType::get(32 / operandType.getIntOrFloatBitWidth(),
+                                  cast<ScalarTypeInterface>(llvmSrcIntType)));
         Value undefVec = rewriter.create<LLVM::UndefOp>(loc, llvmVecType);
         operand = rewriter.create<LLVM::InsertElementOp>(
             loc, undefVec, operand, createI32Constant(rewriter, loc, 0));

@@ -250,7 +250,8 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
   if (saturateFP8)
     in = clampInput(rewriter, loc, outElemType, in);
   auto inVectorTy = dyn_cast<VectorType>(in.getType());
-  VectorType truncResType = VectorType::get(4, outElemType);
+  VectorType truncResType =
+      VectorType::get(4, cast<ScalarTypeInterface>(outElemType));
   if (!inVectorTy) {
     Value asFloat = castToF32(in, loc, rewriter);
     Value asF8s = rewriter.create<amdgpu::PackedTrunc2xFp8Op>(
@@ -331,7 +332,8 @@ LogicalResult TruncfToFloat16RewritePattern::matchAndRewrite(
   Location loc = op.getLoc();
   Value in = op.getIn();
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
-  VectorType truncResType = VectorType::get(2, outElemType);
+  VectorType truncResType =
+      VectorType::get(2, cast<ScalarTypeInterface>(outElemType));
   auto inVectorTy = dyn_cast<VectorType>(in.getType());
 
   // Handle the case where input type is not a vector type

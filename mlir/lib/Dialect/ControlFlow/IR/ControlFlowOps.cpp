@@ -89,7 +89,7 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
   return failure();
 }
 
-// This side effect models "program termination". 
+// This side effect models "program termination".
 void AssertOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -480,8 +480,9 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
                      ArrayRef<ValueRange> caseOperands) {
   DenseIntElementsAttr caseValuesAttr;
   if (!caseValues.empty()) {
-    ShapedType caseValueType = VectorType::get(
-        static_cast<int64_t>(caseValues.size()), value.getType());
+    ShapedType caseValueType =
+        VectorType::get(static_cast<int64_t>(caseValues.size()),
+                        cast<ScalarTypeInterface>(value.getType()));
     caseValuesAttr = DenseIntElementsAttr::get(caseValueType, caseValues);
   }
   build(builder, result, value, defaultDestination, defaultOperands,
@@ -494,8 +495,9 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
                      ArrayRef<ValueRange> caseOperands) {
   DenseIntElementsAttr caseValuesAttr;
   if (!caseValues.empty()) {
-    ShapedType caseValueType = VectorType::get(
-        static_cast<int64_t>(caseValues.size()), value.getType());
+    ShapedType caseValueType =
+        VectorType::get(static_cast<int64_t>(caseValues.size()),
+                        cast<ScalarTypeInterface>(value.getType()));
     caseValuesAttr = DenseIntElementsAttr::get(caseValueType, caseValues);
   }
   build(builder, result, value, defaultDestination, defaultOperands,
@@ -550,7 +552,8 @@ static ParseResult parseSwitchOpCases(
 
   if (!values.empty()) {
     ShapedType caseValueType =
-        VectorType::get(static_cast<int64_t>(values.size()), flagType);
+        VectorType::get(static_cast<int64_t>(values.size()),
+                        cast<ScalarTypeInterface>(flagType));
     caseValues = DenseIntElementsAttr::get(caseValueType, values);
   }
   return success();

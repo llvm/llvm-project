@@ -48,7 +48,8 @@ static std::pair<unsigned, VectorType> legalizeVectorType(const Type &type) {
   const unsigned lmul = eltCount * sew / 64;
 
   unsigned n = lmul > 8 ? llvm::Log2_32(lmul) - 2 : 1;
-  return {n, VectorType::get({eltCount >> (n - 1)}, eltTy, {true})};
+  return {n, VectorType::get({eltCount >> (n - 1)},
+                             cast<ScalarTypeInterface>(eltTy), {true})};
 }
 
 /// Replace math.cos(v) operation with vcix.v.iv(v).

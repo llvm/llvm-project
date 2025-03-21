@@ -548,8 +548,9 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
                      ArrayRef<int32_t> branchWeights) {
   DenseIntElementsAttr caseValuesAttr;
   if (!caseValues.empty()) {
-    ShapedType caseValueType = VectorType::get(
-        static_cast<int64_t>(caseValues.size()), value.getType());
+    ShapedType caseValueType =
+        VectorType::get(static_cast<int64_t>(caseValues.size()),
+                        cast<ScalarTypeInterface>(value.getType()));
     caseValuesAttr = DenseIntElementsAttr::get(caseValueType, caseValues);
   }
 
@@ -564,8 +565,9 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
                      ArrayRef<int32_t> branchWeights) {
   DenseIntElementsAttr caseValuesAttr;
   if (!caseValues.empty()) {
-    ShapedType caseValueType = VectorType::get(
-        static_cast<int64_t>(caseValues.size()), value.getType());
+    ShapedType caseValueType =
+        VectorType::get(static_cast<int64_t>(caseValues.size()),
+                        cast<ScalarTypeInterface>(value.getType()));
     caseValuesAttr = DenseIntElementsAttr::get(caseValueType, caseValues);
   }
 
@@ -611,8 +613,8 @@ static ParseResult parseSwitchOpCases(
   if (failed(parser.parseCommaSeparatedList(parseCase)))
     return failure();
 
-  ShapedType caseValueType =
-      VectorType::get(static_cast<int64_t>(values.size()), flagType);
+  ShapedType caseValueType = VectorType::get(
+      static_cast<int64_t>(values.size()), cast<ScalarTypeInterface>(flagType));
   caseValues = DenseIntElementsAttr::get(caseValueType, values);
   return parser.parseRSquare();
 }

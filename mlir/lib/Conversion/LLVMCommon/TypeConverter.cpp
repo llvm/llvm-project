@@ -638,8 +638,9 @@ FailureOr<Type> LLVMTypeConverter::convertVectorType(VectorType type) const {
   if (!elementType)
     return {};
   if (type.getShape().empty())
-    return VectorType::get({1}, elementType);
-  Type vectorType = VectorType::get(type.getShape().back(), elementType,
+    return VectorType::get({1}, cast<ScalarTypeInterface>(elementType));
+  Type vectorType = VectorType::get(type.getShape().back(),
+                                    cast<ScalarTypeInterface>(elementType),
                                     type.getScalableDims().back());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");

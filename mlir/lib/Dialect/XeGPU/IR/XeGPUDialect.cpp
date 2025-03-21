@@ -368,8 +368,9 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
            "tensor descriptor shape is not distributable");
     if (chunkSize > 1)
       return VectorType::get({chunkSize / wiDataSize, wiDataSize},
-                             getElementType());
-    return VectorType::get({wiDataSize}, getElementType());
+                             llvm::cast<ScalarTypeInterface>(getElementType()));
+    return VectorType::get({wiDataSize},
+                           llvm::cast<ScalarTypeInterface>(getElementType()));
   }
 
   // Case 2: block loads/stores
@@ -393,7 +394,7 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   tensorSize *= getArrayLength();
 
   return VectorType::get({tensorSize / (sgSize * wiDataSize), wiDataSize},
-                         getElementType());
+                         llvm::cast<ScalarTypeInterface>(getElementType()));
 }
 
 } // namespace xegpu
