@@ -2204,7 +2204,7 @@ class OutOfProcessThinBackend : public CGThinBackend {
   bool SaveTemps;
 
   SmallVector<StringRef, 0> CodegenOptions;
-  DenseSet<StringRef> AdditionalInputs;
+  DenseSet<StringRef> CommonInputs;
 
   // Information specific to individual backend compilation job.
   struct Job {
@@ -2332,7 +2332,7 @@ public:
     if (!C.SampleProfile.empty()) {
       Ops.push_back(
           Saver.save("-fprofile-sample-use=" + Twine(C.SampleProfile)));
-      AdditionalInputs.insert(C.SampleProfile);
+      CommonInputs.insert(C.SampleProfile);
     }
 
     // We don't know which of options will be used by Clang.
@@ -2355,53 +2355,53 @@ public:
 
     json::OStream JOS(OS);
     JOS.object([&]() {
-      // Information common to all jobs note that we use a custom syntax for
-      // referencing by index into the job input and output file arrays.
+      // Information common to all jobs.
       JOS.attributeObject("common", [&]() {
         JOS.attribute("linker_output", LinkerOutputFile);
 
-        // Common command line template.
         JOS.attributeArray("args", [&]() {
           JOS.value(RemoteCompiler);
 
-          // Reference to Job::NativeObjectPath.
-          JOS.value("-o");
-          JOS.value(Array{"primary_output", 0});
-
           JOS.value("-c");
 
-          JOS.value("-x");
-          JOS.value("ir");
-
-          // Reference to Job::ModuleID.
-          JOS.value(Array{"primary_input", 0});
-
-          // Reference to Job::SummaryIndexPath.
-          JOS.value(Array{"summary_index", "-fthinlto-index=", 0});
           JOS.value(Saver.save("--target=" + Twine(Triple)));
 
           for (const auto &A : CodegenOptions)
             JOS.value(A);
         });
+
+        JOS.attribute("inputs", Array(CommonInputs));
       });
+
+      // Per-compilation-job information.
       JOS.attributeArray("jobs", [&]() {
         for (const auto &J : Jobs) {
           assert(J.Task != 0);
+
+          SmallVector<StringRef, 2> Inputs;
+          SmallVector<StringRef, 1> Outputs;
+
           JOS.object([&]() {
-            JOS.attribute("primary_input", Array{J.ModuleID});
-            JOS.attribute("summary_index", Array{J.SummaryIndexPath});
-            JOS.attribute("primary_output", Array{J.NativeObjectPath});
+            JOS.attributeArray("args", [&]() {
+              JOS.value(J.ModuleID);
+              Inputs.push_back(J.ModuleID);
+
+              JOS.value(
+                  Saver.save("-fthinlto-index=" + Twine(J.SummaryIndexPath)));
+              Inputs.push_back(J.SummaryIndexPath);
+
+              JOS.value("-o");
+              JOS.value(J.NativeObjectPath);
+              Outputs.push_back(J.NativeObjectPath);
+            });
 
             // Add the bitcode files from which imports will be made. These do
-            // not appear on the command line but are recorded in the summary
-            // index shard.
-            JOS.attribute("imports", Array(J.ImportFiles));
+            // not explicitly appear on the backend compilation command lines
+            // but are recorded in the summary index shards.
+            llvm::append_range(Inputs, J.ImportFiles);
+            JOS.attribute("inputs", Array(Inputs));
 
-            // Add any input files that are common to each invocation. These
-            // filenames are duplicated in the command line template and in
-            // each of the per job "inputs" array. However, this small amount
-            // of duplication makes the schema simpler.
-            JOS.attribute("additional_inputs", Array(AdditionalInputs));
+            JOS.attribute("outputs", Array(Outputs));
           });
         }
       });

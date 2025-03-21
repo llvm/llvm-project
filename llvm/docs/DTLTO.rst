@@ -11,44 +11,63 @@ DTLTO
 Distributed ThinLTO (DTLTO)
 ===========================
 
-Distributed ThinLTO (DTLTO) facilitates the distribution of backend ThinLTO
-compilations via external distribution systems such as Incredibuild.
+Distributed ThinLTO (DTLTO) enables the distribution of backend ThinLTO
+compilations via external distribution systems, such as Incredibuild, during the
+link step.
 
-The existing method of distributing ThinLTO compilations via separate thin-link,
-backend compilation, and link steps often requires significant changes to the
-user's build process to adopt, as it requires using a build system which can
-handle the dynamic dependencies specified by the index files, such as Bazel.
+DTLTO extends the existing ThinLTO distribution support which uses separate
+*thin-link*, *backend compilation*, and *link* steps. This method is documented
+here:
 
-DTLTO eliminates this need by managing distribution internally within the LLD
-linker during the traditional link step. This allows DTLTO to be used with any
-build process that supports in-process ThinLTO.
+    https://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
 
-Limitations
------------
+Using the *separate thin-link* approach requires a build system capable of
+handling the dynamic dependencies specified in the individual summary index
+files, such as Bazel. DTLTO removes this requirement, allowing it to be used
+with any build process that supports in-process ThinLTO.
 
-The current implementation of DTLTO has the following limitations:
+The following commands show the steps used for the *separate thin-link*
+approach for a basic example:
 
-- The ThinLTO cache is not supported.
-- Only ELF and COFF platforms are supported.
-- Archives with bitcode members are not supported.
-- Only a very limited set of LTO configurations are currently supported, e.g.,
-  support for basic block sections is not currently available.
+.. code-block:: console
 
-Overview of Operation
----------------------
+    1. clang -flto=thin -O2 t1.c t2.c -c
+    2. clang -flto=thin -O2 t1.o t2.o -fuse-ld=lld -Wl,--thinlto-index-only
+    3. clang -O2 -o t1.native.o t1.o -c -fthinlto-index=t1.o.thinlto.bc
+    4. clang -O2 -o t2.native.o t2.o -c -fthinlto-index=t2.o.thinlto.bc
+    5. clang t1.native.o t2.native.o -o a.out -fuse-ld=lld
 
-For each ThinLTO backend compilation job, LLD:
+With DTLTO, steps 2-5 are performed internally as part of the link step. The
+equivalent DTLTO commands for the above are:
 
-1. Generates the required summary index shard.
-2. Records a list of input and output files.
-3. Constructs a Clang command line to perform the ThinLTO backend compilation.
+.. code-block:: console
 
-This information is supplied, via a JSON file, to a distributor program that
-executes the backend compilations using a distribution system. Upon completion,
-LLD integrates the compiled native object files into the link process.
+    clang -flto=thin -O2 t1.c t2.c -c
+    clang -flto=thin -O2 t1.o t2.o -fuse-ld=lld -fthinlto-distributor=<distributor_process>
 
-The design keeps the details of distribution systems out of the LLVM source
+For DTLTO, LLD prepares the following for each ThinLTO backend compilation job:
+
+- An individual index file and a list of input and output files (corresponds to
+  step 2 above).
+- A Clang command line to perform the ThinLTO backend compilations.
+
+This information is supplied, via a JSON file, to ``distributor_process``, which
+executes the backend compilations using a distribution system (corresponds to
+steps 3 and 4 above). Upon completion, LLD integrates the compiled native object
+files into the link process and completes the link (corresponds to step 5
+above).
+
+This design keeps the details of distribution systems out of the LLVM source
 code.
+
+An example distributor that performs all work on the local system is included in
+the LLVM source tree. To run an example with that distributor, a command line
+such as the following can be used:
+
+.. code-block:: console
+
+   clang -flto=thin -fuse-ld=lld -O2 t1.o t2.o -fthinlto-distributor=$(which python3) \
+     -Xthinlto-distributor=$LLVMSRC/llvm/utils/dtlto/local.py
 
 Distributors
 ------------
@@ -60,161 +79,118 @@ Distributors are programs responsible for:
 3. Blocking execution until all backend compilations are complete.
 
 Distributors must return a non-zero exit code on failure. They can be
-implemented as binaries or in scripting languages, such as Python. An example
-script demonstrating basic local execution is available with the LLVM source
-code.
-
-How Distributors Are Invoked
-----------------------------
+implemented as platform native executables or in a scripting language, such as
+Python.
 
 Clang and LLD provide options to specify a distributor program for managing
-backend compilations. Distributor options and backend compilation options, can
+backend compilations. Distributor options and backend compilation options can
 also be specified. Such options are transparently forwarded.
 
 The backend compilations are currently performed by invoking Clang. For further
 details, refer to:
 
-- Clang documentation: https://clang.llvm.org/docs/ThinLTO.html
-- LLD documentation: https://lld.llvm.org/DTLTO.html
+* Clang documentation: https://clang.llvm.org/docs/ThinLTO.html
+* LLD documentation: https://lld.llvm.org/DTLTO.html
 
 When invoked with a distributor, LLD generates a JSON file describing the
-backend compilation jobs and executes the distributor passing it this file. The
-JSON file provides the following information to the distributor:
-
-- The **command line** to execute the backend compilations.
-   - DTLTO constructs a Clang command line by translating some of the LTO
-     configuration state into Clang options and forwarding options specified
-     by the user.
-
-- **Link output path**.
-   - A string identifying the output to which this LTO invocation will 
-     contribute. Distributors can use this to label build jobs for informational
-     purposes.
-
-- The list of **imports** required for each job.
-   - The per-job list of bitcode files from which importing will occur. This is
-     the same information that is emitted into import files for ThinLTO.
-
-- The **input files** required for each job.
-   - The per-job set of files required for backend compilation, such as bitcode
-     files, summary index files, and profile data.
-
-- The **output files** generated by each job.
-   - The per-job files generated by the backend compilations, such as compiled
-     object files and toolchain metrics.
-
-Temporary Files
----------------
-
-During its operation, DTLTO generates temporary files. Temporary files are
-created in the same directory as the linker's output file and their filenames
-include the stem of the bitcode module, or the output file that the LTO 
-invocation is contributing to, to aid the user in identifying them:
-
-- **JSON Job Description File**:
-    - Format:  `dtlto.<PID>.dist-file.json`
-    - Example: `dtlto.77380.dist-file.json` (for output file `dtlto.elf`).
-
-- **Object Files From Backend Compilations**:
-    - Format:  `<Module ID stem>.<Task>.<PID>.native.o`
-    - Example: `my.1.77380.native.o` (for bitcode module `my.o`).
-
-- **Summary Index Shard Files**:
-    - Format:  `<Module ID stem>.<Task>.<PID>.native.o.thinlto.bc`
-    - Example: `my.1.77380.native.o.thinlto.bc` (for bitcode module `my.o`).
-
-Temporary files are removed, by default, after the backend compilations complete.
+backend compilation jobs and executes the distributor, passing it this file.
 
 JSON Schema
 -----------
 
-Below is an example of a JSON job file for backend compilation of the module
-`dtlto.o`:
+The JSON format is explained by reference to the following example, which
+describes the backend compilation of the modules ``t1.o`` and ``t2.o``:
 
 .. code-block:: json
 
     {
         "common": {
             "linker_output": "dtlto.elf",
-            "linker_version": "LLD 20.0.0",
-            "args": [
-                "/usr/local/clang",
-                "-O3", "-fprofile-sample-use=my.profdata",
-                "-o", ["primary_output", 0],
-                "-c", "-x", "ir", ["primary_input", 0],
-                ["summary_index", "-fthinlto-index=", 0],
-                "--target=x86_64-sie-ps5"
-            ]
+            "args": ["/usr/bin/clang", "-O2", "-c", "-fprofile-sample-use=my.prof"],
+            "inputs": ["my.prof"]
         },
         "jobs": [
             {
-                "primary_input": ["dtlto.o"],
-                "summary_index": ["dtlto.1.51232.native.o.thinlto.bc"],
-                "primary_output": ["dtlto.1.51232.native.o"],
-                "imports": [],
-                "additional_inputs": ["my.profdata"]
+                "args": ["t1.o", "-fthinlto-index=t1.o.thinlto.bc", "-o", "t1.native.o", "-fproc-stat-report=t1.stats.txt"],
+                "inputs": ["t1.o", "t1.o.thinlto.bc"],
+                "outputs": ["t1.native.o", "t1.stats.txt"]
+            },
+            {
+                "args": ["t2.o", "-fthinlto-index=t2.o.thinlto.bc", "-o", "t2.native.o", "-fproc-stat-report=t2.stats.txt"],
+                "inputs": ["t2.o", "t2.o.thinlto.bc"],
+                "outputs": ["t2.native.o", "t2.stats.txt"]
             }
         ]
     }
 
-Key Features of the Schema
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Each entry in the ``jobs`` array represents a single backend compilation job.
+Each job object records its own command-line arguments and input/output files.
+Shared arguments and inputs are defined once in the ``common`` object.
 
-- **Input/Output Paths**: Paths are stored in per-file-type array fields. This
-  allows files to be adjusted, if required, to meet the constraints of the
-  underlying distribution system. For example, a system may only be able to read
-  and write remote files to `C:\\sandbox`. The remote paths used can be adjusted
-  by the distributor for such constraints. Once outputs are back on the local
-  system, the distributor can rename them as required.
+Reserved Entries:
 
+- The first entry in the ``common.args`` array specifies the compiler
+  executable to invoke.
+- The first entry in each job's ``inputs`` array is the bitcode file for the
+  module being compiled.
+- The second entry in each job's ``inputs`` array is the corresponding
+  individual summary index file.
+- The first entry in each job's ``outputs`` array is the primary output object
+  file.
 
-- **Command-Line Template**: Command-line options are stored in a common
-  template to avoid duplication for each job. The template consists of an array
-  of strings and arrays. The arrays are placeholders which reference per-job
-  paths. This allows the remote compiler and its arguments to be changed without
-  updating the distributors.
+Command-line arguments and input/output files are stored separately to allow
+the remote compiler to be changed without updating the distributors, as the
+distributors do not need to understand the details of the compiler command
+line.
 
-Command-Line Expansion Example
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To generate the backend compilation commands, the common and job-specific
+arguments are concatenated.
 
-To create the backend compilation commands, the command-line template is
-expanded for each job. Placeholders are expanded in the following way: The first
-array element specifies the name of the array field to look in. The remaining
-elements are converted to strings and concatenated. Integers are converted by
-indexing into the specified array.
-
-The example above generates the following backend compilation command for
-`main.o`:
+When consuming the example JSON above, a distributor is expected to issue the
+following backend compilation commands with maximum parallelism:
 
 .. code-block:: console
 
-    /usr/local/clang -O3 -fprofile-sample-use=my.profdata \
-        -o dtlto.1.51232.native.o -c -x ir dtlto.o \
-        -fthinlto-index=dtlto.1.51232.native.o.thinlto.bc --target=x86_64-sie-ps5
+    /usr/bin/clang -O2 -c -fprofile-sample-use=my.prof t1.o -fthinlto-index=t1.o.thinlto.bc -o t1.native.o \
+      -fproc-stat-report=t1.stats.txt
 
-This expansion scheme allows the remote compiler to be changed without updating
-the distributors. For example, if the "args" field in the above example was
-replaced with:
+    /usr/bin/clang -O2 -c -fprofile-sample-use=my.prof t2.o  -fthinlto-index=t2.o.thinlto.bc -o t2.native.o \
+      -fproc-stat-report=t2.stats.txt
 
-.. code-block:: json
+Temporary Files
+---------------
 
-    "args": [
-        "custom-compiler",
-        "-opt-level=2",
-        "-profile-instrument-use-path=my.profdata",
-        "-output", ["primary_output", 0],
-        "-input", ["primary_input", 0],
-        "-thinlto-index", ["summary_index", 0],
-        "-triple", "x86_64-sie-ps5"
-    ]
+During its operation, DTLTO generates temporary files. Temporary files are
+created in the same directory as the linker's output file:
 
-Then distributors can expand the command line without needing to be updated:
+- **JSON Job Description File**:
 
-.. code-block:: console
+  - Format: ``<linker output file basename>.<PID>.dist-file.json``
+  - Example: ``dtlto.77380.dist-file.json`` (for output file ``dtlto.elf``).
 
-    custom-compiler -opt-level=2 -profile-instrument-use-path=my.profdata \
-        -output dtlto.1.51232.native.o -input dtlto.o \
-        -thinlto-index dtlto.1.51232.native.o.thinlto.bc -triple x86_64-sie-ps5
+- **Object Files From Backend Compilations**:
+
+  - Format: ``<Module identifier basename>.<Task>.<PID>.native.o``
+  - Example: ``my.1.77380.native.o`` (for bitcode module ``my.o``).
+
+- **Summary Index Shard Files**:
+
+  - Format: ``<Module identifier basename>.<Task>.<PID>.native.o.thinlto.bc``
+  - Example: ``my.1.77380.native.o.thinlto.bc`` (for bitcode module ``my.o``).
+
+Temporary files are removed by default.
+
+TODOs
+-----
+
+The following features are planned for DTLTO but not yet implemented:
+
+- Support for the ThinLTO in-process cache.
+- Support for platforms other than ELF and COFF.
+- Support for archives with bitcode members.
+- Support for more LTO configurations; only a very limited set of LTO
+  configurations is supported currently, e.g., support for basic block sections
+  is not currently available.
 
 Constraints
 -----------
@@ -222,3 +198,4 @@ Constraints
 - Matching versions of Clang and LLD should be used.
 - The distributor used must support the JSON schema generated by the version of
   LLD in use.
+

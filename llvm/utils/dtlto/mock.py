@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # Iterate over the jobs and create the output
     # files by copying over the supplied input files.
     for job_index, job in enumerate(data["jobs"]):
-        shutil.copy(input_files[job_index], job["primary_output"][0])
+        shutil.copy(input_files[job_index], job["outputs"][0])
 
     # Check the format of the JSON.
     validate.validate(data)

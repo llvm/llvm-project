@@ -16,18 +16,21 @@ DEFINE:    -r=0.bc,g,px \
 DEFINE:    -r=1.bc,f,px \
 DEFINE:    -r=1.bc,g
 
-; We expect an import from 0.o into 1.o but no imports into 0.o. Check that the
-; expected input files have been added to the JSON.
+; We expect an import from 0.bc into 1.bc but no imports into 0.bc. Check that
+; the expected input files have been added to the JSON to account for this.
 RUN: not %{command} 2>&1 | FileCheck %s --check-prefixes=INPUTS,ERR
 
-INPUTS:      "primary_input": [
-INPUTS-NEXT:   "0.bc"
+; 1.bc should not appear in the list of inputs for 0.bc.
+INPUTS:      "jobs":
+INPUTS:      "inputs": [
+INPUTS-NEXT:   "0.bc",
+INPUTS-NEXT:   "0.1.[[#]].native.o.thinlto.bc"
 INPUTS-NEXT: ]
-INPUTS:      "imports": []
-INPUTS:      "primary_input": [
-INPUTS-NEXT:   "1.bc"
-INPUTS-NEXT: ]
-INPUTS:      "imports": [
+
+; 0.bc should appear in the list of inputs for 1.bc.
+INPUTS:      "inputs": [
+INPUTS-NEXT:   "1.bc",
+INPUTS-NEXT:   "1.2.[[#]].native.o.thinlto.bc",
 INPUTS-NEXT:   "0.bc"
 INPUTS-NEXT: ]
 

@@ -11,7 +11,7 @@ Arguments:
     - <json_file> : JSON file describing the DTLTO jobs.
 
 The script does the following:
-    1. Prints the supplied CLI arguments.
+    1. Prints the supplied distributor arguments.
     2. Loads the JSON file.
     3. Pretty prints the JSON.
     4. Validates the structure and required fields.
@@ -36,24 +36,11 @@ def validate(jdoc):
     args = take(jdoc, "common.args")
     assert type(args) is list
     assert len(args) > 0
+    assert all(type(i) is str for i in args)
 
-    def validate_reference(a):
-        for j in jdoc["jobs"]:
-            for x in a[1:]:
-                if type(x) is int:
-                    if a[0] not in j or x >= len(j[a[0]]):
-                        return False
-        return True
-
-    for a in args:
-        assert type(a) is str or (
-            type(a) is list
-            and len(a) >= 2
-            and type(a[0]) is str
-            and all(type(x) in (str, int) for x in a[1:])
-            and any(type(x) is int for x in a[1:])
-            and validate_reference(a)
-        )
+    inputs = take(jdoc, "common.inputs")
+    assert type(inputs) is list
+    assert all(type(i) is str for i in inputs)
 
     assert len(take(jdoc, "common")) == 0
 
@@ -62,18 +49,9 @@ def validate(jdoc):
     for j in jobs:
         assert type(j) is dict
 
-        # Mandatory job attributes.
-        for attr in ("primary_input", "primary_output", "summary_index"):
+        for attr, min_size in (("args", 0), ("inputs", 2), ("outputs", 1)):
             array = take(j, attr)
-            assert type(array) is list
-            assert len(array) == 1
-            assert type(array[0]) is str
-
-        # Optional job attributes.
-        for attr in ("additional_inputs", "additional_outputs", "imports"):
-            array = take(j, attr)
-            if array is KeyError:
-                continue
+            assert len(array) >= min_size
             assert type(array) is list
             assert all(type(a) is str for a in array)
 
@@ -86,6 +64,7 @@ if __name__ == "__main__":
     json_arg = Path(sys.argv[-1])
     distributor_args = sys.argv[1:-1]
 
+    # Print the supplied distributor arguments.
     print(f"{distributor_args=}")
 
     # Load the DTLTO information from the input JSON file.

@@ -21,59 +21,45 @@ CHECK: distributor_args=['--da1=10', '--da2=10']
 ; Check the common object.
 CHECK:      "linker_output": "my.output"
 CHECK:      "args":
-CHECK:      "my_clang.exe"
-CHECK:      "-o"
-CHECK-NEXT: [
-CHECK-NEXT: "primary_output"
-CHECK-NEXT: 0
+CHECK-NEXT: "my_clang.exe"
+CHECK-NEXT: "-c"
+CHECK-NEXT: "--target=x86_64-unknown-linux-gnu"
+CHECK-NEXT: "-O2"
+CHECK-NEXT: "-fpic"
+CHECK-NEXT: "-Wno-unused-command-line-argument"
+CHECK-NEXT: "--rota1=10"
+CHECK-NEXT: "--rota2=20"
 CHECK-NEXT: ]
-CHECK:      "-c"
-CHECK:      "-x"
-CHECK:      "ir"
-CHECK-NEXT: [
-CHECK-NEXT: "primary_input"
-CHECK-NEXT:  0
-CHECK-NEXT: ]
-CHECK:      "summary_index"
-CHECK-NEXT: "-fthinlto-index="
-CHECK-NEXT: 0
-CHECK-NEXT: ]
-CHECK:      "--target=x86_64-unknown-linux-gnu"
-CHECK:      "-O2",
-CHECK:      "-fpic"
-CHECK:      "-Wno-unused-command-line-argument"
-CHECK:      "--rota1=10"
-CHECK:      "--rota2=20"
+CHECK: "inputs": []
 
 ; Check the first job entry.
-CHECK: "jobs":
-CHECK:      "primary_input": [
+CHECK:      "args":
 CHECK-NEXT: "t1.bc"
-CHECK-NEXT: ]
-CHECK:      "summary_index": [
-CHECK-NEXT: "t1.1.[[#]].native.o.thinlto.bc"
-CHECK-NEXT: ]
-CHECK:      "primary_output": [
+CHECK-NEXT: "-fthinlto-index=t1.1.[[#]].native.o.thinlto.bc"
+CHECK-NEXT: "-o"
 CHECK-NEXT: "t1.1.[[#]].native.o"
 CHECK-NEXT: ]
-CHECK:      "imports": [],
-CHECK:      "additional_inputs": []
-CHECK-NEXT: }
+CHECK:      "inputs": [
+CHECK-NEXT: "t1.bc"
+CHECK-NEXT: "t1.1.[[#]].native.o.thinlto.bc"
+CHECK-NEXT: ]
+CHECK:      "outputs": [
+CHECK-NEXT: "t1.1.[[#]].native.o"
+CHECK-NEXT: ]
 
 ; Check the second job entry.
-CHECK-NEXT: {
-CHECK-NEXT: "primary_input": [
+CHECK:      "args": [
 CHECK-NEXT: "t2.bc"
-CHECK-NEXT: ]
-CHECK-NEXT: "summary_index": [
-CHECK-NEXT: "t2.2.[[#]].native.o.thinlto.bc"
-CHECK-NEXT: ]
-CHECK-NEXT: "primary_output": [
+CHECK-NEXT: "-fthinlto-index=t2.2.[[#]].native.o.thinlto.bc"
+CHECK-NEXT: "-o"
 CHECK-NEXT: "t2.2.[[#]].native.o"
 CHECK-NEXT: ]
-CHECK-NEXT: "imports": []
-CHECK-NEXT: "additional_inputs": []
-CHECK-NEXT: }
+CHECK-NEXT: "inputs": [
+CHECK-NEXT: "t2.bc"
+CHECK-NEXT: "t2.2.[[#]].native.o.thinlto.bc"
+CHECK-NEXT: ]
+CHECK-NEXT: "outputs": [
+CHECK-NEXT: "t2.2.[[#]].native.o"
 CHECK-NEXT: ]
 
 ; This check ensures that we have failed for the expected reason.
