@@ -12,6 +12,13 @@ template <typename T> struct Indirect {
   // expected-note@-2{{in instantiation of template class 'G<void *__ptrauth(0,0,1234)>' requested here}}
 };
 
+template <int K, int A, int D>
+struct TemplateParameters {
+  void * __ptrauth(K, 0, 100) m1; // expected-error {{expression is not an integer constant expression}}
+  void * __ptrauth(0, A, 100) m2; // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
+  void * __ptrauth(0, 0, D) m3; // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
+};
+
 void f3() {
   // FIXME: consider loosening the restrictions so that the first two cases are accepted.
   Indirect<void* __ptrauth(0,0,1234)> one;
