@@ -377,7 +377,8 @@ public:
         if (auto *ImplicitParam = dyn_cast<ImplicitParamDecl>(CapturedVar)) {
           auto kind = ImplicitParam->getParameterKind();
           if ((kind == ImplicitParamKind::ObjCSelf ||
-               kind == ImplicitParamKind::CXXThis) && !shouldCheckThis)
+               kind == ImplicitParamKind::CXXThis) &&
+              !shouldCheckThis)
             continue;
         }
         QualType CapturedVarQualType = CapturedVar->getType();
