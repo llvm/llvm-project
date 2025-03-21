@@ -83,6 +83,10 @@ public:
 
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
+  bool isInt8Ty(mlir::Type i) {
+    return i == typeCache.UInt8Ty || i == typeCache.SInt8Ty;
+  }
+
   // Creates constant nullptr for pointer type ty.
   cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
     assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());

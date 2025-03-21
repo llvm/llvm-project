@@ -32,6 +32,11 @@ public:
     return create<cir::ConstantOp>(loc, attr.getType(), attr);
   }
 
+  // Creates constant null value for integral type ty.
+  cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
+    return create<cir::ConstantOp>(loc, ty, getZeroInitAttr(ty));
+  }
+
   cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<cir::ConstantOp>(loc, getBoolTy(), getCIRBoolAttr(state));
   }
@@ -66,6 +71,36 @@ public:
         mlir::IntegerType::get(type.getContext(), 64), value);
     return cir::ConstPtrAttr::get(
         getContext(), mlir::cast<cir::PointerType>(type), valueAttr);
+  }
+
+  mlir::TypedAttr getConstNullPtrAttr(mlir::Type t) {
+    assert(mlir::isa<cir::PointerType>(t) && "expected cir.ptr");
+    return getConstPtrAttr(t, 0);
+  }
+
+  mlir::TypedAttr getZeroAttr(mlir::Type t) {
+    return cir::ZeroAttr::get(getContext(), t);
+  }
+
+  mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (mlir::isa<cir::IntType>(ty))
+      return cir::IntAttr::get(ty, 0);
+    if (auto fltType = mlir::dyn_cast<cir::SingleType>(ty))
+      return cir::FPAttr::getZero(fltType);
+    if (auto fltType = mlir::dyn_cast<cir::DoubleType>(ty))
+      return cir::FPAttr::getZero(fltType);
+    if (auto fltType = mlir::dyn_cast<cir::FP16Type>(ty))
+      return cir::FPAttr::getZero(fltType);
+    if (auto fltType = mlir::dyn_cast<cir::BF16Type>(ty))
+      return cir::FPAttr::getZero(fltType);
+    if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
+      return getZeroAttr(arrTy);
+    if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
+      return getConstNullPtrAttr(ptrTy);
+    if (mlir::isa<cir::BoolType>(ty)) {
+      return getCIRBoolAttr(false);
+    }
+    llvm_unreachable("Zero initializer for given type is NYI");
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,

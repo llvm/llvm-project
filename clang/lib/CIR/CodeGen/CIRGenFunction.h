@@ -80,11 +80,11 @@ public:
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
 
-  mlir::Type convertTypeForMem(QualType T);
+  mlir::Type convertTypeForMem(QualType t);
 
-  mlir::Type convertType(clang::QualType T);
-  mlir::Type convertType(const TypeDecl *T) {
-    return convertType(getContext().getTypeDeclType(T));
+  mlir::Type convertType(clang::QualType t);
+  mlir::Type convertType(const TypeDecl *t) {
+    return convertType(getContext().getTypeDeclType(t));
   }
 
   ///  Return the cir::TypeEvaluationKind of QualType \c type.
@@ -114,6 +114,10 @@ public:
                          mlir::Location loc, clang::CharUnits alignment);
 
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
+
+  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
+  void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
 
 private:
   // Track current variable initialization (if there's one)

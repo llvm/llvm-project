@@ -250,7 +250,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
     return;
   }
   case cir::TEK_Aggregate:
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: aggregate type");
+    emitAggExpr(init, AggValueSlot::forLValue(lvalue));
     return;
   }
   llvm_unreachable("bad evaluation kind");

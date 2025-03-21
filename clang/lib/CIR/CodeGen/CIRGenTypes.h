@@ -71,6 +71,10 @@ public:
   /// representation is usually i8 or i32, depending on the target.
   // TODO: convert this comment to account for MLIR's equivalence
   mlir::Type convertTypeForMem(clang::QualType, bool forBitField = false);
+
+  /// Return whether a type can be zero-initialized (in the C++ sense) with an
+  /// LLVM zeroinitializer.
+  bool isZeroInitializable(clang::QualType t);
 };
 
 } // namespace clang::CIRGen
