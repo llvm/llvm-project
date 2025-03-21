@@ -54,7 +54,12 @@ AutoExporter::AutoExporter(
       "libFortranDecimal",
       "libunwind",
       "libmsvcrt",
+      "libmsvcrt-os",
       "libucrtbase",
+      "libucrt",
+      "libucrtapp",
+      "libpthread",
+      "libwinpthread",
   };
 
   excludeObjects = {
