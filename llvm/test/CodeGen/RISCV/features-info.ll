@@ -139,6 +139,7 @@
 ; CHECK:   svnapot                          - 'Svnapot' (NAPOT Translation Contiguity).
 ; CHECK:   svpbmt                           - 'Svpbmt' (Page-Based Memory Types).
 ; CHECK:   svvptc                           - 'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
+; CHECK:   svrsw60t59b                      - 'Svrsw60t59b' (PTE Reserved-for-Software Bits 60-59).
 ; CHECK:   tagged-globals                   - Use an instruction sequence for taking the address of a global that allows a memory tag in the upper address bits.
 ; CHECK:   unaligned-scalar-mem             - Has reasonably performant unaligned scalar loads and stores.
 ; CHECK:   unaligned-vector-mem             - Has reasonably performant unaligned vector loads and stores.

@@ -152,6 +152,7 @@
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
 // CHECK-NEXT:     svvptc               1.0       'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
+// CHECK-NEXT:     svrsw60t59b          1.0       'Svrsw60t59b' (PTE Reserved-for-Software Bits 60-59)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)
