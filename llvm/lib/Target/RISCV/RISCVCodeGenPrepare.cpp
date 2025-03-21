@@ -137,7 +137,8 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
-  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd &&
+      !isa<VPReductionIntrinsic>(&I))
     return false;
 
   auto *PHI = dyn_cast<PHINode>(I.getOperand(0));

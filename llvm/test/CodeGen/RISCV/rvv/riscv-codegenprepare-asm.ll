@@ -46,26 +46,22 @@ exit:
 define i32 @vp_reduce_add(ptr %a) {
 ; CHECK-LABEL: vp_reduce_add:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB1_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredsum.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB1_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredsum.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -91,26 +87,23 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_and(ptr %a) {
 ; CHECK-LABEL: vp_reduce_and:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB2_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredand.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB2_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredand.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -136,26 +129,22 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_or(ptr %a) {
 ; CHECK-LABEL: vp_reduce_or:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB3_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredor.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB3_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredor.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -181,26 +170,22 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_xor(ptr %a) {
 ; CHECK-LABEL: vp_reduce_xor:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB4_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredxor.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB4_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredxor.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -226,26 +211,23 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_smax(ptr %a) {
 ; CHECK-LABEL: vp_reduce_smax:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB5_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredmax.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB5_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredmax.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -271,27 +253,24 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_smin(ptr %a) {
 ; CHECK-LABEL: vp_reduce_smin:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB6_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredmin.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB6_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredmin.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -317,26 +296,22 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_umax(ptr %a) {
 ; CHECK-LABEL: vp_reduce_umax:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB7_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredmaxu.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB7_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredmaxu.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -362,26 +337,23 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define i32 @vp_reduce_umin(ptr %a) {
 ; CHECK-LABEL: vp_reduce_umin:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    li a3, 1024
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    lui a2, 524288
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, a2
+; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB8_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    vsetvli a5, a3, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    vle32.v v8, (a6)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vsetvli zero, a4, e32, m2, ta, ma
-; CHECK-NEXT:    vredminu.vs v10, v8, v10
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    add a2, a2, a5
-; CHECK-NEXT:    bnez a3, .LBB8_1
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vredminu.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    bnez a2, .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -408,24 +380,21 @@ define float @vp_reduce_fadd(ptr %a) {
 ; CHECK-LABEL: vp_reduce_fadd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB9_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    vsetvli a4, a2, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a5, a1, 2
-; CHECK-NEXT:    add a5, a0, a5
-; CHECK-NEXT:    vle32.v v8, (a5)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    sub a2, a2, a4
-; CHECK-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; CHECK-NEXT:    vfredosum.vs v10, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v10
-; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vfredosum.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -452,24 +421,21 @@ define float @vp_reduce_fmax(ptr %a) {
 ; CHECK-LABEL: vp_reduce_fmax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB10_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    vsetvli a4, a2, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a5, a1, 2
-; CHECK-NEXT:    add a5, a0, a5
-; CHECK-NEXT:    vle32.v v8, (a5)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    sub a2, a2, a4
-; CHECK-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; CHECK-NEXT:    vfredmax.vs v10, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v10
-; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vfredmax.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB10_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
@@ -496,24 +462,21 @@ define float @vp_reduce_fmin(ptr %a) {
 ; CHECK-LABEL: vp_reduce_fmin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:  .LBB11_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    vsetvli a4, a2, e8, mf2, ta, ma
-; CHECK-NEXT:    slli a5, a1, 2
-; CHECK-NEXT:    add a5, a0, a5
-; CHECK-NEXT:    vle32.v v8, (a5)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa0
-; CHECK-NEXT:    sub a2, a2, a4
-; CHECK-NEXT:    vsetvli zero, a3, e32, m2, ta, ma
-; CHECK-NEXT:    vfredmin.vs v10, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa0, v10
-; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    vsetvli a3, a2, e32, m2, ta, ma
+; CHECK-NEXT:    slli a4, a1, 2
+; CHECK-NEXT:    add a4, a0, a4
+; CHECK-NEXT:    vle32.v v10, (a4)
+; CHECK-NEXT:    sub a2, a2, a3
+; CHECK-NEXT:    vfredmin.vs v8, v10, v8
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:    bnez a2, .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
 entry:
   br label %vector.body
