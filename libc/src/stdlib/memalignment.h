@@ -1,4 +1,5 @@
-//===-- Implementation header for memalignment --------------------------*- C++ -*-===//
+//===-- Implementation header for memalignment --------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,9 +15,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-size_t memalignment(const void* p);
+size_t memalignment(const void *p);
 
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_LDIV_H
-
