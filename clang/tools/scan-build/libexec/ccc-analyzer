@@ -51,17 +51,6 @@ sub silent_system {
 # Compiler command setup.
 ##===----------------------------------------------------------------------===##
 
-# Search in the PATH if the compiler exists
-sub SearchInPath {
-    my $file = shift;
-    foreach my $dir (split (':', $ENV{PATH})) {
-        if (-x "$dir/$file") {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 {
   my ($DefaultCCompiler, $DefaultCXXCompiler);
 
@@ -81,13 +70,7 @@ sub SearchInPath {
     my ($is_cxx) = @_;
     my $default = $is_cxx ? $DefaultCXXCompiler : $DefaultCCompiler;
     my $opt = $ENV{$is_cxx ? 'CCC_CXX' : 'CCC_CC'};
-    return $default unless defined $opt;
-    my ($comp, @args) = shellwords($opt);
-    if (!-x $comp && !SearchInPath($comp)) {
-      warn "Can't execute '$comp'. Falling back to '$default'.\n";
-      return $default;
-    }
-    return ($comp, @args);
+    return defined $opt ? shellwords($opt) : $default;
   }
 }
 
