@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 namespace T1 {
-  
+
 class A { };
 class B : private A { }; // expected-note {{declared private here}}
 
@@ -10,7 +10,7 @@ void f(B* b) {
 
 }
 
-namespace T2 { 
+namespace T2 {
 
 class A { };
 class B : A { }; // expected-note {{implicitly declared private here}}
@@ -24,7 +24,7 @@ void f(B* b) {
 namespace T3 {
 
 class A { };
-class B : public A { }; 
+class B : public A { };
 
 void f(B* b) {
   A *a = b;
@@ -50,30 +50,30 @@ void f(D *d) {
 
 namespace T5 {
   class A {};
-    
+
   class B : private A {
     void f(B *b) {
       A *a = b;
     }
-  };    
+  };
 }
 
 namespace T6 {
   class C;
-  
+
   class A {}; // expected-note{{member is declared here}}
-  
+
   class B : private A { // expected-note {{declared private here}} expected-note {{constrained by private inheritance here}}
     void f(C* c);
   };
-  
-  class C : public B { 
+
+  class C : public B {
     void f(C *c) {
       A* a = c; // expected-error {{cannot cast 'C' to its private base class 'A'}} \
                 // expected-error {{'A' is a private member of 'T6::A'}}
     }
   };
-  
+
   void B::f(C *c) {
     A *a = c;
   }
@@ -82,7 +82,7 @@ namespace T6 {
 namespace T7 {
   class A {};
   class B : public A {};
-  class C : private B { 
+  class C : private B {
     void f(C *c) {
       A* a = c; // okay
     }
@@ -98,7 +98,7 @@ struct flag {
 template <class T>
 struct trait : flag<sizeof(T)> {}; // expected-note 2{{here}}
 
-template <class T, bool Inferred = trait<T>::value> // expected-note {{here}}
+template <class T, bool Inferred = trait<T>::value> // expected-note 2{{here}}
 struct a {};
 
 template <class T>

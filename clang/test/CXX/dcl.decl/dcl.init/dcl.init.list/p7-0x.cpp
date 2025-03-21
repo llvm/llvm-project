@@ -251,5 +251,5 @@ void P1957R2(void *a, int *b, Agg<int> *c, int Agg<int>::*d) {
   Agg<bool> tc = {c}; // expected-error {{cannot be narrowed}} expected-note {{}}
   Agg<bool> td = {d}; // expected-error {{cannot be narrowed}} expected-note {{}}
 }
-template<bool> struct BoolParam {};
+template<bool> struct BoolParam {}; // expected-note {{template parameter is declared here}}
 BoolParam<&P1957R2> bp; // expected-error {{not allowed in a converted constant expression}}
