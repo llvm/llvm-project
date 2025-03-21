@@ -1520,8 +1520,8 @@ static void verifyDiagnosticWording(const Record &Diag) {
 }
 
 /// ClangDiagsCompatIDsEmitter - Emit a set of 'compatibility diagnostic ids'
-/// that map set of 2 regular diagnostic ids each and which are used to simplify
-/// emitting compatibility warnings.
+/// that map to a set of 2 regular diagnostic ids each and which are used to
+/// simplify emitting compatibility warnings.
 void clang::EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
                                     llvm::raw_ostream &OS,
                                     const std::string &Component) {
