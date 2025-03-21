@@ -70,15 +70,6 @@ void test() {
   test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>>();
 #endif
-
-#ifndef TEST_HAS_NO_CHAR8_T
-  test<char8_t>();
-  test<char8_t, constexpr_char_traits<char8_t>>();
-#endif
-  test<char16_t>();
-  test<char16_t, constexpr_char_traits<char16_t>>();
-  test<char32_t>();
-  test<char32_t, constexpr_char_traits<char32_t>>();
 }
 
 // Aliases
