@@ -32,14 +32,21 @@ struct BuildAttributeItem {
   unsigned Tag;
   unsigned IntValue;
   std::string StringValue;
+  BuildAttributeItem() {};
   BuildAttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
       : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
 };
+
 struct BuildAttributeSubSection {
-  StringRef Name;
+  std::string Name;
   unsigned IsOptional;
   unsigned ParameterType;
   SmallVector<BuildAttributeItem, 64> Content;
+  BuildAttributeSubSection() {};
+  BuildAttributeSubSection(const std::string &N, unsigned Opt, unsigned Type,
+                           SmallVector<BuildAttributeItem, 64> &&Content)
+      : Name(N), IsOptional(Opt), ParameterType(Type),
+        Content(std::move(Content)) {}
 };
 
 // Tag to string: ELF extended build attribute section
@@ -57,7 +64,8 @@ enum AttrType : unsigned { File = 1, Section = 2, Symbol = 3 };
 
 StringRef attrTypeAsString(unsigned attr, TagNameMap tagNameMap,
                            bool hasTagPrefix = true);
-std::optional<unsigned> attrTypeFromString(StringRef tag, TagNameMap tagNameMap);
+std::optional<unsigned> attrTypeFromString(StringRef tag,
+                                           TagNameMap tagNameMap);
 
 // Magic numbers for ELF attributes.
 enum AttrMagic { Format_Version = 0x41 };
