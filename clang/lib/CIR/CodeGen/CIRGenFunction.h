@@ -109,7 +109,13 @@ private:
 
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment);
+                         mlir::Location loc, clang::CharUnits alignment,
+                         bool insertIntoFnEntryBlock,
+                         mlir::Value arraySize = nullptr);
+  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
+                         mlir::Location loc, clang::CharUnits alignment,
+                         mlir::OpBuilder::InsertPoint ip,
+                         mlir::Value arraySize = nullptr);
 
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
@@ -483,7 +489,7 @@ public:
   LexicalScope *curLexScope = nullptr;
 
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
-                           const Twine &name = "tmp");
+                           const Twine &name, bool insertIntoFnEntryBlock);
 };
 
 } // namespace clang::CIRGen
