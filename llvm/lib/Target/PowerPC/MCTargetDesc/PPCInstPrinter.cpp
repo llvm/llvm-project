@@ -581,13 +581,13 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
   // like __tls_get_addr@notoc(x@tlsgd).
   if (getSpecifier(RefExp) == PPCMCExpr::VK_NOTOC)
-    O << '@' << MAI.getVariantKindName(RefExp->getKind());
+    O << '@' << MAI.getSpecifierName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
   if (getSpecifier(RefExp) != PPCMCExpr::VK_None &&
       getSpecifier(RefExp) != PPCMCExpr::VK_NOTOC)
-    O << '@' << MAI.getVariantKindName(RefExp->getKind());
+    O << '@' << MAI.getSpecifierName(RefExp->getKind());
   if (Rhs) {
     SmallString<0> Buf;
     raw_svector_ostream Tmp(Buf);

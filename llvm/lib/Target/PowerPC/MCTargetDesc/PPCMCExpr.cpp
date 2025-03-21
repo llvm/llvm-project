@@ -27,7 +27,7 @@ const PPCMCExpr *PPCMCExpr::create(Specifier S, const MCExpr *Expr,
 
 void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   getSubExpr()->print(OS, MAI);
-  OS << '@' << MAI->getVariantKindName(specifier);
+  OS << '@' << MAI->getSpecifierName(specifier);
 }
 
 bool
