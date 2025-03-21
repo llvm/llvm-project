@@ -363,28 +363,26 @@ define void @two_half(ptr %p, ptr %q) {
 ; ZVFH-NEXT:    .cfi_def_cfa_offset 32
 ; ZVFH-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZVFH-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; ZVFH-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; ZVFH-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
 ; ZVFH-NEXT:    .cfi_offset ra, -8
 ; ZVFH-NEXT:    .cfi_offset s0, -16
-; ZVFH-NEXT:    csrr a2, vlenb
-; ZVFH-NEXT:    sub sp, sp, a2
-; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vle16.v v8, (a0)
-; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; ZVFH-NEXT:    .cfi_offset fs0, -24
+; ZVFH-NEXT:    .cfi_offset fs1, -32
+; ZVFH-NEXT:    flh fs0, 0(a0)
+; ZVFH-NEXT:    flh fs1, 2(a0)
 ; ZVFH-NEXT:    mv s0, a1
 ; ZVFH-NEXT:    call g
-; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vse16.v v8, (s0)
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    add sp, sp, a0
-; ZVFH-NEXT:    .cfi_def_cfa sp, 32
+; ZVFH-NEXT:    fsh fs0, 0(s0)
+; ZVFH-NEXT:    fsh fs1, 2(s0)
 ; ZVFH-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; ZVFH-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; ZVFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; ZVFH-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; ZVFH-NEXT:    .cfi_restore ra
 ; ZVFH-NEXT:    .cfi_restore s0
+; ZVFH-NEXT:    .cfi_restore fs0
+; ZVFH-NEXT:    .cfi_restore fs1
 ; ZVFH-NEXT:    addi sp, sp, 32
 ; ZVFH-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFH-NEXT:    ret
@@ -409,28 +407,26 @@ define void @two_float(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    .cfi_offset fs0, -24
+; CHECK-NEXT:    .cfi_offset fs1, -32
+; CHECK-NEXT:    flw fs0, 0(a0)
+; CHECK-NEXT:    flw fs1, 4(a0)
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (s0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 32
+; CHECK-NEXT:    fsw fs0, 0(s0)
+; CHECK-NEXT:    fsw fs1, 4(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore fs0
+; CHECK-NEXT:    .cfi_restore fs1
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
@@ -453,28 +449,26 @@ define void @two_double(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    .cfi_offset fs0, -24
+; CHECK-NEXT:    .cfi_offset fs1, -32
+; CHECK-NEXT:    fld fs0, 0(a0)
+; CHECK-NEXT:    fld fs1, 8(a0)
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v8, (s0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 32
+; CHECK-NEXT:    fsd fs0, 0(s0)
+; CHECK-NEXT:    fsd fs1, 8(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore fs0
+; CHECK-NEXT:    .cfi_restore fs1
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
