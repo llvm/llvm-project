@@ -90,6 +90,8 @@ Changes to the AMDGPU Backend
   [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
   for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
 
+* Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
+
 Changes to the ARM Backend
 --------------------------
 

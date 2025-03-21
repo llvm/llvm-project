@@ -2539,7 +2539,8 @@ static void createNewOperandWithStaticSizes(
     newShape.push_back(affineExprToSize[dimExpr]);
     newOperandNeeded = true;
   }
-  resultType = RankedTensorType::get(newShape, sourceType.getElementType());
+  resultType = RankedTensorType::get(newShape, sourceType.getElementType(),
+                                     sourceType.getEncoding());
   if (newOperandNeeded) {
     changeNeeded = true;
     // Get the new operand value given its size and element type by
