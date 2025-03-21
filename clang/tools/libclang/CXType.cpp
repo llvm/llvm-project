@@ -966,14 +966,12 @@ long long clang_Type_getAlignOf(CXType T) {
 }
 
 CXType clang_Type_getClassType(CXType CT) {
-  ASTContext &Ctx = cxtu::getASTUnit(GetTU(CT))->getASTContext();
   QualType ET = QualType();
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();
 
   if (TP && TP->getTypeClass() == Type::MemberPointer) {
-    ET = Ctx.getTypeDeclType(
-        cast<MemberPointerType>(TP)->getMostRecentCXXRecordDecl());
+    ET = QualType(cast<MemberPointerType> (TP)->getClass(), 0);
   }
   return MakeCXType(ET, GetTU(CT));
 }
