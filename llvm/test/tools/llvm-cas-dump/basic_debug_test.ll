@@ -1,3 +1,4 @@
+; REQUIRES: ondisk_cas
 ; RUN: rm -rf %t.casdb
 ; RUN: llc -cas-friendly-debug-info -O0 --filetype=obj --cas-backend --cas=%t.casdb --mccas-casid -o %t.casid %s
 ; RUN: llvm-cas-dump --cas=%t.casdb --dwarf-sections-only --dwarf-dump --casid-file %t.casid | FileCheck %s --check-prefix=DWARF

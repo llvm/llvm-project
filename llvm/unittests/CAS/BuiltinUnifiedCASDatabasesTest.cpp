@@ -8,6 +8,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
+#if LLVM_ENABLE_ONDISK_CAS
 TEST(BuiltinUnifiedCASDatabases,
      MaterializationCheckPreventsGarbageCollection) {
   unittest::TempDir Temp("on-disk-unified-cas", /*Unique=*/true);
@@ -57,3 +58,4 @@ TEST(BuiltinUnifiedCASDatabases,
     ASSERT_TRUE(IsMaterialized);
   });
 }
+#endif

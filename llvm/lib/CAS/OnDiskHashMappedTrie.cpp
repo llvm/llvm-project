@@ -1618,6 +1618,7 @@ OnDiskHashMappedTrie::create(const Twine &PathTwine, const Twine &TrieNameTwine,
                              size_t NumHashBits, uint64_t DataSize,
                              uint64_t MaxFileSize,
                              std::optional<uint64_t> NewFileInitialSize,
+                             std::shared_ptr<OnDiskCASLogger> Logger,
                              std::optional<size_t> NewTableNumRootBits,
                              std::optional<size_t> NewTableNumSubtrieBits) {
   report_fatal_error("not supported");
@@ -1668,6 +1669,7 @@ struct OnDiskDataAllocator::ImplType {};
 Expected<OnDiskDataAllocator> OnDiskDataAllocator::create(
     const Twine &Path, const Twine &TableName, uint64_t MaxFileSize,
     std::optional<uint64_t> NewFileInitialSize, uint32_t UserHeaderSize,
+    std::shared_ptr<OnDiskCASLogger> Logger,
     function_ref<void(void *)> UserHeaderInit) {
   report_fatal_error("not supported");
 }

@@ -1,3 +1,4 @@
+REQUIRES: ondisk_cas
 RUN: rm -rf %t && mkdir -p %t
 RUN: llc %S/Inputs/stats-dump.ll -O0 --filetype=obj --cas-backend --cas %t/cas --mccas-casid -o %t/stats-dump.id
 

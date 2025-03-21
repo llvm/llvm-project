@@ -1,3 +1,4 @@
+; REQUIRES: ondisk_cas
 ; RUN: llc -debug-info-unopt -O0 --filetype=obj --cas-backend --cas=%t/cas --mccas-casid --mtriple=arm64-apple-darwin %s -o %t/debug_unopt.id
 ; RUN: llvm-cas-dump --cas=%t/cas --casid-file %t/debug_unopt.id | FileCheck %s
 
