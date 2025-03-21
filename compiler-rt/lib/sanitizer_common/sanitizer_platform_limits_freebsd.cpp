@@ -105,6 +105,7 @@ void *__sanitizer_get_link_map_by_dlopen_handle(void *handle) {
 }
 
 unsigned struct_cpuset_sz = sizeof(cpuset_t);
+unsigned struct_cpu_set_sz = sizeof(cpu_set_t);
 unsigned struct_cap_rights_sz = sizeof(cap_rights_t);
 unsigned struct_utsname_sz = sizeof(struct utsname);
 unsigned struct_stat_sz = sizeof(struct stat);

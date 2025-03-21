@@ -743,7 +743,9 @@ struct __sanitizer_cpuset {
 };
 
 typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
+typedef struct __sanitizer_cpuset __sanitizer_cpu_set_t;
 extern unsigned struct_cpuset_sz;
+extern unsigned struct_cpu_set_sz;
 
 typedef unsigned long long __sanitizer_eventfd_t;
 }  // namespace __sanitizer
