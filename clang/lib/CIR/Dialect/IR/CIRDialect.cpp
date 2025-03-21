@@ -19,6 +19,7 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
 using namespace cir;
@@ -31,6 +32,20 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
+    if (auto intType = dyn_cast<cir::IntType>(type)) {
+      // We only provide alias for standard integer types (i.e. integer types
+      // whose width is a power of 2 and at least 8).
+      unsigned width = intType.getWidth();
+      if (width < 8 || !llvm::isPowerOf2_32(width))
+        return AliasResult::NoAlias;
+      os << intType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
+    if (auto voidType = dyn_cast<cir::VoidType>(type)) {
+      os << voidType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
+
     return AliasResult::NoAlias;
   }
 
@@ -137,6 +152,41 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
 }
 
 //===----------------------------------------------------------------------===//
+// ConditionOp
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------
+// BranchOpTerminatorInterface Methods
+//===----------------------------------
+
+void cir::ConditionOp::getSuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  // TODO(cir): The condition value may be folded to a constant, narrowing
+  // down its list of possible successors.
+
+  // Parent is a loop: condition may branch to the body or to the parent op.
+  if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
+    regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
+    regions.emplace_back(loopOp->getResults());
+  }
+
+  assert(!cir::MissingFeatures::awaitOp());
+}
+
+MutableOperandRange
+cir::ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  // No values are yielded to the successor region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
+LogicalResult cir::ConditionOp::verify() {
+  assert(!cir::MissingFeatures::awaitOp());
+  if (!isa<LoopOpInterface>(getOperation()->getParentOp()))
+    return emitOpError("condition must be within a conditional region");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -147,6 +197,12 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
       return op->emitOpError(
           "pointer constant initializing a non-pointer type");
     return success();
+  }
+
+  if (isa<cir::ZeroAttr>(attrType)) {
+    if (::mlir::isa<cir::ArrayType>(opType))
+      return success();
+    return op->emitOpError("zero expects struct or array type");
   }
 
   if (mlir::isa<cir::BoolAttr>(attrType)) {
@@ -165,6 +221,9 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     }
     return success();
   }
+
+  if (mlir::isa<cir::ConstArrayAttr>(attrType))
+    return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
@@ -417,12 +476,24 @@ void cir::ScopeOp::build(
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
   builder.createBlock(scopeRegion);
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
 
   mlir::Type yieldTy;
   scopeBuilder(builder, yieldTy, result.location);
 
   if (yieldTy)
     result.addTypes(TypeRange{yieldTy});
+}
+
+void cir::ScopeOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
+  assert(scopeBuilder && "the builder callback for 'then' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+  Region *scopeRegion = result.addRegion();
+  builder.createBlock(scopeRegion);
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+  scopeBuilder(builder, result.location);
 }
 
 LogicalResult cir::ScopeOp::verify() {
@@ -449,6 +520,36 @@ mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
 
 Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
+}
+
+//===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrCondOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDestOperandsTrueMutable()
+                                      : getDestOperandsFalseMutable());
+}
+
+Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (IntegerAttr condAttr = dyn_cast_if_present<IntegerAttr>(operands.front()))
+    return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+void cir::ForOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+}
+
+llvm::SmallVector<Region *> cir::ForOp::getLoopRegions() {
+  return {&getBody()};
 }
 
 //===----------------------------------------------------------------------===//

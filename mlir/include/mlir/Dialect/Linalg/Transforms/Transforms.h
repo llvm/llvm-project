@@ -356,7 +356,7 @@ struct LinalgPromotionOptions {
   std::optional<DenseSet<unsigned>> operandsToPromote;
   LinalgPromotionOptions &setOperandsToPromote(ArrayRef<int64_t> operands) {
     operandsToPromote = DenseSet<unsigned>();
-    operandsToPromote->insert(operands.begin(), operands.end());
+    operandsToPromote->insert_range(operands);
     return *this;
   }
   /// If ith element of `useFullTiles` is true the full view should be used

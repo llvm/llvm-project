@@ -349,6 +349,16 @@ public:
     LastFlat[DS_CNT] = ScoreUBs[DS_CNT];
   }
 
+  bool hasPendingGDS() const {
+    return LastGDS > ScoreLBs[DS_CNT] && LastGDS <= ScoreUBs[DS_CNT];
+  }
+
+  unsigned getPendingGDSWait() const {
+    return std::min(getScoreUB(DS_CNT) - LastGDS, getWaitCountMax(DS_CNT) - 1);
+  }
+
+  void setPendingGDS() { LastGDS = ScoreUBs[DS_CNT]; }
+
   // Return true if there might be pending writes to the vgpr-interval by VMEM
   // instructions with types different from V.
   bool hasOtherPendingVmemTypes(RegInterval Interval, VmemType V) const {
@@ -427,6 +437,8 @@ private:
   unsigned PendingEvents = 0;
   // Remember the last flat memory operation.
   unsigned LastFlat[NUM_INST_CNTS] = {0};
+  // Remember the last GDS operation.
+  unsigned LastGDS = 0;
   // wait_cnt scores for every vgpr.
   // Keep track of the VgprUB and SgprUB to make merge at join efficient.
   int VgprUB = -1;
@@ -729,6 +741,10 @@ public:
                        MachineInstr *OldWaitcntInstr);
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
+  bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
+                    MachineBasicBlock *Block) const;
+  bool insertForcedWaitAfter(MachineInstr &Inst, MachineBasicBlock &Block,
+                             WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
 };
@@ -1682,6 +1698,11 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       }
     }
 
+    // Wait for any pending GDS instruction to complete before any
+    // "Always GDS" instruction.
+    if (TII->isAlwaysGDS(MI.getOpcode()) && ScoreBrackets.hasPendingGDS())
+      addWait(Wait, DS_CNT, ScoreBrackets.getPendingGDSWait());
+
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
@@ -1986,6 +2007,64 @@ static bool isCacheInvOrWBInst(MachineInstr &Inst) {
          Opc == AMDGPU::GLOBAL_WBINV;
 }
 
+// Return true if the next instruction is S_ENDPGM, following fallthrough
+// blocks if necessary.
+bool SIInsertWaitcnts::isNextENDPGM(MachineBasicBlock::instr_iterator It,
+                                    MachineBasicBlock *Block) const {
+  auto BlockEnd = Block->getParent()->end();
+  auto BlockIter = Block->getIterator();
+
+  while (true) {
+    if (It.isEnd()) {
+      if (++BlockIter != BlockEnd) {
+        It = BlockIter->instr_begin();
+        continue;
+      }
+
+      return false;
+    }
+
+    if (!It->isMetaInstruction())
+      break;
+
+    It++;
+  }
+
+  assert(!It.isEnd());
+
+  return It->getOpcode() == AMDGPU::S_ENDPGM;
+}
+
+// Add a wait after an instruction if architecture requirements mandate one.
+bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
+                                             MachineBasicBlock &Block,
+                                             WaitcntBrackets &ScoreBrackets) {
+  AMDGPU::Waitcnt Wait;
+  bool NeedsEndPGMCheck = false;
+
+  if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore())
+    Wait = WCG->getAllZeroWaitcnt(Inst.mayStore() &&
+                                  !SIInstrInfo::isAtomicRet(Inst));
+
+  if (TII->isAlwaysGDS(Inst.getOpcode())) {
+    Wait.DsCnt = 0;
+    NeedsEndPGMCheck = true;
+  }
+
+  ScoreBrackets.simplifyWaitcnt(Wait);
+
+  auto SuccessorIt = std::next(Inst.getIterator());
+  bool Result = generateWaitcnt(Wait, SuccessorIt, Block, ScoreBrackets,
+                                /*OldWaitcntInstr=*/nullptr);
+
+  if (Result && NeedsEndPGMCheck && isNextENDPGM(SuccessorIt, &Block)) {
+    BuildMI(Block, SuccessorIt, Inst.getDebugLoc(), TII->get(AMDGPU::S_NOP))
+        .addImm(0);
+  }
+
+  return Result;
+}
+
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
   // Now look at the instruction opcode. If it is a memory access
@@ -1998,6 +2077,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
         TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_ACCESS, Inst);
       ScoreBrackets->updateByEvent(TII, TRI, MRI, GDS_GPR_LOCK, Inst);
+      ScoreBrackets->setPendingGDS();
     } else {
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
     }
@@ -2128,6 +2208,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
     StrictDom |= mergeScore(M, LastFlat[T], Other.LastFlat[T]);
 
+    if (T == DS_CNT)
+      StrictDom |= mergeScore(M, LastGDS, Other.LastGDS);
+
     for (int J = 0; J <= VgprUB; J++)
       StrictDom |= mergeScore(M, VgprScores[T][J], Other.VgprScores[T][J]);
 
@@ -2253,13 +2336,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
-    if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
-      AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
-          Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst));
-      ScoreBrackets.simplifyWaitcnt(Wait);
-      Modified |= generateWaitcnt(Wait, std::next(Inst.getIterator()), Block,
-                                  ScoreBrackets, /*OldWaitcntInstr=*/nullptr);
-    }
+    Modified |= insertForcedWaitAfter(Inst, Block, ScoreBrackets);
 
     LLVM_DEBUG({
       Inst.print(dbgs());

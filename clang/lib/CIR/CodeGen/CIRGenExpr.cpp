@@ -165,6 +165,25 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   return LValue();
 }
 
+mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
+  QualType boolTy = getContext().BoolTy;
+  SourceLocation loc = e->getExprLoc();
+
+  assert(!cir::MissingFeatures::pgoUse());
+  if (const MemberPointerType *MPT = e->getType()->getAs<MemberPointerType>()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "evaluateExprAsBool: member pointer type");
+    return createDummyValue(getLoc(loc), boolTy);
+  }
+
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
+  if (!e->getType()->isAnyComplexType())
+    return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
+
+  cgm.errorNYI(e->getSourceRange(), "evaluateExprAsBool: complex type");
+  return createDummyValue(getLoc(loc), boolTy);
+}
+
 LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
   UnaryOperatorKind op = e->getOpcode();
 
