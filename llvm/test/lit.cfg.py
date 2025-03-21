@@ -588,6 +588,7 @@ def host_unwind_supports_jit():
 
         assert (
             "arm64" in config.host_triple
+            or "aarch64" in config.host_triple
             or "x86_64" in config.host_triple
         )
 
