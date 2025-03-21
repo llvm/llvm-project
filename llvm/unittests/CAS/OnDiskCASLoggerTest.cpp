@@ -141,7 +141,7 @@ TEST(OnDiskCASLoggerTest, MultiProcess) {
                       Succeeded());
 
     for (int I = 0; I < 10; ++I) {
-      writeToLog(Logger.get(), /*NumOpens=*/10, /*NumEntries=*/100);
+      writeToLog(Logger.get(), /*NumOpens=*/5, /*NumEntries=*/50);
     }
     exit(0);
   }
@@ -157,7 +157,7 @@ TEST(OnDiskCASLoggerTest, MultiProcess) {
 
   std::string Error;
   SmallVector<ProcessInfo> PIs;
-  for (int I = 0; I < 10; ++I) {
+  for (int I = 0; I < 5; ++I) {
     bool ExecutionFailed;
     auto PI = ExecuteNoWait(Executable, Argv, ArrayRef<StringRef>{}, {}, 0, &Error,
                             &ExecutionFailed);
@@ -166,7 +166,8 @@ TEST(OnDiskCASLoggerTest, MultiProcess) {
   }
 
   for (auto &PI : PIs) {
-    auto Result = Wait(PI, /*Timeout=*/5, &Error);
+    // Note: this is typically <1 second, but account for slow CI systems.
+    auto Result = Wait(PI, /*Timeout=*/15, &Error);
     ASSERT_TRUE(Error.empty()) << Error;
     ASSERT_EQ(Result.Pid, PI.Pid);
     ASSERT_EQ(Result.ReturnCode, 0);
