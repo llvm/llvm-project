@@ -1364,7 +1364,8 @@ static bool checkDestructor(InterpState &S, CodePtr OpPC, const Function *Func,
 
 static void compileFunction(InterpState &S, const Function *Func) {
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Func->getDecl(), const_cast<Function *>(Func));
+      .compileFunc(Func->getDecl()->getMostRecentDecl(),
+                   const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1448,6 +1449,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr))
         return cleanup();
       if (!Func->isConstructor() && !Func->isDestructor() &&
+          !Func->isCopyOrMoveOperator() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
     }

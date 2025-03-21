@@ -92,9 +92,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
       if (!MAI) // should only be used by dump()
         OS << "@<variant " << Kind << '>';
       else if (MAI->useParensForSymbolVariant()) // ARM
-        OS << '(' << MAI->getVariantKindName(Kind) << ')';
+        OS << '(' << MAI->getSpecifierName(Kind) << ')';
       else
-        OS << '@' << MAI->getVariantKindName(Kind);
+        OS << '@' << MAI->getSpecifierName(Kind);
     }
 
     return;
@@ -286,8 +286,8 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   }
 
   bool IsRelocatable = evaluateAsRelocatableImpl(Value, Asm, Addrs, InSet);
-  Res = Value.getConstant(); // Value with RefKind (e.g. %hi(0xdeadbeef) in
-                             // MIPS) is not considered
+  Res = Value.getConstant();
+  // Value with RefKind (e.g. %hi(0xdeadbeef) in MIPS) is not considered
   // absolute (the value is unknown at parse time), even if it might be resolved
   // by evaluateFixup.
   return IsRelocatable && Value.isAbsolute() && Value.getRefKind() == 0;

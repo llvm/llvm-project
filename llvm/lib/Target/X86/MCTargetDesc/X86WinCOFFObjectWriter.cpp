@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCContext.h"
@@ -58,9 +59,8 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     }
   }
 
-  MCSymbolRefExpr::VariantKind Modifier = Target.isAbsolute() ?
-    MCSymbolRefExpr::VK_None : Target.getSymA()->getKind();
-
+  auto Modifier = Target.isAbsolute() ? MCSymbolRefExpr::VK_None
+                                      : Target.getSymA()->getKind();
   if (Is64Bit) {
     switch (FixupKind) {
     case FK_PCRel_4:

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/fsync.h"
@@ -14,12 +13,15 @@
 #include "src/unistd/pwrite.h"
 #include "src/unistd/unlink.h"
 #include "src/unistd/write.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/stat.h>
 
-TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
+using LlvmLibcUniStd = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   // The strategy here is that we first create a file and write to it. Next,
   // we open that file again and write at an offset. Finally, we open the
   // file again and pread at an offset and make sure that only expected data
@@ -65,12 +67,12 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }
 
-TEST(LlvmLibcUniStd, PWriteFails) {
+TEST_F(LlvmLibcUniStd, PWriteFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   EXPECT_THAT(LIBC_NAMESPACE::pwrite(-1, "", 1, 0), Fails<ssize_t>(EBADF));
 }
 
-TEST(LlvmLibcUniStd, PReadFails) {
+TEST_F(LlvmLibcUniStd, PReadFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   EXPECT_THAT(LIBC_NAMESPACE::pread(-1, nullptr, 1, 0), Fails<ssize_t>(EBADF));
 }
