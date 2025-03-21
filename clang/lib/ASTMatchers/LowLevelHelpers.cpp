@@ -77,7 +77,8 @@ static void matchEachArgumentWithParamTypeImpl(
     QualType ParamType;
     if (FProto && FProto->getNumParams() > ParamIndex)
       ParamType = FProto->getParamType(ParamIndex);
-    else if (const FunctionDecl *FD = getCallee(Node); FD && FD->getNumParams() > ParamIndex)
+    else if (const FunctionDecl *FD = getCallee(Node);
+             FD && FD->getNumParams() > ParamIndex)
       ParamType = FD->getParamDecl(ParamIndex)->getType();
     else
       continue;
