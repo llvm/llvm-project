@@ -231,7 +231,7 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
       DIScope *S1 = L1->getScope();
       DIScope *S2 = L2->getScope();
 
-      SmallMapVector<std::tuple<DIFile *, LineColumn>,
+      SmallMapVector<std::pair<DIFile *, LineColumn>,
                      SmallSetVector<DIScope *, 8>, 8>
           Scopes;
 
