@@ -87,7 +87,10 @@ private:
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 
-  // The most proximate reason that something is live.
+  // The most proximate reason that something is live. This forms a DAG between
+  // LiveItems. Acyclicality is maintained by only admitting the first
+  // discovered reason for each LiveItem; this captures the acyclic region of
+  // the liveness graph around the GC roots.
   DenseMap<LiveItem, LiveReason> whyLive;
 };
 } // namespace
@@ -145,6 +148,10 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
                       relSec->nextInSectionGroup))) {
       Symbol *canonicalSym = d;
       if (TrackWhyLive && d->isSection()) {
+        // This is expensive, so ideally this would be deferred until it's known
+        // whether this reference contributes to a printed whyLive chain, but
+        // that determination cannot be made without knowing the enclosing
+        // symbol.
         if (Symbol *s = relSec->getEnclosingSymbol(offset))
           canonicalSym = s;
         else
