@@ -165,11 +165,11 @@ func.func @test_depthwise_conv2d_non_const_input_zp(%arg0: tensor<1x4x4x4xi8>, %
 
 // -----
 
-func.func @test_transpose_conv2d_non_const_weight_zp(%arg0: tensor<1x4x4x4xi8>, %arg1: tensor<1x1x4x2xi8>, %arg2: tensor<8xi32>, %arg3: tensor<1xi8>) -> tensor<1x4x4x8xi32> {
+func.func @test_transpose_conv2d_non_const_weight_zp(%arg0: tensor<1x4x4x4xi8>, %arg1: tensor<1x1x4x2xi8>, %arg2: tensor<8xi32>, %arg3: tensor<1xi8>) -> tensor<1x4x7x8xi32> {
   %input_zp = "tosa.const"() {values = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
   // expected-error@+1 {{'tosa.transpose_conv2d' op expected compile time resolvable constant, but got variable value for operand #4}}
-  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %arg3 {acc_type = i32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x4x4x4xi8>, tensor<1x1x4x2xi8>, tensor<8xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x8xi32>
-  return %0 : tensor<1x4x4x8xi32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %arg3 {acc_type = i32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x4x4x4xi8>, tensor<1x1x4x2xi8>, tensor<8xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x7x8xi32>
+  return %0 : tensor<1x4x7x8xi32>
 }
 
 // -----
