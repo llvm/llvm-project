@@ -18,3 +18,6 @@ class TestSwiftAsyncExpressions(lldbtest.TestBase):
         target, process, thread, main_bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec("main.swift"))
         self.expect("expr n", substrs=["42"])
+        process.Continue()
+        stop_desc = process.GetSelectedThread().GetStopDescription(1024)
+        self.assertNotIn("EXC_BAD_ACCESS", stop_desc)
