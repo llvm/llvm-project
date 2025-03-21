@@ -72,34 +72,39 @@ LogicalResult ScatterTensorDescAttr::verify(
 //===----------------------------------------------------------------------===//
 LogicalResult
 LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                  ScopeAttr scope,
-                  DenseI32ArrayAttr sg_layout,
-                  DenseI32ArrayAttr sg_data,
-                  DenseI32ArrayAttr order,
-                  DenseI32ArrayAttr wi_layout,
-                  DenseI32ArrayAttr wi_data) {
+                   ScopeAttr scope, DenseI32ArrayAttr sg_layout,
+                   DenseI32ArrayAttr sg_data, DenseI32ArrayAttr order,
+                   DenseI32ArrayAttr wi_layout, DenseI32ArrayAttr wi_data) {
 
-  if (scope && scope.getValue() != Scope::WG && (sg_layout || sg_data || order)) {
-    return emitError() << "expected sg_layout, sg_data, and order being only used at workgroup level.";
+  if (scope && scope.getValue() != Scope::WG &&
+      (sg_layout || sg_data || order)) {
+    return emitError() << "expected sg_layout, sg_data, and order being only "
+                          "used at workgroup level.";
   }
 
   if ((sg_layout != nullptr) ^ (sg_data != nullptr)) {
-    return emitError() << "expected sg_layout and sg_data being both present or both absent";
+    return emitError() << "expected sg_layout and sg_data being both present "
+                          "or both absent";
   }
 
   if (order) {
     if (!sg_layout)
-      return emitError() << "expected order being used with sg_layout and sg_data.";
+      return emitError()
+             << "expected order being used with sg_layout and sg_data.";
     if (order.size() != sg_layout.size())
-      return emitError() << "expected order having the same rank as sg_layout and sg_data";
+      return emitError()
+             << "expected order having the same rank as sg_layout and sg_data";
   }
 
-  if (sg_layout && (sg_layout.size() != sg_data.size() || sg_layout.size() > 2)) {
-    return emitError() << "expected sg_layout and sg_data having the same rank, which is not larger than 2";
+  if (sg_layout &&
+      (sg_layout.size() != sg_data.size() || sg_layout.size() > 2)) {
+    return emitError() << "expected sg_layout and sg_data having the same "
+                          "rank, which is not larger than 2";
   }
 
   if (wi_layout.size() != wi_data.size() || wi_layout.size() > 2)
-    return emitError() << "expected wi_layout and wi_data having the same rank, which is not larger than 2";
+    return emitError() << "expected wi_layout and wi_data having the same "
+                          "rank, which is not larger than 2";
 
   return success();
 }

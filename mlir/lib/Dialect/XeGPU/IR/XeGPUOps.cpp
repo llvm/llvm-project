@@ -617,7 +617,9 @@ LogicalResult DpasOp::verify() {
   };
 
   if (!isValidSet())
-    return emitOpError("layout attributes should be either set for all operands (for SIMT code) or not set at all (for SIMD code).");
+    return emitOpError(
+        "layout attributes should be either set for all operands (for SIMT "
+        "code) or not set at all (for SIMD code).");
 
   // query the scope from layoutA (a valid setting).
   if (layoutA && layoutA.isForWorkItemLevel()) {
@@ -643,7 +645,8 @@ LogicalResult DpasOp::verify() {
       return emitOpError("M-dimension mismatch.");
     if (expandedShapeB[1] != expandedShapeC[1])
       return emitOpError("N-dimension mismatch.");
-  } else { // For other scopes, operands' shape should match the mxkxn semantics.
+  } else { // For other scopes, operands' shape should match the mxkxn
+           // semantics.
     if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
       return emitOpError(
           "expecting lhs and result to be a 2D vector, and rhs to be either "
