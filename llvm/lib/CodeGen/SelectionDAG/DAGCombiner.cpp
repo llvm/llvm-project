@@ -1213,9 +1213,12 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
 
   if (DAG.isConstantIntBuildVectorOrConstantInt(N01)) {
     SDNodeFlags NewFlags;
-    if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
-        Flags.hasNoUnsignedWrap())
-      NewFlags |= SDNodeFlags::NoUnsignedWrap;
+    if (N0.getOpcode() == ISD::ADD) {
+      if (N0->getFlags().hasNoUnsignedWrap() && Flags.hasNoUnsignedWrap())
+        NewFlags |= SDNodeFlags::NoUnsignedWrap;
+      if (N0->getFlags().hasInBounds() && Flags.hasInBounds())
+        NewFlags |= SDNodeFlags::InBounds;
+    }
 
     if (DAG.isConstantIntBuildVectorOrConstantInt(N1)) {
       // Reassociate: (op (op x, c1), c2) -> (op x, (op c1, c2))
