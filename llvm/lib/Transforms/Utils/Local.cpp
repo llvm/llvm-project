@@ -3359,9 +3359,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       // being removed as unknown metadata. The actual merging is handled
       // separately below.
       case LLVMContext::MD_mmra:
-        [[fallthrough]];
       case LLVMContext::MD_memprof:
-        [[fallthrough]];
       case LLVMContext::MD_callsite:
         break;
       case LLVMContext::MD_align:
@@ -3422,8 +3420,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   // Merge memprof metadata.
   // Handle separately to support cases where only one instruction has the
   // metadata.
-  auto JMemProf = J->getMetadata(LLVMContext::MD_memprof);
-  auto KMemProf = K->getMetadata(LLVMContext::MD_memprof);
+  auto *JMemProf = J->getMetadata(LLVMContext::MD_memprof);
+  auto *KMemProf = K->getMetadata(LLVMContext::MD_memprof);
   if (!AAOnly && (JMemProf || KMemProf)) {
     K->setMetadata(LLVMContext::MD_memprof,
                    MDNode::getMergedMemProfMetadata(KMemProf, JMemProf));
@@ -3432,8 +3430,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   // Merge callsite metadata.
   // Handle separately to support cases where only one instruction has the
   // metadata.
-  auto JCallSite = J->getMetadata(LLVMContext::MD_callsite);
-  auto KCallSite = K->getMetadata(LLVMContext::MD_callsite);
+  auto *JCallSite = J->getMetadata(LLVMContext::MD_callsite);
+  auto *KCallSite = K->getMetadata(LLVMContext::MD_callsite);
   if (!AAOnly && (JCallSite || KCallSite)) {
     K->setMetadata(LLVMContext::MD_callsite,
                    MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
