@@ -109,9 +109,9 @@ class MachineModuleInfo {
   MachineModuleInfo &operator=(MachineModuleInfo &&MMII) = delete;
 
 public:
-  explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
+  explicit MachineModuleInfo(const TargetMachine &TM);
 
-  explicit MachineModuleInfo(const TargetMachine *TM, MCContext *ExtContext);
+  explicit MachineModuleInfo(const TargetMachine &TM, MCContext *ExtContext);
 
   MachineModuleInfo(MachineModuleInfo &&MMII);
 
