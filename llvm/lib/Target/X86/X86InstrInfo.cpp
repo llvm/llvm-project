@@ -6797,18 +6797,12 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
   if (OpNum != 0)
     return 0;
 
-  // With the NDD/ZU features, ISel may generate NDD/ZU ops which
-  // appear to perform partial writes. We detect these based on flags
-  // and register class.
+  // NDD ops with 8/16b results may appear to be partial register
+  // updates after register allocation.
   bool HasNDDPartialWrite = false;
   if (X86II::hasNewDataDest(MI.getDesc().TSFlags)) {
     Register Reg = MI.getOperand(0).getReg();
-    if (Reg.isVirtual()) {
-      auto &MRI = MI.getParent()->getParent()->getRegInfo();
-      if (auto *TRC = MRI.getRegClassOrNull(Reg))
-        HasNDDPartialWrite = (TRC->getID() == X86::GR16RegClassID ||
-                              TRC->getID() == X86::GR8RegClassID);
-    } else
+    if (!Reg.isVirtual())
       HasNDDPartialWrite =
           X86::GR8RegClass.contains(Reg) || X86::GR16RegClass.contains(Reg);
   }
@@ -6816,11 +6810,11 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
   if (!(HasNDDPartialWrite || hasPartialRegUpdate(MI.getOpcode(), Subtarget)))
     return 0;
 
-  // For non-NDD ops, if MI is marked as reading Reg, the partial register
-  // update is wanted, hence we return 0.
-  // For NDD ops, if MI is marked as reading Reg, then it is possible to
-  // compress to a legacy form in CompressEVEX, which would create an
-  // unwanted partial update, so we return the clearance.
+  // Check if the result register is also used as a source.
+  // For non-NDD ops, this means a partial update is wanted, hence we return 0.
+  // For NDD ops, this means it is possible to compress the instruction
+  // to a legacy form in CompressEVEX, which would create an unwanted partial
+  // update, so we return the clearance.
   const MachineOperand &MO = MI.getOperand(0);
   Register Reg = MO.getReg();
   bool ReadsReg = false;
