@@ -40,3 +40,4 @@ int16_t4 test_asint16_vector_float(float4 p1)
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate template ignored: substitution failure [with T = float, N = 4]: no type named 'Type'}}
   // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate template ignored: substitution failure [with T = float4]: no type named 'Type'}}
 }
+

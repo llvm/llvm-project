@@ -57,3 +57,4 @@ int16_t4 fn(half4 p1)
 {
     return asint16(p1);
 }
+
