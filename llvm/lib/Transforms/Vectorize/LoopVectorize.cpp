@@ -1022,6 +1022,12 @@ public:
     SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
   };
 
+  /// \return Returns information about the register usages of the loop for the
+  /// given plan and vectorization factors.
+  SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
+  calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
+                         const TargetTransformInfo &TTI);
+
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
@@ -4861,9 +4867,9 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
 
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs.
 /// Returns the register usage for each VF in \p VFs.
-static SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
-calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
-                       const TargetTransformInfo &TTI) {
+SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
+LoopVectorizationCostModel::calculateRegisterUsage(
+    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI) {
   // This function calculates the register usage by measuring the highest number
   // of values that are alive at a single location. Obviously, this is a very
   // rough estimation. We scan the loop in a topological order in order and
@@ -5003,6 +5009,12 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         for (auto *R : OpenIntervals) {
           if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
             continue;
+          if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
+              Phi && Phi->getUnderlyingInstr()) {
+            if (auto *PhiNode = dyn_cast<PHINode>(Phi->getUnderlyingInstr());
+                PhiNode && isInLoopReduction(PhiNode))
+              continue;
+          }
           if (isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
                   VPScalarIVStepsRecipe>(R) ||
               (isa<VPInstruction>(R) &&
@@ -5147,7 +5159,7 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       return 1;
   }
 
-  RegisterUsage R = ::calculateRegisterUsage(Plan, {VF}, TTI)[0];
+  RegisterUsage R = calculateRegisterUsage(Plan, {VF}, TTI)[0];
   // We divide by these constants so assume that we have at least one
   // instruction that uses at least one register.
   for (auto &Pair : R.MaxLocalUsers) {
@@ -7546,7 +7558,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
   for (auto &P : VPlans) {
     SmallVector<ElementCount, 1> VFs(P->vectorFactors());
-    auto RUs = ::calculateRegisterUsage(*P, VFs, TTI);
+    auto RUs = CM.calculateRegisterUsage(*P, VFs, TTI);
     for (unsigned I = 0; I < VFs.size(); I++) {
       auto VF = VFs[I];
       if (VF.isScalar())
@@ -7597,8 +7609,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
     SmallVector<ElementCount, 1> VFs = {BestFactor.Width};
 
     auto LegacyRUs =
-        calculateRegisterUsage(getPlanFor(LegacyVF.Width), LegacyVFs, TTI);
-    auto RUs = calculateRegisterUsage(BestPlan, VFs, TTI);
+        CM.calculateRegisterUsage(getPlanFor(LegacyVF.Width), LegacyVFs, TTI);
+    auto RUs = CM.calculateRegisterUsage(BestPlan, VFs, TTI);
 
     auto GetMaxUsage = [](SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers) {
       unsigned Max = 0;

@@ -35,25 +35,16 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[MIDDLE_BLOCK:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add nuw nsw i32 [[AND]], 7
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], 24
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[MIDDLE_BLOCK]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC_ADDR_0_LCSSA]], i32 [[INDEX]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 [[INDEX]], i32 [[AND]])
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <8 x i8> @llvm.masked.load.v8i8.p0(ptr [[NEXT_GEP]], i32 1, <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i8> poison)
-; CHECK-NEXT:    [[TMP4:%.*]] = sext <8 x i8> [[WIDE_MASKED_LOAD]] to <8 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i32> [[TMP4]], <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP5]])
-; CHECK-NEXT:    [[TMP7]] = add i32 [[TMP6]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[WHILE_END5]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 [[AND]])
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[PSRC_ADDR_0_LCSSA]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i32> [[TMP4]], <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[SUM_0_LCSSA]]
+; CHECK-NEXT:    br label [[WHILE_END5]]
 ; CHECK:       while.end5:
-; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUM_1_LCSSA]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    [[CONV6:%.*]] = trunc i32 [[DIV]] to i8
 ; CHECK-NEXT:    store i8 [[CONV6]], ptr [[PRESULT:%.*]], align 1
