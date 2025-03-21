@@ -25,6 +25,7 @@
 namespace clang {
   class DiagnosticsEngine;
   class DiagnosticBuilder;
+  class LangOptions;
   class SourceLocation;
 
   // Import the diagnostic enums themselves.
@@ -473,6 +474,10 @@ public:
   /// Get the diagnostic option with the closest edit distance to the
   /// given group name.
   static StringRef getNearestOption(diag::Flavor Flavor, StringRef Group);
+
+  /// Get the appropriate diagnostic Id to use for issuing a compatibility
+  /// diagnostic. For use by the various DiagCompat() helpers.
+  static unsigned getCompatDiagId(const LangOptions& LangOpts, unsigned CompatDiagId);
 
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by

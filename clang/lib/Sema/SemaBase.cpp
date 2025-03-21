@@ -91,6 +91,7 @@ Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc,
 SemaBase::SemaDiagnosticBuilder SemaBase::DiagCompat(SourceLocation Loc,
                                                      unsigned CompatDiagId,
                                                      bool DeferHint) {
-  return Diag(Loc, GetCompatDiagId(getLangOpts(), CompatDiagId), DeferHint);
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId),
+              DeferHint);
 }
 } // namespace clang
