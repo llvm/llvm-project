@@ -102,8 +102,9 @@ void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
 }
 
-RISCVMCExpr::Specifier RISCVMCExpr::getSpecifierForName(StringRef name) {
-  return StringSwitch<RISCVMCExpr::Specifier>(name)
+std::optional<RISCVMCExpr::Specifier>
+RISCVMCExpr::getSpecifierForName(StringRef name) {
+  return StringSwitch<std::optional<RISCVMCExpr::Specifier>>(name)
       .Case("lo", VK_LO)
       .Case("hi", VK_HI)
       .Case("pcrel_lo", VK_PCREL_LO)
@@ -118,12 +119,11 @@ RISCVMCExpr::Specifier RISCVMCExpr::getSpecifierForName(StringRef name) {
       .Case("tlsdesc_load_lo", VK_TLSDESC_LOAD_LO)
       .Case("tlsdesc_add_lo", VK_TLSDESC_ADD_LO)
       .Case("tlsdesc_call", VK_TLSDESC_CALL)
-      .Default(VK_Invalid);
+      .Default(std::nullopt);
 }
 
 StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
   switch (S) {
-  case VK_Invalid:
   case VK_None:
     llvm_unreachable("Invalid ELF symbol kind");
   case VK_LO:
