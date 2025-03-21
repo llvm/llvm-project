@@ -105,6 +105,7 @@ public:
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
+  bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
@@ -179,6 +180,9 @@ private:
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
+  bool initResourceVarFromBinding(VarDecl *VD, unsigned SpaceNo,
+                                  unsigned RegisterNo, int32_t Range,
+                                  unsigned Index);
 };
 
 } // namespace clang

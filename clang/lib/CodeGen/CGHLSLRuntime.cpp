@@ -659,7 +659,7 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
     // not implemented yet.
     return;
 
-  createResourceInitFn(CGM, GV, RBA->getSlotNumber(), RBA->getSpaceNumber());
+  // createResourceInitFn(CGM, GV, RBA->getSlotNumber(), RBA->getSpaceNumber());
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
