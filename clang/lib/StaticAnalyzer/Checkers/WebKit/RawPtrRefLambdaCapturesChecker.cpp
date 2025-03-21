@@ -285,10 +285,10 @@ public:
         auto *VD = dyn_cast<VarDecl>(ValueDecl);
         if (!VD)
           return false;
-        auto *Init = VD->getInit()->IgnoreParenCasts();
+        auto *Init = VD->getInit();
         if (!Init)
           return false;
-        const Expr *Arg = Init;
+        const Expr *Arg = Init->IgnoreParenCasts();
         do {
           if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg))
             Arg = BTE->getSubExpr()->IgnoreParenCasts();
