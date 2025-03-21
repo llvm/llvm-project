@@ -438,3 +438,53 @@ module attributes {transform.with_named_sequence} {
     transform.yield 
   }
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape(
+// CHECK:      scf.for %[[X:[A-Za-z0-9]+]] = {{.*}} -> (tensor<8x1800x32xf32>) {
+// CHECK:             %[[EXTRACT1:.*]] = tensor.extract_slice
+// CHECK:             %[[COLLAPSE1:.*]] = tensor.collapse_shape %[[EXTRACT1]]
+// CHECK:             %[[EXP1:.*]] = linalg.exp ins(%[[COLLAPSE1]]
+func.func @bubble_up_extract_slice_through_collapse_shape(%0: tensor<1x8x1800x32xf32>) -> tensor<8x1800x32xf32> {
+  %expand = tensor.collapse_shape %0 [[0, 1], [2], [3]] : tensor<1x8x1800x32xf32> into tensor<8x1800x32xf32>
+  %empty = tensor.empty() : tensor<8x1800x32xf32>
+  %exp = linalg.exp ins(%expand : tensor<8x1800x32xf32>) outs(%empty : tensor<8x1800x32xf32>) -> tensor<8x1800x32xf32>
+  return %exp : tensor<8x1800x32xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %transformed, %loops:1 = transform.structured.fuse %0 [1, 0, 0] interchange [0, 1, 2] apply_cleanup = true : 
+      (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield 
+  }
+}
+
+
+// -----
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(
+// CHECK:           scf.for %[[X:[A-Za-z0-9]+]] = {{.*}}
+// CHECK:             %[[VAL_9:.*]] = tensor.extract_slice
+// CHECK:             %[[VAL_11:.*]] = linalg.abs ins(%[[VAL_9]]
+// CHECK:             %[[VAL_12:.*]] = tensor.collapse_shape %[[VAL_11]]
+// CHECK:             %[[VAL_14:.*]] = linalg.exp ins(%[[VAL_12]]
+func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(%0: tensor<1x8x1800x32xf32>) -> tensor<8x1800x32xf32> {
+  %empty1 = tensor.empty() : tensor<1x8x1800x32xf32>
+  %abs = linalg.abs ins(%0 : tensor<1x8x1800x32xf32>) outs(%empty1 : tensor<1x8x1800x32xf32>) -> tensor<1x8x1800x32xf32>
+  %expand = tensor.collapse_shape %abs [[0, 1], [2], [3]] : tensor<1x8x1800x32xf32> into tensor<8x1800x32xf32>
+  %empty2 = tensor.empty() : tensor<8x1800x32xf32>
+  %exp = linalg.exp ins(%expand : tensor<8x1800x32xf32>) outs(%empty2 : tensor<8x1800x32xf32>) -> tensor<8x1800x32xf32>
+  return %exp : tensor<8x1800x32xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.exp"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %transformed, %loops:1 = transform.structured.fuse %0 [1, 0, 0] interchange [0, 1, 2] apply_cleanup = true : 
+      (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield 
+  }
+}
