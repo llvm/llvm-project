@@ -307,19 +307,27 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 
 /// This ThinBackend generates the index shards and then runs the individual
 /// backend jobs via an external process. It takes the same parameters as the
-/// InProcessThinBackend, however, these parameters only control the behavior
+/// InProcessThinBackend; however, these parameters only control the behavior
 /// when generating the index files for the modules. Additionally:
 /// LinkerOutputFile is a string that should identify this LTO invocation in
 /// the context of a wider build. It's used for naming to aid the user in
 /// identifying activity related to a specific LTO invocation.
 /// Distributor specifies the path to a process to invoke to manage the backend
-/// jobs execution.
+/// job execution.
+/// DistributorArgs specifies a list of arguments to be applied to the
+/// distributor.
+/// RemoteCompiler specifies the path to a Clang executable to be invoked for
+/// the backend jobs.
+/// RemoteCompilerArgs specifies a list of arguments to be applied to the
+/// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
 /// backend from being cleaned up.
 ThinBackend createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef Distributor, bool SaveTemps);
+    StringRef LinkerOutputFile, StringRef Distributor,
+    ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds

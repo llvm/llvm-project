@@ -10,9 +10,7 @@ RUN: opt -thinlto-bc 1.ll -o 1.bc -O2
 ; of validate.py will cause a failure as it does not create output files.
 DEFINE: %{command} = llvm-lto2 run 0.bc 1.bc -o t.o \
 DEFINE:    -dtlto-distributor=%python \
-DEFINE:    -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
-DEFINE:    -thinlto-distributor-arg=0.bc \
-DEFINE:    -thinlto-distributor-arg=1.bc \
+DEFINE:    -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py,0.bc,1.bc \
 DEFINE:    -thinlto-emit-indexes \
 DEFINE:    -r=0.bc,g,px \
 DEFINE:    -r=1.bc,f,px \

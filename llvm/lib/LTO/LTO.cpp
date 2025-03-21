@@ -94,19 +94,6 @@ extern cl::opt<bool> SupportsHotColdNew;
 
 /// Enable MemProf context disambiguation for thin link.
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
-
-cl::list<std::string> AdditionalThinLTODistributorArgs(
-    "thinlto-distributor-arg",
-    cl::desc("Additional arguments to pass to the ThinLTO distributor"));
-
-cl::opt<std::string> ThinLTORemoteCompiler(
-    "thinlto-remote-compiler",
-    cl::desc("Compiler to invoke for the ThinLTO backend compilations"));
-
-cl::list<std::string>
-    ThinLTORemoteCompilerArgs("thinlto-remote-compiler-arg",
-                              cl::desc("Additional arguments to pass to the "
-                                       "ThinLTO remote compiler"));
 } // namespace llvm
 
 // Computes a unique hash for the Module considering the current list of
@@ -2207,7 +2194,13 @@ class OutOfProcessThinBackend : public CGThinBackend {
   StringSaver Saver{Alloc};
 
   SString LinkerOutputFile;
+
   SString DistributorPath;
+  ArrayRef<StringRef> DistributorArgs;
+
+  SString RemoteCompiler;
+  ArrayRef<StringRef> RemoteCompilerArgs;
+
   bool SaveTemps;
 
   SmallVector<StringRef, 0> CodegenOptions;
@@ -2240,12 +2233,15 @@ public:
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-      StringRef LinkerOutputFile, StringRef Distributor, bool SaveTemps)
+      StringRef LinkerOutputFile, StringRef Distributor,
+      ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+      ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
-        SaveTemps(SaveTemps) {}
+        DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
+        RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps) {}
 
   virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
                      StringRef Triple) override {
@@ -2343,8 +2339,8 @@ public:
     Ops.push_back("-Wno-unused-command-line-argument");
 
     // Forward any supplied options.
-    if (!ThinLTORemoteCompilerArgs.empty())
-      for (auto &a : ThinLTORemoteCompilerArgs)
+    if (!RemoteCompilerArgs.empty())
+      for (auto &a : RemoteCompilerArgs)
         Ops.push_back(a);
   }
 
@@ -2366,7 +2362,7 @@ public:
 
         // Common command line template.
         JOS.attributeArray("args", [&]() {
-          JOS.value(ThinLTORemoteCompiler);
+          JOS.value(RemoteCompiler);
 
           // Reference to Job::NativeObjectPath.
           JOS.value("-o");
@@ -2454,7 +2450,7 @@ public:
     });
 
     SmallVector<StringRef, 3> Args = {DistributorPath};
-    llvm::append_range(Args, AdditionalThinLTODistributorArgs);
+    llvm::append_range(Args, DistributorArgs);
     Args.push_back(JsonFile);
     std::string ErrMsg;
     if (sys::ExecuteAndWait(Args[0], Args,
@@ -2491,7 +2487,9 @@ public:
 ThinBackend lto::createOutOfProcessThinBackend(
     ThreadPoolStrategy Parallelism, lto::IndexWriteCallback OnWrite,
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef Distributor, bool SaveTemps) {
+    StringRef LinkerOutputFile, StringRef Distributor,
+    ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
@@ -2499,7 +2497,8 @@ ThinBackend lto::createOutOfProcessThinBackend(
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
-            LinkerOutputFile, Distributor, SaveTemps);
+            LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
+            RemoteCompilerArgs, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);
 }

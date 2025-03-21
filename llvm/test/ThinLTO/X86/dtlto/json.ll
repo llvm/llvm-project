@@ -11,12 +11,9 @@ RUN: opt -thinlto-bc t2.ll -o t2.bc
 RUN: not llvm-lto2 run t1.bc t2.bc -o my.output \
 RUN:     -r=t1.bc,t1,px -r=t2.bc,t2,px \
 RUN:     -dtlto-distributor=%python \
-RUN:     -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
-RUN:     -thinlto-remote-compiler=my_clang.exe \
-RUN:     -thinlto-remote-compiler-arg=--rota1=10 \
-RUN:     -thinlto-remote-compiler-arg=--rota2=20 \
-RUN:     -thinlto-distributor-arg=--da1=10 \
-RUN:     -thinlto-distributor-arg=--da2=10 \
+RUN:     -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py,--da1=10,--da2=10 \
+RUN:     -dtlto-compiler=my_clang.exe \
+RUN:     -dtlto-compiler-arg=--rota1=10,--rota2=20 \
 RUN:   2>&1 | FileCheck %s
 
 CHECK: distributor_args=['--da1=10', '--da2=10']

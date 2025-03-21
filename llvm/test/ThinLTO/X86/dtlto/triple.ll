@@ -10,7 +10,7 @@ RUN: opt -thinlto-bc t2.ll -o t2.bc
 ; of validate.py will cause a failure as it does not create output files.
 DEFINE: %{command} = llvm-lto2 run -o t.o -save-temps \
 DEFINE:    -dtlto-distributor=%python \
-DEFINE:    -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+DEFINE:    -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
 DEFINE:    -r=t1.bc,t1,px \
 DEFINE:    -r=t2.bc,t2,px
 
