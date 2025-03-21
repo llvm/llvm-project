@@ -41,8 +41,8 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_ABI_DEFINES=",
       "_LIBCPP_HARDENING_MODE_DEFAULT=_LIBCPP_HARDENING_MODE_NONE",
       "_LIBCPP_PSTL_BACKEND_LIBDISPATCH=",
-      "_LIBCPP_PSTL_BACKEND_SERIAL=1",
-      "_LIBCPP_PSTL_BACKEND_STD_THREAD=",
+      "_LIBCPP_PSTL_BACKEND_SERIAL=",
+      "_LIBCPP_PSTL_BACKEND_STD_THREAD=1",
     ]
     if (libcxx_abi_namespace != "") {
       values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
