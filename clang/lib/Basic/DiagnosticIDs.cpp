@@ -784,7 +784,7 @@ unsigned DiagnosticIDs::getCompatDiagId(const LangOptions &LangOpts,
   // our encoding on that.
 #define DIAG_COMPAT_IDS_BEGIN()
 #define DIAG_COMPAT_IDS_END()
-#define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                      \
+#define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                        \
   {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
   static constexpr CompatDiag Diags[]{
 #include "clang/Basic/DiagnosticAllCompatIDs.inc"

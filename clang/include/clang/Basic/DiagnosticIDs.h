@@ -107,7 +107,7 @@ namespace clang {
 
   namespace diag_compat {
 #define DIAG_COMPAT_IDS_BEGIN() enum {
-#define DIAG_COMPAT_IDS_END()                                               \
+#define DIAG_COMPAT_IDS_END()                                                \
     }                                                                          \
     ;
 #define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,

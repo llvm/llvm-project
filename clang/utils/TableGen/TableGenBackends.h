@@ -92,8 +92,8 @@ void EmitClangBuiltinTemplates(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 
 void EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
-                               llvm::raw_ostream &OS,
-                               const std::string &Component);
+                             llvm::raw_ostream &OS,
+                             const std::string &Component);
 void EmitClangDiagsDefs(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS, const std::string &Component);
 void EmitClangDiagsEnums(const llvm::RecordKeeper &Records,
