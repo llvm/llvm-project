@@ -25,8 +25,6 @@ define i32 @clober_bp() {
 ; CHECK-NEXT:    .cfi_offset %edi, -12
 ; CHECK-NEXT:    movl $4, 12(%esi)
 ; CHECK-NEXT:    movl 12(%esi), %eax
-; CHECK-NEXT:    addl $3, %eax
-; CHECK-NEXT:    andl $-4, %eax
 ; CHECK-NEXT:    calll __alloca
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    andl $-16, %eax
@@ -78,8 +76,6 @@ define i32 @clobber_bpfp() {
 ; CHECK-NEXT:    .cfi_offset %edi, -12
 ; CHECK-NEXT:    movl $4, 12(%esi)
 ; CHECK-NEXT:    movl 12(%esi), %eax
-; CHECK-NEXT:    addl $3, %eax
-; CHECK-NEXT:    andl $-4, %eax
 ; CHECK-NEXT:    calll __alloca
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    andl $-16, %eax

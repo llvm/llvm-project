@@ -3111,21 +3111,39 @@ bool IRTranslator::translateAlloca(const User &U,
       getOrCreateVReg(*ConstantInt::get(IntPtrIRTy, DL->getTypeAllocSize(Ty)));
   MIRBuilder.buildMul(AllocSize, NumElts, TySize);
 
-  // Round the size of the allocation up to the stack alignment size
-  // by add SA-1 to the size. This doesn't overflow because we're computing
-  // an address inside an alloca.
-  Align StackAlign = MF->getSubtarget().getFrameLowering()->getStackAlign();
-  auto SAMinusOne = MIRBuilder.buildConstant(IntPtrTy, StackAlign.value() - 1);
-  auto AllocAdd = MIRBuilder.buildAdd(IntPtrTy, AllocSize, SAMinusOne,
-                                      MachineInstr::NoUWrap);
-  auto AlignCst =
-      MIRBuilder.buildConstant(IntPtrTy, ~(uint64_t)(StackAlign.value() - 1));
-  auto AlignedAlloc = MIRBuilder.buildAnd(IntPtrTy, AllocAdd, AlignCst);
-
+  const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+  Align StackAlign = TFI->getStackAlign();
   Align Alignment = std::max(AI.getAlign(), DL->getPrefTypeAlign(Ty));
-  if (Alignment <= StackAlign)
+
+  // If the stack alignment is stricter than the alloca's alignment, ignore the
+  // alloca's alignment. We will align the size of the alloca to the stack
+  // alignment, which will guarantee that the alloca's alignment is satisfied.
+  bool IsUnderAligned = Alignment <= StackAlign;
+  if (IsUnderAligned)
     Alignment = Align(1);
-  MIRBuilder.buildDynStackAlloc(getOrCreateVReg(AI), AlignedAlloc, Alignment);
+
+  // If the stack grows up, adding the alloca's size to SP without padding may
+  // leave SP not aligned (to the stack alignment) after the alloca because we
+  // align SP (to the stack align or alloca align) *before* adding the alloca
+  // size. On the other hand, if the stack grows down, we will align SP *after*
+  // decrementing it, so there is no need to pad the size.
+  if (TFI->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp ||
+      IsUnderAligned) {
+    // Round the size of the allocation up to the stack alignment size
+    // by add SA-1 to the size. This doesn't overflow because we're computing
+    // an address inside an alloca.
+    auto SAMinusOne =
+        MIRBuilder.buildConstant(IntPtrTy, StackAlign.value() - 1);
+    auto AllocAdd = MIRBuilder.buildAdd(IntPtrTy, AllocSize, SAMinusOne,
+                                        MachineInstr::NoUWrap);
+    auto AlignCst =
+        MIRBuilder.buildConstant(IntPtrTy, ~(uint64_t)(StackAlign.value() - 1));
+    auto AlignedAlloc = MIRBuilder.buildAnd(IntPtrTy, AllocAdd, AlignCst);
+
+    MIRBuilder.buildDynStackAlloc(getOrCreateVReg(AI), AlignedAlloc, Alignment);
+  } else {
+    MIRBuilder.buildDynStackAlloc(getOrCreateVReg(AI), AllocSize, Alignment);
+  }
 
   MF->getFrameInfo().CreateVariableSizedObject(Alignment, &AI);
   assert(MF->getFrameInfo().hasVarSizedObjects());
