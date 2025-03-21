@@ -63,8 +63,7 @@ constexpr void check_iterator(R& r, F f, std::optional<Expected> const& expected
   }
 
   {
-    is_in_value_result<R, std::optional<Expected>> decltype(auto) result =
-        std::ranges::fold_left_first_with_iter(r, f);
+    is_in_value_result<R, std::optional<Expected>> decltype(auto) result = std::ranges::fold_left_first_with_iter(r, f);
     assert(result.in == r.end());
     assert(result.value == expected);
   }
