@@ -35,6 +35,14 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
   return nullptr;
 }
 
+static bool isPointerAuthOpcode(unsigned Opcode) {
+  return (Opcode >= 1648 && Opcode <= 1667); // AUT instruction class range
+}
+
+static bool isUncheckedAccessOpcode(unsigned Opcode) {
+  return Opcode == 4694; // LDGM instruction
+}
+
 const char *
 ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
                                              unsigned Opcode) const {
@@ -45,6 +53,8 @@ ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
     return "Unsupported opcode: isBranch/isIndirectBranch";
   if (InstrDesc.isCall() || InstrDesc.isReturn())
     return "Unsupported opcode: isCall/isReturn";
+  if (isPointerAuthOpcode(Opcode) || isUncheckedAccessOpcode(Opcode))
+    return "Unsupported opcode: isPointerAuth/isUncheckedAccess";
   return nullptr;
 }
 
