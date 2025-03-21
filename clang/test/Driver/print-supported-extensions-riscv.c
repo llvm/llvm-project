@@ -190,6 +190,7 @@
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvkgs                0.7       'Zvkgs' (Vector-Scalar GCM instructions for Cryptography)
+// CHECK-NEXT:     zvqdotq              0.0       'Zvqdotq' (Vector quad widening 4D Dot Product)
 // CHECK-NEXT:     sdext                1.0       'Sdext' (External debugger)
 // CHECK-NEXT:     sdtrig               1.0       'Sdtrig' (Debugger triggers)
 // CHECK-NEXT:     smctr                1.0       'Smctr' (Control Transfer Records Machine Level)
