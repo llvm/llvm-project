@@ -243,10 +243,13 @@ public:
   /// \param Kind -- The kind of the expected mutex.
   /// \param Expected -- The name of the expected mutex.
   /// \param Actual -- The name of the actual mutex.
+  /// \param ForParam -- Indicates whether the note applies to a function
+  /// parameter.
   virtual void handleUnmatchedUnderlyingMutexes(SourceLocation Loc,
                                                 SourceLocation DLoc,
                                                 Name ScopeName, StringRef Kind,
-                                                Name Expected, Name Actual) {}
+                                                Name Expected, Name Actual,
+                                                bool ForParam) {}
 
   /// Warn when we get fewer underlying mutexes than expected.
   /// \param Loc -- The location of the call expression.
@@ -254,10 +257,13 @@ public:
   /// \param ScopeName -- The name of the scope passed to the function.
   /// \param Kind -- The kind of the expected mutex.
   /// \param Expected -- The name of the expected mutex.
+  /// \param ForParam -- Indicates whether the note applies to a function
+  /// parameter.
   virtual void handleExpectMoreUnderlyingMutexes(SourceLocation Loc,
                                                  SourceLocation DLoc,
                                                  Name ScopeName, StringRef Kind,
-                                                 Name Expected) {}
+                                                 Name Expected, bool ForParam) {
+  }
 
   /// Warn when we get more underlying mutexes than expected.
   /// \param Loc -- The location of the call expression.
@@ -265,11 +271,13 @@ public:
   /// \param ScopeName -- The name of the scope passed to the function.
   /// \param Kind -- The kind of the actual mutex.
   /// \param Actual -- The name of the actual mutex.
+  /// \param ForParam -- Indicates whether the note applies to a function
+  /// parameter.
   virtual void handleExpectFewerUnderlyingMutexes(SourceLocation Loc,
                                                   SourceLocation DLoc,
                                                   Name ScopeName,
-                                                  StringRef Kind, Name Actual) {
-  }
+                                                  StringRef Kind, Name Actual,
+                                                  bool ForParam) {}
 
   /// Warn that L1 cannot be acquired before L2.
   virtual void handleLockAcquiredBefore(StringRef Kind, Name L1Name,
