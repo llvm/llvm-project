@@ -1047,6 +1047,11 @@ void SIFoldOperandsImpl::foldOperand(
     if (MovOp == AMDGPU::COPY)
       return;
 
+    // Check if the destination register of the MOV operation belongs
+    // to a vector superclass. Folding would be illegal.
+    if (TRI->isVectorSuperClass(DestRC))
+      return;
+
     MachineInstr::mop_iterator ImpOpI = UseMI->implicit_operands().begin();
     MachineInstr::mop_iterator ImpOpE = UseMI->implicit_operands().end();
     while (ImpOpI != ImpOpE) {
