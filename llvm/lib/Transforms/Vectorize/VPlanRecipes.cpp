@@ -801,6 +801,21 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   cast<VectorType>(VectorTy), Mask,
                                   Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
+  case VPInstruction::ActiveLaneMask: {
+    Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
+    Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
+                                  {ArgTy, ArgTy});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::ExplicitVectorLength: {
+    Type *Arg0Ty = Ctx.Types.inferScalarType(getOperand(0));
+    Type *I32Ty = Type::getInt32Ty(Ctx.LLVMCtx);
+    Type *I1Ty = Type::getInt1Ty(Ctx.LLVMCtx);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
+                                  I32Ty, {Arg0Ty, I32Ty, I1Ty});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
