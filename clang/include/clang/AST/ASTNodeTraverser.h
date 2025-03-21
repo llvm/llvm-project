@@ -393,9 +393,7 @@ public:
     Visit(T->getPointeeType());
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
-    // FIXME: Provide a NestedNameSpecifier visitor.
-    Visit(T->getQualifier()->getAsType());
-    Visit(T->getMostRecentCXXRecordDecl());
+    Visit(T->getClass());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }
@@ -487,8 +485,7 @@ public:
     }
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
-    // FIXME: Provide NestedNamespecifierLoc visitor.
-    Visit(TL.getQualifierLoc().getTypeLoc());
+    Visit(TL.getClassTInfo()->getTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
