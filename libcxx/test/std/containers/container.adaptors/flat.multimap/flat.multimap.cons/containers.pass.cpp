@@ -71,7 +71,16 @@ int main(int, char**) {
     std::vector<int> ks             = {1, 1, 1, 2, 2, 3, 2, 3, 3};
     std::vector<char> vs            = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto m                          = M(ks, vs);
-    std::pair<int, char> expected[] = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {2, 7}, {3, 6}, {3, 8}, {3, 9}};
+    std::pair<int, char> expected[] = {
+        {1, static_cast<char>(1)},
+        {1, static_cast<char>(2)},
+        {1, static_cast<char>(3)},
+        {2, static_cast<char>(4)},
+        {2, static_cast<char>(5)},
+        {2, static_cast<char>(7)},
+        {3, static_cast<char>(6)},
+        {3, static_cast<char>(8)},
+        {3, static_cast<char>(9)}};
     assert(std::ranges::equal(m, expected));
 
     // explicit(false)
@@ -123,7 +132,16 @@ int main(int, char**) {
     std::vector<int> ks             = {1, 1, 1, 2, 2, 3, 2, 3, 3};
     std::vector<char> vs            = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto m                          = M(ks, vs, C(4));
-    std::pair<int, char> expected[] = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {2, 7}, {3, 6}, {3, 8}, {3, 9}};
+    std::pair<int, char> expected[] = {
+        {1, static_cast<char>(1)},
+        {1, static_cast<char>(2)},
+        {1, static_cast<char>(3)},
+        {2, static_cast<char>(4)},
+        {2, static_cast<char>(5)},
+        {2, static_cast<char>(7)},
+        {3, static_cast<char>(6)},
+        {3, static_cast<char>(8)},
+        {3, static_cast<char>(9)}};
     assert(std::ranges::equal(m, expected));
     assert(m.key_comp() == C(4));
 
@@ -169,7 +187,16 @@ int main(int, char**) {
     std::vector<int, A> ks          = {1, 1, 1, 2, 2, 3, 2, 3, 3};
     std::vector<int, A> vs          = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto m                          = M(ks, vs, C(4), A(5));
-    std::pair<int, char> expected[] = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {2, 7}, {3, 6}, {3, 8}, {3, 9}};
+    std::pair<int, char> expected[] = {
+        {1, static_cast<char>(1)},
+        {1, static_cast<char>(2)},
+        {1, static_cast<char>(3)},
+        {2, static_cast<char>(4)},
+        {2, static_cast<char>(5)},
+        {2, static_cast<char>(7)},
+        {3, static_cast<char>(6)},
+        {3, static_cast<char>(8)},
+        {3, static_cast<char>(9)}};
     assert(std::ranges::equal(m, expected));
     assert(m.key_comp() == C(4));
     assert(m.keys().get_allocator() == A(5));

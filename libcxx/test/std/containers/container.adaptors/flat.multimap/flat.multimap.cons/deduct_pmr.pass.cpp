@@ -35,7 +35,14 @@ void test_containers() {
   std::deque<short, test_allocator<short>> vs({1, 2, 3, 4, 5, 3, 4}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({1, 1, 2, 2, 2, 3, INT_MAX}, test_allocator<int>(0, 42));
   std::deque<short, test_allocator<short>> sorted_vs({1, 3, 2, 4, 5, 4, 3}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{1, 1}, {1, 3}, {2, 2}, {2, 4}, {2, 5}, {3, 4}, {INT_MAX, 3}};
+  const std::pair<int, short> expected[] = {
+      {1, static_cast<short>(1)},
+      {1, static_cast<short>(3)},
+      {2, static_cast<short>(2)},
+      {2, static_cast<short>(4)},
+      {2, static_cast<short>(5)},
+      {3, static_cast<short>(4)},
+      {INT_MAX, static_cast<short>(3)}};
   {
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::monotonic_buffer_resource mr2;
@@ -69,7 +76,14 @@ void test_containers_compare() {
   std::deque<short, test_allocator<short>> vs({1, 2, 3, 4, 5, 3, 4}, test_allocator<int>(0, 43));
   std::deque<int, test_allocator<int>> sorted_ks({INT_MAX, 3, 2, 2, 2, 1, 1}, test_allocator<int>(0, 42));
   std::deque<short, test_allocator<short>> sorted_vs({3, 4, 2, 4, 5, 1, 3}, test_allocator<int>(0, 43));
-  const std::pair<int, short> expected[] = {{INT_MAX, 3}, {3, 4}, {2, 2}, {2, 4}, {2, 5}, {1, 1}, {1, 3}};
+  const std::pair<int, short> expected[] = {
+      {INT_MAX, static_cast<short>(3)},
+      {3, static_cast<short>(4)},
+      {2, static_cast<short>(2)},
+      {2, static_cast<short>(4)},
+      {2, static_cast<short>(5)},
+      {1, static_cast<short>(1)},
+      {1, static_cast<short>(3)}};
 
   {
     std::pmr::monotonic_buffer_resource mr;
