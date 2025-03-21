@@ -238,9 +238,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *FromMP = SubExpr->getType()->getAs<MemberPointerType>();
     const auto *ToMP = CE->getType()->getAs<MemberPointerType>();
 
-    unsigned DerivedOffset =
-        Ctx.collectBaseOffset(ToMP->getMostRecentCXXRecordDecl(),
-                              FromMP->getMostRecentCXXRecordDecl());
+    unsigned DerivedOffset = collectBaseOffset(QualType(ToMP->getClass(), 0),
+                                               QualType(FromMP->getClass(), 0));
 
     if (!this->delegate(SubExpr))
       return false;
@@ -254,9 +253,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     const auto *FromMP = SubExpr->getType()->getAs<MemberPointerType>();
     const auto *ToMP = CE->getType()->getAs<MemberPointerType>();
 
-    unsigned DerivedOffset =
-        Ctx.collectBaseOffset(FromMP->getMostRecentCXXRecordDecl(),
-                              ToMP->getMostRecentCXXRecordDecl());
+    unsigned DerivedOffset = collectBaseOffset(QualType(FromMP->getClass(), 0),
+                                               QualType(ToMP->getClass(), 0));
 
     if (!this->delegate(SubExpr))
       return false;

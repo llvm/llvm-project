@@ -697,6 +697,17 @@ struct FragmentCompiler {
           C.Completion.ArgumentLists = *Val;
         });
     }
+    if (F.HeaderInsertion) {
+      if (auto Val =
+              compileEnum<Config::HeaderInsertionPolicy>("HeaderInsertion",
+                                                         *F.HeaderInsertion)
+                  .map("IWYU", Config::HeaderInsertionPolicy::IWYU)
+                  .map("Never", Config::HeaderInsertionPolicy::NeverInsert)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.HeaderInsertion = *Val;
+        });
+    }
   }
 
   void compile(Fragment::HoverBlock &&F) {

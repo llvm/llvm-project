@@ -288,7 +288,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
 
 /// ZeroAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ZeroAttr attr) {
-  auto loc = parentOp->getLoc();
+  mlir::Location loc = parentOp->getLoc();
   return rewriter.create<mlir::LLVM::ZeroOp>(
       loc, converter->convertType(attr.getType()));
 }

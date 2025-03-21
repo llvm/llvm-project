@@ -6983,7 +6983,7 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
   }
   if (Op2.getReg() == ARM::PC)
     return;
-  unsigned PairedReg = GPR.getRegister(RtEncoding + 1);
+  MCRegister PairedReg = GPR.getRegister(RtEncoding + 1);
   if (!PairedReg || PairedReg == ARM::PC ||
       (PairedReg == ARM::SP && !hasV8Ops()))
     return;
