@@ -5212,11 +5212,6 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
                            internal::Matcher<Expr>, ArgMatcher,
                            internal::Matcher<QualType>, ParamMatcher) {
   BoundNodesTreeBuilder Result;
-  // The first argument of an overloaded member operator is the implicit object
-  // argument of the method which should not be matched against a parameter, so
-  // we skip over it here.
-  BoundNodesTreeBuilder Matches;
-
   bool Matched = false;
   auto ProcessParamAndArg = [&](QualType ParamType, const Expr *Arg) {
     BoundNodesTreeBuilder ArgMatches(*Builder);
@@ -5234,7 +5229,7 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
   else if (auto *Construct = llvm::dyn_cast<CXXConstructExpr>(&Node))
     matchEachArgumentWithParamType(*Construct, ProcessParamAndArg);
   else
-    return false;
+    llvm_unreachable("expected CallExpr or CXXConstructExpr");
 
   *Builder = std::move(Result);
   return Matched;
