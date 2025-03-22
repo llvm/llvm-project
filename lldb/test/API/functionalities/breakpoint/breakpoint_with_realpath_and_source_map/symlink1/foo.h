@@ -1,1 +1,5 @@
+XSym
+0013
+64f134e8c57126ca56932a494eb70be5
 ../real/foo.h
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
