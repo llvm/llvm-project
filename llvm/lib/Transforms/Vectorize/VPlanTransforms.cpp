@@ -2236,19 +2236,26 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   }
 }
 
-/// Returns true if \p V used at \p Idx of a wide recipe is defined by a
-/// VPWidenLoadRecipe or VPInterleaveRecipe that can be converted to a narrower
-/// recipe. A VPWidenLoadRecipe can be narrowed to an index independent load if
-/// it feeds all the wide ops at all indices (checked by via the operands of the
-/// wide recipe at lane0, \p R0). A VPInterleaveRecipe can be narrowed to a wide
-/// load, if \p V used at index \p Idx are defined at \p Idx of the interleave
-/// group.
-static bool canNarrowLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
+/// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
+/// converted to a narrower recipe. \p V is used by a wide recipe \p WideMember
+/// that feeds a store interleave group at index \p Idx, \p WideMember0 is the
+/// recipe feeding the same interleave group at index 0. A VPWidenLoadRecipe can
+/// be narrowed to an index-independent load if it feeds all wide ops at all
+/// indices (checked by via the operands of the wide recipe at lane0, \p
+/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
+/// is defined at \p Idx of a load interleave group.
+static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
+                          VPValue *V, unsigned Idx) {
   auto *DefR = V->getDefiningRecipe();
   if (!DefR)
     return false;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
-    return !W->getMask() && is_contained(R0->operands(), V);
+    return !W->getMask() &&
+           all_of(zip(WideMember0->operands(), WideMember->operands()),
+                  [V](const auto P) {
+                    const auto &[WideMember0Op, WideMemberOp] = P;
+                    return (WideMember0Op == V) == (WideMemberOp == V);
+                  });
 
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
     return IR->getInterleaveGroup()->getFactor() ==
@@ -2360,8 +2367,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
-      if (any_of(R->operands(), [WideMember0, Idx = I](VPValue *V) {
-            return !canNarrowLoad(WideMember0, V, Idx);
+      if (any_of(R->operands(), [WideMember0, Idx = I, R](VPValue *V) {
+            return !canNarrowLoad(WideMember0, R, V, Idx);
           }))
         return;
     }
