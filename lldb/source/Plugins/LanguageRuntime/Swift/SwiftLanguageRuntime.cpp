@@ -2161,10 +2161,10 @@ protected:
   }
 };
 
-/// Construct a `ThreadTask` instance for a Task variable contained in the first
-/// argument.
+/// Construct a `ThreadTask` instance for a live (yet to be completed) Task
+/// variable contained in the first argument.
 static llvm::Expected<ThreadSP>
-ThreadForTaskArgument(Args &command, ExecutionContext &exe_ctx) {
+ThreadForLiveTaskArgument(Args &command, ExecutionContext &exe_ctx) {
   if (!exe_ctx.GetFramePtr())
     return llvm::createStringError("no active frame selected");
 
@@ -2196,12 +2196,15 @@ ThreadForTaskArgument(Args &command, ExecutionContext &exe_ctx) {
 
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx.GetProcessSP()))
     if (auto reflection_ctx = runtime->GetReflectionContext()) {
-      if (auto task_info = reflection_ctx->asyncTaskInfo(task_ptr))
-        return std::make_shared<ThreadTask>(task_info->id,
-                                            task_info->resumeAsyncContext,
-                                            task_info->runJob, exe_ctx);
-      else
+      auto task_info = reflection_ctx->asyncTaskInfo(task_ptr);
+      if (!task_info)
         return task_info.takeError();
+      if (task_info->isComplete)
+        return llvm::createStringError("task has completed");
+
+      return std::make_shared<ThreadTask>(task_info->id,
+                                          task_info->resumeAsyncContext,
+                                          task_info->runJob, exe_ctx);
     }
 
   return llvm::createStringError("failed to access Task data from runtime");
@@ -2230,7 +2233,7 @@ private:
     }
 
     llvm::Expected<ThreadSP> thread_task =
-        ThreadForTaskArgument(command, m_exe_ctx);
+        ThreadForLiveTaskArgument(command, m_exe_ctx);
     if (auto error = thread_task.takeError()) {
       result.AppendError(toString(std::move(error)));
       return;
@@ -2265,7 +2268,7 @@ private:
     }
 
     llvm::Expected<ThreadSP> thread_task =
-        ThreadForTaskArgument(command, m_exe_ctx);
+        ThreadForLiveTaskArgument(command, m_exe_ctx);
     if (auto error = thread_task.takeError()) {
       result.AppendError(toString(std::move(error)));
       return;

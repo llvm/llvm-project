@@ -14,3 +14,13 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
         self.expect("v task", substrs=["flags:complete"])
+        self.expect(
+            "language swift task backtrace task",
+            error=True,
+            substrs=["task has completed"],
+        )
+        self.expect(
+            "language swift task select task",
+            error=True,
+            substrs=["task has completed"],
+        )
