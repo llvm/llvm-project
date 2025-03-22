@@ -230,15 +230,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   // with stack arguments.
   TFI->spillFPBP(MF);
 
-  LLVM_DEBUG(llvm::dbgs() << "Before calculateCallFrameInfo \n");
-  LLVM_DEBUG(MF.dump());
-
   // Calculate the MaxCallFrameSize value for the function's frame
   // information. Also eliminates call frame pseudo instructions.
   calculateCallFrameInfo(MF);
-
-  LLVM_DEBUG(llvm::dbgs() << "Before calculateSaveRestoreBlocks \n");
-  LLVM_DEBUG(MF.dump());
 
   // Determine placement of CSR spill/restore code and prolog/epilog code:
   // place all spills in the entry block, all restores in return blocks.
@@ -249,28 +243,16 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     stashEntryDbgValues(*SaveBlock, EntryDbgValues);
 
-  LLVM_DEBUG(llvm::dbgs() << "Before spillCalleeSavedRegs \n");
-  LLVM_DEBUG(MF.dump());
-
   // Handle CSR spilling and restoring, for targets that need it.
   if (MF.getTarget().usesPhysRegsForValues())
     spillCalleeSavedRegs(MF);
-
-  LLVM_DEBUG(llvm::dbgs() << "Before processFunctionBeforeFrameFinalized \n");
-  LLVM_DEBUG(MF.dump());
 
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.
   TFI->processFunctionBeforeFrameFinalized(MF, RS);
 
-  LLVM_DEBUG(llvm::dbgs() << "Before calculateFrameObjectOffsets \n");
-  LLVM_DEBUG(MF.dump());
-
   // Calculate actual frame offsets for all abstract stack objects...
   calculateFrameObjectOffsets(MF);
-
-  LLVM_DEBUG(llvm::dbgs() << "Before insertPrologEpilogCode \n");
-  LLVM_DEBUG(MF.dump());
 
   // Add prolog and epilog code to the function.  This function is required
   // to align the stack frame as necessary for any stack variables or
@@ -284,16 +266,9 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   for (auto &I : EntryDbgValues)
     I.first->insert(I.first->begin(), I.second.begin(), I.second.end());
 
-  LLVM_DEBUG(
-      llvm::dbgs() << "Before processFunctionBeforeFrameIndicesReplaced \n");
-  LLVM_DEBUG(MF.dump());
-
   // Allow the target machine to make final modifications to the function
   // before the frame layout is finalized.
   TFI->processFunctionBeforeFrameIndicesReplaced(MF, RS);
-
-  LLVM_DEBUG(llvm::dbgs() << "Before frame index resolution \n");
-  LLVM_DEBUG(MF.dump());
 
   // Replace all MO_FrameIndex operands with physical register references
   // and actual offsets.
@@ -308,9 +283,6 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     else
       replaceFrameIndices(MF);
   }
-
-  LLVM_DEBUG(llvm::dbgs() << "After frame index resolution \n");
-  LLVM_DEBUG(MF.dump());
 
   // If register scavenging is needed, as we've enabled doing it as a
   // post-pass, scavenge the virtual registers that frame index elimination
