@@ -306,7 +306,7 @@ createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
   // objects we might have for X8 and X9, as they might be saved twice.
   for (int I = 0; I < 2; ++I) {
     int FI = MFI.CreateStackObject(TRI.getSpillSize(RC), TRI.getSpillAlign(RC),
-                                   false);
+                                   true);
     RVFI.pushInterruptCSRFrameIndex(FI);
   }
 }
