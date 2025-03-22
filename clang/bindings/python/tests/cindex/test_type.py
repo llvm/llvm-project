@@ -18,7 +18,7 @@ import unittest
 
 from .util import get_cursor, get_cursors, get_tu
 
-k_input = """\
+struct_input = """\
 
 typedef int I;
 
@@ -45,7 +45,7 @@ struct teststruct {
 
 class TestType(unittest.TestCase):
     def test_a_struct(self):
-        tu = get_tu(k_input)
+        tu = get_tu(struct_input)
 
         teststruct = get_cursor(tu, "teststruct")
         self.assertIsNotNone(teststruct, "Could not find teststruct.")
