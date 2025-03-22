@@ -290,6 +290,12 @@ void WinException::endFuncletImpl() {
       // functions that need it in the end anyway.
     }
 
+    if (!MF->getEHContTargets().empty()) {
+      // Copy the function's EH Continuation targets to a module-level list.
+      EHContTargets.insert(EHContTargets.end(), MF->getEHContTargets().begin(),
+                           MF->getEHContTargets().end());
+    }
+
     // Switch back to the funclet start .text section now that we are done
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.

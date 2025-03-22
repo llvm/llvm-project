@@ -34,7 +34,7 @@
 
 static llvm::cl::opt<unsigned> DefaultAMDHSACodeObjectVersion(
     "amdhsa-code-object-version", llvm::cl::Hidden,
-    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV5),
+    llvm::cl::init(llvm::AMDGPU::AMDHSA_COV6),
     llvm::cl::desc("Set default AMDHSA Code Object Version (module flag "
                    "or asm directive still take priority if present)"));
 
@@ -163,6 +163,18 @@ inline unsigned getSaSdstBitWidth() { return 1; }
 
 /// \returns SaSdst bit shift
 inline unsigned getSaSdstBitShift() { return 0; }
+
+/// \returns VaSsrc width
+inline unsigned getVaSsrcBitWidth() { return 1; }
+
+/// \returns VaSsrc bit shift
+inline unsigned getVaSsrcBitShift() { return 8; }
+
+/// \returns HoldCnt bit shift
+inline unsigned getHoldCntWidth() { return 1; }
+
+/// \returns HoldCnt bit shift
+inline unsigned getHoldCntBitShift() { return 7; }
 
 } // end anonymous namespace
 
@@ -992,7 +1004,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize) {
   assert(FlatWorkGroupSize != 0);
-  if (STI->getTargetTriple().getArch() != Triple::amdgcn)
+  if (!STI->getTargetTriple().isAMDGCN())
     return 8;
   unsigned MaxWaves = getMaxWavesPerEU(STI) * getEUsPerCU(STI);
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
@@ -1154,6 +1166,9 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 8;
 
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    return STI->getFeatureBits().test(FeatureDynamicVGPRBlockSize32) ? 32 : 16;
+
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -1195,6 +1210,9 @@ unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI) { return 256; }
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
+  if (STI->getFeatureBits().test(FeatureDynamicVGPR))
+    // On GFX12 we can allocate at most 8 blocks of VGPRs.
+    return 8 * getVGPRAllocGranule(STI);
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -1319,7 +1337,7 @@ void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &KernelCode,
   if (Version.Major >= 10) {
     KernelCode.compute_pgm_resource_registers |=
         S_00B848_WGP_MODE(STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1) |
-        S_00B848_MEM_ORDERED(1);
+        S_00B848_MEM_ORDERED(1) | S_00B848_FWD_PROGRESS(1);
   }
 }
 
@@ -1740,6 +1758,14 @@ unsigned decodeFieldVaVcc(unsigned Encoded) {
   return unpackBits(Encoded, getVaVccBitShift(), getVaVccBitWidth());
 }
 
+unsigned decodeFieldVaSsrc(unsigned Encoded) {
+  return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
+}
+
+unsigned decodeFieldHoldCnt(unsigned Encoded) {
+  return unpackBits(Encoded, getHoldCntBitShift(), getHoldCntWidth());
+}
+
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
   return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
@@ -1778,6 +1804,22 @@ unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc) {
 
 unsigned encodeFieldVaVcc(unsigned VaVcc) {
   return encodeFieldVaVcc(0xffff, VaVcc);
+}
+
+unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
+  return packBits(VaSsrc, Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
+}
+
+unsigned encodeFieldVaSsrc(unsigned VaSsrc) {
+  return encodeFieldVaSsrc(0xffff, VaSsrc);
+}
+
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
+}
+
+unsigned encodeFieldHoldCnt(unsigned HoldCnt) {
+  return encodeFieldHoldCnt(0xffff, HoldCnt);
 }
 
 } // namespace DepCtr

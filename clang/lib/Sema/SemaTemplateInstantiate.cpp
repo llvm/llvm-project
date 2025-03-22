@@ -575,7 +575,6 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case BuildingDeductionGuides:
   case TypeAliasTemplateInstantiation:
   case PartialOrderingTTP:
-  case CheckTemplateParameter:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -810,16 +809,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation ArgLoc, PartialOrderingTTP,
     TemplateDecl *PArg, SourceRange InstantiationRange)
     : InstantiatingTemplate(SemaRef, CodeSynthesisContext::PartialOrderingTTP,
-                            ArgLoc, SourceRange(), PArg) {}
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(Sema &SemaRef,
-                                                   CheckTemplateParameter,
-                                                   NamedDecl *Param)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::CheckTemplateParameter,
-          Param->getLocation(), Param->getSourceRange(), Param) {
-  assert(Param->isTemplateParameter());
-}
+                            ArgLoc, InstantiationRange, PArg) {}
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
@@ -1261,18 +1251,12 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
     case CodeSynthesisContext::PartialOrderingTTP:
       DiagFunc(Active->PointOfInstantiation,
                PDiag(diag::note_template_arg_template_params_mismatch));
+      if (SourceLocation ParamLoc = Active->Entity->getLocation();
+          ParamLoc.isValid())
+        DiagFunc(ParamLoc, PDiag(diag::note_template_prev_declaration)
+                               << /*isTemplateTemplateParam=*/true
+                               << Active->InstantiationRange);
       break;
-    case CodeSynthesisContext::CheckTemplateParameter: {
-      const auto &ND = *cast<NamedDecl>(Active->Entity);
-      if (SourceLocation Loc = ND.getLocation(); Loc.isValid()) {
-        DiagFunc(Loc, PDiag(diag::note_template_param_here)
-                          << ND.getSourceRange());
-        break;
-      }
-      DiagFunc(SourceLocation(), PDiag(diag::note_template_param_external)
-                                     << toTerseString(ND).str());
-      break;
-    }
     }
   }
 }
@@ -1316,7 +1300,6 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DefaultTemplateArgumentChecking:
     case CodeSynthesisContext::RewritingOperatorAsSpaceship:
     case CodeSynthesisContext::PartialOrderingTTP:
-    case CodeSynthesisContext::CheckTemplateParameter:
       // A default template argument instantiation and substitution into
       // template parameters with arguments for prior parameters may or may
       // not be a SFINAE context; look further up the stack.
@@ -1591,6 +1574,8 @@ namespace {
     TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
                                   const AlwaysInlineAttr *A);
     const CodeAlignAttr *TransformCodeAlignAttr(const CodeAlignAttr *CA);
+    const OpenACCRoutineDeclAttr *
+    TransformOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
     ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
@@ -2270,6 +2255,12 @@ TemplateInstantiator::TransformCodeAlignAttr(const CodeAlignAttr *CA) {
   Expr *TransformedExpr = getDerived().TransformExpr(CA->getAlignment()).get();
   return getSema().BuildCodeAlignAttr(*CA, TransformedExpr);
 }
+const OpenACCRoutineDeclAttr *
+TemplateInstantiator::TransformOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  llvm_unreachable("RoutineDecl should only be a declaration attribute, as it "
+                   "applies to a Function Decl (and a few places for VarDecl)");
+}
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     Decl *AssociatedDecl, const NonTypeTemplateParmDecl *parm,
@@ -2365,7 +2356,6 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmPackExpr(
 ExprResult
 TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
                                           SubstNonTypeTemplateParmExpr *E) {
-  Sema::CheckTemplateParameterRAII CTP(SemaRef, E->getParameter());
   ExprResult SubstReplacement = E->getReplacement();
   if (!isa<ConstantExpr>(SubstReplacement.get()))
     SubstReplacement = TransformExpr(E->getReplacement());

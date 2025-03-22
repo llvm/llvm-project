@@ -191,6 +191,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* consteval Unsupported */
   if (!LangOpts.CPlusPlus20 && strchr(AttributesStr.data(), 'G') != nullptr)
     return false;
+  /* C23 unsupported */
+  if (!LangOpts.C23 && BuiltinInfo.Langs == C23_LANG)
+    return false;
   return true;
 }
 

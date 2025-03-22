@@ -1030,9 +1030,7 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
    return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
-     return MI.getOpcode() == TargetOpcode::G_ADD ||
-            (MI.getOpcode() == TargetOpcode::G_OR &&
-             MI.getFlag(MachineInstr::MIFlag::Disjoint));
+     return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
   }];
 }
 

@@ -2492,6 +2492,9 @@ BaseResult Parser::ParseBaseSpecifier(Decl *ClassDecl) {
     IsVirtual = true;
   }
 
+  if (getLangOpts().HLSL && IsVirtual)
+    Diag(Tok.getLocation(), diag::err_hlsl_virtual_inheritance);
+
   CheckMisplacedCXX11Attribute(Attributes, StartLoc);
 
   // Parse the class-name.
@@ -3729,7 +3732,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(
         AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
   case tok::annot_pragma_openacc:
-    return ParseOpenACCDirectiveDecl();
+    return ParseOpenACCDirectiveDecl(AS, AccessAttrs, TagType, TagDecl);
 
   default:
     if (tok::isPragmaAnnotation(Tok.getKind())) {

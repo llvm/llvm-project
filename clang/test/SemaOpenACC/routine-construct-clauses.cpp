@@ -1,11 +1,20 @@
 // RUN: %clang_cc1 %s -fopenacc -verify
 
 void Func();
+void Func2();
 
 #pragma acc routine(Func) worker
 #pragma acc routine(Func) vector nohost
 #pragma acc routine(Func) nohost seq
 #pragma acc routine(Func) gang
+// expected-error@+2{{OpenACC 'bind' clause cannot appear more than once on a 'routine' directive}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) gang bind(a) bind(a)
+
+// expected-error@+2{{OpenACC 'bind' clause cannot appear more than once on a 'routine' directive}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine gang bind(a) bind(a)
+void DupeImplName();
 
 // Only 1 of worker, vector, seq, gang.
 // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
@@ -116,8 +125,105 @@ struct DependentT {
 #pragma acc routine(Func) gang(dim:T::Three())
 // expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
 #pragma acc routine(Func) gang(dim:T::Four())
+
+  void MemFunc();
+// expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
+#pragma acc routine(MemFunc) gang(dim:T::Four())
+
+// expected-error@+1{{argument to 'gang' clause dimension must be 1, 2, or 3: evaluated to 4}}
+#pragma acc routine gang(dim:T::Four())
+  void MemFunc2();
 };
 
 void Inst() {
   DependentT<HasFuncs> T;// expected-note{{in instantiation of}}
 }
+
+#pragma acc routine(Func) gang device_type(Inst)
+#pragma acc routine(Func) gang dtype(Inst)
+#pragma acc routine(Func) device_type(*) worker
+#pragma acc routine(Func) dtype(*) worker
+
+#pragma acc routine(Func) dtype(*) gang
+#pragma acc routine(Func) device_type(*) worker
+#pragma acc routine(Func) device_type(*) vector
+#pragma acc routine(Func) dtype(*) seq
+#pragma acc routine(Func2) seq device_type(*) bind("asdf")
+void Func6();
+#pragma acc routine(Func6) seq device_type(*) bind(WhateverElse)
+#pragma acc routine(Func) seq dtype(*) device_type(*)
+// expected-error@+2{{OpenACC clause 'nohost' may not follow a 'dtype' clause in a 'routine' construct}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) seq dtype(*) nohost
+// expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'routine' construct}}
+// expected-note@+1{{previous clause is here}}
+#pragma acc routine(Func) seq device_type(*) nohost
+
+// 2.15: a bind clause may not bind to a routine name that has a visible bind clause.
+void Func3();
+#pragma acc routine(Func3) seq bind("asdf")
+// OK: Doesn't have a bind
+#pragma acc routine(Func3) seq
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-4{{previous clause is here}}
+#pragma acc routine(Func3) seq bind("asdf")
+
+void Func4();
+// OK: Doesn't have a bind
+#pragma acc routine(Func4) seq
+#pragma acc routine(Func4) seq bind("asdf")
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-2{{previous clause is here}}
+#pragma acc routine(Func4) seq bind("asdf")
+void Func5();
+#pragma acc routine(Func5) seq bind("asdf")
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-2{{previous clause is here}}
+#pragma acc routine(Func5) seq bind("asdf")
+// OK: Doesn't have a bind
+#pragma acc routine(Func5) seq
+
+// OK, same.
+#pragma acc routine bind("asdf") seq
+void DupeBinds1();
+#pragma acc routine bind("asdf") seq
+void DupeBinds1();
+
+#pragma acc routine bind(asdf) seq
+void DupeBinds2();
+#pragma acc routine bind(asdf) seq
+void DupeBinds2();
+
+#pragma acc routine bind("asdf") seq
+void DupeBinds3();
+// expected-error@+2{{OpenACC 'bind' clause on a declaration must bind to the same name as previous bind clauses}}
+// expected-note@-3{{previous clause is here}}
+#pragma acc routine bind(asdf) seq
+void DupeBinds3();
+
+void DupeBinds4();
+#pragma acc routine(DupeBinds4) bind(asdf) seq
+// expected-error@+2{{multiple 'routine' directives with 'bind' clauses are not permitted to refer to the same function}}
+// expected-note@-2{{previous clause is here}}
+#pragma acc routine bind(asdf) seq
+void DupeBinds4();
+
+void DupeBinds4b();
+// expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
+#pragma acc routine bind(asdf) seq
+#pragma acc routine(DupeBinds4b) bind(asdf) seq
+void DupeBinds4b();
+
+#pragma acc routine bind(asdf) seq
+void DupeBinds5();
+// expected-error@+2{{OpenACC 'bind' clause on a declaration must bind to the same name as previous bind clauses}}
+// expected-note@-3{{previous clause is here}}
+#pragma acc routine bind(asdfDiff) seq
+void DupeBinds5();
+
+#pragma acc routine bind("asdf") seq
+void DupeBinds6();
+// expected-error@+2{{OpenACC 'bind' clause on a declaration must bind to the same name as previous bind clauses}}
+// expected-note@-3{{previous clause is here}}
+#pragma acc routine bind("asdfDiff") seq
+void DupeBinds6();

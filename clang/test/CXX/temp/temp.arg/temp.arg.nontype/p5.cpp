@@ -48,9 +48,9 @@ namespace pointer_to_object_parameters {
     X(int, int);
     operator int() const;
   };
-
-  template<X const *Ptr> struct A2; // expected-note 1-2{{template parameter is declared here}}
-
+  
+  template<X const *Ptr> struct A2; // expected-note 0-1{{template parameter is declared here}}
+  
   X *X_ptr; // expected-note 0-1{{declared here}}
   X an_X;
   X array_of_Xs[10];
@@ -64,7 +64,7 @@ namespace pointer_to_object_parameters {
   A2<&an_X> *a13_2;
   A2<(&an_X)> *a13_3;
 #if __cplusplus < 201103L
-  // expected-warning@-2 {{address non-type template argument cannot be surrounded by parentheses}}
+  // expected-warning@-2 {{parentheses around address non-type template argument are a C++11 extension}}
 #endif
 
   // PR6244
@@ -131,16 +131,16 @@ namespace reference_parameters {
     S3<vi> s3v;
     S3<cvi> s3cv;
   }
-
+  
   namespace PR6250 {
     template <typename T, const T &ref> void inc() {
       ref++; // expected-error{{read-only variable is not assignable}}
     }
-
+  
     template<typename T, const T &ref> void bind() {
       T &ref2 = ref; // expected-error{{drops 'const' qualifier}}
     }
-
+    
     int counter;
     void test() {
       inc<int, counter>(); // expected-note{{instantiation of}}
@@ -213,7 +213,7 @@ namespace reference_to_function {
 //        (13.4).
 namespace pointer_to_member_function {
   struct X { };
-  struct Y : X {
+  struct Y : X { 
     int f(int);
     int g(int);
     int g(float);
@@ -223,7 +223,7 @@ namespace pointer_to_member_function {
   template<int (Y::*)(int)> struct X0 {}; // expected-note 0-1{{template parameter is declared here}}
   X0<&Y::f> x0a;
   X0<&Y::g> x0b;
-  X0<&Y::h> x0c; // expected-error-re{{type 'float (pointer_to_member_function::Y::*)(float){{( __attribute__\(\(thiscall\)\))?}}' {{.*}} convert{{.*}} 'int (Y::*)(int){{( __attribute__\(\(thiscall\)\))?}}'}}
+  X0<&Y::h> x0c; // expected-error-re{{type 'float (Y::*)(float){{( __attribute__\(\(thiscall\)\))?}}' {{.*}} convert{{.*}} 'int (Y::*)(int){{( __attribute__\(\(thiscall\)\))?}}'}}
 }
 
 //     -- For a non-type template-parameter of type pointer to data member,
@@ -238,9 +238,9 @@ namespace pointer_to_member_data {
   X0<&Y::y> x0a;
   X0<&Y::x> x0b;
 #if __cplusplus <= 201402L
-  // expected-error@-2 {{non-type template argument of type 'int pointer_to_member_data::X::*' cannot be converted to a value of type 'int Y::*'}}
+  // expected-error@-2 {{non-type template argument of type 'int Y::*' (aka 'int X::*') cannot be converted to a value of type 'int Y::*'}}
 #else
-  // expected-error@-4 {{conversion from 'int pointer_to_member_data::X::*' to 'int Y::*' is not allowed in a converted constant expression}}
+  // expected-error@-4 {{conversion from 'int Y::*' (aka 'int X::*') to 'int Y::*' is not allowed in a converted constant expression}}
 #endif
 
   // Test qualification conversions

@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANHELPERS_H
 
 #include "VPlanAnalysis.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -360,6 +361,9 @@ struct VPTransformState {
 
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
+
+  /// VPlan-based dominator tree.
+  VPDominatorTree VPDT;
 };
 
 /// Struct to hold various analysis needed for cost computations.

@@ -11366,12 +11366,12 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
            II = BB->rbegin(), IE = BB->rend(); II != IE; ++II) {
       if (!II->isCall()) continue;
 
-      DenseMap<unsigned, bool> DefRegs;
+      DenseSet<unsigned> DefRegs;
       for (MachineInstr::mop_iterator
              OI = II->operands_begin(), OE = II->operands_end();
            OI != OE; ++OI) {
         if (!OI->isReg()) continue;
-        DefRegs[OI->getReg()] = true;
+        DefRegs.insert(OI->getReg());
       }
 
       MachineInstrBuilder MIB(*MF, &*II);
@@ -11386,7 +11386,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
           continue;
         if (!Subtarget->isThumb() && !ARM::GPRRegClass.contains(Reg))
           continue;
-        if (!DefRegs[Reg])
+        if (!DefRegs.contains(Reg))
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
 
@@ -19691,7 +19691,7 @@ bool ARMTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 /// immediate into a register.
 bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   // Same encoding for add/sub, just flip the sign.
-  int64_t AbsImm = std::abs(Imm);
+  uint64_t AbsImm = AbsoluteValue(Imm);
   if (!Subtarget->isThumb())
     return ARM_AM::getSOImmVal(AbsImm) != -1;
   if (Subtarget->isThumb2())

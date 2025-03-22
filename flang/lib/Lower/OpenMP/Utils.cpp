@@ -143,10 +143,10 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
       varType = mlir::TypeAttr::get(seqType.getEleTy());
 
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
+      loc, retTy, baseAddr, varType,
       builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      mapperId,
       builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
+      varPtrPtr, members, membersIndex, bounds, mapperId,
       builder.getStringAttr(name), builder.getBoolAttr(partialMap));
   return op;
 }
@@ -303,7 +303,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
   /// Checks if an omp::Object is an array expression with a subscript, e.g.
   /// array(1,2).
   auto isArrayExprWithSubscript = [](omp::Object obj) {
-    if (auto maybeRef = evaluate::ExtractDataRef(*obj.ref())) {
+    if (auto maybeRef = evaluate::ExtractDataRef(obj.ref())) {
       evaluate::DataRef ref = *maybeRef;
       if (auto *arr = std::get_if<evaluate::ArrayRef>(&ref.u))
         return !arr->subscript().empty();
@@ -454,7 +454,7 @@ getComponentObject(std::optional<Object> object,
   if (!object)
     return std::nullopt;
 
-  auto ref = evaluate::ExtractDataRef(*object.value().ref());
+  auto ref = evaluate::ExtractDataRef(object.value().ref());
   if (!ref)
     return std::nullopt;
 
@@ -551,7 +551,7 @@ void insertChildMapInfoIntoParent(
       // it allows this to work with enter and exit without causing MLIR
       // verification issues. The more appropriate thing may be to take
       // the "main" map type clause from the directive being used.
-      uint64_t mapType = indices.second.memberMap[0].getMapType().value_or(0);
+      uint64_t mapType = indices.second.memberMap[0].getMapType();
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());

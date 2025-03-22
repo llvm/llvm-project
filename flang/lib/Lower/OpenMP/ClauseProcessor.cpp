@@ -849,14 +849,34 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
-    mlir::omp::HasDeviceAddrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const {
-  return findRepeatableClause<omp::clause::HasDeviceAddr>(
-      [&](const omp::clause::HasDeviceAddr &devAddrClause,
-          const parser::CharBlock &) {
-        addUseDeviceClause(converter, devAddrClause.v, result.hasDeviceAddrVars,
-                           isDeviceSyms);
+    lower::StatementContext &stmtCtx, mlir::omp::HasDeviceAddrClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const {
+  // For HAS_DEVICE_ADDR objects, implicitly map the top-level entities.
+  // Their address (or the whole descriptor, if the entity had one) will be
+  // passed to the target region.
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
+  bool clauseFound = findRepeatableClause<omp::clause::HasDeviceAddr>(
+      [&](const omp::clause::HasDeviceAddr &clause,
+          const parser::CharBlock &source) {
+        mlir::Location location = converter.genLocation(source);
+        llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+        omp::ObjectList baseObjects;
+        llvm::transform(clause.v, std::back_inserter(baseObjects),
+                        [&](const omp::Object &object) {
+                          if (auto maybeBase = getBaseObject(object, semaCtx))
+                            return *maybeBase;
+                          return object;
+                        });
+        processMapObjects(stmtCtx, location, baseObjects, mapTypeBits,
+                          parentMemberIndices, result.hasDeviceAddrVars,
+                          hasDeviceSyms);
       });
+
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
+                               result.hasDeviceAddrVars, hasDeviceSyms);
+  return clauseFound;
 }
 
 bool ClauseProcessor::processIf(
@@ -908,8 +928,41 @@ void ClauseProcessor::processMapObjects(
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  auto getDefaultMapperID = [&](const omp::Object &object,
+                                std::string &mapperIdName) {
+    if (!mlir::isa<mlir::omp::DeclareMapperOp>(
+            firOpBuilder.getRegion().getParentOp())) {
+      const semantics::DerivedTypeSpec *typeSpec = nullptr;
+
+      if (object.sym()->owner().IsDerivedType())
+        typeSpec = object.sym()->owner().derivedTypeSpec();
+      else if (object.sym()->GetType() &&
+               object.sym()->GetType()->category() ==
+                   semantics::DeclTypeSpec::TypeDerived)
+        typeSpec = &object.sym()->GetType()->derivedTypeSpec();
+
+      if (typeSpec) {
+        mapperIdName = typeSpec->name().ToString() + ".default";
+        mapperIdName =
+            converter.mangleName(mapperIdName, *typeSpec->GetScope());
+      }
+    }
+  };
+
+  // Create the mapper symbol from its name, if specified.
   mlir::FlatSymbolRefAttr mapperId;
-  std::string mapperIdName = mapperIdNameRef.str();
+  if (!mapperIdNameRef.empty() && !objects.empty() &&
+      mapperIdNameRef != "__implicit_mapper") {
+    std::string mapperIdName = mapperIdNameRef.str();
+    const omp::Object &object = objects.front();
+    if (mapperIdNameRef == "default")
+      getDefaultMapperID(object, mapperIdName);
+    assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
+           "mapper not found");
+    mapperId =
+        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
+  }
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -942,20 +995,15 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
-    if (!mapperIdName.empty()) {
-      if (mapperIdName == "default") {
-        auto &typeSpec = object.sym()->owner().IsDerivedType()
-                             ? *object.sym()->owner().derivedTypeSpec()
-                             : object.sym()->GetType()->derivedTypeSpec();
-        mapperIdName = typeSpec.name().ToString() + ".default";
-        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
-      }
-      assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
-             "mapper not found");
-      mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                              mapperIdName);
-      mapperIdName.clear();
+    if (mapperIdNameRef == "__implicit_mapper") {
+      std::string mapperIdName;
+      getDefaultMapperID(object, mapperIdName);
+      mapperId = converter.getModuleOp().lookupSymbol(mapperIdName)
+                     ? mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                                    mapperIdName)
+                     : mlir::FlatSymbolRefAttr();
     }
+
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
     // types to optimise
@@ -1001,7 +1049,7 @@ bool ClauseProcessor::processMap(
     const auto &[mapType, typeMods, mappers, iterator, objects] = clause.t;
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-    std::string mapperIdName;
+    std::string mapperIdName = "__implicit_mapper";
     // If the map type is specified, then process it else Tofrom is the
     // default.
     Map::MapType type = mapType.value_or(Map::MapType::Tofrom);
@@ -1029,15 +1077,15 @@ bool ClauseProcessor::processMap(
     }
 
     if (typeMods) {
+      // TODO: Still requires "self" modifier, an OpenMP 6.0+ feature
       if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Always))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
-      // Diagnose unimplemented map-type-modifiers.
-      if (llvm::any_of(*typeMods, [](Map::MapTypeModifier m) {
-            return m != Map::MapTypeModifier::Always;
-          })) {
-        TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
-                              " are not implemented yet");
-      }
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Present))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Close))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::OmpxHold))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
     }
 
     if (iterator) {
@@ -1073,19 +1121,20 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[expectation, mapper, iterator, objects] = clause.t;
-    // TODO Support motion modifiers: present, mapper, iterator.
-    if (expectation) {
-      TODO(clauseLocation, "PRESENT modifier is not supported yet");
-    } else if (mapper) {
+
+    // TODO Support motion modifiers: mapper, iterator.
+    if (mapper) {
       TODO(clauseLocation, "Mapper modifier is not supported yet");
     } else if (iterator) {
       TODO(clauseLocation, "Iterator modifier is not supported yet");
     }
-    constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-
+    if (expectation && *expectation == omp::clause::To::Expectation::Present)
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapSymbols);
   };

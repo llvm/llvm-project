@@ -380,11 +380,22 @@ llvm::LogicalResult fir::AllocMemOp::verify() {
 
 // CHARACTERs and derived types with LEN PARAMETERs are dependent types that
 // require runtime values to fully define the type of an object.
-static bool validTypeParams(mlir::Type dynTy, mlir::ValueRange typeParams) {
+static bool validTypeParams(mlir::Type dynTy, mlir::ValueRange typeParams,
+                            bool allowParamsForBox = false) {
   dynTy = fir::unwrapAllRefAndSeqType(dynTy);
-  // A box value will contain type parameter values itself.
-  if (mlir::isa<fir::BoxType>(dynTy))
-    return typeParams.size() == 0;
+  if (mlir::isa<fir::BaseBoxType>(dynTy)) {
+    // A box value will contain type parameter values itself.
+    if (!allowParamsForBox)
+      return typeParams.size() == 0;
+
+    // A boxed value may have no length parameters, when the lengths
+    // are assumed. If dynamic lengths are used, then proceed
+    // to the verification below.
+    if (typeParams.size() == 0)
+      return true;
+
+    dynTy = fir::getFortranElementType(dynTy);
+  }
   // Derived type must have all type parameters satisfied.
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(dynTy))
     return typeParams.size() == recTy.getNumLenParams();
@@ -3941,6 +3952,26 @@ void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 }
 
 //===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+void fir::CopyOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::Value source, mlir::Value destination,
+                        bool noOverlap) {
+  mlir::UnitAttr noOverlapAttr =
+      noOverlap ? builder.getUnitAttr() : mlir::UnitAttr{};
+  build(builder, result, source, destination, noOverlapAttr);
+}
+
+llvm::LogicalResult fir::CopyOp::verify() {
+  mlir::Type sourceType = fir::unwrapRefType(getSource().getType());
+  mlir::Type destinationType = fir::unwrapRefType(getDestination().getType());
+  if (sourceType != destinationType)
+    return emitOpError("source and destination must have the same value type");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // StringLitOp
 //===----------------------------------------------------------------------===//
 
@@ -4539,6 +4570,349 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+//===----------------------------------------------------------------------===//
+// PackArrayOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::PackArrayOp::verify() {
+  mlir::Type arrayType = getArray().getType();
+  if (!validTypeParams(arrayType, getTypeparams(), /*allowParamsForBox=*/true))
+    return emitOpError("invalid type parameters");
+
+  if (getInnermost() && fir::getBoxRank(arrayType) == 1)
+    return emitOpError(
+        "'innermost' is invalid for 1D arrays, use 'whole' instead");
+  return mlir::success();
+}
+
+void fir::PackArrayOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  if (getStack())
+    effects.emplace_back(
+        mlir::MemoryEffects::Allocate::get(),
+        mlir::SideEffects::AutomaticAllocationScopeResource::get());
+  else
+    effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
+                         mlir::SideEffects::DefaultResource::get());
+
+  if (!getNoCopy())
+    effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+static mlir::ParseResult
+parsePackArrayConstraints(mlir::OpAsmParser &parser, mlir::IntegerAttr &maxSize,
+                          mlir::IntegerAttr &maxElementSize,
+                          mlir::IntegerAttr &minStride) {
+  mlir::OperationName opName = mlir::OperationName(
+      fir::PackArrayOp::getOperationName(), parser.getContext());
+  struct {
+    llvm::StringRef name;
+    mlir::IntegerAttr &ref;
+  } attributes[] = {
+      {fir::PackArrayOp::getMaxSizeAttrName(opName), maxSize},
+      {fir::PackArrayOp::getMaxElementSizeAttrName(opName), maxElementSize},
+      {fir::PackArrayOp::getMinStrideAttrName(opName), minStride}};
+
+  mlir::NamedAttrList parsedAttrs;
+  if (succeeded(parser.parseOptionalAttrDict(parsedAttrs))) {
+    for (auto parsedAttr : parsedAttrs) {
+      for (auto opAttr : attributes) {
+        if (parsedAttr.getName() == opAttr.name)
+          opAttr.ref = mlir::cast<mlir::IntegerAttr>(parsedAttr.getValue());
+      }
+    }
+    return mlir::success();
+  }
+  return mlir::failure();
+}
+
+static void printPackArrayConstraints(mlir::OpAsmPrinter &p,
+                                      fir::PackArrayOp &op,
+                                      const mlir::IntegerAttr &maxSize,
+                                      const mlir::IntegerAttr &maxElementSize,
+                                      const mlir::IntegerAttr &minStride) {
+  llvm::SmallVector<mlir::NamedAttribute> attributes;
+  if (maxSize)
+    attributes.emplace_back(op.getMaxSizeAttrName(), maxSize);
+  if (maxElementSize)
+    attributes.emplace_back(op.getMaxElementSizeAttrName(), maxElementSize);
+  if (minStride)
+    attributes.emplace_back(op.getMinStrideAttrName(), minStride);
+
+  p.printOptionalAttrDict(attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// UnpackArrayOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::UnpackArrayOp::verify() {
+  if (auto packOp = getTemp().getDefiningOp<fir::PackArrayOp>())
+    if (getStack() != packOp.getStack())
+      return emitOpError() << "the pack operation uses different memory for "
+                              "the temporary (stack vs heap): "
+                           << *packOp.getOperation() << "\n";
+  return mlir::success();
+}
+
+void fir::UnpackArrayOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  if (getStack())
+    effects.emplace_back(
+        mlir::MemoryEffects::Free::get(),
+        mlir::SideEffects::AutomaticAllocationScopeResource::get());
+  else
+    effects.emplace_back(mlir::MemoryEffects::Free::get(),
+                         mlir::SideEffects::DefaultResource::get());
+
+  if (!getNoCopy())
+    effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
+// IsContiguousBoxOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct SimplifyIsContiguousBoxOp
+    : public mlir::OpRewritePattern<fir::IsContiguousBoxOp> {
+  using mlir::OpRewritePattern<fir::IsContiguousBoxOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::IsContiguousBoxOp op,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+} // namespace
+
+mlir::LogicalResult SimplifyIsContiguousBoxOp::matchAndRewrite(
+    fir::IsContiguousBoxOp op, mlir::PatternRewriter &rewriter) const {
+  auto boxType = mlir::cast<fir::BaseBoxType>(op.getBox().getType());
+  // Nothing to do for assumed-rank arrays and !fir.box<none>.
+  if (boxType.isAssumedRank() || fir::isBoxNone(boxType))
+    return mlir::failure();
+
+  if (fir::getBoxRank(boxType) == 0) {
+    // Scalars are always contiguous.
+    mlir::Type i1Type = rewriter.getI1Type();
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, i1Type, rewriter.getIntegerAttr(i1Type, 1));
+    return mlir::success();
+  }
+
+  // TODO: support more patterns, e.g. a result of fir.embox without
+  // the slice is contiguous. We can add fir::isSimplyContiguous(box)
+  // that walks def-use to figure it out.
+  return mlir::failure();
+}
+
+void fir::IsContiguousBoxOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<SimplifyIsContiguousBoxOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// BoxTotalElementsOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct SimplifyBoxTotalElementsOp
+    : public mlir::OpRewritePattern<fir::BoxTotalElementsOp> {
+  using mlir::OpRewritePattern<fir::BoxTotalElementsOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxTotalElementsOp op,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+} // namespace
+
+mlir::LogicalResult SimplifyBoxTotalElementsOp::matchAndRewrite(
+    fir::BoxTotalElementsOp op, mlir::PatternRewriter &rewriter) const {
+  auto boxType = mlir::cast<fir::BaseBoxType>(op.getBox().getType());
+  // Nothing to do for assumed-rank arrays and !fir.box<none>.
+  if (boxType.isAssumedRank() || fir::isBoxNone(boxType))
+    return mlir::failure();
+
+  if (fir::getBoxRank(boxType) == 0) {
+    // Scalar: 1 element.
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, op.getType(), rewriter.getIntegerAttr(op.getType(), 1));
+    return mlir::success();
+  }
+
+  // TODO: support more cases, e.g. !fir.box<!fir.array<10xi32>>.
+  return mlir::failure();
+}
+
+void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<SimplifyBoxTotalElementsOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// DoConcurrentOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::DoConcurrentOp::verify() {
+  mlir::Block *body = getBody();
+
+  if (body->empty())
+    return emitOpError("body cannot be empty");
+
+  if (!body->mightHaveTerminator() ||
+      !mlir::isa<fir::DoConcurrentLoopOp>(body->getTerminator()))
+    return emitOpError("must be terminated by 'fir.do_concurrent.loop'");
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// DoConcurrentLoopOp
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
+                                                 mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  // Parse an opening `(` followed by induction variables followed by `)`
+  llvm::SmallVector<mlir::OpAsmParser::Argument, 4> ivs;
+  if (parser.parseArgumentList(ivs, mlir::OpAsmParser::Delimiter::Paren))
+    return mlir::failure();
+
+  // Parse loop bounds.
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> lower;
+  if (parser.parseEqual() ||
+      parser.parseOperandList(lower, ivs.size(),
+                              mlir::OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(lower, builder.getIndexType(), result.operands))
+    return mlir::failure();
+
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> upper;
+  if (parser.parseKeyword("to") ||
+      parser.parseOperandList(upper, ivs.size(),
+                              mlir::OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(upper, builder.getIndexType(), result.operands))
+    return mlir::failure();
+
+  // Parse step values.
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> steps;
+  if (parser.parseKeyword("step") ||
+      parser.parseOperandList(steps, ivs.size(),
+                              mlir::OpAsmParser::Delimiter::Paren) ||
+      parser.resolveOperands(steps, builder.getIndexType(), result.operands))
+    return mlir::failure();
+
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> reduceOperands;
+  llvm::SmallVector<mlir::Type> reduceArgTypes;
+  if (succeeded(parser.parseOptionalKeyword("reduce"))) {
+    // Parse reduction attributes and variables.
+    llvm::SmallVector<fir::ReduceAttr> attributes;
+    if (failed(parser.parseCommaSeparatedList(
+            mlir::AsmParser::Delimiter::Paren, [&]() {
+              if (parser.parseAttribute(attributes.emplace_back()) ||
+                  parser.parseArrow() ||
+                  parser.parseOperand(reduceOperands.emplace_back()) ||
+                  parser.parseColonType(reduceArgTypes.emplace_back()))
+                return mlir::failure();
+              return mlir::success();
+            })))
+      return mlir::failure();
+    // Resolve input operands.
+    for (auto operand_type : llvm::zip(reduceOperands, reduceArgTypes))
+      if (parser.resolveOperand(std::get<0>(operand_type),
+                                std::get<1>(operand_type), result.operands))
+        return mlir::failure();
+    llvm::SmallVector<mlir::Attribute> arrayAttr(attributes.begin(),
+                                                 attributes.end());
+    result.addAttribute(getReduceAttrsAttrName(result.name),
+                        builder.getArrayAttr(arrayAttr));
+  }
+
+  // Now parse the body.
+  mlir::Region *body = result.addRegion();
+  for (auto &iv : ivs)
+    iv.type = builder.getIndexType();
+  if (parser.parseRegion(*body, ivs))
+    return mlir::failure();
+
+  // Set `operandSegmentSizes` attribute.
+  result.addAttribute(DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {static_cast<int32_t>(lower.size()),
+                           static_cast<int32_t>(upper.size()),
+                           static_cast<int32_t>(steps.size()),
+                           static_cast<int32_t>(reduceOperands.size())}));
+
+  // Parse attributes.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return mlir::failure();
+
+  return mlir::success();
+}
+
+void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
+  p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
+    << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
+
+  if (!getReduceOperands().empty()) {
+    p << " reduce(";
+    auto attrs = getReduceAttrsAttr();
+    auto operands = getReduceOperands();
+    llvm::interleaveComma(llvm::zip(attrs, operands), p, [&](auto it) {
+      p << std::get<0>(it) << " -> " << std::get<1>(it) << " : "
+        << std::get<1>(it).getType();
+    });
+    p << ')';
+  }
+
+  p << ' ';
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
+                       DoConcurrentLoopOp::getReduceAttrsAttrName()});
+}
+
+llvm::SmallVector<mlir::Region *> fir::DoConcurrentLoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
+
+llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
+  mlir::Operation::operand_range lbValues = getLowerBound();
+  mlir::Operation::operand_range ubValues = getUpperBound();
+  mlir::Operation::operand_range stepValues = getStep();
+
+  if (lbValues.empty())
+    return emitOpError(
+        "needs at least one tuple element for lowerBound, upperBound and step");
+
+  if (lbValues.size() != ubValues.size() ||
+      ubValues.size() != stepValues.size())
+    return emitOpError("different number of tuple elements for lowerBound, "
+                       "upperBound or step");
+
+  // Check that the body defines the same number of block arguments as the
+  // number of tuple elements in step.
+  mlir::Block *body = getBody();
+  if (body->getNumArguments() != stepValues.size())
+    return emitOpError() << "expects the same number of induction variables: "
+                         << body->getNumArguments()
+                         << " as bound and step values: " << stepValues.size();
+  for (auto arg : body->getArguments())
+    if (!arg.getType().isIndex())
+      return emitOpError(
+          "expects arguments for the induction variable to be of index type");
+
+  auto reduceAttrs = getReduceAttrsAttr();
+  if (getNumReduceOperands() != (reduceAttrs ? reduceAttrs.size() : 0))
+    return emitOpError(
+        "mismatch in number of reduction variables and reduction attributes");
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

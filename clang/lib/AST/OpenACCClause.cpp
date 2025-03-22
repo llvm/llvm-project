@@ -20,7 +20,8 @@ using namespace clang;
 bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
   return OpenACCDeviceTypeClause::classof(C) ||
          OpenACCClauseWithCondition::classof(C) ||
-         OpenACCClauseWithExprs::classof(C) || OpenACCSelfClause::classof(C);
+         OpenACCBindClause::classof(C) || OpenACCClauseWithExprs::classof(C) ||
+         OpenACCSelfClause::classof(C);
 }
 bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
   return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
@@ -609,6 +610,36 @@ OpenACCIfPresentClause *OpenACCIfPresentClause::Create(const ASTContext &C,
   return new (Mem) OpenACCIfPresentClause(BeginLoc, EndLoc);
 }
 
+OpenACCBindClause *OpenACCBindClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             const StringLiteral *SL,
+                                             SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCBindClause), alignof(OpenACCBindClause));
+  return new (Mem) OpenACCBindClause(BeginLoc, LParenLoc, SL, EndLoc);
+}
+
+OpenACCBindClause *OpenACCBindClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             const IdentifierInfo *ID,
+                                             SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCBindClause), alignof(OpenACCBindClause));
+  return new (Mem) OpenACCBindClause(BeginLoc, LParenLoc, ID, EndLoc);
+}
+
+bool clang::operator==(const OpenACCBindClause &LHS,
+                       const OpenACCBindClause &RHS) {
+  if (LHS.isStringArgument() != RHS.isStringArgument())
+    return false;
+
+  if (LHS.isStringArgument())
+    return LHS.getStringArgument()->getString() ==
+           RHS.getStringArgument()->getString();
+  return LHS.getIdentifierArgument()->getName() ==
+         RHS.getIdentifierArgument()->getName();
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -935,4 +966,13 @@ void OpenACCClausePrinter::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 void OpenACCClausePrinter::VisitIfPresentClause(
     const OpenACCIfPresentClause &C) {
   OS << "if_present";
+}
+
+void OpenACCClausePrinter::VisitBindClause(const OpenACCBindClause &C) {
+  OS << "bind(";
+  if (C.isStringArgument())
+    OS << '"' << C.getStringArgument()->getString() << '"';
+  else
+    OS << C.getIdentifierArgument()->getName();
+  OS << ")";
 }

@@ -75,6 +75,7 @@ define i32 @bar(i32 %t) !guid !1 {
 ;--- profile.yaml
 Contexts:
   - Guid: 1234
+    TotalRootEntryCount: 100
     Counters: [10, 4]
     Callsites:  -
                   - Guid: 5678

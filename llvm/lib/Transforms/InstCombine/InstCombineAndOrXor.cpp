@@ -3120,15 +3120,16 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
     return ConcatIntrinsicCalls(Intrinsic::bitreverse, UpperBRev, LowerBRev);
 
   // iX ext split: extending or(zext(x),shl(zext(y),bw/2) pattern
-  // to consume sext/ashr: or(zext(sext(x)),shl(zext(sext(ashr(x))),bw/2)
+  // to consume sext/ashr:
+  // or(zext(sext(x)),shl(zext(sext(ashr(x,xbw-1))),bw/2)
+  // or(zext(x),shl(zext(ashr(x,xbw-1)),bw/2)
   Value *X;
-  if (match(LowerSrc, m_SExt(m_Value(X))) &&
+  if (match(LowerSrc, m_SExtOrSelf(m_Value(X))) &&
       match(UpperSrc,
-            m_SExt(m_AShr(
+            m_SExtOrSelf(m_AShr(
                 m_Specific(X),
-                m_SpecificInt(X->getType()->getScalarSizeInBits() - 1))))) {
+                m_SpecificInt(X->getType()->getScalarSizeInBits() - 1)))))
     return Builder.CreateSExt(X, Ty);
-  }
 
   return nullptr;
 }

@@ -46,6 +46,13 @@ bool isTopLevelValue(Value value, Region *region);
 /// trait `AffineScope`; `nullptr` if there is no such region.
 Region *getAffineScope(Operation *op);
 
+/// Returns the closest region enclosing `op` that is held by a non-affine
+/// operation; `nullptr` if there is no such region. This method is meant to
+/// be used by affine analysis methods (e.g. dependence analysis) which are
+/// only meaningful when performed among/between operations from the same
+/// analysis scope.
+Region *getAffineAnalysisScope(Operation *op);
+
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination
 /// memref need not be of the same dimensionality, but need to have the same

@@ -270,8 +270,8 @@ public:
       return rewriter.notifyMatchFailure(
           op, "weight zero point cannot be statically determined");
 
-    int64_t inputZpVal = *maybeIZp;
-    int64_t weightZpVal = *maybeWZp;
+    const int64_t inputZpVal = *maybeIZp;
+    const int64_t weightZpVal = *maybeWZp;
 
     if (op.verifyInputZeroPoint(inputZpVal).failed())
       return rewriter.notifyMatchFailure(
@@ -466,8 +466,8 @@ public:
       return rewriter.notifyMatchFailure(
           op, "weight zero point cannot be statically determined");
 
-    int64_t inputZpVal = *maybeIZp;
-    int64_t weightZpVal = *maybeWZp;
+    const int64_t inputZpVal = *maybeIZp;
+    const int64_t weightZpVal = *maybeWZp;
 
     if (op.verifyInputZeroPoint(inputZpVal).failed())
       return rewriter.notifyMatchFailure(
@@ -477,21 +477,27 @@ public:
       return rewriter.notifyMatchFailure(
           op, "weight zero point must be zero for non-int8 integer types");
 
+    bool hasNullZps = (inputZpVal == 0) && (weightZpVal == 0);
     auto weightShape = weightTy.getShape();
     auto resultShape = resultTy.getShape();
 
     // Apply padding as necessary.
-    int64_t intMin = APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
-                         .getSExtValue();
-    int64_t intMax = APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
-                         .getSExtValue();
+    TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
+    if (!hasNullZps) {
+      int64_t intMin =
+          APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
+      int64_t intMax =
+          APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
+              .getSExtValue();
 
-    if (inputZpVal < intMin || inputZpVal > intMax)
-      return rewriter.notifyMatchFailure(
-          op, "tosa.depthwise_conv op quantization has zp outside of input "
-              "range");
+      if (inputZpVal < intMin || inputZpVal > intMax)
+        return rewriter.notifyMatchFailure(
+            op, "tosa.depthwise_conv op quantization has zp outside of input "
+                "range");
 
-    TypedAttr zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
+      zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
+    }
 
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
@@ -530,7 +536,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
-    if (inputZpVal == 0 && weightZpVal == 0) {
+    if (hasNullZps) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
@@ -620,15 +626,38 @@ public:
                            .create<linalg::FillOp>(loc, ValueRange{zero},
                                                    ValueRange{emptyTensor})
                            .result();
-    if (!op.getAZp() && !op.getBZp()) {
+
+    FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
+    FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
+    if (failed(maybeAZp))
+      return rewriter.notifyMatchFailure(
+          op, "input a zero point cannot be statically determined");
+    if (failed(maybeBZp))
+      return rewriter.notifyMatchFailure(
+          op, "input b zero point cannot be statically determined");
+
+    const int64_t aZpVal = *maybeAZp;
+    const int64_t bZpVal = *maybeBZp;
+
+    if (op.verifyAZeroPoint(aZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input a zero point must be zero for non-int8 integer types");
+
+    if (op.verifyBZeroPoint(bZpVal).failed())
+      return rewriter.notifyMatchFailure(
+          op, "input b zero point must be zero for non-int8 integer types");
+
+    if (aZpVal == 0 && bZpVal == 0) {
       rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
           op, TypeRange{op.getType()},
           ValueRange{adaptor.getA(), adaptor.getB()}, ValueRange{zeroTensor});
       return success();
     }
 
-    auto aZp = rewriter.create<arith::ConstantOp>(loc, op.getAZpAttr());
-    auto bZp = rewriter.create<arith::ConstantOp>(loc, op.getBZpAttr());
+    auto aZp = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(aZpVal));
+    auto bZp = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(bZpVal));
     rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
         op, TypeRange{op.getType()},
         ValueRange{adaptor.getA(), adaptor.getB(), aZp, bZp}, zeroTensor);
@@ -833,8 +862,8 @@ public:
       return rewriter.notifyMatchFailure(
           op, "output zero point could not be statically determined");
 
-    int64_t inputZpVal = *maybeIZp;
-    int64_t outputZpVal = *maybeOZp;
+    const int64_t inputZpVal = *maybeIZp;
+    const int64_t outputZpVal = *maybeOZp;
 
     // Apply padding as necessary.
     llvm::SmallVector<int64_t> pad;
@@ -1002,9 +1031,9 @@ public:
 
             auto scaled =
                 rewriter
-                    .create<tosa::ApplyScaleOp>(loc, rewriter.getI32Type(),
-                                                poolVal, multiplier, shift,
-                                                rewriter.getBoolAttr(false))
+                    .create<tosa::ApplyScaleOp>(
+                        loc, rewriter.getI32Type(), poolVal, multiplier, shift,
+                        rewriter.getStringAttr("SINGLE_ROUND"))
                     .getResult();
 
             // If we have quantization information we need to apply output

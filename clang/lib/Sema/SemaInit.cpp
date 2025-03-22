@@ -106,6 +106,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
       return SIF_None;
     [[fallthrough]];
   case StringLiteralKind::Ordinary:
+  case StringLiteralKind::Binary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
     if (ElemTy->isCharType())
@@ -7271,7 +7272,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
 
 void InitializationSequence::PrintInitLocationNote(Sema &S,
                                               const InitializedEntity &Entity) {
-  if (Entity.isParameterKind() && Entity.getDecl()) {
+  if (Entity.isParamOrTemplateParamKind() && Entity.getDecl()) {
     if (Entity.getDecl()->getLocation().isInvalid())
       return;
 
@@ -7280,8 +7281,9 @@ void InitializationSequence::PrintInitLocationNote(Sema &S,
         << Entity.getDecl()->getDeclName();
     else
       S.Diag(Entity.getDecl()->getLocation(), diag::note_parameter_here);
-  } else if (Entity.getKind() == InitializedEntity::EK_RelatedResult &&
-             Entity.getMethodDecl())
+  }
+  else if (Entity.getKind() == InitializedEntity::EK_RelatedResult &&
+           Entity.getMethodDecl())
     S.Diag(Entity.getMethodDecl()->getLocation(),
            diag::note_method_return_type_change)
       << Entity.getMethodDecl()->getDeclName();

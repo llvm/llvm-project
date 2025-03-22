@@ -98,6 +98,7 @@ define i32 @b() !guid !2 {
 ;--- profile.yaml
 Contexts:
   - Guid: 1000
+    TotalRootEntryCount: 24
     Counters: [10, 2, 8]
     Callsites:  -
                   - Guid: 1001
@@ -115,6 +116,7 @@ Contexts:
 
 Contexts:
   - Guid:            1000
+    TotalRootEntryCount: 24
     Counters:        [ 10, 2, 8, 100 ]
     Callsites:
       - [  ]
