@@ -9,9 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
