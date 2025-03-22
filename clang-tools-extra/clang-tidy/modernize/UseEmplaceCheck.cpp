@@ -98,8 +98,8 @@ auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
 
 // Matches member call expressions of the named method on the listed container
 // types.
-auto cxxMemberCallExprOnContainer(
-    StringRef MethodName, llvm::ArrayRef<StringRef> ContainerNames) {
+auto cxxMemberCallExprOnContainer(StringRef MethodName,
+                                  llvm::ArrayRef<StringRef> ContainerNames) {
   return cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName(MethodName))),
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
@@ -174,19 +174,19 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // passed pointer because smart pointer won't be constructed
   // (and destructed) as in push_back case.
   auto IsCtorOfSmartPtr =
-      hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(SmartPointers))));
+      cxxConstructorDecl(ofClass(hasAnyName(SmartPointers)));
 
   // Bitfields binds only to consts and emplace_back take it by universal ref.
-  auto BitFieldAsArgument = hasAnyArgument(
-      ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(isBitField())))));
+  auto BitFieldAsArgument =
+      ignoringImplicit(memberExpr(hasDeclaration(fieldDecl(isBitField()))));
 
   // Initializer list can't be passed to universal reference.
-  auto InitializerListAsArgument = hasAnyArgument(
+  auto InitializerListAsArgument =
       ignoringImplicit(allOf(cxxConstructExpr(isListInitialization()),
-                             unless(cxxTemporaryObjectExpr()))));
+                             unless(cxxTemporaryObjectExpr())));
 
   // We could have leak of resource.
-  auto NewExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
+  auto NewExprAsArgument = ignoringImplicit(cxxNewExpr());
   // We would call another constructor.
   auto ConstructingDerived =
       hasParent(implicitCastExpr(hasCastKind(CastKind::CK_DerivedToBase)));
@@ -202,19 +202,36 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // overloaded functions and template names.
   auto SoughtConstructExpr =
       cxxConstructExpr(
-          unless(anyOf(IsCtorOfSmartPtr, HasInitList, BitFieldAsArgument,
-                       InitializerListAsArgument, NewExprAsArgument,
-                       ConstructingDerived, IsPrivateOrProtectedCtor)))
+          unless(anyOf(hasDeclaration(IsCtorOfSmartPtr), HasInitList,
+                       hasAnyArgument(BitFieldAsArgument),
+                       hasAnyArgument(InitializerListAsArgument),
+                       hasAnyArgument(NewExprAsArgument), ConstructingDerived,
+                       IsPrivateOrProtectedCtor)))
           .bind("ctor");
-  auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
+
+  auto IsPrimitiveType = hasType(builtinType());
+
+  auto AggregateInitExpr =
+      getLangOpts().CPlusPlus20
+          ? initListExpr(unless(anyOf(HasInitList, has(IsCtorOfSmartPtr),
+                                      has(BitFieldAsArgument),
+                                      has(InitializerListAsArgument),
+                                      has(NewExprAsArgument), IsPrimitiveType)))
+                .bind("agg_init")
+          : unless(anything());
+
+  auto HasConstructExpr =
+      has(ignoringImplicit(anyOf(SoughtConstructExpr, AggregateInitExpr)));
 
   // allow for T{} to be replaced, even if no CTOR is declared
   auto HasConstructInitListExpr = has(initListExpr(
-      initCountLeq(1), anyOf(allOf(has(SoughtConstructExpr),
-                                   has(cxxConstructExpr(argumentCountIs(0)))),
-                             has(cxxBindTemporaryExpr(
-                                 has(SoughtConstructExpr),
-                                 has(cxxConstructExpr(argumentCountIs(0))))))));
+      initCountLeq(1),
+      anyOf(allOf(has(SoughtConstructExpr),
+                  has(cxxConstructExpr(argumentCountIs(0)))),
+            has(cxxBindTemporaryExpr(has(SoughtConstructExpr),
+                                     has(cxxConstructExpr(argumentCountIs(0)))
+
+                                         )))));
   auto HasBracedInitListExpr =
       anyOf(has(cxxBindTemporaryExpr(HasConstructInitListExpr)),
             HasConstructInitListExpr);
@@ -314,6 +331,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *EmplacyCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("emplacy_call");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
+  const auto *AggInitCall = Result.Nodes.getNodeAs<InitListExpr>("agg_init");
   const auto *MakeCall = Result.Nodes.getNodeAs<CallExpr>("make");
   const auto *TemporaryExpr =
       Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("temporary_expr");
@@ -332,10 +350,17 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   }();
 
   assert(Call && "No call matched");
-  assert((CtorCall || MakeCall) && "No push_back parameter matched");
+  assert((CtorCall || MakeCall || AggInitCall) &&
+         "No push_back parameter matched");
 
   if (IgnoreImplicitConstructors && CtorCall && CtorCall->getNumArgs() >= 1 &&
       CtorCall->getArg(0)->getSourceRange() == CtorCall->getSourceRange())
+    return;
+
+  if (IgnoreImplicitConstructors && AggInitCall &&
+      AggInitCall->getNumInits() >= 1 &&
+      AggInitCall->getInit(0)->getSourceRange() ==
+          AggInitCall->getSourceRange())
     return;
 
   const auto FunctionNameSourceRange = CharSourceRange::getCharRange(
@@ -345,6 +370,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
       EmplacyCall
           ? diag(TemporaryExpr ? TemporaryExpr->getBeginLoc()
                  : CtorCall    ? CtorCall->getBeginLoc()
+                 : AggInitCall ? AggInitCall->getBeginLoc()
                                : MakeCall->getBeginLoc(),
                  "unnecessary temporary object created while calling %0")
           : diag(Call->getExprLoc(), "use emplace%select{|_back|_front}0 "
@@ -376,9 +402,10 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const SourceRange CallParensRange =
-      MakeCall ? SourceRange(MakeCall->getCallee()->getEndLoc(),
-                             MakeCall->getRParenLoc())
-               : CtorCall->getParenOrBraceRange();
+      MakeCall   ? SourceRange(MakeCall->getCallee()->getEndLoc(),
+                               MakeCall->getRParenLoc())
+      : CtorCall ? CtorCall->getParenOrBraceRange()
+                 : AggInitCall->getSourceRange();
 
   // Finish if there is no explicit constructor call.
   if (CallParensRange.getBegin().isInvalid())
@@ -387,6 +414,7 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   // FIXME: Will there ever be a CtorCall, if there is no TemporaryExpr?
   const SourceLocation ExprBegin = TemporaryExpr ? TemporaryExpr->getExprLoc()
                                    : CtorCall    ? CtorCall->getExprLoc()
+                                   : AggInitCall ? AggInitCall->getExprLoc()
                                                  : MakeCall->getExprLoc();
 
   // Range for constructor name and opening brace.
