@@ -12,10 +12,13 @@
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -34,15 +37,6 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   FPBits xbits(x);
   uint16_t x_u = xbits.uintval();
 
-  // Domain error for inputs less than 1.0.
-  if (LIBC_UNLIKELY(x <= 1.0f)) {
-    if (x == 1.0f)
-      return FPBits::zero().get_val();
-    fputil::set_errno_if_required(EDOM);
-    fputil::raise_except_if_required(FE_INVALID);
-    return FPBits::quiet_nan().get_val();
-  }
-
   // Check for NaN input first.
   if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_signaling_nan()) {
@@ -55,6 +49,15 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
       return FPBits::quiet_nan().get_val();
     }
     return x;
+  }
+
+  // Domain error for inputs less than 1.0.
+  if (LIBC_UNLIKELY(x <= 1.0f)) {
+    if (x == 1.0f)
+      return FPBits::zero().get_val();
+    fputil::set_errno_if_required(EDOM);
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits::quiet_nan().get_val();
   }
 
   if (auto r = ACOSHF16_EXCEPTS.lookup(xbits.uintval());
