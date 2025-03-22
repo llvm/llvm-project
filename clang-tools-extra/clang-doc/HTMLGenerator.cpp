@@ -490,15 +490,17 @@ genReferencesBlock(const std::vector<Reference> &References,
   }
   return Out;
 }
+static std::unique_ptr<TagNode>
+writeFileDefinition(const ClangDocContext &CDCtx, const Location &L) {
+  std::string RepositoryUrl = CDCtx.RepositoryUrl.value_or("");
+  std::string RepositoryLinePrefix = CDCtx.RepositoryLinePrefix.value_or("");
 
-static std::unique_ptr<TagNode> writeFileDefinition(
-    const Location &L, std::optional<StringRef> RepositoryUrl = std::nullopt,
-    std::optional<StringRef> RepositoryLinePrefix = std::nullopt) {
-  if (!L.IsFileInRootDir && !RepositoryUrl)
+  if (!L.IsFileInRootDir && RepositoryUrl.empty())
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
-  SmallString<128> FileURL(RepositoryUrl.value_or(""));
+
+  SmallString<128> FileURL(RepositoryUrl);
   llvm::sys::path::append(
       FileURL, llvm::sys::path::Style::posix,
       // If we're on Windows, the file name will be in the wrong format, and
@@ -516,8 +518,8 @@ static std::unique_ptr<TagNode> writeFileDefinition(
       std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
-  std::string LineAnchor = formatv("#{0}{1}", RepositoryLinePrefix.value_or(""), L.LineNumber);
-
+  std::string LineAnchor =
+      formatv("#{0}{1}", RepositoryLinePrefix, L.LineNumber);
 
   LocNumberNode->Attributes.emplace_back("href", (FileURL + LineAnchor).str());
   Node->Children.emplace_back(std::move(LocNumberNode));
@@ -750,17 +752,8 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   Out.emplace_back(std::move(Table));
 
-  if (I.DefLoc) {
-    std::optional<StringRef> RepoUrl;
-    std::optional<StringRef> RepoLinePrefix;
-
-    if (CDCtx.RepositoryUrl)
-      RepoUrl = StringRef{*CDCtx.RepositoryUrl};
-    if (CDCtx.RepositoryLinePrefix)
-      RepoLinePrefix = StringRef{*CDCtx.RepositoryLinePrefix};
-
-    Out.emplace_back(writeFileDefinition(*I.DefLoc, RepoUrl, RepoLinePrefix));
-  }
+  if (I.DefLoc)
+    Out.emplace_back(writeFileDefinition(CDCtx, *I.DefLoc));
 
   std::string Description;
   if (!I.Description.empty())
@@ -803,17 +796,8 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   }
   FunctionHeader->Children.emplace_back(std::make_unique<TextNode>(")"));
 
-  if (I.DefLoc) {
-    std::optional<StringRef> RepoUrl;
-    std::optional<StringRef> RepoLinePrefix;
-
-    if (CDCtx.RepositoryUrl)
-      RepoUrl = StringRef{*CDCtx.RepositoryUrl};
-    if (CDCtx.RepositoryLinePrefix)
-      RepoLinePrefix = StringRef{*CDCtx.RepositoryLinePrefix};
-
-    Out.emplace_back(writeFileDefinition(*I.DefLoc, RepoUrl, RepoLinePrefix));
-  }
+  if (I.DefLoc)
+    Out.emplace_back(writeFileDefinition(CDCtx, *I.DefLoc));
 
   std::string Description;
   if (!I.Description.empty())
@@ -874,17 +858,8 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   InfoTitle = (getTagType(I.TagType) + " " + I.Name).str();
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
-  if (I.DefLoc) {
-    std::optional<StringRef> RepoUrl;
-    std::optional<StringRef> RepoLinePrefix;
-
-    if (CDCtx.RepositoryUrl)
-      RepoUrl = StringRef{*CDCtx.RepositoryUrl};
-    if (CDCtx.RepositoryLinePrefix)
-      RepoLinePrefix = StringRef{*CDCtx.RepositoryLinePrefix};
-
-    Out.emplace_back(writeFileDefinition(*I.DefLoc, RepoUrl, RepoLinePrefix));
-  }
+  if (I.DefLoc)
+    Out.emplace_back(writeFileDefinition(CDCtx, *I.DefLoc));
 
   std::string Description;
   if (!I.Description.empty())
