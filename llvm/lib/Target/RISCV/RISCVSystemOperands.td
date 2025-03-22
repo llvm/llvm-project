@@ -324,8 +324,20 @@ def : SysReg<"scountinhibit", 0x120>;
 //===----------------------------------------------------------------------===//
 def : SysReg<"tselect", 0x7A0>;
 def : SysReg<"tdata1", 0x7A1>;
+let isAltName = 1 in {
+def : SysReg<"mcontrol", 0x7A1>;
+def : SysReg<"mcontrol6", 0x7A1>;
+def : SysReg<"icount", 0x7A1>;
+def : SysReg<"itrigger", 0x7A1>;
+def : SysReg<"etrigger", 0x7A1>;
+def : SysReg<"tmexttrigger", 0x7A1>;
+}
 def : SysReg<"tdata2", 0x7A2>;
 def : SysReg<"tdata3", 0x7A3>;
+let isAltName = 1 in {
+def : SysReg<"textra32", 0x7A3>;
+def : SysReg<"textra64", 0x7A3>;
+}
 def : SysReg<"tinfo", 0x7A4>;
 def : SysReg<"tcontrol", 0x7A5>;
 def : SysReg<"mcontext", 0x7A8>;
