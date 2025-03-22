@@ -30,4 +30,5 @@ add_clang_library(clangDependencyScanning
   clangLex
   clangSerialization
   clangTooling
+  ${LLVM_PTHREAD_LIB}
   )
