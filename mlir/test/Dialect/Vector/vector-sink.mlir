@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-vector-sink-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt -transform-preload-library='transform-library-paths=%p/vector-sink-transform.mlir' -transform-interpreter -split-input-file %s | FileCheck %s
 
 //-----------------------------------------------------------------------------
 // [Pattern: ReorderElementwiseOpsOnBroadcast]
@@ -426,6 +427,10 @@ func.func @transpose_elementwise_diff_map_scalable(%a : vector<[4]x6x3x2xf32>, %
 
 // -----
 
+//-----------------------------------------------------------------------------
+// [Pattern: ExtractOpFromElementwise]
+//-----------------------------------------------------------------------------
+
 // CHECK-LABEL: @extract_elementwise_scalar
 //  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
 func.func @extract_elementwise_scalar(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f32 {
@@ -461,9 +466,9 @@ func.func @extract_elementwise_vec(%arg0: vector<2x4xf32>, %arg1: vector<2x4xf32
   return %1 : vector<4xf32>
 }
 
-// CHECK-LABEL: @extract_elementwise_no_single_use
+// CHECK-LABEL: @negative_extract_elementwise_no_single_use
 //  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
-func.func @extract_elementwise_no_single_use(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
+func.func @negative_extract_elementwise_no_single_use(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
 // Do not propagate extract, as elementwise has other uses.
 // CHECK:   %[[ELT:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : vector<4xf32>
 // CHECK:   %[[EXT:.*]] = vector.extract %[[ELT]][1] : f32 from vector<4xf32>
@@ -473,9 +478,9 @@ func.func @extract_elementwise_no_single_use(%arg0: vector<4xf32>, %arg1: vector
   return %1, %0 : f32, vector<4xf32>
 }
 
-// CHECK-LABEL: @extract_elementwise_not_one_res
+// CHECK-LABEL: @negative_extract_elementwise_not_one_res
 //  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xi32>, %[[ARG1:.*]]: vector<4xi32>)
-func.func @extract_elementwise_not_one_res(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
+func.func @negative_extract_elementwise_not_one_res(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
 // Do not propagate extract, as elementwise has more than 1 result.
 // CHECK:   %[[LOW:.*]], %[[HIGH:.*]] = arith.mulsi_extended %[[ARG0]], %[[ARG1]] : vector<4xi32>
 // CHECK:   %[[EXT:.*]] = vector.extract %[[LOW]][1] : i32 from vector<4xi32>
@@ -485,9 +490,9 @@ func.func @extract_elementwise_not_one_res(%arg0: vector<4xi32>, %arg1: vector<4
   return %1 : i32
 }
 
-// CHECK-LABEL: @extract_not_elementwise
+// CHECK-LABEL: @negative_extract_not_elementwise
 //  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xi64>)
-func.func @extract_not_elementwise(%arg0: vector<4xi64>) -> i64 {
+func.func @negative_extract_not_elementwise(%arg0: vector<4xi64>) -> i64 {
 // `test.increment` is not an elemewise op.
 // CHECK:   %[[INC:.*]] = test.increment %[[ARG0]] : vector<4xi64>
 // CHECK:   %[[RES:.*]] = vector.extract %[[INC]][1] : i64 from vector<4xi64>

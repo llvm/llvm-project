@@ -59,19 +59,19 @@ func.func @vectorize_nd_tensor_extract_transfer_read_complex(%6: tensor<45x80x16
 
 
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_transfer_read_complex(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<45x80x16xf32>,
-// CHECK-SAME:      %[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: index, %[[VAL_4:.*]]: index,
-// CHECK-SAME:      %[[VAL_5:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<45x80x16xf32>,
+// CHECK-SAME:      %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index,
+// CHECK-SAME:      %[[ARG5:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
 
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[CST:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       %[[C79:.*]] = arith.constant 79 : index
-// CHECK:           %[[VAL6:.*]] = arith.addi %[[VAL_1]], %[[VAL_2]] : index
-// CHECK:           %[[VAL7:.*]] = arith.addi %[[VAL_3]], %[[VAL_4]] : index
+// CHECK:           %[[ADD1:.*]] = arith.addi %[[ARG1]], %[[ARG2]] : index
+// CHECK:           %[[ADD2:.*]] = arith.addi %[[ARG3]], %[[ARG4]] : index
 
-// CHECK:           %[[VAL_20:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL6]], %[[C79]], %[[VAL7]]], %[[CST]] {in_bounds = [true, true]} : tensor<45x80x16xf32>, vector<1x4xf32>
-// CHECK:           %[[VAL_21:.*]] = vector.transfer_write %[[VAL_20]], %[[VAL_5]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
-// CHECK:           return %[[VAL_21]] : tensor<1x4xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG0]]{{\[}}%[[ADD1]], %[[C79]], %[[ADD2]]], %[[CST]] {in_bounds = [true, true]} : tensor<45x80x16xf32>, vector<1x4xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[ARG5]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+// CHECK:           return %[[WRITE]] : tensor<1x4xf32>
 // CHECK:         }
 
 // -----
@@ -93,17 +93,17 @@ func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(%6: tensor<8
 }
 
 // CHECK-LABEL:   func.func @vectorize_nd_tensor_extract_with_affine_apply_contiguous(
-// CHECK-SAME:                                                                        %[[VAL_0:.*]]: tensor<80x16xf32>,
-// CHECK-SAME:                                                                        %[[VAL_1:.*]]: index,
-// CHECK-SAME:                                                                        %[[VAL_2:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<80x16xf32>,
+// CHECK-SAME:      %[[ARG1:.*]]: index,
+// CHECK-SAME:      %[[ARG2:.*]]: tensor<1x4xf32>) -> tensor<1x4xf32> {
 
-// CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 0 : index
-// CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 79 : index
+// CHECK-DAG:       %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C79:.*]] = arith.constant 79 : index
 
-// CHECK:           %[[VAL_11:.*]] = vector.transfer_read %[[VAL_0]]{{\[}}%[[VAL_7]], %[[VAL_1]]], %[[VAL_5]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
-// CHECK:           %[[VAL_12:.*]] = vector.transfer_write %[[VAL_11]], %[[VAL_2]]{{\[}}%[[VAL_6]], %[[VAL_6]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
-// CHECK:           return %[[VAL_12]] : tensor<1x4xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG0]]{{\[}}%[[C79]], %[[ARG1]]], %[[CST]] {in_bounds = [true, true]} : tensor<80x16xf32>, vector<1x4xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[ARG2]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+// CHECK:           return %[[WRITE]] : tensor<1x4xf32>
 // CHECK:         }
 
 // -----

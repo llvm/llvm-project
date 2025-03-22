@@ -1044,7 +1044,7 @@ struct ReorderElementwiseOpsOnBroadcast final
 };
 
 /// Pattern to rewrite a ExtractOp(Elementwise) -> Elementwise(ExtractOp).
-/// This may result in more efficient code when we extracting a single value
+/// This may result in cleaner code when we extracting a single value
 /// from multi-element vector and also to help canonicalize 1-element vectors to
 /// scalars.
 /// ```
@@ -1066,14 +1066,17 @@ public:
                                 PatternRewriter &rewriter) const override {
     Operation *eltwise = op.getVector().getDefiningOp();
 
-    // Elementwise op with single result and `extract` is single user.
-    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise) ||
-        eltwise->getNumResults() != 1 || !eltwise->hasOneUse())
-      return rewriter.notifyMatchFailure(op, "not a suitable op");
+    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise))
+      return rewriter.notifyMatchFailure(op, "not an elementwise op");
 
-    // Arguments types must match.
+    if (eltwise->getNumResults() != 1)
+      return rewriter.notifyMatchFailure(op, "expected single result");
+
+    if (!eltwise->hasOneUse())
+      return rewriter.notifyMatchFailure(op, "expected single op use");
+
     if (!llvm::all_equal(eltwise->getOperandTypes()))
-      return rewriter.notifyMatchFailure(op, "arg types are different");
+      return rewriter.notifyMatchFailure(op, "operand types are different");
 
     Type dstType = op.getType();
 
