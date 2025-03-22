@@ -1844,15 +1844,16 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   auto Params = getUsualDeleteParams(DeleteFD);
   auto ParamTypeIt = DeleteFTy->param_type_begin();
 
-  llvm::SmallVector<llvm::AllocaInst *, 2> TagAllocas;
+  std::optional<llvm::AllocaInst *> TagAlloca;
   auto EmitTag = [&](QualType TagType, const char *TagName) {
+    assert(!TagAlloca);
     llvm::Type *Ty = getTypes().ConvertType(TagType);
     CharUnits Align = CGM.getNaturalTypeAlignment(TagType);
     llvm::AllocaInst *TagAllocation = CreateTempAlloca(Ty, TagName);
     TagAllocation->setAlignment(Align.getAsAlign());
     DeleteArgs.add(RValue::getAggregate(Address(TagAllocation, Ty, Align)),
                    TagType);
-    TagAllocas.push_back(TagAllocation);
+    TagAlloca = TagAllocation;
   };
 
   // Pass std::type_identity tag if present
@@ -1903,14 +1904,11 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   // Emit the call to delete.
   EmitNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs);
 
-  // If call argument lowering didn't use the tag arguments allocas we remove
-  // them
-  for (auto *TagAlloca : TagAllocas) {
-    if (TagAlloca && TagAlloca->use_empty())
-      TagAlloca->eraseFromParent();
-  }
+  // If call argument lowering didn't use a generated tag argument alloca we
+  // remove them
+  if (TagAlloca && (*TagAlloca)->use_empty())
+    (*TagAlloca)->eraseFromParent();
 }
-
 namespace {
   /// Calls the given 'operator delete' on a single object.
   struct CallObjectDelete final : EHScopeStack::Cleanup {

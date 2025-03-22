@@ -9902,7 +9902,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       // C++ [over.match.class.deduct#3]: ..., the defining-type-id of A must be
       // of the form
       //   [typename] [nested-name-specifier] [template] simple-template-id
-      auto SpecializedTD = UnderlyingType->tryGetSpecializedTemplateDecl();
+      auto SpecializedTD = UnderlyingType->getSpecializedTemplateDecl();
       Template = dyn_cast_or_null<ClassTemplateDecl>(SpecializedTD);
     }
   }

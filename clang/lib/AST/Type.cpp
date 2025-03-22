@@ -3140,7 +3140,7 @@ bool Type::isDestroyingDeleteT() const {
          RD->getIdentifier()->isStr("destroying_delete_t");
 }
 
-TemplateDecl *Type::tryGetSpecializedTemplateDecl() const {
+TemplateDecl *Type::getSpecializedTemplateDecl() const {
   auto UnderlyingType = getCanonicalTypeInternal();
   if (auto *TST = UnderlyingType->getAs<TemplateSpecializationType>())
     return TST->getTemplateName().getAsTemplateDecl();
@@ -3152,7 +3152,7 @@ TemplateDecl *Type::tryGetSpecializedTemplateDecl() const {
 }
 
 bool Type::isTypeIdentitySpecialization() const {
-  const TemplateDecl *STDecl = tryGetSpecializedTemplateDecl();
+  const TemplateDecl *STDecl = getSpecializedTemplateDecl();
   if (!STDecl)
     return false;
   IdentifierInfo *II = STDecl->getIdentifier();
