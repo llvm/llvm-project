@@ -113,6 +113,27 @@ void t24(f_t f1) {
   (*p)();
 }
 
+// CHECK:define{{.*}} void @t25() [[NUW]] {
+// CHECK: call void @exit(i32 noundef 1)
+// CHECK-NEXT: unreachable
+void t25(void) {
+  __builtin_exit(1);
+}
+
+// CHECK:define{{.*}} void @t26() [[NUW]] {
+// CHECK: call void @_exit(i32 noundef 2)
+// CHECK-NEXT: unreachable
+void t26(void) {
+  __builtin__exit(2);
+}
+
+// CHECK:define{{.*}} void @t27() [[NUW]] {
+// CHECK: call void @_Exit(i32 noundef 3)
+// CHECK-NEXT: unreachable
+void t27(void) {
+  __builtin__Exit(3);
+}
+
 // CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
 // CHECK: attributes [[NR]] = { noinline noreturn nounwind{{.*}} }
 // CHECK: attributes [[COLDDEF]] = { cold {{.*}}}
