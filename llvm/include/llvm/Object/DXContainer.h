@@ -117,14 +117,24 @@ template <typename T> struct ViewArray {
 
 namespace DirectX {
 
+struct RootParameter {
+  dxbc::RootParameterHeader Header;
+  union {
+    dxbc::RootConstants Constants;
+  };
+};
 class RootSignature {
 private:
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
-  uint32_t Flags;
+  uint32_t Version = 2;
+  uint32_t NumParameters = 0;
+  uint32_t RootParametersOffset = 0;
+  uint32_t NumStaticSamplers = 0;
+  uint32_t StaticSamplersOffset = 0;
+  uint32_t Flags = 0;
+
+  SmallVector<DirectX::RootParameter> Parameters;
+
+  using ParamsIter = SmallVector<DirectX::RootParameter>::iterator;
 
 public:
   RootSignature() {}
@@ -135,6 +145,9 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+  llvm::iterator_range<const RootParameter *> getParameters() const {
+    return llvm::make_range(Parameters.begin(), Parameters.end());
+  }
   uint32_t getFlags() const { return Flags; }
 };
 
