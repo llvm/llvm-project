@@ -2,11 +2,8 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+b | FileCheck %s --check-prefixes=CHECK,V
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+b,+zvfh | FileCheck %s --check-prefixes=CHECK,ZVFH
 
-declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare void @g()
 
-; TODO: Merging scalars into vectors is unprofitable because we have no
-; vector CSRs which creates additional spills around the call.
 define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
@@ -16,40 +13,40 @@ define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
 ; CHECK-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    csrr a6, vlenb
-; CHECK-NEXT:    sub sp, sp, a6
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x30, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 48 + 1 * vlenb
+; CHECK-NEXT:    .cfi_offset s3, -40
+; CHECK-NEXT:    .cfi_offset s4, -48
 ; CHECK-NEXT:    mv s0, a5
 ; CHECK-NEXT:    mv s1, a4
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vse64.v v8, (a1)
-; CHECK-NEXT:    vle64.v v8, (a2)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    ld s3, 0(a2)
+; CHECK-NEXT:    ld s4, 8(a2)
 ; CHECK-NEXT:    mv s2, a3
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    sd s3, 0(s2)
+; CHECK-NEXT:    sd s4, 8(s2)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v8, (s2)
 ; CHECK-NEXT:    vle64.v v8, (s1)
 ; CHECK-NEXT:    vse64.v v8, (s0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 48
 ; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    .cfi_restore s1
 ; CHECK-NEXT:    .cfi_restore s2
+; CHECK-NEXT:    .cfi_restore s3
+; CHECK-NEXT:    .cfi_restore s4
 ; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
@@ -78,13 +75,13 @@ define void @f(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
   ret void
 }
 
-define void @f1(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
+define void @f1(ptr %p, ptr %q, double %t) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    fcvt.wu.d a0, fa0, rtz
-; CHECK-NEXT:    vse64.v v8, (a3)
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %x0 = load i64, ptr %p
   %p.1 = getelementptr i64, ptr %p, i64 1
@@ -93,7 +90,6 @@ define void @f1(ptr %m, ptr %n, ptr %p, ptr %q, ptr %r, ptr %s, double %t) {
   store i64 %x0, ptr %q
   %q.1 = getelementptr i64, ptr %q, i64 1
   store i64 %x1, ptr %q.1
-
   ret void
 }
 
@@ -515,28 +511,26 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
 ; ZVFH-NEXT:    .cfi_def_cfa_offset 32
 ; ZVFH-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZVFH-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; ZVFH-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; ZVFH-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
 ; ZVFH-NEXT:    .cfi_offset ra, -8
 ; ZVFH-NEXT:    .cfi_offset s0, -16
-; ZVFH-NEXT:    csrr a2, vlenb
-; ZVFH-NEXT:    sub sp, sp, a2
-; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vle16.v v8, (a0)
-; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; ZVFH-NEXT:    .cfi_offset fs0, -24
+; ZVFH-NEXT:    .cfi_offset fs1, -32
+; ZVFH-NEXT:    flh fs0, 0(a0)
+; ZVFH-NEXT:    flh fs1, 2(a0)
 ; ZVFH-NEXT:    mv s0, a1
 ; ZVFH-NEXT:    call g
-; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vse16.v v8, (s0)
-; ZVFH-NEXT:    csrr a0, vlenb
-; ZVFH-NEXT:    add sp, sp, a0
-; ZVFH-NEXT:    .cfi_def_cfa sp, 32
+; ZVFH-NEXT:    fsh fs0, 0(s0)
+; ZVFH-NEXT:    fsh fs1, 2(s0)
 ; ZVFH-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; ZVFH-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; ZVFH-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; ZVFH-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; ZVFH-NEXT:    .cfi_restore ra
 ; ZVFH-NEXT:    .cfi_restore s0
+; ZVFH-NEXT:    .cfi_restore fs0
+; ZVFH-NEXT:    .cfi_restore fs1
 ; ZVFH-NEXT:    addi sp, sp, 32
 ; ZVFH-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFH-NEXT:    ret
@@ -552,9 +546,6 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
   ret void
 }
 
-
-; TODO: This one is currently a vector which is unprofitable, we should
-; use i64 instead.
 define void @two_float(ptr %p, ptr %q) {
 ; CHECK-LABEL: two_float:
 ; CHECK:       # %bb.0:
@@ -598,28 +589,26 @@ define void @two_float_unaligned(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    .cfi_offset fs0, -24
+; CHECK-NEXT:    .cfi_offset fs1, -32
+; CHECK-NEXT:    flw fs0, 0(a0)
+; CHECK-NEXT:    flw fs1, 4(a0)
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vse32.v v8, (s0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 32
+; CHECK-NEXT:    fsw fs0, 0(s0)
+; CHECK-NEXT:    fsw fs1, 4(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore fs0
+; CHECK-NEXT:    .cfi_restore fs1
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
@@ -679,28 +668,26 @@ define void @two_double(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs1, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x01, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 1 * vlenb
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    .cfi_offset fs0, -24
+; CHECK-NEXT:    .cfi_offset fs1, -32
+; CHECK-NEXT:    fld fs0, 0(a0)
+; CHECK-NEXT:    fld fs1, 8(a0)
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v8, (s0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 32
+; CHECK-NEXT:    fsd fs0, 0(s0)
+; CHECK-NEXT:    fsd fs1, 8(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs1, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore s0
+; CHECK-NEXT:    .cfi_restore fs0
+; CHECK-NEXT:    .cfi_restore fs1
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
