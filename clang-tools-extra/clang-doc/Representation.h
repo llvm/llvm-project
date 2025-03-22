@@ -507,7 +507,7 @@ struct ClangDocContext {
   ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
-                  StringRef RepositoryUrl,
+                  StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   std::vector<std::string> UserStylesheets);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
@@ -518,6 +518,8 @@ struct ClangDocContext {
                             // the file is in this dir.
   // URL of repository that hosts code used for links to definition locations.
   std::optional<std::string> RepositoryUrl;
+  // Prefix of line code for repository.
+  std::optional<std::string> RepositoryLinePrefix;
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;

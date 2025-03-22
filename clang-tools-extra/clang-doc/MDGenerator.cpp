@@ -10,6 +10,7 @@
 #include "Representation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include <string>
 
@@ -57,11 +58,13 @@ static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
     OS << "*Defined at " << L.Filename << "#" << std::to_string(L.LineNumber)
        << "*";
   } else {
-    OS << "*Defined at [" << L.Filename << "#" << std::to_string(L.LineNumber)
-       << "](" << StringRef{*CDCtx.RepositoryUrl}
-       << llvm::sys::path::relative_path(L.Filename) << "#"
-       << std::to_string(L.LineNumber) << ")"
-       << "*";
+
+    std::string LineAnchor =
+        formatv("#{0}{1}", CDCtx.RepositoryLinePrefix.value_or(""),
+                std::to_string(L.LineNumber));
+
+    OS << formatv("*Defined at [{0}{1}]({0}{2})*", LineAnchor, L.Filename,
+                  StringRef{*CDCtx.RepositoryUrl});
   }
   OS << "\n\n";
 }
