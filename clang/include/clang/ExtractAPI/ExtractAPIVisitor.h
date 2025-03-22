@@ -175,28 +175,30 @@ protected:
   SmallVector<SymbolReference> getBases(const CXXRecordDecl *Decl) {
     // FIXME: store AccessSpecifier given by inheritance
     SmallVector<SymbolReference> Bases;
-    for (const auto &BaseSpecifier : Decl->bases()) {
-      // skip classes not inherited as public
-      if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
-        continue;
-      if (auto *BaseDecl = BaseSpecifier.getType()->getAsTagDecl()) {
-        Bases.emplace_back(createSymbolReferenceForDecl(*BaseDecl));
-      } else {
-        SymbolReference BaseClass;
-        BaseClass.Name = API.copyString(BaseSpecifier.getType().getAsString(
-            Decl->getASTContext().getPrintingPolicy()));
+    if (Decl->isCompleteDefinition()) {
+      for (const auto &BaseSpecifier : Decl->bases()) {
+        // skip classes not inherited as public
+        if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
+          continue;
+        if (auto *BaseDecl = BaseSpecifier.getType()->getAsTagDecl()) {
+          Bases.emplace_back(createSymbolReferenceForDecl(*BaseDecl));
+        } else {
+          SymbolReference BaseClass;
+          BaseClass.Name = API.copyString(BaseSpecifier.getType().getAsString(
+              Decl->getASTContext().getPrintingPolicy()));
 
-        if (BaseSpecifier.getType().getTypePtr()->isTemplateTypeParmType()) {
-          if (auto *TTPTD = BaseSpecifier.getType()
-                                ->getAs<TemplateTypeParmType>()
-                                ->getDecl()) {
-            SmallString<128> USR;
-            index::generateUSRForDecl(TTPTD, USR);
-            BaseClass.USR = API.copyString(USR);
-            BaseClass.Source = API.copyString(getOwningModuleName(*TTPTD));
+          if (BaseSpecifier.getType().getTypePtr()->isTemplateTypeParmType()) {
+            if (auto *TTPTD = BaseSpecifier.getType()
+                                  ->getAs<TemplateTypeParmType>()
+                                  ->getDecl()) {
+              SmallString<128> USR;
+              index::generateUSRForDecl(TTPTD, USR);
+              BaseClass.USR = API.copyString(USR);
+              BaseClass.Source = API.copyString(getOwningModuleName(*TTPTD));
+            }
           }
+          Bases.emplace_back(BaseClass);
         }
-        Bases.emplace_back(BaseClass);
       }
     }
     return Bases;
