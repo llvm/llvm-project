@@ -6,17 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This utility is used to launch standard programs onto the GPU in conjunction
-// with the LLVM 'libc' project. It is designed to mimic a standard emulator
-// workflow, allowing for unit tests to be run on the GPU directly.
+// This file opens a device image passed on the command line and passes it to
+// one of the loader implementations for launch.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-gpu-loader.h"
+#include "Loader.h"
 
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -24,7 +21,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/TargetParser/Triple.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -129,40 +125,12 @@ int main(int argc, const char **argv, const char **envp) {
                                      strerror(errno)));
   }
 
+  // Drop the loader from the program arguments.
   LaunchParameters params{threads_x, threads_y, threads_z,
                           blocks_x,  blocks_y,  blocks_z};
-
-  Expected<llvm::object::ELF64LEObjectFile> elf_or_err =
-      llvm::object::ELF64LEObjectFile::create(image);
-  if (!elf_or_err)
-    report_error(std::move(elf_or_err.takeError()));
-
-  int ret = 1;
-  if (elf_or_err->getArch() == Triple::amdgcn) {
-#ifdef AMDHSA_SUPPORT
-    ret = load_amdhsa(new_argv.size(), new_argv.data(), envp,
-                      const_cast<char *>(image.getBufferStart()),
-                      image.getBufferSize(), params, print_resource_usage);
-#else
-    report_error(createStringError(
-        "Unsupported architecture; %s",
-        Triple::getArchTypeName(elf_or_err->getArch()).bytes_begin()));
-#endif
-  } else if (elf_or_err->getArch() == Triple::nvptx64) {
-#ifdef NVPTX_SUPPORT
-    ret = load_nvptx(new_argv.size(), new_argv.data(), envp,
-                     const_cast<char *>(image.getBufferStart()),
-                     image.getBufferSize(), params, print_resource_usage);
-#else
-    report_error(createStringError(
-        "Unsupported architecture; %s",
-        Triple::getArchTypeName(elf_or_err->getArch()).bytes_begin()));
-#endif
-  } else {
-    report_error(createStringError(
-        "Unsupported architecture; %s",
-        Triple::getArchTypeName(elf_or_err->getArch()).bytes_begin()));
-  }
+  int ret = load(new_argv.size(), new_argv.data(), envp,
+                 const_cast<char *>(image.getBufferStart()),
+                 image.getBufferSize(), params, print_resource_usage);
 
   if (no_parallelism) {
     if (flock(fd, LOCK_UN) == -1)
