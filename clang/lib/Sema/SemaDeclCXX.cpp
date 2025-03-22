@@ -12182,10 +12182,14 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
   Args.addArgument(TemplateArgumentLoc(TemplateArgument(Element),
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
+
+  QualType T = CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args);
+  if (T.isNull())
+    return QualType();
+
   return Context.getElaboratedType(
       ElaboratedTypeKeyword::None,
-      NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
-      CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
+      NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()), T);
 }
 
 bool Sema::isInitListConstructor(const FunctionDecl *Ctor) {
