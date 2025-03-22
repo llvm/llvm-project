@@ -2021,11 +2021,22 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
     unsigned &MaxCSFrameIndex) const {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  // Preemptible Interrupts have two additional Callee-save Frame Indexes,
+  // not tracked by `CSI`.
+  if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
+    for (int I = 0; I < 2; ++I) {
+      int FI = RVFI->getInterruptCSRFrameIndex(I);
+      MinCSFrameIndex = std::min<unsigned>(MinCSFrameIndex, FI);
+      MaxCSFrameIndex = std::max<unsigned>(MaxCSFrameIndex, FI);
+    }
+  }
+
   // Early exit if no callee saved registers are modified!
   if (CSI.empty())
     return true;
 
-  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->useQCIInterrupt(MF)) {
     RVFI->setQCIInterruptStackSize(QCIInterruptPushAmount);
   } else if (RVFI->isPushable(MF)) {
