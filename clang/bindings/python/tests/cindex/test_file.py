@@ -7,7 +7,7 @@ if "CLANG_LIBRARY_PATH" in os.environ:
 
 import unittest
 
-kInputsDir = os.path.join(os.path.dirname(__file__), "INPUTS")
+inputs_dir = os.path.join(os.path.dirname(__file__), "INPUTS")
 
 class TestFile(unittest.TestCase):
     def test_file(self):
@@ -19,8 +19,8 @@ class TestFile(unittest.TestCase):
         self.assertEqual(repr(file), "<File: t.c>")
 
     def test_file_eq(self):
-        path = os.path.join(kInputsDir, "hello.cpp")
-        header_path = os.path.join(kInputsDir, "header3.h")
+        path = os.path.join(inputs_dir, "hello.cpp")
+        header_path = os.path.join(inputs_dir, "header3.h")
         tu = TranslationUnit.from_source(path)
         file1 = File.from_name(tu, path)
         file2 = File.from_name(tu, header_path)
@@ -30,3 +30,17 @@ class TestFile(unittest.TestCase):
         self.assertEqual(file2, file2_2)
         self.assertNotEqual(file1, file2)
         self.assertNotEqual(file1, "t.c")
+
+    # FIXME: this test shouldn't pass
+    def test_file_eq_failing(self):
+        index = Index.create()
+        tu = index.parse(
+            "t.c",
+            unsaved_files=[
+                ("t.c", "int a = 729;"),
+                ("s.c", "int a = 729;"),
+            ],
+        )
+        file1 = File.from_name(tu, "t.c")
+        file2 = File.from_name(tu, "s.c")
+        self.assertEqual(file1, file2)  # These files are not supposed to be equal
