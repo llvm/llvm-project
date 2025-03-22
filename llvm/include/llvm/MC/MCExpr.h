@@ -220,21 +220,6 @@ public:
     VK_GOTPAGEOFF,
     VK_SECREL,
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
-    VK_FUNCDESC,
-    VK_GOTFUNCDESC,
-    VK_GOTOFFFUNCDESC,
-    VK_TLSGD_FDPIC,
-    VK_TLSLDM_FDPIC,
-    VK_GOTTPOFF_FDPIC,
-
-    VK_ARM_NONE,
-    VK_ARM_GOT_PREL,
-    VK_ARM_TARGET1,
-    VK_ARM_TARGET2,
-    VK_ARM_PREL31,
-    VK_ARM_SBREL,  // symbol(sbrel)
-    VK_ARM_TLSLDO, // symbol(tlsldo)
-    VK_ARM_TLSDESCSEQ,
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 

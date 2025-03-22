@@ -864,8 +864,8 @@ public:
   /// By default, performs semantic analysis when building the member pointer
   /// type. Subclasses may override this routine to provide different behavior.
   QualType RebuildMemberPointerType(QualType PointeeType,
-                                    NestedNameSpecifier *Qualifier,
-                                    CXXRecordDecl *Cls, SourceLocation Sigil);
+                                    const CXXScopeSpec &SS, CXXRecordDecl *Cls,
+                                    SourceLocation Sigil);
 
   QualType RebuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
                                     SourceLocation ProtocolLAngleLoc,
@@ -5631,9 +5631,10 @@ TreeTransform<Derived>::TransformMemberPointerType(TypeLocBuilder &TLB,
       NewQualifierLoc.getNestedNameSpecifier() !=
           OldQualifierLoc.getNestedNameSpecifier() ||
       NewCls != OldCls) {
-    Result = getDerived().RebuildMemberPointerType(
-        PointeeType, NewQualifierLoc.getNestedNameSpecifier(), NewCls,
-        TL.getStarLoc());
+    CXXScopeSpec SS;
+    SS.Adopt(NewQualifierLoc);
+    Result = getDerived().RebuildMemberPointerType(PointeeType, SS, NewCls,
+                                                   TL.getStarLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -17044,9 +17045,9 @@ TreeTransform<Derived>::RebuildReferenceType(QualType ReferentType,
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildMemberPointerType(
-    QualType PointeeType, NestedNameSpecifier *Qualifier, CXXRecordDecl *Cls,
+    QualType PointeeType, const CXXScopeSpec &SS, CXXRecordDecl *Cls,
     SourceLocation Sigil) {
-  return SemaRef.BuildMemberPointerType(PointeeType, Qualifier, Cls, Sigil,
+  return SemaRef.BuildMemberPointerType(PointeeType, SS, Cls, Sigil,
                                         getDerived().getBaseEntity());
 }
 
