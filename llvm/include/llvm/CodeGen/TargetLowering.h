@@ -3464,6 +3464,12 @@ public:
     return false;
   }
 
+  // Is it preferable to legalize FP types to SINT instead of UINT if both SINT
+  // and UINT are custom.
+  virtual bool preferPromoteFPToCustomSINTOverCustomUINT() const {
+    return true;
+  }
+
   /// Create the IR node for the given complex deinterleaving operation.
   /// If one cannot be created using all the given inputs, nullptr should be
   /// returned.
