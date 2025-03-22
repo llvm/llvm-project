@@ -147,7 +147,7 @@ RUN <<EOF
   set -e
   sudo git clone https://github.com/compiler-explorer/infra.git /tmp/ce-infra
   (cd /tmp/ce-infra && sudo make ce)
-  # Current ToT, we do not quarantee any support in our support matrix.
+  # Current ToT, we do not guarantee any support in our support matrix.
   sudo /tmp/ce-infra/bin/ce_install --enable nightly install compilers/c++/nightly/gcc trunk
   sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/gcc /usr/bin/gcc-$GCC_HEAD_VERSION
   sudo ln -s /opt/compiler-explorer/gcc-snapshot/bin/g++ /usr/bin/g++-$GCC_HEAD_VERSION
