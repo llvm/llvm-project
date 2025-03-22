@@ -16,6 +16,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   CastingThroughVoidCheck.cpp
   ChainedComparisonCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
+  ConflictingGlobalAccesses.cpp
   CopyConstructorInitCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
