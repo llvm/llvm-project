@@ -36,11 +36,10 @@
 #include "test_macros.h"
 
 // class utc_clock
-using rep                                 = std::chrono::utc_clock::rep;
-using period                              = std::chrono::utc_clock::period;
-using duration                            = std::chrono::utc_clock::duration;
-using time_point                          = std::chrono::utc_clock::time_point;
-[[maybe_unused]] constexpr bool is_steady = std::chrono::utc_clock::is_steady;
+using rep        = std::chrono::utc_clock::rep;
+using period     = std::chrono::utc_clock::period;
+using duration   = std::chrono::utc_clock::duration;
+using time_point = std::chrono::utc_clock::time_point;
 
 // Tests the values. Some of them are implementation-defined.
 LIBCPP_STATIC_ASSERT(std::same_as<rep, std::chrono::system_clock::rep>);
@@ -52,7 +51,7 @@ static_assert(std::same_as<period, std::ratio<period::num, period::den>>);
 
 static_assert(std::same_as<duration, std::chrono::duration<rep, period>>);
 static_assert(std::same_as<time_point, std::chrono::time_point<std::chrono::utc_clock>>);
-LIBCPP_STATIC_ASSERT(is_steady == false);
+LIBCPP_STATIC_ASSERT(std::chrono::utc_clock::is_steady == false);
 
 // typedefs
 static_assert(std::same_as<std::chrono::utc_time<int>, std::chrono::time_point<std::chrono::utc_clock, int>>);
