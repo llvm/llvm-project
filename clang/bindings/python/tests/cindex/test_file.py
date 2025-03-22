@@ -43,4 +43,47 @@ class TestFile(unittest.TestCase):
         file1 = File.from_name(tu, "t.c")
         file2 = File.from_name(tu, "s.c")
         # FIXME: These files are not supposed to be equal
-        self.assertEqual(file1, file2)  
+        self.assertEqual(file1, file2)
+
+    def test_file_eq_failing_2(self):
+        index = Index.create()
+        tu = index.parse(
+            "t.c",
+            unsaved_files=[
+                ("t.c", "int a = 729;"),
+                ("s.c", "int a = 728;"),
+            ],
+        )
+        file1 = File.from_name(tu, "t.c")
+        file2 = File.from_name(tu, "s.c")
+        # FIXME: These files are not supposed to be equal
+        self.assertEqual(file1, file2)
+
+    def test_file_eq_failing_3(self):
+        index = Index.create()
+        tu = index.parse(
+            "t.c",
+            unsaved_files=[
+                ("t.c", '#include "a.c"\n#include "b.c";'),
+                ("a.c", "int a = 729;"),
+                ("b.c", "int b = 729;"),
+            ],
+        )
+        file1 = File.from_name(tu, "t.c")
+        file2 = File.from_name(tu, "a.c")
+        file3 = File.from_name(tu, "b.c")
+        # FIXME: These files are not supposed to be equal
+        self.assertEqual(file2, file3)
+        self.assertEqual(file1, file2)
+        self.assertEqual(file1, file3)
+
+    def test_file_eq_failing_4(self):
+        path = os.path.join(inputs_dir, "hello.cpp")
+        tu = TranslationUnit.from_source(path)
+        file1 = File.from_name(tu, "t.c")
+        file2 = File.from_name(tu, "a.c")
+        file3 = File.from_name(tu, "b.c")
+        # FIXME: These files are not supposed to be equal
+        self.assertEqual(file2, file3)
+        self.assertEqual(file1, file2)
+        self.assertEqual(file1, file3)
