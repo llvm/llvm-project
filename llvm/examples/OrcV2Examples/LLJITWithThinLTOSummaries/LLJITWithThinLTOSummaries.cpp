@@ -77,7 +77,7 @@ public:
 
   void log(raw_ostream &OS) const override {
     OS << "Duplicate symbol for global value '" << GlobalValueName
-       << "' (GUID: " << GlobalValue::getGUID(GlobalValueName) << ") in:\n";
+       << "' (GUID: " << GlobalValue::getGUIDAssumingExternalLinkage(GlobalValueName) << ") in:\n";
     for (const std::string &Path : ModulePaths) {
       OS << "    " << Path << "\n";
     }
@@ -111,7 +111,7 @@ public:
 
   void log(raw_ostream &OS) const override {
     OS << "No symbol for global value '" << GlobalValueName
-       << "' (GUID: " << GlobalValue::getGUID(GlobalValueName) << ") in:\n";
+       << "' (GUID: " << GlobalValue::getGUIDAssumingExternalLinkage(GlobalValueName) << ") in:\n";
     for (const std::string &Path : ModulePaths) {
       OS << "    " << Path << "\n";
     }
@@ -135,7 +135,7 @@ char DefinitionNotFoundInSummary::ID = 0;
 Expected<StringRef> getMainModulePath(StringRef FunctionName,
                                       ModuleSummaryIndex &Index) {
   // Summaries use unmangled names.
-  GlobalValue::GUID G = GlobalValue::getGUID(FunctionName);
+  GlobalValue::GUID G = GlobalValue::getGUIDAssumingExternalLinkage(FunctionName);
   ValueInfo VI = Index.getValueInfo(G);
 
   // We need a unique definition, otherwise don't try further.

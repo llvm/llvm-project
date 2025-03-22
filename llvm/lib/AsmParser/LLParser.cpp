@@ -9006,7 +9006,7 @@ bool LLParser::parseTypeIdEntry(unsigned ID) {
     for (auto TIDRef : FwdRefTIDs->second) {
       assert(!*TIDRef.first &&
              "Forward referenced type id GUID expected to be 0");
-      *TIDRef.first = GlobalValue::getGUID(Name);
+      *TIDRef.first = GlobalValue::getGUIDAssumingExternalLinkage(Name);
     }
     ForwardRefTypeIds.erase(FwdRefTIDs);
   }
@@ -9111,7 +9111,7 @@ bool LLParser::parseTypeIdCompatibleVtableEntry(unsigned ID) {
     for (auto TIDRef : FwdRefTIDs->second) {
       assert(!*TIDRef.first &&
              "Forward referenced type id GUID expected to be 0");
-      *TIDRef.first = GlobalValue::getGUID(Name);
+      *TIDRef.first = GlobalValue::getGUIDAssumingExternalLinkage(Name);
     }
     ForwardRefTypeIds.erase(FwdRefTIDs);
   }
@@ -9424,11 +9424,9 @@ bool LLParser::addGlobalValueToIndex(
 
       VI = Index->getOrInsertValueInfo(GV);
     } else {
-      assert(
-          (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&
-          "Need a source_filename to compute GUID for local");
-      GUID = GlobalValue::getGUID(
-          GlobalValue::getGlobalIdentifier(Name, Linkage, SourceFileName));
+      assert(GlobalValue::isExternalLinkage(Linkage) &&
+             "Cannot compute GUID for local");
+      GUID = GlobalValue::getGUIDAssumingExternalLinkage(Name);
       VI = Index->getOrInsertValueInfo(GUID, Index->saveString(Name));
     }
   }

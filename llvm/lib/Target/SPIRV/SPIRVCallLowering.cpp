@@ -461,8 +461,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                            SPIRV::Extension::SPV_KHR_linkonce_odr)
                    ? SPIRV::LinkageType::LinkOnceODR
                    : SPIRV::LinkageType::Export);
-    buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
+    buildOpDecorate(
+        FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
+        // TODO: is getName a valid substitute here? Is there a linkage type
+        // included where the name and globalidentifier might be different?
+        {static_cast<uint32_t>(LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration
