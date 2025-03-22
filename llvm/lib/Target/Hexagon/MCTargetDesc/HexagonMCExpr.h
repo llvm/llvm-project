@@ -14,12 +14,10 @@
 namespace llvm {
 class HexagonMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum VariantKind : uint8_t {
     VK_None,
 
-    // While not strictly necessary, start at a larger number to avoid confusion
-    // with MCSymbolRefExpr::VariantKind.
-    VK_DTPREL = 100,
+    VK_DTPREL = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_GD_GOT,
     VK_GD_PLT,
     VK_GOT,

@@ -1276,7 +1276,6 @@ namespace BuiltinMemcpy {
   static_assert(test_incomplete_array_type() == 1234); // both-error {{constant}} both-note {{in call}}
 
 
-  /// FIXME: memmove needs to support overlapping memory regions.
   constexpr bool memmoveOverlapping() {
     char s1[] {1, 2, 3};
     __builtin_memmove(s1, s1 + 1, 2 * sizeof(char));
@@ -1289,7 +1288,7 @@ namespace BuiltinMemcpy {
 
     return Result1 && Result2;
   }
-  static_assert(memmoveOverlapping()); // expected-error {{failed}}
+  static_assert(memmoveOverlapping());
 }
 
 namespace Memcmp {
