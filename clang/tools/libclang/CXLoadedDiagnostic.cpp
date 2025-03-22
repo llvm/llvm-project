@@ -41,6 +41,7 @@ public:
 
   llvm::BumpPtrAllocator Alloc;
   Strings Categories;
+  Strings CategoryURLs;
   Strings WarningFlags;
   Strings FileNames;
   
@@ -124,6 +125,10 @@ unsigned CXLoadedDiagnostic::getCategory() const {
 
 CXString CXLoadedDiagnostic::getCategoryText() const {
   return cxstring::createDup(CategoryText);
+}
+
+CXString CXLoadedDiagnostic::getCategoryURL() const {
+  return cxstring::createDup(CategoryURL);
 }
 
 unsigned CXLoadedDiagnostic::getNumRanges() const {
@@ -215,7 +220,8 @@ protected:
   std::error_code visitStartOfDiagnostic() override;
   std::error_code visitEndOfDiagnostic() override;
 
-  std::error_code visitCategoryRecord(unsigned ID, StringRef Name) override;
+  std::error_code visitCategoryRecord(unsigned ID, StringRef Name,
+                                      StringRef URL) override;
 
   std::error_code visitDiagFlagRecord(unsigned ID, StringRef Name) override;
 
@@ -345,11 +351,13 @@ std::error_code DiagLoader::visitEndOfDiagnostic() {
   return std::error_code();
 }
 
-std::error_code DiagLoader::visitCategoryRecord(unsigned ID, StringRef Name) {
+std::error_code DiagLoader::visitCategoryRecord(unsigned ID, StringRef Name,
+                                                StringRef URL) {
   // FIXME: Why do we care about long strings?
   if (Name.size() > 65536)
     return reportInvalidFile("Out-of-bounds string in category");
   TopDiags->Categories[ID] = TopDiags->copyString(Name);
+  TopDiags->CategoryURLs[ID] = TopDiags->copyString(URL);
   return std::error_code();
 }
 
@@ -431,6 +439,7 @@ std::error_code DiagLoader::visitDiagnosticRecord(
   D.category = Category;
   D.DiagOption = Flag ? TopDiags->WarningFlags[Flag] : "";
   D.CategoryText = Category ? TopDiags->Categories[Category] : "";
+  D.CategoryURL = Category ? TopDiags->CategoryURLs[Category] : "";
   D.Spelling = TopDiags->copyString(Message);
   return std::error_code();
 }

@@ -339,6 +339,14 @@ clang_getDiagnosticCategoryName(unsigned Category);
 CINDEX_LINKAGE CXString clang_getDiagnosticCategoryText(CXDiagnostic);
 
 /**
+ * Retrieve the diagnostic category's URL for a given diagnostic.
+ *
+ * \returns The URL that provides additional documentation for the
+ * category of this diagnostic.
+ */
+CINDEX_LINKAGE CXString clang_getDiagnosticCategoryURL(CXDiagnostic);
+
+/**
  * Determine the number of source ranges associated with the given
  * diagnostic.
  */

@@ -4823,9 +4823,10 @@ static void printDiagnosticSet(
     CXSourceLocation DiagLoc;
     CXDiagnostic D;
     CXFile File;
-    CXString FileName, DiagSpelling, DiagOption, DiagCat;
+    CXString FileName, DiagSpelling, DiagOption, DiagCat, DiagCatURL;
     unsigned line, column, offset;
-    const char *FileNameStr = 0, *DiagOptionStr = 0, *DiagCatStr = 0;
+    const char *FileNameStr = 0, *DiagOptionStr = 0, *DiagCatStr = 0,
+      *DiagCatURLStr = 0;
     const char *FileContents = 0;
 
     D = clang_getDiagnosticInSet(Diags, i);
@@ -4883,6 +4884,12 @@ static void printDiagnosticSet(
       fprintf(stderr, "%s\nEND CONTENTS OF FILE\n", FileContents);
     }
 
+    DiagCatURL = clang_getDiagnosticCategoryURL(D);
+    DiagCatURLStr = clang_getCString(DiagCatURL);
+    if (DiagCatURLStr && DiagCatStr && DiagCatURLStr[0]) {
+      fprintf(stderr, "[%s]: <%s>\n", DiagCatStr, DiagCatURLStr);
+    }
+
     /* Print subdiagnostics. */
     printDiagnosticSet(clang_getChildDiagnostics(D), indent+2, TopDiags);
 
@@ -4890,6 +4897,7 @@ static void printDiagnosticSet(
     clang_disposeString(DiagSpelling);
     clang_disposeString(DiagOption);
     clang_disposeString(DiagCat);
+    clang_disposeString(DiagCatURL);
   }
 }
 
