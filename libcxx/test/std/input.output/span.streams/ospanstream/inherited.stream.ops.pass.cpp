@@ -14,7 +14,7 @@
 //   class basic_spanstream
 //     : public basic_iostream<charT, traits> {
 
-//   Test stream operations inherited from `basic_istream` and `basic_ostream`
+//   Test stream operations inherited from `basic_ostream`
 
 #include <cassert>
 #include <span>
@@ -37,6 +37,9 @@ void test() {
   constexpr auto arrSize{30UZ};
   assert(sv.size() < arrSize);
 
+  constexpr std::basic_string_view<CharT, TraitsT> sv2{SV("This string should overflow! This string should overflow!")};
+  assert(sv2.size() >= arrSize);
+
   // Create a std::span test value
   CharT arr[arrSize]{};
   initialize_array_from_string_view(arr, sv);
@@ -44,6 +47,7 @@ void test() {
 
   // `std::span` + Mode: default (`out`)
   {
+    // Construct stream
     SpStream spSt(sp);
 
     assert(spSt);
@@ -52,11 +56,11 @@ void test() {
     assert(spSt.good());
     assert(spSt.span().size() == 0);
 
-    // Check underlying buffer
-    assert(arr[0] == CH('z'));
+    assert(arr[0] == CH('z')); // Check underlying buffer
     assert(arr[1] == CH('m'));
     assert(arr[2] == CH('t'));
 
+    // Write to stream
     spSt << SV("snt");
 
     assert(spSt.span().size() == 3);
@@ -64,8 +68,8 @@ void test() {
     assert(spSt.span()[0] == CH('s'));
     assert(spSt.span()[1] == CH('n'));
     assert(spSt.span()[2] == CH('t'));
-    // Check underlying buffer
-    assert(arr[0] == CH('s'));
+
+    assert(arr[0] == CH('s')); // Check underlying buffer
     assert(arr[1] == CH('n'));
     assert(arr[2] == CH('t'));
 
@@ -80,8 +84,8 @@ void test() {
 
     assert(spSt.span()[3] == CH('7'));
     assert(spSt.span()[4] == CH('1'));
-    // Check underlying buffer
-    assert(arr[3] == CH('7'));
+
+    assert(arr[3] == CH('7')); // Check underlying buffer
     assert(arr[4] == CH('1'));
 
     assert(spSt);
@@ -89,7 +93,39 @@ void test() {
     assert(!spSt.fail());
     assert(spSt.good());
 
+    spSt.put(CH('!'));
+
+    assert(spSt.span().size() == 6);
+
+    assert(spSt.span()[5] == CH('!'));
+
+    assert(arr[5] == CH('!')); // Check underlying buffer
+
+    spSt.write(CS("?#?"), 1);
+
+    assert(spSt.span().size() == 7);
+
+    assert(spSt.span()[6] == CH('?'));
+
+    assert(arr[6] == CH('?')); // Check underlying buffer
+
+    // Write to stream with overflow
+    spSt << sv2;
+
+    assert(spSt.span().size() == 30);
+
+    assert(!spSt);
+    assert(spSt.bad());
+    assert(spSt.fail());
+    assert(!spSt.good());
+
+    assert(spSt.tellp() == 30);
+
+    // Clear stream
+    spSt.seekp(0);
     spSt.clear();
+
+    assert(spSt.span().size() == 0);
 
     assert(spSt);
     assert(!spSt.bad());
