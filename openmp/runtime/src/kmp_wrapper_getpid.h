@@ -36,6 +36,9 @@
 #elif KMP_OS_AIX
 #include <pthread.h>
 #define __kmp_gettid() pthread_self()
+#elif KMP_OS_EMSCRIPTEN
+// Emscripten defines gettid without defining SYS_gettid
+#define __kmp_gettid() gettid()
 #elif defined(SYS_gettid)
 // Hopefully other Unix systems define SYS_gettid syscall for getting os thread
 // id
