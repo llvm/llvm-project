@@ -1757,7 +1757,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
         // LOAD_CNT is only relevant to vgpr or LDS.
         unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
-        bool FoundAliasingStore = false;
         // Only objects with alias scope info were added to LDSDMAScopes array.
         // In the absense of the scope info we will not be able to disambiguate
         // aliasing here. There is no need to try searching for a corresponding
@@ -1768,13 +1767,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           const auto &LDSDMAStores = ScoreBrackets.getLDSDMAStores();
           for (unsigned I = 0, E = LDSDMAStores.size(); I != E; ++I) {
             if (MI.mayAlias(AA, *LDSDMAStores[I], true)) {
-              FoundAliasingStore = true;
               ScoreBrackets.determineWait(LOAD_CNT, RegNo + I + 1, Wait);
             }
           }
-        }
-        if (!FoundAliasingStore)
+        } else {
           ScoreBrackets.determineWait(LOAD_CNT, RegNo, Wait);
+        }
         if (Memop->isStore()) {
           ScoreBrackets.determineWait(EXP_CNT, RegNo, Wait);
         }
