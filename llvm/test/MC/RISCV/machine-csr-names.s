@@ -1392,6 +1392,54 @@ csrrs t1, tdata1, zero
 # uimm12
 csrrs t2, 0x7A1, zero
 
+# mcontrol (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, mcontrol, zero
+
+# mcontrol6 (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, mcontrol6, zero
+
+# icount (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, icount, zero
+
+# itrigger (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, itrigger, zero
+
+# etrigger (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, etrigger, zero
+
+# tmexttrigger (alias for tdata1)
+# name
+# CHECK-INST: csrrs t1, tdata1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata1
+# name
+csrrs t1, tmexttrigger, zero
+
 # tdata2
 # name
 # CHECK-INST: csrrs t1, tdata2, zero
@@ -1418,6 +1466,22 @@ csrrs t2, 0x7A2, zero
 csrrs t1, tdata3, zero
 # uimm12
 csrrs t2, 0x7A3, zero
+
+# textra32 (alias for tdata3)
+# name
+# CHECK-INST: csrrs t1, tdata3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata3
+# name
+csrrs t1, textra32, zero
+
+# textra64 (alias for tdata3)
+# name
+# CHECK-INST: csrrs t1, tdata3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x7a]
+# CHECK-INST-ALIAS: csrr t1, tdata3
+# name
+csrrs t1, textra64, zero
 
 # tinfo
 # name
