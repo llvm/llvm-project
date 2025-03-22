@@ -528,8 +528,8 @@ namespace llvm {
   // Expands large div/rem instructions.
   FunctionPass *createExpandLargeDivRemPass();
 
-  // Expands large div/rem instructions.
-  FunctionPass *createExpandFpPass();
+  // Expands floating point instructions.
+  FunctionPass *createExpandFpPass(CodeGenOptLevel);
 
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpLegacyPass();
