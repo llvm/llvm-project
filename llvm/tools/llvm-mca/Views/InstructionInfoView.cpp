@@ -20,8 +20,7 @@
 namespace llvm {
 namespace mca {
 
-  void InstructionInfoView::getComment(raw_ostream &OS,
-				       const MCInst &MCI) const {
+void InstructionInfoView::getComment(raw_ostream &OS, const MCInst &MCI) const {
   StringRef S = MCI.getLoc().getPointer();
   StringRef InstrStr;
   size_t Pos = 0, PosCmt = 0;
@@ -95,7 +94,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   unsigned LastPadding = Paddings.back();
   if (PrintFullInfo) {
     Fields.push_back("Bypass Latency");
-    // Reserving 7 chars for 
+    // Reserving 7 chars for
     Paddings.push_back(LastPadding += 7);
     Fields.push_back("Resources (<Name> | <Name>[<ReleaseAtCycle>] | "
                      "<Name>[<AcquireAtCycle>,<ReleaseAtCycle])");
