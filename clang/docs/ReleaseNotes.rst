@@ -317,6 +317,10 @@ Bug Fixes in This Version
 - Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
   ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
