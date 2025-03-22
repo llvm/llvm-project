@@ -88,7 +88,7 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   //      dirtyinfnorm(acosh(1 + x) - sqrt(2*x) * P(x), [0, 0.25])
   //    is:
   //      0x1.d84281p-22
-  if (LIBC_UNLIKELY(x_u < 1.25f)) {
+  if (LIBC_UNLIKELY(x_u < 0x3D00U)) {
     float delta = xf - 1.0f;
     float sqrt_2_delta = fputil::sqrt<float>(2.0 * delta);
     float pe = fputil::polyeval(delta, 0x1p+0f, -0x1.555556p-4f, 0x1.333334p-6f,
