@@ -333,3 +333,14 @@ namespace test9 {
   struct C { int BAR::*mp; };
   // expected-error@-1 {{'BAR' is not a class, namespace, or enumeration}}
 } // namespace test9
+
+namespace GH132494 {
+  enum E {};
+
+  void f(int E::*); // expected-error {{member pointer does not point into a class}}
+
+  template <class T> struct A {
+    int T::*foo; // expected-error {{'foo' does not point into a class}}
+  };
+  template struct A<E>; // expected-note {{requested here}}
+} // namespace GH132494
