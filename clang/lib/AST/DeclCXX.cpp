@@ -2533,11 +2533,36 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
       getOverloadedOperator() != OO_Array_Delete)
     return false;
 
+  bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
+  if (IsTypeAware && isVariadic())
+    return false;
+
   // C++ [basic.stc.dynamic.deallocation]p2:
+  //   Pre-type aware allocators:
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
-  if (getPrimaryTemplate())
-    return false;
+  //   Pending final C++26 text:
+  //   A template instance is only a usual deallocation function if it
+  //   is a type aware deallocation function, only the type-identity
+  //   parameter is dependent, and there is no parameter pack in the argument
+  //   list.
+  if (FunctionTemplateDecl *PrimaryTemplate = getPrimaryTemplate()) {
+    if (!IsTypeAware)
+      // Stop early on if the specialization is not explicitly type aware
+      return false;
+
+    FunctionDecl *SpecializedDecl = PrimaryTemplate->getTemplatedDecl();
+    // A type aware allocation function template is only valid if the first
+    // parameter is dependent
+    if (!SpecializedDecl->getParamDecl(0)->getType()->isDependentType())
+      return false;
+
+    // and none of the other parameters are dependent
+    for (unsigned Idx = 1; Idx < getNumParams(); ++Idx) {
+      if (SpecializedDecl->getParamDecl(Idx)->getType()->isDependentType())
+        return false;
+    }
+  }
 
   // C++ [basic.stc.dynamic.deallocation]p2:
   //   If a class T has a member deallocation function named operator delete
@@ -2547,13 +2572,18 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     return true;
   unsigned UsualParams = 1;
 
+  if (IsTypeAware)
+    ++UsualParams;
+
   // C++ P0722:
   //   A destroying operator delete is a usual deallocation function if
   //   removing the std::destroying_delete_t parameter and changing the
   //   first parameter type from T* to void* results in the signature of
   //   a usual deallocation function.
-  if (isDestroyingOperatorDelete())
+  if (isDestroyingOperatorDelete()) {
+    assert(!IsTypeAware);
     ++UsualParams;
+  }
 
   // C++ <=14 [basic.stc.dynamic.deallocation]p2:
   //   [...] If class T does not declare such an operator delete but does
@@ -2565,6 +2595,11 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   //   (void* [, size_t] [, std::align_val_t] [, ...])
   // and all such functions are usual deallocation functions. It's not clear
   // that allowing varargs functions was intentional.
+  //
+  // P2719 extends usual deallocation functions to permit
+  //   (type_identity<U>, void*, size_t, std::align_val_t)
+  // it does not permit variadic or template parameter packs
+
   ASTContext &Context = getASTContext();
   if (UsualParams < getNumParams() &&
       Context.hasSameUnqualifiedType(getParamDecl(UsualParams)->getType(),
@@ -2584,8 +2619,8 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   // FIXME(EricWF): Destroying Delete should be a language option. How do we
   // handle when destroying delete is used prior to C++17?
   if (Context.getLangOpts().CPlusPlus17 ||
-      Context.getLangOpts().AlignedAllocation ||
-      isDestroyingOperatorDelete())
+      Context.getLangOpts().AlignedAllocation || isDestroyingOperatorDelete() ||
+      IsTypeAware)
     return true;
 
   // This function is a usual deallocation function if there are no

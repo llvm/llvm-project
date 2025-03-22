@@ -3362,12 +3362,7 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
-    return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+  if (!getDeclName().isOperatorNewOrDelete())
     return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
@@ -3375,6 +3370,8 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
 
   const auto *proto = getType()->castAs<FunctionProtoType>();
   if (proto->getNumParams() != 2 || proto->isVariadic())
+    return false;
+  if (proto->getParamType(0)->isTypeIdentitySpecialization())
     return false;
 
   const ASTContext &Context =
@@ -3386,14 +3383,9 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isReplaceableGlobalAllocationFunction(
+bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
-    return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+  if (!getDeclName().isOperatorNewOrDelete())
     return false;
 
   if (isa<CXXRecordDecl>(getDeclContext()))
@@ -3403,8 +3395,31 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
+  if (isVariadic())
+    return false;
+
+  if (isTypeAwareOperatorNewOrDelete()) {
+    bool IsDelete = getDeclName().isOperatorDelete();
+    unsigned RequiredParameterCount =
+        IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount
+                 : FunctionDecl::RequiredTypeAwareNewParameterCount;
+    if (AlignmentParam)
+      *AlignmentParam =
+          /* type identity */ 1 + /* address */ IsDelete + /* size */ 1;
+    if (RequiredParameterCount == getNumParams())
+      return true;
+    if (getNumParams() > RequiredParameterCount + 1)
+      return false;
+    if (!getParamDecl(RequiredParameterCount)->getType()->isNothrowT())
+      return false;
+
+    if (IsNothrow)
+      *IsNothrow = true;
+    return true;
+  }
+
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4 || FPT->isVariadic())
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4)
     return false;
 
   // If this is a single-parameter function, it must be a replaceable global
@@ -3503,9 +3518,23 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
       getNumParams() < 2)
     return false;
 
-  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
-  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
-         RD->getIdentifier()->isStr("destroying_delete_t");
+  if (isTypeAwareOperatorNewOrDelete())
+    return false;
+
+  return getParamDecl(1)->getType()->isDestroyingDeleteT();
+}
+
+bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
+  if (getDeclName().isOperatorNew()) {
+    if (getNumParams() < FunctionDecl::RequiredTypeAwareNewParameterCount)
+      return false;
+  } else if (getDeclName().isOperatorDelete()) {
+    if (getNumParams() < FunctionDecl::RequiredTypeAwareDeleteParameterCount)
+      return false;
+  } else
+    return false;
+
+  return getParamDecl(0)->getType()->isTypeIdentitySpecialization();
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {

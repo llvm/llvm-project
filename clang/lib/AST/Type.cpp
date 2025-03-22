@@ -3133,6 +3133,31 @@ bool Type::isStdByteType() const {
   return false;
 }
 
+bool Type::isDestroyingDeleteT() const {
+  auto *RD = getAsCXXRecordDecl();
+  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
+         RD->getIdentifier()->isStr("destroying_delete_t");
+}
+
+TemplateDecl *Type::tryGetSpecializedTemplateDecl() const {
+  auto UnderlyingType = getCanonicalTypeInternal();
+  if (auto *TST = UnderlyingType->getAs<TemplateSpecializationType>())
+    return TST->getTemplateName().getAsTemplateDecl();
+  if (auto *RT = UnderlyingType->getAsCXXRecordDecl()) {
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RT))
+      return CTSD->getSpecializedTemplate();
+  }
+  return nullptr;
+}
+
+bool Type::isTypeIdentitySpecialization() const {
+  const TemplateDecl *STDecl = tryGetSpecializedTemplateDecl();
+  if (!STDecl)
+    return false;
+  IdentifierInfo *II = STDecl->getIdentifier();
+  return STDecl->isInStdNamespace() && II->isStr("type_identity");
+}
+
 bool Type::isSpecifierType() const {
   // Note that this intentionally does not use the canonical type.
   switch (getTypeClass()) {
