@@ -42,4 +42,5 @@ class TestFile(unittest.TestCase):
         )
         file1 = File.from_name(tu, "t.c")
         file2 = File.from_name(tu, "s.c")
-        self.assertEqual(file1, file2)  # These files are not supposed to be equal
+        # FIXME: These files are not supposed to be equal
+        self.assertEqual(file1, file2)  
