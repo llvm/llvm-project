@@ -758,6 +758,7 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   CLI.IsVarArg = false;
   CLI.DL = DL;
   CLI.NoMerge = false;
+  CLI.DoesNotReturn = true;
   return LowerCall(CLI, InVals);
 }
 
