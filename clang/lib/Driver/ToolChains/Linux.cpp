@@ -354,6 +354,8 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   addPathIfExists(D, concat(SysRoot, "/lib"), Paths);
   addPathIfExists(D, concat(SysRoot, "/usr/lib"), Paths);
+
+  addPathIfExists(D, concat(SysRoot, "/lib"), getLibraryPaths());
 }
 
 ToolChain::RuntimeLibType Linux::GetDefaultRuntimeLibType() const {
