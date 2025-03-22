@@ -998,7 +998,6 @@ int count(int a, int b){
         self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")
 
     def test_hash(self):
-
         def accumulate_cursors(cursor: Cursor, all_cursors: list):
             all_cursors.append(cursor)
             for child in cursor.get_children():
