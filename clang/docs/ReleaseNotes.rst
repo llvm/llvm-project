@@ -291,6 +291,8 @@ Improvements to Clang's diagnostics
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
