@@ -344,3 +344,14 @@ namespace GH132494 {
   };
   template struct A<E>; // expected-note {{requested here}}
 } // namespace GH132494
+
+namespace GH132401 {
+  template <typename Func> struct CallableHelper {
+    static auto Resolve() -> Func;
+  };
+  struct QIODevice {
+    void d_func() { (void)d_ptr; }
+    int d_ptr;
+  };
+  template struct CallableHelper<void (QIODevice::*)()>;
+} // namespace GH132401
