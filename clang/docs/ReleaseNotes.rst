@@ -527,7 +527,7 @@ Python Binding Changes
 ----------------------
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
-- Add equality comparison operators for ``File`` type
+- Add equality comparison operators for ``File`` type.
 
 OpenMP Support
 --------------
