@@ -942,7 +942,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+  auto [It, Inserted] = NumberedMetadata.try_emplace(MID);
+  if (!Inserted) {
     Result = It->second;
     return false;
   }
@@ -952,7 +953,7 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
   FwdRef = std::make_pair(MDTuple::getTemporary(Context, {}), IDLoc);
 
   Result = FwdRef.first.get();
-  NumberedMetadata[MID].reset(Result);
+  It->second.reset(Result);
   return false;
 }
 
