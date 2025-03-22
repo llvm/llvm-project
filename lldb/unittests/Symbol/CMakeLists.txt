@@ -26,6 +26,7 @@ add_lldb_unittest(SymbolTests
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
   TestLineEntry.cpp
+  UnwindPlanTest.cpp
 
   ${SWIFT_SOURCES}
 
