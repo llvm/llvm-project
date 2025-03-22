@@ -1073,6 +1073,29 @@ inputs. Here is some example of ``$``-prefixed options:
 Language and Target-Independent Features
 ========================================
 
+Freestanding Builds
+-------------------
+Passing the ``-ffreestanding`` flag causes Clang to build for a freestanding
+(rather than a hosted) environment. The flag has the following effects:
+
+* the ``__STDC_HOSTED__`` predefined macro will expand to ``0``,
+* builtin functions are disabled (``-fno-builtins``),
+* unwind tables are disabled (``fno-asynchronous-unwind-tables -fno-unwind-tables``),
+* allows ``main`` to be used as a regular function, and
+* removes implicit system header search paths and link libraries.
+
+A freestanding environment is not one which has no C standard library support.
+A conforming freestanding C standard library implementation is required. Clang
+supplies some of the header files needed for a freestanding execution, such as
+``<stdarg.h>``, ``<limits.h>``, ``<stdint.h>``, etc. However, Clang still
+requires the runtime freestanding library to provide the interfaces required by
+Clause 4 (Conformance) of the C standard. Additionally, Clang requires the
+following runtime interfaces to be provided:
+
+  * `memcpy`,
+  * `memmove`, and
+  * `memset`.
+
 Controlling Errors and Warnings
 -------------------------------
 
