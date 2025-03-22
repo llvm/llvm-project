@@ -120,11 +120,13 @@ static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
 
-static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
-    "simplifycfg-hoist-loads-stores-with-cond-faulting", cl::Hidden,
-    cl::init(true),
-    cl::desc("Hoist loads/stores if the target supports "
-             "conditional faulting"));
+static cl::opt<bool> HoistLoadsWithCondFaulting(
+    "simplifycfg-hoist-loads-with-cond-faulting", cl::Hidden, cl::init(true),
+    cl::desc("Hoist loads if the target supports conditional faulting"));
+
+static cl::opt<bool> HoistStoresWithCondFaulting(
+    "simplifycfg-hoist-stores-with-cond-faulting", cl::Hidden, cl::init(true),
+    cl::desc("Hoist stores if the target supports conditional faulting"));
 
 static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
     "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
@@ -1682,22 +1684,22 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 static void hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
-    std::optional<bool> Invert) {
+    std::optional<bool> Invert, Instruction *Sel) {
   auto &Context = BI->getParent()->getContext();
   auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
   auto *Cond = BI->getOperand(0);
   // Construct the condition if needed.
   BasicBlock *BB = BI->getParent();
-  IRBuilder<> Builder(
-      Invert.has_value() ? SpeculatedConditionalLoadsStores.back() : BI);
   Value *Mask = nullptr;
   Value *MaskFalse = nullptr;
   Value *MaskTrue = nullptr;
   if (Invert.has_value()) {
+    IRBuilder<> Builder(Sel ? Sel : SpeculatedConditionalLoadsStores.back());
     Mask = Builder.CreateBitCast(
         *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
         VCondTy);
   } else {
+    IRBuilder<> Builder(BI);
     MaskFalse = Builder.CreateBitCast(
         Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
     MaskTrue = Builder.CreateBitCast(Cond, VCondTy);
@@ -1723,13 +1725,20 @@ static void hoistConditionalLoadsStores(
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
       if (Invert.has_value())
-        for (User *U : I->users())
+        for (User *U : I->users()) {
           if ((PN = dyn_cast<PHINode>(U))) {
             PassThru = Builder.CreateBitCast(
                 PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
                 FixedVectorType::get(Ty, 1));
-            break;
+          } else if (auto *Ins = cast<Instruction>(U);
+                     Sel && Ins->getParent() == BB) {
+            // This happens when store or/and a speculative instruction between
+            // load and store were hoisted to the BB. Make sure the masked load
+            // inserted before its use.
+            // We assume there's one of such use.
+            Builder.SetInsertPoint(Ins);
           }
+        }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
@@ -1770,10 +1779,10 @@ static bool isSafeCheapLoadStore(const Instruction *I,
   // Not handle volatile or atomic.
   bool IsStore = false;
   if (auto *L = dyn_cast<LoadInst>(I)) {
-    if (!L->isSimple())
+    if (!L->isSimple() || !HoistLoadsWithCondFaulting)
       return false;
   } else if (auto *S = dyn_cast<StoreInst>(I)) {
-    if (!S->isSimple())
+    if (!S->isSimple() || !HoistStoresWithCondFaulting)
       return false;
     IsStore = true;
   } else
@@ -3214,8 +3223,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
-  bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
-                          Options.HoistLoadsStoresWithCondFaulting;
+  bool HoistLoadsStores = Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
@@ -3310,6 +3318,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // If we get here, we can hoist the instruction and if-convert.
   LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
+  Instruction *Sel = nullptr;
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
@@ -3320,6 +3329,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       std::swap(TrueV, FalseV);
     Value *S = Builder.CreateSelect(
         BrCond, TrueV, FalseV, "spec.store.select", BI);
+    Sel = cast<Instruction>(S);
     SpeculatedStore->setOperand(0, S);
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
@@ -3392,7 +3402,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
              std::prev(ThenBB->end()));
 
   if (!SpeculatedConditionalLoadsStores.empty())
-    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert);
+    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert,
+                                Sel);
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
@@ -8020,8 +8031,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
           hoistCommonCodeFromSuccessors(BI, !Options.HoistCommonInsts))
         return requestResimplify();
 
-      if (BI && HoistLoadsStoresWithCondFaulting &&
-          Options.HoistLoadsStoresWithCondFaulting &&
+      if (BI && Options.HoistLoadsStoresWithCondFaulting &&
           isProfitableToSpeculate(BI, std::nullopt, TTI)) {
         SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
         auto CanSpeculateConditionalLoadsStores = [&]() {
@@ -8044,7 +8054,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
         if (CanSpeculateConditionalLoadsStores()) {
           hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
-                                      std::nullopt);
+                                      std::nullopt, nullptr);
           return requestResimplify();
         }
       }
