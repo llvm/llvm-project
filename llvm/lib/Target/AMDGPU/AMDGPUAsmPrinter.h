@@ -40,7 +40,7 @@ private:
   unsigned CodeObjectVersion;
   void initializeTargetID(const Module &M);
 
-  AMDGPUResourceUsageAnalysis *ResourceUsage;
+  AMDGPUResourceUsageAnalysisWrapperPass *ResourceUsage;
 
   MCResourceInfo RI;
 
