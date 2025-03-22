@@ -1346,19 +1346,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                  decl_line, decl_column, call_file, call_line,
                                  call_column, nullptr)) {
       for (const llvm::DWARFAddressRange &range : ranges) {
-        if (!range.valid())
-          continue;
-        if (range.LowPC >= subprogram_low_pc)
+        if (range.valid() && range.LowPC >= m_first_code_address)
           block->AddRange(Block::Range(range.LowPC - subprogram_low_pc,
                                        range.HighPC - range.LowPC));
-        else {
-          GetObjectFile()->GetModule()->ReportError(
-              "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
-              "that is less than the function's low PC {3:x16}. Please file "
-              "a bug and attach the file at the "
-              "start of this error message",
-              block->GetID(), range.LowPC, range.HighPC, subprogram_low_pc);
-        }
       }
       block->FinalizeRanges();
 
