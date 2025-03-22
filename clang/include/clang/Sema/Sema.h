@@ -14885,7 +14885,7 @@ public:
   ///
   /// \returns a member pointer type, if successful, or a NULL type if there was
   /// an error.
-  QualType BuildMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+  QualType BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
                                   CXXRecordDecl *Cls, SourceLocation Loc,
                                   DeclarationName Entity);
 
