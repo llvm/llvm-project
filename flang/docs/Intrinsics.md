@@ -952,24 +952,22 @@ This intrinsic is provided in both subroutine and function forms; however, only 
 | `TIME`     | The type shall be REAL(4).                                            |
 
 #### Example
-Here is an example usage from [Gfortran ETIME](https://gcc.gnu.org/onlinedocs/gfortran/ETIME.html)
 ```Fortran
-program test_etime
-    integer(8) :: i, j
-    real, dimension(2) :: tarray
-    real :: result
-    call ETIME(tarray, result)
-    print *, result
-    print *, tarray(1)
-    print *, tarray(2)   
-    do i=1,100000000    ! Just a delay
-        j = i * i - i
-    end do
-    call ETIME(tarray, result)
-    print *, result
-    print *, tarray(1)
-    print *, tarray(2)
-end program test_etime
+program example_etime
+  implicit none
+  real, dimension(2) :: values
+  real :: time
+  integer :: i
+
+  DO i = 1, 1000000000
+  END DO
+
+  call ETIME(values, time)
+
+  print *, "real  ", time, "s"
+  print *, "user  ", values(1), "s"
+  print *, "sys   ", values(2), "s"
+end program example_etime
 ```
 
 ### Non-Standard Intrinsics: GETCWD
