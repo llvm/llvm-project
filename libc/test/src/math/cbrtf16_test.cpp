@@ -43,7 +43,12 @@ TEST_F(LlvmLibcCbrtf16Test, NegativeRange) {
 
 TEST_F(LlvmLibcCbrtf16Test, SpecialValues) {
   constexpr uint16_t INPUTS[] = {
-      0x4a00, 0x4500, 0x4e00, 0x0c00, 0x4940,
+      0x4a00, 0x4500, 0x4e00, 0x4940, 0x0c00,
+      0x4248, // ~pi
+      0x7bff, // max positive value
+      0x3800, // 0.5
+      0x3bec, // ~0.99
+      0x3c01, // ~1.01
   };
   for (uint16_t v : INPUTS) {
     float16 x = FPBits(v).get_val();
