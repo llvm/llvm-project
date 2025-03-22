@@ -40,6 +40,12 @@ functions:
     arguments:
       - type: size_t
       - type: size_t
+  - name: memalignment
+    standards:
+      - gnu
+    return_type: size_t
+    arguments:
+      - type: const void *
   - name: realloc
     standards:
       - stdc
