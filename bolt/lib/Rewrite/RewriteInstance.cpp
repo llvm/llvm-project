@@ -3472,7 +3472,8 @@ void RewriteInstance::buildFunctionsCFG() {
       };
 
   ParallelUtilities::PredicateTy SkipPredicate = [&](const BinaryFunction &BF) {
-    return !shouldDisassemble(BF) || !BF.isSimple();
+    // Construct CFG for non-simple functions in aggregation mode.
+    return !(shouldDisassemble(BF) && (BF.isSimple() || opts::AggregateOnly));
   };
 
   ParallelUtilities::runOnEachFunctionWithUniqueAllocId(
