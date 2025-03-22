@@ -2053,9 +2053,7 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
       (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
 
   PrimType ElemT =
-      IsRawByte
-          ? PT_Sint8
-          : *S.getContext().classify(Ptr.getFieldDesc()->getElemQualType());
+      IsRawByte ? PT_Sint8 : *S.getContext().classify(getElemType(Ptr));
 
   size_t Index = Ptr.getIndex();
   size_t Step = 0;
