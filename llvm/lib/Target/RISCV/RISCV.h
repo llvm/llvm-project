@@ -43,6 +43,9 @@ FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 
+FunctionPass *createRISCVLatePeepholeOptPass();
+void initializeRISCVLatePeepholeOptPass(PassRegistry &);
+
 FunctionPass *createRISCVGatherScatterLoweringPass();
 void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
 

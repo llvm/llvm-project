@@ -492,7 +492,7 @@ static void FixTail(MachineBasicBlock *CurMBB, MachineBasicBlock *SuccBB,
   DebugLoc dl = CurMBB->findBranchDebugLoc();
   if (!dl)
     dl = BranchDL;
-  if (I != MF->end() && !TII->analyzeBranch(*CurMBB, TBB, FBB, Cond, true)) {
+  if (I != MF->end() && !TII->analyzeBranch(*CurMBB, TBB, FBB, Cond)) {
     MachineBasicBlock *NextBB = &*I;
     if (TBB == NextBB && !Cond.empty() && !FBB) {
       if (!TII->reverseBranchCondition(Cond)) {
@@ -1132,7 +1132,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
 
       MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
       SmallVector<MachineOperand, 4> Cond;
-      if (!TII->analyzeBranch(*PBB, TBB, FBB, Cond, true)) {
+      if (!TII->analyzeBranch(*PBB, TBB, FBB, Cond)) {
         // Failing case: IBB is the target of a cbr, and we cannot reverse the
         // branch.
         SmallVector<MachineOperand, 4> NewCond(Cond);
@@ -1589,7 +1589,8 @@ ReoptimizeBlock:
     //    Loop: xxx; jcc Out; jmp Loop
     // we want:
     //    Loop: xxx; jncc Loop; jmp Out
-    if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB) {
+    if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB &&
+        !CurCond.empty()) {
       SmallVector<MachineOperand, 4> NewCond(CurCond);
       if (!TII->reverseBranchCondition(NewCond)) {
         DebugLoc Dl = MBB->findBranchDebugLoc();
