@@ -411,7 +411,7 @@ def FeatureStdExtZcf
 def FeatureStdExtZclsd
     : RISCVExtension<1, 0,
                      "Compressed Load/Store Pair Instructions",
-                     [FeatureStdExtZilsd,FeatureStdExtZca]>;     
+                     [FeatureStdExtZilsd, FeatureStdExtZca]>;
 def HasStdExtZclsd : Predicate<"Subtarget->hasStdExtZclsd()">,
                     AssemblerPredicate<(all_of FeatureStdExtZclsd),
                         "'Zclsd' (Compressed Load/Store pair instructions)">;
