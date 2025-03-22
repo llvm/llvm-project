@@ -3743,7 +3743,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  DisasmSymbolSet.insert(DisassembleSymbols.begin(), DisassembleSymbols.end());
+  DisasmSymbolSet.insert_range(DisassembleSymbols);
 
   llvm::for_each(InputFilenames, dumpInput);
 
