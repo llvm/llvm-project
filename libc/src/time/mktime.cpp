@@ -15,13 +15,13 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
-  int64_t seconds = time_utils::mktime_internal(tm_out);
+  auto [seconds, out_of_range_flag] = time_utils::mktime_internal(tm_out);
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (time_utils::update_from_seconds(seconds, tm_out) < 0)
+  if (out_of_range_flag || time_utils::update_from_seconds(seconds, tm_out) < 0)
     return time_utils::out_of_range();
 
-  return static_cast<time_t>(seconds);
+  return seconds;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
