@@ -9,7 +9,7 @@
 declare void @str2(ptr %str)
 define void @str1() {
 entry:
-;; CHECK: mov.u64 %rd{{[0-9]+}}, $str;
+;; CHECK: mov.b64 %rd{{[0-9]+}}, $str;
   tail call void @str2(ptr addrspacecast (ptr addrspace(1) @"$str" to ptr))
   ret void
 }
