@@ -98,7 +98,7 @@ static Value flattenVecToBits(ConversionPatternRewriter &rewriter, Location loc,
 
   int64_t bitwidth =
       vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
-  Type allBitsType = rewriter.getIntegerType(bitwidth);
+  auto allBitsType = rewriter.getIntegerType(bitwidth);
   auto allBitsVecType = VectorType::get({1}, allBitsType);
   Value bitcast = rewriter.create<vector::BitCastOp>(loc, allBitsVecType, val);
   Value scalar = rewriter.create<vector::ExtractOp>(loc, bitcast, 0);

@@ -684,7 +684,8 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
   auto loads = buildMemRefLoads(b, loc, laneId, memref, std::move(indexFn));
 
   Type elementType = getElementTypeOrSelf(memref.getType());
-  auto vt = VectorType::get(vectorShape, elementType);
+  auto vt =
+      VectorType::get(vectorShape, cast<ScalarTypeInterface>(elementType));
   Value res = b.create<vector::SplatOp>(loc, vt, loads[0]);
   foreachIndividualVectorElement(
       res,

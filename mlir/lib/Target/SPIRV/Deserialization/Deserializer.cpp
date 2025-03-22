@@ -882,7 +882,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
       return emitError(unknownLoc, "OpTypeVector references undefined <id> ")
              << operands[1];
     }
-    typeMap[operands[0]] = VectorType::get({operands[2]}, elementTy);
+    typeMap[operands[0]] =
+        VectorType::get({operands[2]}, cast<ScalarTypeInterface>(elementTy));
   } break;
   case spirv::Opcode::OpTypePointer: {
     return processOpTypePointer(operands);

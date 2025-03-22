@@ -139,8 +139,8 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   if (iface.isConvertibleInstruction(inst->getOpcode()))
     return iface.convertInstruction(odsBuilder, inst, llvmOperands,
                                     moduleImport);
-  // TODO: Implement the `convertInstruction` hooks in the
-  // `LLVMDialectLLVMIRImportInterface` and move the following include there.
+    // TODO: Implement the `convertInstruction` hooks in the
+    // `LLVMDialectLLVMIRImportInterface` and move the following include there.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
 }
@@ -813,7 +813,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
 
   SmallVector<int64_t> shape(arrayShape);
   shape.push_back(numElements.getKnownMinValue());
-  return VectorType::get(shape, elementType);
+  return VectorType::get(shape, cast<ScalarTypeInterface>(elementType));
 }
 
 Type ModuleImport::getBuiltinTypeForAttr(Type type) {

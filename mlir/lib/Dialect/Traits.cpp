@@ -179,7 +179,7 @@ Type OpTrait::util::getBroadcastedType(Type type1, Type type2,
 
   // Compose the final broadcasted type
   if (resultCompositeKind == VectorType::getTypeID())
-    return VectorType::get(resultShape, elementType);
+    return VectorType::get(resultShape, cast<ScalarTypeInterface>(elementType));
   if (resultCompositeKind == RankedTensorType::getTypeID())
     return RankedTensorType::get(resultShape, elementType);
   return elementType;

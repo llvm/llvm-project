@@ -203,6 +203,10 @@ class ConfinedType<Type type, list<Pred> predicates, string summary = "",
     list<Pred> predicateList = predicates;
 }
 
+def AnyScalarType : Type<
+    CPred<"::llvm::isa<::mlir::ScalarTypeInterface>($_self)">,
+        "scalable type", "::mlir::ScalarTypeInterface">;
+
 // Integer types.
 
 // Any integer type irrespective of its width and signedness semantics.

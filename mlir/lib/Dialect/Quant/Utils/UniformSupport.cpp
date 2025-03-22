@@ -39,7 +39,8 @@ Type ExpressedToQuantizedConverter::convert(QuantizedType elementalType) const {
   if (dyn_cast<UnrankedTensorType>(inputType))
     return UnrankedTensorType::get(elementalType);
   if (auto vectorType = dyn_cast<VectorType>(inputType))
-    return VectorType::get(vectorType.getShape(), elementalType);
+    return VectorType::get(vectorType.getShape(),
+                           cast<ScalarTypeInterface>(elementalType));
 
   // If the expressed types match, just use the new elemental type.
   if (elementalType.getExpressedType() == expressedType)
