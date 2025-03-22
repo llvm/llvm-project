@@ -10,6 +10,7 @@ add_object_library(
   DEPENDS
     libc.include.errno
     libc.include.limits
+    libc.include.uefi
     libc.src.__support.common
     libc.src.__support.CPP.string_view
 )

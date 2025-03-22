@@ -15,9 +15,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static const struct {
+static constexpr struct errno_efi_status_entry {
   EFI_STATUS status;
-  int errno;
+  int errno_value;
 } uefi_status_errno_map[] = {
     {EFI_SUCCESS, 0},
     {ERROR_BIT | EFI_LOAD_ERROR, EINVAL},
@@ -65,20 +65,20 @@ static constexpr size_t uefi_status_errno_map_length =
 
 int uefi_status_to_errno(EFI_STATUS status) {
   for (size_t i = 0; i < uefi_status_errno_map_length; i++) {
-    if (uefi_status_errno_map[i].status == status) {
-      return uefi_status_errno_map[i].errno;
-    }
+    const struct errno_efi_status_entry *entry = &uefi_status_errno_map[i];
+    if (entry->status == status)
+      return entry->errno_value;
   }
 
   // Unknown type
   __builtin_unreachable();
 }
 
-EFI_STATUS errno_to_uefi_status(int errno) {
+EFI_STATUS errno_to_uefi_status(int errno_value) {
   for (size_t i = 0; i < uefi_status_errno_map_length; i++) {
-    if (uefi_status_errno_map[i].errno == errno) {
-      return uefi_status_errno_map[i].status;
-    }
+    const struct errno_efi_status_entry *entry = &uefi_status_errno_map[i];
+    if (entry->errno_value == errno_value)
+      return entry->status;
   }
 
   // Unknown type
