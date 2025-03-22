@@ -6425,7 +6425,7 @@ def err_init_objc_class : Error<
 def err_implicit_empty_initializer : Error<
   "initializer for aggregate with no elements requires explicit braces">;
 def err_bitfield_has_negative_width : Error<
-  "bit-field %0 has negative width (%1)">;
+  "bit-field %0 has negative width (%separated1)">;
 def err_anon_bitfield_has_negative_width : Error<
   "anonymous bit-field has negative width (%0)">;
 def err_bitfield_has_zero_width : Error<"named bit-field %0 has zero width">;
@@ -6437,10 +6437,10 @@ def err_incorrect_number_of_vector_initializers : Error<
 
 // Used by C++ which allows bit-fields that are wider than the type.
 def warn_bitfield_width_exceeds_type_width: Warning<
-  "width of bit-field %0 (%1 bits) exceeds the width of its type; value will "
-  "be truncated to %2 bit%s2">, InGroup<BitFieldWidth>;
+  "width of bit-field %0 (%separated1 bits) exceeds the width of its type; value will "
+  "be truncated to %separated2 bit%s2">, InGroup<BitFieldWidth>;
 def err_bitfield_too_wide : Error<
-  "%select{bit-field %1|anonymous bit-field}0 is too wide (%2 bits)">;
+  "%select{bit-field %1|anonymous bit-field}0 is too wide (%separated2 bits)">;
 def warn_bitfield_too_small_for_enum : Warning<
   "bit-field %0 is not wide enough to store all enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
