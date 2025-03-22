@@ -90,6 +90,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h external entrypoints
     libc.src.stdlib.malloc
+    libc.src.stdlib.memalignment
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.aligned_alloc

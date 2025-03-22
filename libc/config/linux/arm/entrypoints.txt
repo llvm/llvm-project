@@ -170,6 +170,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
     libc.src.stdlib.malloc
+    libc.src.stdlib.memalignment
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
