@@ -107,6 +107,15 @@ void BoundNodesTreeBuilder::visitMatches(Visitor *ResultVisitor) {
   }
 }
 
+bool BoundNodesTreeBuilder::contains(const internal::BoundNodesMap &Subset) {
+  for (BoundNodesMap &Binding : Bindings) {
+    if (Binding.contains(Subset)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 namespace {
 
 using VariadicOperatorFunction = bool (*)(
@@ -1052,8 +1061,12 @@ const internal::ArgumentAdaptingMatcherFunc<internal::HasDescendantMatcher>
     hasDescendant = {};
 const internal::ArgumentAdaptingMatcherFunc<internal::ForEachMatcher> forEach =
     {};
+const internal::ArgumentAdaptingMatcherFunc<internal::ForNoneMatcher> forNone =
+    {};
 const internal::ArgumentAdaptingMatcherFunc<internal::ForEachDescendantMatcher>
     forEachDescendant = {};
+const internal::ArgumentAdaptingMatcherFunc<internal::ForNoDescendantMatcher>
+    forNoDescendant = {};
 const internal::ArgumentAdaptingMatcherFunc<
     internal::HasParentMatcher,
     internal::TypeList<Decl, NestedNameSpecifierLoc, Stmt, TypeLoc, Attr>,
