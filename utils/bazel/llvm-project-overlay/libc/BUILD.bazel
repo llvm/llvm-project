@@ -2845,6 +2845,13 @@ libc_math_function(name = "floorf16")
 
 # TODO: Add fma, fmaf, fmal, fmaf128 functions.
 
+libc_math_function(
+    name = "fmaf16",
+    additional_deps = [
+        ":__support_fputil_fma",
+    ],
+)
+
 libc_math_function(name = "fmax")
 
 libc_math_function(name = "fmaxf")
