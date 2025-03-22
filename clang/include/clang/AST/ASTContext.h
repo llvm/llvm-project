@@ -2976,6 +2976,9 @@ public:
   /// This routine adjusts the given parameter type @p T to the actual
   /// parameter type used by semantic analysis (C99 6.7.5.3p[7,8],
   /// C++ [dcl.fct]p3). The adjusted parameter type is returned.
+  ///
+  /// If @p T is a pack expansion type, the adjustment is performed
+  /// on its pattern.
   QualType getAdjustedParameterType(QualType T) const;
 
   /// Retrieve the parameter type as adjusted for use in the signature

@@ -11358,19 +11358,22 @@ public:
                             NonTypeTemplateParmDecl *OrigConstrainedParm,
                             SourceLocation EllipsisLoc);
 
-  /// Require the given type to be a structural type, and diagnose if it is not.
+  /// Require the given type to be a structural type,
+  /// and optionally diagnose if it is not.
   ///
-  /// \return \c true if an error was produced.
-  bool RequireStructuralType(QualType T, SourceLocation Loc);
+  /// \return \c true if the type is *not* a structural type.
+  bool RequireStructuralType(QualType T, SourceLocation Loc, bool Diagnose);
 
   /// Check that the type of a non-type template parameter is
   /// well-formed.
   ///
   /// \returns the (possibly-promoted) parameter type if valid;
-  /// otherwise, produces a diagnostic and returns a NULL type.
+  /// otherwise, returns a NULL type and optionally produces a diagnostic.
   QualType CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
-                                             SourceLocation Loc);
-  QualType CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc);
+                                             SourceLocation Loc,
+                                             bool Diagnose = true);
+  QualType CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc,
+                                             bool Diagnose = true);
 
   NamedDecl *ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
                                            unsigned Depth, unsigned Position,
