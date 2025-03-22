@@ -42,6 +42,12 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Some old-style offsetof idioms like ``((int)(&(((struct S *)0)->field)))`` are treated
+  as UB. To avoid breaking existing code, ``inbounds`` flags will not be set for such patterns.
+  However, it is still highly recommended to use the UB-free macro ``offsetof`` or clang builtin
+  function ``__builtin_offsetof``. It is also possible to use ``-fwrapv-pointer`` or 
+  ``-fno-delete-null-pointer-checks`` to make this behavior well-defined. (#GH130734, #GH130742)
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
