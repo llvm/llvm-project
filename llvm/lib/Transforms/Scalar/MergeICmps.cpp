@@ -602,10 +602,13 @@ public:
   bool simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
                 DomTreeUpdater &DTU);
 
+  bool multBlockOnlyPartiallyMerged();
+
   bool atLeastOneMerged() const {
     return any_of(MergedBlocks_,
                   [](const auto &Blocks) { return Blocks.size() > 1; });
-  }
+  };
+
 
 private:
   PHINode &Phi_;
@@ -615,6 +618,25 @@ private:
   // The original entry block (before sorting);
   BasicBlock *EntryBlock_;
 };
+
+
+// Returns true if a merge in the chain depends on a basic block where not every comparison is merged.
+// NOTE: This is pretty restrictive and could potentially be handled using an improved tradeoff heuristic.
+bool BCECmpChain::multBlockOnlyPartiallyMerged() {
+  llvm::SmallDenseSet<const BasicBlock*, 8> UnmergedBlocks, MergedBB;
+
+  for (auto& Merged : MergedBlocks_) {
+    if (Merged.size() == 1) {
+      UnmergedBlocks.insert(Merged[0].BB);
+      continue;
+    }
+    for (auto& C : Merged)
+      MergedBB.insert(C.BB);
+  }
+  return llvm::any_of(MergedBB, [&](const BasicBlock* BB){
+    return UnmergedBlocks.contains(BB);
+  });
+}
 
 static unsigned getMinOrigOrder(const BCECmpChain::ContiguousBlocks &Blocks) {
   unsigned MinOrigOrder = std::numeric_limits<unsigned>::max();
@@ -654,6 +676,7 @@ static void mergeBlocks(RandomIt First, RandomIt Last,
     return getMinOrigOrder(LhsBlocks) < getMinOrigOrder(RhsBlocks);
   });
 }
+
 
 BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
                          AliasAnalysis &AA)
@@ -796,14 +819,41 @@ private:
 };
 } // namespace
 
+
+void updateBranching(Value* CondResult,
+                     IRBuilder<>& Builder,
+                     BasicBlock *BB,
+                     BasicBlock *const NextCmpBlock,
+                     PHINode &Phi,
+                     LLVMContext &Context,
+                     const TargetLibraryInfo &TLI,
+                     AliasAnalysis &AA, DomTreeUpdater &DTU) {
+  BasicBlock *const PhiBB = Phi.getParent();
+  // Add a branch to the next basic block in the chain.
+  if (NextCmpBlock == PhiBB) {
+    // Continue to phi, passing it the comparison result.
+    Builder.CreateBr(PhiBB);
+    Phi.addIncoming(CondResult, BB);
+    DTU.applyUpdates({{DominatorTree::Insert, BB, PhiBB}});
+  } else {
+    // Continue to next block if equal, exit to phi else.
+    Builder.CreateCondBr(CondResult, NextCmpBlock, PhiBB);
+    Phi.addIncoming(ConstantInt::getFalse(Context), BB);
+    DTU.applyUpdates({{DominatorTree::Insert, BB, NextCmpBlock},
+                      {DominatorTree::Insert, BB, PhiBB}});
+  }
+}
+
+
 // Merges the given contiguous comparison blocks into one memcmp block.
 static BasicBlock *mergeComparisons(ArrayRef<SingleBCECmpBlock> Comparisons,
                                     BasicBlock *const InsertBefore,
                                     BasicBlock *const NextCmpBlock,
-                                    PHINode &Phi, const TargetLibraryInfo &TLI,
+                                    PHINode &Phi,
+                                    LLVMContext &Context,
+                                    const TargetLibraryInfo &TLI,
                                     AliasAnalysis &AA, DomTreeUpdater &DTU) {
-  assert(!Comparisons.empty() && "merging zero comparisons");
-  LLVMContext &Context = NextCmpBlock->getContext();
+  assert(Comparisons.size() > 1 && "merging multiple comparisons");
   const SingleBCECmpBlock &FirstCmp = Comparisons[0];
 
   // Create a new cmp block before next cmp block.
@@ -818,90 +868,79 @@ static BasicBlock *mergeComparisons(ArrayRef<SingleBCECmpBlock> Comparisons,
     Lhs = Builder.Insert(FirstCmp.Lhs()->GEP->clone());
   else
     Lhs = FirstCmp.Lhs()->LoadI->getPointerOperand();
+
   // Build constant-struct to compare pointer to. Has to be a chain of const-comparisons.
   if (isa<BCEConstCmp>(FirstCmp.getCmp())) {
-    if (Comparisons.size() > 1) {
-      std::vector<Constant*> Constants;
-      std::vector<Type*> Types;
-      for (const auto& BceBlock : Comparisons) {
-        auto* ConstCmp = cast<BCEConstCmp>(BceBlock.getCmp());
-        Constants.emplace_back(ConstCmp->Const);
-        Types.emplace_back(ConstCmp->Lhs.LoadI->getType());
-      }
-      // NOTE: Could check if all elements are of the same type and then use an array instead, if that is more performat.
-      auto* StructType = StructType::get(Context, Types, /* currently only matches packed offsets */ true);
-      auto* StructAlloca = Builder.CreateAlloca(StructType,nullptr);
-      auto *StructConstant = ConstantStruct::get(StructType, Constants);
-      Builder.CreateStore(StructConstant, StructAlloca);
-      Rhs = StructAlloca;
+    std::vector<Constant*> Constants;
+    std::vector<Type*> Types;
+    for (const auto& BceBlock : Comparisons) {
+      auto* ConstCmp = cast<BCEConstCmp>(BceBlock.getCmp());
+      Constants.emplace_back(ConstCmp->Const);
+      Types.emplace_back(ConstCmp->Lhs.LoadI->getType());
     }
-  } else if (auto* FirstBceCmp = dyn_cast<BCECmp>(FirstCmp.getCmp())) {
+    // NOTE: Could check if all elements are of the same type and then use an array instead, if that is more performat.
+    auto* StructType = StructType::get(Context, Types, /* currently only matches packed offsets */ true);
+    auto* StructAlloca = Builder.CreateAlloca(StructType,nullptr);
+    auto *StructConstant = ConstantStruct::get(StructType, Constants);
+    Builder.CreateStore(StructConstant, StructAlloca);
+    Rhs = StructAlloca;
+  } else {
+    auto* FirstBceCmp = cast<BCECmp>(FirstCmp.getCmp());
     if (FirstBceCmp->Rhs.GEP)
       Rhs = Builder.Insert(FirstBceCmp->Rhs.GEP->clone());
     else
       Rhs = FirstBceCmp->Rhs.LoadI->getPointerOperand();
   }
-  Value *IsEqual = nullptr;
   LLVM_DEBUG(dbgs() << "Merging " << Comparisons.size() << " comparisons -> "
                     << BB->getName() << "\n");
 
   // If there is one block that requires splitting, we do it now, i.e.
   // just before we know we will collapse the chain. The instructions
   // can be executed before any of the instructions in the chain.
-  const auto ToSplit = llvm::find_if(
+  const auto* ToSplit = llvm::find_if(
       Comparisons, [](const SingleBCECmpBlock &B) { return B.RequireSplit; });
   if (ToSplit != Comparisons.end()) {
     LLVM_DEBUG(dbgs() << "Splitting non_BCE work to header\n");
     ToSplit->split(BB, AA);
   }
 
-  if (Comparisons.size() == 1) {
-    LLVM_DEBUG(dbgs() << "Only one comparison, updating branches\n");
-    // Use clone to keep the metadata
-    Instruction *const LhsLoad = Builder.Insert(FirstCmp.Lhs()->LoadI->clone());
-    LhsLoad->replaceUsesOfWith(LhsLoad->getOperand(0), Lhs);
-    // There are no blocks to merge, just do the comparison.
-    if (auto* ConstCmp = dyn_cast<BCEConstCmp>(FirstCmp.getCmp()))
-      IsEqual = Builder.CreateICmpEQ(LhsLoad, ConstCmp->Const);
-    else if (const auto& BceCmp = dyn_cast<BCECmp>(FirstCmp.getCmp())) {
-      Instruction *const RhsLoad = Builder.Insert(BceCmp->Rhs.LoadI->clone());
-      RhsLoad->replaceUsesOfWith(cast<Instruction>(RhsLoad)->getOperand(0), Rhs);
-      IsEqual = Builder.CreateICmpEQ(LhsLoad, RhsLoad);
-    }
-  } else {
-    // memcmp expects a 'size_t' argument and returns 'int'.
-    unsigned SizeTBits = TLI.getSizeTSize(*Phi.getModule());
-    unsigned IntBits = TLI.getIntSize();
-    const unsigned TotalSizeBits = std::accumulate(
-        Comparisons.begin(), Comparisons.end(), 0u,
-        [](int Size, const SingleBCECmpBlock &C) { return Size + C.getCmp()->SizeBits; });
+  // memcmp expects a 'size_t' argument and returns 'int'.
+  unsigned SizeTBits = TLI.getSizeTSize(*Phi.getModule());
+  unsigned IntBits = TLI.getIntSize();
+  const unsigned TotalSizeBits = std::accumulate(
+      Comparisons.begin(), Comparisons.end(), 0u,
+      [](int Size, const SingleBCECmpBlock &C) { return Size + C.getCmp()->SizeBits; });
 
+  // Create memcmp() == 0.
+  const auto &DL = Phi.getDataLayout();
+  Value *const MemCmpCall = emitMemCmp(
+      Lhs, Rhs,
+      ConstantInt::get(Builder.getIntNTy(SizeTBits), TotalSizeBits / 8),
+      Builder, DL, &TLI);
+  Value* IsEqual = Builder.CreateICmpEQ(
+      MemCmpCall, ConstantInt::get(Builder.getIntNTy(IntBits), 0));
 
-    // Create memcmp() == 0.
-    const auto &DL = Phi.getDataLayout();
-    Value *const MemCmpCall = emitMemCmp(
-        Lhs, Rhs,
-        ConstantInt::get(Builder.getIntNTy(SizeTBits), TotalSizeBits / 8),
-        Builder, DL, &TLI);
-    IsEqual = Builder.CreateICmpEQ(
-        MemCmpCall, ConstantInt::get(Builder.getIntNTy(IntBits), 0));
-  }
-
-  BasicBlock *const PhiBB = Phi.getParent();
-  // Add a branch to the next basic block in the chain.
-  if (NextCmpBlock == PhiBB) {
-    // Continue to phi, passing it the comparison result.
-    Builder.CreateBr(PhiBB);
-    Phi.addIncoming(IsEqual, BB);
-    DTU.applyUpdates({{DominatorTree::Insert, BB, PhiBB}});
-  } else {
-    // Continue to next block if equal, exit to phi else.
-    Builder.CreateCondBr(IsEqual, NextCmpBlock, PhiBB);
-    Phi.addIncoming(ConstantInt::getFalse(Context), BB);
-    DTU.applyUpdates({{DominatorTree::Insert, BB, NextCmpBlock},
-                      {DominatorTree::Insert, BB, PhiBB}});
-  }
+  updateBranching(IsEqual, Builder, BB, NextCmpBlock, Phi, Context, TLI, AA, DTU);
   return BB;
+}
+
+// Keep existing block if it isn't merged. Only change the branches.
+// Also handles not splitting mult-blocks that use select instructions.
+static BasicBlock *updateOriginalBlock(BasicBlock *const BB,
+                                    BasicBlock *const InsertBefore,
+                                    BasicBlock *const NextCmpBlock,
+                                    PHINode &Phi,
+                                    LLVMContext &Context,
+                                    const TargetLibraryInfo &TLI,
+                                    AliasAnalysis &AA, DomTreeUpdater &DTU) {
+  BasicBlock *MultBB = BasicBlock::Create(Context, BB->getName(),
+                         NextCmpBlock->getParent(), InsertBefore);
+  // Transfer all instructions except the branching terminator to the new block.
+  MultBB->splice(MultBB->end(), BB, BB->begin(), std::prev(BB->end()));
+  Value* CondResult = cast<Value>(&MultBB->back());
+  IRBuilder<> Builder(MultBB);
+  updateBranching(CondResult, Builder, MultBB, NextCmpBlock, Phi, Context, TLI, AA, DTU);
+  return MultBB;
 }
 
 bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
@@ -914,9 +953,23 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   // so that the next block is always available to branch to.
   BasicBlock *InsertBefore = EntryBlock_;
   BasicBlock *NextCmpBlock = Phi_.getParent();
-  for (const auto &Blocks : reverse(MergedBlocks_)) {
-    InsertBefore = NextCmpBlock = mergeComparisons(
-        Blocks, InsertBefore, NextCmpBlock, Phi_, TLI, AA, DTU);
+  SmallDenseSet<const BasicBlock*, 8> ExistingBlocksToKeep;
+  LLVMContext &Context = NextCmpBlock->getContext();
+  for (const auto &Cmps : reverse(MergedBlocks_)) {
+    // TODO: Check if single comparisons should also be split!
+    // If there is only a single comparison then nothing should be merged and can use original block.
+    if (Cmps.size() == 1) {
+      // If a comparison from a mult-block is already handled then don't emit same block again.
+      BasicBlock *const BB = Cmps[0].BB;
+      if (ExistingBlocksToKeep.contains(BB))
+        continue;
+      ExistingBlocksToKeep.insert(BB);
+      InsertBefore = NextCmpBlock = updateOriginalBlock(
+        BB, InsertBefore, NextCmpBlock, Phi_, Context, TLI, AA, DTU);
+    } else {
+      InsertBefore = NextCmpBlock = mergeComparisons(
+          Cmps, InsertBefore, NextCmpBlock, Phi_, Context, TLI, AA, DTU);
+    }
   }
 
   // Replace the original cmp chain with the new cmp chain by pointing all
@@ -947,7 +1000,7 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   SmallVector<BasicBlock *, 16> DeadBlocks;
   for (const auto &Blocks : MergedBlocks_) {
     for (const SingleBCECmpBlock &Block : Blocks) {
-      // Many single blocks can refer to the same multblock coming from an select instruction
+      // Many single blocks can refer to the same multblock coming from an select instruction.
       // TODO: preferrably use a set instead
       if (llvm::is_contained(DeadBlocks, Block.BB))
         continue;
@@ -1066,6 +1119,11 @@ bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
 
   if (!CmpChain.atLeastOneMerged()) {
     LLVM_DEBUG(dbgs() << "skip: nothing merged\n");
+    return false;
+  }
+
+  if (CmpChain.multBlockOnlyPartiallyMerged()) {
+    LLVM_DEBUG(dbgs() << "chain uses not fully merged basic block, no merge\n");
     return false;
   }
 
