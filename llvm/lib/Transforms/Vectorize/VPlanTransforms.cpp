@@ -2253,6 +2253,8 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
     return !W->getMask() &&
            all_of(zip(WideMember0->operands(), WideMember->operands()),
                   [V](const auto P) {
+                    // V must be as at the same places in both WideMember0 and
+                    // WideMember.
                     const auto &[WideMember0Op, WideMemberOp] = P;
                     return (WideMember0Op == V) == (WideMemberOp == V);
                   });

@@ -3663,6 +3663,9 @@ public:
     return SemaRef.BuildCXXNoexceptExpr(Range.getBegin(), Arg, Range.getEnd());
   }
 
+  std::optional<unsigned>
+  ComputeSizeOfPackExprWithoutSubstitution(ArrayRef<TemplateArgument> PackArgs);
+
   /// Build a new expression to compute the length of a parameter pack.
   ExprResult RebuildSizeOfPackExpr(SourceLocation OperatorLoc, NamedDecl *Pack,
                                    SourceLocation PackLoc,
@@ -16031,6 +16034,49 @@ TreeTransform<Derived>::TransformPackExpansionExpr(PackExpansionExpr *E) {
                                            E->getNumExpansions());
 }
 
+template <typename Derived>
+std::optional<unsigned>
+TreeTransform<Derived>::ComputeSizeOfPackExprWithoutSubstitution(
+    ArrayRef<TemplateArgument> PackArgs) {
+  std::optional<unsigned> Result = 0;
+  for (const TemplateArgument &Arg : PackArgs) {
+    if (!Arg.isPackExpansion()) {
+      Result = *Result + 1;
+      continue;
+    }
+
+    TemplateArgumentLoc ArgLoc;
+    InventTemplateArgumentLoc(Arg, ArgLoc);
+
+    // Find the pattern of the pack expansion.
+    SourceLocation Ellipsis;
+    std::optional<unsigned> OrigNumExpansions;
+    TemplateArgumentLoc Pattern =
+        getSema().getTemplateArgumentPackExpansionPattern(ArgLoc, Ellipsis,
+                                                          OrigNumExpansions);
+
+    // Substitute under the pack expansion. Do not expand the pack (yet).
+    TemplateArgumentLoc OutPattern;
+    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
+    if (getDerived().TransformTemplateArgument(Pattern, OutPattern,
+                                               /*Uneval*/ true))
+      return true;
+
+    // See if we can determine the number of arguments from the result.
+    std::optional<unsigned> NumExpansions =
+        getSema().getFullyPackExpandedSize(OutPattern.getArgument());
+    if (!NumExpansions) {
+      // No: we must be in an alias template expansion, and we're going to
+      // need to actually expand the packs.
+      Result = std::nullopt;
+      break;
+    }
+
+    Result = *Result + *NumExpansions;
+  }
+  return Result;
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
@@ -16096,42 +16142,8 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
   }
 
   // Try to compute the result without performing a partial substitution.
-  std::optional<unsigned> Result = 0;
-  for (const TemplateArgument &Arg : PackArgs) {
-    if (!Arg.isPackExpansion()) {
-      Result = *Result + 1;
-      continue;
-    }
-
-    TemplateArgumentLoc ArgLoc;
-    InventTemplateArgumentLoc(Arg, ArgLoc);
-
-    // Find the pattern of the pack expansion.
-    SourceLocation Ellipsis;
-    std::optional<unsigned> OrigNumExpansions;
-    TemplateArgumentLoc Pattern =
-        getSema().getTemplateArgumentPackExpansionPattern(ArgLoc, Ellipsis,
-                                                          OrigNumExpansions);
-
-    // Substitute under the pack expansion. Do not expand the pack (yet).
-    TemplateArgumentLoc OutPattern;
-    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
-    if (getDerived().TransformTemplateArgument(Pattern, OutPattern,
-                                               /*Uneval*/ true))
-      return true;
-
-    // See if we can determine the number of arguments from the result.
-    std::optional<unsigned> NumExpansions =
-        getSema().getFullyPackExpandedSize(OutPattern.getArgument());
-    if (!NumExpansions) {
-      // No: we must be in an alias template expansion, and we're going to need
-      // to actually expand the packs.
-      Result = std::nullopt;
-      break;
-    }
-
-    Result = *Result + *NumExpansions;
-  }
+  std::optional<unsigned> Result =
+      getDerived().ComputeSizeOfPackExprWithoutSubstitution(PackArgs);
 
   // Common case: we could determine the number of expansions without
   // substituting.
