@@ -4889,7 +4889,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtph2ibs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short, _Constant int)">;
+  def vcvtph2ibs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4901,7 +4901,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtph2iubs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short, _Constant int)">;
+  def vcvtph2iubs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4913,7 +4913,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtps2ibs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char, _Constant int)">;
+  def vcvtps2ibs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4925,7 +4925,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvtps2iubs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char, _Constant int)">;
+  def vcvtps2iubs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4961,7 +4961,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvttph2ibs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short, _Constant int)">;
+  def vcvttph2ibs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4973,7 +4973,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvttph2iubs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short, _Constant int)">;
+  def vcvttph2iubs256_mask : X86Builtin<"_Vector<16, unsigned short>(_Vector<16, _Float16>, _Vector<16, unsigned short>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4985,7 +4985,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvttps2ibs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char, _Constant int)">;
+  def vcvttps2ibs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -4997,7 +4997,7 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vcvttps2iubs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char, _Constant int)">;
+  def vcvttps2iubs256_mask : X86Builtin<"_Vector<8, unsigned int>(_Vector<8, float>, _Vector<8, unsigned int>, unsigned char)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
