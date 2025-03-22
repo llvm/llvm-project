@@ -510,10 +510,11 @@ MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym,
                                                 TOCEntryType Type,
                                                 PPCMCExpr::Specifier Spec) {
   // If this is a new TOC entry add statistics about it.
-  if (!TOC.contains({Sym, Spec}))
+  auto [It, Inserted] = TOC.try_emplace({Sym, Spec});
+  if (Inserted)
     collectTOCStats(Type);
 
-  MCSymbol *&TOCEntry = TOC[{Sym, Spec}];
+  MCSymbol *&TOCEntry = It->second;
   if (!TOCEntry)
     TOCEntry = createTempSymbol("C");
   return TOCEntry;

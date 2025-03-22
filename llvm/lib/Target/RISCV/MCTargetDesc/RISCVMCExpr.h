@@ -37,6 +37,8 @@ public:
     VK_CALL,
     VK_CALL_PLT,
     VK_32_PCREL,
+    VK_GOTPCREL,
+    VK_PLT,
     VK_TLSDESC_HI,
     VK_TLSDESC_LOAD_LO,
     VK_TLSDESC_ADD_LO,
@@ -85,6 +87,9 @@ public:
   static StringRef getSpecifierName(Specifier Kind);
 };
 
+static inline RISCVMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return RISCVMCExpr::Specifier(SRE->getKind());
+}
 } // end namespace llvm.
 
 #endif
