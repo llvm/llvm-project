@@ -79,7 +79,7 @@ using size_t = decltype(sizeof(0));
 
 struct index_type
 {
-  size_t value{~0ull};
+  size_t value = 0;
   index_type() = default;
   constexpr index_type(size_t i) noexcept : value(i) {}
 };
