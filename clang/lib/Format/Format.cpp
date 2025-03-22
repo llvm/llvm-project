@@ -29,6 +29,7 @@
 using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
+LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::FunctionDeclarationWithKeywords)
 
 namespace llvm {
 namespace yaml {
@@ -852,6 +853,14 @@ struct ScalarEnumerationTraits<
   }
 };
 
+template <> struct MappingTraits<FormatStyle::FunctionDeclarationWithKeywords> {
+  static void mapping(IO &IO,
+                      FormatStyle::FunctionDeclarationWithKeywords &Function) {
+    IO.mapOptional("Name", Function.Name);
+    IO.mapOptional("Keywords", Function.Keywords);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle> {
   static void mapping(IO &IO, FormatStyle &Style) {
     // When reading, read the language first, we need it for getPredefinedStyle.
@@ -1046,6 +1055,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.ExperimentalAutoDetectBinPacking);
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
     IO.mapOptional("ForEachMacros", Style.ForEachMacros);
+    IO.mapOptional("FunctionDeclarationsWithKeywords",
+                   Style.FunctionDeclarationsWithKeywords);
     IO.mapOptional("IfMacros", Style.IfMacros);
     IO.mapOptional("IncludeBlocks", Style.IncludeStyle.IncludeBlocks);
     IO.mapOptional("IncludeCategories", Style.IncludeStyle.IncludeCategories);

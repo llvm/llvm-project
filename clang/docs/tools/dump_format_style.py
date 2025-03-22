@@ -461,6 +461,7 @@ class OptionsReader:
                 "int",
                 "std::string",
                 "std::vector<std::string>",
+                "std::vector<FunctionDeclarationWithKeywords>",
                 "std::vector<IncludeCategory>",
                 "std::vector<RawStringFormat>",
                 "std::optional<unsigned>",

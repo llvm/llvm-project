@@ -2753,6 +2753,45 @@ struct FormatStyle {
   /// \version 3.7
   std::vector<std::string> ForEachMacros;
 
+  /// Function-like declaration with keyworded parameters.
+  /// Lists possible keywords for a named macro-like function
+  struct FunctionDeclarationWithKeywords {
+    std::string Name;
+    std::vector<std::string> Keywords;
+
+    bool operator==(const FunctionDeclarationWithKeywords &Other) const {
+      return Name == Other.Name && Keywords == Other.Keywords;
+    }
+  };
+
+  /// Allows to format function-like macros with keyworded parameters according
+  /// to the BinPackParameters setting, treating keywords as parameter
+  /// sepratators.
+  ///
+  /// Q_PROPERTY is an example of such a macro:
+  /// \code
+  ///   Q_PROPERTY(int name READ name WRITE setName NOTIFY nameChanged)
+  /// \endcode
+  ///
+  /// With ``BinPackParameters``  set to ``OnePerLine`` (or
+  /// ``AlwaysOnePerLine``) and
+  /// \code{.yaml}
+  ///   FunctionDeclarationsWithKeywords:
+  ///   - Name: "Q_PROPERTY"
+  ///     Keywords: ['READ', 'WRITE', 'MEMBER', 'RESET', 'NOTIFY']
+  /// \endcode
+  ///
+  /// the line above will be split on these keywords:
+  /// \code
+  ///   Q_PROPERTY(
+  ///       int name
+  ///       READ name
+  ///       WRITE setName
+  ///       NOTIFY nameChanged)
+  /// \endcode
+  /// \version 21
+  std::vector<FunctionDeclarationWithKeywords> FunctionDeclarationsWithKeywords;
+
   tooling::IncludeStyle IncludeStyle;
 
   /// A vector of macros that should be interpreted as conditionals
@@ -5327,6 +5366,8 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
+           FunctionDeclarationsWithKeywords ==
+               R.FunctionDeclarationsWithKeywords &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
            IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
            IncludeStyle.IncludeIsMainRegex ==
