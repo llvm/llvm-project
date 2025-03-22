@@ -16,7 +16,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 #include <set>
 
@@ -607,18 +606,6 @@ void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
   }
 
   ToolChain::addProfileRTLibs(Args, CmdArgs);
-}
-
-std::string AIX::getCompilerRT(const ArgList &Args, StringRef Component,
-                               FileType Type, bool IsFortran) const {
-  // On AIX, build the filename for the layout as if
-  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF (e.g. lib/${os_dirname})
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type,
-                              /*AddArch=*/!IsFortran, IsFortran);
-  SmallString<128> Path(getCompilerRTPath());
-  llvm::sys::path::append(Path, CRTBasename);
-  return std::string(Path);
 }
 
 void AIX::addFortranRuntimeLibs(const ArgList &Args,
