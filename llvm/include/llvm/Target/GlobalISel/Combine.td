@@ -430,6 +430,12 @@ def binop_right_undef_to_undef: GICombineRule<
          [{ return Helper.matchOperandIsUndef(*${root}, 2); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
+def binop_right_poison_to_poison
+    : GICombineRule<(defs root:$root),
+                    (match(wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
+                        [{ return Helper.matchOperandIsPoison(*${root}, 2); }]),
+                    (apply [{ Helper.replaceInstWithPoison(*${root}); }])>;
+
 def unary_undef_to_zero: GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ABS):$root,
@@ -447,6 +453,17 @@ def unary_undef_to_undef : GICombineRule<
   (match (unary_undef_to_undef_frags $dst)),
   (apply [{ Helper.replaceInstWithUndef(*${dst}.getParent()); }])>;
 
+def unary_poison_to_poison_frags
+    : GICombinePatFrag<(outs root:$dst), (ins),
+                       !foreach(op,
+                                [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT,
+                                 G_INTTOPTR, G_FPTOSI, G_FPTOUI],
+                                (pattern(op $dst, $x), (G_POISON $x)))>;
+def unary_poison_to_poison
+    : GICombineRule<
+          (defs root:$dst), (match(unary_poison_to_poison_frags $dst)),
+          (apply [{ Helper.replaceInstWithPoison(*${dst}.getParent()); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
@@ -455,6 +472,15 @@ def propagate_undef_any_op: GICombineRule<
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
+// Instructions where if any source operand is poison, the instruction can be
+// replaced with poison.
+def propagate_poison_any_op
+    : GICombineRule<
+          (defs root:$root),
+          (match(wip_match_opcode G_ADD, G_SUB, G_XOR):$root,
+              [{ return Helper.matchAnyExplicitUseIsPoison(*${root}); }]),
+          (apply [{ Helper.replaceInstWithPoison(*${root}); }])>;
+
 // Instructions where if all source operands are undef, the instruction can be
 // replaced with undef.
 def propagate_undef_all_ops: GICombineRule<
@@ -462,6 +488,15 @@ def propagate_undef_all_ops: GICombineRule<
   (match (wip_match_opcode G_SHUFFLE_VECTOR, G_BUILD_VECTOR):$root,
           [{ return Helper.matchAllExplicitUsesAreUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+
+// Instructions where if all source operands are poison, the instruction can be
+// replaced with poison.
+def propagate_poison_all_ops
+    : GICombineRule<
+          (defs root:$root),
+          (match(wip_match_opcode G_SHUFFLE_VECTOR, G_BUILD_VECTOR):$root,
+              [{ return Helper.matchAllExplicitUsesArePoison(*${root}); }]),
+          (apply [{ Helper.replaceInstWithPoison(*${root}); }])>;
 
 // Replace a G_SHUFFLE_VECTOR with an undef mask with a G_IMPLICIT_DEF.
 def propagate_undef_shuffle_mask: GICombineRule<
@@ -653,6 +688,13 @@ def erase_undef_store : GICombineRule<
     [{ return Helper.matchUndefStore(*${root}); }]),
   (apply [{ Helper.eraseInst(*${root}); }])
 >;
+
+// Erase stores of poison values.
+def erase_poison_store
+    : GICombineRule<(defs root:$root),
+                    (match(wip_match_opcode G_STORE):$root,
+                        [{ return Helper.matchPoisonStore(*${root}); }]),
+                    (apply [{ Helper.eraseInst(*${root}); }])>;
 
 def simplify_add_to_sub_matchinfo: GIDefMatchData<"std::tuple<Register, Register>">;
 def simplify_add_to_sub: GICombineRule <
@@ -1955,6 +1997,11 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      erase_undef_store,
                                      insert_extract_vec_elt_out_of_bounds]>;
 
+def poison_combines
+    : GICombineGroup<[binop_right_poison_to_poison, unary_poison_to_poison,
+                      propagate_poison_any_op, propagate_poison_all_ops,
+                      erase_poison_store]>;
+
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
@@ -2006,29 +2053,29 @@ def shuffle_combines : GICombineGroup<[combine_shuffle_concat,
                                        combine_shuffle_undef_rhs,
                                        combine_shuffle_disjoint_mask]>;
 
-def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
-    vector_ops_combines, freeze_combines, cast_combines,
-    insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
-    combine_extracted_vector_load,
-    undef_combines, identity_combines, phi_combines,
-    simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
-    reassocs, ptr_add_immed_chain, cmp_combines,
-    shl_ashr_to_sext_inreg, sext_inreg_of_load,
-    width_reduction_combines, select_combines,
-    known_bits_simplifications, trunc_shift,
-    not_cmp_fold, opt_brcond_by_inverting_cond,
-    const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
-    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem, funnel_shift_combines, bitreverse_shift, commute_shift,
-    form_bitfield_extract, constant_fold_binops, constant_fold_fma,
-    constant_fold_cast_op, fabs_fneg_fold,
-    intdiv_combines, mulh_combines, redundant_neg_operands,
-    and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    sub_add_reg, select_to_minmax,
-    fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    simplify_neg_minmax, combine_concat_vector,
-    sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines]>;
+def all_combines
+    : GICombineGroup<
+          [integer_reassoc_combines, trivial_combines, vector_ops_combines,
+           freeze_combines, cast_combines, insert_vec_elt_combines,
+           extract_vec_elt_combines, combines_for_extload,
+           combine_extracted_vector_load, undef_combines, poison_combines,
+           identity_combines, phi_combines, simplify_add_to_sub,
+           hoist_logic_op_with_same_opcode_hands, shifts_too_big, reassocs,
+           ptr_add_immed_chain, cmp_combines, shl_ashr_to_sext_inreg,
+           sext_inreg_of_load, width_reduction_combines, select_combines,
+           known_bits_simplifications, trunc_shift, not_cmp_fold,
+           opt_brcond_by_inverting_cond, const_combines,
+           xor_of_and_with_same_reg, ptr_add_with_zero, shift_immed_chain,
+           shift_of_shifted_logic_chain, load_or_combine, div_rem_to_divrem,
+           funnel_shift_combines, bitreverse_shift, commute_shift,
+           form_bitfield_extract, constant_fold_binops, constant_fold_fma,
+           constant_fold_cast_op, fabs_fneg_fold, intdiv_combines,
+           mulh_combines, redundant_neg_operands, and_or_disjoint_mask,
+           fma_combines, fold_binop_into_select, sub_add_reg, select_to_minmax,
+           fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
+           simplify_neg_minmax, combine_concat_vector, sext_trunc, zext_trunc,
+           prefer_sign_combines, shuffle_combines, combine_use_vector_truncate,
+           merge_combines, overflow_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
