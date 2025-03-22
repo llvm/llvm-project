@@ -22,6 +22,26 @@ bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
          O.mapOptional("terminateDebuggee", DA.terminateDebuggee) &&
          O.mapOptional("suspendDebuggee", DA.suspendDebuggee);
 }
+bool fromJSON(const llvm::json::Value &Params, GotoArguments &GA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("targetId", GA.targetId) && O.map("threadId", GA.threadId);
+}
+
+bool fromJSON(const llvm::json::Value &Params, GotoTargetsArguments &GTA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("source", GTA.source) && O.map("line", GTA.line) &&
+         O.mapOptional("column", GTA.column);
+}
+
+llvm::json::Value toJSON(const GotoTargetsResponseBody &GTA) {
+  json::Array targets;
+  for (const auto &target : GTA.targets) {
+    targets.emplace_back(target);
+  }
+  return json::Object{{"targets", std::move(targets)}};
+}
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);

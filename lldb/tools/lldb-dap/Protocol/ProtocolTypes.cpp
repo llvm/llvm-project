@@ -37,6 +37,17 @@ bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
   return true;
 }
 
+llvm::json::Value toJSON(const GotoTarget &target) {
+  return llvm::json::Object{
+      {"id", target.id},
+      {"label", target.label},
+      {"line", target.line},
+      {"column", target.column},
+      {"endLine", target.endLine},
+      {"endColumn", target.endColumn},
+      {"instructionPointerReference", target.instructionPointerReference}};
+}
+
 bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.mapOptional("name", S.name) && O.mapOptional("path", S.path) &&

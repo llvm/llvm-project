@@ -761,6 +761,33 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_goto(self, threadId: int, targetId: int):
+        command_dict = {
+            "command": "goto",
+            "type": "request",
+            "arguments": {
+                "threadId": threadId,
+                "targetId": targetId,
+            },
+        }
+        return self.send_recv(command_dict)
+
+    def request_gotoTargets(self, filename: str, path: str, line: int, column: int):
+        arguments = {
+            "source": {
+                "name": filename,
+                "path": path,
+            },
+            "line": line,
+            "column": column,
+        }
+        command_dict = {
+            "command": "gotoTargets",
+            "type": "request",
+            "arguments": arguments,
+        }
+        return self.send_recv(command_dict)
+
     def request_initialize(self, sourceInitFile):
         command_dict = {
             "command": "initialize",

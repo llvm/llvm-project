@@ -27,6 +27,34 @@
 
 namespace lldb_dap::protocol {
 
+/// A `GotoTarget` describes a code location that can be used as a target
+/// in the goto request. The possible goto targets can be determined via the
+/// gotoTargets request.
+struct GotoTarget {
+  /// Unique identifier for a goto target. This is used in the `goto` request.
+  uint64_t id;
+
+  /// The name of the goto target (shown in the UI).
+  std::string label;
+
+  /// The line of the goto target.
+  uint64_t line;
+
+  /// The column of the goto target.
+  std::optional<uint64_t> column;
+
+  /// The end line of the range covered by the goto target.
+  std::optional<uint64_t> endLine;
+
+  /// The end column of the range covered by the goto target.
+  std::optional<uint64_t> endColumn;
+
+  /// A memory reference for the instruction pointer value represented by this
+  /// target.
+  std::optional<std::string> instructionPointerReference;
+};
+llvm::json::Value toJSON(const GotoTarget &);
+
 /// A `Source` is a descriptor for source code. It is returned from the debug
 /// adapter as part of a `StackFrame` and it is used by clients when specifying
 /// breakpoints.
