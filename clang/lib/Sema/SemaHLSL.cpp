@@ -2476,11 +2476,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_dot2add: {
-    // Check number of arguments should be 3
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    // Check first two arguments are vector of length 2 with half data type
     auto checkHalfVectorOfSize2 = [](clang::QualType PassedType) -> bool {
       if (const auto *VecTy = PassedType->getAs<VectorType>())
         return !(VecTy->getNumElements() == 2 &&
@@ -2496,10 +2494,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                              checkHalfVectorOfSize2))
       return true;
 
-    // Check third argument is a float
     if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), SemaRef.getASTContext().FloatTy))
       return true;
-    TheCall->setType(TheCall->getArg(2)->getType());
+    TheCall->setType(SemaRef.getASTContext().FloatTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh:
