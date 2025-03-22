@@ -8241,7 +8241,10 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg) {
+  // Note that IsWin64 part is required to prevent odd miscompilations on arm64
+  // windows platforms. For more info refer to GH#126780 PR comments.
+  if (isVarArg &&
+      (DAG.getMachineFunction().getFrameInfo().hasVAStart() || IsWin64)) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
