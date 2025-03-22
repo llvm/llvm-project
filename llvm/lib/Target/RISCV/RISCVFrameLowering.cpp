@@ -268,7 +268,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 }
 
 // Insert instruction to swap mscratchsw with sp
-static void emitSifiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
+static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI,
                                     const DebugLoc &DL) {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
@@ -302,7 +302,7 @@ createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Create two frame objects for spilling X8 and X9, which will be done in
-  // `emitSifiveCLICPreemptibleSaves`. This is in addition to any other stack
+  // `emitSiFiveCLICPreemptibleSaves`. This is in addition to any other stack
   // objects we might have for X8 and X9, as they might be saved twice.
   for (int I = 0; I < 2; ++I) {
     int FI = MFI.CreateStackObject(TRI.getSpillSize(RC), TRI.getSpillAlign(RC),
@@ -311,7 +311,7 @@ createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
   }
 }
 
-static void emitSifiveCLICPreemptibleSaves(MachineFunction &MF,
+static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
                                            MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
                                            const DebugLoc &DL) {
@@ -363,7 +363,7 @@ static void emitSifiveCLICPreemptibleSaves(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
-static void emitSifiveCLICPreemptibleRestores(MachineFunction &MF,
+static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
                                               MachineBasicBlock &MBB,
                                               MachineBasicBlock::iterator MBBI,
                                               const DebugLoc &DL) {
@@ -386,7 +386,7 @@ static void emitSifiveCLICPreemptibleRestores(MachineFunction &MF,
 
   // Restore `mepc` from x9 (s1), and `mcause` from x8 (s0). If either were used
   // in the function, they have already been restored once, so now have the
-  // value stored in `emitSifiveCLICPreemptibleSaves`.
+  // value stored in `emitSiFiveCLICPreemptibleSaves`.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
       .addReg(RISCV::X0)
       .addImm(RISCVSysReg::mepc)
@@ -399,7 +399,7 @@ static void emitSifiveCLICPreemptibleRestores(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 
   // X8 and X9 need to be restored to their values on function entry, which we
-  // saved onto the stack in `emitSifiveCLICPreemptibleSaves`.
+  // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
   TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X9,
                             RVFI->getInterruptCSRFrameIndex(1),
                             &RISCV::GPRRegClass, STI.getRegisterInfo(),
@@ -1016,7 +1016,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     return;
 
   // SiFive CLIC needs to swap `sp` into `mscratchcsw`
-  emitSifiveCLICStackSwap(MF, MBB, MBBI, DL);
+  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
@@ -1138,7 +1138,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
                   NeedProbe, ProbeSize, DynAllocation);
 
   // Save SiFive CLIC CSRs into Stack
-  emitSifiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
+  emitSiFiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
 
   // The frame pointer is callee-saved, and code has been generated for us to
   // save it to the stack. We need to skip over the storing of callee-saved
@@ -1456,7 +1456,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  emitSifiveCLICPreemptibleRestores(MF, MBB, MBBI, DL);
+  emitSiFiveCLICPreemptibleRestores(MF, MBB, MBBI, DL);
 
   // Deallocate stack if StackSize isn't a zero yet
   if (StackSize != 0)
@@ -1466,7 +1466,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSCSEpilogue(MF, MBB, MBBI, DL);
 
   //
-  emitSifiveCLICStackSwap(MF, MBB, MBBI, DL);
+  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
 StackOffset
