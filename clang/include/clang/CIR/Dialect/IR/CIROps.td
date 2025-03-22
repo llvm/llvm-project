@@ -827,6 +827,129 @@ def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
+
+// FIXME: represent Commutative, Idempotent traits for appropriate binops
+def BinOpKind_Mul : I32EnumAttrCase<"Mul", 1, "mul">;
+def BinOpKind_Div : I32EnumAttrCase<"Div", 2, "div">;
+def BinOpKind_Rem : I32EnumAttrCase<"Rem", 3, "rem">;
+def BinOpKind_Add : I32EnumAttrCase<"Add", 4, "add">;
+def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5, "sub">;
+def BinOpKind_And : I32EnumAttrCase<"And", 8, "and">;
+def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9, "xor">;
+def BinOpKind_Or  : I32EnumAttrCase<"Or", 10, "or">;
+// TODO(cir): Do we need a min binop?
+def BinOpKind_Max : I32EnumAttrCase<"Max", 11, "max">;
+
+def BinOpKind : I32EnumAttr<
+    "BinOpKind",
+    "binary operation (arith and logic) kind",
+    [BinOpKind_Mul, BinOpKind_Div, BinOpKind_Rem,
+     BinOpKind_Add, BinOpKind_Sub,
+     BinOpKind_And, BinOpKind_Xor,
+     BinOpKind_Or, BinOpKind_Max]> {
+  let cppNamespace = "::cir";
+}
+
+// FIXME: Pure won't work when we add overloading.
+def BinOp : CIR_Op<"binop", [Pure,
+  SameTypeOperands, SameOperandsAndResultType]> {
+
+  let summary = "Binary operations (arith and logic)";
+  let description = [{
+    cir.binop performs the binary operation according to
+    the specified opcode kind: [mul, div, rem, add, sub,
+    and, xor, or, max].
+
+    It requires two input operands and has one result, all types
+    should be the same.
+
+    ```mlir
+    %7 = cir.binop(add, %1, %2) : !s32i
+    %7 = cir.binop(mul, %1, %2) : !u8i
+    ```
+  }];
+
+  // TODO: get more accurate than CIR_AnyType
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins Arg<BinOpKind, "binop kind">:$kind,
+                       CIR_AnyType:$lhs, CIR_AnyType:$rhs,
+                       UnitAttr:$no_unsigned_wrap,
+                       UnitAttr:$no_signed_wrap,
+                       UnitAttr:$saturated);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs  `)`
+    (`nsw` $no_signed_wrap^)?
+    (`nuw` $no_unsigned_wrap^)?
+    (`sat` $saturated^)?
+    `:` type($lhs) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// BinOpOverflowOp
+//===----------------------------------------------------------------------===//
+
+def BinOpOverflowKind : I32EnumAttr<
+    "BinOpOverflowKind",
+    "checked binary arithmetic operation kind",
+    [BinOpKind_Add, BinOpKind_Sub, BinOpKind_Mul]> {
+  let cppNamespace = "::cir";
+}
+
+def BinOpOverflowOp : CIR_Op<"binop.overflow", [Pure, SameTypeOperands]> {
+  let summary = "Perform binary integral arithmetic with overflow checking";
+  let description = [{
+    `cir.binop.overflow` performs binary arithmetic operations with overflow
+    checking on integral operands.
+
+    The `kind` argument specifies the kind of arithmetic operation to perform.
+    It can be either `add`, `sub`, or `mul`. The `lhs` and `rhs` arguments
+    specify the input operands of the arithmetic operation. The types of `lhs`
+    and `rhs` must be the same.
+
+    `cir.binop.overflow` produces two SSA values. `result` is the result of the
+    arithmetic operation truncated to its specified type. `overflow` is a
+    boolean value indicating whether overflow happens during the operation.
+
+    The exact semantic of this operation is as follows:
+
+      - `lhs` and `rhs` are promoted to an imaginary integral type that has
+        infinite precision.
+      - The arithmetic operation is performed on the promoted operands.
+      - The infinite-precision result is truncated to the type of `result`. The
+        truncated result is assigned to `result`.
+      - If the truncated result is equal to the un-truncated result, `overflow`
+        is assigned to false. Otherwise, `overflow` is assigned to true.
+  }];
+
+  let arguments = (ins Arg<BinOpOverflowKind, "arithmetic kind">:$kind,
+                       CIR_IntType:$lhs, CIR_IntType:$rhs);
+  let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` type($lhs) `,`
+    `(` type($result) `,` type($overflow) `)`
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "cir::IntType":$resultTy,
+                   "cir::BinOpOverflowKind":$kind,
+                   "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      auto overflowTy = cir::BoolType::get($_builder.getContext());
+      build($_builder, $_state, resultTy, overflowTy, kind, lhs, rhs);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
