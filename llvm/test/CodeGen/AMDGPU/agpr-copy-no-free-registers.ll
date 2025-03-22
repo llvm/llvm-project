@@ -591,6 +591,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_mov_b32_e32 v17, s5
 ; GFX908-NEXT:    v_mov_b32_e32 v12, s4
 ; GFX908-NEXT:    v_mov_b32_e32 v16, s4
+; GFX908-NEXT:    ; kill: def $vgpr14_vgpr15 killed $vgpr14_vgpr15 killed $exec
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v20, vcc, 1, v10
 ; GFX908-NEXT:    v_addc_co_u32_e32 v18, vcc, 0, v11, vcc
