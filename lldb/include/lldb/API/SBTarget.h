@@ -946,6 +946,8 @@ public:
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
 
+  lldb::SBLock AcquireAPILock() const;
+
 protected:
   friend class SBAddress;
   friend class SBAddressRange;
