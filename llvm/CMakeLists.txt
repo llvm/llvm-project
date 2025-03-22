@@ -187,6 +187,16 @@ foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   endif()
 endforeach()
 
+if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  option(FLANG_ENABLE_FLANG_RT "Implicitly add LLVM_ENABLE_RUNTIMES=flang-rt when compiling Flang" ON)
+  if (NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    if (FLANG_ENABLE_FLANG_RT)
+      message(STATUS "Enabling Flang-RT as a dependency of Flang")
+      list(APPEND LLVM_ENABLE_RUNTIMES "flang-rt")
+    endif ()
+  endif()
+endif ()
+
 # Set a shorthand option to enable the GPU build of the 'libc' project.
 option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
 if(LIBC_GPU_BUILD)
