@@ -471,3 +471,26 @@ def : SysReg<"sctrstatus", 0x14f>;
 def : SysReg<"sctrdepth", 0x15f>;
 def : SysReg<"vsctrctl", 0x24e>;
 def : SysReg<"mctrctl", 0x34e>;
+
+
+//===-----------------------------------------------
+// Vendor CSRs
+//===-----------------------------------------------
+
+// XSfmclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfmclic} }] in {
+def : SysReg<"mtvt", 0x307>;
+def : SysReg<"mnxti", 0x345>;
+def : SysReg<"mintstatus", 0x346>;
+def : SysReg<"mscratchcsw", 0x348>;
+def : SysReg<"mscratchcswl", 0x349>;
+}
+
+// XSfsclic
+let FeaturesRequired = [{ {RISCV::FeatureVendorXSfsclic} }] in {
+def : SysReg<"stvt", 0x107>;
+def : SysReg<"snxti", 0x145>;
+def : SysReg<"sintstatus", 0x146>;
+def : SysReg<"sscratchcsw", 0x148>;
+def : SysReg<"sscratchcswl", 0x149>;
+}
