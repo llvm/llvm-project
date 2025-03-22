@@ -301,8 +301,6 @@ foreach i = 3...31 in
 // Machine Counter Setup
 //===----------------------------------------------------------------------===//
 def : SysReg<"mcountinhibit", 0x320>;
-let isAltName = 1 in
-def : SysReg<"mucounteren", 0x320>;
 
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
 foreach i = 3...31 in
