@@ -35,7 +35,7 @@ void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   const MCExpr *Expr = getSubExpr();
   Expr->print(OS, MAI);
   if (Kind != VK_None && Kind != VK_REFLONG)
-    OS << '@' << MAI->getVariantKindName(Kind);
+    OS << '@' << MAI->getSpecifierName(Kind);
 }
 
 VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::Specifier S) {

@@ -155,9 +155,8 @@ public:
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
-  const MCExpr *applyModifierToExpr(const MCExpr *E,
-                                    MCSymbolRefExpr::VariantKind,
-                                    MCContext &Ctx) override;
+  const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
+                               MCContext &Ctx) override;
 };
 
 /// PPCOperand - Instances of this class represent a parsed PowerPC machine
@@ -1848,12 +1847,10 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
-const MCExpr *
-PPCAsmParser::applyModifierToExpr(const MCExpr *E,
-                                  MCSymbolRefExpr::VariantKind Variant,
-                                  MCContext &Ctx) {
+const MCExpr *PPCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec,
+                                           MCContext &Ctx) {
   if (isa<MCConstantExpr>(E)) {
-    switch (PPCMCExpr::Specifier(Variant)) {
+    switch (PPCMCExpr::Specifier(Spec)) {
     case PPCMCExpr::VK_LO:
     case PPCMCExpr::VK_HI:
     case PPCMCExpr::VK_HA:
@@ -1869,5 +1866,5 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
     }
   }
 
-  return PPCMCExpr::create(PPCMCExpr::Specifier(Variant), E, Ctx);
+  return PPCMCExpr::create(PPCMCExpr::Specifier(Spec), E, Ctx);
 }
