@@ -6488,7 +6488,8 @@ public:
   /// This should match the result of `getReplacedParameter()->getIndex()`.
   unsigned getIndex() const { return SubstTemplateTypeParmPackTypeBits.Index; }
 
-  // When true the substitution will be 'Final' (subst node won't be placed).
+  // This substitution will be Final, which means the substitution will be fully
+  // sugared: it doesn't need to be resugared later.
   bool getFinal() const;
 
   unsigned getNumArgs() const {

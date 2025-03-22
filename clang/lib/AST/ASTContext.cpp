@@ -10090,10 +10090,10 @@ ASTContext::getDependentTemplateName(const DependentTemplateStorage &S) const {
 
 TemplateName ASTContext::getSubstTemplateTemplateParm(
     TemplateName Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex) const {
+    std::optional<unsigned> PackIndex, bool Final) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTemplateParmStorage::Profile(ID, Replacement, AssociatedDecl,
-                                            Index, PackIndex);
+                                            Index, PackIndex, Final);
 
   void *insertPos = nullptr;
   SubstTemplateTemplateParmStorage *subst
@@ -10101,7 +10101,7 @@ TemplateName ASTContext::getSubstTemplateTemplateParm(
 
   if (!subst) {
     subst = new (*this) SubstTemplateTemplateParmStorage(
-        Replacement, AssociatedDecl, Index, PackIndex);
+        Replacement, AssociatedDecl, Index, PackIndex, Final);
     SubstTemplateTemplateParms.InsertNode(subst, insertPos);
   }
 

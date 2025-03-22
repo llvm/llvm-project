@@ -2083,10 +2083,8 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       TemplateName Template = Arg.getAsTemplate();
       assert(!Template.isNull() && "Null template template argument");
 
-      if (Final)
-        return Template;
       return getSema().Context.getSubstTemplateTemplateParm(
-          Template, AssociatedDecl, TTP->getIndex(), PackIndex);
+          Template, AssociatedDecl, TTP->getIndex(), PackIndex, Final);
     }
   }
 
@@ -2098,11 +2096,9 @@ TemplateName TemplateInstantiator::TransformTemplateName(
     TemplateArgument Pack = SubstPack->getArgumentPack();
     TemplateName Template =
         getPackSubstitutedTemplateArgument(getSema(), Pack).getAsTemplate();
-    if (SubstPack->getFinal())
-      return Template;
     return getSema().Context.getSubstTemplateTemplateParm(
         Template, SubstPack->getAssociatedDecl(), SubstPack->getIndex(),
-        getPackIndex(Pack));
+        getPackIndex(Pack), SubstPack->getFinal());
   }
 
   return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
