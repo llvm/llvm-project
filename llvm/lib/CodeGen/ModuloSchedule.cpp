@@ -551,7 +551,7 @@ void ModuloScheduleExpander::generateExistingPhis(
 
               if (IsLast && np == NumPhis - 1) {
                 replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-                NoIntervalRegs.push_back(NewReg);
+                NoIntervalRegs.insert(NewReg);
               }
               continue;
             }
@@ -594,7 +594,7 @@ void ModuloScheduleExpander::generateExistingPhis(
       // epilog.
       if (IsLast && np == NumPhis - 1) {
         replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-        NoIntervalRegs.push_back(NewReg);
+        NoIntervalRegs.insert(NewReg);
       }
 
       // In the kernel, a dependent Phi uses the value from this Phi.
@@ -617,7 +617,7 @@ void ModuloScheduleExpander::generateExistingPhis(
       auto It = CurStageMap.find(LoopVal);
       if (It != CurStageMap.end()) {
         replaceRegUsesAfterLoop(Def, It->second, BB, MRI);
-        NoIntervalRegs.push_back(It->second);
+        NoIntervalRegs.insert(It->second);
       }
     }
   }
@@ -740,7 +740,7 @@ void ModuloScheduleExpander::generatePhis(
         }
         if (IsLast && np == NumPhis - 1) {
           replaceRegUsesAfterLoop(Def, NewReg, BB, MRI);
-          NoIntervalRegs.push_back(NewReg);
+          NoIntervalRegs.insert(NewReg);
         }
       }
     }
@@ -1083,7 +1083,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
       VRMap[CurStageNum][reg] = NewReg;
       if (LastDef) {
         replaceRegUsesAfterLoop(reg, NewReg, BB, MRI);
-        NoIntervalRegs.push_back(NewReg);
+        NoIntervalRegs.insert(NewReg);
       }
     } else if (MO.isUse()) {
       MachineInstr *Def = MRI.getVRegDef(reg);

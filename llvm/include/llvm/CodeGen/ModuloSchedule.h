@@ -60,6 +60,7 @@
 #ifndef LLVM_CODEGEN_MODULOSCHEDULE_H
 #define LLVM_CODEGEN_MODULOSCHEDULE_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -189,7 +190,7 @@ private:
   InstrChangesTy InstrChanges;
 
   /// Record the registers that need to compute live intervals.
-  SmallVector<Register> NoIntervalRegs;
+  SmallSet<Register, 8> NoIntervalRegs;
 
   void generatePipelinedLoop();
   void generateProlog(unsigned LastStage, MachineBasicBlock *KernelBB,
