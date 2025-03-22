@@ -1370,14 +1370,26 @@ static void __kmp_stg_print_tasking(kmp_str_buf_t *buffer, char const *name,
 
 static void __kmp_stg_parse_task_stealing(char const *name, char const *value,
                                           void *data) {
-  __kmp_stg_parse_int(name, value, 0, 1,
-                      (int *)&__kmp_task_stealing_constraint);
+  __kmp_stg_parse_int(name, value, 0, 1, (int *)&__kmp_task_stealing);
 } // __kmp_stg_parse_task_stealing
 
 static void __kmp_stg_print_task_stealing(kmp_str_buf_t *buffer,
                                           char const *name, void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_task_stealing_constraint);
+  __kmp_stg_print_int(buffer, name, __kmp_task_stealing);
 } // __kmp_stg_print_task_stealing
+
+static void __kmp_stg_parse_task_stealing_constraint(char const *name,
+                                                     char const *value,
+                                                     void *data) {
+  __kmp_stg_parse_int(name, value, 0, 1,
+                      (int *)&__kmp_task_stealing_constraint);
+} // __kmp_stg_parse_task_stealing_constraint
+
+static void __kmp_stg_print_task_stealing_constraint(kmp_str_buf_t *buffer,
+                                                     char const *name,
+                                                     void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_task_stealing_constraint);
+} // __kmp_stg_print_task_stealing_constraint
 
 static void __kmp_stg_parse_max_active_levels(char const *name,
                                               char const *value, void *data) {
@@ -5545,8 +5557,10 @@ static kmp_setting_t __kmp_stg_table[] = {
 
     {"KMP_TASKING", __kmp_stg_parse_tasking, __kmp_stg_print_tasking, NULL, 0,
      0},
-    {"KMP_TASK_STEALING_CONSTRAINT", __kmp_stg_parse_task_stealing,
+    {"KMP_TASK_STEALING", __kmp_stg_parse_task_stealing,
      __kmp_stg_print_task_stealing, NULL, 0, 0},
+    {"KMP_TASK_STEALING_CONSTRAINT", __kmp_stg_parse_task_stealing_constraint,
+     __kmp_stg_print_task_stealing_constraint, NULL, 0, 0},
     {"OMP_MAX_ACTIVE_LEVELS", __kmp_stg_parse_max_active_levels,
      __kmp_stg_print_max_active_levels, NULL, 0, 0},
     {"OMP_DEFAULT_DEVICE", __kmp_stg_parse_default_device,
@@ -5758,7 +5772,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMPX_TASKGRAPH
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
-    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
+     0},
 #endif
 
 #if OMPT_SUPPORT
