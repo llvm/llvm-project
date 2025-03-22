@@ -10,6 +10,8 @@
 #define LLVM_MC_MCWINEH_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/SMLoc.h"
 #include <vector>
 
 namespace llvm {
@@ -42,6 +44,7 @@ struct FrameInfo {
   const MCSymbol *FuncletOrFuncEnd = nullptr;
   const MCSymbol *ExceptionHandler = nullptr;
   const MCSymbol *Function = nullptr;
+  SMLoc FunctionLoc;
   const MCSymbol *PrologEnd = nullptr;
   const MCSymbol *Symbol = nullptr;
   MCSection *TextSection = nullptr;
@@ -52,6 +55,8 @@ struct FrameInfo {
   bool HandlesExceptions = false;
   bool EmitAttempted = false;
   bool Fragment = false;
+  constexpr static uint8_t DefaultVersion = 1;
+  uint8_t Version = DefaultVersion;
 
   int LastFrameInst = -1;
   const FrameInfo *ChainedParent = nullptr;
@@ -59,9 +64,12 @@ struct FrameInfo {
   struct Epilog {
     std::vector<Instruction> Instructions;
     unsigned Condition;
-    MCSymbol *End;
+    const MCSymbol *Start = nullptr;
+    const MCSymbol *End = nullptr;
+    const MCSymbol *UnwindV2Start = nullptr;
+    SMLoc Loc;
   };
-  MapVector<MCSymbol *, Epilog> EpilogMap;
+  std::vector<Epilog> Epilogs;
 
   // For splitting unwind info of large functions
   struct Segment {
@@ -70,7 +78,11 @@ struct FrameInfo {
     bool HasProlog;
     MCSymbol *Symbol = nullptr;
     // Map an Epilog's symbol to its offset within the function.
-    MapVector<MCSymbol *, int64_t> Epilogs;
+    struct Epilog {
+      const MCSymbol *Symbol;
+      int64_t Offset;
+    };
+    std::vector<Epilog> Epilogs;
 
     Segment(int64_t Offset, int64_t Length, bool HasProlog = false)
         : Offset(Offset), Length(Length), HasProlog(HasProlog) {}
@@ -89,10 +101,20 @@ struct FrameInfo {
   bool empty() const {
     if (!Instructions.empty())
       return false;
-    for (const auto &E : EpilogMap)
-      if (!E.second.Instructions.empty())
+    for (const auto &E : Epilogs)
+      if (!E.Instructions.empty())
         return false;
     return true;
+  }
+
+  auto findEpilog(const MCSymbol *Start) const {
+    return llvm::find_if(Epilogs,
+                         [Start](const Epilog &E) { return E.Start == Start; });
+  }
+
+  auto findEpilog(const MCSymbol *Start) {
+    return llvm::find_if(Epilogs,
+                         [Start](Epilog &E) { return E.Start == Start; });
   }
 };
 
