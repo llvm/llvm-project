@@ -210,16 +210,6 @@ multiclass avx10_sat_cvt_rc<bits<8> Opc, string OpStr, X86SchedWriteWidths sched
                                 (MaskNode (SrcInfo.info512.VT SrcInfo.info512.RC:$src),
                                           (i32 timm:$rc)))>,
                              Sched<[sched.ZMM]>, EVEX, EVEX_RC, EVEX_B;
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-  defm Z256rrb : AVX512_maskable<Opc, MRMSrcReg, DestInfo.info256,
-                                (outs DestInfo.info256.RC:$dst),
-                                (ins SrcInfo.info256.RC:$src, AVX512RC:$rc),
-                                OpStr, "$rc, $src", "$src, $rc",
-                                (DestInfo.info256.VT
-                                  (MaskNode (SrcInfo.info256.VT SrcInfo.info256.RC:$src),
-                                            (i32 timm:$rc)))>,
-                               Sched<[sched.YMM]>, EVEX, EVEX_RC, EVEX_B;
-  }
 }
 
 // Conversion with SAE
@@ -234,15 +224,6 @@ multiclass avx10_sat_cvt_sae<bits<8> Opc, string OpStr, X86SchedWriteWidths sche
                              (DestInfo.info512.VT
                                (Node (SrcInfo.info512.VT SrcInfo.info512.RC:$src)))>,
                              Sched<[sched.ZMM]>, EVEX, EVEX_B;
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-  defm Z256rrb : AVX512_maskable<Opc, MRMSrcReg, DestInfo.info256,
-                                (outs DestInfo.info256.RC:$dst),
-                                (ins SrcInfo.info256.RC:$src),
-                                OpStr, "{sae}, $src", "$src, {sae}",
-                                (DestInfo.info256.VT
-                                  (Node (SrcInfo.info256.VT SrcInfo.info256.RC:$src)))>,
-                                Sched<[sched.YMM]>, EVEX, EVEX_B;
-  }
 }
 
 multiclass avx10_sat_cvt_base<bits<8> Opc, string OpStr, X86SchedWriteWidths sched,
