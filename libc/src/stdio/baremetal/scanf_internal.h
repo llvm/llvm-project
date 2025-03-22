@@ -1,4 +1,4 @@
-//===-- Baremetal implementation of getchar -------------------------------===//
+//===-- Internal implementation header of scanf -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,20 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/getchar.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/macros/config.h"
-
-#include "hdr/stdio_macros.h" // for EOF.
+#include "src/stdio/scanf_core/reader.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, getchar, ()) {
-  char buf[1];
-  auto result = read_from_stdin(buf, sizeof(buf));
-  if (result <= 0)
-    return EOF;
-  return buf[0];
-}
+namespace scanf_core {
+
+struct StdinReader : public Reader<StdinReader> {
+  LIBC_INLINE char getc() {
+    char buf[1];
+    auto result = read_from_stdin(buf, sizeof(buf));
+    if (result <= 0)
+      return EOF;
+    return buf[0];
+  }
+  LIBC_INLINE void ungetc(int) {}
+};
+
+} // namespace scanf_core
 
 } // namespace LIBC_NAMESPACE_DECL
