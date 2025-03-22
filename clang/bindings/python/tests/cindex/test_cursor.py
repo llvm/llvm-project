@@ -4,6 +4,7 @@ from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
     Config,
+    Cursor,
     CursorKind,
     PrintingPolicy,
     PrintingPolicyProperty,
@@ -995,3 +996,42 @@ int count(int a, int b){
         pp.set_property(PrintingPolicyProperty.Bool, False)
         self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), False)
         self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")
+
+    def test_hash(self):
+        def accumulate_cursors(cursor: Cursor, all_cursors: list):
+            all_cursors.append(cursor)
+            for child in cursor.get_children():
+                all_cursors = accumulate_cursors(child, all_cursors)
+            return all_cursors
+
+        tu = get_tu(children_test)
+        all_cursors = accumulate_cursors(tu.cursor, [])
+        cursor_hashes = set()
+        for cursor in all_cursors:
+            self.assertNotIn(hash(cursor), cursor_hashes)
+            cursor_hashes.add(hash(cursor))
+
+    def test_has_attrs(self):
+        tu = get_tu(
+            """
+struct A;
+struct A final {};
+
+struct B;
+struct B {};
+""",
+            lang="cpp",
+        )
+        A = get_cursor(tu, "A")
+        B = get_cursor(tu, "B")
+        self.assertTrue(A.get_definition().has_attrs())
+        self.assertFalse(B.get_definition().has_attrs())
+
+    def test_specialized_template(self):
+        tu = get_tu(template_arg_test, lang="cpp")
+        foos = get_cursors(tu, "foo")
+        prime_foo = foos[1].specialized_template
+
+        self.assertNotEqual(foos[0], foos[1])
+        self.assertEqual(foos[0], prime_foo)
+        self.assertIsNone(tu.cursor.specialized_template)
