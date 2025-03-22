@@ -587,6 +587,22 @@ public:
     return getNoRegister();
   }
 
+  virtual MCPhysReg getSafelyMaterializedAddressReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  /// Analyzes if this instruction can safely perform address arithmetics.
+  ///
+  /// If the first element of the returned pair is no-register, this instruction
+  /// is considered unknown. Otherwise, (output, input) pair is returned,
+  /// so that output is as trusted as input is.
+  virtual std::pair<MCPhysReg, MCPhysReg>
+  analyzeSafeAddressArithmetics(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return std::make_pair(getNoRegister(), getNoRegister());
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
