@@ -790,10 +790,20 @@ public:
       remainder[pos] = rem;
     }
 
+    // GCC currently emits a false-positive warning on this for some compilers.
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+#endif
+
     // Set the remaining lower bits of the remainder.
     for (; pos > 0; --pos) {
       remainder[pos - 1] = val[pos - 1];
     }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
     *this = quotient;
     return remainder;
@@ -851,8 +861,8 @@ public:
       result[i] = lhs[i] OP rhs[i];                                            \
     return result;                                                             \
   }                                                                            \
-  LIBC_INLINE friend constexpr BigInt operator OP##=(BigInt &lhs,              \
-                                                     const BigInt &rhs) {      \
+  LIBC_INLINE friend constexpr BigInt operator OP## =                          \
+      (BigInt & lhs, const BigInt &rhs) {                                      \
     for (size_t i = 0; i < WORD_COUNT; ++i)                                    \
       lhs[i] OP## = rhs[i];                                                    \
     return lhs;                                                                \
