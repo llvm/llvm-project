@@ -12664,6 +12664,12 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("__attr1() ::qualified_type f();", CustomAttrs);
   verifyFormat("__attr1(nodebug) ::qualified_type f();", CustomAttrs);
 
+  CustomAttrs.AttributeMacros.push_back("my_attr_name");
+  verifyFormat("void MyGoodOldFunction(\n"
+               "    void *const long_enough = nullptr,\n"
+               "    void *my_attr_name even_longeeeeeeeeeeeeeeeeer = nullptr);",
+               CustomAttrs);
+
   // Check that these are not parsed as function declarations:
   CustomAttrs.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
   CustomAttrs.BreakBeforeBraces = FormatStyle::BS_Allman;
