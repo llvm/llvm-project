@@ -1448,14 +1448,6 @@ def HasVendorXqcisim
                 AssemblerPredicate<(all_of FeatureVendorXqcisim),
                 "'Xqcisim' (Qualcomm uC Simulation Hint Extension)">;
 
-def FeatureVendorXqcisync
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Sync Delay Extension",
-                                 [FeatureStdExtZca]>;
-def HasVendorXqcisync
-    : Predicate<"Subtarget->hasVendorXqcisync()">,
-                AssemblerPredicate<(all_of FeatureVendorXqcisync),
-                "'Xqcisync' (Qualcomm uC Sync Delay Extension)">;
-
 // Rivos Extension(s)
 
 def FeatureVendorXRivosVisni
