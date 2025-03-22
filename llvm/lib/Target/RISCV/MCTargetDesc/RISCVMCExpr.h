@@ -22,7 +22,7 @@ class StringRef;
 
 class RISCVMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum Specifier {
     VK_None,
     VK_LO,
     VK_HI,
@@ -46,18 +46,18 @@ public:
 
 private:
   const MCExpr *Expr;
-  const VariantKind Kind;
+  const Specifier specifier;
 
   int64_t evaluateAsInt64(int64_t Value) const;
 
-  explicit RISCVMCExpr(const MCExpr *Expr, VariantKind Kind)
-      : Expr(Expr), Kind(Kind) {}
+  explicit RISCVMCExpr(const MCExpr *Expr, Specifier S)
+      : Expr(Expr), specifier(S) {}
 
 public:
-  static const RISCVMCExpr *create(const MCExpr *Expr, VariantKind Kind,
+  static const RISCVMCExpr *create(const MCExpr *Expr, Specifier S,
                                    MCContext &Ctx);
 
-  VariantKind getKind() const { return Kind; }
+  Specifier getSpecifier() const { return specifier; }
 
   const MCExpr *getSubExpr() const { return Expr; }
 
@@ -82,8 +82,8 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static VariantKind getVariantKindForName(StringRef name);
-  static StringRef getVariantKindName(VariantKind Kind);
+  static Specifier getSpecifierForName(StringRef name);
+  static StringRef getSpecifierName(Specifier Kind);
 };
 
 } // end namespace llvm.
