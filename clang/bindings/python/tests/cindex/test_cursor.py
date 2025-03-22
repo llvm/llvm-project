@@ -998,13 +998,14 @@ int count(int a, int b){
         self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")
 
     def test_hash(self):
-        def accumulate_cursors(cursor: Cursor, all_cursors: list[Cursor]):
+
+        def accumulate_cursors(cursor: Cursor, all_cursors: list):
             all_cursors.append(cursor)
             for child in cursor.get_children():
                 all_cursors = accumulate_cursors(child, all_cursors)
             return all_cursors
 
-        tu = get_tu(kInput)
+        tu = get_tu(children_test)
         all_cursors = accumulate_cursors(tu.cursor, [])
         cursor_hashes = set()
         for cursor in all_cursors:
@@ -1028,7 +1029,7 @@ struct B {};
         self.assertFalse(B.get_definition().has_attrs())
 
     def test_specialized_template(self):
-        tu = get_tu(kTemplateArgTest, lang="cpp")
+        tu = get_tu(template_arg_test, lang="cpp")
         foos = get_cursors(tu, "foo")
         prime_foo = foos[1].specialized_template
 
