@@ -972,8 +972,8 @@ func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
 //       CHECK:   linalg.generic{{.*}}memref<f32, 3>
 
 // CHECK-SLICES-LABEL: func @drop_all_loops
-//       CHECK-SLICES:   memref.subview %{{.*}}[0, 0] [1, 1] [1, 1] : memref<1x1xf32, 3> to memref<f32, strided<[]>, 3>
-//       CHECK-SLICES:   linalg.generic{{.*}}memref<f32, strided<[]>, 3>
+//       CHECK-SLICES:   memref.subview %{{.*}}[0, 0] [1, 1] [1, 1] : memref<1x1xf32, 3> to memref<f32, 3>
+//       CHECK-SLICES:   linalg.generic{{.*}}memref<f32, 3>
 
 // -----
 

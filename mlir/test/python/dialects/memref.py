@@ -217,21 +217,10 @@ def testSubViewOpInferReturnTypeExtensiveSlicing():
             check_strides_offset(memref.subview(mem1, (1, 1, 1, 0), (1, 1, 1, 44), (1, 1, 1, 1)), golden_mem[1:2, 1:2, 1:2, :])
             # fmt: on
 
-            # default strides and offset means no stridedlayout attribute means affinemap layout
+            # default strides and offset means no stridedlayout attribute means contiguous layout
             assert memref.subview(
                 mem1, (0, 0, 0, 0), (10, 22, 3, 44), (1, 1, 1, 1)
-            ).type.layout == AffineMapAttr.get(
-                AffineMap.get(
-                    4,
-                    0,
-                    [
-                        AffineDimExpr.get(0),
-                        AffineDimExpr.get(1),
-                        AffineDimExpr.get(2),
-                        AffineDimExpr.get(3),
-                    ],
-                )
-            )
+            ).type.layout == ContiguousLayoutAttr.get_row_major(0, 4)
 
             shape = (7, 22, 30, 44)
             golden_mem = np.zeros(shape, dtype=np.int32)

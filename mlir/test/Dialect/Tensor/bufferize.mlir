@@ -324,8 +324,8 @@ func.func @tensor.insert_slice_rank_reducing_1(
   -> tensor<?x?xf32>
 {
   // CHECK: %[[alloc:.*]] = memref.alloc{{.*}} : memref<?x?xf32>
-  // CHECK: memref.subview %[[alloc]][%{{.*}}, %{{.*}}] [1, 1] [1, 1] : memref<?x?xf32> to memref<f32, strided<[], offset: ?>>
-  // CHECK: memref.copy {{.*}} : memref<f32> to memref<f32, strided<[], offset: ?>>
+  // CHECK: memref.subview %[[alloc]][%{{.*}}, %{{.*}}] [1, 1] [1, 1] : memref<?x?xf32> to memref<f32, contiguous<0, offset: ?>>
+  // CHECK: memref.copy {{.*}} : memref<f32> to memref<f32, contiguous<0, offset: ?>>
   %0 = tensor.insert_slice %f into %t1[%idx1, %idx2][1, 1][1, 1]
       : tensor<f32> into tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -402,9 +402,9 @@ func.func @tensor.expand_shape_of_slice(
 func.func @tensor.expand_shape_of_scalar_slice(
     %t1: tensor<?xf32>, %o1: index, %s1: index) -> tensor<1xf32> {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]] : tensor<?xf32> to memref<?xf32>
-  // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}] [1] [1] :  memref<?xf32> to memref<f32, strided<[], offset: ?>>
+  // CHECK: %[[subview:.*]] = memref.subview %[[m1]][%{{.*}}] [1] [1] :  memref<?xf32> to memref<f32, contiguous<0, offset: ?>>
   %0 = tensor.extract_slice %t1[%o1][1][1] : tensor<?xf32> to tensor<f32>
-  // CHECK: %[[expanded:.*]] = memref.expand_shape %[[subview]] [] output_shape [1] : memref<f32, strided{{.*}}> into memref<1xf32, strided<[1], offset: ?>>
+  // CHECK: %[[expanded:.*]] = memref.expand_shape %[[subview]] [] output_shape [1] : memref<f32, contiguous<0, offset: ?>> into memref<1xf32, contiguous<1, offset: ?>>
   %1 = tensor.expand_shape %0 [] output_shape [1] : tensor<f32> into tensor<1xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[expanded]]
   // CHECK: return %[[r]]
@@ -459,9 +459,9 @@ func.func @tensor.collapse_shape_to_scalar(%t1: tensor<1x1x1xf32>) -> tensor<f32
 
 // CHECK-LABEL: func @tensor.collapse_shape_of_slice(
 func.func @tensor.collapse_shape_of_slice(%arg0: tensor<2xi32>) -> tensor<i32> {
-  // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<2xi32> to memref<1xi32, strided<[1], offset: 1>>
+  // CHECK: memref.subview %{{.*}}[1] [1] [1] : memref<2xi32> to memref<1xi32, contiguous<1, offset: 1>>
   %0 = tensor.extract_slice %arg0[1] [1] [1] : tensor<2xi32> to tensor<1xi32>
-  // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, strided<[1], offset: 1>> into memref<i32, strided<[], offset: 1>>
+  // CHECK: memref.collapse_shape %{{.*}} [] : memref<1xi32, contiguous<1, offset: 1>> into memref<i32, contiguous<0, offset: 1>>
   %1 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   return %1 : tensor<i32>
 }
@@ -643,8 +643,8 @@ func.func @parallel_insert_slice_copy_before_write(%in: tensor<4xf32>, %out: ten
   %result = scf.forall (%thread_idx) in (%num_threads) shared_outs (%o = %out) -> tensor<4xf32> {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<4xf32> to tensor<1xf32>
       scf.forall.in_parallel {
-        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<4xf32> to memref<1xf32, strided<[1], offset: ?>>
-        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<4xf32> to memref<1xf32, strided<[1], offset: ?>>
+        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<4xf32> to memref<1xf32, contiguous<1, offset: ?>>
+        // CHECK: memref.subview %{{.*}}[%{{.*}}] [1] [1] : memref<4xf32> to memref<1xf32, contiguous<1, offset: ?>>
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<4xf32>
       }
