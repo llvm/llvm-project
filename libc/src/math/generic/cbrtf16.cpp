@@ -94,10 +94,9 @@ LLVM_LIBC_FUNCTION(float16, cbrtf16, (float16 x)) {
   float xf = static_cast<float>(x);
   FloatBits xf_bits(xf);
 
-  unsigned x_e = static_cast<unsigned>(xf_bits.get_exponent());
-  unsigned out_e = x_e / 3 + 127;
-
-  unsigned shift_e = x_e % 3;
+  uint32_t x_e = xf_bits.get_biased_exponent();
+  uint32_t out_e = (x_e - 1) / 3 + (127 - 42);
+  uint32_t shift_e = (x_e - 1) % 3;
 
   // Set x_m = 2^(x_e % 3) * (1 + mantissa)
   uint32_t x_m = xf_bits.get_mantissa();
