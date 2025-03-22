@@ -1058,6 +1058,8 @@ R"(All available -march extensions for RISC-V
     zvl8192b             1.0
     zhinx                1.0
     zhinxmin             1.0
+    sdext                1.0
+    sdtrig               1.0
     sha                  1.0
     shcounterenw         1.0
     shgatpa              1.0
@@ -1137,8 +1139,6 @@ Experimental extensions
     zvbc32e              0.7
     zvkgs                0.7
     zvqdotq              0.0
-    sdext                1.0
-    sdtrig               1.0
     smctr                1.0
     ssctr                1.0
     svukte               0.3
