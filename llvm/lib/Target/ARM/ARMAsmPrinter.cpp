@@ -90,12 +90,10 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   const GlobalValue *GV = dyn_cast<GlobalValue>(CV->stripPointerCasts());
   assert(GV && "C++ constructor pointer was not a GlobalValue!");
 
-  const MCExpr *E = MCSymbolRefExpr::create(GetARMGVSymbol(GV,
-                                                           ARMII::MO_NO_FLAG),
-                                            (Subtarget->isTargetELF()
-                                             ? MCSymbolRefExpr::VK_ARM_TARGET1
-                                             : MCSymbolRefExpr::VK_None),
-                                            OutContext);
+  const MCExpr *E = MCSymbolRefExpr::create(
+      GetARMGVSymbol(GV, ARMII::MO_NO_FLAG),
+      (Subtarget->isTargetELF() ? ARMMCExpr::VK_TARGET1 : ARMMCExpr::VK_None),
+      OutContext);
 
   OutStreamer->emitValue(E, Size);
 }
@@ -835,21 +833,20 @@ static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
   return Label;
 }
 
-static MCSymbolRefExpr::VariantKind
-getModifierVariantKind(ARMCP::ARMCPModifier Modifier) {
+static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   switch (Modifier) {
   case ARMCP::no_modifier:
-    return MCSymbolRefExpr::VK_None;
+    return ARMMCExpr::VK_None;
   case ARMCP::TLSGD:
-    return MCSymbolRefExpr::VK_TLSGD;
+    return ARMMCExpr::VK_TLSGD;
   case ARMCP::TPOFF:
-    return MCSymbolRefExpr::VK_TPOFF;
+    return ARMMCExpr::VK_TPOFF;
   case ARMCP::GOTTPOFF:
-    return MCSymbolRefExpr::VK_GOTTPOFF;
+    return ARMMCExpr::VK_GOTTPOFF;
   case ARMCP::SBREL:
-    return MCSymbolRefExpr::VK_ARM_SBREL;
+    return ARMMCExpr::VK_SBREL;
   case ARMCP::GOT_PREL:
-    return MCSymbolRefExpr::VK_ARM_GOT_PREL;
+    return ARMMCExpr::VK_GOT_PREL;
   case ARMCP::SECREL:
     return MCSymbolRefExpr::VK_SECREL;
   }
@@ -964,9 +961,8 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
   }
 
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr =
-    MCSymbolRefExpr::create(MCSym, getModifierVariantKind(ACPV->getModifier()),
-                            OutContext);
+  const MCExpr *Expr = MCSymbolRefExpr::create(
+      MCSym, getModifierSpecifier(ACPV->getModifier()), OutContext);
 
   if (ACPV->getPCAdjustment()) {
     MCSymbol *PCLabel =

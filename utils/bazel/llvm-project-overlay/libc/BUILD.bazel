@@ -1884,9 +1884,13 @@ libc_support_library(
 libc_support_library(
     name = "inv_trigf_utils",
     srcs = ["src/math/generic/inv_trigf_utils.cpp"],
-    hdrs = ["src/math/generic/inv_trigf_utils.h"],
+    hdrs = [
+        "src/math/generic/inv_trigf_utils.h",
+        "src/math/generic/atan_utils.h",
+    ],
     deps = [
         ":__support_common",
+        ":__support_fputil_double_double",
         ":__support_fputil_fma",
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
@@ -2281,6 +2285,16 @@ libc_math_function(
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "atan",
+    additional_deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_nearest_integer",
         ":__support_macros_optimization",
         ":inv_trigf_utils",
     ],

@@ -8,9 +8,11 @@
 
 #include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -46,29 +48,20 @@ define void @foo(i8 %arg0, i8 %arg1) {
 )IR");
   Function *F = M->getFunction("foo");
   auto *BB = &*F->begin();
-  AssumptionCache AC(*F);
-  EphemeralValuesCache EVC(*F, AC);
   auto It = BB->begin();
   auto *C0 = &*It++;
   auto *Assume0 = &*It++;
   [[maybe_unused]] auto *NotEph = &*It++;
   auto *C1 = &*It++;
   auto *Assume1 = &*It++;
-  [[maybe_unused]] auto *Ret = &*It++;
-  // Check emphemeral values.
-  EXPECT_THAT(EVC.ephValues(),
+
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([] { return EphemeralValuesAnalysis(); });
+  FAM.registerPass([] { return PassInstrumentationAnalysis(); });
+  FAM.registerPass([] { return AssumptionAnalysis(); });
+  FAM.registerPass([] { return TargetIRAnalysis(); });
+  EXPECT_THAT(FAM.getResult<EphemeralValuesAnalysis>(*F),
               testing::UnorderedElementsAre(C0, Assume0, C1, Assume1));
-  // Clear the cache and try again.
-  EVC.clear();
-  EXPECT_THAT(EVC.ephValues(),
-              testing::UnorderedElementsAre(C0, Assume0, C1, Assume1));
-  // Modify the IR, clear cache and recompute.
-  Assume1->eraseFromParent();
-  C1->eraseFromParent();
-  EXPECT_THAT(EVC.ephValues(),
-              testing::UnorderedElementsAre(C0, Assume0, C1, Assume1));
-  EVC.clear();
-  EXPECT_THAT(EVC.ephValues(), testing::UnorderedElementsAre(C0, Assume0));
 }
 
 } // namespace
