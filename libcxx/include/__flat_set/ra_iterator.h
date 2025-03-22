@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___FLAT_SET_RA_ITERATOR_H
 #define _LIBCPP___FLAT_SET_RA_ITERATOR_H
 
+#include "__type_traits/is_same.h"
 #include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__iterator/incrementable_traits.h>
@@ -42,7 +43,7 @@ private:
   friend _Container;
 
   // note: checking the concept random_access_iterator does not work for incomplete types
-  static_assert(__is_same(iterator_traits<_Iterator>::iterator_category, random_access_iterator_tag),
+  static_assert(_IsSame<typename iterator_traits<_Iterator>::iterator_category, random_access_iterator_tag>::value,
                 "Underlying iterator must be a random access iterator");
 
 public:

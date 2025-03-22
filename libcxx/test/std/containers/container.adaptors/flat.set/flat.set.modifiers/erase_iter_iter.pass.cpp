@@ -31,6 +31,14 @@ void test_one() {
   using M   = std::flat_set<Key, std::less<Key>, KeyContainer>;
   using I   = M::iterator;
 
+  auto make = [](std::initializer_list<int> il) {
+    M m;
+    for (int i : il) {
+      m.emplace(i);
+    }
+    return m;
+  };
+
   int ar[] = {
       1,
       2,
@@ -46,30 +54,17 @@ void test_one() {
   std::same_as<I> decltype(auto) i1 = m.erase(m.cbegin(), m.cbegin());
   assert(m.size() == 8);
   assert(i1 == m.begin());
-  assert(*m.begin() == 1);
-  assert(*std::next(m.begin()) == 2);
-  assert(*std::next(m.begin(), 2) == 3);
-  assert(*std::next(m.begin(), 3) == 4);
-  assert(*std::next(m.begin(), 4) == 5);
-  assert(*std::next(m.begin(), 5) == 6);
-  assert(*std::next(m.begin(), 6) == 7);
-  assert(*std::next(m.begin(), 7) == 8);
+  assert(m == make({1, 2, 3, 4, 5, 6, 7, 8}));
 
   std::same_as<I> decltype(auto) i2 = m.erase(m.cbegin(), std::next(m.cbegin(), 2));
   assert(m.size() == 6);
   assert(i2 == m.begin());
-  assert(*std::next(m.begin(), 0) == 3);
-  assert(*std::next(m.begin(), 1) == 4);
-  assert(*std::next(m.begin(), 2) == 5);
-  assert(*std::next(m.begin(), 3) == 6);
-  assert(*std::next(m.begin(), 4) == 7);
-  assert(*std::next(m.begin(), 5) == 8);
+  assert(m == make({3, 4, 5, 6, 7, 8}));
 
   std::same_as<I> decltype(auto) i3 = m.erase(std::next(m.cbegin(), 2), std::next(m.cbegin(), 6));
   assert(m.size() == 2);
   assert(i3 == std::next(m.begin(), 2));
-  assert(*std::next(m.begin(), 0) == 3);
-  assert(*std::next(m.begin(), 1) == 4);
+  assert(m == make({3, 4}));
 
   std::same_as<I> decltype(auto) i4 = m.erase(m.cbegin(), m.cend());
   assert(m.size() == 0);

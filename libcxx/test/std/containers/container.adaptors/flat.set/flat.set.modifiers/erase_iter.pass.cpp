@@ -43,62 +43,50 @@ void test_one() {
       8,
   };
   M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+
+  auto make = [](std::initializer_list<int> il) {
+    M m;
+    for (int i : il) {
+      m.emplace(i);
+    }
+    return m;
+  };
   assert(m.size() == 8);
+  assert(m == make({1, 2, 3, 4, 5, 6, 7, 8}));
   std::same_as<I> decltype(auto) i1 = m.erase(std::next(m.cbegin(), 3));
   assert(m.size() == 7);
   assert(i1 == std::next(m.begin(), 3));
-  assert(*m.begin() == 1);
-  assert(*std::next(m.begin()) == 2);
-  assert(*std::next(m.begin(), 2) == 3);
-  assert(*std::next(m.begin(), 3) == 5);
-  assert(*std::next(m.begin(), 4) == 6);
-  assert(*std::next(m.begin(), 5) == 7);
-  assert(*std::next(m.begin(), 6) == 8);
+  assert(m == make({1, 2, 3, 5, 6, 7, 8}));
 
   std::same_as<I> decltype(auto) i2 = m.erase(std::next(m.begin(), 0));
   assert(m.size() == 6);
   assert(i2 == m.begin());
-  assert(*m.begin() == 2);
-  assert(*std::next(m.begin()) == 3);
-  assert(*std::next(m.begin(), 2) == 5);
-  assert(*std::next(m.begin(), 3) == 6);
-  assert(*std::next(m.begin(), 4) == 7);
-  assert(*std::next(m.begin(), 5) == 8);
+  assert(m == make({2, 3, 5, 6, 7, 8}));
 
   std::same_as<I> decltype(auto) i3 = m.erase(std::next(m.cbegin(), 5));
   assert(m.size() == 5);
   assert(i3 == m.end());
-  assert(*m.begin() == 2);
-  assert(*std::next(m.begin()) == 3);
-  assert(*std::next(m.begin(), 2) == 5);
-  assert(*std::next(m.begin(), 3) == 6);
-  assert(*std::next(m.begin(), 4) == 7);
+  assert(m == make({2, 3, 5, 6, 7}));
 
   std::same_as<I> decltype(auto) i4 = m.erase(std::next(m.begin(), 1));
   assert(m.size() == 4);
   assert(i4 == std::next(m.begin()));
-  assert(*m.begin() == 2);
-  assert(*std::next(m.begin()) == 5);
-  assert(*std::next(m.begin(), 2) == 6);
-  assert(*std::next(m.begin(), 3) == 7);
+  assert(m == make({2, 5, 6, 7}));
 
   std::same_as<I> decltype(auto) i5 = m.erase(std::next(m.cbegin(), 2));
   assert(m.size() == 3);
   assert(i5 == std::next(m.begin(), 2));
-  assert(*m.begin() == 2);
-  assert(*std::next(m.begin()) == 5);
-  assert(*std::next(m.begin(), 2) == 7);
+  assert(m == make({2, 5, 7}));
 
   std::same_as<I> decltype(auto) i6 = m.erase(std::next(m.begin(), 2));
   assert(m.size() == 2);
   assert(i6 == std::next(m.begin(), 2));
-  assert(*m.begin() == 2);
-  assert(*std::next(m.begin()) == 5);
+  assert(m == make({2, 5}));
 
   std::same_as<I> decltype(auto) i7 = m.erase(std::next(m.cbegin(), 0));
   assert(m.size() == 1);
   assert(i7 == std::next(m.begin(), 0));
-  assert(*m.begin() == 5);
+  assert(m == make({5}));
 
   std::same_as<I> decltype(auto) i8 = m.erase(m.begin());
   assert(m.size() == 0);
