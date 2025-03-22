@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -222,4 +223,34 @@ void SSAUpdaterBulk::RewriteAllUses(DominatorTree *DT,
       U->set(V);
     }
   }
+}
+
+bool SSAUpdaterBulk::simplifyPass(SmallVectorImpl<PHINode *> &Worklist) {
+  if (Worklist.empty())
+    return false;
+
+  auto findEquivalentPHI = [](PHINode *PHI) -> Value * {
+    BasicBlock *BB = PHI->getParent();
+    for (auto &OtherPHI : BB->phis()) {
+      if (PHI != &OtherPHI && PHI->isIdenticalToWhenDefined(&OtherPHI))
+        return &OtherPHI;
+    }
+    return nullptr;
+  };
+
+  const DataLayout &DL = Worklist.front()->getParent()->getDataLayout();
+  bool Change = false;
+  for (PHINode *&PHI : Worklist) {
+    Value *Replacement = simplifyInstruction(PHI, DL);
+    if (!Replacement)
+      Replacement = findEquivalentPHI(PHI);
+
+    if (Replacement) {
+      PHI->replaceAllUsesWith(Replacement);
+      PHI->eraseFromParent();
+      PHI = nullptr; // Mark as removed
+      Change = true;
+    }
+  }
+  return Change;
 }
