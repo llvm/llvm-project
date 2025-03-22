@@ -2680,6 +2680,19 @@ bool VarDecl::isNonEscapingByref() const {
   return hasAttr<BlocksAttr>() && !NonParmVarDeclBits.EscapingByref;
 }
 
+void VarDecl::setEscapingByref() {
+  assert(!isa<ParmVarDecl>(this) && hasAttr<BlocksAttr>());
+  NonParmVarDeclBits.EscapingByref = true;
+}
+
+bool VarDecl::needsInitOnHeap() const {
+  // We need direct initialization on the heap for self-capturing __block
+  // variables of types that cause CodeGenFunction::getEvaluationKind to return
+  // TEK_Aggregate.  The only such types that can be captured are records.
+  return isCapturedByOwnInit() &&
+         getType().getAtomicUnqualifiedType()->isRecordType();
+}
+
 bool VarDecl::hasDependentAlignment() const {
   QualType T = getType();
   return T->isDependentType() || T->isUndeducedType() ||
