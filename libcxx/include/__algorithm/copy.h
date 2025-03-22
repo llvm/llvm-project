@@ -242,21 +242,33 @@ struct __copy_impl {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
   operator()(__bit_iterator<_Cp, _IsConst> __first,
              __bit_iterator<_Cp, _IsConst> __last,
-             __bit_iterator<_Cp, false> __result) const {
+             __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
     if (__first.__ctz_ == __result.__ctz_)
       return std::make_pair(__last, std::__copy_aligned(__first, __last, __result));
     return std::make_pair(__last, std::__copy_unaligned(__first, __last, __result));
   }
 
   template <class _InIter,
+            class _OutIter,
+            class _Cp,
+            bool _IsConst,
+            __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, __bit_iterator<_Cp, false> >
+  operator()(_InIter __first, _InIter __last, __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
+    std::__for_each_segment(__first, __last, _CopySegment<_InIter, __bit_iterator<_Cp, false> >(__result));
+    return std::make_pair(__last, std::move(__result));
+  }
+
+  template <class _InIter,
             class _Sent,
             class _Cp,
-            __enable_if_t<(__has_forward_iterator_category<_InIter>::value ||
-                           __has_iterator_concept_convertible_to<_InIter, forward_iterator_tag>::value) &&
+            __enable_if_t<!__is_segmented_iterator<_InIter>::value &&
+                              (__has_forward_iterator_category<_InIter>::value ||
+                               __has_iterator_concept_convertible_to<_InIter, forward_iterator_tag>::value) &&
                               is_convertible<typename iterator_traits<_InIter>::value_type, bool>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, __bit_iterator<_Cp, false> >
-  operator()(_InIter __first, _Sent __last, __bit_iterator<_Cp, false> __result) const {
+  operator()(_InIter __first, _Sent __last, __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
     using _It            = __bit_iterator<_Cp, false>;
     using __storage_type = typename _It::__storage_type;
 #if _LIBCPP_STD_VER >= 20
@@ -272,7 +284,7 @@ struct __copy_impl {
         __storage_type __clz = static_cast<__storage_type>(__bits_per_word - __result.__ctz_);
         __storage_type __dn  = std::min(__clz, __n);
         __storage_type __w   = *__result.__seg_;
-        __storage_type __m   = (~__storage_type(0) << __result.__ctz_) & (~__storage_type(0) >> (__clz - __dn));
+        __storage_type __m   = std::__middle_mask<__storage_type>(__clz - __dn, __result.__ctz_);
         __w &= ~__m;
         for (__storage_type __i = 0; __i < __dn; ++__i, ++__first)
           __w |= static_cast<__storage_type>(*__first) << __result.__ctz_++;
@@ -298,7 +310,7 @@ struct __copy_impl {
       __storage_type __w = 0;
       for (__storage_type __i = 0; __i < __n; ++__i, ++__first)
         __w |= static_cast<__storage_type>(*__first) << __i;
-      __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
+      __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
       *__result.__seg_ &= ~__m;
       *__result.__seg_ |= __w;
       __result.__ctz_ = __n;
