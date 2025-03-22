@@ -4067,6 +4067,47 @@ assignment can happen automatically.
 to a variable, have its address taken, or passed into or returned from a
 function, because doing so violates bounds safety conventions.
 
+``__builtin_is_modifiable_lvalue``
+----------------------------------
+
+``__builtin_is_modifiable_lvalue`` returns true when the argument is an assignable lvalue.
+
+The argument does not have any side-effects resolved.
+
+**Syntax**:
+
+.. code-block:: c
+
+  bool __builtin_is_modifiable_lvalue(T expr)
+
+**Examples**:
+
+.. code-block:: c
+
+  #define __force_lvalue_expr(x)  \
+          __builtin_choose_expr(__builtin_is_modifiable_lvalue(x), \
+                                x, (void *){ NULL })
+
+  #define __free_and_null(__do_free, x)   \
+  ({                                      \
+          typeof(x) *__ptr = &(x);        \
+          __do_free(*__ptr);              \
+          *__ptr = NULL;                  \
+  })
+  #define __free_and_maybe_null(__how, x)                          \
+          __builtin_choose_expr(__builtin_is_modifiable_lvalue(x), \
+                  __free_and_null(__how, __force_lvalue_expr(x)),  \
+                  __kfree(x))
+  #define kfree(x)    __free_and_maybe_null(__kfree, x)
+
+**Description**:
+
+When building complex preprocessor macros, it can be helpful to be able
+to determine if a given argument is an lvalue to make choices about
+how to resolve the given arguments. For example, performing assignments
+against an lvalue in a macro becomes possible, but values returned from
+function calls can be ignored.
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 
