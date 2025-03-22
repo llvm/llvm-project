@@ -185,6 +185,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
@@ -244,6 +245,7 @@ template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
 
 class AMDGPULowerModuleLDS {
   const AMDGPUTargetMachine &TM;
+  friend class ScopedNoAliasAAResult;
 
   static void
   removeLocalVarsFromUsedLists(Module &M,
@@ -1424,14 +1426,12 @@ private:
 
       Align A =
           commonAlignment(Replacement.SGV->getAlign().valueOrOne(), Offset);
-
       if (I)
         NoAliasList[I - 1] = AliasScopes[I - 1];
       MDNode *NoAlias =
           NoAliasList.empty() ? nullptr : MDNode::get(Ctx, NoAliasList);
       MDNode *AliasScope =
           AliasScopes.empty() ? nullptr : MDNode::get(Ctx, {AliasScopes[I]});
-
       refineUsesAlignmentAndAA(GEP, A, DL, AliasScope, NoAlias);
     }
   }
@@ -1442,6 +1442,8 @@ private:
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
+    ScopedNoAliasAAResult ScopedNoAlias;
+
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
@@ -1451,7 +1453,17 @@ private:
           I->setMetadata(LLVMContext::MD_alias_scope, AS);
 
           MDNode *NA = I->getMetadata(LLVMContext::MD_noalias);
-          NA = (NA ? MDNode::intersect(NA, NoAlias) : NoAlias);
+          // If domain of NoAlias (domain of LDS structure) is different
+          // than existing NA, we need to preserve exising !NoAlias
+          SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
+          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
+          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
+          auto Diff = set_difference(ExistingDomains, LDSDomains);
+          if (Diff.empty()) {
+            NA = (NA ? MDNode::intersect(NA, NoAlias) : NoAlias);
+          } else {
+            NA = (NA ? MDNode::concatenate(NA, NoAlias) : NoAlias);
+          }
           I->setMetadata(LLVMContext::MD_noalias, NA);
         }
       }
