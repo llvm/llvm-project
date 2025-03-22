@@ -154,33 +154,81 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_SGMapAttr : XeGPUAttr<"SGMap", "sg_map"> {
+def XeGPU_ScopeWG:   I32EnumAttrCase<"WG", 0, "wg">;      // workgroup level code
+def XeGPU_ScopeSG:   I32EnumAttrCase<"SG", 1, "sg">;      // subgroup level code
+def XeGPU_ScopeWI:   I32EnumAttrCase<"WI", 2, "wi">;      // simt level code
+
+def XeGPU_ScopeEnums : I32EnumAttr<"Scope", "enumerate of scope",
+  [XeGPU_ScopeWG,XeGPU_ScopeSG,XeGPU_ScopeWI]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_ScopeAttr
+  : EnumAttr<XeGPU_Dialect,XeGPU_ScopeEnums, "Stage"> {
+    let summary = [{Describe the stage of lowering progress}];
+    let assemblyFormat = "``$value";
+}
+
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let summary = [{
     Describes the mapping between work item (WI) and the 2D tensor specified by the tensor descriptor.
   }];
   let description = [{
-    To distribute the XeGPU operation to work items, the tensor_desc must be specified with the sg_map
-    attribute at the tensor description creation time.
-    Within the `sg_map`, `wi_layout` specifies the layout of work items,
-    describing the mapping of work items to the tensor.
-    wi_layout[0] x wi_layout[1] must be equal to the total number of work items within a subgroup.
-    `wi_data` specifies the minimum number of data elements assigned to each work item for a single distribution.
+    XeGPU operations leverages LayoutAttr to distribute data across work-item. It is specified in tensor_descs
+    upon the tensor description creation. LayoutAttr contains the following parameters.
 
-    E.g., #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>
-    In this example, the subgroup has 16 work items in wi_layout=[1, 16],
-    each accessing 1 element as specified by wi_data=[1, 1].
+    * scope: specifies the scope of current code. It can be either wg (workgroup), sg (subgroup) or wi (workitem).
+             it is hard required for subgroup, but optional for workgroup and wi. By default, if a LayoutAttr
+             contains sg_layout and sg_data, it will be treated as workgroup code; and if it only contains
+             wi_layout and wi_data, it will be considered as workitem level.
+    * sg_layout: [optional] specifies the total number of subgroups and their layout in a workgroup.
+    * sg_data: [optional] specifies the data size accessed per subgroup.
+    * order: [optional] specifies the dimension order used to linearize n-d sbugroup ids to 1-d.
+            The first dimension in the order list is the fastest-changing dimension.
+    * wi_layout: [required] specifies the total number of work-items and their layout in a subgroup
+    * wi_data: [required] specifies the data size accessed per work-item for a single distribution.
 
     `wi_data[0] * wi_data[1]` can be greater than 1, meaning that each work item operates on multiple elements,
     which is eventually lowered to "SIMT-flavor" vector, like SPIR-V vector or llvm vector, or packed to a storage data type.
     The multiple elements indicated by `wi_data` can only be from one dimension and must be contiguous in the memory along either dimension.
+
+    E.g., #xegpu.layout<wi_layout = [1, 16], wi_data = [1, 1]>
+    In this example, the subgroup has 16 work items in wi_layout=[1, 16], each accessing 1 element as specified by wi_data=[1, 1].
+
+    E.g., #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], wi_layout = [1, 16], wi_data = [1, 1]>
+    In this example, the layout representing a workgroup work distribution. A workgroup has 8 subgroups organized as 2x4 layout.
+    and each subgroup accesses a 16x16 block per instruction, which is further disbributed to 16 work items as described above.
+
   }];
   let parameters = (ins
-    ArrayRefParameter<"uint32_t">:$wi_layout,
-    ArrayRefParameter<"uint32_t">:$wi_data
+    OptionalParameter<"ScopeAttr">: $scope,
+    OptionalParameter<"DenseI32ArrayAttr">: $sg_layout,
+    OptionalParameter<"DenseI32ArrayAttr">: $sg_data,
+    OptionalParameter<"DenseI32ArrayAttr">: $order,
+    "DenseI32ArrayAttr": $wi_layout,
+    "DenseI32ArrayAttr": $wi_data
   );
 
+  let extraClassDeclaration = [{
+    bool isForWorkgroupLevel() {
+      if (!getScope())
+        return getSgLayout() && getSgData();
+      return getScope() == ScopeAttr::get(getContext(), Scope::WG);
+    }
 
-  let hasCustomAssemblyFormat = 1;
+    bool isForSubgroupLevel() {
+      return getScope() == ScopeAttr::get(getContext(), Scope::SG);
+    }
+
+    bool isForWorkItemLevel() {
+      if (!getScope())
+        return !getSgLayout() && !getSgData() && !getOrder();
+      return getScope() == ScopeAttr::get(getContext(), Scope::WI);
+    }
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
 }
 
