@@ -38,7 +38,6 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {MCSymbolRefExpr::VK_TLSDESC, "tlsdesc"},
     {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
     {MCSymbolRefExpr::VK_TLSGD_FDPIC, "tlsgd_fdpic"},
-    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
     {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
     {MCSymbolRefExpr::VK_TLSLDM_FDPIC, "tlsldm_fdpic"},
     {MCSymbolRefExpr::VK_TPOFF, "TPOFF"},
