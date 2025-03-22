@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/glample/fastBPE.git",
+      "commit_sha": "036711f8fdc3265d64e8e123a0761be12c5a8e74"
+    }
+  ],
+  "folder_name": "fastbpe",
+  "build_system": "manual",
+  "commands": [
+    "clang++ -std=c++11 -pthread -O3 fastBPE/main.cc -IfastBPE -Xclang -fembed-bitcode=all -c -o fast.o",
+    "clang++ -std=c++11 -pthread -O3 fastBPE/main.cc -IfastBPE -emit-llvm -c -o fast.bc"
+  ],
+  "raw_bc_corpus": "bitcode",
+  "license": "MIT",
+  "license_source": "manual"
+}
