@@ -84,6 +84,7 @@
 // CHECK-NEXT: FlagEnum (SubjectMatchRule_enum)
 // CHECK-NEXT: Flatten (SubjectMatchRule_function)
 // CHECK-NEXT: FunctionReturnThunks (SubjectMatchRule_function)
+// CHECK-NEXT: GCCStruct (SubjectMatchRule_record)
 // CHECK-NEXT: GNUInline (SubjectMatchRule_function)
 // CHECK-NEXT: HIPManaged (SubjectMatchRule_variable)
 // CHECK-NEXT: Hot (SubjectMatchRule_function)
