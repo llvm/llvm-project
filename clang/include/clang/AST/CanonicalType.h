@@ -453,7 +453,9 @@ template<>
 struct CanProxyAdaptor<MemberPointerType>
   : public CanProxyBase<MemberPointerType> {
   LLVM_CLANG_CANPROXY_TYPE_ACCESSOR(getPointeeType)
-  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(const Type *, getClass)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(NestedNameSpecifier *, getQualifier)
+  LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(const CXXRecordDecl *,
+                                      getMostRecentCXXRecordDecl)
 };
 
 // CanProxyAdaptors for arrays are intentionally unimplemented because

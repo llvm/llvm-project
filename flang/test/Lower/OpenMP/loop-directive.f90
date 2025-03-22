@@ -15,7 +15,7 @@ subroutine test_no_clauses()
   ! CHECK: omp.simd private(@[[I_PRIV]] %{{.*}}#0 -> %[[ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) {{.*}} {
   ! CHECK:          %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]]
-  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#1 : i32, !fir.ref<i32>
+  ! CHECK:          hlfir.assign %[[IV]] to %[[ARG_DECL]]#0 : i32, !fir.ref<i32>
   ! CHECK:        }
   ! CHECK: }
   !$omp loop
@@ -318,12 +318,12 @@ end subroutine
 subroutine loop_teams_loop_reduction
   implicit none
   integer :: x, i
-  ! CHECK: omp.teams {
+  ! CHECK: omp.teams reduction(@add_reduction_i32 %{{.*}}#0 -> %[[TEAMS_RED_ARG:.*]] : !fir.ref<i32>) {
   ! CHECK:   omp.parallel
   ! CHECK-SAME: private(@{{[^[:space:]]+}} %{{[^[:space:]]+}}#0 -> %[[PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {
   ! CHECK:      omp.distribute {
   ! CHECK:        omp.wsloop
-  ! CHECK-SAME:     reduction(@add_reduction_i32 %{{.*}}#0 -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK-SAME:     reduction(@add_reduction_i32 %[[TEAMS_RED_ARG]] -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:     omp.loop_nest {{.*}} {
   ! CHECK-NEXT:       hlfir.declare %[[PRIV_ARG]] {uniq_name = "_QF{{.*}}Ei"}
   ! CHECK-NEXT:       hlfir.declare %[[RED_ARG]] {uniq_name = "_QF{{.*}}Ex"}

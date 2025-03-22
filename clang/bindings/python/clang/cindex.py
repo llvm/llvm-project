@@ -2786,7 +2786,7 @@ class _CXUnsavedFile(Structure):
 # Functions calls through the python interface are rather slow. Fortunately,
 # for most symboles, we do not need to perform a function call. Their spelling
 # never changes and is consequently provided by this spelling cache.
-SpellingCache = {
+spelling_cache = {
     # 0: CompletionChunk.Kind("Optional"),
     # 1: CompletionChunk.Kind("TypedText"),
     # 2: CompletionChunk.Kind("Text"),
@@ -2832,8 +2832,8 @@ class CompletionChunk:
 
     @CachedProperty
     def spelling(self):
-        if self.__kindNumber in SpellingCache:
-            return SpellingCache[self.__kindNumber]
+        if self.__kindNumber in spelling_cache:
+            return spelling_cache[self.__kindNumber]
         return _CXString.from_result(
             conf.lib.clang_getCompletionChunkText(self.cs, self.key)
         )
@@ -3830,7 +3830,7 @@ cursor_visit_callback = CFUNCTYPE(c_int, Cursor, Cursor, py_object)
 fields_visit_callback = CFUNCTYPE(c_int, Cursor, py_object)
 
 # Functions strictly alphabetical order.
-functionList: list[LibFunc] = [
+function_list: list[LibFunc] = [
     (
         "clang_annotateTokens",
         [TranslationUnit, POINTER(Token), c_uint, POINTER(Cursor)],
@@ -4108,7 +4108,7 @@ def register_functions(lib: CDLL, ignore_errors: bool) -> None:
     def register(item: LibFunc) -> None:
         register_function(lib, item, ignore_errors)
 
-    for f in functionList:
+    for f in function_list:
         register(f)
 
 

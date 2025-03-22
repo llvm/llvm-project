@@ -5363,27 +5363,37 @@ void OmpStructureChecker::CheckArraySection(
       if (const auto *triplet{
               std::get_if<parser::SubscriptTriplet>(&subscript.u)}) {
         if (std::get<0>(triplet->t) && std::get<1>(triplet->t)) {
+          std::optional<int64_t> strideVal{std::nullopt};
+          if (const auto &strideExpr = std::get<2>(triplet->t)) {
+            // OpenMP 6.0 Section 5.2.5: Array Sections
+            // Restrictions: if a stride expression is specified it must be
+            // positive. A stride of 0 doesn't make sense.
+            strideVal = GetIntValue(strideExpr);
+            if (strideVal && *strideVal < 1) {
+              context_.Say(GetContext().clauseSource,
+                  "'%s' in %s clause must have a positive stride"_err_en_US,
+                  name.ToString(),
+                  parser::ToUpperCaseLetters(getClauseName(clause).str()));
+            }
+          }
           const auto &lower{std::get<0>(triplet->t)};
           const auto &upper{std::get<1>(triplet->t)};
           if (lower && upper) {
             const auto lval{GetIntValue(lower)};
             const auto uval{GetIntValue(upper)};
-            if (lval && uval && *uval < *lval) {
-              context_.Say(GetContext().clauseSource,
-                  "'%s' in %s clause"
-                  " is a zero size array section"_err_en_US,
-                  name.ToString(),
-                  parser::ToUpperCaseLetters(getClauseName(clause).str()));
-              break;
-            } else if (std::get<2>(triplet->t)) {
-              const auto &strideExpr{std::get<2>(triplet->t)};
-              if (strideExpr) {
-                if (clause == llvm::omp::Clause::OMPC_depend) {
-                  context_.Say(GetContext().clauseSource,
-                      "Stride should not be specified for array section in "
-                      "DEPEND "
-                      "clause"_err_en_US);
-                }
+            if (lval && uval) {
+              int64_t sectionLen = *uval - *lval;
+              if (strideVal) {
+                sectionLen = sectionLen / *strideVal;
+              }
+
+              if (sectionLen < 1) {
+                context_.Say(GetContext().clauseSource,
+                    "'%s' in %s clause"
+                    " is a zero size array section"_err_en_US,
+                    name.ToString(),
+                    parser::ToUpperCaseLetters(getClauseName(clause).str()));
+                break;
               }
             }
           }

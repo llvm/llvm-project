@@ -524,7 +524,7 @@ struct ClangDocContext {
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;
-  // JavaScript files that will be imported in all HTML file.
+  // JavaScript files that will be imported in all HTML files.
   std::vector<std::string> JsScripts;
   Index Idx;
 };
