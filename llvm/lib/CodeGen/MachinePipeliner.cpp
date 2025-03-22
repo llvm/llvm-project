@@ -2132,7 +2132,7 @@ void SwingSchedulerDAG::groupRemainingNodes(NodeSetType &NodeSets) {
       if (!Path.empty())
         I.insert(Path.begin(), Path.end());
     }
-    NodesAdded.insert(I.begin(), I.end());
+    NodesAdded.insert_range(I);
   }
 
   // Create a new node set with the connected nodes of any successor of a node
@@ -2246,12 +2246,12 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
     OrderKind Order;
     SmallSetVector<SUnit *, 8> N;
     if (pred_L(NodeOrder, N, DDG.get()) && llvm::set_is_subset(N, Nodes)) {
-      R.insert(N.begin(), N.end());
+      R.insert_range(N);
       Order = BottomUp;
       LLVM_DEBUG(dbgs() << "  Bottom up (preds) ");
     } else if (succ_L(NodeOrder, N, DDG.get()) &&
                llvm::set_is_subset(N, Nodes)) {
-      R.insert(N.begin(), N.end());
+      R.insert_range(N);
       Order = TopDown;
       LLVM_DEBUG(dbgs() << "  Top down (succs) ");
     } else if (isIntersect(N, Nodes, R)) {
@@ -2330,7 +2330,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         LLVM_DEBUG(dbgs() << "\n   Switching order to bottom up ");
         SmallSetVector<SUnit *, 8> N;
         if (pred_L(NodeOrder, N, DDG.get(), &Nodes))
-          R.insert(N.begin(), N.end());
+          R.insert_range(N);
       } else {
         // Choose the node with the maximum depth.  If more than one, choose
         // the node with the maximum ZeroLatencyDepth. If still more than one,
@@ -2385,7 +2385,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         LLVM_DEBUG(dbgs() << "\n   Switching order to top down ");
         SmallSetVector<SUnit *, 8> N;
         if (succ_L(NodeOrder, N, DDG.get(), &Nodes))
-          R.insert(N.begin(), N.end());
+          R.insert_range(N);
       }
     }
     LLVM_DEBUG(dbgs() << "\nDone with Nodeset\n");
