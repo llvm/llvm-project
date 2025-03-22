@@ -31,6 +31,3 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // CHECK: }
 // CHECK: ![[SP]] = {{.*}}!DISubprogram(name: "add"{{.*}})
 // CHECK: ![[A]] = !DILocalVariable(name: "a", arg: 1, scope: ![[SP]]{{.*}})
-
-
-

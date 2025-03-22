@@ -5465,12 +5465,7 @@ static void updateDebugInfoForDeclareTargetVariables(
   }
 }
 
-// This function handle any adjustments needed in declare target function to
-// generate valid debug info for AMDGPU. It does 2 main things:
-// 1. Add alloca for arguments passed by reference.
-// 2. Add DIOp based expressions
-
-static void updateDebugInfoForDeclareTargetFunctions(
+static void addAllocasForDeclareTargetFunctionPointerArgs(
     llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Module &M = ompBuilder->M;
@@ -5528,6 +5523,18 @@ static void updateDebugInfoForDeclareTargetFunctions(
     }
   }
   builder.restoreIP(curInsert);
+}
+
+// This function Add DIOp based expressions to the debug records in the
+// declare target functions.
+
+static void updateDebugInfoForDeclareTargetFunctions(
+    llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Module &M = ompBuilder->M;
+
+  if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
+    return;
 
   auto AddExpression = [&](auto *DR) {
     llvm::DIExpression *Old = DR->getExpression();
@@ -5579,8 +5586,11 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (declareType == omp::DeclareTargetDeviceType::host) {
         llvmFunc->dropAllReferences();
         llvmFunc->eraseFromParent();
-      } else
+      } else {
+        addAllocasForDeclareTargetFunctionPointerArgs(llvmFunc,
+                                                      moduleTranslation);
         updateDebugInfoForDeclareTargetFunctions(llvmFunc, moduleTranslation);
+      }
     }
     return success();
   }
