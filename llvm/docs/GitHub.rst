@@ -21,6 +21,8 @@ Before your first PR
 Please ensure that you have set a valid email address in your GitHub account,
 see :ref:`github-email-address`.
 
+.. _github_branches:
+
 Branches
 ========
 
@@ -32,17 +34,42 @@ aren't associated with a pull-request **will be deleted**.
 Stacked Pull Requests
 =====================
 
-GitHub does not natively support stacked pull requests. There are two common
-alternatives:
+GitHub does not natively support stacked pull requests. However, there are
+several common alternatives.
 
-  * Add a note in your PR summary indicating that your patch is part of a
-    series or depends on another PR (e.g., “Depends on #123456”). It also helps
-    to highlight which commits belong to other PRs, so reviewers can focus only
-    on the relevant changes.
-  * Use Graphite (described below), a tool that supports stacked PR workflows.
+To illustrate, let's assume you're working on two branches in your fork of the
+``llvm/llvm-project`` repository, and you want to eventually merge both into ``main``:
 
-Both approaches help streamline the review process. Choose the one that works
-best for you.
+* `feature_1`, which contains commit `feature_commit_1`,
+* `feature_2`, which contains commit `feature_commit_2` and depends on
+  `feature_1` (so it also includes `feature_commit_1`).
+
+Your options are as follows:
+
+#. Two PRs with dependency note
+
+  Create PR_1 for branch feature_1 and PR_2 for branch feature_2. In PR_2, add a
+  note in the PR summary indicating that it is part of a series or depends on
+  another PR (e.g., “Depends on #PR_1”). It's also helpful to highlight which
+  commits belong to the base PR, so reviewers can focus on the new changes.
+
+#. User branches in `llvm/llvm-project`
+
+  Create user branches in the main repository, as described
+  :ref:`above<github_branches>`. Then:
+
+  * Create a pull request from `users/<username>/feature_1` → `main`
+  * Create another from `users/<username>/feature_2` →
+    `users/<username>/feature_1` Once `feature_1` is merged, you can update the
+    base of the second PR to target main.
+
+#. Use a stacked PR tool
+
+  Use a tool like SPR or Graphite (described below) to manage stacked PRs more
+  easily.
+
+Each of these approaches can help streamline the review process. Choose the one
+that works best for your workflow.
 
 Using Graphite for stacked Pull Requests
 ----------------------------------------
