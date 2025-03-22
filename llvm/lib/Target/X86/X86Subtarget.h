@@ -99,6 +99,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Required vector width from function attribute.
   unsigned RequiredVectorWidth;
 
+  /// Denormal math for bfloat from function attribute.
+  bool DenormalMathFTZDAZBF16 = false;
+
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
   // X86TargetLowering needs.
@@ -112,8 +115,8 @@ public:
   ///
   X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
                const X86TargetMachine &TM, MaybeAlign StackAlignOverride,
-               unsigned PreferVectorWidthOverride,
-               unsigned RequiredVectorWidth);
+               unsigned PreferVectorWidthOverride, unsigned RequiredVectorWidth,
+               bool DenormalMathFTZDAZBF16);
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -224,6 +227,7 @@ public:
 
   unsigned getPreferVectorWidth() const { return PreferVectorWidth; }
   unsigned getRequiredVectorWidth() const { return RequiredVectorWidth; }
+  bool getDenormalMathFTZDAZBF16() const { return DenormalMathFTZDAZBF16; }
 
   // Helper functions to determine when we should allow widening to 512-bit
   // during codegen.
