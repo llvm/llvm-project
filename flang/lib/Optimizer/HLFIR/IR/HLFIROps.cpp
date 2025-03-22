@@ -61,6 +61,12 @@ getIntrinsicEffects(mlir::Operation *self,
   // }
   for (mlir::OpOperand &operand : self->getOpOperands()) {
     mlir::Type opTy = operand.get().getType();
+    if (fir::isa_volatile_ref_type(opTy)) {
+      effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
+                           mlir::SideEffects::DefaultResource::get());
+      effects.emplace_back(mlir::MemoryEffects::Write::get(), &operand,
+                           mlir::SideEffects::DefaultResource::get());
+    }
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
@@ -162,6 +168,12 @@ void hlfir::AssignOp::getEffects(
       effects.emplace_back(mlir::MemoryEffects::Write::get(), &lhs,
                            mlir::SideEffects::DefaultResource::get());
     }
+  }
+
+  if (fir::isa_volatile_ref_type(lhsType) ||
+      fir::isa_volatile_ref_type(rhsType)) {
+    effects.emplace_back(mlir::MemoryEffects::Read::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get());
   }
 
   if (getRealloc()) {

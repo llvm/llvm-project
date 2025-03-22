@@ -286,7 +286,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
+def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -302,7 +302,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
     or null.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref,
+  let arguments = (ins Arg<AnyReferenceLike, "">:$memref,
                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
@@ -315,7 +315,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
+def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
+                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -335,7 +336,7 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   }];
 
   let arguments = (ins AnyType:$value,
-                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
+                   Arg<AnyReferenceLike, "">:$memref,
                    OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
@@ -1373,7 +1374,7 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
 //   !- Merge the new and old values into the memory for "A"
 //   array_merge_store <updated A> to <A's address>
 
-def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
+def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Load an array as a value.";
 
@@ -1412,7 +1413,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins
-    Arg<AnyRefOrBox, "", [MemRead]>:$memref,
+    Arg<AnyRefOrBox, "">:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
