@@ -214,6 +214,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
     libc.src.stdlib.realloc
+    libc.src.stdlib.memalignment
 
     # stdio.h entrypoints
     libc.src.stdio.fprintf
