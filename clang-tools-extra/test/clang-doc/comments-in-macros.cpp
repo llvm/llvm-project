@@ -1,9 +1,9 @@
 // Fixes #59819. The underlying problem was fixed in https://reviews.llvm.org/D142560, but this patch adds a proper regression test.
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %s
-// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.md --check-prefix=MD-MyClass-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.md --check-prefix=MD-MyClass
+// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.html --check-prefix=HTML-MyClass-LINE
 // RUN: FileCheck %s < %t/GlobalNamespace/MyClass.html --check-prefix=HTML-MyClass
 
