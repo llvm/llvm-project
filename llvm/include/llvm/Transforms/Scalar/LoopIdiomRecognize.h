@@ -34,12 +34,6 @@ struct DisableLIRP {
 
   /// When true, Memcpy is disabled.
   static bool Memcpy;
-
-  /// When true, Strlen is disabled.
-  static bool Strlen;
-
-  /// When true, Wcslen is disabled.
-  static bool Wcslen;
 };
 
 /// Performs Loop Idiom Recognize Pass.
