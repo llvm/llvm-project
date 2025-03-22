@@ -320,7 +320,7 @@ class MultBCECmpBlock {
   // instructions in the block.
   bool canSplit(AliasAnalysis &AA) const;
 
-  // Return true if this all the relevant instructions in the BCE-cmp-block can
+  // Return true if all the relevant instructions in the BCE-cmp-block can
   // be sunk below this instruction. By doing this, we know we can separate the
   // BCE-cmp-block instructions from the non-BCE-cmp-block instructions in the
   // block.
@@ -761,9 +761,16 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
   auto isConstCmp = [](SingleBCECmpBlock& C) { return isa<BCEConstCmp>(C.getCmp()); };
   auto BceIt = std::partition(Comparisons.begin(), Comparisons.end(), isConstCmp);
 
-  // this will order the merged BCE-comparisons before the BCE-const-comparisons
-  mergeBlocks(BceIt, Comparisons.end(), &MergedBlocks_);
-  mergeBlocks(Comparisons.begin(), BceIt, &MergedBlocks_);
+  // The chain that requires splitting should always be first.
+  // If no chain requires splitting then defaults to BCE-comparisons coming first.
+  if (std::any_of(Comparisons.begin(), BceIt,
+                   [](const SingleBCECmpBlock &B) { return B.RequireSplit; })) {
+    mergeBlocks(Comparisons.begin(), BceIt, &MergedBlocks_);
+    mergeBlocks(BceIt, Comparisons.end(), &MergedBlocks_);
+  } else {
+    mergeBlocks(BceIt, Comparisons.end(), &MergedBlocks_);
+    mergeBlocks(Comparisons.begin(), BceIt, &MergedBlocks_);
+  }
 }
 
 namespace {
@@ -956,10 +963,11 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   SmallDenseSet<const BasicBlock*, 8> ExistingBlocksToKeep;
   LLVMContext &Context = NextCmpBlock->getContext();
   for (const auto &Cmps : reverse(MergedBlocks_)) {
-    // TODO: Check if single comparisons should also be split!
-    // If there is only a single comparison then nothing should be merged and can use original block.
+    // If there is only a single comparison then nothing should
+    // be merged and can use original block.
     if (Cmps.size() == 1) {
-      // If a comparison from a mult-block is already handled then don't emit same block again.
+      // If a comparison from a mult-block is already handled
+      // then don't emit same block again.
       BasicBlock *const BB = Cmps[0].BB;
       if (ExistingBlocksToKeep.contains(BB))
         continue;
