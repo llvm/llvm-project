@@ -600,7 +600,7 @@ void ClassTemplatePartialSpecializationDecl::Profile(
     TemplateParameterList *TPL, const ASTContext &Context) {
   ID.AddInteger(TemplateArgs.size());
   for (const TemplateArgument &TemplateArg : TemplateArgs)
-    TemplateArg.Profile(ID, Context);
+    TemplateArg.Profile(ID, Context, /*Canonical=*/true);
   TPL->Profile(ID, Context);
 }
 
@@ -670,8 +670,12 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   ASTContext &Context = getASTContext();
   TemplateName Name = Context.getQualifiedTemplateName(
       /*NNS=*/nullptr, /*TemplateKeyword=*/false, TemplateName(this));
+  auto TemplateArgs = getTemplateParameters()->getInjectedTemplateArgs(Context);
   CommonPtr->InjectedClassNameType = Context.getTemplateSpecializationType(
-      Name, getTemplateParameters()->getInjectedTemplateArgs(Context));
+      Name,
+      /*SpecifiedArgs=*/TemplateArgs,
+      /*SugaredConvertedArgs=*/TemplateArgs,
+      /*CanonicalConvertedArgs=*/std::nullopt);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -1361,7 +1365,7 @@ void VarTemplatePartialSpecializationDecl::Profile(
     TemplateParameterList *TPL, const ASTContext &Context) {
   ID.AddInteger(TemplateArgs.size());
   for (const TemplateArgument &TemplateArg : TemplateArgs)
-    TemplateArg.Profile(ID, Context);
+    TemplateArg.Profile(ID, Context, /*Canonical=*/true);
   TPL->Profile(ID, Context);
 }
 

@@ -608,8 +608,10 @@ public:
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
           const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
+    // We allow instantiating deduction guides with non-canonical template
+    // arguments.
     for (const TemplateArgument &TemplateArg : TemplateArgs)
-      TemplateArg.Profile(ID, Context);
+      TemplateArg.Profile(ID, Context, /*Canonical=*/false);
   }
 };
 
@@ -2096,7 +2098,7 @@ public:
           const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
-      TemplateArg.Profile(ID, Context);
+      TemplateArg.Profile(ID, Context, /*Canonical=*/true);
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2869,7 +2871,7 @@ public:
                       const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
-      TemplateArg.Profile(ID, Context);
+      TemplateArg.Profile(ID, Context, /*Canonical=*/true);
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

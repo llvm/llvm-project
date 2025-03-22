@@ -1669,7 +1669,10 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
 
   DefaultTemplateArgsPolicyRAII TemplateArgs(Policy);
   const TemplateParameterList *TPL = TD ? TD->getTemplateParameters() : nullptr;
-  printTemplateArgumentList(OS, T->template_arguments(), Policy, TPL);
+  ArrayRef<TemplateArgument> Args = T->isCanonicalUnqualified()
+                                        ? T->getConvertedArguments()
+                                        : T->getSpecifiedArguments();
+  printTemplateArgumentList(OS, Args, Policy, TPL);
   spaceBeforePlaceHolder(OS);
 }
 
@@ -2299,7 +2302,7 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     ArrayRef<TemplateArgument> TemplateArgs;
     if (auto *TTST = T->getAs<TemplateSpecializationType>()) {
       Template = TTST->getTemplateName();
-      TemplateArgs = TTST->template_arguments();
+      TemplateArgs = TTST->getConvertedArguments();
     } else if (auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
                    T->getAsCXXRecordDecl())) {
       Template = TemplateName(CTSD->getSpecializedTemplate());
@@ -2311,11 +2314,12 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     if (!isSubstitutedTemplateArgument(Ctx, Template, PTST->getTemplateName(),
                                        Args, Depth))
       return false;
-    if (TemplateArgs.size() != PTST->template_arguments().size())
+    ArrayRef<TemplateArgument> PArgs = PTST->getConvertedArguments();
+    if (TemplateArgs.size() != PArgs.size())
       return false;
     for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      if (!isSubstitutedTemplateArgument(
-              Ctx, TemplateArgs[I], PTST->template_arguments()[I], Args, Depth))
+      if (!isSubstitutedTemplateArgument(Ctx, TemplateArgs[I], PArgs[I], Args,
+                                         Depth))
         return false;
     return true;
   }

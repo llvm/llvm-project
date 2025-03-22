@@ -191,12 +191,8 @@ void foo() {
 // CHECK-NEXT: | | | | `-TemplateArgument pack '<Packs<type-parameter-0-1...>>'
 // CHECK-NEXT: | | | |   `-TemplateArgument type 'Packs<type-parameter-0-1...>'
 // CHECK-NEXT: | | | |     `-TemplateSpecializationType {{.*}} 'Packs<type-parameter-0-1...>' dependent
-// CHECK-NEXT: | | | |       |-name: 'GH124715::Packs'
-// CHECK-NEXT: | | | |       | `-ClassTemplateDecl {{.*}} Packs
-// CHECK-NEXT: | | | |       `-TemplateArgument pack '<type-parameter-0-1...>'
-// CHECK-NEXT: | | | |         `-TemplateArgument type 'type-parameter-0-1...'
-// CHECK-NEXT: | | | |           `-PackExpansionType {{.*}} 'type-parameter-0-1...' dependent
-// CHECK-NEXT: | | | |             `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent contains_unexpanded_pack depth 0 index 1 pack
+// CHECK-NEXT: | | | |       `-name: 'GH124715::Packs'
+// CHECK-NEXT: | | | |         `-ClassTemplateDecl {{.*}} Packs
 // CHECK-NEXT: | | | |-TemplateArgument {{.*}} type 'U':'type-parameter-0-2'
 // CHECK-NEXT: | | | | `-TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 2
 // CHECK-NEXT: | | | |   `-TemplateTypeParm {{.*}} 'U'

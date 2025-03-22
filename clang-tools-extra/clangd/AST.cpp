@@ -438,9 +438,15 @@ bool hasReservedScope(const DeclContext &DC) {
 QualType declaredType(const TypeDecl *D) {
   ASTContext &Context = D->getASTContext();
   if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
-    if (const auto *Args = CTSD->getTemplateArgsAsWritten())
+    if (const auto *ArgList = CTSD->getTemplateArgsAsWritten()) {
+      SmallVector<TemplateArgument, 4> Args(ArgList->arguments().size());
+      for (unsigned I = 0, E = Args.size(); I < E; ++I)
+        Args[I] = ArgList->arguments()[I].getArgument();
       return Context.getTemplateSpecializationType(
-          TemplateName(CTSD->getSpecializedTemplate()), Args->arguments());
+          TemplateName(CTSD->getSpecializedTemplate()), Args,
+          /*SugaredConvertedArgs=*/std::nullopt,
+          /*CanonicalConvertedArgs=*/std::nullopt);
+    }
   return Context.getTypeDeclType(D);
 }
 

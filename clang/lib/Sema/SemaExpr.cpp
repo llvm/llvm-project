@@ -21056,8 +21056,10 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     Diag(Temp->getLocation(), diag::note_referenced_type_template)
         << IsTypeAliasTemplateDecl;
 
-    QualType TST =
-        Context.getTemplateSpecializationType(TN, ULE->template_arguments());
+    QualType TST = Context.getTemplateSpecializationType(
+        TN, ULE->template_arguments(),
+        /*SugaredConvertedArgs=*/ArrayRef<TemplateArgument>{},
+        /*CanonicalConvertedArgs=*/{});
     QualType ET =
         Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {},

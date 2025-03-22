@@ -54,7 +54,7 @@ void DeducedTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddInteger(DefArgs.StartPos);
   ID.AddInteger(DefArgs.Args.size());
   for (const TemplateArgument &Arg : DefArgs.Args)
-    Arg.Profile(ID, Context);
+    Arg.Profile(ID, Context, /*Canonical=*/false);
 }
 
 TemplateArgument
@@ -116,7 +116,7 @@ void SubstTemplateTemplateParmPackStorage::Profile(
     llvm::FoldingSetNodeID &ID, ASTContext &Context,
     const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
     bool Final) {
-  ArgPack.Profile(ID, Context);
+  ArgPack.Profile(ID, Context, /*Canonical=*/false);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
   ID.AddBoolean(Final);

@@ -381,21 +381,28 @@ QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
 }
 
 void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
-                               const ASTContext &Context) const {
+                               const ASTContext &Context,
+                               bool Canonical) const {
   ID.AddInteger(getKind());
   switch (getKind()) {
   case Null:
     break;
 
   case Type:
+    assert(!Canonical || getAsType().isCanonical());
     getAsType().Profile(ID);
     break;
 
   case NullPtr:
+    assert(!Canonical || getNullPtrType().isCanonical());
     getNullPtrType().Profile(ID);
     break;
 
   case Declaration:
+    if (Canonical) {
+      assert(getParamTypeForDecl().isCanonical());
+      assert(getAsDecl()->isCanonicalDecl());
+    }
     getParamTypeForDecl().Profile(ID);
     ID.AddPointer(getAsDecl());
     break;
@@ -404,27 +411,33 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     ID.AddInteger(TemplateArg.NumExpansions);
     [[fallthrough]];
   case Template:
+    if (Canonical) {
+      TemplateName Name = TemplateName::getFromVoidPointer(TemplateArg.Name);
+      assert(Context.getCanonicalTemplateName(Name) == Name);
+    }
     ID.AddPointer(TemplateArg.Name);
     break;
 
   case Integral:
+    assert(!Canonical || getIntegralType().isCanonical());
     getIntegralType().Profile(ID);
     getAsIntegral().Profile(ID);
     break;
 
   case StructuralValue:
+    assert(!Canonical || getStructuralValueType().isCanonical());
     getStructuralValueType().Profile(ID);
     getAsStructuralValue().Profile(ID);
     break;
 
   case Expression:
-    getAsExpr()->Profile(ID, Context, true);
+    getAsExpr()->Profile(ID, Context, Canonical);
     break;
 
   case Pack:
     ID.AddInteger(Args.NumArgs);
     for (unsigned I = 0; I != Args.NumArgs; ++I)
-      Args.Args[I].Profile(ID, Context);
+      Args.Args[I].Profile(ID, Context, Canonical);
   }
 }
 

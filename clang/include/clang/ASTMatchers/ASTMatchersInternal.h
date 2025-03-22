@@ -1949,7 +1949,7 @@ getTemplateSpecializationArgs(const VarTemplateSpecializationDecl &D) {
 
 inline ArrayRef<TemplateArgument>
 getTemplateSpecializationArgs(const TemplateSpecializationType &T) {
-  return T.template_arguments();
+  return T.getSpecifiedArguments();
 }
 
 inline ArrayRef<TemplateArgument>

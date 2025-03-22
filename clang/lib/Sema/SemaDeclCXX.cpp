@@ -12102,7 +12102,7 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
     if (TST) {
       Template = dyn_cast_or_null<ClassTemplateDecl>(
           TST->getTemplateName().getAsTemplateDecl());
-      Arguments = TST->template_arguments().begin();
+      Arguments = TST->getConvertedArguments().begin();
     }
   }
   if (!Template)

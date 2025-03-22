@@ -1891,7 +1891,7 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
   //   A declarator that specifies the type "reference to cv void"
   //   is ill-formed.
   if (T->isVoidType()) {
-    Diag(Loc, diag::err_reference_to_void);
+    Diag(Loc, diag::err_reference_to_void) << T;
     return QualType();
   }
 

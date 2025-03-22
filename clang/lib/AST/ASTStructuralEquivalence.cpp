@@ -1264,8 +1264,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, Spec1->getTemplateName(),
                                   Spec2->getTemplateName()))
       return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
-                                  Spec2->template_arguments()))
+    if (!IsStructurallyEquivalent(Context, Spec1->getSpecifiedArguments(),
+                                  Spec2->getSpecifiedArguments()))
+      return false;
+    if (!IsStructurallyEquivalent(Context, Spec1->getConvertedArguments(),
+                                  Spec2->getConvertedArguments()))
       return false;
     break;
   }

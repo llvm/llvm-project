@@ -80,7 +80,7 @@ void ConstraintSatisfaction::Profile(
   ID.AddPointer(ConstraintOwner);
   ID.AddInteger(TemplateArgs.size());
   for (auto &Arg : TemplateArgs)
-    Arg.Profile(ID, C);
+    Arg.Profile(ID, C, /*Canonical=*/false);
 }
 
 ConceptReference *

@@ -935,8 +935,8 @@ void USRGenerator::VisitType(QualType T) {
                                     = T->getAs<TemplateSpecializationType>()) {
       Out << '>';
       VisitTemplateName(Spec->getTemplateName());
-      Out << Spec->template_arguments().size();
-      for (const auto &Arg : Spec->template_arguments())
+      Out << Spec->getConvertedArguments().size();
+      for (const TemplateArgument &Arg : Spec->getConvertedArguments())
         VisitTemplateArgument(Arg);
       return;
     }

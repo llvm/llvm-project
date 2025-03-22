@@ -615,12 +615,15 @@ static TemplateDeductionResult DeduceTemplateArguments(
 /// but it may still fail, later, for other reasons.
 
 static const TemplateSpecializationType *getLastTemplateSpecType(QualType QT) {
+  const TemplateSpecializationType *LastTST = nullptr;
   for (const Type *T = QT.getTypePtr(); /**/; /**/) {
     const TemplateSpecializationType *TST =
         T->getAs<TemplateSpecializationType>();
-    assert(TST && "Expected a TemplateSpecializationType");
+    if (!TST)
+      return LastTST;
     if (!TST->isSugared())
       return TST;
+    LastTST = TST;
     T = TST->desugar().getTypePtr();
   }
 }
@@ -643,87 +646,61 @@ DeduceTemplateSpecArguments(Sema &S, TemplateParameterList *TemplateParams,
   if (const auto *TD = TNP.getAsTemplateDecl(); TD && TD->isTypeAlias())
     return TemplateDeductionResult::Success;
 
-  // FIXME: To preserve sugar, the TST needs to carry sugared resolved
-  // arguments.
-  ArrayRef<TemplateArgument> PResolved =
-      TP->getCanonicalTypeInternal()
-          ->castAs<TemplateSpecializationType>()
-          ->template_arguments();
+  ArrayRef<TemplateArgument> PResolved = TP->getConvertedArguments();
 
   QualType UA = A;
-  std::optional<NestedNameSpecifier *> NNS;
   // Treat an injected-class-name as its underlying template-id.
-  if (const auto *Elaborated = A->getAs<ElaboratedType>()) {
-    NNS = Elaborated->getQualifier();
-  } else if (const auto *Injected = A->getAs<InjectedClassNameType>()) {
+  if (const auto *Injected = A->getAs<InjectedClassNameType>())
     UA = Injected->getInjectedSpecializationType();
-    NNS = nullptr;
+
+  const TemplateSpecializationType *TA = ::getLastTemplateSpecType(UA);
+  TemplateName TNA;
+  ArrayRef<TemplateArgument> AResolved;
+  if (TA) {
+    TNA = TA->getTemplateName();
+    AResolved = TA->getConvertedArguments();
   }
-
-  // Check whether the template argument is a dependent template-id.
-  if (isa<TemplateSpecializationType>(UA.getCanonicalType())) {
-    const TemplateSpecializationType *SA = ::getLastTemplateSpecType(UA);
-    TemplateName TNA = SA->getTemplateName();
-
+  if (auto *SA = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+          A->getAsCXXRecordDecl())) {
+    if (TA) {
+      // This could be a type alias to a class template specialization type
+      // which was desugared. If so, ignore it.
+      if (TNA.getAsTemplateDecl()->isTypeAlias())
+        TA = nullptr;
+      else
+        assert(isSameDeclaration(TNA.getAsTemplateDecl(),
+                                 SA->getSpecializedTemplate()));
+    }
+    if (!TA) {
+      // If the argument type is a class template specialization, we
+      // perform template argument deduction using its template
+      // arguments.
+      TNA = TemplateName(SA->getSpecializedTemplate());
+      AResolved = SA->getTemplateArgs().asArray();
+    }
+  } else if (isa<TemplateSpecializationType>(UA.getCanonicalType())) {
     // If the argument is an alias template, there is nothing to deduce.
     if (const auto *TD = TNA.getAsTemplateDecl(); TD && TD->isTypeAlias())
       return TemplateDeductionResult::Success;
-
-    // FIXME: To preserve sugar, the TST needs to carry sugared resolved
-    // arguments.
-    ArrayRef<TemplateArgument> AResolved =
-        SA->getCanonicalTypeInternal()
-            ->castAs<TemplateSpecializationType>()
-            ->template_arguments();
-
-    // Perform template argument deduction for the template name.
-    if (auto Result = DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
-                                              /*DefaultArguments=*/AResolved,
-                                              PartialOrdering, Deduced,
-                                              HasDeducedAnyParam);
-        Result != TemplateDeductionResult::Success)
-      return Result;
-
-    // Perform template argument deduction on each template
-    // argument. Ignore any missing/extra arguments, since they could be
-    // filled in by default arguments.
-    return DeduceTemplateArguments(
-        S, TemplateParams, PResolved, AResolved, Info, Deduced,
-        /*NumberOfArgumentsMustMatch=*/false, PartialOrdering,
-        PackFold::ParameterToArgument, HasDeducedAnyParam);
-  }
-
-  // If the argument type is a class template specialization, we
-  // perform template argument deduction using its template
-  // arguments.
-  const auto *RA = UA->getAs<RecordType>();
-  const auto *SA =
-      RA ? dyn_cast<ClassTemplateSpecializationDecl>(RA->getDecl()) : nullptr;
-  if (!SA) {
+  } else {
     Info.FirstArg = TemplateArgument(P);
     Info.SecondArg = TemplateArgument(A);
     return TemplateDeductionResult::NonDeducedMismatch;
   }
 
-  TemplateName TNA = TemplateName(SA->getSpecializedTemplate());
-  if (NNS)
-    TNA = S.Context.getQualifiedTemplateName(
-        *NNS, false, TemplateName(SA->getSpecializedTemplate()));
-
   // Perform template argument deduction for the template name.
-  if (auto Result = DeduceTemplateArguments(
-          S, TemplateParams, TNP, TNA, Info,
-          /*DefaultArguments=*/SA->getTemplateArgs().asArray(), PartialOrdering,
-          Deduced, HasDeducedAnyParam);
+  if (auto Result =
+          DeduceTemplateArguments(S, TemplateParams, TNP, TNA, Info,
+                                  /*DefaultArguments=*/AResolved,
+                                  PartialOrdering, Deduced, HasDeducedAnyParam);
       Result != TemplateDeductionResult::Success)
     return Result;
 
   // Perform template argument deduction for the template arguments.
-  return DeduceTemplateArguments(S, TemplateParams, PResolved,
-                                 SA->getTemplateArgs().asArray(), Info, Deduced,
-                                 /*NumberOfArgumentsMustMatch=*/true,
-                                 PartialOrdering, PackFold::ParameterToArgument,
-                                 HasDeducedAnyParam);
+  return DeduceTemplateArguments(
+      S, TemplateParams, PResolved, AResolved, Info, Deduced,
+      /*NumberOfArgumentsMustMatch=*/true, PartialOrdering,
+      PackFold::ParameterToArgument, HasDeducedAnyParam);
 }
 
 static bool IsPossiblyOpaquelyQualifiedTypeInternal(const Type *T) {
@@ -5880,8 +5857,8 @@ static MoreSpecializedTrailingPackTieBreakerResult
 getMoreSpecializedTrailingPackTieBreaker(
     const TemplateSpecializationType *TST1,
     const TemplateSpecializationType *TST2) {
-  ArrayRef<TemplateArgument> As1 = TST1->template_arguments(),
-                             As2 = TST2->template_arguments();
+  ArrayRef<TemplateArgument> As1 = TST1->getConvertedArguments(),
+                             As2 = TST2->getConvertedArguments();
   const TemplateArgument &TA1 = As1.back(), &TA2 = As2.back();
   bool IsPack = TA1.getKind() == TemplateArgument::Pack;
   assert(IsPack == (TA2.getKind() == TemplateArgument::Pack));
@@ -6288,8 +6265,8 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   TemplateDeductionResult Result;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {
     Result = ::FinishTemplateArgumentDeduction(
-        S, P2, /*IsPartialOrdering=*/true, TST1->template_arguments(), Deduced,
-        Info);
+        S, P2, /*IsPartialOrdering=*/true, TST1->getConvertedArguments(),
+        Deduced, Info);
   });
 
   if (Result != TemplateDeductionResult::Success)
@@ -6333,8 +6310,10 @@ struct TemplateArgumentListAreEqual {
       // because canonicalization can't do the right thing for dependent
       // expressions.
       llvm::FoldingSetNodeID IDA, IDB;
-      Args1[I].Profile(IDA, Ctx);
-      Args2[I].Profile(IDB, Ctx);
+      Ctx.getCanonicalTemplateArgument(Args1[I]).Profile(IDA, Ctx,
+                                                         /*Canonical=*/true);
+      Ctx.getCanonicalTemplateArgument(Args2[I]).Profile(IDB, Ctx,
+                                                         /*Canonical=*/true);
       if (IDA != IDB)
         return false;
     }
@@ -6352,10 +6331,10 @@ struct TemplateArgumentListAreEqual {
       // because canonicalization can't do the right thing for dependent
       // expressions.
       llvm::FoldingSetNodeID IDA, IDB;
-      Args1[I].Profile(IDA, Ctx);
-      // Unlike the specialization arguments, the injected arguments are not
-      // always canonical.
-      Ctx.getCanonicalTemplateArgument(Args2[I]).Profile(IDB, Ctx);
+      Ctx.getCanonicalTemplateArgument(Args1[I]).Profile(IDA, Ctx,
+                                                         /*Canonical=*/true);
+      Ctx.getCanonicalTemplateArgument(Args2[I]).Profile(IDB, Ctx,
+                                                         /*Canonical=*/true);
       if (IDA != IDB)
         return false;
     }
@@ -6498,9 +6477,11 @@ Sema::getMoreSpecializedPartialSpecialization(
          " the same template.");
   TemplateName Name(PS1->getSpecializedTemplate());
   QualType PT1 = Context.getTemplateSpecializationType(
-      Name, PS1->getTemplateArgs().asArray());
+      Name, ArrayRef<TemplateArgument>(), std::nullopt,
+      PS1->getTemplateArgs().asArray());
   QualType PT2 = Context.getTemplateSpecializationType(
-      Name, PS2->getTemplateArgs().asArray());
+      Name, ArrayRef<TemplateArgument>(), std::nullopt,
+      PS2->getTemplateArgs().asArray());
 
   TemplateDeductionInfo Info(Loc);
   return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
@@ -6511,9 +6492,11 @@ bool Sema::isMoreSpecializedThanPrimary(
   VarTemplateDecl *Primary = Spec->getSpecializedTemplate();
   TemplateName Name(Primary);
   QualType PrimaryT = Context.getTemplateSpecializationType(
-      Name, Primary->getInjectedTemplateArgs(Context));
+      Name, ArrayRef<TemplateArgument>(),
+      Primary->getInjectedTemplateArgs(Context), std::nullopt);
   QualType PartialT = Context.getTemplateSpecializationType(
-      Name, Spec->getTemplateArgs().asArray());
+      Name, ArrayRef<TemplateArgument>(), std::nullopt,
+      Spec->getTemplateArgs().asArray());
 
   VarTemplatePartialSpecializationDecl *MaybeSpec =
       getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);
@@ -6975,11 +6958,10 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     //   If the template argument list of P contains a pack expansion that is
     //   not the last template argument, the entire template argument list is a
     //   non-deduced context.
-    if (OnlyDeduced &&
-        hasPackExpansionBeforeEnd(Spec->template_arguments()))
+    if (OnlyDeduced && hasPackExpansionBeforeEnd(Spec->getConvertedArguments()))
       break;
 
-    for (const auto &Arg : Spec->template_arguments())
+    for (const TemplateArgument &Arg : Spec->getConvertedArguments())
       MarkUsedTemplateParameters(Ctx, Arg, OnlyDeduced, Depth, Used);
     break;
   }

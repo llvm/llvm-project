@@ -361,8 +361,8 @@ public:
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
-    Hash.AddInteger(T->template_arguments().size());
-    for (const auto &TA : T->template_arguments()) {
+    Hash.AddInteger(T->getSpecifiedArguments().size());
+    for (const auto &TA : T->getSpecifiedArguments()) {
       Hash.AddTemplateArgument(TA);
     }
     Hash.AddTemplateName(T->getTemplateName());

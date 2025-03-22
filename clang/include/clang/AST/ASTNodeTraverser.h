@@ -452,7 +452,7 @@ public:
     Visit(T->getArgumentPack());
   }
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
-    for (const auto &Arg : T->template_arguments())
+    for (const auto &Arg : T->getSpecifiedArguments())
       Visit(Arg);
   }
   void VisitObjCObjectPointerType(const ObjCObjectPointerType *T) {

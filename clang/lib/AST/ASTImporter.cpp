@@ -1657,7 +1657,12 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err =
-          ImportTemplateArguments(T->template_arguments(), ToTemplateArgs))
+          ImportTemplateArguments(T->getSpecifiedArguments(), ToTemplateArgs))
+    return std::move(Err);
+
+  SmallVector<TemplateArgument, 2> ToConvertedArgs;
+  if (Error Err =
+          ImportTemplateArguments(T->getConvertedArguments(), ToConvertedArgs))
     return std::move(Err);
 
   QualType ToCanonType;
@@ -1669,9 +1674,9 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
     else
       return TyOrErr.takeError();
   }
-  return Importer.getToContext().getTemplateSpecializationType(*ToTemplateOrErr,
-                                                               ToTemplateArgs,
-                                                               ToCanonType);
+  return Importer.getToContext().getTemplateSpecializationType(
+      *ToTemplateOrErr, ToTemplateArgs, ToConvertedArgs,
+      /*CanonicalConvertedArgs=*/std::nullopt, ToCanonType);
 }
 
 ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
@@ -3642,7 +3647,7 @@ public:
 
   std::optional<bool>
   VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
-    for (const auto &Arg : T->template_arguments())
+    for (const auto &Arg : T->getSpecifiedArguments())
       if (checkTemplateArgument(Arg))
         return true;
     // This type is a "sugar" to a record type, it can have a desugared type.

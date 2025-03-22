@@ -420,7 +420,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
         .append(Str, DeclarationFragments::FragmentKind::TypeIdentifier, USR)
         .append("<", DeclarationFragments::FragmentKind::Text)
         .append(getFragmentsForTemplateArguments(
-            TemplSpecTy->template_arguments(), Context, std::nullopt))
+            TemplSpecTy->getSpecifiedArguments(), Context, std::nullopt))
         .append(">", DeclarationFragments::FragmentKind::Text);
   }
 

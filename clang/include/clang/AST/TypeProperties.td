@@ -743,29 +743,27 @@ let Class = TemplateSpecializationType in {
   def : Property<"templateName", TemplateName> {
     let Read = [{ node->getTemplateName() }];
   }
-  def : Property<"templateArguments", Array<TemplateArgument>> {
-    let Read = [{ node->template_arguments() }];
+  def : Property<"specifiedArguments", Array<TemplateArgument>> {
+    let Read = [{ node->getSpecifiedArguments() }];
   }
-  def : Property<"underlyingType", Optional<QualType>> {
+  def : Property<"convertedArguments", Array<TemplateArgument>> {
+    let Read = [{ node->getConvertedArguments() }];
+  }
+  def : Property<"underlyingType", QualType> {
     let Read = [{
       node->isTypeAlias()
-        ? std::optional<QualType>(node->getAliasedType())
+        ? node->getAliasedType()
         : node->isCanonicalUnqualified()
-            ? std::nullopt
-            : std::optional<QualType>(node->getCanonicalTypeInternal())
+            ? QualType() : node->getCanonicalTypeInternal()
     }];
   }
 
   def : Creator<[{
-    QualType result;
-    if (!underlyingType) {
-      result = ctx.getCanonicalTemplateSpecializationType(templateName,
-                                                          templateArguments);
-    } else {
-      result = ctx.getTemplateSpecializationType(templateName,
-                                                 templateArguments,
-                                                 *underlyingType);
-    }
+    QualType result = ctx.getTemplateSpecializationType(templateName,
+                                                        specifiedArguments,
+                                                        convertedArguments,
+                                                        /*CanonicalConvertedArguments=*/{},
+                                                        underlyingType);
     if (dependent)
       const_cast<Type *>(result.getTypePtr())
           ->addDependence(TypeDependence::DependentInstantiation);

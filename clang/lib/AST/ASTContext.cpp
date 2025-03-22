@@ -3088,12 +3088,26 @@ static auto getCanonicalTemplateArguments(const ASTContext &C,
                                           ArrayRef<TemplateArgument> Args,
                                           bool &AnyNonCanonArgs) {
   SmallVector<TemplateArgument, 16> CanonArgs(Args);
-  for (auto &Arg : CanonArgs) {
-    TemplateArgument OrigArg = Arg;
-    Arg = C.getCanonicalTemplateArgument(Arg);
-    AnyNonCanonArgs |= !Arg.structurallyEquals(OrigArg);
-  }
+  AnyNonCanonArgs |= C.canonicalizeTemplateArguments(CanonArgs);
   return CanonArgs;
+}
+
+bool ASTContext::canonicalizeTemplateArguments(
+    MutableArrayRef<TemplateArgument> Args) const {
+  bool AnyNonCanonArgs = false;
+  for (auto &Arg : Args) {
+    TemplateArgument OrigArg = Arg;
+    Arg = getCanonicalTemplateArgument(Arg);
+    if (Arg.getKind() == TemplateArgument::Expression) {
+      llvm::FoldingSetNodeID ID1, ID2;
+      OrigArg.getAsExpr()->Profile(ID1, *this, /*Canonical=*/false);
+      Arg.getAsExpr()->Profile(ID2, *this, /*Canonical=*/true);
+      AnyNonCanonArgs |= ID1 != ID2;
+    } else {
+      AnyNonCanonArgs |= !Arg.structurallyEquals(OrigArg);
+    }
+  }
+  return AnyNonCanonArgs;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5544,41 +5558,41 @@ QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
   return QualType(TypeParm, 0);
 }
 
-TypeSourceInfo *
-ASTContext::getTemplateSpecializationTypeInfo(TemplateName Name,
-                                              SourceLocation NameLoc,
-                                        const TemplateArgumentListInfo &Args,
-                                              QualType Underlying) const {
-  assert(!Name.getAsDependentTemplateName() &&
-         "No dependent template names here!");
-  QualType TST =
-      getTemplateSpecializationType(Name, Args.arguments(), Underlying);
+TypeSourceInfo *ASTContext::getTemplateSpecializationTypeInfo(
+    TemplateName Name, SourceLocation NameLoc,
+    const TemplateArgumentListInfo &SpecifiedArgs,
+    ArrayRef<TemplateArgument> SugaredConvertedArgs,
+    ArrayRef<TemplateArgument> CanonicalConvertedArgs,
+    QualType Underlying) const {
+  QualType TST = getTemplateSpecializationType(
+      Name, SpecifiedArgs.arguments(), SugaredConvertedArgs,
+      CanonicalConvertedArgs, Underlying);
 
   TypeSourceInfo *DI = CreateTypeSourceInfo(TST);
   TemplateSpecializationTypeLoc TL =
       DI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>();
   TL.setTemplateKeywordLoc(SourceLocation());
   TL.setTemplateNameLoc(NameLoc);
-  TL.setLAngleLoc(Args.getLAngleLoc());
-  TL.setRAngleLoc(Args.getRAngleLoc());
+  TL.setLAngleLoc(SpecifiedArgs.getLAngleLoc());
+  TL.setRAngleLoc(SpecifiedArgs.getRAngleLoc());
   for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    TL.setArgLocInfo(i, Args[i].getLocInfo());
+    TL.setArgLocInfo(i, SpecifiedArgs[i].getLocInfo());
   return DI;
 }
 
-QualType
-ASTContext::getTemplateSpecializationType(TemplateName Template,
-                                          ArrayRef<TemplateArgumentLoc> Args,
-                                          QualType Underlying) const {
-  assert(!Template.getAsDependentTemplateName() &&
-         "No dependent template names here!");
+QualType ASTContext::getTemplateSpecializationType(
+    TemplateName Template, ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
+    ArrayRef<TemplateArgument> SugaredConvertedArgs,
+    ArrayRef<TemplateArgument> CanonicalConvertedArgs,
+    QualType Underlying) const {
+  SmallVector<TemplateArgument, 4> SpecifiedArgVec;
+  SpecifiedArgVec.reserve(SpecifiedArgs.size());
+  for (const TemplateArgumentLoc &Arg : SpecifiedArgs)
+    SpecifiedArgVec.push_back(Arg.getArgument());
 
-  SmallVector<TemplateArgument, 4> ArgVec;
-  ArgVec.reserve(Args.size());
-  for (const TemplateArgumentLoc &Arg : Args)
-    ArgVec.push_back(Arg.getArgument());
-
-  return getTemplateSpecializationType(Template, ArgVec, Underlying);
+  return getTemplateSpecializationType(Template, SpecifiedArgVec,
+                                       SugaredConvertedArgs,
+                                       CanonicalConvertedArgs, Underlying);
 }
 
 #ifndef NDEBUG
@@ -5591,82 +5605,90 @@ static bool hasAnyPackExpansions(ArrayRef<TemplateArgument> Args) {
 }
 #endif
 
-QualType
-ASTContext::getTemplateSpecializationType(TemplateName Template,
-                                          ArrayRef<TemplateArgument> Args,
-                                          QualType Underlying) const {
+QualType ASTContext::getTemplateSpecializationType(
+    TemplateName Template, ArrayRef<TemplateArgument> SpecifiedArgs,
+    ArrayRef<TemplateArgument> SugaredConvertedArgs,
+    ArrayRef<TemplateArgument> CanonicalConvertedArgs,
+    QualType Underlying) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
+
+  SmallVector<TemplateArgument, 4> CanonArgsVec;
+  TemplateName CanonTemplate =
+      getCanonicalTemplateName(Template, /*IgnoreDeduced=*/true);
+  bool NonCanonical = !SpecifiedArgs.empty() || !Underlying.isNull() ||
+                      Template != CanonTemplate;
+  if (CanonicalConvertedArgs.size() != 0) {
+    if (SugaredConvertedArgs.empty()) {
+      SugaredConvertedArgs = CanonicalConvertedArgs;
+    } else if (!NonCanonical) {
+      for (unsigned I = 0; I < SugaredConvertedArgs.size(); ++I) {
+        TemplateArgument C = CanonicalConvertedArgs[I];
+        TemplateArgument S = SugaredConvertedArgs[I];
+        assert(C.getKind() == S.getKind());
+        if (C.getKind() == TemplateArgument::Expression) {
+          llvm::FoldingSetNodeID ID1, ID2;
+          C.getAsExpr()->Profile(ID1, *this, /*Canonical=*/true);
+          S.getAsExpr()->Profile(ID2, *this, /*Canonical=*/false);
+          if (ID1 != ID2) {
+            NonCanonical = true;
+            break;
+          }
+        } else if (!C.structurallyEquals(S)) {
+          NonCanonical = true;
+          break;
+        }
+      }
+    }
+  } else {
+    CanonArgsVec = ::getCanonicalTemplateArguments(*this, SugaredConvertedArgs,
+                                                   NonCanonical);
+    CanonicalConvertedArgs = CanonArgsVec;
+  }
+  assert(SugaredConvertedArgs.size() == CanonicalConvertedArgs.size());
+
+  llvm::FoldingSetNodeID ID;
+  TemplateSpecializationType::Profile(ID, Template, SpecifiedArgs,
+                                      SugaredConvertedArgs, Underlying, *this,
+                                      /*Canonical=*/!NonCanonical);
+
+  void *InsertPos = nullptr;
+  if (auto *T = TemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(T, 0);
 
   const auto *TD = Template.getAsTemplateDecl(/*IgnoreDeduced=*/true);
   bool IsTypeAlias = TD && TD->isTypeAlias();
-  QualType CanonType;
-  if (!Underlying.isNull())
-    CanonType = getCanonicalType(Underlying);
-  else {
-    // We can get here with an alias template when the specialization contains
-    // a pack expansion that does not match up with a parameter pack.
-    assert((!IsTypeAlias || hasAnyPackExpansions(Args)) &&
+  if (Underlying.isNull()) {
+    // We can get here with an alias template when the specialization
+    // contains a pack expansion that does not match up with a parameter
+    // pack.
+    assert((!IsTypeAlias || hasAnyPackExpansions(CanonicalConvertedArgs)) &&
            "Caller must compute aliased type");
     IsTypeAlias = false;
-    CanonType = getCanonicalTemplateSpecializationType(Template, Args);
+
+    if (NonCanonical) {
+      Underlying = getTemplateSpecializationType(
+          CanonTemplate, ArrayRef<TemplateArgument>(), std::nullopt,
+          CanonicalConvertedArgs, QualType());
+      assert(Underlying->isDependentType() &&
+             "Non-dependent template-id type must have a canonical type");
+      [[maybe_unused]] const auto *Found =
+          TemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos);
+      assert(!Found);
+    }
   }
 
-  // Allocate the (non-canonical) template specialization type, but don't
-  // try to unique it: these types typically have location information that
-  // we don't unique and don't want to lose.
-  void *Mem = Allocate(sizeof(TemplateSpecializationType) +
-                           sizeof(TemplateArgument) * Args.size() +
-                           (IsTypeAlias ? sizeof(QualType) : 0),
-                       alignof(TemplateSpecializationType));
-  auto *Spec
-    = new (Mem) TemplateSpecializationType(Template, Args, CanonType,
-                                         IsTypeAlias ? Underlying : QualType());
+  void *Mem =
+      Allocate(sizeof(TemplateSpecializationType) +
+                   sizeof(TemplateArgument) *
+                       (SpecifiedArgs.size() + SugaredConvertedArgs.size()) +
+                   (IsTypeAlias ? sizeof(QualType) : 0),
+               alignof(TemplateSpecializationType));
+  auto *Spec = new (Mem) TemplateSpecializationType(
+      Template, IsTypeAlias, SpecifiedArgs, SugaredConvertedArgs, Underlying);
 
   Types.push_back(Spec);
-  return QualType(Spec, 0);
-}
-
-QualType ASTContext::getCanonicalTemplateSpecializationType(
-    TemplateName Template, ArrayRef<TemplateArgument> Args) const {
-  assert(!Template.getAsDependentTemplateName() &&
-         "No dependent template names here!");
-
-  // Build the canonical template specialization type.
-  // Any DeducedTemplateNames are ignored, because the effective name of a TST
-  // accounts for the TST arguments laid over any default arguments contained in
-  // its name.
-  TemplateName CanonTemplate =
-      getCanonicalTemplateName(Template, /*IgnoreDeduced=*/true);
-
-  bool AnyNonCanonArgs = false;
-  auto CanonArgs =
-      ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
-
-  // Determine whether this canonical template specialization type already
-  // exists.
-  llvm::FoldingSetNodeID ID;
-  TemplateSpecializationType::Profile(ID, CanonTemplate,
-                                      CanonArgs, *this);
-
-  void *InsertPos = nullptr;
-  TemplateSpecializationType *Spec
-    = TemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos);
-
-  if (!Spec) {
-    // Allocate a new canonical template specialization type.
-    void *Mem = Allocate((sizeof(TemplateSpecializationType) +
-                          sizeof(TemplateArgument) * CanonArgs.size()),
-                         alignof(TemplateSpecializationType));
-    Spec = new (Mem) TemplateSpecializationType(CanonTemplate,
-                                                CanonArgs,
-                                                QualType(), QualType());
-    Types.push_back(Spec);
-    TemplateSpecializationTypes.InsertNode(Spec, InsertPos);
-  }
-
-  assert(Spec->isDependentType() &&
-         "Non-dependent template-id type must have a canonical type");
+  TemplateSpecializationTypes.InsertNode(Spec, InsertPos);
   return QualType(Spec, 0);
 }
 
@@ -5773,18 +5795,26 @@ QualType ASTContext::getDependentTemplateSpecializationType(
   return getDependentTemplateSpecializationType(Keyword, NNS, Name, ArgCopy);
 }
 
-QualType
-ASTContext::getDependentTemplateSpecializationType(
-                                 ElaboratedTypeKeyword Keyword,
-                                 NestedNameSpecifier *NNS,
-                                 const IdentifierInfo *Name,
-                                 ArrayRef<TemplateArgument> Args) const {
+QualType ASTContext::getDependentTemplateSpecializationType(
+    ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
+    const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args,
+    bool Canonical) const {
   assert((!NNS || NNS->isDependent()) &&
          "nested-name-specifier must be dependent");
 
+  ElaboratedTypeKeyword CanonKeyword = Keyword;
+  if (Keyword == ElaboratedTypeKeyword::None)
+    CanonKeyword = ElaboratedTypeKeyword::Typename;
+  NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
+  bool NonCanonical = NNS != CanonNNS || Keyword != CanonKeyword;
+  SmallVector<TemplateArgument, 16> CanonArgs(Args);
+  assert(!(Canonical && NonCanonical));
+  if (!Canonical)
+    NonCanonical |= canonicalizeTemplateArguments(CanonArgs);
+
   llvm::FoldingSetNodeID ID;
-  DependentTemplateSpecializationType::Profile(ID, *this, Keyword, NNS,
-                                               Name, Args);
+  DependentTemplateSpecializationType::Profile(
+      ID, *this, Keyword, NNS, Name, Args, /*Canonical=*/!NonCanonical);
 
   void *InsertPos = nullptr;
   DependentTemplateSpecializationType *T
@@ -5792,22 +5822,10 @@ ASTContext::getDependentTemplateSpecializationType(
   if (T)
     return QualType(T, 0);
 
-  NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
-
-  ElaboratedTypeKeyword CanonKeyword = Keyword;
-  if (Keyword == ElaboratedTypeKeyword::None)
-    CanonKeyword = ElaboratedTypeKeyword::Typename;
-
-  bool AnyNonCanonArgs = false;
-  auto CanonArgs =
-      ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
-
   QualType Canon;
-  if (AnyNonCanonArgs || CanonNNS != NNS || CanonKeyword != Keyword) {
-    Canon = getDependentTemplateSpecializationType(CanonKeyword, CanonNNS,
-                                                   Name,
-                                                   CanonArgs);
-
+  if (NonCanonical) {
+    Canon = getDependentTemplateSpecializationType(
+        CanonKeyword, CanonNNS, Name, CanonArgs, /*Canonical=*/true);
     // Find the insert position again.
     [[maybe_unused]] auto *Nothing =
         DependentTemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6450,7 +6468,7 @@ QualType ASTContext::getAutoTypeInternal(
       !DeducedType.isNull() && DeducedType->isDependentType();
   AutoType::Profile(ID, *this, DeducedType, Keyword,
                     IsDependent || IsDeducedDependent, TypeConstraintConcept,
-                    TypeConstraintArgs);
+                    TypeConstraintArgs, /*Canonical=*/IsCanon);
   if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
     return QualType(AT_iter->getSecond(), 0);
 
@@ -6464,9 +6482,9 @@ QualType ASTContext::getAutoTypeInternal(
       auto CanonicalConceptArgs = ::getCanonicalTemplateArguments(
           *this, TypeConstraintArgs, AnyNonCanonArgs);
       if (CanonicalConcept != TypeConstraintConcept || AnyNonCanonArgs) {
-        Canon =
-            getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
-                                CanonicalConcept, CanonicalConceptArgs, true);
+        Canon = getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
+                                    CanonicalConcept, CanonicalConceptArgs,
+                                    /*IsCanon=*/true);
       }
     }
   }
@@ -7006,7 +7024,7 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
         getCanonicalTemplateArgument(subst->getArgumentPack());
     return getSubstTemplateTemplateParmPack(
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
-        subst->getFinal(), subst->getIndex());
+        subst->getIndex(), subst->getFinal());
   }
   case TemplateName::DeducedTemplate: {
     assert(IgnoreDeduced == false);
@@ -8180,8 +8198,7 @@ QualType ASTContext::getObjCSuperType() const {
 void ASTContext::setCFConstantStringType(QualType T) {
   const auto *TD = T->castAs<TypedefType>();
   CFConstantStringTypeDecl = cast<TypedefDecl>(TD->getDecl());
-  const auto *TagType =
-      CFConstantStringTypeDecl->getUnderlyingType()->castAs<RecordType>();
+  const auto *TagType = TD->castAs<RecordType>();
   CFConstantStringTagDecl = TagType->getDecl();
 }
 
@@ -14017,13 +14034,16 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::TemplateSpecialization: {
     const auto *TX = cast<TemplateSpecializationType>(X),
                *TY = cast<TemplateSpecializationType>(Y);
-    auto As = getCommonTemplateArguments(Ctx, TX->template_arguments(),
-                                         TY->template_arguments());
+    auto SpecAs = getCommonTemplateArguments(Ctx, TX->getSpecifiedArguments(),
+                                             TY->getSpecifiedArguments());
+    auto ConvAs = getCommonTemplateArguments(Ctx, TX->getConvertedArguments(),
+                                             TY->getConvertedArguments());
     return Ctx.getTemplateSpecializationType(
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
                                        TY->getTemplateName(),
                                        /*IgnoreDeduced=*/true),
-        As, X->getCanonicalTypeInternal());
+        SpecAs, ConvAs, /*CanonicalConvertedArgs=*/{},
+        X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
     const auto *DX = cast<DecltypeType>(X);
@@ -14260,11 +14280,14 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                 TY->getTemplateName(), /*IgnoreDeduced=*/true);
     if (!CTN.getAsVoidPointer())
       return QualType();
-    SmallVector<TemplateArgument, 8> Args;
-    if (getCommonTemplateArguments(Ctx, Args, TX->template_arguments(),
-                                   TY->template_arguments()))
+    SmallVector<TemplateArgument, 8> SpecAs;
+    if (getCommonTemplateArguments(Ctx, SpecAs, TX->getSpecifiedArguments(),
+                                   TY->getSpecifiedArguments()))
       return QualType();
-    return Ctx.getTemplateSpecializationType(CTN, Args,
+    auto ConvAs = getCommonTemplateArguments(Ctx, TX->getConvertedArguments(),
+                                             TY->getConvertedArguments());
+    return Ctx.getTemplateSpecializationType(CTN, SpecAs, ConvAs,
+                                             /*CanonicalConvertedArgs=*/{},
                                              Ctx.getQualifiedType(Underlying));
   }
   case Type::Typedef: {

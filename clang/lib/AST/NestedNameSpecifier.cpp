@@ -316,7 +316,10 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
                                         TemplateName::Qualified::None);
 
       // Print the template argument list.
-      printTemplateArgumentList(OS, SpecType->template_arguments(),
+      printTemplateArgumentList(OS,
+                                SpecType->isCanonicalUnqualified()
+                                    ? SpecType->getConvertedArguments()
+                                    : SpecType->getSpecifiedArguments(),
                                 InnerPolicy);
     } else if (const auto *DepSpecType =
                    dyn_cast<DependentTemplateSpecializationType>(T)) {

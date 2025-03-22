@@ -995,7 +995,7 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
     Template = TST->getTemplateName().getAsTemplateDecl();
-    AliasRhsTemplateArgs = TST->template_arguments();
+    AliasRhsTemplateArgs = TST->getSpecifiedArguments();
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
@@ -1068,7 +1068,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // performing deduction for rest of arguments to align with the C++
   // standard.
   SemaRef.DeduceTemplateArguments(
-      F->getTemplateParameters(), FReturnType->template_arguments(),
+      F->getTemplateParameters(), FReturnType->getSpecifiedArguments(),
       AliasRhsTemplateArgs, TDeduceInfo, DeduceResults,
       /*NumberOfArgumentsMustMatch=*/false);
 

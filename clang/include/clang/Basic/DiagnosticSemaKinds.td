@@ -6977,7 +6977,7 @@ def err_illegal_decl_mempointer_to_void : Error<
   "'%0' declared as a member pointer to void">;
 def err_illegal_decl_mempointer_in_nonclass
     : Error<"'%0' does not point into a class">;
-def err_reference_to_void : Error<"cannot form a reference to 'void'">;
+def err_reference_to_void : Error<"cannot form a reference to %0">;
 def err_nonfunction_block_type : Error<
   "block pointer to non-function type is invalid">;
 def err_return_block_has_expr : Error<"void block should not return a value">;
