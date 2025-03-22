@@ -10,6 +10,7 @@
 #define TEST_SUPPORT_CONCAT_MACROS_H
 
 #include <cstdio>
+#include <source_location>
 #include <string>
 #include <source_location>
 
