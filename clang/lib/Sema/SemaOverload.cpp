@@ -1897,7 +1897,8 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       auto ToMPT = CanTo.castAs<MemberPointerType>();
       auto FromMPT = CanFrom.castAs<MemberPointerType>();
       // A function pointer conversion cannot change the class of the function.
-      if (ToMPT->getClass() != FromMPT->getClass())
+      if (!declaresSameEntity(ToMPT->getMostRecentCXXRecordDecl(),
+                              FromMPT->getMostRecentCXXRecordDecl()))
         return false;
       CanTo = ToMPT->getPointeeType();
       CanFrom = FromMPT->getPointeeType();
@@ -3290,7 +3291,8 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
   if (FromType->isMemberPointerType() && ToType->isMemberPointerType()) {
     const auto *FromMember = FromType->castAs<MemberPointerType>(),
                *ToMember = ToType->castAs<MemberPointerType>();
-    if (!Context.hasSameType(FromMember->getClass(), ToMember->getClass())) {
+    if (!declaresSameEntity(FromMember->getMostRecentCXXRecordDecl(),
+                            ToMember->getMostRecentCXXRecordDecl())) {
       PDiag << ft_different_class << QualType(ToMember->getClass(), 0)
             << QualType(FromMember->getClass(), 0);
       return;
@@ -4891,14 +4893,10 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
     const auto *ToMemPointer1 = ToType1->castAs<MemberPointerType>();
     const auto *FromMemPointer2 = FromType2->castAs<MemberPointerType>();
     const auto *ToMemPointer2 = ToType2->castAs<MemberPointerType>();
-    const Type *FromPointeeType1 = FromMemPointer1->getClass();
-    const Type *ToPointeeType1 = ToMemPointer1->getClass();
-    const Type *FromPointeeType2 = FromMemPointer2->getClass();
-    const Type *ToPointeeType2 = ToMemPointer2->getClass();
-    QualType FromPointee1 = QualType(FromPointeeType1, 0).getUnqualifiedType();
-    QualType ToPointee1 = QualType(ToPointeeType1, 0).getUnqualifiedType();
-    QualType FromPointee2 = QualType(FromPointeeType2, 0).getUnqualifiedType();
-    QualType ToPointee2 = QualType(ToPointeeType2, 0).getUnqualifiedType();
+    CXXRecordDecl *FromPointee1 = FromMemPointer1->getMostRecentCXXRecordDecl();
+    CXXRecordDecl *ToPointee1 = ToMemPointer1->getMostRecentCXXRecordDecl();
+    CXXRecordDecl *FromPointee2 = FromMemPointer2->getMostRecentCXXRecordDecl();
+    CXXRecordDecl *ToPointee2 = ToMemPointer2->getMostRecentCXXRecordDecl();
     // conversion of A::* to B::* is better than conversion of A::* to C::*,
     if (FromPointee1 == FromPointee2 && ToPointee1 != ToPointee2) {
       if (S.IsDerivedFrom(Loc, ToPointee1, ToPointee2))
@@ -8872,20 +8870,18 @@ static void AddBuiltinAssignmentOperatorCandidates(Sema &S,
 /// if any, found in visible type conversion functions found in ArgExpr's type.
 static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
     Qualifiers VRQuals;
-    const RecordType *TyRec;
+    CXXRecordDecl *ClassDecl;
     if (const MemberPointerType *RHSMPType =
-        ArgExpr->getType()->getAs<MemberPointerType>())
-      TyRec = RHSMPType->getClass()->getAs<RecordType>();
+            ArgExpr->getType()->getAs<MemberPointerType>())
+      ClassDecl = RHSMPType->getMostRecentCXXRecordDecl();
     else
-      TyRec = ArgExpr->getType()->getAs<RecordType>();
-    if (!TyRec) {
+      ClassDecl = ArgExpr->getType()->getAsCXXRecordDecl();
+    if (!ClassDecl) {
       // Just to be safe, assume the worst case.
       VRQuals.addVolatile();
       VRQuals.addRestrict();
       return VRQuals;
     }
-
-    CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
     if (!ClassDecl->hasDefinition())
       return VRQuals;
 
@@ -9878,9 +9874,10 @@ public:
         continue;
       for (QualType MemPtrTy : CandidateTypes[1].member_pointer_types()) {
         const MemberPointerType *mptr = cast<MemberPointerType>(MemPtrTy);
-        QualType C2 = QualType(mptr->getClass(), 0);
-        C2 = C2.getUnqualifiedType();
-        if (C1 != C2 && !S.IsDerivedFrom(CandidateSet.getLocation(), C1, C2))
+        CXXRecordDecl *D1 = C1->getAsCXXRecordDecl(),
+                      *D2 = mptr->getMostRecentCXXRecordDecl();
+        if (!declaresSameEntity(D1, D2) &&
+            !S.IsDerivedFrom(CandidateSet.getLocation(), D1, D2))
           break;
         QualType ParamTypes[2] = {PtrTy, MemPtrTy};
         // build CV12 T&

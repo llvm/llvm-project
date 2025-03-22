@@ -629,8 +629,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   const FunctionProtoType *FPT =
       MPT->getPointeeType()->castAs<FunctionProtoType>();
-  auto *RD =
-      cast<CXXRecordDecl>(MPT->getClass()->castAs<RecordType>()->getDecl());
+  auto *RD = MPT->getMostRecentCXXRecordDecl();
 
   llvm::Constant *ptrdiff_1 = llvm::ConstantInt::get(CGM.PtrDiffTy, 1);
 
@@ -799,7 +798,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   // Check the function pointer if CFI on member function pointers is enabled.
   if (ShouldEmitCFICheck) {
-    CXXRecordDecl *RD = MPT->getClass()->getAsCXXRecordDecl();
+    CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
     if (RD->hasDefinition()) {
       CodeGenFunction::SanitizerScope SanScope(&CGF);
 
@@ -3817,7 +3816,8 @@ static bool ContainsIncompleteClassType(QualType Ty) {
   if (const MemberPointerType *MemberPointerTy =
       dyn_cast<MemberPointerType>(Ty)) {
     // Check if the class type is incomplete.
-    const RecordType *ClassType = cast<RecordType>(MemberPointerTy->getClass());
+    const auto *ClassType = cast<RecordType>(
+        MemberPointerTy->getMostRecentCXXRecordDecl()->getTypeForDecl());
     if (IsIncompleteClassType(ClassType))
       return true;
 
@@ -4556,7 +4556,8 @@ ItaniumRTTIBuilder::BuildPointerToMemberTypeInfo(const MemberPointerType *Ty) {
   //   attributes of the type pointed to.
   unsigned Flags = extractPBaseFlags(CGM.getContext(), PointeeTy);
 
-  const RecordType *ClassType = cast<RecordType>(Ty->getClass());
+  const auto *ClassType =
+      cast<RecordType>(Ty->getMostRecentCXXRecordDecl()->getTypeForDecl());
   if (IsIncompleteClassType(ClassType))
     Flags |= PTI_ContainingClassIncomplete;
 
