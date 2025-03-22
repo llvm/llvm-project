@@ -37,8 +37,7 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   SmallPtrSet<GlobalObject *, 2> Used;
 
 protected:
-  MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
-      MCSymbolRefExpr::VK_None;
+  uint8_t PLTRelativeSpecifier = 0;
 
 public:
   TargetLoweringObjectFileELF();
