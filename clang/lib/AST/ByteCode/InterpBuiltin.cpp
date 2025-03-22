@@ -149,6 +149,18 @@ static bool retPrimValue(InterpState &S, CodePtr OpPC,
 #undef RET_CASE
 }
 
+static QualType getElemType(const Pointer &P) {
+  const Descriptor *Desc = P.getFieldDesc();
+  QualType T = Desc->getType();
+  if (Desc->isPrimitive())
+    return T;
+  if (T->isPointerType())
+    return T->getAs<PointerType>()->getPointeeType();
+  if (Desc->isArray())
+    return Desc->getElemQualType();
+  return T;
+}
+
 static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
                                         unsigned ID) {
   auto Loc = S.Current->getSource(OpPC);
@@ -1575,10 +1587,10 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
       return true;
     }
 
-    const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
-                             /*IsConst=*/false, /*IsTemporary=*/false,
-                             /*IsMutable=*/false);
+    const Descriptor *Desc = S.P.createDescriptor(
+        NewCall, *ElemT, ElemType.getTypePtr(), Descriptor::InlineDescMD,
+        /*IsConst=*/false, /*IsTemporary=*/false,
+        /*IsMutable=*/false);
     Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                   DynamicAllocator::Form::Operator);
     assert(B);
@@ -1782,15 +1794,13 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
 
-  QualType DestElemType;
+  QualType DestElemType = getElemType(DestPtr);
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
-    DestElemType = DestPtr.getFieldDesc()->getElemQualType();
     RemainingDestElems = DestPtr.isUnknownSizeArray()
                              ? 0
                              : (DestPtr.getNumElems() - DestPtr.getIndex());
   } else {
-    DestElemType = DestPtr.getType();
     RemainingDestElems = 1;
   }
   unsigned DestElemSize = ASTCtx.getTypeSizeInChars(DestElemType).getQuantity();
@@ -1803,15 +1813,13 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  QualType SrcElemType;
+  QualType SrcElemType = getElemType(SrcPtr);
   size_t RemainingSrcElems;
   if (SrcPtr.getFieldDesc()->isArray()) {
-    SrcElemType = SrcPtr.getFieldDesc()->getElemQualType();
     RemainingSrcElems = SrcPtr.isUnknownSizeArray()
                             ? 0
                             : (SrcPtr.getNumElems() - SrcPtr.getIndex());
   } else {
-    SrcElemType = SrcPtr.getType();
     RemainingSrcElems = 1;
   }
   unsigned SrcElemSize = ASTCtx.getTypeSizeInChars(SrcElemType).getQuantity();
@@ -1883,16 +1891,6 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
-
-  auto getElemType = [](const Pointer &P) -> QualType {
-    const Descriptor *Desc = P.getFieldDesc();
-    QualType T = Desc->getType();
-    if (T->isPointerType())
-      return T->getAs<PointerType>()->getPointeeType();
-    if (Desc->isArray())
-      return Desc->getElemQualType();
-    return T;
-  };
 
   const ASTContext &ASTCtx = S.getASTContext();
   QualType ElemTypeA = getElemType(PtrA);
