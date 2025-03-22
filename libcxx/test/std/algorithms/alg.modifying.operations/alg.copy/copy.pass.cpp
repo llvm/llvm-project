@@ -66,7 +66,7 @@ struct TestInIters {
 };
 
 template <std::size_t N>
-struct TestFwdIterInBitIterOut {
+struct CopyFromForwardIterToBitIter {
   std::array<bool, N> in = {};
   template <class FwdIter>
   TEST_CONSTEXPR_CXX20 void operator()() {
@@ -285,11 +285,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   { // Test std::copy() with forward_iterator-pair inputs and vector<bool>::iterator output
-    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<8>());
-    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<19>());
-    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<32>());
-    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<64>());
-    types::for_each(types::forward_iterator_list<bool*>(), TestFwdIterInBitIterOut<299>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<8>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<19>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<32>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<64>());
+    types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<299>());
   }
 
   return true;

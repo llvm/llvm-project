@@ -33,9 +33,9 @@
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_unsigned.h>
-#include <__type_traits/is_convertible.h>
 #include <__type_traits/void_t.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -471,8 +471,9 @@ private:
   template <class _InIter,
             class _Sent,
             class _Dp,
-            __enable_if_t<(__has_forward_iterator_category<_InIter>::value ||
-                           __has_iterator_concept_convertible_to<_InIter, forward_iterator_tag>::value) &&
+            __enable_if_t<!__is_segmented_iterator<_InIter>::value &&
+                              (__has_forward_iterator_category<_InIter>::value ||
+                               __has_iterator_concept_convertible_to<_InIter, forward_iterator_tag>::value) &&
                               is_convertible<typename iterator_traits<_InIter>::value_type, bool>::value,
                           int> >
   _LIBCPP_CONSTEXPR_SINCE_CXX14 friend pair<_InIter, __bit_iterator<_Dp, false> >
