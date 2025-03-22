@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TYPES_EFI_STATUS_H
 #define LLVM_LIBC_TYPES_EFI_STATUS_H
 
-#include "size_t.h"
+#include "../llvm-libc-macros/stdint-macros.h"
 
-typedef size_t EFI_STATUS;
+typedef uintptr_t EFI_STATUS;
 
 #define EFI_SUCCESS 0
 

@@ -3,13 +3,9 @@ add_object_library(
   SRCS
     io.cpp
     exit.cpp
-    error.cpp
   HDRS
     io.h
-    error.h
   DEPENDS
-    libc.include.errno
-    libc.include.limits
     libc.include.uefi
     libc.src.__support.common
     libc.src.__support.CPP.string_view
