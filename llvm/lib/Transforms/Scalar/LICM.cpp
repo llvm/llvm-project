@@ -689,8 +689,8 @@ public:
     // TODO: This could be expanded to allowing branches where both ends
     // eventually converge to a single block.
     SmallPtrSet<BasicBlock *, 4> TrueDestSucc, FalseDestSucc;
-    TrueDestSucc.insert(succ_begin(TrueDest), succ_end(TrueDest));
-    FalseDestSucc.insert(succ_begin(FalseDest), succ_end(FalseDest));
+    TrueDestSucc.insert_range(successors(TrueDest));
+    FalseDestSucc.insert_range(successors(FalseDest));
     BasicBlock *CommonSucc = nullptr;
     if (TrueDestSucc.count(FalseDest)) {
       CommonSucc = FalseDest;

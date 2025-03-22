@@ -37,8 +37,9 @@
 ; CHECK-NEXT:   experimental-xqcilia             - 'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension).
 ; CHECK-NEXT:   experimental-xqcilo              - 'Xqcilo' (Qualcomm uC Large Offset Load Store Extension).
 ; CHECK-NEXT:   experimental-xqcilsm             - 'Xqcilsm' (Qualcomm uC Load Store Multiple Extension).
-; CHECK-NEXT:   experimental-xqcisim             - 'Xqcisim' (Qualcomm uC Simulation Hint Extension). 
+; CHECK-NEXT:   experimental-xqcisim             - 'Xqcisim' (Qualcomm uC Simulation Hint Extension).
 ; CHECK-NEXT:   experimental-xqcisls             - 'Xqcisls' (Qualcomm uC Scaled Load Store Extension).
+; CHECK-NEXT:   experimental-xqcisync            - 'Xqcisync' (Qualcomm uC Sync Delay Extension).
 ; CHECK-NEXT:   experimental-xrivosvisni         - 'XRivosVisni' (Rivos Vector Integer Small New).
 ; CHECK-NEXT:   experimental-xrivosvizip         - 'XRivosVizip' (Rivos Vector Register Zips).
 ; CHECK-NEXT:   experimental-zalasr              - 'Zalasr' (Load-Acquire and Store-Release Instructions).
@@ -60,13 +61,13 @@
 ; CHECK-NEXT:   no-rvc-hints                     - Disable RVC Hint Instructions..
 ; CHECK-NEXT:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
 ; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
-; CHECK-NEXT:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v areimplemented as a wide memory op and shuffle.
-; CHECK-NEXT:   optimized-nf3-segment-load-store - vlseg3eN.v and vsseg3eN.v areimplemented as a wide memory op and shuffle.
-; CHECK-NEXT:   optimized-nf4-segment-load-store - vlseg4eN.v and vsseg4eN.v areimplemented as a wide memory op and shuffle.
-; CHECK-NEXT:   optimized-nf5-segment-load-store - vlseg5eN.v and vsseg5eN.v areimplemented as a wide memory op and shuffle.
-; CHECK-NEXT:   optimized-nf6-segment-load-store - vlseg6eN.v and vsseg6eN.v areimplemented as a wide memory op and shuffle.
-; CHECK-NEXT:   optimized-nf7-segment-load-store - vlseg7eN.v and vsseg7eN.v areimplemented as a wide memory op and shuffle.
-; CHECK-NEXT:   optimized-nf8-segment-load-store - vlseg8eN.v and vsseg8eN.v areimplemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf3-segment-load-store - vlseg3eN.v and vsseg3eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf4-segment-load-store - vlseg4eN.v and vsseg4eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf5-segment-load-store - vlseg5eN.v and vsseg5eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf6-segment-load-store - vlseg6eN.v and vsseg6eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf7-segment-load-store - vlseg7eN.v and vsseg7eN.v are implemented as a wide memory op and shuffle.
+; CHECK-NEXT:   optimized-nf8-segment-load-store - vlseg8eN.v and vsseg8eN.v are implemented as a wide memory op and shuffle.
 ; CHECK-NEXT:   optimized-zero-stride-load       - Optimized (perform fewer memory operations)zero-stride vector load.
 ; CHECK-NEXT:   predictable-select-expensive     - Prefer likely predicted branches over selects.
 ; CHECK-NEXT:   prefer-vsetvli-over-read-vlenb   - Prefer vsetvli over read vlenb CSR to calculate VLEN.
