@@ -106,5 +106,18 @@ bool testEnumConversion(const EResult& value) {
 }
 
 }
+}
 
+namespace without::issue {
+namespace enum_bool {
+
+enum EResult : bool {
+  OK = 1
+};
+
+bool testEnumConversion(const EResult& value) {
+  return value;
+}
+
+}
 }
