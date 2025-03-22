@@ -2220,8 +2220,8 @@ ParseStatus RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return Error(getLoc(), "expected valid identifier for operand modifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
-  RISCVMCExpr::Specifier VK = RISCVMCExpr::getSpecifierForName(Identifier);
-  if (VK == RISCVMCExpr::VK_Invalid)
+  auto Spec = RISCVMCExpr::getSpecifierForName(Identifier);
+  if (!Spec)
     return Error(getLoc(), "unrecognized operand modifier");
 
   getParser().Lex(); // Eat the identifier
@@ -2232,7 +2232,7 @@ ParseStatus RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   if (getParser().parseParenExpression(SubExpr, E))
     return ParseStatus::Failure;
 
-  const MCExpr *ModExpr = RISCVMCExpr::create(SubExpr, VK, getContext());
+  const MCExpr *ModExpr = RISCVMCExpr::create(SubExpr, *Spec, getContext());
   Operands.push_back(RISCVOperand::createImm(ModExpr, S, E, isRV64()));
   return ParseStatus::Success;
 }

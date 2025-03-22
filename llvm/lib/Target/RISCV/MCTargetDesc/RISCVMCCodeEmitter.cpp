@@ -443,7 +443,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
 
     switch (RVExpr->getSpecifier()) {
     case RISCVMCExpr::VK_None:
-    case RISCVMCExpr::VK_Invalid:
     case RISCVMCExpr::VK_32_PCREL:
       llvm_unreachable("Unhandled fixup kind!");
     case RISCVMCExpr::VK_TPREL_ADD:
