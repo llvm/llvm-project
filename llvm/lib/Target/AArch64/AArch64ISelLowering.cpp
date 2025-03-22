@@ -17651,8 +17651,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
         Builder.CreateVectorSplat(StTy->getElementCount(), Builder.getTrue());
 
   auto ExtractedValues = InterleavedValues;
-  SmallVector<Value *, 4> StoreOperands(InterleavedValues.begin(),
-                                        InterleavedValues.end());
+  SmallVector<Value *, 4> StoreOperands(InterleavedValues);
   if (UseScalable)
     StoreOperands.push_back(Pred);
   StoreOperands.push_back(BaseAddr);
