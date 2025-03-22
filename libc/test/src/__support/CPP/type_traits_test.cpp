@@ -334,7 +334,9 @@ TEST(LlvmLibcTypeTraitsTest, is_class) {
   // Neither other types.
   EXPECT_FALSE((is_class_v<Union>));
   EXPECT_FALSE((is_class_v<int>));
-  EXPECT_FALSE((is_class_v<EnumClass>));
+  // TODO: Re-enable the test after
+  // https://github.com/llvm/llvm-project/issues/132494 is fixed.
+  // EXPECT_FALSE((is_class_v<EnumClass>));
 }
 
 TYPED_TEST(LlvmLibcTypeTraitsTest, is_const, UnqualObjectTypes) {

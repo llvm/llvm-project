@@ -271,7 +271,8 @@ protected:
   CallBase &CandidateCall;
 
   /// Getter for the cache of ephemeral values.
-  function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache = nullptr;
+  function_ref<EphemeralValuesAnalysis::Result &(Function &)>
+      GetEphValuesCache = nullptr;
 
   /// Extension points for handling callsite features.
   // Called before a basic block was analyzed.
@@ -515,8 +516,8 @@ public:
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr,
-      function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+      function_ref<EphemeralValuesAnalysis::Result &(Function &)>
+          GetEphValuesCache = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         GetTLI(GetTLI), PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
         CandidateCall(Call), GetEphValuesCache(GetEphValuesCache) {}
@@ -1133,8 +1134,8 @@ public:
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
       bool IgnoreThreshold = false,
-      function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+      function_ref<EphemeralValuesAnalysis::Result &(Function &)>
+          GetEphValuesCache = nullptr)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
                      ORE, GetEphValuesCache),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
@@ -2794,7 +2795,7 @@ InlineResult CallAnalyzer::analyze() {
   SmallPtrSet<const Value *, 32> EphValuesStorage;
   const SmallPtrSetImpl<const Value *> *EphValues = &EphValuesStorage;
   if (GetEphValuesCache)
-    EphValues = &GetEphValuesCache(F).ephValues();
+    EphValues = &GetEphValuesCache(F);
   else
     CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F),
                                         EphValuesStorage);
@@ -2980,7 +2981,8 @@ InlineCost llvm::getInlineCost(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    function_ref<EphemeralValuesAnalysis::Result &(Function &)>
+        GetEphValuesCache) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
                        GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
                        GetEphValuesCache);
@@ -3104,7 +3106,8 @@ InlineCost llvm::getInlineCost(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    function_ref<EphemeralValuesAnalysis::Result &(Function &)>
+        GetEphValuesCache) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
