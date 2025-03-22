@@ -44,6 +44,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <string>
 
@@ -478,6 +479,12 @@ void benchmarkMain() {
       ExitWithError("cannot initialize libpfm");
 #endif
   }
+
+  // case for cross generating, when native arch and target mismatch
+  if ((Triple(sys::getProcessTriple()).getArch() !=
+       Triple(TripleName).getArch()) &&
+      (MCPU == "native"))
+    ExitWithError("Incorrect cpu. To see all possible options use -mcpu=help");
 
   InitializeAllExegesisTargets();
 #define LLVM_EXEGESIS(TargetName)                                              \
