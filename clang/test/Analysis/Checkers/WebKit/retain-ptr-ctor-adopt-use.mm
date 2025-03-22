@@ -4,6 +4,7 @@
 #include "objc-mock-types.h"
 
 CFTypeRef CFCopyArray(CFArrayRef);
+void* CreateCopy();
 
 void basic_correct() {
   auto ns1 = adoptNS([SomeObj alloc]);
@@ -15,6 +16,7 @@ void basic_correct() {
   CFMutableArrayRef cf1 = adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, 10));
   auto cf2 = adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault));
   auto cf3 = adoptCF(checked_cf_cast<CFArrayRef>(CFCopyArray(cf1)));
+  CreateCopy();
 }
 
 CFMutableArrayRef provide_cf();

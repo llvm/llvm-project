@@ -172,6 +172,8 @@ public:
       CreateOrCopyOutArguments.insert(Decl);
       hasOutArgument = true;
     }
+    if (!RTC.isUnretained(Callee->getReturnType()))
+      return;
     if (!hasOutArgument && !CreateOrCopyFnCall.contains(CE))
       reportLeak(CE, DeclWithIssue);
   }
