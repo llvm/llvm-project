@@ -66,6 +66,14 @@ public:
 
   bool hasDensity() const { return HasDensity; }
 
+  bool hasMul16() const { return HasMul16; }
+
+  bool hasMul32() const { return HasMul32; }
+
+  bool hasMul32High() const { return HasMul32High; }
+
+  bool hasDiv32() const { return HasDiv32; }
+
   bool hasMAC16() const { return HasMAC16; }
 
   bool hasWindowed() const { return HasWindowed; }
