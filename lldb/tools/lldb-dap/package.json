@@ -76,6 +76,15 @@
           "type": "string",
           "description": "The path to the lldb-dap binary."
         },
+        "lldb-dap.arguments": {
+          "scope": "resource",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "The list of additional arguments used to launch the debug adapter executable."
+        },
         "lldb-dap.log-path": {
           "scope": "resource",
           "type": "string",
@@ -149,19 +158,30 @@
       {
         "type": "lldb-dap",
         "label": "LLDB DAP Debugger",
-        "program": "./bin/lldb-dap",
-        "windows": {
-          "program": "./bin/lldb-dap.exe"
-        },
         "configurationAttributes": {
           "launch": {
             "required": [
               "program"
             ],
             "properties": {
+              "debugAdapterHostname": {
+                "type": "string",
+                "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
+              },
+              "debugAdapterPort": {
+                "type": "number",
+                "markdownDescription": "The port that an existing lldb-dap executable is listening on."
+              },
               "debugAdapterExecutable": {
                 "type": "string",
-                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
+              },
+              "debugAdapterArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
               },
               "program": {
                 "type": "string",
@@ -349,9 +369,24 @@
           },
           "attach": {
             "properties": {
+              "debugAdapterHostname": {
+                "type": "string",
+                "markdownDescription": "The hostname that an existing lldb-dap executable is listening on."
+              },
+              "debugAdapterPort": {
+                "type": "number",
+                "markdownDescription": "The port that an existing lldb-dap executable is listening on."
+              },
               "debugAdapterExecutable": {
                 "type": "string",
-                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use."
+                "markdownDescription": "The absolute path to the LLDB debug adapter executable to use. Overrides any user or workspace settings."
+              },
+              "debugAdapterArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "The list of additional arguments used to launch the debug adapter executable. Overrides any user or workspace settings."
               },
               "program": {
                 "type": "string",
