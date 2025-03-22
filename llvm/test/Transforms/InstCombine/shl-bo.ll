@@ -659,8 +659,8 @@ define <16 x i8> @test_FoldShiftByConstant_CreateAnd(<16 x i8> %in0) {
 
 define <vscale x 1 x i8> @test_FoldShiftByConstant_CreateAnd_scalable(<vscale x 1 x i8> %x) {
 ; CHECK-LABEL: @test_FoldShiftByConstant_CreateAnd_scalable(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <vscale x 1 x i8> [[X:%.*]], splat (i8 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw <vscale x 1 x i8> [[TMP1]], splat (i8 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 1 x i8> [[X:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i8> [[TMP1]], splat (i8 8)
 ; CHECK-NEXT:    ret <vscale x 1 x i8> [[TMP2]]
 ;
   %1 = and <vscale x 1 x i8> %x, splat (i8 2)
