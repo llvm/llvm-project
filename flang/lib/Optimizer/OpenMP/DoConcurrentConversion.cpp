@@ -69,10 +69,10 @@ mlir::omp::MapInfoOp createMapInfoOp(
       varType = mlir::TypeAttr::get(seqType.getEleTy());
 
   mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
+      loc, retTy, baseAddr, varType,
       builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      mapperId,
       builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
+      varPtrPtr, members, membersIndex, bounds, mapperId,
       builder.getStringAttr(name), builder.getBoolAttr(partialMap));
 
   return op;
