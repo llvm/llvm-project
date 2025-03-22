@@ -8937,7 +8937,8 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
       ToType, E->getValueKind(), ToExprLoc, ToReplacement, ToAssociatedDecl,
-      E->getIndex(), E->getPackIndex(), E->isReferenceParameter());
+      E->getIndex(), E->getPackIndex(), E->isReferenceParameter(),
+      E->getFinal());
 }
 
 ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
