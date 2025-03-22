@@ -79,10 +79,13 @@ class TestFile(unittest.TestCase):
 
     def test_file_eq_failing_4(self):
         path = os.path.join(inputs_dir, "testfile.c")
+        path_a = os.path.join(inputs_dir, "a.inc")
+        path_b = os.path.join(inputs_dir, "b.inc")
         tu = TranslationUnit.from_source(path)
-        file1 = File.from_name(tu, "testfile.c")
-        file2 = File.from_name(tu, "a.c")
-        file3 = File.from_name(tu, "b.c")
+        print(tu.spelling, tu.cursor.spelling)
+        file1 = File.from_name(tu, path)
+        file2 = File.from_name(tu, path_a)
+        file3 = File.from_name(tu, path_b)
         # FIXME: These files are not supposed to be equal
         self.assertEqual(file2, file3)
         self.assertEqual(file1, file2)
