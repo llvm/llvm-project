@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cbrtf16.h"
-#include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "hdr/fenv_macros.h"                   // FE_INVALID, FE_INEXACT
+#include "src/__support/FPUtil/FEnvImpl.h"     // fputil::raise_except
+#include "src/__support/FPUtil/FPBits.h"       // fputil::FPBits
+#include "src/__support/FPUtil/multiply_add.h" // fputil::multiply_add
+#include "src/__support/common.h"              // LLVM_LIBC_FUNCTION
+#include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 namespace LIBC_NAMESPACE_DECL {
