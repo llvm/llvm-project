@@ -471,3 +471,32 @@ def : SysReg<"sctrstatus", 0x14f>;
 def : SysReg<"sctrdepth", 0x15f>;
 def : SysReg<"vsctrctl", 0x24e>;
 def : SysReg<"mctrctl", 0x34e>;
+
+//===-----------------------------------------------
+// Vendor CSRs
+//===-----------------------------------------------
+
+// Xqciint
+let FeaturesRequired = [{ {RISCV::FeatureVendorXqciint} }], isRV32Only = 1 in {
+def : SysReg<"qc.mmcr", 0x7C0>;
+def : SysReg<"qc.mntvec", 0x7C3>;
+def : SysReg<"qc.mstktopaddr", 0x7C4>;
+def : SysReg<"qc.mstkbottomaddr", 0x7C5>;
+def : SysReg<"qc.mthreadptr", 0x7C8>;
+def : SysReg<"qc.mcause", 0x7C9>;
+
+foreach i = 0 - 7 in {
+  def : SysReg<"qc.mclicip" # i, !add(0x7F0, i)>;
+  def : SysReg<"qc.mclicie" # i, !add(0x7F8, i)>;
+}
+
+foreach i = 0 - 31 in {
+  def : SysReg<"qc.mclicilvl" # !if(!lt(i, 10), "0", "") # i, 
+               !add(0xBC0, i)>;
+}
+
+foreach i = 0 - 3 in {
+  def : SysReg<"qc.mwpstartaddr" # i, !add(0x7D0, i)>;
+  def : SysReg<"qc.mwpendaddr" # i,   !add(0x7D4, i)>;
+}
+} // FeatureVendorXqciint, isRV32Only
