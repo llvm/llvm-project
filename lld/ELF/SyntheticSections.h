@@ -111,8 +111,7 @@ public:
   void writeTo(uint8_t *buf) override;
 
   void addConstant(const Relocation &r);
-  void addEntry(const Symbol &sym);
-  void addAuthEntry(const Symbol &sym);
+  void addEntry(const Symbol &sym, bool authEntry = false);
   bool addTlsDescEntry(const Symbol &sym);
   void addTlsDescAuthEntry();
   bool addDynTlsEntry(const Symbol &sym);
@@ -138,6 +137,10 @@ protected:
     bool isSymbolFunc;
   };
   SmallVector<AuthEntryInfo, 0> authEntries;
+
+  // To track GOT entries for symbols that may have been ICFed
+  llvm::DenseMap<std::tuple<SectionBase *, uint64_t, unsigned char>, uint32_t>
+      gotEntries;
 };
 
 // .note.GNU-stack section.
