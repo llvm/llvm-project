@@ -3541,6 +3541,11 @@ void EmitClangAttrPCHRead(const RecordKeeper &Records, raw_ostream &OS) {
       DelayedArgs->writePCHReadArgs(OS);
       OS << ");\n";
     }
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    read" << R.getName() << "Attr(cast<" << R.getName()
+         << "Attr>(New));\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -3571,6 +3576,10 @@ void EmitClangAttrPCHWrite(const RecordKeeper &Records, raw_ostream &OS) {
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    Record.Add" << R.getName() << "Attr(SA);\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
