@@ -13,6 +13,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/PatternMatch.h"
@@ -24,6 +25,11 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+// Controls the maximum memory allocation to 32-bit or 4GB.
+static cl::opt<bool> PointerAllocationsLimitedto32bit(
+    "alloc-limit-32bit", cl::init(false),
+    cl::desc("A Pointer with max 32bit allocs"));
 
 /// Given an expression that CanEvaluateTruncated or CanEvaluateSExtd returns
 /// true for, actually insert the code to evaluate the expression.
@@ -950,6 +956,67 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
                         /*Depth=*/0, &Trunc)) {
     Trunc.setHasNoUnsignedWrap(true);
     Changed = true;
+  }
+
+  // Handle scenarios like trunc i64 (sub(ptr2int, ptr2int)) to i32 / trunc i64
+  // (lshr(sub(ptr2int, ptr2int))) to i32, where the ptrs are from same object
+  // and one of the pointers is a recursive GEP. And either the objectSize is
+  // known OR is indicative via a compiler flag, which suggests objectSize<4G.
+
+  // Check if trunc src type is same as Ptr type and dest is a 32bit.
+  if (!Trunc.hasNoUnsignedWrap() && SrcWidth == DL.getPointerSizeInBits() &&
+      DestTy == Type::getInt32Ty(Trunc.getContext())) {
+    Value *A, *B;
+    if (match(Src, m_Sub(m_PtrToIntSameSize(DL, m_Value(A)),
+                         m_PtrToIntSameSize(DL, m_Value(B)))) ||
+        match(Src, m_LShr(m_Sub(m_PtrToIntSameSize(DL, m_Value(A)),
+                                m_PtrToIntSameSize(DL, m_Value(B))),
+                          m_ConstantInt()))) {
+      // Check for a specific pattern where A is recursive GEP with a PHI ptr
+      // with incoming values as (Start,Step) and Start==B.
+      auto *GEPA = dyn_cast<GEPOperator>(A);
+      if (!GEPA) {
+        GEPA = dyn_cast<GEPOperator>(B);
+        std::swap(A, B);
+      }
+      if (GEPA && GEPA->getNumIndices() == 1 &&
+          isa<Constant>(GEPA->idx_begin())) {
+        // Handle 2 incoming PHI values with one being a recursive GEP.
+        auto *PN = dyn_cast<PHINode>(GEPA->getPointerOperand());
+        if (PN && PN->getNumIncomingValues() == 2) {
+          // Search for the recursive GEP as an incoming operand, and record
+          // that as Step.
+          Value *Start = nullptr;
+          Value *Step = const_cast<Value *>(A);
+          if (PN->getIncomingValue(0) == Step)
+            Start = PN->getIncomingValue(1);
+          else if (PN->getIncomingValue(1) == Step)
+            Start = PN->getIncomingValue(0);
+          // Check if the pointers Start and B are same and ObjectSize can be
+          // determined/PointerAllocationsLimitedto32bit flag set.
+          if (Start && Start == B) {
+            ObjectSizeOpts Opts;
+            Opts.RoundToAlign = false;
+            Opts.NullIsUnknownSize = true;
+            uint64_t ObjSize = 0;
+            // Can we get the ObjectSize and ObjectSize is within range.
+            // There is possibly more that we can do when ObjSize if known, and
+            // extend the same for other truncates. Restricting it for a 32bit
+            // truncate result.
+            if (getObjectSize(Start, ObjSize, DL, &TLI, Opts)) {
+              if (ObjSize != 0 && ObjSize <= (uint64_t)0xFFFFFFFF)
+                Changed = true;
+            }
+            // Does the compiler flag specify Object allocs within 4G.
+            else if (PointerAllocationsLimitedto32bit)
+              Changed = true;
+
+            if (Changed)
+              Trunc.setHasNoUnsignedWrap(true);
+          }
+        }
+      }
+    }
   }
 
   return Changed ? &Trunc : nullptr;
