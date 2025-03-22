@@ -520,7 +520,7 @@ ReducerWorkItem::clone(const TargetMachine *TM) const {
     // MachineModuleInfo contains a lot of other state used during codegen which
     // we won't be using here, but we should be able to ignore it (although this
     // is pretty ugly).
-    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(TM);
+    CloneMMM->MMI = std::make_unique<MachineModuleInfo>(*TM);
 
     for (const Function &F : getModule()) {
       if (auto *MF = MMI->getMachineFunction(F))
