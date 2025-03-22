@@ -386,6 +386,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      memalignment
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       calloc
       DEPENDS
         ${SCUDO_DEPS}
@@ -413,6 +418,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   else()
     add_entrypoint_external(
       malloc
+    )
+    add_entrypoint_external(
+      memalignment
     )
     add_entrypoint_external(
       calloc
@@ -523,6 +531,12 @@ if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
     ALIAS
     DEPENDS
       .${LIBC_TARGET_OS}.malloc
+  )
+  add_entrypoint_object(
+    memalignment
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.memalignment
   )
   add_entrypoint_object(
     free
