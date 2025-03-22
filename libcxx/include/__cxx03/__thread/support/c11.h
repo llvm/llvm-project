@@ -31,7 +31,8 @@ using __libcpp_timespec_t = ::timespec;
 typedef mtx_t __libcpp_mutex_t;
 // mtx_t is a struct so using {} for initialization is valid.
 #define _LIBCPP_MUTEX_INITIALIZER                                                                                      \
-  {}
+  {                                                                                                                    \
+  }
 
 typedef mtx_t __libcpp_recursive_mutex_t;
 
@@ -82,7 +83,8 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m) {
 typedef cnd_t __libcpp_condvar_t;
 // cnd_t is a struct so using {} for initialization is valid.
 #define _LIBCPP_CONDVAR_INITIALIZER                                                                                    \
-  {}
+  {                                                                                                                    \
+  }
 
 inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_signal(__libcpp_condvar_t* __cv) {
   return cnd_signal(__cv) == thrd_success ? 0 : EINVAL;

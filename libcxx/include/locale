@@ -3114,7 +3114,9 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __first, const char* __last);
 
-  _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) { return to_bytes(std::addressof(__wchar), std::addressof(__wchar) + 1); }
+  _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) {
+    return to_bytes(std::addressof(__wchar), std::addressof(__wchar) + 1);
+  }
   _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const _Elem* __wptr) {
     return to_bytes(__wptr, __wptr + char_traits<_Elem>::length(__wptr));
   }

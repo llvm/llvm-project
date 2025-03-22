@@ -259,8 +259,8 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, w
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
-    : __char_traits_base<char8_t, unsigned int, static_cast<unsigned int>(EOF)> {
+struct _LIBCPP_TEMPLATE_VIS
+char_traits<char8_t> : __char_traits_base<char8_t, unsigned int, static_cast<unsigned int>(EOF)> {
   static _LIBCPP_HIDE_FROM_ABI constexpr int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) noexcept {
     return std::__constexpr_memcmp(__s1, __s2, __element_count(__n));
@@ -279,8 +279,8 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 #endif // _LIBCPP_HAS_NO_CHAR8_T
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
-    : __char_traits_base<char16_t, uint_least16_t, static_cast<uint_least16_t>(0xFFFF)> {
+struct _LIBCPP_TEMPLATE_VIS
+char_traits<char16_t> : __char_traits_base<char16_t, uint_least16_t, static_cast<uint_least16_t>(0xFFFF)> {
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t length(const char_type* __s) _NOEXCEPT;
@@ -314,8 +314,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t char_traits<char16_t>::length(const 
 }
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
-    : __char_traits_base<char32_t, uint_least32_t, static_cast<uint_least32_t>(0xFFFFFFFF)> {
+struct _LIBCPP_TEMPLATE_VIS
+char_traits<char32_t> : __char_traits_base<char32_t, uint_least32_t, static_cast<uint_least32_t>(0xFFFFFFFF)> {
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 int
   compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t length(const char_type* __s) _NOEXCEPT;

@@ -70,10 +70,10 @@ using iter_common_reference_t = common_reference_t<iter_reference_t<_Tp>, iter_v
 // [iterator.concept.writable]
 template <class _Out, class _Tp>
 concept indirectly_writable = requires(_Out&& __o, _Tp&& __t) {
-  *__o                                             = std::forward<_Tp>(__t); // not required to be equality-preserving
-  *std::forward<_Out>(__o)                         = std::forward<_Tp>(__t); // not required to be equality-preserving
-  const_cast<const iter_reference_t<_Out>&&>(*__o) = std::forward<_Tp>(__t); // not required to be equality-preserving
-  const_cast<const iter_reference_t<_Out>&&>(*std::forward<_Out>(__o)) =
+  *__o                                              = std::forward<_Tp>(__t); // not required to be equality-preserving
+  *std::forward<_Out>(__o)                          = std::forward<_Tp>(__t); // not required to be equality-preserving
+  const_cast<const iter_reference_t<_Out> &&>(*__o) = std::forward<_Tp>(__t); // not required to be equality-preserving
+  const_cast<const iter_reference_t<_Out> &&>(*std::forward<_Out>(__o)) =
       std::forward<_Tp>(__t); // not required to be equality-preserving
 };
 

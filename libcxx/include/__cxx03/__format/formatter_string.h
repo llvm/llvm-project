@@ -118,8 +118,8 @@ struct _LIBCPP_TEMPLATE_VIS formatter<_CharT[_Size], _CharT> : public __formatte
 
 // Formatter std::string.
 template <__fmt_char_type _CharT, class _Traits, class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS formatter<basic_string<_CharT, _Traits, _Allocator>, _CharT>
-    : public __formatter_string<_CharT> {
+struct _LIBCPP_TEMPLATE_VIS
+formatter<basic_string<_CharT, _Traits, _Allocator>, _CharT> : public __formatter_string<_CharT> {
   using _Base = __formatter_string<_CharT>;
 
   template <class _FormatContext>

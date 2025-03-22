@@ -22,8 +22,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__is_trivially_destructible)
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_trivially_destructible
-    : public integral_constant<bool, __is_trivially_destructible(_Tp)> {};
+struct _LIBCPP_TEMPLATE_VIS
+is_trivially_destructible : public integral_constant<bool, __is_trivially_destructible(_Tp)> {};
 
 #elif __has_builtin(__has_trivial_destructor)
 

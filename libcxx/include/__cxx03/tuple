@@ -455,8 +455,8 @@ template <class _Indx, class... _Tp>
 struct __tuple_impl;
 
 template <size_t... _Indx, class... _Tp>
-struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
-    : public __tuple_leaf<_Indx, _Tp>... {
+struct _LIBCPP_DECLSPEC_EMPTY_BASES
+    __tuple_impl<__tuple_indices<_Indx...>, _Tp...> : public __tuple_leaf<_Indx, _Tp>... {
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_impl() noexcept(
       __all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 

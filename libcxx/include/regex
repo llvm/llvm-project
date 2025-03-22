@@ -2177,7 +2177,8 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
             }
           }
           if (!__equivalences_.empty()) {
-            string_type __s2 = __traits_.transform_primary(std::addressof(__ch2.first), std::addressof(__ch2.first) + 2);
+            string_type __s2 =
+                __traits_.transform_primary(std::addressof(__ch2.first), std::addressof(__ch2.first) + 2);
             for (size_t __i = 0; __i < __equivalences_.size(); ++__i) {
               if (__s2 == __equivalences_[__i]) {
                 __found = true;
@@ -2225,7 +2226,8 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
       }
     }
     if (!__ranges_.empty()) {
-      string_type __s2 = __collate_ ? __traits_.transform(std::addressof(__ch), std::addressof(__ch) + 1) : string_type(1, __ch);
+      string_type __s2 =
+          __collate_ ? __traits_.transform(std::addressof(__ch), std::addressof(__ch) + 1) : string_type(1, __ch);
       for (size_t __i = 0; __i < __ranges_.size(); ++__i) {
         if (__ranges_[__i].first <= __s2 && __s2 <= __ranges_[__i].second) {
           __found = true;
@@ -2271,8 +2273,8 @@ typedef basic_regex<wchar_t> wregex;
 #  endif
 
 template <class _CharT, class _Traits>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(regex)
-    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wregex)) basic_regex {
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_PREFERRED_NAME(regex) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wregex))
+    basic_regex {
 public:
   // types:
   typedef _CharT value_type;
@@ -5678,7 +5680,8 @@ template <class _BidirectionalIterator, class _CharT, class _Traits>
 bool regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator==(const regex_token_iterator& __x) const {
   if (__result_ == nullptr && __x.__result_ == nullptr)
     return true;
-  if (__result_ == std::addressof(__suffix_) && __x.__result_ == std::addressof(__x.__suffix_) && __suffix_ == __x.__suffix_)
+  if (__result_ == std::addressof(__suffix_) && __x.__result_ == std::addressof(__x.__suffix_) &&
+      __suffix_ == __x.__suffix_)
     return true;
   if (__result_ == nullptr || __x.__result_ == nullptr)
     return false;

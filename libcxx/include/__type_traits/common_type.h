@@ -103,8 +103,8 @@ struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
 // bullet 4 - sizeof...(Tp) > 2
 
 template <class _Tp, class _Up, class _Vp, class... _Rest>
-struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up, _Vp, _Rest...>
-    : __common_type_impl<__common_types<_Tp, _Up, _Vp, _Rest...> > {};
+struct _LIBCPP_TEMPLATE_VIS
+common_type<_Tp, _Up, _Vp, _Rest...> : __common_type_impl<__common_types<_Tp, _Up, _Vp, _Rest...> > {};
 
 #endif
 

@@ -21,8 +21,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template < class _Tp, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
-    : public integral_constant<bool, __is_nothrow_constructible(_Tp, _Args...)> {};
+struct _LIBCPP_TEMPLATE_VIS
+is_nothrow_constructible : public integral_constant<bool, __is_nothrow_constructible(_Tp, _Args...)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class... _Args>
@@ -48,8 +48,8 @@ inline constexpr bool is_nothrow_move_constructible_v = is_nothrow_move_construc
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_default_constructible
-    : public integral_constant<bool, __is_nothrow_constructible(_Tp)> {};
+struct _LIBCPP_TEMPLATE_VIS
+is_nothrow_default_constructible : public integral_constant<bool, __is_nothrow_constructible(_Tp)> {};
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>

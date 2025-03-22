@@ -55,16 +55,16 @@ public:
 };
 
 template <class _CharT, class _Tp, formattable<_CharT> _Container>
-struct _LIBCPP_TEMPLATE_VIS formatter<queue<_Tp, _Container>, _CharT>
-    : public __formatter_container_adaptor<queue<_Tp, _Container>, _CharT> {};
+struct _LIBCPP_TEMPLATE_VIS
+formatter<queue<_Tp, _Container>, _CharT> : public __formatter_container_adaptor<queue<_Tp, _Container>, _CharT> {};
 
 template <class _CharT, class _Tp, class _Container, class _Compare>
 struct _LIBCPP_TEMPLATE_VIS formatter<priority_queue<_Tp, _Container, _Compare>, _CharT>
     : public __formatter_container_adaptor<priority_queue<_Tp, _Container, _Compare>, _CharT> {};
 
 template <class _CharT, class _Tp, formattable<_CharT> _Container>
-struct _LIBCPP_TEMPLATE_VIS formatter<stack<_Tp, _Container>, _CharT>
-    : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
+struct _LIBCPP_TEMPLATE_VIS
+formatter<stack<_Tp, _Container>, _CharT> : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
 #endif //_LIBCPP_STD_VER >= 23
 

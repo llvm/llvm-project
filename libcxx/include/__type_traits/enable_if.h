@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <bool, class _Tp = void>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS enable_if{};
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS enable_if {};
 
 _LIBCPP_DIAGNOSTIC_PUSH
 #if __has_warning("-Winvalid-specialization")

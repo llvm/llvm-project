@@ -248,8 +248,8 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable : integral_constant<bool, __not
 };
 
 template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
-    : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
+struct _LIBCPP_TEMPLATE_VIS
+is_nothrow_invocable_r : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
 
 template <class _Fn, class... _Args>
 inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
