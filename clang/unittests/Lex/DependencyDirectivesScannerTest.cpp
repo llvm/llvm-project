@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 
@@ -1056,6 +1057,34 @@ TEST(MinimizeSourceToDependencyDirectivesTest, TokensBeforeEOF) {
     )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
   EXPECT_STREQ("#ifndef A\n#define A\n#endif\n<TokBeforeEOF>\n", Out.data());
+}
+
+TEST(MinimizeSourceToDependencyDirectivesTest, QuoteSeparatedNumber) {
+  SmallVector<char, 128> Out;
+  SmallVector<dependency_directives_scan::Token, 4> Tokens;
+  SmallVector<Directive, 4> Directives;
+
+  StringRef Source = R"(
+#if 123'124
+#endif
+)";
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
+  EXPECT_STREQ("#if 123'124\n#endif\n", Out.data());
+  ASSERT_EQ(Directives.size(), 3u);
+  EXPECT_EQ(Directives[0].Kind, dependency_directives_scan::pp_if);
+  EXPECT_EQ(Directives[1].Kind, dependency_directives_scan::pp_endif);
+  EXPECT_EQ(Directives[2].Kind, dependency_directives_scan::pp_eof);
+  ASSERT_EQ(Tokens.size(), 7u);
+
+  ASSERT_TRUE(Tokens[0].is(tok::hash));
+  ASSERT_TRUE(Tokens[1].is(tok::raw_identifier));   // "if"
+  ASSERT_TRUE(Tokens[2].is(tok::numeric_constant)); // 123'124
+  ASSERT_TRUE(Tokens[3].is(tok::eod));
+  ASSERT_TRUE(Tokens[4].is(tok::hash));
+  ASSERT_TRUE(Tokens[5].is(tok::raw_identifier)); // #endif
+  ASSERT_TRUE(Tokens[6].is(tok::eod));
 }
 
 } // end anonymous namespace
