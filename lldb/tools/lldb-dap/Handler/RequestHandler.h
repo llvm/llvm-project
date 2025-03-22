@@ -45,6 +45,8 @@ public:
 
   virtual ~BaseRequestHandler() = default;
 
+  void Run(const protocol::Request &);
+
   virtual void operator()(const protocol::Request &request) const = 0;
 
   virtual llvm::StringMap<bool> GetCapabilities() const { return {}; }
@@ -441,6 +443,19 @@ public:
     return {{"supportsReadMemoryRequest", true}};
   }
   void operator()(const llvm::json::Object &request) const override;
+};
+
+class CancelRequestHandler
+    : public RequestHandler<protocol::CancelArguments,
+                            protocol::CancelResponseBody> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "cancel"; }
+  llvm::StringMap<bool> GetCapabilities() const override {
+    return {{"supportsCancelRequest", true}};
+  }
+  llvm::Expected<protocol::CancelResponseBody>
+  Run(const protocol::CancelArguments &args) const override;
 };
 
 /// A request used in testing to get the details on all breakpoints that are
