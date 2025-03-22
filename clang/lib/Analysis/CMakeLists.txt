@@ -16,6 +16,7 @@ add_clang_library(clangAnalysis
   ConstructionContext.cpp
   Consumed.cpp
   CodeInjector.cpp
+  DanglingReference.cpp
   Dominators.cpp
   ExprMutationAnalyzer.cpp
   IntervalPartition.cpp
