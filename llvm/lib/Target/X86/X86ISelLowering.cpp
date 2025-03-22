@@ -8646,7 +8646,7 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
-  MVT VT = Op->getSimpleValueType(0);
+  EVT VT = Op->getValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
@@ -8677,6 +8677,18 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
     if (!TLI.isOperationLegalOrPromote(Opcode, VT))
       return SDValue();
     break;
+  // TODO: Add ANY/SIGN/ZERO_EXTEND support.
+  case ISD::TRUNCATE: {
+    SmallVector<SDValue, 32> Elts;
+    for (SDValue Elt : Op->ops())
+      Elts.push_back(Elt.getOperand(0));
+    EVT SrcSVT = Elts[0].getValueType();
+    EVT SrcVT = VT.changeVectorElementType(SrcSVT);
+    if (Op->getSplatValue() || !TLI.isTypeLegal(SrcVT) ||
+        any_of(Elts, [&](SDValue Elt) { return Elt.getValueType() != SrcSVT; }))
+      return SDValue();
+    return DAG.getNode(Opcode, DL, VT, DAG.getBuildVector(SrcVT, DL, Elts));
+  }
   }
 
   SmallVector<SDValue, 4> LHSElts, RHSElts;
