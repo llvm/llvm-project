@@ -76,6 +76,11 @@ ELF Improvements
 * Supported relocation types for LoongArch target: ``R_LARCH_TLS_{LD,GD,DESC}_PCREL20_S2``.
   (`#100105 <https://github.com/llvm/llvm-project/pull/100105>`_)
 
+* The default Hexagon architecture version in ELF object files produced by
+  lld is changed to v68. This change is only effective when the version is
+  not provided in the command line by the user and cannot be inferred from
+  inputs.
+
 Breaking changes
 ----------------
 
