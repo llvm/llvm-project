@@ -13,19 +13,12 @@
 
 #include "make_string.h"
 
+// Helper macros for creating strings and string views
+
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-#  define CH(C)                                                                                                        \
-    (std::is_same_v<CharT, wchar_t>    ? L##C                                                                          \
-     : std::is_same_v<CharT, char8_t>  ? u8##C                                                                         \
-     : std::is_same_v<CharT, char16_t> ? u##C                                                                          \
-     : std::is_same_v<CharT, char32_t> ? U##C                                                                          \
-                                       : C)
+#  define CH(C) (std::is_same_v<CharT, wchar_t> ? L##C : C)
 #else
-#  define CH(C)                                                                                                        \
-    (std::is_same_v<CharT, char8_t>    ? u8##C                                                                         \
-     : std::is_same_v<CharT, char16_t> ? u##C                                                                          \
-     : std::is_same_v<CharT, char32_t> ? U##C                                                                          \
-                                       : C)
+#  define CH(C) C
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 #define CS(S) MAKE_CSTRING(CharT, S)
 #define ST(S, a) std::basic_string<CharT, TraitsT, AllocT>(MAKE_CSTRING(CharT, S), MKSTR_LEN(CharT, S), a)
