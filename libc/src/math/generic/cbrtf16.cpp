@@ -80,7 +80,7 @@ LLVM_LIBC_FUNCTION(float16, cbrtf16, (float16 x)) {
 
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
-  uint32_t sign_bit = (x_u >> 15) << FloatBits::EXP_LEN;
+  uint32_t sign_bit = static_cast<uint32_t>(x_u >> 15) << FloatBits::EXP_LEN;
 
   // cbrtf16(0) = 0, cbrtf16(NaN) = NaN
   if (LIBC_UNLIKELY(x_abs == 0 || x_abs >= 0x7C00)) {
