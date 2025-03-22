@@ -316,8 +316,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+supm %s -o - | FileCheck --check-prefix=RV64SUPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smctr  %s -o - | FileCheck --check-prefix=RV64SMCTR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssctr  %s -o - | FileCheck --check-prefix=RV64SSCTR %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-sdext  %s -o - | FileCheck --check-prefix=RV64SDEXT %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-sdtrig  %s -o - | FileCheck --check-prefix=RV64SDTRIG %s
+; RUN: llc -mtriple=riscv64 -mattr=+sdext  %s -o - | FileCheck --check-prefix=RV64SDEXT %s
+; RUN: llc -mtriple=riscv64 -mattr=+sdtrig  %s -o - | FileCheck --check-prefix=RV64SDTRIG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV64XQCCMP %s
 
 

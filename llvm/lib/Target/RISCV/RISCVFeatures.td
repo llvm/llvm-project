@@ -869,9 +869,9 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 // Supervisor extensions
 
-def FeatureStdExtSdext : RISCVExperimentalExtension<1, 0, "External debugger">;
+def FeatureStdExtSdext : RISCVExtension<1, 0, "External debugger">;
 
-def FeatureStdExtSdtrig : RISCVExperimentalExtension<1, 0, "Debugger triggers">;
+def FeatureStdExtSdtrig : RISCVExtension<1, 0, "Debugger triggers">;
 
 def FeatureStdExtShgatpa
     : RISCVExtension<1, 0,
