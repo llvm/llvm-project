@@ -31,7 +31,6 @@ class TestFile(unittest.TestCase):
         self.assertNotEqual(file1, file2)
         self.assertNotEqual(file1, "t.c")
 
-    # FIXME: this test shouldn't pass
     def test_file_eq_failing(self):
         index = Index.create()
         tu = index.parse(
