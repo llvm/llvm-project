@@ -29,8 +29,23 @@ intended to be able to support "stacked" pull-request. Do not create any branche
 llvm/llvm-project repository otherwise, please use a fork (see below). User branches that
 aren't associated with a pull-request **will be deleted**.
 
+Stacked Pull Requests
+=====================
+
+GitHub does not natively support stacked pull requests. There are two common
+alternatives:
+
+  * Add a note in your PR summary indicating that your patch is part of a
+    series or depends on another PR (e.g., “Depends on #123456”). It also helps
+    to highlight which commits belong to other PRs, so reviewers can focus only
+    on the relevant changes.
+  * Use Graphite (described below), a tool that supports stacked PR workflows.
+
+Both approaches help streamline the review process. Choose the one that works
+best for you.
+
 Using Graphite for stacked Pull Requests
-========================================
+----------------------------------------
 
 `Graphite <https://app.graphite.dev/>`_ is a stacked pull request tool supported
 by the LLVM repo (the other being `reviewable.io <https://reviewable.io>`_).
