@@ -125,7 +125,9 @@ RISCVMCExpr::getSpecifierForName(StringRef name) {
 StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
   switch (S) {
   case VK_None:
-    llvm_unreachable("Invalid ELF symbol kind");
+  case VK_PLT:
+  case VK_GOTPCREL:
+    llvm_unreachable("not used as %specifier()");
   case VK_LO:
     return "lo";
   case VK_HI:
