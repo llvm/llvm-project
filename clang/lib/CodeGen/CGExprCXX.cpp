@@ -16,6 +16,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
+#include "MitigationTagging.h"
 #include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -416,6 +417,11 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
       std::tie(VTable, RD) = CGM.getCXXABI().LoadVTablePtr(
           *this, This.getAddress(), CalleeDecl->getParent());
       EmitVTablePtrCheckForCall(RD, VTable, CFITCK_NVCall, CE->getBeginLoc());
+      AttachMitigationMetadataToFunction(*this, MitigationKey::CFI_NVCALL,
+                                         true);
+    } else if (MD->getParent()->isDynamicClass()) {
+      AttachMitigationMetadataToFunction(*this, MitigationKey::CFI_NVCALL,
+                                         false);
     }
 
     if (getLangOpts().AppleKext && MD->isVirtual() && HasQualifier)
