@@ -100,6 +100,9 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
+- New :program:`clang-tidy` config property `ClangQueryChecks` that allows adding
+  custom checks based on a :program:`clang-query` syntax
+
 New checks
 ^^^^^^^^^^
 
