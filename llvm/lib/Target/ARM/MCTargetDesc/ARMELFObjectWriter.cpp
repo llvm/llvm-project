@@ -81,7 +81,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   unsigned Kind = Fixup.getTargetKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+  MCSymbolRefExpr::VariantKind Specifier = Target.getAccessVariant();
   auto CheckFDPIC = [&](uint32_t Type) {
     if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
       Ctx.reportError(Fixup.getLoc(),
@@ -91,13 +91,31 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     return Type;
   };
 
+  switch (Specifier) {
+  case MCSymbolRefExpr::VK_GOTTPOFF:
+  case MCSymbolRefExpr::VK_GOTTPOFF_FDPIC:
+  case MCSymbolRefExpr::VK_TLSCALL:
+  case MCSymbolRefExpr::VK_TLSDESC:
+  case MCSymbolRefExpr::VK_TLSGD:
+  case MCSymbolRefExpr::VK_TLSGD_FDPIC:
+  case MCSymbolRefExpr::VK_TLSLDM:
+  case MCSymbolRefExpr::VK_TLSLDM_FDPIC:
+  case MCSymbolRefExpr::VK_ARM_TLSLDO:
+  case MCSymbolRefExpr::VK_TPOFF:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
   if (IsPCRel) {
     switch (Fixup.getTargetKind()) {
     default:
       Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
       return ELF::R_ARM_NONE;
     case FK_Data_4:
-      switch (Modifier) {
+      switch (Specifier) {
       default:
         Ctx.reportError(Fixup.getLoc(),
                         "invalid fixup for 4-byte pc-relative data relocation");
@@ -120,7 +138,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       }
     case ARM::fixup_arm_blx:
     case ARM::fixup_arm_uncondbl:
-      switch (Modifier) {
+      switch (Specifier) {
       case MCSymbolRefExpr::VK_PLT:
         return ELF::R_ARM_CALL;
       case MCSymbolRefExpr::VK_TLSCALL:
@@ -158,7 +176,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_THM_JUMP8;
     case ARM::fixup_arm_thumb_bl:
     case ARM::fixup_arm_thumb_blx:
-      switch (Modifier) {
+      switch (Specifier) {
       case MCSymbolRefExpr::VK_TLSCALL:
         return ELF::R_ARM_THM_TLS_CALL;
       default:
@@ -189,7 +207,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
     return ELF::R_ARM_NONE;
   case FK_Data_1:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 1-byte data relocation");
@@ -198,7 +216,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_ABS8;
     }
   case FK_Data_2:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 2-byte data relocation");
@@ -207,7 +225,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_ABS16;
     }
   case FK_Data_4:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for 4-byte data relocation");
@@ -263,7 +281,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
   case ARM::fixup_arm_uncondbranch:
     return ELF::R_ARM_JUMP24;
   case ARM::fixup_arm_movt_hi16:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(), "invalid fixup for ARM MOVT instruction");
       return ELF::R_ARM_NONE;
@@ -273,7 +291,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_MOVT_BREL;
     }
   case ARM::fixup_arm_movw_lo16:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(), "invalid fixup for ARM MOVW instruction");
       return ELF::R_ARM_NONE;
@@ -283,7 +301,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_MOVW_BREL_NC;
     }
   case ARM::fixup_t2_movt_hi16:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for Thumb MOVT instruction");
@@ -294,7 +312,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       return ELF::R_ARM_THM_MOVT_BREL;
     }
   case ARM::fixup_t2_movw_lo16:
-    switch (Modifier) {
+    switch (Specifier) {
     default:
       Ctx.reportError(Fixup.getLoc(),
                       "invalid fixup for Thumb MOVW instruction");
