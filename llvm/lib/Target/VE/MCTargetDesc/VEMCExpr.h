@@ -22,12 +22,10 @@ namespace llvm {
 class StringRef;
 class VEMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum Specifier {
     VK_None,
 
-    // While not strictly necessary, start at a larger number to avoid confusion
-    // with MCSymbolRefExpr::VariantKind.
-    VK_REFLONG = 100,
+    VK_REFLONG = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_HI32,        // @hi
     VK_LO32,        // @lo
     VK_PC_HI32,     // @pc_hi
@@ -45,24 +43,24 @@ public:
   };
 
 private:
-  const VariantKind Kind;
+  const Specifier Kind;
   const MCExpr *Expr;
 
-  explicit VEMCExpr(VariantKind Kind, const MCExpr *Expr)
+  explicit VEMCExpr(Specifier Kind, const MCExpr *Expr)
       : Kind(Kind), Expr(Expr) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const VEMCExpr *create(VariantKind Kind, const MCExpr *Expr,
+  static const VEMCExpr *create(Specifier Kind, const MCExpr *Expr,
                                 MCContext &Ctx);
   /// @}
   /// @name Accessors
   /// @{
 
   /// getOpcode - Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
+  Specifier getSpecifier() const { return Kind; }
 
   /// getSubExpr - Get the child of this expression.
   const MCExpr *getSubExpr() const { return Expr; }
@@ -85,13 +83,11 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 
-  static VariantKind parseVariantKind(StringRef name);
-  static bool printVariantKind(raw_ostream &OS, VariantKind Kind);
-  static VE::Fixups getFixupKind(VariantKind Kind);
+  static VE::Fixups getFixupKind(Specifier S);
 };
 
-static inline VEMCExpr::VariantKind getVariantKind(const MCSymbolRefExpr *SRE) {
-  return VEMCExpr::VariantKind(SRE->getKind());
+static inline VEMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return VEMCExpr::Specifier(SRE->getKind());
 }
 
 } // namespace llvm
