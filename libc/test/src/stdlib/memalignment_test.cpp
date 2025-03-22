@@ -64,4 +64,5 @@ TEST(LlvmLibcMemAlignmentTest, SpecificAlignment) {
   uintptr_t addr_complex = 0x1234560; // 16-byte aligned (ends in 0)
   void *ptr_complex = reinterpret_cast<void *>(addr_complex);
   EXPECT_EQ(LIBC_NAMESPACE::memalignment(ptr_complex), static_cast<size_t>(16));
-}
+} 
+ 
