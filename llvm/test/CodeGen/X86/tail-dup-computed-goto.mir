@@ -11,6 +11,7 @@
   @computed_goto.dispatch = external global [5 x ptr]
   define void @computed_goto() { ret void }
   define void @jump_table() { ret void }
+  define void @jump_table_pic() { ret void }
 ...
 ---
 name:            computed_goto
@@ -209,6 +210,169 @@ body:             |
     successors: %bb.2(0x1999999a), %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a)
 
     JMP64m $noreg, 8, %8, %jump-table.0, $noreg :: (load (s64) from jump-table)
+
+  bb.2:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 target-flags(x86-plt) @f1, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %13:gr64 = COPY $rax
+    %2:gr64 = COPY %13
+    JMP_1 %bb.1
+
+  bb.3:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 target-flags(x86-plt) @f2, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %12:gr64 = COPY $rax
+    %3:gr64 = COPY %12
+    JMP_1 %bb.1
+
+  bb.4:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 target-flags(x86-plt) @f3, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %11:gr64 = COPY $rax
+    %4:gr64 = COPY %11
+    JMP_1 %bb.1
+
+  bb.5:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 target-flags(x86-plt) @f4, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %10:gr64 = COPY $rax
+    %5:gr64 = COPY %10
+    JMP_1 %bb.1
+
+  bb.6:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 target-flags(x86-plt) @f5, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %9:gr64 = COPY $rax
+    %6:gr64 = COPY %9
+    JMP_1 %bb.1
+
+  bb.7:
+
+...
+---
+name:            jump_table_pic
+tracksRegLiveness: true
+jumpTable:
+  kind:            block-address
+  entries:
+    - id:              0
+      blocks:          [ '%bb.2', '%bb.3', '%bb.4', '%bb.5', '%bb.6' ]
+body:             |
+  ; CHECK-LABEL: name: jump_table_pic
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a), %bb.7(0x1999999a)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @f0, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rax
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY [[COPY]]
+  ; CHECK-NEXT:   [[DEC64r:%[0-9]+]]:gr64_nosp = DEC64r [[COPY1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; CHECK-NEXT:   [[MOVSX64rm32_:%[0-9]+]]:gr64 = MOVSX64rm32 [[DEC64r]], 4, [[DEC64r]], 0, $noreg :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[ADD64rr:%[0-9]+]]:gr64 = ADD64rr [[LEA64r]], [[MOVSX64rm32_]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a), %bb.7(0x1999999a)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @f1, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY $rax
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[DEC64r1:%[0-9]+]]:gr64_nosp = DEC64r [[COPY4]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[LEA64r1:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; CHECK-NEXT:   [[MOVSX64rm32_1:%[0-9]+]]:gr64 = MOVSX64rm32 [[DEC64r1]], 4, [[DEC64r1]], 0, $noreg :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[ADD64rr1:%[0-9]+]]:gr64 = ADD64rr [[LEA64r1]], [[MOVSX64rm32_1]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[COPY4]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr1]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   successors: %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a), %bb.7(0x1999999a)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @f2, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY $rax
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr64 = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[DEC64r2:%[0-9]+]]:gr64_nosp = DEC64r [[COPY7]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[LEA64r2:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; CHECK-NEXT:   [[MOVSX64rm32_2:%[0-9]+]]:gr64 = MOVSX64rm32 [[DEC64r2]], 4, [[DEC64r2]], 0, $noreg :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[ADD64rr2:%[0-9]+]]:gr64 = ADD64rr [[LEA64r2]], [[MOVSX64rm32_2]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr64 = COPY [[COPY7]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr2]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5:
+  ; CHECK-NEXT:   successors: %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a), %bb.7(0x1999999a)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @f3, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY $rax
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gr64 = COPY [[COPY9]]
+  ; CHECK-NEXT:   [[DEC64r3:%[0-9]+]]:gr64_nosp = DEC64r [[COPY10]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[LEA64r3:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; CHECK-NEXT:   [[MOVSX64rm32_3:%[0-9]+]]:gr64 = MOVSX64rm32 [[DEC64r3]], 4, [[DEC64r3]], 0, $noreg :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[ADD64rr3:%[0-9]+]]:gr64 = ADD64rr [[LEA64r3]], [[MOVSX64rm32_3]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:gr64 = COPY [[COPY10]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr3]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6:
+  ; CHECK-NEXT:   successors: %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a), %bb.7(0x1999999a)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @f4, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:gr64 = COPY $rax
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:gr64 = COPY [[COPY12]]
+  ; CHECK-NEXT:   [[DEC64r4:%[0-9]+]]:gr64_nosp = DEC64r [[COPY13]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[LEA64r4:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; CHECK-NEXT:   [[MOVSX64rm32_4:%[0-9]+]]:gr64 = MOVSX64rm32 [[DEC64r4]], 4, [[DEC64r4]], 0, $noreg :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[ADD64rr4:%[0-9]+]]:gr64 = ADD64rr [[LEA64r4]], [[MOVSX64rm32_4]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:gr64 = COPY [[COPY13]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr4]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7:
+  ; CHECK-NEXT:   successors: %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a), %bb.7(0x1999999a)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @f5, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+  ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:gr64 = COPY $rax
+  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:gr64 = COPY [[COPY15]]
+  ; CHECK-NEXT:   [[DEC64r5:%[0-9]+]]:gr64_nosp = DEC64r [[COPY16]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[LEA64r5:%[0-9]+]]:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+  ; CHECK-NEXT:   [[MOVSX64rm32_5:%[0-9]+]]:gr64 = MOVSX64rm32 [[DEC64r5]], 4, [[DEC64r5]], 0, $noreg :: (load (s32) from jump-table)
+  ; CHECK-NEXT:   [[ADD64rr5:%[0-9]+]]:gr64 = ADD64rr [[LEA64r5]], [[MOVSX64rm32_5]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:gr64 = COPY [[COPY16]]
+  ; CHECK-NEXT:   JMP64r [[ADD64rr5]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.8:
+  bb.0:
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 target-flags(x86-plt) @f0, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %7:gr64 = COPY $rax
+    %0:gr64 = COPY %7
+
+  bb.1:
+    %1:gr64 = PHI %0, %bb.0, %6, %bb.6, %5, %bb.5, %4, %bb.4, %3, %bb.3, %2, %bb.2
+    %8:gr64_nosp = DEC64r %1, implicit-def dead $eflags
+
+  bb.8:
+    successors: %bb.2(0x1999999a), %bb.3(0x1999999a), %bb.4(0x1999999a), %bb.5(0x1999999a), %bb.6(0x1999999a)
+
+    %14:gr64 = LEA64r $rip, 1, $noreg, %jump-table.0, $noreg
+    %15:gr64 = MOVSX64rm32 %8, 4, %8, 0, $noreg :: (load (s32) from jump-table)
+    %16:gr64 = ADD64rr %14, killed %15, implicit-def dead $eflags
+    JMP64r killed %16
 
   bb.2:
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
