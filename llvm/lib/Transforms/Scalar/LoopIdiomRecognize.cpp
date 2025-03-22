@@ -1515,16 +1515,6 @@ bool LoopIdiomRecognize::runOnNoncountableLoop() {
          recognizeShiftUntilLessThan() || recognizeAndInsertStrLen();
 }
 
-/// Check if a Value is either a nullptr or a constant int zero
-static bool isZeroConstant(const Value *Val) {
-  if (isa<ConstantPointerNull>(Val))
-    return true;
-  const ConstantInt *CmpZero = dyn_cast<ConstantInt>(Val);
-  if (!CmpZero || !CmpZero->isZero())
-    return false;
-  return true;
-}
-
 /// Check if the given conditional branch is based on the comparison between
 /// a variable and zero, and if the variable is non-zero or zero (JmpOnZero is
 /// true), the control yields to the loop entry. If the branch matches the
@@ -1540,7 +1530,8 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
   if (!Cond)
     return nullptr;
 
-  if (!isZeroConstant(Cond->getOperand(1)))
+  auto *CmpZero = dyn_cast<ConstantInt>(Cond->getOperand(1));
+  if (!CmpZero || !CmpZero->isZero())
     return nullptr;
 
   BasicBlock *TrueSucc = BI->getSuccessor(0);
@@ -1611,11 +1602,7 @@ public:
       return false;
     LoadBaseEv = LoadEv->getStart();
 
-    LLVM_DEBUG({
-      dbgs() << "pointer load scev: ";
-      LoadEv->print(outs());
-      dbgs() << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "pointer load scev: " << *LoadEv << "\n");
 
     const SCEVConstant *Step =
         dyn_cast<SCEVConstant>(LoadEv->getStepRecurrence(*SE));
@@ -1656,11 +1643,7 @@ public:
       if (!Ev)
         return false;
 
-      LLVM_DEBUG({
-        dbgs() << "loop exit phi scev: ";
-        Ev->print(dbgs());
-        dbgs() << "\n";
-      });
+      LLVM_DEBUG(dbgs() << "loop exit phi scev: " << *Ev << "\n");
 
       // Since we verified that the loop trip count will be a valid strlen
       // idiom, we can expand all lcssa phi with {n,+,1} as (n + strlen) and use
@@ -1763,6 +1746,18 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
 
+  if (Verifier.OpWidth == 8) {
+    if (DisableLIRP::Strlen)
+      return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
+      return false;
+  } else {
+    if (DisableLIRP::Wcslen)
+      return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
+      return false;
+  }
+
   IRBuilder<> Builder(Preheader->getTerminator());
   SCEVExpander Expander(*SE, Preheader->getModule()->getDataLayout(),
                         "strlen_idiom");
@@ -1772,16 +1767,8 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   Value *StrLenFunc = nullptr;
   if (Verifier.OpWidth == 8) {
-    if (DisableLIRP::Strlen)
-      return false;
-    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
-      return false;
     StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
   } else {
-    if (DisableLIRP::Wcslen)
-      return false;
-    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
-      return false;
     StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
   }
   assert(StrLenFunc && "Failed to emit strlen function.");
