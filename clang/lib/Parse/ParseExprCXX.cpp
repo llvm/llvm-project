@@ -1269,22 +1269,24 @@ static void tryConsumeLambdaSpecifierToken(Parser &P,
     DeclEndLoc = SpecifierLoc;
   };
 
-  while (true) {
+  // Process lambda specifiers until an invalid token is found
+  while (P.getCurToken().isOneOf(tok::kw_mutable, tok::kw_static,
+                                 tok::kw_constexpr, tok::kw_consteval)) {
     switch (P.getCurToken().getKind()) {
     case tok::kw_mutable:
-      ConsumeLocation(MutableLoc, 0);
+      ConsumeLocation(MutableLoc, 0); 
       break;
     case tok::kw_static:
-      ConsumeLocation(StaticLoc, 1);
+      ConsumeLocation(StaticLoc, 1); 
       break;
     case tok::kw_constexpr:
-      ConsumeLocation(ConstexprLoc, 2);
+      ConsumeLocation(ConstexprLoc, 2); 
       break;
     case tok::kw_consteval:
       ConsumeLocation(ConstevalLoc, 3);
       break;
     default:
-      return;
+      llvm_unreachable("Unexpected token in lambda specifier parsing");
     }
   }
 }
