@@ -39,6 +39,12 @@ TEST(DenseSetTest, CtorRange) {
   EXPECT_THAT(set, ::testing::UnorderedElementsAre(1, 2, 3));
 }
 
+TEST(SmallDenseSetTest, CtorRange) {
+  constexpr unsigned Args[] = {9, 7, 8};
+  llvm::SmallDenseSet<unsigned> set(llvm::from_range, Args);
+  EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
+}
+
 TEST(DenseSetTest, InsertRange) {
   llvm::DenseSet<unsigned> set;
   constexpr unsigned Args[] = {3, 1, 2};
