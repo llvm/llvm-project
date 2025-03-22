@@ -687,6 +687,7 @@ module std [system] {
     }
     module ranges_partition {
       header "__algorithm/ranges_partition.h"
+      export std.ranges.subrange // return type
     }
     module ranges_pop_heap {
       header "__algorithm/ranges_pop_heap.h"
@@ -786,6 +787,7 @@ module std [system] {
     }
     module ranges_stable_partition {
       header "__algorithm/ranges_stable_partition.h"
+      export std.ranges.subrange // return type
     }
     module ranges_stable_sort {
       header "__algorithm/ranges_stable_sort.h"
