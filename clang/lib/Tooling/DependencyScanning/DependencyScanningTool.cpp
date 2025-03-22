@@ -154,17 +154,20 @@ DependencyScanningTool::getTranslationUnitDependencies(
   return Consumer.takeTranslationUnitDeps();
 }
 
-llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
-    StringRef ModuleName, const std::vector<std::string> &CommandLine,
-    StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
+std::pair<llvm::Error, ModuleDepsGraph>
+DependencyScanningTool::getModuleDependencies(
+    ArrayRef<StringRef> ModuleNames,
+    const std::vector<std::string> &CommandLine, StringRef CWD,
+    const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
+
+  assert(ModuleNames.size() && "GettingModuleDependencies for an empty list!");
   llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, ModuleName);
-  if (Result)
-    return std::move(Result);
-  return Consumer.takeModuleGraphDeps();
+                                                  Controller, ModuleNames);
+
+  return std::make_pair(std::move(Result), Consumer.takeModuleGraphDeps());
 }
 
 TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
