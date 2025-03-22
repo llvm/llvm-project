@@ -775,7 +775,7 @@ public:
   bool isUImm5Slist() const {
     if (!isImm())
       return false;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_None;
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm &&
