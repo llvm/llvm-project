@@ -3105,6 +3105,14 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
+#if CLANG_ENABLE_CIR
+  if (Args.hasArg(OPT_clangir_disable_passes))
+    Opts.ClangIRDisablePasses = true;
+
+  if (Args.hasArg(OPT_clangir_disable_verifier))
+    Opts.ClangIRDisableCIRVerifier = true;
+#endif // CLANG_ENABLE_CIR
+
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
   if (Args.hasArg(OPT_aux_target_feature))
@@ -4048,8 +4056,13 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
     StringRef Name = A->getValue();
-    if (Name == "full" || Name == "branch") {
+    if (Name == "full") {
       Opts.CFProtectionBranch = 1;
+      Opts.CFProtectionReturn = 1;
+    } else if (Name == "branch") {
+      Opts.CFProtectionBranch = 1;
+    } else if (Name == "return") {
+      Opts.CFProtectionReturn = 1;
     }
   }
 
@@ -4317,8 +4330,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             TT.getArch() == llvm::Triple::systemz ||
             TT.getArch() == llvm::Triple::loongarch64 ||
             TT.getArch() == llvm::Triple::nvptx ||
-            TT.getArch() == llvm::Triple::nvptx64 ||
-            TT.getArch() == llvm::Triple::amdgcn ||
+            TT.getArch() == llvm::Triple::nvptx64 || TT.isAMDGCN() ||
             TT.getArch() == llvm::Triple::x86 ||
             TT.getArch() == llvm::Triple::x86_64))
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
@@ -4771,17 +4783,6 @@ static bool ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
     }
   }
 
-  // Add the __CET__ macro if a CFProtection option is set.
-  if (const Arg *A = Args.getLastArg(OPT_fcf_protection_EQ)) {
-    StringRef Name = A->getValue();
-    if (Name == "branch")
-      Opts.addMacroDef("__CET__=1");
-    else if (Name == "return")
-      Opts.addMacroDef("__CET__=2");
-    else if (Name == "full")
-      Opts.addMacroDef("__CET__=3");
-  }
-
   // Add macros from the command line.
   for (const auto *A : Args.filtered(OPT_D, OPT_U)) {
     if (A->getOption().matches(OPT_D))
@@ -4970,6 +4971,14 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  if (Res.getFrontendOpts().GenReducedBMI ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateReducedModuleInterface ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateModuleInterface) {
+    Res.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    Res.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  }
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParsePointerAuthArgs(LangOpts, Args, Diags);

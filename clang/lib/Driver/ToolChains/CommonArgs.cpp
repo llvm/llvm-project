@@ -491,6 +491,10 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
     else if (A.getOption().matches(options::OPT_Z_reserved_lib_cckext))
       TC.AddCCKextLibArgs(Args, CmdArgs);
+    // Do not pass OPT_rpath to linker in AIX
+    else if (A.getOption().matches(options::OPT_rpath) &&
+             TC.getTriple().isOSAIX())
+      continue;
     else
       A.renderAsInput(Args, CmdArgs);
   }
@@ -858,12 +862,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const llvm::Triple &Triple = ToolChain.getTriple();
   const bool IsOSAIX = Triple.isOSAIX();
   const bool IsAMDGCN = Triple.isAMDGCN();
-  const char *Linker = Args.MakeArgString(ToolChain.GetLinkerPath());
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ);
+  const char *LinkerPath = Args.MakeArgString(ToolChain.GetLinkerPath());
   const Driver &D = ToolChain.getDriver();
-  const bool IsFatLTO = Args.hasArg(options::OPT_ffat_lto_objects);
+  const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
+                                     options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
-  if (llvm::sys::path::filename(Linker) != "ld.lld" &&
-      llvm::sys::path::stem(Linker) != "ld.lld" && !Triple.isOSOpenBSD()) {
+  if (Linker != "lld" && Linker != "lld-link" &&
+      llvm::sys::path::filename(LinkerPath) != "ld.lld" &&
+      llvm::sys::path::stem(LinkerPath) != "ld.lld" && !Triple.isOSOpenBSD()) {
     // Tell the linker to load the plugin. This has to come before
     // AddLinkerInputs as gold requires -plugin and AIX ld requires -bplugin to
     // come before any -plugin-opt/-bplugin_opt that -Wl might forward.
@@ -1289,7 +1296,8 @@ bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
   if (IsOffloadingHost)
     CmdArgs.push_back("-lomptarget");
 
-  if (IsOffloadingHost && !Args.hasArg(options::OPT_nogpulib))
+  if (IsOffloadingHost &&
+      Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("-lomptarget.devicertl");
 
   addArchSpecificRPath(TC, Args, CmdArgs);
@@ -1438,19 +1446,22 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid() && !TC.getTriple().isOHOSFamily()) {
     CmdArgs.push_back("-lpthread");
-    if (!TC.getTriple().isOSOpenBSD())
+    if (!TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSHaiku())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
       !TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSDragonFly() &&
+      !TC.getTriple().isOSHaiku() &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
   if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
       TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
     CmdArgs.push_back("-lexecinfo");
+  if (TC.getTriple().isOSHaiku())
+    CmdArgs.push_back("-lbsd");
   // There is no libresolv on Android, FreeBSD, OpenBSD, etc. On musl
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
@@ -2569,7 +2580,8 @@ static void GetSDLFromOffloadArchive(
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
-  std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
+  std::string NormalizedTriple = T.getToolChain().getTriple().normalize(
+      llvm::Triple::CanonicalForm::FOUR_IDENT);
   DeviceTriple += NormalizedTriple;
   if (!Target.empty()) {
     DeviceTriple += '-';
@@ -2748,7 +2760,7 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
 
 unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                                            const llvm::opt::ArgList &Args) {
-  unsigned CodeObjVer = 5; // default
+  unsigned CodeObjVer = 6; // default
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args))
     StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
   return CodeObjVer;
@@ -3131,4 +3143,37 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
     CmdArgs.push_back("-fwrapv");
   if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
+}
+
+/// Vectorize at all optimization levels greater than 1 except for -Oz.
+/// For -Oz the loop vectorizer is disabled, while the slp vectorizer is
+/// enabled.
+bool tools::shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+    if (A->getOption().matches(options::OPT_O4) ||
+        A->getOption().matches(options::OPT_Ofast))
+      return true;
+
+    if (A->getOption().matches(options::OPT_O0))
+      return false;
+
+    assert(A->getOption().matches(options::OPT_O) && "Must have a -O flag");
+
+    // Vectorize -Os.
+    StringRef S(A->getValue());
+    if (S == "s")
+      return true;
+
+    // Don't vectorize -Oz, unless it's the slp vectorizer.
+    if (S == "z")
+      return isSlpVec;
+
+    unsigned OptLevel = 0;
+    if (S.getAsInteger(10, OptLevel))
+      return false;
+
+    return OptLevel > 1;
+  }
+
+  return false;
 }

@@ -289,6 +289,7 @@ public:
     u.t = nullptr;
   }
   T &get() const { return *t; }
+  operator T&() const { return *t; }
   T *operator->() const { return t; }
   UniqueRef &operator=(T &) { return *this; }
 };

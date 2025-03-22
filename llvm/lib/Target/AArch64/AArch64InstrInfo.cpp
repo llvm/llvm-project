@@ -62,6 +62,10 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AArch64GenInstrInfo.inc"
 
+static cl::opt<unsigned>
+    CBDisplacementBits("aarch64-cb-offset-bits", cl::Hidden, cl::init(9),
+                       cl::desc("Restrict range of CB instructions (DEBUG)"));
+
 static cl::opt<unsigned> TBZDisplacementBits(
     "aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
     cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
@@ -216,6 +220,18 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
     Cond.push_back(MachineOperand::CreateImm(LastInst->getOpcode()));
     Cond.push_back(LastInst->getOperand(0));
     Cond.push_back(LastInst->getOperand(1));
+    break;
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
+    Target = LastInst->getOperand(3).getMBB();
+    Cond.push_back(MachineOperand::CreateImm(-1));
+    Cond.push_back(MachineOperand::CreateImm(LastInst->getOpcode()));
+    Cond.push_back(LastInst->getOperand(0));
+    Cond.push_back(LastInst->getOperand(1));
+    Cond.push_back(LastInst->getOperand(2));
+    break;
   }
 }
 
@@ -237,6 +253,11 @@ static unsigned getBranchDisplacementBits(unsigned Opc) {
     return CBZDisplacementBits;
   case AArch64::Bcc:
     return BCCDisplacementBits;
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
+    return CBDisplacementBits;
   }
 }
 
@@ -266,6 +287,11 @@ AArch64InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case AArch64::CBNZX:
   case AArch64::Bcc:
     return MI.getOperand(1).getMBB();
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
+    return MI.getOperand(3).getMBB();
   }
 }
 
@@ -543,6 +569,17 @@ bool AArch64InstrInfo::reverseBranchCondition(
     case AArch64::TBNZX:
       Cond[1].setImm(AArch64::TBZX);
       break;
+
+    // Cond is { -1, Opcode, CC, Op0, Op1 }
+    case AArch64::CBWPri:
+    case AArch64::CBXPri:
+    case AArch64::CBWPrr:
+    case AArch64::CBXPrr: {
+      // Pseudos using standard 4bit Arm condition codes
+      AArch64CC::CondCode CC =
+          static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+      Cond[2].setImm(AArch64CC::getInvertedCondCode(CC));
+    }
     }
   }
 
@@ -593,10 +630,19 @@ void AArch64InstrInfo::instantiateCondBranch(
   } else {
     // Folded compare-and-branch
     // Note that we use addOperand instead of addReg to keep the flags.
+
+    // cbz, cbnz
     const MachineInstrBuilder MIB =
         BuildMI(&MBB, DL, get(Cond[1].getImm())).add(Cond[2]);
+
+    // tbz/tbnz
     if (Cond.size() > 3)
-      MIB.addImm(Cond[3].getImm());
+      MIB.add(Cond[3]);
+
+    // cb
+    if (Cond.size() > 4)
+      MIB.add(Cond[4]);
+
     MIB.addMBB(TBB);
   }
 }
@@ -841,6 +887,48 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
           .addImm(
               AArch64_AM::encodeLogicalImmediate(1ull << Cond[3].getImm(), 64));
     break;
+  }
+  case 5: { // cb
+    // We must insert a cmp, that is a subs
+    //            0       1   2    3    4
+    // Cond is { -1, Opcode, CC, Op0, Op1 }
+    unsigned SUBSOpC, SUBSDestReg;
+    bool IsImm = false;
+    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+    switch (Cond[1].getImm()) {
+    default:
+      llvm_unreachable("Unknown branch opcode in Cond");
+    case AArch64::CBWPri:
+      SUBSOpC = AArch64::SUBSWri;
+      SUBSDestReg = AArch64::WZR;
+      IsImm = true;
+      break;
+    case AArch64::CBXPri:
+      SUBSOpC = AArch64::SUBSXri;
+      SUBSDestReg = AArch64::XZR;
+      IsImm = true;
+      break;
+    case AArch64::CBWPrr:
+      SUBSOpC = AArch64::SUBSWrr;
+      SUBSDestReg = AArch64::WZR;
+      IsImm = false;
+      break;
+    case AArch64::CBXPrr:
+      SUBSOpC = AArch64::SUBSXrr;
+      SUBSDestReg = AArch64::XZR;
+      IsImm = false;
+      break;
+    }
+
+    if (IsImm)
+      BuildMI(MBB, I, DL, get(SUBSOpC), SUBSDestReg)
+          .addReg(Cond[3].getReg())
+          .addImm(Cond[4].getImm())
+          .addImm(0);
+    else
+      BuildMI(MBB, I, DL, get(SUBSOpC), SUBSDestReg)
+          .addReg(Cond[3].getReg())
+          .addReg(Cond[4].getReg());
   }
   }
 
@@ -1403,13 +1491,22 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     if ((Mask == Pred) && PTest->getOpcode() == AArch64::PTEST_PP_ANY)
       return PredOpcode;
 
+    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+
+    // If the PTEST like instruction's general predicate is not `Mask`, attempt
+    // to look through a copy and try again. This is because some instructions
+    // take a predicate whose register class is a subset of its result class.
+    if (Mask != PTestLikeMask && PTestLikeMask->isFullCopy() &&
+        PTestLikeMask->getOperand(1).getReg().isVirtual())
+      PTestLikeMask =
+          MRI->getUniqueVRegDef(PTestLikeMask->getOperand(1).getReg());
+
     // For PTEST(PTRUE_ALL, PTEST_LIKE), the PTEST is redundant if the
     // the element size matches and either the PTEST_LIKE instruction uses
     // the same all active mask or the condition is "any".
     if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31 &&
         getElementSizeForOpcode(MaskOpcode) ==
             getElementSizeForOpcode(PredOpcode)) {
-      auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
       if (Mask == PTestLikeMask || PTest->getOpcode() == AArch64::PTEST_PP_ANY)
         return PredOpcode;
     }
@@ -1436,7 +1533,6 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     // active flag, whereas the PTEST instruction with the same mask doesn't.
     // For PTEST_ANY this doesn't apply as the flags in this case would be
     // identical regardless of element size.
-    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
     uint64_t PredElementSize = getElementSizeForOpcode(PredOpcode);
     if (Mask == PTestLikeMask && (PredElementSize == AArch64::ElementSizeB ||
                                   PTest->getOpcode() == AArch64::PTEST_PP_ANY))
@@ -4900,8 +4996,8 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
@@ -4980,8 +5076,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     auto ToPPR = [](MCRegister R) -> MCRegister {
       return (R - AArch64::PN0) + AArch64::P0;
     };
-    MCRegister PPRSrcReg = SrcIsPNR ? ToPPR(SrcReg) : SrcReg;
-    MCRegister PPRDestReg = DestIsPNR ? ToPPR(DestReg) : DestReg;
+    MCRegister PPRSrcReg = SrcIsPNR ? ToPPR(SrcReg) : SrcReg.asMCReg();
+    MCRegister PPRDestReg = DestIsPNR ? ToPPR(DestReg) : DestReg.asMCReg();
 
     if (PPRSrcReg != PPRDestReg) {
       auto NewMI = BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
@@ -7272,7 +7368,7 @@ static MachineInstr *genFusedMultiplyAcc(
 static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
                        const TargetInstrInfo *TII, MachineInstr &Root,
                        SmallVectorImpl<MachineInstr *> &InsInstrs,
-                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
+                       DenseMap<Register, unsigned> &InstrIdxForVirtReg,
                        unsigned MnegOpc, const TargetRegisterClass *RC) {
   Register NewVR = MRI.createVirtualRegister(RC);
   MachineInstrBuilder MIB =
@@ -7291,7 +7387,7 @@ static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
 static MachineInstr *genFusedMultiplyAccNeg(
     MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
     MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
     unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1);
 
@@ -7318,7 +7414,7 @@ static MachineInstr *genFusedMultiplyIdx(
 static MachineInstr *genFusedMultiplyIdxNeg(
     MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
     MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
     unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1);
 
@@ -7384,13 +7480,12 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
 /// Do the following transformation
 /// A - (B + C)  ==>   (A - B) - C
 /// A - (B + C)  ==>   (A - C) - B
-static void
-genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
-                 const TargetInstrInfo *TII, MachineInstr &Root,
-                 SmallVectorImpl<MachineInstr *> &InsInstrs,
-                 SmallVectorImpl<MachineInstr *> &DelInstrs,
-                 unsigned IdxOpd1,
-                 DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
+                             const TargetInstrInfo *TII, MachineInstr &Root,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             SmallVectorImpl<MachineInstr *> &DelInstrs,
+                             unsigned IdxOpd1,
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
   assert(IdxOpd1 == 1 || IdxOpd1 == 2);
   unsigned IdxOtherOpd = IdxOpd1 == 1 ? 2 : 1;
   MachineInstr *AddMI = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
@@ -7443,7 +7538,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineFunction &MF = *MBB.getParent();
@@ -8426,6 +8521,10 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   default:
     llvm_unreachable("Unknown branch instruction?");
   case AArch64::Bcc:
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
     return false;
   case AArch64::CBZW:
   case AArch64::CBZX:

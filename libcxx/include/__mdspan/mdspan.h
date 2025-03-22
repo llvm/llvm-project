@@ -22,6 +22,7 @@
 #include <__fwd/mdspan.h>
 #include <__mdspan/default_accessor.h>
 #include <__mdspan/extents.h>
+#include <__memory/addressof.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/is_abstract.h>
 #include <__type_traits/is_array.h>
@@ -215,7 +216,7 @@ public:
     _LIBCPP_ASSERT_UNCATEGORIZED(
         false == ([&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
           size_type __prod = 1;
-          return (__builtin_mul_overflow(__prod, extent(_Idxs), &__prod) || ... || false);
+          return (__builtin_mul_overflow(__prod, extent(_Idxs), std::addressof(__prod)) || ... || false);
         }(make_index_sequence<rank()>())),
         "mdspan: size() is not representable as size_type");
     return [&]<size_t... _Idxs>(index_sequence<_Idxs...>) {

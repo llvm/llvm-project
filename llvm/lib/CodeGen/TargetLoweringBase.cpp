@@ -312,6 +312,8 @@ RTLIB::Libcall RTLIB::getSINTTOFP(EVT OpVT, EVT RetVT) {
     if (RetVT == MVT::ppcf128)
       return SINTTOFP_I32_PPCF128;
   } else if (OpVT == MVT::i64) {
+    if (RetVT == MVT::bf16)
+      return SINTTOFP_I64_BF16;
     if (RetVT == MVT::f16)
       return SINTTOFP_I64_F16;
     if (RetVT == MVT::f32)
@@ -358,6 +360,8 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
     if (RetVT == MVT::ppcf128)
       return UINTTOFP_I32_PPCF128;
   } else if (OpVT == MVT::i64) {
+    if (RetVT == MVT::bf16)
+      return UINTTOFP_I64_BF16;
     if (RetVT == MVT::f16)
       return UINTTOFP_I64_F16;
     if (RetVT == MVT::f32)
@@ -402,7 +406,7 @@ RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
                       FREXP_PPCF128);
 }
 
-RTLIB::Libcall RTLIB::getFSINCOS(EVT RetVT) {
+RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
   return getFPLibCall(RetVT, SINCOS_F32, SINCOS_F64, SINCOS_F80, SINCOS_F128,
                       SINCOS_PPCF128);
 }
@@ -835,6 +839,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
+
+    // PartialReduceMLA operations default to expand.
+    setOperationAction({ISD::PARTIAL_REDUCE_UMLA, ISD::PARTIAL_REDUCE_SMLA}, VT,
+                       Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.

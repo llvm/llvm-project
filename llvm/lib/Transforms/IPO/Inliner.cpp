@@ -26,6 +26,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -388,6 +389,10 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         Advice->recordUnsuccessfulInlining(IR);
         continue;
       }
+      // TODO: Shouldn't we be invalidating all analyses on F here?
+      // The caller was modified, so invalidate Ephemeral Values.
+      FAM.invalidate(
+          F, PreservedAnalyses::all().abandon(EphemeralValuesAnalysis::ID()));
 
       DidInline = true;
       InlinedCallees.insert(&Callee);

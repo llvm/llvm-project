@@ -164,12 +164,18 @@ if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if (NOT "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Flang is not enabled, but is required for the Flang-RT runtime")
+  endif ()
+endif ()
+
 # Select the runtimes to build
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -203,10 +209,6 @@ endforeach()
 if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
   set(LLVM_LIBC_GPU_BUILD ON)
-endif()
-if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS AND LLVM_LIBC_GPU_BUILD)
-  message(STATUS "Enabling libc project to build libc testing tools")
-  list(APPEND LLVM_ENABLE_PROJECTS "libc")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -539,6 +541,9 @@ set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
 
+option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
+  "Add additional fields to DILocations to support Key Instructions" OFF)
+
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
   # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
@@ -829,7 +834,7 @@ option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OF
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
-option (LLVM_BUILD_TELEMETRY "Build the telemetry library. This does not enable telemetry." ON)
+option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -1181,8 +1186,9 @@ endif()
 # Build with _XOPEN_SOURCE on AIX, as stray macros in _ALL_SOURCE mode tend to
 # break things. In this case we need to enable the large-file API as well.
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-          add_compile_definitions(_XOPEN_SOURCE=700)
-          add_compile_definitions(_LARGE_FILE_API)
+  add_compile_definitions(_XOPEN_SOURCE=700)
+  add_compile_definitions(_LARGE_FILE_API)
+  add_compile_options(-pthread)
 
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.
@@ -1190,6 +1196,13 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
+
+  # Set LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF as AIX doesn't support it
+  if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+    message(WARNING
+    "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON is not supported on AIX. LLVM_ENABLE_PER_TARGET_RUNTIME_DIR is set to OFF.")
+    set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR OFF CACHE BOOL "" FORCE)
+  endif()
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.

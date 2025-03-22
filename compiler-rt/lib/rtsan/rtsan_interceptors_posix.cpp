@@ -30,6 +30,12 @@
 extern "C" {
 typedef int32_t OSSpinLock;
 void OSSpinLockLock(volatile OSSpinLock *__lock);
+// A pointer to this type is in the interface for `_os_nospin_lock_lock`, but
+// it's an internal implementation detail of `os/lock.c` on Darwin, and
+// therefore not available in any headers. As a workaround, we forward declare
+// it here, which is enough to facilitate interception of _os_nospin_lock_lock.
+struct _os_nospin_lock_s;
+using _os_nospin_lock_t = _os_nospin_lock_s *;
 }
 #endif // TARGET_OS_MAC
 
@@ -196,7 +202,11 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+#if SANITIZER_MUSL
+INTERCEPTOR(int, ioctl, int filedes, int request, ...) {
+#else
 INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+#endif
   __rtsan_notify_intercepted_call("ioctl");
 
   // See fcntl for discussion on why we use intptr_t
@@ -273,6 +283,43 @@ INTERCEPTOR(ssize_t, readlinkat, int dirfd, const char *pathname, char *buf,
 #define RTSAN_MAYBE_INTERCEPT_READLINKAT INTERCEPT_FUNCTION(readlinkat)
 #else
 #define RTSAN_MAYBE_INTERCEPT_READLINKAT
+#endif
+
+INTERCEPTOR(int, unlink, const char *pathname) {
+  __rtsan_notify_intercepted_call("unlink");
+  return REAL(unlink)(pathname);
+}
+
+INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
+  __rtsan_notify_intercepted_call("unlinkat");
+  return REAL(unlinkat)(fd, pathname, flag);
+}
+
+INTERCEPTOR(int, truncate, const char *pathname, off_t length) {
+  __rtsan_notify_intercepted_call("truncate");
+  return REAL(truncate)(pathname, length);
+}
+
+INTERCEPTOR(int, ftruncate, int fd, off_t length) {
+  __rtsan_notify_intercepted_call("ftruncate");
+  return REAL(ftruncate)(fd, length);
+}
+
+#if SANITIZER_LINUX && !SANITIZER_MUSL
+INTERCEPTOR(int, truncate64, const char *pathname, off64_t length) {
+  __rtsan_notify_intercepted_call("truncate64");
+  return REAL(truncate64)(pathname, length);
+}
+
+INTERCEPTOR(int, ftruncate64, int fd, off64_t length) {
+  __rtsan_notify_intercepted_call("ftruncate64");
+  return REAL(ftruncate64)(fd, length);
+}
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64 INTERCEPT_FUNCTION(truncate64)
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64 INTERCEPT_FUNCTION(ftruncate64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64
 #endif
 
 // Streams
@@ -673,6 +720,11 @@ INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   __rtsan_notify_intercepted_call("os_unfair_lock_lock");
   return REAL(os_unfair_lock_lock)(lock);
+}
+
+INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
+  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
+  return REAL(_os_nospin_lock_lock)(lock);
 }
 #define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK                              \
   INTERCEPT_FUNCTION(os_unfair_lock_lock)
@@ -1425,6 +1477,12 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(fchdir);
   RTSAN_MAYBE_INTERCEPT_READLINK;
   RTSAN_MAYBE_INTERCEPT_READLINKAT;
+  INTERCEPT_FUNCTION(unlink);
+  INTERCEPT_FUNCTION(unlinkat);
+  INTERCEPT_FUNCTION(truncate);
+  INTERCEPT_FUNCTION(ftruncate);
+  RTSAN_MAYBE_INTERCEPT_TRUNCATE64;
+  RTSAN_MAYBE_INTERCEPT_FTRUNCATE64;
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;

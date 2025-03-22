@@ -49,6 +49,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
@@ -67,7 +68,6 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -90,16 +90,18 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumRemoveDeadBindings,
-            "The # of times RemoveDeadBindings is called");
-STATISTIC(NumMaxBlockCountReached,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "a top level function");
-STATISTIC(NumMaxBlockCountReachedInInlined,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "an inlined function");
-STATISTIC(NumTimesRetriedWithoutInlining,
-            "The # of times we re-evaluated a call without inlining");
+STAT_COUNTER(NumRemoveDeadBindings,
+             "The # of times RemoveDeadBindings is called");
+STAT_COUNTER(
+    NumMaxBlockCountReached,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "a top level function");
+STAT_COUNTER(
+    NumMaxBlockCountReachedInInlined,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "an inlined function");
+STAT_COUNTER(NumTimesRetriedWithoutInlining,
+             "The # of times we re-evaluated a call without inlining");
 
 //===----------------------------------------------------------------------===//
 // Internal program state traits.
@@ -1745,7 +1747,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::DependentCoawaitExprClass:
     case Stmt::CoreturnStmtClass:
     case Stmt::CoyieldExprClass:
-    case Stmt::ResolvedUnexpandedPackExprClass:
     case Stmt::SEHTryStmtClass:
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
@@ -1814,6 +1815,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
     case Stmt::OMPReverseDirectiveClass:
+    case Stmt::OMPStripeDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInterchangeDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
@@ -1834,6 +1836,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OpenACCExitDataConstructClass:
     case Stmt::OpenACCHostDataConstructClass:
     case Stmt::OpenACCWaitConstructClass:
+    case Stmt::OpenACCCacheConstructClass:
     case Stmt::OpenACCInitConstructClass:
     case Stmt::OpenACCShutdownConstructClass:
     case Stmt::OpenACCSetConstructClass:
@@ -1950,7 +1953,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     // to be explicitly evaluated.
     case Stmt::PredefinedExprClass:
     case Stmt::AddrLabelExprClass:
-    case Stmt::AttributedStmtClass:
     case Stmt::IntegerLiteralClass:
     case Stmt::FixedPointLiteralClass:
     case Stmt::CharacterLiteralClass:
@@ -1977,6 +1979,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet preVisit;
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
       getCheckerManager().runCheckersForPostStmt(Dst, preVisit, S, *this);
+      Bldr.addNodes(Dst);
+      break;
+    }
+
+    case Stmt::AttributedStmtClass: {
+      Bldr.takeNodes(Pred);
+      VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
     }
@@ -2813,13 +2822,24 @@ void ExprEngine::processBranch(
     if (StTrue && StFalse)
       assert(!isa<ObjCForCollectionStmt>(Condition));
 
+    // We want to ensure consistent behavior between `eagerly-assume=false`,
+    // when the state split is always performed by the `assumeCondition()`
+    // call within this function and `eagerly-assume=true` (the default), when
+    // some conditions (comparison operators, unary negation) can trigger a
+    // state split before this callback. There are some contrived corner cases
+    // that behave differently with and without `eagerly-assume`, but I don't
+    // know about an example that could plausibly appear in "real" code.
+    bool BothFeasible =
+        (StTrue && StFalse) ||
+        didEagerlyAssumeBifurcateAt(PrevState, dyn_cast<Expr>(Condition));
+
     if (StTrue) {
-      // If we are processing a loop condition where two iterations have
-      // already been completed and the false branch is also feasible, then
-      // don't assume a third iteration because it is a redundant execution
-      // path (unlikely to be different from earlier loop exits) and can cause
-      // false positives if e.g. the loop iterates over a two-element structure
-      // with an opaque condition.
+      // In a loop, if both branches are feasible (i.e. the analyzer doesn't
+      // understand the loop condition) and two iterations have already been
+      // completed, then don't assume a third iteration because it is a
+      // redundant execution path (unlikely to be different from earlier loop
+      // exits) and can cause false positives if e.g. the loop iterates over a
+      // two-element structure with an opaque condition.
       //
       // The iteration count "2" is hardcoded because it's the natural limit:
       // * the fact that the programmer wrote a loop (and not just an `if`)
@@ -2830,10 +2850,7 @@ void ExprEngine::processBranch(
       //   two iterations". (This pattern is common in FFMPEG and appears in
       //   many other projects as well.)
       bool CompletedTwoIterations = IterationsCompletedInLoop.value_or(0) >= 2;
-      bool FalseAlsoFeasible =
-          StFalse ||
-          didEagerlyAssumeBifurcateAt(PrevState, dyn_cast<Expr>(Condition));
-      bool SkipTrueBranch = CompletedTwoIterations && FalseAlsoFeasible;
+      bool SkipTrueBranch = BothFeasible && CompletedTwoIterations;
 
       // FIXME: This "don't assume third iteration" heuristic partially
       // conflicts with the widen-loop analysis option (which is off by
@@ -2843,8 +2860,25 @@ void ExprEngine::processBranch(
         Builder.generateNode(StTrue, true, PredN);
     }
 
-    if (StFalse)
-      Builder.generateNode(StFalse, false, PredN);
+    if (StFalse) {
+      // In a loop, if both branches are feasible (i.e. the analyzer doesn't
+      // understand the loop condition), we are before the first iteration and
+      // the analyzer option `assume-at-least-one-iteration` is set to `true`,
+      // then avoid creating the execution path where the loop is skipped.
+      //
+      // In some situations this "loop is skipped" execution path is an
+      // important corner case that may evade the notice of the developer and
+      // hide significant bugs -- however, there are also many situations where
+      // it's guaranteed that at least one iteration will happen (e.g. some
+      // data structure is always nonempty), but the analyzer cannot realize
+      // this and will produce false positives when it assumes that the loop is
+      // skipped.
+      bool BeforeFirstIteration = IterationsCompletedInLoop == std::optional{0};
+      bool SkipFalseBranch = BothFeasible && BeforeFirstIteration &&
+                             AMgr.options.ShouldAssumeAtLeastOneIteration;
+      if (!SkipFalseBranch)
+        Builder.generateNode(StFalse, false, PredN);
+    }
   }
   currBldrCtx = nullptr;
 }
@@ -3516,15 +3550,16 @@ ProgramStateRef ExprEngine::processPointerEscapedOnBind(
   for (const std::pair<SVal, SVal> &LocAndVal : LocAndVals) {
     // Cases (1) and (2).
     const MemRegion *MR = LocAndVal.first.getAsRegion();
-    if (!MR ||
-        !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(MR->getMemorySpace())) {
+    const MemSpaceRegion *Space = MR ? MR->getMemorySpace(State) : nullptr;
+    if (!MR || !isa<StackSpaceRegion, StaticGlobalSpaceRegion>(Space)) {
       Escaped.push_back(LocAndVal.second);
       continue;
     }
 
     // Case (3).
     if (const auto *VR = dyn_cast<VarRegion>(MR->getBaseRegion()))
-      if (VR->hasStackParametersStorage() && VR->getStackFrame()->inTopFrame())
+      if (isa<StackArgumentsSpaceRegion>(Space) &&
+          VR->getStackFrame()->inTopFrame())
         if (const auto *RD = VR->getValueType()->getAsCXXRecordDecl())
           if (!RD->hasTrivialDestructor()) {
             Escaped.push_back(LocAndVal.second);

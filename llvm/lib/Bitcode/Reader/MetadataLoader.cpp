@@ -539,9 +539,9 @@ class MetadataLoader::MetadataLoaderImpl {
       if (!Visited.insert(S).second)
         break;
     }
-    ParentSubprogram[InitialScope] = llvm::dyn_cast_or_null<DISubprogram>(S);
 
-    return ParentSubprogram[InitialScope];
+    return ParentSubprogram[InitialScope] =
+               llvm::dyn_cast_or_null<DISubprogram>(S);
   }
 
   /// Move local imports from DICompileUnit's 'imports' field to
@@ -1229,13 +1229,13 @@ static Value *getValueFwdRef(BitcodeReaderValueList &ValueList, unsigned Idx,
 
   // This is a reference to a no longer supported constant expression.
   // Pretend that the constant was deleted, which will replace metadata
-  // references with undef.
+  // references with poison.
   // TODO: This is a rather indirect check. It would be more elegant to use
   // a separate ErrorInfo for constant materialization failure and thread
   // the error reporting through getValueFwdRef().
   if (Idx < ValueList.size() && ValueList[Idx] &&
       ValueList[Idx]->getType() == Ty)
-    return UndefValue::get(Ty);
+    return PoisonValue::get(Ty);
 
   return nullptr;
 }
@@ -1599,6 +1599,24 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_SUBRANGE_TYPE: {
+    if (Record.size() != 13)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[7]);
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DISubrangeType,
+                        (Context, getMDString(Record[1]),
+                         getMDOrNull(Record[2]), Record[3],
+                         getMDOrNull(Record[4]), Record[5], Record[6], Flags,
+                         getDITypeRefOrNull(Record[8]), getMDOrNull(Record[9]),
+                         getMDOrNull(Record[10]), getMDOrNull(Record[11]),
+                         getMDOrNull(Record[12]))),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_COMPOSITE_TYPE: {
     if (Record.size() < 16 || Record.size() > 25)
       return error("Invalid record");
@@ -1686,8 +1704,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       }
     }
 
-    if (Record.size() > 25 && Record[25] != dwarf::DW_APPLE_ENUM_KIND_invalid)
-      EnumKind = Record[25];
+    if (Record.size() > 24 && Record[24] != dwarf::DW_APPLE_ENUM_KIND_invalid)
+      EnumKind = Record[24];
 
     DICompositeType *CT = nullptr;
     if (Identifier)

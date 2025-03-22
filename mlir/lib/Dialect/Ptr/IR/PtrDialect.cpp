@@ -48,6 +48,12 @@ void PtrDialect::initialize() {
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.cpp.inc"
+
+#include "mlir/Dialect/Ptr/IR/MemorySpaceAttrInterfaces.cpp.inc"
+
+#include "mlir/Dialect/Ptr/IR/PtrOpsEnums.cpp.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
 

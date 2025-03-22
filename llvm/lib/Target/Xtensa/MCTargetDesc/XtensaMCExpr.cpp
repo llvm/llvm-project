@@ -41,9 +41,8 @@ void XtensaMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 bool XtensaMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAssembler *Asm,
-                                             const MCFixup *Fixup) const {
-  return getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup);
+                                             const MCAssembler *Asm) const {
+  return getSubExpr()->evaluateAsRelocatable(Res, Asm);
 }
 
 void XtensaMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

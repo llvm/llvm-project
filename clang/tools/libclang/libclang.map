@@ -435,6 +435,7 @@ LLVM_20 {
     clang_getTypePrettyPrinted;
     clang_isBeforeInTranslationUnit;
     clang_visitCXXBaseClasses;
+    clang_visitCXXMethods;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

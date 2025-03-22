@@ -918,6 +918,11 @@ ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   return g_section_name_eh_frame;
 }
 
+ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
+  static ConstString g_section_name_lldb_no_nlist("__lldb_no_nlist");
+  return g_section_name_lldb_no_nlist;
+}
+
 bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
@@ -2394,14 +2399,53 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   uint32_t memory_module_load_level = eMemoryModuleLoadLevelComplete;
   bool is_shared_cache_image = IsSharedCacheBinary();
   bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
+
+  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
+  ConstString g_segment_name_DATA = GetSegmentNameDATA();
+  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
+  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
+  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
+  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
+  ConstString g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
+  SectionSP text_section_sp(
+      section_list->FindSectionByName(g_segment_name_TEXT));
+  SectionSP data_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA));
   SectionSP linkedit_section_sp(
       section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
+  SectionSP data_dirty_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
+  SectionSP data_const_section_sp(
+      section_list->FindSectionByName(g_segment_name_DATA_CONST));
+  SectionSP objc_section_sp(
+      section_list->FindSectionByName(g_segment_name_OBJC));
+  SectionSP eh_frame_section_sp;
+  SectionSP lldb_no_nlist_section_sp;
+  if (text_section_sp.get()) {
+    eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
+        g_section_name_eh_frame);
+    lldb_no_nlist_section_sp = text_section_sp->GetChildren().FindSectionByName(
+        g_section_name_lldb_no_nlist);
+  } else {
+    eh_frame_section_sp =
+        section_list->FindSectionByName(g_section_name_eh_frame);
+    lldb_no_nlist_section_sp =
+        section_list->FindSectionByName(g_section_name_lldb_no_nlist);
+  }
 
   if (process && m_header.filetype != llvm::MachO::MH_OBJECT &&
       !is_local_shared_cache_image) {
     Target &target = process->GetTarget();
 
     memory_module_load_level = target.GetMemoryModuleLoadLevel();
+
+    // If __TEXT,__lldb_no_nlist section is present in this binary,
+    // and we're reading it out of memory, do not read any of the
+    // nlist entries.  They are not needed in lldb and it may be
+    // expensive to load these.  This is to handle a dylib consisting
+    // of only metadata, no code, but it has many nlist entries.
+    if (lldb_no_nlist_section_sp)
+      memory_module_load_level = eMemoryModuleLoadLevelMinimal;
 
     // Reading mach file from memory in a process or core file...
 
@@ -2525,30 +2569,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   }
 
   const bool have_strtab_data = strtab_data.GetByteSize() > 0;
-
-  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
-  ConstString g_segment_name_DATA = GetSegmentNameDATA();
-  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
-  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
-  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
-  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
-  SectionSP text_section_sp(
-      section_list->FindSectionByName(g_segment_name_TEXT));
-  SectionSP data_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA));
-  SectionSP data_dirty_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
-  SectionSP data_const_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_CONST));
-  SectionSP objc_section_sp(
-      section_list->FindSectionByName(g_segment_name_OBJC));
-  SectionSP eh_frame_section_sp;
-  if (text_section_sp.get())
-    eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
-        g_section_name_eh_frame);
-  else
-    eh_frame_section_sp =
-        section_list->FindSectionByName(g_section_name_eh_frame);
 
   const bool is_arm = (m_header.cputype == llvm::MachO::CPU_TYPE_ARM);
   const bool always_thumb = GetArchitecture().IsAlwaysThumbInstructions();
@@ -5599,9 +5619,13 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       // struct main_bin_spec
       // {
       //     uint32_t version;       // currently 2
-      //     uint32_t type;          // 0 == unspecified, 1 == kernel,
+      //     uint32_t type;          // 0 == unspecified,
+      //                             // 1 == kernel
       //                             // 2 == user process,
+      //                                     dyld mach-o binary addr
       //                             // 3 == standalone binary
+      //                             // 4 == user process,
+      //                             //      dyld_all_image_infos addr
       //     uint64_t address;       // UINT64_MAX if address not specified
       //     uint64_t slide;         // slide, UINT64_MAX if unspecified
       //                             // 0 if no slide needs to be applied to
@@ -5652,6 +5676,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
           const char *typestr = "unrecognized type";
+          type = eBinaryTypeInvalid;
           switch (binspec_type) {
           case 0:
             type = eBinaryTypeUnknown;
@@ -5668,6 +5693,10 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
           case 3:
             type = eBinaryTypeStandalone;
             typestr = "standalone";
+            break;
+          case 4:
+            type = eBinaryTypeUserAllImageInfos;
+            typestr = "userland dyld_all_image_infos";
             break;
           }
           LLDB_LOGF(log,

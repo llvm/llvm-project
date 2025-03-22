@@ -40,8 +40,6 @@ define void @foo(ptr %ptr, ptr %ptr.2) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 80, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 82, [[MIDDLE_BLOCK]] ], [ 2, [[ENTRY]] ], [ 2, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       vector.scevcheck:
-; CHECK-NEXT:    unreachable
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[CAN_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[CAN_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[TMP12:%.*]], [[LOOP]] ]

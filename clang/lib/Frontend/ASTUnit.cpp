@@ -61,7 +61,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
-#include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -219,8 +219,8 @@ struct ASTUnit::ASTWriterData {
   llvm::BitstreamWriter Stream;
   ASTWriter Writer;
 
-  ASTWriterData(InMemoryModuleCache &ModuleCache)
-      : Stream(Buffer), Writer(Stream, Buffer, ModuleCache, {}) {}
+  ASTWriterData(ModuleCache &ModCache)
+      : Stream(Buffer), Writer(Stream, Buffer, ModCache, {}) {}
 };
 
 void ASTUnit::clearFileLevelDecls() {
@@ -829,7 +829,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
-  AST->ModuleCache = new InMemoryModuleCache;
+  AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = HSOpts ? HSOpts : std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
@@ -861,8 +861,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   if (::getenv("LIBCLANG_DISABLE_PCH_VALIDATION"))
     disableValid = DisableValidationForModuleKind::All;
   AST->Reader = new ASTReader(
-      PP, *AST->ModuleCache, AST->Ctx.get(), PCHContainerRdr, {},
-      /*isysroot=*/"",
+      PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr, {}, /*isysroot=*/"",
       /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
 
   unsigned Counter = 0;
@@ -1546,7 +1545,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
                                      UserFilesAreVolatile);
-  AST->ModuleCache = new InMemoryModuleCache;
+  AST->ModCache = createCrossProcessModuleCache();
 
   return AST;
 }
@@ -1833,7 +1832,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
   AST->PreambleStoragePath = PreambleStoragePath;
-  AST->ModuleCache = new InMemoryModuleCache;
+  AST->ModCache = createCrossProcessModuleCache();
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
@@ -1844,7 +1843,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->Invocation = CI;
   AST->SkipFunctionBodies = SkipFunctionBodies;
   if (ForSerialization)
-    AST->WriterData.reset(new ASTWriterData(*AST->ModuleCache));
+    AST->WriterData.reset(new ASTWriterData(*AST->ModCache));
   // Zero out now to ease cleanup during crash recovery.
   CI = nullptr;
   Diags = nullptr;
@@ -2379,8 +2378,8 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  InMemoryModuleCache ModuleCache;
-  ASTWriter Writer(Stream, Buffer, ModuleCache, {});
+  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
+  ASTWriter Writer(Stream, Buffer, *ModCache, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }
 

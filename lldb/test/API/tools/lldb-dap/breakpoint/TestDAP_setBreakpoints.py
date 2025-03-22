@@ -27,7 +27,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         with the corresponding source maps to have breakpoints and frames
         working.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
 
         other_basename = "other-copy.c"
         other_path = self.getBuildArtifact(other_basename)
@@ -100,7 +100,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_set_and_clear(self):
         """Tests setting and clearing source file and line breakpoints.
-        This packet is a bit tricky on the debug adaptor side since there
+        This packet is a bit tricky on the debug adapter side since there
         is no "clearBreakpoints" packet. Source file and line breakpoints
         are set by sending a "setBreakpoints" packet with a source file
         specified and zero or more source lines. If breakpoints have been
@@ -116,7 +116,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         third_line = line_number("main.cpp", "break 14")
         lines = [first_line, third_line, second_line]
 
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")
@@ -257,7 +257,7 @@ class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
             line_number("main.cpp", "break 13"),
         ]
 
-        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # Visual Studio Code Debug Adapters have no way to specify the file
         # without launching or attaching to a process, so we must start a
         # process in order to be able to set breakpoints.
         program = self.getBuildArtifact("a.out")

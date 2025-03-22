@@ -20,7 +20,7 @@ static int f(void);
 static int f(void); // f
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant 'f' declaration
 // CHECK-FIXES: {{^}}// f{{$}}
-static int f(void) {}
+static int f(void) { return 0; }
 
 inline void g(void) {}
 

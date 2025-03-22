@@ -19,12 +19,12 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
 ; SI-SDAG-NEXT:    s_mov_b32 s2, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -106,10 +106,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -199,12 +199,12 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e64 s[2:3], |s[0:1]|, v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], |s[0:1]|, v0
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], exec
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
 ; SI-SDAG-NEXT:    s_mov_b32 s2, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -286,10 +286,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_fabs(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e64 s[2:3], |s[0:1]|, v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], |s[0:1]|, v0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], s[2:3], exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -380,12 +380,12 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
 ; SI-SDAG-NEXT:    s_mov_b32 s2, 0xbff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -467,10 +467,10 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_f64(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -560,12 +560,12 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 9
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], -s[0:1], v0
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
 ; SI-SDAG-NEXT:    s_mov_b32 s2, 0xbff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -647,10 +647,10 @@ define amdgpu_ps <2 x i32> @s_neg_rsq_neg_f64(double inreg %x) {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 9
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], -s[0:1], v0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -741,12 +741,12 @@ define double @v_rsq_f64(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -827,8 +827,8 @@ define double @v_rsq_f64(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -910,12 +910,12 @@ define double @v_rsq_f64_fabs(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -996,8 +996,8 @@ define double @v_rsq_f64_fabs(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], |v[0:1]|, v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -1080,12 +1080,12 @@ define double @v_rsq_f64_missing_contract0(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -1166,8 +1166,8 @@ define double @v_rsq_f64_missing_contract0(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -1249,12 +1249,12 @@ define double @v_rsq_f64_missing_contract1(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -1335,8 +1335,8 @@ define double @v_rsq_f64_missing_contract1(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -1418,12 +1418,12 @@ define double @v_neg_rsq_f64(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0xbff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -1504,8 +1504,8 @@ define double @v_neg_rsq_f64(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -1588,23 +1588,22 @@ define <2 x double> @v_rsq_v2f64(<2 x double> %x) {
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[4:5]
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v6, 8, v6
+; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
+; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, v6, s[4:5]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v6
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
+; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[10:11], v[0:1], v[6:7]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[6:7], 0.5
-; SI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
 ; SI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
-; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
+; SI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
-; SI-SDAG-NEXT:    v_fma_f64 v[18:19], -v[10:11], v[10:11], v[0:1]
+; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[6:7]
+; SI-SDAG-NEXT:    v_fma_f64 v[18:19], -v[10:11], v[10:11], v[0:1]
 ; SI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[18:19], v[6:7], v[10:11]
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
@@ -1743,45 +1742,44 @@ define <2 x double> @v_rsq_v2f64(<2 x double> %x) {
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v4, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[4:5]
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v4
-; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
+; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v5
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
-; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
-; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
+; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_mul_f64 v[10:11], v[0:1], v[6:7]
 ; VI-SDAG-NEXT:    v_mul_f64 v[6:7], v[6:7], 0.5
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
+; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
+; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
-; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
-; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[4:5]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
 ; VI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[6:7]
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
+; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[4:5]
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
-; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[12:13], v[4:5], v[8:9]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
 ; VI-SDAG-NEXT:    v_fma_f64 v[10:11], v[14:15], v[6:7], v[10:11]
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
 ; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
-; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v10, 0, v8, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
+; VI-SDAG-NEXT:    v_ldexp_f64 v[6:7], v[6:7], v8
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[2:3], v9
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v10
-; VI-SDAG-NEXT:    v_ldexp_f64 v[6:7], v[6:7], v8
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v3, s[4:5]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v7, v1, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v6, v0, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v3, s[4:5]
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[5:6], s[6:7], v[0:1], v[0:1], 1.0
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[7:8], s[4:5], v[2:3], v[2:3], 1.0
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[17:18], s[4:5], 1.0, v[2:3], 1.0
 ; VI-SDAG-NEXT:    v_rcp_f64_e32 v[9:10], v[5:6]
@@ -1890,23 +1888,22 @@ define <2 x double> @v_neg_rsq_v2f64(<2 x double> %x) {
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[4:5]
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v6, 8, v6
+; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
+; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, v6, s[4:5]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v6
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    s_mov_b32 s6, 0xbff00000
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
+; SI-SDAG-NEXT:    s_mov_b32 s6, 0xbff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[10:11], v[0:1], v[6:7]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[6:7], 0.5
-; SI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
 ; SI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
-; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
+; SI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
-; SI-SDAG-NEXT:    v_fma_f64 v[18:19], -v[10:11], v[10:11], v[0:1]
+; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[6:7]
+; SI-SDAG-NEXT:    v_fma_f64 v[18:19], -v[10:11], v[10:11], v[0:1]
 ; SI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[18:19], v[6:7], v[10:11]
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
@@ -2045,45 +2042,44 @@ define <2 x double> @v_neg_rsq_v2f64(<2 x double> %x) {
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v4, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[4:5]
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v4
-; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
+; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v5
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
-; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
-; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
+; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_mul_f64 v[10:11], v[0:1], v[6:7]
 ; VI-SDAG-NEXT:    v_mul_f64 v[6:7], v[6:7], 0.5
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
+; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
+; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
-; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
-; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[4:5]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
 ; VI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[6:7]
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
+; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[4:5]
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
-; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[12:13], v[4:5], v[8:9]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
 ; VI-SDAG-NEXT:    v_fma_f64 v[10:11], v[14:15], v[6:7], v[10:11]
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
 ; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
-; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v10, 0, v8, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
+; VI-SDAG-NEXT:    v_ldexp_f64 v[6:7], v[6:7], v8
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[2:3], v9
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v10
-; VI-SDAG-NEXT:    v_ldexp_f64 v[6:7], v[6:7], v8
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v3, s[4:5]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v7, v1, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v6, v0, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v3, s[4:5]
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[5:6], s[6:7], v[0:1], v[0:1], -1.0
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[7:8], s[4:5], v[2:3], v[2:3], -1.0
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[17:18], s[4:5], -1.0, v[2:3], -1.0
 ; VI-SDAG-NEXT:    v_rcp_f64_e32 v[9:10], v[5:6]
@@ -2191,12 +2187,12 @@ define <2 x double> @v_neg_rsq_v2f64_poisonelt(<2 x double> %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0xbff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -2315,8 +2311,8 @@ define <2 x double> @v_neg_rsq_v2f64_poisonelt(<2 x double> %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -2434,23 +2430,22 @@ define <2 x double> @v_neg_pos_rsq_v2f64(<2 x double> %x) {
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, 1, s[4:5]
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v6, 8, v6
+; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
+; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, v6, s[4:5]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v6
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    s_mov_b32 s6, 0xbff00000
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
+; SI-SDAG-NEXT:    s_mov_b32 s6, 0xbff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[10:11], v[0:1], v[6:7]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[6:7], 0.5
-; SI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
 ; SI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
-; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
+; SI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
-; SI-SDAG-NEXT:    v_fma_f64 v[18:19], -v[10:11], v[10:11], v[0:1]
+; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[6:7]
+; SI-SDAG-NEXT:    v_fma_f64 v[18:19], -v[10:11], v[10:11], v[0:1]
 ; SI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], v[18:19], v[6:7], v[10:11]
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
@@ -2592,45 +2587,44 @@ define <2 x double> @v_neg_pos_rsq_v2f64(<2 x double> %x) {
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v4, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[4:5]
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v4
-; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
+; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v5
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
-; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
-; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
+; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_mul_f64 v[10:11], v[0:1], v[6:7]
 ; VI-SDAG-NEXT:    v_mul_f64 v[6:7], v[6:7], 0.5
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
+; VI-SDAG-NEXT:    v_mul_f64 v[8:9], v[2:3], v[4:5]
+; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[6:7], v[10:11], 0.5
-; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
-; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[4:5]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[4:5], v[8:9], 0.5
 ; VI-SDAG-NEXT:    v_fma_f64 v[10:11], v[10:11], v[14:15], v[10:11]
 ; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[14:15], v[6:7]
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[12:13], v[8:9]
+; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], v[4:5]
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
-; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[12:13], v[4:5], v[8:9]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
 ; VI-SDAG-NEXT:    v_fma_f64 v[10:11], v[14:15], v[6:7], v[10:11]
-; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[8:9], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
+; VI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[8:9], v[8:9], v[2:3]
+; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
 ; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
-; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v10, 0, v8, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
+; VI-SDAG-NEXT:    v_ldexp_f64 v[6:7], v[6:7], v8
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], v[2:3], v9
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v10
-; VI-SDAG-NEXT:    v_ldexp_f64 v[6:7], v[6:7], v8
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v3, s[4:5]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v1, v7, v1, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v0, v6, v0, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v3, v5, v3, s[4:5]
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[5:6], s[6:7], v[0:1], v[0:1], -1.0
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, v4, v2, s[4:5]
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[7:8], s[4:5], v[2:3], v[2:3], 1.0
 ; VI-SDAG-NEXT:    v_div_scale_f64 v[17:18], s[4:5], 1.0, v[2:3], 1.0
 ; VI-SDAG-NEXT:    v_rcp_f64_e32 v[9:10], v[5:6]
@@ -2738,12 +2732,12 @@ define double @v_rsq_f64_fneg_fabs(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 9
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -2824,8 +2818,8 @@ define double @v_rsq_f64_fneg_fabs(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 9
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e64 vcc, |v[0:1]|, s[4:5]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], -|v[0:1]|, v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -2909,12 +2903,12 @@ define double @v_rsq_f64__afn_sqrt(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -2995,8 +2989,8 @@ define double @v_rsq_f64__afn_sqrt(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3078,12 +3072,12 @@ define double @v_rsq_f64__afn_fdiv(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -3148,8 +3142,8 @@ define double @v_rsq_f64__afn_fdiv(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3223,12 +3217,12 @@ define double @v_rsq_f64__afn(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -3293,8 +3287,8 @@ define double @v_rsq_f64__afn(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3368,12 +3362,12 @@ define double @v_neg_rsq_f64__afn(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -3439,8 +3433,8 @@ define double @v_neg_rsq_f64__afn(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3515,12 +3509,12 @@ define double @v_rsq_f64__afn_ninf(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -3585,8 +3579,8 @@ define double @v_rsq_f64__afn_ninf(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3660,12 +3654,12 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -3730,8 +3724,8 @@ define double @v_rsq_f64__afn_nnan(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3805,12 +3799,12 @@ define double @v_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -3875,8 +3869,8 @@ define double @v_rsq_f64__afn_nnan_ninf(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -3950,12 +3944,12 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -4021,8 +4015,8 @@ define double @v_neg_rsq_f64__afn_nnan_ninf(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -4097,12 +4091,12 @@ define double @v_rsq_f64__nnan_ninf(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0x3ff00000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -4183,8 +4177,8 @@ define double @v_rsq_f64__nnan_ninf(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -4266,40 +4260,39 @@ define <2 x double> @v_rsq_v2f64__afn_nnan_ninf(<2 x double> %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; SI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; SI-SDAG-NEXT:    v_mov_b32_e32 v12, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v12, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v14, 0xffffff80
+; SI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v12, 0, v14, vcc
+; SI-SDAG-NEXT:    v_mov_b32_e32 v14, 0xffffff80
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v15, 0x260
-; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v15
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[8:9], v[6:7]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, 1, s[4:5]
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v8, 8, v8
+; SI-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, v12, s[4:5]
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[6:7], v[2:3]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v8
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[10:11], v[4:5], v[6:7]
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[8:9], v[0:1]
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[6:7], v[2:3]
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v12, 0, v14, vcc
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[10:11], v[4:5], v[6:7]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[0:1], v[8:9]
 ; SI-SDAG-NEXT:    v_mul_f64 v[8:9], v[8:9], 0.5
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v12
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[8:9], v[6:7], 0.5
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
+; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v15
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[10:11], v[6:7]
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], v[8:9], v[10:11], v[8:9]
 ; SI-SDAG-NEXT:    v_fma_f64 v[12:13], -v[6:7], v[6:7], v[0:1]
-; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[12:13], v[8:9], v[6:7]
-; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v15
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[6:7], v[0:1]
+; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v15
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[10:11], v[8:9], v[6:7]
 ; SI-SDAG-NEXT:    v_cndmask_b32_e64 v6, 0, v14, s[4:5]
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v6
@@ -4391,11 +4384,10 @@ define <2 x double> @v_rsq_v2f64__afn_nnan_ninf(<2 x double> %x) {
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
-; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, s[4:5]
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v4, vcc
+; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[4:5]
+; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v5
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v4
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[6:7], v[0:1]
@@ -4417,8 +4409,8 @@ define <2 x double> @v_rsq_v2f64__afn_nnan_ninf(<2 x double> %x) {
 ; VI-SDAG-NEXT:    v_fma_f64 v[14:15], -v[10:11], v[10:11], v[0:1]
 ; VI-SDAG-NEXT:    v_fma_f64 v[4:5], v[12:13], v[4:5], v[8:9]
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; VI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; VI-SDAG-NEXT:    v_fma_f64 v[6:7], v[14:15], v[6:7], v[10:11]
+; VI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; VI-SDAG-NEXT:    v_cndmask_b32_e32 v10, 0, v8, vcc
 ; VI-SDAG-NEXT:    v_cndmask_b32_e64 v8, 0, v8, s[4:5]
 ; VI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v9
@@ -4519,12 +4511,12 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) #0 {
 ; SI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; SI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
 ; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0x260
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; SI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; SI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; SI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; SI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
+; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v8
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
@@ -4590,10 +4582,10 @@ define amdgpu_ps <2 x i32> @s_rsq_f64_unsafe(double inreg %x) #0 {
 ; VI-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-SDAG-NEXT:    v_bfrev_b32_e32 v1, 8
 ; VI-SDAG-NEXT:    v_cmp_lt_f64_e32 vcc, s[0:1], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; VI-SDAG-NEXT:    s_and_b64 s[2:3], vcc, exec
+; VI-SDAG-NEXT:    s_cselect_b32 s2, 0x100, 0
+; VI-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], s[0:1], v0
-; VI-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; VI-SDAG-NEXT:    s_cselect_b32 s0, 0xffffff80, 0
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -4675,12 +4667,12 @@ define double @v_rsq_f64_unsafe(double %x) #0 {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
@@ -4745,8 +4737,8 @@ define double @v_rsq_f64_unsafe(double %x) #0 {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
@@ -5074,24 +5066,24 @@ define double @v_div_contract_sqrt_f64(double %x, double %y) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v10, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; SI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v11, 0x260
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[8:9], v[6:7]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[6:7], v[2:3]
-; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[8:9], v[4:5], v[6:7]
+; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[6:7], v[2:3]
+; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[10:11], v[4:5], v[6:7]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v10, 0xffffff80
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[6:7], v[2:3]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[6:7]
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0, v10, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v6
-; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v11
+; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x260
+; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v6
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-SDAG-NEXT:    v_div_scale_f64 v[4:5], s[4:5], v[2:3], v[2:3], v[0:1]
@@ -5158,8 +5150,8 @@ define double @v_div_contract_sqrt_f64(double %x, double %y) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
@@ -5241,24 +5233,24 @@ define double @v_div_arcp_sqrt_f64(double %x, double %y) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v10, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; SI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v11, 0x260
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[8:9], v[6:7]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[6:7], v[2:3]
-; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[8:9], v[4:5], v[6:7]
+; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[6:7], v[2:3]
+; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[10:11], v[4:5], v[6:7]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v10, 0xffffff80
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[6:7], v[2:3]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[6:7]
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0, v10, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v6
-; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v11
+; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x260
+; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v6
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-SDAG-NEXT:    v_div_scale_f64 v[4:5], s[4:5], v[2:3], v[2:3], v[0:1]
@@ -5325,8 +5317,8 @@ define double @v_div_arcp_sqrt_f64(double %x, double %y) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
@@ -5408,24 +5400,24 @@ define double @v_div_contract_arcp_sqrt_f64(double %x, double %y) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v10, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; SI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
-; SI-SDAG-NEXT:    v_mov_b32_e32 v11, 0x260
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[4:5], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[6:7], v[8:9], v[6:7]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[8:9], v[4:5]
-; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[6:7], v[2:3]
-; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[8:9], v[4:5], v[6:7]
+; SI-SDAG-NEXT:    v_fma_f64 v[10:11], -v[6:7], v[6:7], v[2:3]
+; SI-SDAG-NEXT:    v_fma_f64 v[6:7], v[10:11], v[4:5], v[6:7]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v10, 0xffffff80
 ; SI-SDAG-NEXT:    v_fma_f64 v[8:9], -v[6:7], v[6:7], v[2:3]
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[8:9], v[4:5], v[6:7]
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0, v10, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[4:5], v[4:5], v6
-; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v11
+; SI-SDAG-NEXT:    v_mov_b32_e32 v6, 0x260
+; SI-SDAG-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v6
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-SDAG-NEXT:    v_div_scale_f64 v[4:5], s[4:5], v[2:3], v[2:3], v[0:1]
@@ -5492,8 +5484,8 @@ define double @v_div_contract_arcp_sqrt_f64(double %x, double %y) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[2:3]
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
+; VI-SDAG-NEXT:    v_mov_b32_e32 v4, 0x100
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[2:3], v[2:3], v4
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[4:5], v[2:3]
 ; VI-SDAG-NEXT:    v_mul_f64 v[6:7], v[2:3], v[4:5]
@@ -5575,17 +5567,17 @@ define double @v_div_const_contract_sqrt_f64(double %x) {
 ; SI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; SI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; SI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
-; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
-; SI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; SI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
+; SI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; SI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
-; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
+; SI-SDAG-NEXT:    v_mov_b32_e32 v8, 0xffffff80
 ; SI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
+; SI-SDAG-NEXT:    v_mov_b32_e32 v9, 0x260
 ; SI-SDAG-NEXT:    s_mov_b32 s6, 0
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0x40700000
-; SI-SDAG-NEXT:    s_mov_b32 s8, 0x40700000
 ; SI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]
 ; SI-SDAG-NEXT:    v_mul_f64 v[2:3], v[2:3], 0.5
+; SI-SDAG-NEXT:    s_mov_b32 s8, 0x40700000
 ; SI-SDAG-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 0.5
 ; SI-SDAG-NEXT:    v_fma_f64 v[4:5], v[4:5], v[6:7], v[4:5]
 ; SI-SDAG-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[2:3]
@@ -5665,10 +5657,10 @@ define double @v_div_const_contract_sqrt_f64(double %x) {
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_brev_b32 s5, 8
 ; VI-SDAG-NEXT:    v_cmp_gt_f64_e32 vcc, s[4:5], v[0:1]
+; VI-SDAG-NEXT:    v_mov_b32_e32 v2, 0x100
 ; VI-SDAG-NEXT:    s_mov_b32 s4, 0
 ; VI-SDAG-NEXT:    s_mov_b32 s5, 0x40700000
-; VI-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
-; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; VI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; VI-SDAG-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; VI-SDAG-NEXT:    v_rsq_f64_e32 v[2:3], v[0:1]
 ; VI-SDAG-NEXT:    v_mul_f64 v[4:5], v[0:1], v[2:3]

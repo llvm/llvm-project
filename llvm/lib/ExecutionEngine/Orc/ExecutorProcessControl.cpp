@@ -54,9 +54,8 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   // FIXME: Don't add an UnwindInfoManager by default -- it's redundant when
   //        the ORC runtime is loaded. We'll need a way to document this and
   //        allow clients to choose.
-  this->UnwindInfoMgr = UnwindInfoManager::TryCreate();
-  if (this->UnwindInfoMgr)
-    this->UnwindInfoMgr->addBootstrapSymbols(this->BootstrapSymbols);
+  if (UnwindInfoManager::TryEnable())
+    UnwindInfoManager::addBootstrapSymbols(this->BootstrapSymbols);
 #endif // __APPLE__
 }
 

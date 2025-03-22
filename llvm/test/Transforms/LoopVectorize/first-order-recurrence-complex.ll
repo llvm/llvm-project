@@ -16,9 +16,9 @@ define void @can_sink_after_store(i32 %x, ptr %ptr, i64 %tc) local_unnamed_addr 
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[IDX_PHI_TRANS]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -96,9 +96,9 @@ define void @sink_sdiv(i32 %x, ptr %ptr, i64 %tc) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[IDX_PHI_TRANS]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -175,9 +175,9 @@ define void @can_sink_with_additional_user(i32 %x, ptr %ptr, i64 %tc) {
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[IDX_PHI_TRANS]], align 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i32> poison, i32 [[DOTPRE]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

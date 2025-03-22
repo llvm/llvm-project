@@ -103,6 +103,10 @@ def TEST_TestType : DialectType<Test_Dialect,
     CPred<"::llvm::isa<::test::TestType>($_self)">, "test">,
     BuildableType<"$_builder.getType<::test::TestType>()">;
 
+def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
+  let arguments = (ins Variadic<SignlessIntegerLike>:$x);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//
@@ -951,6 +955,25 @@ def ResultNameFromTypeOp
 def BlockArgumentNameFromTypeOp
   : TEST_Op<"block_argument_name_from_type",
       [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "regions attr-dict-with-keyword";
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for op result name when OpAsmOpInterface::getAsmResultNames is the default implementation
+// i.e. does nothing.
+def ResultNameFromTypeInterfaceOp
+ : TEST_Op<"result_name_from_type_interface",
+           [OpAsmOpInterface]> {
+  let results = (outs Variadic<AnyType>:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for block argument name when OpAsmOpInterface::getAsmBlockArgumentNames is the default implementation
+// i.e. does nothing.
+def BlockArgumentNameFromTypeInterfaceOp
+  : TEST_Op<"block_argument_name_from_type_interface",
+      [OpAsmOpInterface]> {
   let regions = (region AnyRegion:$body);
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
@@ -1917,9 +1940,17 @@ def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
 def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
-def DuplicateBlockArgsOp : TEST_Op<"duplicate_block_args", [SingleBlock]> {
-  let arguments = (ins UnitAttr:$is_legal);
+def ConvertBlockArgsOp : TEST_Op<"convert_block_args", [SingleBlock]> {
+  let arguments = (ins UnitAttr:$is_legal, UnitAttr:$replace_with_operand,
+                       UnitAttr:$duplicate, Optional<AnyType>:$val);
   let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $val
+    (`is_legal` $is_legal^)?
+    (`duplicate` $duplicate^)?
+    (`replace_with_operand` $replace_with_operand^)?
+    $body attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 // Check that the conversion infrastructure can properly undo the creation of
@@ -2483,6 +2514,13 @@ def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
 def TableGenBuildOp6 : TEST_Op<"tblgen_build_6", [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<AnyType>:$a, Variadic<AnyType>:$b);
   let results = (outs F32:$result);
+}
+
+// An inherent attribute. Test collective builders, both those that take properties as
+// properties structs and those that take an attribute dictionary.
+def TableGenBuildOp7 : TEST_Op<"tblgen_build_7", []> {
+  let arguments = (ins BoolAttr:$attr0);
+  let results = (outs);
 }
 
 //===----------------------------------------------------------------------===//

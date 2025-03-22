@@ -152,7 +152,7 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
   for (llvm::BasicBlock *basicBlock : basicBlocks) {
     if (!blocks.contains(basicBlock)) {
       llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(basicBlock);
-      blocks.insert(traversal.begin(), traversal.end());
+      blocks.insert_range(traversal);
     }
   }
   assert(blocks.size() == basicBlocks.size() && "some blocks are not sorted");
@@ -162,7 +162,8 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
-                           bool importEmptyDICompositeTypes)
+                           bool importEmptyDICompositeTypes,
+                           bool preferUnregisteredIntrinsics)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
@@ -171,7 +172,8 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
           mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
-      emitExpensiveWarnings(emitExpensiveWarnings) {
+      emitExpensiveWarnings(emitExpensiveWarnings),
+      preferUnregisteredIntrinsics(preferUnregisteredIntrinsics) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -517,6 +519,33 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertModuleFlagsMetadata() {
+  SmallVector<llvm::Module::ModuleFlagEntry> llvmModuleFlags;
+  llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
+
+  SmallVector<Attribute> moduleFlags;
+  for (const auto [behavior, key, val] : llvmModuleFlags) {
+    // Currently only supports most common: int constant values.
+    auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
+    if (!constInt) {
+      emitWarning(mlirModule.getLoc())
+          << "unsupported module flag value: " << diagMD(val, llvmModule.get())
+          << ", only constant integer currently supported";
+      continue;
+    }
+
+    moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
+        convertModFlagBehaviorFromLLVM(behavior),
+        builder.getStringAttr(key->getString()), constInt->getZExtValue()));
+  }
+
+  if (!moduleFlags.empty())
+    builder.create<LLVM::ModuleFlagsOp>(mlirModule.getLoc(),
+                                        builder.getArrayAttr(moduleFlags));
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     if (named.getName() != "llvm.linker.options")
@@ -596,6 +625,8 @@ LogicalResult ModuleImport::convertMetadata() {
   }
   if (failed(convertLinkerOptionsMetadata()))
     return failure();
+  if (failed(convertModuleFlagsMetadata()))
+    return failure();
   if (failed(convertIdentMetadata()))
     return failure();
   if (failed(convertCommandlineMetadata()))
@@ -673,8 +704,9 @@ LogicalResult ModuleImport::convertDataLayout() {
 }
 
 void ModuleImport::convertTargetTriple() {
-  mlirModule->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
-                      builder.getStringAttr(llvmModule->getTargetTriple()));
+  mlirModule->setAttr(
+      LLVM::LLVMDialect::getTargetTripleAttrName(),
+      builder.getStringAttr(llvmModule->getTargetTriple().str()));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -759,11 +791,6 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
   iface->setAttr(iface.getFastmathAttrName(), attr);
 }
 
-/// Returns if `type` is a scalar integer or floating-point type.
-static bool isScalarType(Type type) {
-  return isa<IntegerType, FloatType>(type);
-}
-
 /// Returns `type` if it is a builtin integer or floating-point vector type that
 /// can be used to create an attribute or nullptr otherwise. If provided,
 /// `arrayShape` is added to the shape of the vector to create an attribute that
@@ -781,7 +808,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
 
   // An LLVM dialect vector can only contain scalars.
   Type elementType = LLVM::getVectorElementType(type);
-  if (!isScalarType(elementType))
+  if (!elementType.isIntOrFloat())
     return {};
 
   SmallVector<int64_t> shape(arrayShape);
@@ -794,7 +821,7 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
     return {};
 
   // Return builtin integer and floating-point types as is.
-  if (isScalarType(type))
+  if (type.isIntOrFloat())
     return type;
 
   // Return builtin vectors of integer and floating-point types as is.
@@ -808,7 +835,7 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
     arrayShape.push_back(arrayType.getNumElements());
     type = arrayType.getElementType();
   }
-  if (isScalarType(type))
+  if (type.isIntOrFloat())
     return RankedTensorType::get(arrayShape, type);
   return getVectorTypeForAttr(type, arrayShape);
 }
@@ -962,13 +989,18 @@ ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
   return symbolRef;
 }
 
-LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
-  // Insert the global after the last one or at the start of the module.
+OpBuilder::InsertionGuard ModuleImport::setGlobalInsertionPoint() {
   OpBuilder::InsertionGuard guard(builder);
-  if (!aliasInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
+  if (globalInsertionOp)
+    builder.setInsertionPointAfter(globalInsertionOp);
   else
-    builder.setInsertionPointAfter(aliasInsertionOp);
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  return guard;
+}
+
+LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
+  // Insert the alias after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
   AliasOp aliasOp = builder.create<AliasOp>(
@@ -977,7 +1009,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
       /*dso_local=*/alias->isDSOLocal(),
       /*thread_local=*/alias->isThreadLocal(),
       /*attrs=*/ArrayRef<NamedAttribute>());
-  aliasInsertionOp = aliasOp;
+  globalInsertionOp = aliasOp;
 
   clearRegionState();
   Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
@@ -996,11 +1028,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
 
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   // Insert the global after the last one or at the start of the module.
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Attribute valueAttr;
   if (globalVar->hasInitializer())
@@ -1070,10 +1098,20 @@ LogicalResult
 ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   if (!globalVar->hasInitializer() || !globalVar->hasAppendingLinkage())
     return failure();
-  auto *initializer =
-      dyn_cast<llvm::ConstantArray>(globalVar->getInitializer());
-  if (!initializer)
+  llvm::Constant *initializer = globalVar->getInitializer();
+
+  bool knownInit = isa<llvm::ConstantArray>(initializer) ||
+                   isa<llvm::ConstantAggregateZero>(initializer);
+  if (!knownInit)
     return failure();
+
+  // ConstantAggregateZero does not engage with the operand initialization
+  // in the loop that follows - there should be no operands. This implies
+  // empty ctor/dtor lists.
+  if (auto *caz = dyn_cast<llvm::ConstantAggregateZero>(initializer)) {
+    if (caz->getElementCount().getFixedValue() != 0)
+      return failure();
+  }
 
   SmallVector<Attribute> funcs;
   SmallVector<int32_t> priorities;
@@ -1096,11 +1134,8 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
     priorities.push_back(priority->getValue().getZExtValue());
   }
 
-  OpBuilder::InsertionGuard guard(builder);
-  if (!globalInsertionOp)
-    builder.setInsertionPointToStart(mlirModule.getBody());
-  else
-    builder.setInsertionPointAfter(globalInsertionOp);
+  // Insert the global after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   if (globalVar->getName() == getGlobalCtorsVarName()) {
     globalInsertionOp = builder.create<LLVM::GlobalCtorsOp>(
@@ -2205,7 +2240,8 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
 }
 
 void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
-                                              CallOpInterface callOp,
+                                              ArrayAttr &argsAttr,
+                                              ArrayAttr &resAttr,
                                               OpBuilder &builder) {
   llvm::AttributeList llvmAttrs = call->getAttributes();
   SmallVector<llvm::AttributeSet> llvmArgAttrsSet;
@@ -2225,14 +2261,23 @@ void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
     SmallVector<DictionaryAttr> argAttrs;
     for (auto &llvmArgAttrs : llvmArgAttrsSet)
       argAttrs.emplace_back(convertParameterAttribute(llvmArgAttrs, builder));
-    callOp.setArgAttrsAttr(getArrayAttr(argAttrs));
+    argsAttr = getArrayAttr(argAttrs);
   }
 
   llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
   if (!llvmResAttr.hasAttributes())
     return;
   DictionaryAttr resAttrs = convertParameterAttribute(llvmResAttr, builder);
-  callOp.setResAttrsAttr(getArrayAttr({resAttrs}));
+  resAttr = getArrayAttr({resAttrs});
+}
+
+void ModuleImport::convertParameterAttributes(llvm::CallBase *call,
+                                              CallOpInterface callOp,
+                                              OpBuilder &builder) {
+  ArrayAttr argsAttr, resAttr;
+  convertParameterAttributes(call, argsAttr, resAttr, builder);
+  callOp.setArgAttrsAttr(argsAttr);
+  callOp.setResAttrsAttr(resAttr);
 }
 
 template <typename Op>
@@ -2249,10 +2294,15 @@ LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
 LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
                                                   CallOp op) {
   setFastmathFlagsAttr(inst, op.getOperation());
+  // Query the attributes directly instead of using `inst->getFnAttr(Kind)`, the
+  // latter does additional lookup to the parent and inherits, changing the
+  // semantics too early.
+  llvm::AttributeList callAttrs = inst->getAttributes();
+
   op.setTailCallKind(convertTailCallKindFromLLVM(inst->getTailCallKind()));
-  op.setConvergent(inst->isConvergent());
-  op.setNoUnwind(inst->doesNotThrow());
-  op.setWillReturn(inst->hasFnAttr(llvm::Attribute::WillReturn));
+  op.setConvergent(callAttrs.getFnAttr(llvm::Attribute::Convergent).isValid());
+  op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
+  op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
 
   llvm::MemoryEffects memEffects = inst->getMemoryEffects();
   ModRefInfo othermem = convertModRefInfoFromLLVM(
@@ -2508,11 +2558,35 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
   return loopAnnotationImporter->translateLoopAnnotation(node, loc);
 }
 
-OwningOpRef<ModuleOp>
-mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context, bool emitExpensiveWarnings,
-                              bool dropDICompositeTypeElements,
-                              bool loadAllDialects) {
+FailureOr<DereferenceableAttr>
+ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
+                                           unsigned kindID) {
+  Location loc = mlirModule.getLoc();
+
+  // The only operand should be a constant integer representing the number of
+  // dereferenceable bytes.
+  if (node->getNumOperands() != 1)
+    return emitError(loc) << "dereferenceable metadata must have one operand: "
+                          << diagMD(node, llvmModule.get());
+
+  auto *numBytesMD = dyn_cast<llvm::ConstantAsMetadata>(node->getOperand(0));
+  auto *numBytesCst = dyn_cast<llvm::ConstantInt>(numBytesMD->getValue());
+  if (!numBytesCst || !numBytesCst->getValue().isNonNegative())
+    return emitError(loc) << "dereferenceable metadata operand must be a "
+                             "non-negative constant integer: "
+                          << diagMD(node, llvmModule.get());
+
+  bool mayBeNull = kindID == llvm::LLVMContext::MD_dereferenceable_or_null;
+  auto derefAttr = builder.getAttr<DereferenceableAttr>(
+      numBytesCst->getZExtValue(), mayBeNull);
+
+  return derefAttr;
+}
+
+OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
+    std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
+    bool emitExpensiveWarnings, bool dropDICompositeTypeElements,
+    bool loadAllDialects, bool preferUnregisteredIntrinsics) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2529,7 +2603,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings, dropDICompositeTypeElements);
+                            emitExpensiveWarnings, dropDICompositeTypeElements,
+                            preferUnregisteredIntrinsics);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

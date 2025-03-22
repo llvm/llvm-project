@@ -1,5 +1,15 @@
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
+#include <clc/utils.h>
+
+#define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
+#define __CLC_CONVERT_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_GENTYPE)
+
+#define __CLC_AS_U_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_U_GENTYPE)
+#define __CLC_CONVERT_U_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_U_GENTYPE)
+
+#define __CLC_AS_S_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_S_GENTYPE)
+#define __CLC_CONVERT_S_GENTYPE __CLC_XCONCAT(__clc_convert_, __CLC_S_GENTYPE)
 
 // These 2 defines only change when switching between data sizes or base types
 // to keep this file manageable.
@@ -532,3 +542,12 @@
 #undef __CLC_GENSIZE
 #undef __CLC_SCALAR_GENTYPE
 #undef __CLC_BODY
+
+#undef __CLC_CONVERT_S_GENTYPE
+#undef __CLC_AS_S_GENTYPE
+
+#undef __CLC_CONVERT_U_GENTYPE
+#undef __CLC_AS_U_GENTYPE
+
+#undef __CLC_CONVERT_GENTYPE
+#undef __CLC_AS_GENTYPE

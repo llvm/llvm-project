@@ -47,7 +47,7 @@ define dso_local i1 @test2(ptr readonly %0) {
   ret i1 %2
 }
 
-define dso_local i32 @test4(ptr readonly %0, i1 %cond) {
+define dso_local i32 @test4(ptr readonly %0, i1 %cond) nofree nosync {
 ; COUNTER1-LABEL: @test4(
 ; COUNTER1-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 4) ]
 ; COUNTER1-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]

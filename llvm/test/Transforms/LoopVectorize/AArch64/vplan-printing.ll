@@ -86,7 +86,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     SCALAR-PHI vp<[[EP_IV:%.+]]> = phi ir<0>, vp<%index.next>
+; CHECK-NEXT:     EMIT vp<[[EP_IV:%.+]]> = phi ir<0>, vp<%index.next>
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[EP_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
@@ -103,9 +103,9 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
+; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<%accum>, ir<%add>
 ; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-from-end vp<[[RED_RESULT]]>, ir<1>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, ir<1024>
@@ -113,7 +113,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[EXTRACT]]> from ir-bb<middle.block>)
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[EXTRACT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:

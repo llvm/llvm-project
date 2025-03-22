@@ -13,7 +13,7 @@ NONEXISTINGFILEARG:       llvm-bolt-binary-analysis: 'non-existing-file': No suc
 RUN: not llvm-bolt-binary-analysis %p/Inputs/dummy.txt 2>&1 | FileCheck -check-prefix=NOELFFILEARG %s
 NOELFFILEARG:       llvm-bolt-binary-analysis: '{{.*}}/Inputs/dummy.txt': The file was not recognized as a valid object file.
 
-RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
+RUN: %clang %cflags -Wl,--emit-relocs %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
 RUN: llvm-bolt-binary-analysis %t.exe 2>&1 | FileCheck -check-prefix=VALIDELFFILEARG --allow-empty %s
 # Check that there are no BOLT-WARNING or BOLT-ERROR output lines
 VALIDELFFILEARG:     BOLT-INFO:
@@ -29,5 +29,11 @@ HELP-EMPTY:
 HELP-NEXT:  USAGE: llvm-bolt-binary-analysis [options] <executable>
 HELP-EMPTY:
 HELP-NEXT:  OPTIONS:
+HELP-EMPTY:
+HELP-NEXT:  BinaryAnalysis options:
+HELP-EMPTY:
+HELP-NEXT:   --scanners=<value> - which gadget scanners to run
+HELP-NEXT:   =pacret - pac-ret
+HELP-NEXT:   =all - all
 HELP-EMPTY:
 HELP-NEXT:  Generic Options:

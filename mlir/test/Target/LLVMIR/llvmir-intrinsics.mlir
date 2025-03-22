@@ -122,6 +122,35 @@ llvm.func @trig_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @inv_trig_test
+llvm.func @inv_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.asin.f32
+  llvm.intr.asin(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.asin.v8f32
+  llvm.intr.asin(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.acos.f32
+  llvm.intr.acos(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.acos.v8f32
+  llvm.intr.acos(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  // CHECK: call float @llvm.atan.f32
+  llvm.intr.atan(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.atan.v8f32
+  llvm.intr.atan(%arg1) : (vector<8xf32>) -> vector<8xf32>
+
+  llvm.return
+}
+
+// CHECK-LABEL: @atan2_test
+llvm.func @atan2_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.atan2.f32
+  "llvm.intr.atan2"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.atan2.v8f32
+  "llvm.intr.atan2"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @hyperbolic_trig_test
 llvm.func @hyperbolic_trig_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.sinh.f32
@@ -1050,6 +1079,20 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
   llvm.return %0 : f32
 }
 
+// CHECK-LABEL: @ptrmask
+llvm.func @ptrmask(%p: !llvm.ptr, %mask: i64) -> !llvm.ptr {
+  // CHECK: call ptr @llvm.ptrmask.p0.i64
+  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.ptr, i64) -> !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK-LABEL: @vector_ptrmask
+llvm.func @vector_ptrmask(%p: !llvm.vec<8 x ptr>, %mask: vector<8 x i64>) -> !llvm.vec<8 x ptr> {
+  // CHECK: call <8 x ptr> @llvm.ptrmask.v8p0.v8i64
+  %0 = llvm.intr.ptrmask %p, %mask : (!llvm.vec<8 x ptr>, vector<8 x i64>) -> !llvm.vec<8 x ptr>
+  llvm.return %0 : !llvm.vec<8 x ptr>
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
   // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
@@ -1243,6 +1286,8 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 // CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr captures(none))
 
 // CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
+// CHECK-DAG: declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+// CHECK-DAG: declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 // CHECK-DAG: declare ptr @llvm.stacksave.p0()
 // CHECK-DAG: declare ptr addrspace(1) @llvm.stacksave.p1()
 // CHECK-DAG: declare void @llvm.stackrestore.p0(ptr)

@@ -38,18 +38,6 @@ bb1:
 
 ; // -----
 
-declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
-
-; CHECK:      <unknown>
-; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr null)
-define void @unhandled_intrinsic() gc "example" {
-  %arg1 = alloca ptr
-  call void @llvm.gcroot(ptr %arg1, ptr null)
-  ret void
-}
-
-; // -----
-
 ; Check that debug intrinsics with an unsupported argument are dropped.
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -351,8 +339,25 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; // -----
 
 ; CHECK:      import-failure.ll
+; CHECK-SAME: dereferenceable metadata operand must be a non-negative constant integer
+define void @deref(i64 %0) {
+  %2 = inttoptr i64 %0 to ptr, !dereferenceable !0
+  ret void
+}
+
+!0 = !{i64 -4}
+
+; // -----
+
+; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: unhandled data layout token: ni:42
 target datalayout = "e-ni:42-i64:64"
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: malformed specification, must be of the form "m:<mangling>"
+target datalayout = "e-m-i64:64"
 
 ; // -----
 

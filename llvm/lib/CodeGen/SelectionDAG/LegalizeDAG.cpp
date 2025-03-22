@@ -2284,7 +2284,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
 
 /// Return true if sincos libcall is available.
 static bool isSinCosLibcallAvailable(SDNode *Node, const TargetLowering &TLI) {
-  RTLIB::Libcall LC = RTLIB::getFSINCOS(Node->getSimpleValueType(0).SimpleTy);
+  RTLIB::Libcall LC = RTLIB::getSINCOS(Node->getSimpleValueType(0).SimpleTy);
   return TLI.getLibcallName(LC) != nullptr;
 }
 
@@ -2913,7 +2913,9 @@ SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
 }
 
 SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
-  MVT VecVT = Node->getOperand(1).getSimpleValueType();
+  bool IsVPOpcode = ISD::isVPOpcode(Node->getOpcode());
+  MVT VecVT = IsVPOpcode ? Node->getOperand(1).getSimpleValueType()
+                         : Node->getOperand(0).getSimpleValueType();
   MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
   MVT ScalarVT = Node->getSimpleValueType(0);
   MVT NewScalarVT = NewVecVT.getVectorElementType();
@@ -2921,16 +2923,13 @@ SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
   SDLoc DL(Node);
   SmallVector<SDValue, 4> Operands(Node->getNumOperands());
 
-  // promote the initial value.
   // FIXME: Support integer.
   assert(Node->getOperand(0).getValueType().isFloatingPoint() &&
          "Only FP promotion is supported");
-  Operands[0] =
-      DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(0));
 
-  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
+  for (unsigned j = 0; j != Node->getNumOperands(); ++j)
     if (Node->getOperand(j).getValueType().isVector() &&
-        !(ISD::isVPOpcode(Node->getOpcode()) &&
+        !(IsVPOpcode &&
           ISD::getVPMaskIdx(Node->getOpcode()) == j)) { // Skip mask operand.
       // promote the vector operand.
       // FIXME: Support integer.
@@ -2938,6 +2937,10 @@ SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
              "Only FP promotion is supported");
       Operands[j] =
           DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
+    } else if (Node->getOperand(j).getValueType().isFloatingPoint()) {
+      // promote the initial value.
+      Operands[j] =
+          DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(j));
     } else {
       Operands[j] = Node->getOperand(j); // Skip VL operand.
     }
@@ -4524,7 +4527,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::FSINCOSPI: {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = Node->getOpcode() == ISD::FSINCOS
-                            ? RTLIB::getFSINCOS(VT)
+                            ? RTLIB::getSINCOS(VT)
                             : RTLIB::getSINCOSPI(VT);
     bool Expanded = DAG.expandMultipleResultFPLibCall(LC, Node, Results);
     if (!Expanded)
@@ -5049,7 +5052,11 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::SINT_TO_FP ||
       Node->getOpcode() == ISD::SETCC ||
       Node->getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-      Node->getOpcode() == ISD::INSERT_VECTOR_ELT) {
+      Node->getOpcode() == ISD::INSERT_VECTOR_ELT ||
+      Node->getOpcode() == ISD::VECREDUCE_FMAX ||
+      Node->getOpcode() == ISD::VECREDUCE_FMIN ||
+      Node->getOpcode() == ISD::VECREDUCE_FMAXIMUM ||
+      Node->getOpcode() == ISD::VECREDUCE_FMINIMUM) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
   if (Node->getOpcode() == ISD::ATOMIC_STORE ||
@@ -5068,6 +5075,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   if (Node->getOpcode() == ISD::BR_CC ||
       Node->getOpcode() == ISD::SELECT_CC)
     OVT = Node->getOperand(2).getSimpleValueType();
+  // Preserve fast math flags
+  SDNodeFlags FastMathFlags = Node->getFlags() & SDNodeFlags::FastMathFlags;
+  SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
   MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OVT);
   SDLoc dl(Node);
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
@@ -5103,7 +5113,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                           DAG.getConstant(NVT.getSizeInBits() -
                                           OVT.getSizeInBits(), dl, NVT));
     }
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    Results.push_back(
+        DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1, SDNodeFlags::NoWrap));
     break;
   }
   case ISD::CTLZ_ZERO_UNDEF: {
@@ -5273,7 +5284,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Tmp3 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));
     // Perform the larger operation, then round down.
     Tmp1 = DAG.getSelect(dl, NVT, Tmp1, Tmp2, Tmp3);
-    Tmp1->setFlags(Node->getFlags());
     if (TruncOp != ISD::FP_ROUND)
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else
@@ -5402,8 +5412,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FATAN2:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
-    Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2,
-                       Node->getFlags());
+    Tmp3 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2);
     Results.push_back(
         DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp3,
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
@@ -5514,8 +5523,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FSINCOS:
   case ISD::FSINCOSPI: {
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
-    Tmp2 = DAG.getNode(Node->getOpcode(), dl, DAG.getVTList(NVT, NVT), Tmp1,
-                       Node->getFlags());
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, DAG.getVTList(NVT, NVT), Tmp1);
     Tmp3 = DAG.getIntPtrConstant(0, dl, /*isTarget=*/true);
     for (unsigned ResNum = 0; ResNum < Node->getNumValues(); ResNum++)
       Results.push_back(
@@ -5796,6 +5804,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
   }
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:

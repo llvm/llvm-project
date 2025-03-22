@@ -372,6 +372,15 @@ void enhanceLocatedSymbolsFromIndex(llvm::MutableArrayRef<LocatedSymbol> Result,
   });
 }
 
+bool objcMethodIsTouched(const SourceManager &SM, const ObjCMethodDecl *OMD,
+                         SourceLocation Loc) {
+  unsigned NumSels = OMD->getNumSelectorLocs();
+  for (unsigned I = 0; I < NumSels; ++I)
+    if (SM.getSpellingLoc(OMD->getSelectorLoc(I)) == Loc)
+      return true;
+  return false;
+}
+
 // Decls are more complicated.
 // The AST contains at least a declaration, maybe a definition.
 // These are up-to-date, and so generally preferred over index results.
@@ -427,6 +436,26 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         // We may be overridding multiple methods - offer them all.
         for (const NamedDecl *ND : CMD->overridden_methods())
           AddResultDecl(ND);
+        continue;
+      }
+    }
+    // Special case: - (void)^method {} should jump to overrides, but the decl
+    // shouldn't, only the definition. Note that an Objective-C method can
+    // override a parent class or protocol.
+    //
+    // FIXME: Support jumping from a protocol decl to overrides on go-to
+    // definition.
+    if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(D)) {
+      if (OMD->isThisDeclarationADefinition() && TouchedIdentifier &&
+          objcMethodIsTouched(SM, OMD, TouchedIdentifier->location())) {
+        llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+        OMD->getOverriddenMethods(Overrides);
+        if (!Overrides.empty()) {
+          for (const auto *Override : Overrides)
+            AddResultDecl(Override);
+          LocateASTReferentMetric.record(1, "objc-overriden-method");
+        }
+        AddResultDecl(OMD);
         continue;
       }
     }
@@ -1283,6 +1312,12 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
     } else if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
       IDs.insert(getSymbolID(RD));
       QueryKind = RelationKind::BaseOf;
+    } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(ND)) {
+      IDs.insert(getSymbolID(OMD));
+      QueryKind = RelationKind::OverriddenBy;
+    } else if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(ND)) {
+      IDs.insert(getSymbolID(ID));
+      QueryKind = RelationKind::BaseOf;
     }
   }
   return findImplementors(std::move(IDs), QueryKind, Index, AST.tuPath());
@@ -1296,6 +1331,21 @@ void getOverriddenMethods(const CXXMethodDecl *CMD,
   if (!CMD)
     return;
   for (const CXXMethodDecl *Base : CMD->overridden_methods()) {
+    if (auto ID = getSymbolID(Base))
+      OverriddenMethods.insert(ID);
+    getOverriddenMethods(Base, OverriddenMethods);
+  }
+}
+
+// Recursively finds all the overridden methods of `OMD` in complete type
+// hierarchy.
+void getOverriddenMethods(const ObjCMethodDecl *OMD,
+                          llvm::DenseSet<SymbolID> &OverriddenMethods) {
+  if (!OMD)
+    return;
+  llvm::SmallVector<const ObjCMethodDecl *, 4> Overrides;
+  OMD->getOverriddenMethods(Overrides);
+  for (const ObjCMethodDecl *Base : Overrides) {
     if (auto ID = getSymbolID(Base))
       OverriddenMethods.insert(ID);
     getOverriddenMethods(Base, OverriddenMethods);
@@ -1437,6 +1487,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
               OverriddenBy.Subjects.insert(ID);
             getOverriddenMethods(CMD, OverriddenMethods);
           }
+        }
+        // Special case: Objective-C methods can override a parent class or
+        // protocol, we should be sure to report references to those.
+        if (const auto *OMD = llvm::dyn_cast<ObjCMethodDecl>(ND)) {
+          OverriddenBy.Subjects.insert(getSymbolID(OMD));
+          getOverriddenMethods(OMD, OverriddenMethods);
         }
       }
     }
