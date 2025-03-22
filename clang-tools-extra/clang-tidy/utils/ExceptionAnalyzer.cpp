@@ -178,9 +178,7 @@ bool isFunctionPointerConvertible(QualType From, QualType To) {
 
     // Note: converting Derived::* to Base::* is a different kind of conversion,
     // called Pointer-to-member conversion.
-    return FromMember->getQualifier() == ToMember->getQualifier() &&
-           FromMember->getMostRecentCXXRecordDecl() ==
-               ToMember->getMostRecentCXXRecordDecl() &&
+    return FromMember->getClass() == ToMember->getClass() &&
            FromMember->getPointeeType() == ToMember->getPointeeType();
   }
 

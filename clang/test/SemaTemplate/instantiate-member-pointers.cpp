@@ -5,8 +5,7 @@ struct Y {
 
 template<typename T>
 struct X1 {
-  int f(T* ptr, int T::*pm) {
-    // expected-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
+  int f(T* ptr, int T::*pm) { // expected-error{{member pointer}}
     return ptr->*pm;
   }
 };

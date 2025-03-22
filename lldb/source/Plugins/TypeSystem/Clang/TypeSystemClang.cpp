@@ -2821,8 +2821,8 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     // is a member.
     if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
       auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
-      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
-        GetCompleteRecordType(ast, QualType(RD->getTypeForDecl(), 0),
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
                               allow_completion);
 
       return !qual_type.getTypePtr()->isIncompleteType();
@@ -8764,8 +8764,7 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
       return CompilerType();
     return ast->GetType(ast->getASTContext().getMemberPointerType(
         ClangUtil::GetQualType(pointee_type),
-        /*Qualifier=*/nullptr,
-        ClangUtil::GetQualType(type)->getAsCXXRecordDecl()));
+        ClangUtil::GetQualType(type).getTypePtr()));
   }
   return CompilerType();
 }
