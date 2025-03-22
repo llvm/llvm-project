@@ -223,8 +223,37 @@ private:
             designatorNode, getConverter().getFoldingContext(),
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
       return fir::BoxType::get(resultValueType);
+
+    bool isVolatile = false;
+
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = fir::isa_volatile_ref_type(baseType);
+    }
+
+    auto isVolatileSymbol = [](const Fortran::semantics::Symbol &symbol) {
+      return symbol.GetUltimate().attrs().test(
+          Fortran::semantics::Attr::VOLATILE);
+    };
+
+    // Check if this should be a volatile reference
+    if constexpr (std::is_same_v<std::decay_t<T>,
+                                 Fortran::evaluate::SymbolRef>) {
+      if (isVolatileSymbol(designatorNode.get()))
+        isVolatile = true;
+    } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                        Fortran::evaluate::Component>) {
+      if (isVolatileSymbol(designatorNode.GetLastSymbol()))
+        isVolatile = true;
+    }
+
+    // If it's a reference to a ref, account for it
+    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(resultValueType))
+      resultValueType = refTy.getEleTy();
+
     // Other designators can be handled as raw addresses.
-    return fir::ReferenceType::get(resultValueType);
+    return fir::ReferenceType::get(resultValueType, isVolatile);
   }
 
   template <typename T>
@@ -414,10 +443,16 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
-              fir::ClassType>([&](auto t) -> mlir::Type {
-          using FIRT = decltype(t);
-          return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
+        // TODO: handle volatility for other types
+        .Case<fir::PointerType, fir::HeapType, fir::BoxType, fir::ClassType>(
+            [&](auto t) -> mlir::Type {
+              using FIRT = decltype(t);
+              return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
+            })
+        .Case<fir::ReferenceType>([&](fir::ReferenceType refTy) -> mlir::Type {
+          return fir::ReferenceType::get(
+              changeElementType(refTy.getEleTy(), newEleTy),
+              refTy.isVolatile());
         })
         .Default([newEleTy](mlir::Type t) -> mlir::Type { return newEleTy; });
   }
@@ -1808,6 +1843,7 @@ private:
       auto &expr = std::get<const Fortran::lower::SomeExpr &>(iter);
       auto &baseOp = std::get<hlfir::EntityWithAttributes>(iter);
       std::string name = converter.getRecordTypeFieldName(sym);
+      const bool isVolatile = fir::isa_volatile_ref_type(baseOp.getType());
 
       // Generate DesignateOp for the component.
       // The designator's result type is just a reference to the component type,
@@ -1818,7 +1854,7 @@ private:
       assert(compType && "failed to retrieve component type");
       mlir::Value compShape =
           designatorBuilder.genComponentShape(sym, compType);
-      mlir::Type designatorType = builder.getRefType(compType);
+      mlir::Type designatorType = builder.getRefType(compType, isVolatile);
 
       mlir::Type fieldElemType = hlfir::getFortranElementType(compType);
       llvm::SmallVector<mlir::Value, 1> typeParams;
