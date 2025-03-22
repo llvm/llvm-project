@@ -423,6 +423,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (isSingleScalar() || isVectorToScalar())
     return true;
   switch (Opcode) {
+  case Instruction::Freeze:
   case Instruction::ICmp:
   case Instruction::PHI:
   case Instruction::Select:
@@ -473,6 +474,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Vec = State.get(getOperand(0));
     Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
     return Builder.CreateExtractElement(Vec, Idx, Name);
+  }
+  case Instruction::Freeze: {
+    if (State.hasVectorValue(this))
+      return State.get(this);
+    Value *Op = State.get(getOperand(0), true);
+    return Builder.CreateFreeze(Op, Name);
   }
   case Instruction::ICmp: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -939,6 +946,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
+  case Instruction::Freeze:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
