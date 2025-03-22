@@ -7103,7 +7103,7 @@ void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(readSourceLocation());
-  TL.setClassTInfo(GetTypeSourceInfo());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
 }
 
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -11761,7 +11761,7 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
   unsigned NumFlags = Record.readInt();
   SmallVector<bool, 16> Flags;
   Flags.reserve(NumFlags);
-  for (unsigned I : llvm::seq<unsigned>(NumFlags))
+  for ([[maybe_unused]] unsigned I : llvm::seq<unsigned>(NumFlags))
     Flags.push_back(Record.readInt());
   C->setPrivateVariableReductionFlags(Flags);
 }
@@ -12869,6 +12869,12 @@ void ASTRecordReader::readOpenACCClauseList(
     MutableArrayRef<const OpenACCClause *> Clauses) {
   for (unsigned I = 0; I < Clauses.size(); ++I)
     Clauses[I] = readOpenACCClause();
+}
+
+void ASTRecordReader::readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A) {
+  unsigned NumVars = readInt();
+  A->Clauses.resize(NumVars);
+  readOpenACCClauseList(A->Clauses);
 }
 
 static unsigned getStableHashForModuleName(StringRef PrimaryModuleName) {

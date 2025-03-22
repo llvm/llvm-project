@@ -3993,7 +3993,7 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
   // builtin variable.
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, true,
+      SPIRV::StorageClass::Input, nullptr, true, false,
       SPIRV::LinkageType::Import, MIRBuilder, false);
 
   // Create new register for loading value.
@@ -4046,7 +4046,7 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
   // builtin variable.
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, true,
+      SPIRV::StorageClass::Input, nullptr, true, false,
       SPIRV::LinkageType::Import, MIRBuilder, false);
 
   // Load uint value from the global variable.

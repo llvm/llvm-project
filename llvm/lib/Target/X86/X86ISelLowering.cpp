@@ -56427,33 +56427,33 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalize()) {
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
-    // Shrink constant indices if they are larger than 32-bits.
+    // Shrink indices if they are larger than 32-bits.
     // Only do this before legalize types since v2i64 could become v2i32.
     // FIXME: We could check that the type is legal if we're after legalize
     // types, but then we would need to construct test cases where that happens.
-    // FIXME: We could support more than just constant vectors, but we need to
-    // careful with costing. A truncate that can be optimized out would be fine.
-    // Otherwise we might only want to create a truncate if it avoids a split.
-    if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
-      if (BV->isConstant() && IndexWidth > 32 &&
-          DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
-        EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
+    if (IndexWidth > 32 && DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
+      EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
+
+      // FIXME: We could support more than just constant vectors, but we need to
+      // careful with costing. A truncate that can be optimized out would be
+      // fine. Otherwise we might only want to create a truncate if it avoids a
+      // split.
+      if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
+        if (BV->isConstant()) {
+          Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
+          return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
+        }
+      }
+
+      // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
+      // there are sufficient sign bits. Only do this before legalize types to
+      // avoid creating illegal types in truncate.
+      if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
+           Index.getOpcode() == ISD::ZERO_EXTEND) &&
+          Index.getOperand(0).getScalarValueSizeInBits() <= 32) {
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
         return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
       }
-    }
-
-    // Shrink any sign/zero extends from 32 or smaller to larger than 32 if
-    // there are sufficient sign bits. Only do this before legalize types to
-    // avoid creating illegal types in truncate.
-    if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
-         Index.getOpcode() == ISD::ZERO_EXTEND) &&
-        IndexWidth > 32 &&
-        Index.getOperand(0).getScalarValueSizeInBits() <= 32 &&
-        DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
-      EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
-      Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
-      return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
     }
   }
 
@@ -57955,13 +57955,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            DAG.getBitcast(VT, Src1.getOperand(0)),
                            DAG.getTargetConstant(0x31, DL, MVT::i8));
       }
-      // concat(extract_subvector(x,lo), extract_subvector(x,hi)) -> x.
+      // Widen extract_subvector
+      // concat(extract_subvector(x,lo), extract_subvector(x,hi))
+      // --> extract_subvector(x,lo)
+      unsigned NumSubElts0 = Src0.getValueType().getVectorNumElements();
       if (Src0.getOperand(0) == Src1.getOperand(0) &&
-          Src0.getConstantOperandAPInt(1) == 0 &&
+          (Src0.getConstantOperandAPInt(1) == 0 ||
+           Src0.getConstantOperandAPInt(1) == (NumSrcElts0 / 2)) &&
           Src1.getConstantOperandAPInt(1) ==
-              Src0.getValueType().getVectorNumElements()) {
-        return DAG.getBitcast(VT, extractSubVector(Src0.getOperand(0), 0, DAG,
-                                                   DL, VT.getSizeInBits()));
+              (Src0.getConstantOperandAPInt(1) + NumSubElts0)) {
+        return DAG.getBitcast(VT,
+                              extractSubVector(Src0.getOperand(0),
+                                               Src0.getConstantOperandVal(1),
+                                               DAG, DL, VT.getSizeInBits()));
       }
     }
   }

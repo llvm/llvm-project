@@ -13,7 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Loader.h"
+#include "llvm-gpu-loader.h"
+#include "server.h"
 
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
@@ -260,9 +261,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
         // Register RPC callbacks for the malloc and free functions on HSA.
         auto malloc_handler = [&](size_t size) -> void * {
           void *dev_ptr = nullptr;
-          if (hsa_status_t err =
-                  hsa_amd_memory_pool_allocate(coarsegrained_pool, size,
-                                               /*flags=*/0, &dev_ptr))
+          if (hsa_amd_memory_pool_allocate(coarsegrained_pool, size,
+                                           /*flags=*/0, &dev_ptr))
             dev_ptr = nullptr;
           hsa_amd_agents_allow_access(1, &dev_agent, nullptr, dev_ptr);
           return dev_ptr;
@@ -330,9 +330,9 @@ static hsa_status_t hsa_memcpy(void *dst, hsa_agent_t dst_agent,
   return HSA_STATUS_SUCCESS;
 }
 
-int load(int argc, const char **argv, const char **envp, void *image,
-         size_t size, const LaunchParameters &params,
-         bool print_resource_usage) {
+int load_amdhsa(int argc, const char **argv, const char **envp, void *image,
+                size_t size, const LaunchParameters &params,
+                bool print_resource_usage) {
   // Initialize the HSA runtime used to communicate with the device.
   if (hsa_status_t err = hsa_init())
     handle_error(err);

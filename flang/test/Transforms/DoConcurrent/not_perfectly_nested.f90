@@ -52,13 +52,13 @@ end
 ! COMMON: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
 ! COMMON:   fir.do_loop %[[J_IV:.*]] = {{.*}} {
 ! COMMON:     %[[J_IV_CONV:.*]] = fir.convert %[[J_IV]] : (index) -> i32
-! HOST:       fir.store %[[J_IV_CONV]] to %[[ORIG_J_DECL]]#1
-! DEVICE:     fir.store %[[J_IV_CONV]] to %[[TARGET_J_DECL]]#1
+! HOST:       fir.store %[[J_IV_CONV]] to %[[ORIG_J_DECL]]#0
+! DEVICE:     fir.store %[[J_IV_CONV]] to %[[TARGET_J_DECL]]#0
 
 ! COMMON:     fir.do_loop %[[K_IV:.*]] = {{.*}} {
 ! COMMON:       %[[K_IV_CONV:.*]] = fir.convert %[[K_IV]] : (index) -> i32
-! HOST:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#1
-! DEVICE:       fir.store %[[K_IV_CONV]] to %[[TARGET_K_DECL]]#1
+! HOST:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#0
+! DEVICE:       fir.store %[[K_IV_CONV]] to %[[TARGET_K_DECL]]#0
 ! COMMON:     }
 ! COMMON:   }
 ! COMMON: omp.yield
