@@ -741,7 +741,7 @@ define i64 @nullptrtoint_scalable_c() {
 ; CHECK-NEXT:    ret i64 [[PTR_IDX]]
 ;
 entry:
-  %ptr = getelementptr inbounds <vscale x 4 x i32>, ptr null, i64 8
+  %ptr = getelementptr nusw <vscale x 4 x i32>, ptr null, i64 8
   %ret = ptrtoint ptr %ptr to i64
   ret i64 %ret
 }
@@ -755,7 +755,7 @@ define i64 @nullptrtoint_scalable_x(i64 %x) {
 ; CHECK-NEXT:    ret i64 [[PTR_IDX]]
 ;
 entry:
-  %ptr = getelementptr inbounds <vscale x 4 x i32>, ptr null, i64 %x
+  %ptr = getelementptr nusw <vscale x 4 x i32>, ptr null, i64 %x
   %ret = ptrtoint ptr %ptr to i64
   ret i64 %ret
 }
