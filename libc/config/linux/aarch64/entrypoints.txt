@@ -212,6 +212,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.free
     libc.src.stdlib.malloc
+    libc.src.stdlib.memalignment
     libc.src.stdlib.realloc
 
     # stdio.h entrypoints
