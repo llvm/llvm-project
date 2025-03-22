@@ -26,7 +26,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
+  PLTRelativeSpecifier = MCSymbolRefExpr::VK_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(

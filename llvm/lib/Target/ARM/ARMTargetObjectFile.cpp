@@ -29,7 +29,7 @@ using namespace dwarf;
 //===----------------------------------------------------------------------===//
 
 ARMElfTargetObjectFile::ARMElfTargetObjectFile() {
-  PLTRelativeVariantKind = MCSymbolRefExpr::VK_ARM_PREL31;
+  PLTRelativeSpecifier = MCSymbolRefExpr::VK_ARM_PREL31;
   SupportIndirectSymViaGOTPCRel = true;
 }
 
