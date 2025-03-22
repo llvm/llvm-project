@@ -3357,7 +3357,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
     return;
   }
 
-  const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
+  const DataLayout &DL = SE.getDataLayout();
   SCEVExpander Exp(SE, DL, "induction", /*PreserveLCSSA=*/true);
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
