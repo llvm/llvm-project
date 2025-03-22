@@ -87,14 +87,17 @@ constexpr bool test_all() {
   test<volatile double>();
   test<const volatile double>();
 
-  // Note: Can't test non-fundamental types with volatile because we require `T*` to be indirectly_readable,
-  //       which isn't the case when T is volatile.
+  // Note: Can't test class types with volatile because we require `T*` to be indirectly_readable,
+  //       which isn't the case when T is volatile. See also LWG3813.
   test<Foo>();
   test<const Foo>();
 
   test<std::string>();
   test<const std::string>();
 
+#if defined(_LIBCPP_VERSION) && TEST_STD_VER < 23
+  // libc++ supports span<Incomplete> as an extension in C++20 mode,
+  // but the extension is incompatible with changes of span in C++23.
   // Regression test for https://github.com/llvm/llvm-project/issues/104496
   {
     struct Incomplete;
@@ -103,6 +106,7 @@ constexpr bool test_all() {
     assert(copy.data() == x.data());
     assert(copy.size() == x.size());
   }
+#endif
 
   return true;
 }

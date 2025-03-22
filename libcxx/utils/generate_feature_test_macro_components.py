@@ -1039,11 +1039,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_ranges_as_const",
             "values": {
-                "c++23": 202207  # P2278R4 cbegin should always return a constant iterator
-                #        202311  # DR P2836R1 std::basic_const_iterator should follow its underlying type’s convertibility
+                "c++23": 202311  # DR P2836R1 std::basic_const_iterator should follow its underlying type’s convertibility
             },
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_as_rvalue",

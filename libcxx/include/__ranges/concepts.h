@@ -15,12 +15,12 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/const_iterator.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/readable_traits.h>
 #include <__ranges/access.h>
-#include <__ranges/data.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
@@ -61,6 +61,8 @@ concept borrowed_range =
 template <range _Rp>
 using sentinel_t = decltype(ranges::end(std::declval<_Rp&>()));
 
+// `const_iterator_t` and `const_sentinel_t` defined in <__ranges/const_access.h>
+
 template <range _Rp>
 using range_difference_t = iter_difference_t<iterator_t<_Rp>>;
 
@@ -69,6 +71,11 @@ using range_value_t = iter_value_t<iterator_t<_Rp>>;
 
 template <range _Rp>
 using range_reference_t = iter_reference_t<iterator_t<_Rp>>;
+
+#  if _LIBCPP_STD_VER >= 23
+template <range _Rp>
+using range_const_reference_t = iter_const_reference_t<iterator_t<_Rp>>;
+#  endif
 
 template <range _Rp>
 using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp>>;
@@ -132,6 +139,11 @@ concept viewable_range =
      (!view<remove_cvref_t<_Tp>> &&
       (is_lvalue_reference_v<_Tp> ||
        (movable<remove_reference_t<_Tp>> && !__is_std_initializer_list<remove_cvref_t<_Tp>>))));
+
+#  if _LIBCPP_STD_VER >= 23
+template <class _Tp>
+concept constant_range = input_range<_Tp> && __constant_iterator<iterator_t<_Tp>>;
+#  endif // _LIBCPP_STD_VER >= 23
 
 } // namespace ranges
 

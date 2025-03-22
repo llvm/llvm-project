@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // std::ranges::data
+// std::ranges::cdata
 
 #include <ranges>
 
@@ -19,6 +20,14 @@
 
 using RangeDataT = decltype(std::ranges::data);
 using RangeCDataT = decltype(std::ranges::cdata);
+
+#if TEST_STD_VER < 23
+#  define STD_VER_20(...) __VA_ARGS__
+#  define STD_VER_23(...) static_assert(true)
+#else
+#  define STD_VER_20(...) static_assert(true)
+#  define STD_VER_23(...) __VA_ARGS__
+#endif
 
 static int globalBuff[2];
 
@@ -38,9 +47,26 @@ static_assert(!std::is_invocable_v<RangeCDataT, int [1]>);
 static_assert(!std::is_invocable_v<RangeCDataT, int (&&)[1]>);
 static_assert( std::is_invocable_v<RangeCDataT, int (&)[1]>);
 
+struct DataMemberNonRange {
+  int x;
+  constexpr const int* data() const { return &x; }
+};
+static_assert(std::is_invocable_v<RangeDataT, DataMemberNonRange&>);
+static_assert(!std::is_invocable_v<RangeDataT, DataMemberNonRange&&>);
+static_assert(std::is_invocable_v<RangeDataT, DataMemberNonRange const&>);
+static_assert(!std::is_invocable_v<RangeDataT, DataMemberNonRange const&&>);
+#if TEST_STD_VER < 23
+static_assert(std::is_invocable_v<RangeCDataT, DataMemberNonRange&>);
+static_assert(!std::is_invocable_v<RangeCDataT, DataMemberNonRange&&>);
+static_assert(std::is_invocable_v<RangeCDataT, DataMemberNonRange const&>);
+static_assert(!std::is_invocable_v<RangeCDataT, DataMemberNonRange const&&>);
+#endif
+
 struct DataMember {
   int x;
   constexpr const int *data() const { return &x; }
+  const int* begin() const;
+  const int* end() const;
 };
 static_assert( std::is_invocable_v<RangeDataT, DataMember &>);
 static_assert(!std::is_invocable_v<RangeDataT, DataMember &&>);
@@ -66,16 +92,51 @@ constexpr bool testReturnTypes() {
     struct D {
       char*& data();
       short*& data() const;
+      int* begin();
+      int* end();
     };
     ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<D&>())), char*);
     static_assert(!std::is_invocable_v<RangeDataT, D&&>);
     ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<const D&>())), short*);
     static_assert(!std::is_invocable_v<RangeDataT, const D&&>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), short*);
+
     static_assert(!std::is_invocable_v<RangeCDataT, D&&>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const D&>())), short*);
+    static_assert(!std::is_invocable_v<RangeCDataT, const D&&>);
+    STD_VER_20(ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), short*));
+    STD_VER_23(ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), const char*));
+    STD_VER_20(ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const D&>())), short*));
+    STD_VER_23(static_assert(!std::is_invocable_v<RangeCDataT, const D&>));
+  }
+#if TEST_STD_VER >= 23
+  {
+    struct D {
+      char*& data();
+      short*& data() const;
+      int* begin();
+      int* end();
+      int* begin() const;
+      int* end() const;
+    };
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), const short*);
+    static_assert(!std::is_invocable_v<RangeCDataT, D&&>);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const D&>())), const short*);
     static_assert(!std::is_invocable_v<RangeCDataT, const D&&>);
   }
+  {
+    struct D {
+      char*& data();
+      short*& data() const;
+      int* begin();
+      int* end();
+      const int* begin() const;
+      const int* end() const;
+    };
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<D&>())), const short*);
+    static_assert(!std::is_invocable_v<RangeCDataT, D&&>);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const D&>())), const short*);
+    static_assert(!std::is_invocable_v<RangeCDataT, const D&&>);
+  }
+#endif // TEST_STD_VER >= 23
   {
     struct NC {
       char *begin() const;
@@ -88,10 +149,16 @@ constexpr bool testReturnTypes() {
     static_assert(!std::is_invocable_v<RangeDataT, NC&&>);
     ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<const NC&>())), char*);
     static_assert(!std::is_invocable_v<RangeDataT, const NC&&>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<NC&>())), char*);
+
     static_assert(!std::is_invocable_v<RangeCDataT, NC&&>);
-    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const NC&>())), char*);
     static_assert(!std::is_invocable_v<RangeCDataT, const NC&&>);
+#if TEST_STD_VER < 23
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<NC&>())), char*);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const NC&>())), char*);
+#else
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<NC&>())), const char*);
+    ASSERT_SAME_TYPE(decltype(std::ranges::cdata(std::declval<const NC&>())), const char*);
+#endif
   }
   return true;
 }
@@ -121,10 +188,14 @@ static_assert(!std::is_invocable_v<RangeCDataT, PtrConvertibleDataMember const&>
 struct NonConstDataMember {
   int x;
   constexpr int *data() { return &x; }
+  int* begin();
+  int* end();
 };
 
 struct EnabledBorrowingDataMember {
   constexpr int *data() { return &globalBuff[0]; }
+  int* begin();
+  int* end();
 };
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<EnabledBorrowingDataMember> = true;
@@ -133,6 +204,7 @@ struct DataMemberAndBegin {
   int x;
   constexpr const int *data() const { return &x; }
   const int *begin() const;
+  const int* end() const;
 };
 
 constexpr bool testDataMember() {
@@ -142,15 +214,13 @@ constexpr bool testDataMember() {
 
   NonConstDataMember b;
   assert(std::ranges::data(b) == &b.x);
-  static_assert(!std::is_invocable_v<RangeCDataT, decltype((b))>);
+  STD_VER_20(static_assert(!std::is_invocable_v<RangeCDataT, decltype((b))>));
+  STD_VER_23(assert(std::ranges::cdata(b) == &b.x));
 
   EnabledBorrowingDataMember c;
   assert(std::ranges::data(std::move(c)) == &globalBuff[0]);
-  static_assert(!std::is_invocable_v<RangeCDataT, decltype(std::move(c))>);
-
-  DataMemberAndBegin d;
-  assert(std::ranges::data(d) == &d.x);
-  assert(std::ranges::cdata(d) == &d.x);
+  STD_VER_20(static_assert(!std::is_invocable_v<RangeCDataT, decltype((c))>));
+  STD_VER_23(assert(std::ranges::data(c) == &globalBuff[0]));
 
   return true;
 }
@@ -161,6 +231,7 @@ struct BeginMemberContiguousIterator {
   int buff[8];
 
   constexpr ContiguousIter begin() const { return ContiguousIter(buff); }
+  constexpr ContiguousIter end() const { return ContiguousIter(buff); }
 };
 static_assert( std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &&>);
@@ -175,6 +246,7 @@ struct BeginMemberRandomAccess {
   int buff[8];
 
   random_access_iterator<const int*> begin() const;
+  random_access_iterator<const int*> end() const;
 };
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRandomAccess&&>);
@@ -191,6 +263,7 @@ struct BeginFriendContiguousIterator {
   friend constexpr ContiguousIter begin(const BeginFriendContiguousIterator &iter) {
     return ContiguousIter(iter.buff);
   }
+  friend constexpr ContiguousIter end(const BeginFriendContiguousIterator& iter) { return ContiguousIter(iter.buff); }
 };
 static_assert( std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberContiguousIterator &&>);
@@ -202,7 +275,8 @@ static_assert( std::is_invocable_v<RangeCDataT, BeginMemberContiguousIterator co
 static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberContiguousIterator const&&>);
 
 struct BeginFriendRandomAccess {
-  friend random_access_iterator<const int*> begin(const BeginFriendRandomAccess iter);
+  friend random_access_iterator<const int*> begin(const BeginFriendRandomAccess& iter);
+  friend random_access_iterator<const int*> end(const BeginFriendRandomAccess& iter);
 };
 static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginFriendRandomAccess&&>);
@@ -217,6 +291,7 @@ struct BeginMemberRvalue {
   int buff[8];
 
   ContiguousIter begin() &&;
+  ContiguousIter end() &&;
 };
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue&&>);
@@ -229,6 +304,7 @@ static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberRvalue const&&>);
 
 struct BeginMemberBorrowingEnabled {
   constexpr contiguous_iterator<int*> begin() { return contiguous_iterator<int*>{&globalBuff[1]}; }
+  constexpr contiguous_iterator<int*> end() { return contiguous_iterator<int*>{&globalBuff[2]}; }
 };
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BeginMemberBorrowingEnabled> = true;
@@ -236,10 +312,27 @@ static_assert( std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled &>);
 static_assert( std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled &&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled const&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberBorrowingEnabled const&&>);
-static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled &>);
-static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled &&>);
+STD_VER_20(static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled&>));
+STD_VER_23(static_assert(std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled&>));
+STD_VER_20(static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled&&>));
+STD_VER_23(static_assert(std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled&&>));
 static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled const&>);
 static_assert(!std::is_invocable_v<RangeCDataT, BeginMemberBorrowingEnabled const&&>);
+
+struct ConstBeginMemberBorrowingEnabled {
+  constexpr contiguous_iterator<int*> begin() const { return contiguous_iterator<int*>{&globalBuff[1]}; }
+  constexpr contiguous_iterator<int*> end() const { return contiguous_iterator<int*>{&globalBuff[2]}; }
+};
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<ConstBeginMemberBorrowingEnabled> = true;
+static_assert(std::is_invocable_v<RangeDataT, ConstBeginMemberBorrowingEnabled&>);
+static_assert(std::is_invocable_v<RangeDataT, ConstBeginMemberBorrowingEnabled&&>);
+static_assert(std::is_invocable_v<RangeDataT, ConstBeginMemberBorrowingEnabled const&>);
+static_assert(std::is_invocable_v<RangeDataT, ConstBeginMemberBorrowingEnabled const&&>);
+static_assert(std::is_invocable_v<RangeCDataT, ConstBeginMemberBorrowingEnabled&>);
+static_assert(std::is_invocable_v<RangeCDataT, ConstBeginMemberBorrowingEnabled&&>);
+static_assert(std::is_invocable_v<RangeCDataT, ConstBeginMemberBorrowingEnabled const&>);
+static_assert(std::is_invocable_v<RangeCDataT, ConstBeginMemberBorrowingEnabled const&&>);
 
 constexpr bool testViaRangesBegin() {
   int arr[2];
@@ -256,7 +349,12 @@ constexpr bool testViaRangesBegin() {
 
   BeginMemberBorrowingEnabled c;
   assert(std::ranges::data(std::move(c)) == &globalBuff[1]);
-  static_assert(!std::is_invocable_v<RangeCDataT, decltype(std::move(c))>);
+  STD_VER_20(static_assert(!std::is_invocable_v<RangeCDataT, decltype(std::move(c))>));
+  STD_VER_23(static_assert(std::is_invocable_v<RangeCDataT, decltype(std::move(c))>));
+
+  ConstBeginMemberBorrowingEnabled d;
+  assert(std::ranges::data(std::move(d)) == &globalBuff[1]);
+  assert(std::ranges::cdata(std::move(d)) == &globalBuff[1]);
 
   return true;
 }

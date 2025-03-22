@@ -65,7 +65,9 @@ public:
     using reference = element_type&;
     using const_reference = const element_type&;
     using iterator = implementation-defined;
+    using const_iterator = std::const_iterator<iterator>;                 // since C++23
     using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::const_iterator<reverse_iterator>; // since C++23
     static constexpr size_type extent = Extent;
 
     // [span.cons], span constructors, copy, assignment, and destructor
@@ -115,8 +117,12 @@ public:
     // [span.iterators], span iterator support
     constexpr iterator begin() const noexcept;
     constexpr iterator end() const noexcept;
+    constexpr const_iterator cbegin() const noexcept;          // since C++23
+    constexpr const_iterator cend() const noexcept;            // since C++23
     constexpr reverse_iterator rbegin() const noexcept;
     constexpr reverse_iterator rend() const noexcept;
+    constexpr const_reverse_iterator crbegin() const noexcept; // since C++23
+    constexpr const_reverse_iterator crend() const noexcept;   // since C++23
 
 private:
     pointer data_;    // exposition only
@@ -157,12 +163,13 @@ template<class R>
 #  include <__fwd/span.h>
 #  include <__iterator/bounded_iter.h>
 #  include <__iterator/concepts.h>
+#  include <__iterator/const_iterator.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/reverse_iterator.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__memory/pointer_traits.h>
+#  include <__ranges/access.h>
 #  include <__ranges/concepts.h>
-#  include <__ranges/data.h>
 #  include <__ranges/enable_borrowed_range.h>
 #  include <__ranges/enable_view.h>
 #  include <__ranges/size.h>
@@ -172,6 +179,7 @@ template<class R>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_integral.h>
 #  include <__type_traits/is_same.h>
+#  include <__type_traits/is_volatile.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
@@ -246,6 +254,10 @@ public:
   using iterator = __wrap_iter<pointer>;
 #    endif
   using reverse_iterator = std::reverse_iterator<iterator>;
+#    if _LIBCPP_STD_VER >= 23
+  using const_iterator         = std::const_iterator<iterator>;
+  using const_reverse_iterator = std::const_iterator<reverse_iterator>;
+#    endif // _LIBCPP_STD_VER >= 23
 
   static constexpr size_type extent = _Extent;
 
@@ -332,8 +344,8 @@ public:
   }
 
   template <size_t _Offset, size_t _Count = dynamic_extent>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto
-  subspan() const noexcept -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto subspan() const noexcept
+      -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
     static_assert(_Offset <= _Extent, "span<T, N>::subspan<Offset, Count>(): Offset out of range");
     static_assert(_Count == dynamic_extent || _Count <= _Extent - _Offset,
                   "span<T, N>::subspan<Offset, Count>(): Offset + Count out of range");
@@ -396,8 +408,33 @@ public:
     return iterator(data() + size());
 #    endif
   }
+#    if _LIBCPP_STD_VER >= 23
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cbegin() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return begin();
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cend() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return end();
+  }
+#    endif // _LIBCPP_STD_VER >= 23
+
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
+#    if _LIBCPP_STD_VER >= 23
+  _LIBCPP_HIDE_FROM_ABI constexpr const_reverse_iterator crbegin() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return rbegin();
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_reverse_iterator crend() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return rend();
+  }
+#    endif // _LIBCPP_STD_VER >= 23
 
   _LIBCPP_HIDE_FROM_ABI span<const byte, _Extent * sizeof(element_type)> __as_bytes() const noexcept {
     return span<const byte, _Extent * sizeof(element_type)>{reinterpret_cast<const byte*>(data()), size_bytes()};
@@ -429,6 +466,10 @@ public:
   using iterator = __wrap_iter<pointer>;
 #    endif
   using reverse_iterator = std::reverse_iterator<iterator>;
+#    if _LIBCPP_STD_VER >= 23
+  using const_iterator         = std::const_iterator<iterator>;
+  using const_reverse_iterator = std::const_iterator<reverse_iterator>;
+#    endif
 
   static constexpr size_type extent = dynamic_extent;
 
@@ -561,8 +602,33 @@ public:
     return iterator(data() + size());
 #    endif
   }
+#    if _LIBCPP_STD_VER >= 23
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cbegin() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return begin();
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator cend() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return end();
+  }
+#    endif
+
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
+#    if _LIBCPP_STD_VER >= 23
+  _LIBCPP_HIDE_FROM_ABI constexpr const_reverse_iterator crbegin() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return rbegin();
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_reverse_iterator crend() const noexcept
+    requires(!is_volatile_v<_Tp>)
+  {
+    return rend();
+  }
+#    endif
 
   _LIBCPP_HIDE_FROM_ABI span<const byte, dynamic_extent> __as_bytes() const noexcept {
     return {reinterpret_cast<const byte*>(data()), size_bytes()};

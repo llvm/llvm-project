@@ -27,9 +27,6 @@
 #include <__iterator/readable_traits.h>
 #include <__iterator/segmented_iterator.h>
 #include <__memory/addressof.h>
-#include <__ranges/access.h>
-#include <__ranges/concepts.h>
-#include <__ranges/subrange.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_assignable.h>
@@ -314,16 +311,6 @@ inline constexpr bool disable_sized_sentinel_for<reverse_iterator<_Iter1>, rever
 template <class _Iter>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reverse_iterator<_Iter> make_reverse_iterator(_Iter __i) {
   return reverse_iterator<_Iter>(__i);
-}
-#endif
-
-#if _LIBCPP_STD_VER >= 20
-template <ranges::bidirectional_range _Range>
-_LIBCPP_HIDE_FROM_ABI constexpr ranges::subrange<reverse_iterator<ranges::iterator_t<_Range>>,
-                                                 reverse_iterator<ranges::iterator_t<_Range>>>
-__reverse_range(_Range&& __range) {
-  auto __first = ranges::begin(__range);
-  return {std::make_reverse_iterator(ranges::next(__first, ranges::end(__range))), std::make_reverse_iterator(__first)};
 }
 #endif
 

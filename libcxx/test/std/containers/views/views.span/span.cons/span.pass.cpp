@@ -87,11 +87,16 @@ TEST_CONSTEXPR_CXX20 void check() {
 }
 
 template <class T>
-TEST_CONSTEXPR_CXX20 void check_cvs() {
+constexpr void check_non_volatile() {
   check<T, T>();
 
   check<T const, T>();
   check<T const, T const>();
+}
+
+template <class T>
+constexpr void check_cvs() {
+  check_non_volatile<T>();
 
   check<T volatile, T>();
   check<T volatile, T volatile>();
@@ -104,12 +109,17 @@ TEST_CONSTEXPR_CXX20 void check_cvs() {
 
 struct A {};
 
-TEST_CONSTEXPR_CXX20 bool test() {
+constexpr bool test() {
   check_cvs<int>();
   check_cvs<long>();
   check_cvs<double>();
+#if TEST_STD_VER >= 23 // LWG3813: span<volatile class> is generally unsupported since C++23.
+  check_non_volatile<std::string>();
+  check_non_volatile<A>();
+#else
   check_cvs<std::string>();
   check_cvs<A>();
+#endif
   return true;
 }
 

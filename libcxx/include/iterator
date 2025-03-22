@@ -383,6 +383,31 @@ insert_iterator<Container> inserter(Container& x, typename Container::iterator i
 template <class Container>
 constexpr insert_iterator<Container> inserter(Container& x, ranges::iterator_t<Container> i);  // since C++20
 
+template<indirectly_readable I>
+using iter_const_reference_t = see below;                                       // since C++23
+template<input_iterator I>
+using const_iterator = see below;                                               // since C++23
+template<semiregular S>
+using const_sentinel = see below;                                               // since C++23
+
+template<input_iterator Iterator>
+class basic_const_iterator;                                                     // since C++23
+
+template<class T, common_with<T> U>
+  requires input_iterator<common_type_t<T, U>>
+struct common_type<basic_const_iterator<T>, U>;                                 // since C++23
+template<class T, common_with<T> U>
+  requires input_iterator<common_type_t<T, U>>
+struct common_type<U, basic_const_iterator<T>>;                                 // since C++23
+template<class T, common_with<T> U>
+  requires input_iterator<common_type_t<T, U>>
+struct common_type<basic_const_iterator<T>, basic_const_iterator<U>>;           // since C++23
+
+template<input_iterator I>
+constexpr const_iterator<I> make_const_iterator(I it);                          // since C++23
+template<semiregular S>
+constexpr const_sentinel<S> make_const_sentinel(S s);                           // since C++23
+
 template <class Iterator>
 class move_iterator {
 public:
@@ -727,6 +752,10 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #    include <__iterator/readable_traits.h>
 #    include <__iterator/sortable.h>
 #    include <__iterator/unreachable_sentinel.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 23
+#    include <__iterator/const_iterator.h>
 #  endif
 
 #  include <version>
