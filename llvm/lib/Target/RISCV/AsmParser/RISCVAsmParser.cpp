@@ -2343,7 +2343,7 @@ ParseStatus RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
     return ParseStatus::Failure;
 
   if (Res->getKind() != MCExpr::ExprKind::SymbolRef ||
-      cast<MCSymbolRefExpr>(Res)->getKind() == MCSymbolRefExpr::VK_PLT)
+      getSpecifier(cast<MCSymbolRefExpr>(Res)) == RISCVMCExpr::VK_PLT)
     return Error(S, "operand must be a valid jump target");
 
   Res = RISCVMCExpr::create(Res, RISCVMCExpr::VK_CALL, getContext());

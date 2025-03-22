@@ -556,7 +556,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
 
   const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
   const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
-  if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
+  if (getSpecifier(A) != RISCVMCExpr::VK_None || SA.isUndefined())
     return false;
 
   bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
