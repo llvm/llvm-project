@@ -368,6 +368,17 @@ add_libc_test(
     libc.src.stdlib.srand
 )
 
+add_libc_test(
+  memalignment_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    memalignment_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.memalignment
+)
+
 if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_test(
@@ -457,16 +468,4 @@ if(LLVM_LIBC_FULL_BUILD)
         libc.src.stdlib.free
     )
   endif()
-  add_libc_test(
-    memalignment_test
-    # The EXPECT_EXITS test is only availible for unit tests.
-    UNIT_TEST_ONLY
-    SUITE
-      libc-stdlib-tests
-    SRCS
-      memalignment_test.cpp
-    DEPENDS
-      libc.include.stdlib
-      libc.src.stdlib.memalignment
-  )
 endif()

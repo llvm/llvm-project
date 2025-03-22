@@ -345,6 +345,12 @@ add_entrypoint_object(
     .rand_util
 )
 
+add_entrypoint_external(
+  memalignment
+  DEPENDS
+    ${SCUDO_DEPS}
+)
+
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   if(LLVM_LIBC_INCLUDE_SCUDO)
     set(SCUDO_DEPS "")
@@ -382,11 +388,6 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
 
     add_entrypoint_external(
       malloc
-      DEPENDS
-        ${SCUDO_DEPS}
-    )
-    add_entrypoint_external(
-      memalignment
       DEPENDS
         ${SCUDO_DEPS}
     )
