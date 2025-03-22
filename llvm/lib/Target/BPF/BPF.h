@@ -22,6 +22,8 @@ class BPFTargetMachine;
 class InstructionSelector;
 class PassRegistry;
 
+static const char *BPF_UNREACHABLE = "bpf_unreachable";
+
 ModulePass *createBPFCheckAndAdjustIR();
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
