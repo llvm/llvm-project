@@ -2377,6 +2377,18 @@ libc_math_function(
     ],
 )
 
+libc_math_function(
+    name = "cbrtf16",
+    additional_deps = [
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_config",
+        ":__support_common",
+    ],
+)
+
 libc_math_function(name = "ceil")
 
 libc_math_function(name = "ceilf")

@@ -592,6 +592,8 @@ math_mpfr_test(
     hdrs = ["TruncTest.h"],
 )
 
+math_mpfr_test(name = "cbrtf16")
+
 math_mpfr_test(name = "cosf16")
 
 math_mpfr_test(name = "cospif16")
