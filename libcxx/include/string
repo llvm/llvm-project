@@ -1101,7 +1101,7 @@ public:
     size_type __str_sz = __str.size();
     if (__pos > __str_sz)
       this->__throw_out_of_range();
-    __init(__str.data() + __pos, std::min(__n, __str_sz - __pos));
+    __init(__str.data() + __pos, std::min<size_type>(__n, __str_sz - __pos));
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -2943,7 +2943,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const basic_string& __str, siz
   size_type __sz = __str.size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  return assign(__str.data() + __pos, std::min(__n, __sz - __pos));
+  return assign(__str.data() + __pos, std::min<size_type>(__n, __sz - __pos));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2957,7 +2957,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const _Tp& __t, size_type __po
   size_type __sz   = __sv.size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  return assign(__sv.data() + __pos, std::min(__n, __sz - __pos));
+  return assign(__sv.data() + __pos, std::min<size_type>(__n, __sz - __pos));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3088,7 +3088,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str, siz
   size_type __sz = __str.size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  return append(__str.data() + __pos, std::min(__n, __sz - __pos));
+  return append(__str.data() + __pos, std::min<size_type>(__n, __sz - __pos));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3102,7 +3102,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const _Tp& __t, size_type __po
   size_type __sz   = __sv.size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  return append(__sv.data() + __pos, std::min(__n, __sz - __pos));
+  return append(__sv.data() + __pos, std::min<size_type>(__n, __sz - __pos));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3210,7 +3210,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(
   size_type __str_sz = __str.size();
   if (__pos2 > __str_sz)
     this->__throw_out_of_range();
-  return insert(__pos1, __str.data() + __pos2, std::min(__n, __str_sz - __pos2));
+  return insert(__pos1, __str.data() + __pos2, std::min<size_type>(__n, __str_sz - __pos2));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3224,7 +3224,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const _Tp& _
   size_type __str_sz = __sv.size();
   if (__pos2 > __str_sz)
     this->__throw_out_of_range();
-  return insert(__pos1, __sv.data() + __pos2, std::min(__n, __str_sz - __pos2));
+  return insert(__pos1, __sv.data() + __pos2, std::min<size_type>(__n, __str_sz - __pos2));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3268,7 +3268,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(
   size_type __sz = size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  __n1            = std::min(__n1, __sz - __pos);
+  __n1            = std::min<size_type>(__n1, __sz - __pos);
   size_type __cap = capacity();
   if (__cap - __sz + __n1 >= __n2) {
     value_type* __p = std::__to_address(__get_pointer());
@@ -3310,7 +3310,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
   size_type __sz = size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  __n1            = std::min(__n1, __sz - __pos);
+  __n1            = std::min<size_type>(__n1, __sz - __pos);
   size_type __cap = capacity();
   value_type* __p;
   if (__cap - __sz + __n1 >= __n2) {
@@ -3346,7 +3346,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(
   size_type __str_sz = __str.size();
   if (__pos2 > __str_sz)
     this->__throw_out_of_range();
-  return replace(__pos1, __n1, __str.data() + __pos2, std::min(__n2, __str_sz - __pos2));
+  return replace(__pos1, __n1, __str.data() + __pos2, std::min<size_type>(__n2, __str_sz - __pos2));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3361,7 +3361,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(
   size_type __str_sz = __sv.size();
   if (__pos2 > __str_sz)
     this->__throw_out_of_range();
-  return replace(__pos1, __n1, __sv.data() + __pos2, std::min(__n2, __str_sz - __pos2));
+  return replace(__pos1, __n1, __sv.data() + __pos2, std::min<size_type>(__n2, __str_sz - __pos2));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3381,7 +3381,7 @@ basic_string<_CharT, _Traits, _Allocator>::__erase_external_with_move(size_type 
   if (__n) {
     size_type __sz     = size();
     value_type* __p    = std::__to_address(__get_pointer());
-    __n                = std::min(__n, __sz - __pos);
+    __n                = std::min<size_type>(__n, __sz - __pos);
     size_type __n_move = __sz - __pos - __n;
     if (__n_move != 0)
       traits_type::move(__p + __pos, __p + __pos + __n, __n_move);
@@ -3555,7 +3555,7 @@ basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, 
   size_type __sz = size();
   if (__pos > __sz)
     this->__throw_out_of_range();
-  size_type __rlen = std::min(__n, __sz - __pos);
+  size_type __rlen = std::min<size_type>(__n, __sz - __pos);
   traits_type::copy(__s, data() + __pos, __rlen);
   return __rlen;
 }
@@ -3609,7 +3609,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 int basic_string<_CharT, _Traits, _Allocato
   size_type __sz = size();
   if (__pos1 > __sz || __n2 == npos)
     this->__throw_out_of_range();
-  size_type __rlen = std::min(__n1, __sz - __pos1);
+  size_type __rlen = std::min<size_type>(__n1, __sz - __pos1);
   int __r          = traits_type::compare(data() + __pos1, __s, std::min(__rlen, __n2));
   if (__r == 0) {
     if (__rlen < __n2)
