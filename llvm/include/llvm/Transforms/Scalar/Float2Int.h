@@ -28,6 +28,26 @@ class LLVMContext;
 class Type;
 class Value;
 
+class OrderedInstruction {
+  Instruction *Ins;
+  unsigned int Order;
+
+public:
+  OrderedInstruction(Instruction *Inst, unsigned int Ord)
+      : Ins(Inst), Order(Ord) {}
+
+  Instruction *getInstruction() { return Ins; }
+  unsigned int getOrder() { return Order; }
+};
+
+template <class T> struct OrderedInstructionLess {
+  bool operator()(const T &lhs, const T &rhs) const {
+    OrderedInstruction lhsOrder = lhs;
+    OrderedInstruction rhsOrder = rhs;
+    return rhsOrder.getOrder() < lhsOrder.getOrder();
+  }
+};
+
 class Float2IntPass : public PassInfoMixin<Float2IntPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -36,6 +56,7 @@ public:
   bool runImpl(Function &F, const DominatorTree &DT);
 
 private:
+  unsigned int insOrder(Instruction *I);
   void findRoots(Function &F, const DominatorTree &DT);
   void seen(Instruction *I, ConstantRange R);
   ConstantRange badRange();
@@ -50,7 +71,10 @@ private:
 
   MapVector<Instruction *, ConstantRange> SeenInsts;
   SmallSetVector<Instruction *, 8> Roots;
-  EquivalenceClasses<Instruction *> ECs;
+  EquivalenceClasses<OrderedInstruction,
+                     OrderedInstructionLess<OrderedInstruction>>
+      ECs;
+  MapVector<Instruction *, unsigned int> InstructionOrders;
   MapVector<Instruction *, Value *> ConvertedInsts;
   LLVMContext *Ctx;
 };

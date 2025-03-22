@@ -84,6 +84,16 @@ static Instruction::BinaryOps mapBinOpcode(unsigned Opcode) {
   }
 }
 
+// Instruction order - return deterministic order suitable as set
+// order for EquivalenceClasses.
+unsigned int Float2IntPass::insOrder(Instruction *I) {
+  static unsigned int order = 0;
+  if (InstructionOrders.find(I) != InstructionOrders.end())
+    return InstructionOrders[I];
+  InstructionOrders[I] = order++;
+  return order - 1;
+}
+
 // Find the roots - instructions that convert from the FP domain to
 // integer domain.
 void Float2IntPass::findRoots(Function &F, const DominatorTree &DT) {
@@ -187,7 +197,8 @@ void Float2IntPass::walkBackwards() {
     for (Value *O : I->operands()) {
       if (Instruction *OI = dyn_cast<Instruction>(O)) {
         // Unify def-use chains if they interfere.
-        ECs.unionSets(I, OI);
+        ECs.unionSets(OrderedInstruction(I, insOrder(I)),
+                      OrderedInstruction(OI, insOrder(OI)));
         if (SeenInsts.find(I)->second != badRange())
           Worklist.push_back(OI);
       } else if (!isa<ConstantFP>(O)) {
@@ -319,7 +330,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
     // For every member of the partition, union all the ranges together.
     for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
          MI != ME; ++MI) {
-      Instruction *I = *MI;
+      OrderedInstruction OMI = *MI;
+      Instruction *I = OMI.getInstruction();
       auto SeenI = SeenInsts.find(I);
       if (SeenI == SeenInsts.end())
         continue;
@@ -388,9 +400,11 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       }
     }
 
-    for (auto MI = ECs.member_begin(It), ME = ECs.member_end();
-         MI != ME; ++MI)
-      convert(*MI, Ty);
+    for (auto MI = ECs.member_begin(It), ME = ECs.member_end(); MI != ME;
+         ++MI) {
+      OrderedInstruction OMI = *MI;
+      convert(OMI.getInstruction(), Ty);
+    }
     MadeChange = true;
   }
 
@@ -481,8 +495,10 @@ void Float2IntPass::cleanup() {
 bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "F2I: Looking at function " << F.getName() << "\n");
   // Clear out all state.
-  ECs = EquivalenceClasses<Instruction*>();
+  ECs = EquivalenceClasses<OrderedInstruction,
+                           OrderedInstructionLess<OrderedInstruction> >();
   SeenInsts.clear();
+  InstructionOrders.clear();
   ConvertedInsts.clear();
   Roots.clear();
 
