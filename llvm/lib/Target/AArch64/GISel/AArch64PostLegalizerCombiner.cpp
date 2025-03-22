@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/OptMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -440,6 +441,9 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
+  std::unique_ptr<MachineIRBuilder> Opt;
+  // hides Combiner::B
+  MachineIRBuilder &B;
   const CombinerHelper Helper;
   const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
@@ -473,7 +477,9 @@ AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
     const AArch64Subtarget &STI, MachineDominatorTree *MDT,
     const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
+      Opt(std::make_unique<OptMIRBuilder>(MF, CSEInfo, Observer, LI,
+                                          /*IsPrelegalize=*/false)),
+      B(*Opt), Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPostLegalizeGICombiner.inc"
