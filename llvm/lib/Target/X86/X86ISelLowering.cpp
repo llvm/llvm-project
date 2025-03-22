@@ -52226,6 +52226,47 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (!Subtarget.isSHLDSlow()) {
+    using namespace llvm::SDPatternMatch;
+    APInt MaskConst, ShlConst;
+    SDValue A, B;
+    if (sd_match(N, m_Or(m_Shl(m_Value(B), m_ConstInt(ShlConst)),
+                         m_And(m_Value(A), m_ConstInt(MaskConst))))) {
+      uint64_t ShiftValue = ShlConst.getZExtValue();
+      if (MaskConst.isMask(ShiftValue) && (A.getOpcode() == ISD::CopyFromReg) &&
+          (B.getOpcode() == ISD::CopyFromReg)) {
+        unsigned NumBits = B.getScalarValueSizeInBits();
+        unsigned NewShift = NumBits - ShiftValue;
+        if (ShiftValue > 4 && ShiftValue != 8 && ShiftValue != 16 &&
+            ShiftValue != 32 && ShiftValue != 64) {
+          SDValue NewSHL =
+              DAG.getNode(ISD::SHL, dl, VT, A,
+                          DAG.getShiftAmountConstant(NewShift, VT, dl));
+          SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
+                                  DAG.getShiftAmountConstant(NewShift, VT, dl));
+          return R;
+        }
+      }
+      if (MaskConst.isMask(ShiftValue) &&
+          (A.getOpcode() == ISD::TRUNCATE &&
+           A.getOperand(0).getOpcode() == ISD::CopyFromReg) &&
+          (B.getOpcode() == ISD::TRUNCATE &&
+           B.getOperand(0).getOpcode() == ISD::CopyFromReg)) {
+        unsigned NumBits = B.getScalarValueSizeInBits();
+        unsigned NewShift = NumBits - ShiftValue;
+        if (ShiftValue > 4 && ShiftValue != 8 && ShiftValue != 16 &&
+            ShiftValue != 32 && ShiftValue != 64) {
+          SDValue NewSHL =
+              DAG.getNode(ISD::SHL, dl, VT, A,
+                          DAG.getShiftAmountConstant(NewShift, VT, dl));
+          SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
+                                  DAG.getShiftAmountConstant(NewShift, VT, dl));
+          return R;
+        }
+      }
+    }
+  }
+
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
     return SetCC;
 
