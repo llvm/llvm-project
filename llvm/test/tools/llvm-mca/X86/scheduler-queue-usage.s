@@ -176,5 +176,5 @@ xor %eax, %ebx
 # ZNVER4:           [1]            [2]        [3]        [4]
 # ZNVER4-NEXT:     Zn4FP            0          0          64
 # ZNVER4-NEXT:     Zn4Int           0          1          96
-# ZNVER4-NEXT:     Zn4Load          0          0          72
+# ZNVER4-NEXT:     Zn4Load          0          0          88
 # ZNVER4-NEXT:     Zn4Store         0          0          64
