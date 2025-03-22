@@ -1477,6 +1477,9 @@ static bool interp__builtin_ptrauth_string_discriminator(
   const auto &Ptr = S.Stk.peek<Pointer>();
   assert(Ptr.getFieldDesc()->isPrimitiveArray());
 
+  // This should be created for a StringLiteral, so should alway shold at least
+  // one array element.
+  assert(Ptr.getFieldDesc()->getNumElems() >= 1);
   StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
   uint64_t Result = getPointerAuthStableSipHash(R);
   pushInteger(S, Result, Call->getType());
