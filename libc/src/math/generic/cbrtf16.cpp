@@ -95,7 +95,7 @@ LLVM_LIBC_FUNCTION(float16, cbrtf16, (float16 x)) {
   FloatBits xf_bits(xf);
 
   unsigned x_e = static_cast<unsigned>(xf_bits.get_exponent());
-  unsigned out_e = (x_e / 3 + 127) | sign_bit;
+  unsigned out_e = x_e / 3 + 127;
 
   unsigned shift_e = x_e % 3;
 
@@ -155,8 +155,8 @@ LLVM_LIBC_FUNCTION(float16, cbrtf16, (float16 x)) {
     fputil::clear_except_if_required(FE_INEXACT);
   }
 
-  uint32_t r_bits =
-      r_m | (static_cast<uint32_t>(out_e) << FloatBits::FRACTION_LEN);
+  uint32_t r_bits = r_m | (static_cast<uint32_t>(out_e | sign_bit)
+                           << FloatBits::FRACTION_LEN);
 
   return static_cast<float16>(FloatBits(r_bits).get_val());
 }
