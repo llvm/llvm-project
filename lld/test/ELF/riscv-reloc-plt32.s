@@ -18,6 +18,6 @@
 .globl _start
 _start:
 .data
-  .word foo@PLT - .
-  .word foo@PLT - . + 1
-  .word foo@PLT - . - 1
+  .word %plt(foo - .)
+  .word %plt(foo - . + 1)
+  .word %plt(foo - . - 1)

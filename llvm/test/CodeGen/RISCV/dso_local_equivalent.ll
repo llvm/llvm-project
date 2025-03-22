@@ -4,7 +4,7 @@
 declare void @extern_func()
 
 ; CHECK-LABEL: const:
-; CHECK-NEXT:    .word   extern_func@PLT-const
+; CHECK-NEXT:    .word   %plt(extern_func-const)
 
 ;; Note that for riscv32, the ptrtoint will actually upcast the ptr it to an
 ;; oversized 64-bit pointer that eventually gets truncated. This isn't needed

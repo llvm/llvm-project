@@ -1194,18 +1194,34 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 
+// Reference the function or its PLT entry (`Equiv`), optionally with a
+// subtrahend (`RHS`).
 const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
-    const DSOLocalEquivalent *Equiv, const TargetMachine &TM) const {
+    const DSOLocalEquivalent *Equiv, const MCSymbolRefExpr *RHS,
+    const TargetMachine &TM) const {
   assert(supportDSOLocalEquivalentLowering());
 
+  // If GV is dso_local, reference the function itself. Return GV or GV-RHS.
   const auto *GV = Equiv->getGlobalValue();
-
-  // A PLT entry is not needed for dso_local globals.
+  const MCExpr *Res = MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
+  if (RHS)
+    Res = MCBinaryExpr::createSub(Res, RHS, getContext());
   if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
-    return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
+    return Res;
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
-                                 getContext());
+  // Otherwise, reference the PLT. Return a relocatable expression with the PLT
+  // specifier, %plt(GV) or %plt(GV-RHS).
+  Res = createTargetMCExpr(Res, PLTRelativeSpecifier);
+  if (Res)
+    return Res;
+
+  // If the target only supports the legacy syntax @plt, return GV@plt or
+  // GV@plt - RHS.
+  Res = MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
+                                getContext());
+  if (RHS)
+    Res = MCBinaryExpr::createSub(Res, RHS, getContext());
+  return Res;
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForCommandLines() const {

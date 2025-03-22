@@ -15,12 +15,12 @@ l:
 # CHECK-NEXT:   0x10 R_RISCV_PLT32 g 0x18
 # CHECK-NEXT: }
 .data
-.word l@plt - .
-.word l@plt - .data
+.word %plt(l - .)
+.word %plt(l - .data)
 
-.word extern@plt - . + 4
-.word g@plt - . + 8
-.word g@plt - .data + 8
+.word %plt(extern - . + 4)
+.word %plt(g - . + 8)
+.word %plt(g - .data + 8)
 
 # CHECK:      Section ({{.*}}) .rela.data1 {
 # CHECK-NEXT:   0x0 R_RISCV_GOT32_PCREL data1 0x0
@@ -30,14 +30,14 @@ l:
 # CHECK-NEXT: }
 .section .data1,"aw"
 data1:
-.word data1@GOTPCREL
-.word extern@gotpcrel+4
-.word extern@GOTPCREL-5
+.word %gotpcrel(data1)
+.word %gotpcrel(extern+4)
+.word %gotpcrel(extern-5)
 
 .ifdef ERR
 # ERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
-.word extern@plt - und
+.word %plt(extern - und)
 
-# ERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
-.word extern@gotpcrel - und
+# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+.word %gotpcrel(extern - und)
 .endif

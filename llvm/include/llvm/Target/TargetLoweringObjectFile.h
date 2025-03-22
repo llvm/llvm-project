@@ -209,6 +209,7 @@ public:
   }
 
   virtual const MCExpr *lowerDSOLocalEquivalent(const DSOLocalEquivalent *Equiv,
+                                                const MCSymbolRefExpr *RHS,
                                                 const TargetMachine &TM) const {
     return nullptr;
   }

@@ -50,6 +50,9 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
+  assert((!Target.getSymA() ||
+          Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None) &&
+         "sym@specifier should have been rejected");
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
@@ -73,9 +76,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
     case FK_PCRel_4:
-      return uint8_t(Target.getAccessVariant()) == RISCVMCExpr::VK_PLT
-                 ? ELF::R_RISCV_PLT32
-                 : ELF::R_RISCV_32_PCREL;
+      return Target.getRefKind() == RISCVMCExpr::VK_PLT ? ELF::R_RISCV_PLT32
+                                                        : ELF::R_RISCV_32_PCREL;
     case RISCV::fixup_riscv_pcrel_hi20:
       return ELF::R_RISCV_PCREL_HI20;
     case RISCV::fixup_riscv_pcrel_lo12_i:
@@ -129,11 +131,12 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
-    if (Expr->getKind() == MCExpr::Target &&
-        cast<RISCVMCExpr>(Expr)->getSpecifier() == RISCVMCExpr::VK_32_PCREL)
-      return ELF::R_RISCV_32_PCREL;
-    if (getSpecifier(Target.getSymA()) == RISCVMCExpr::VK_GOTPCREL)
-      return ELF::R_RISCV_GOT32_PCREL;
+    if (Expr->getKind() == MCExpr::Target) {
+      if (cast<RISCVMCExpr>(Expr)->getSpecifier() == RISCVMCExpr::VK_32_PCREL)
+        return ELF::R_RISCV_32_PCREL;
+      if (cast<RISCVMCExpr>(Expr)->getSpecifier() == RISCVMCExpr::VK_GOTPCREL)
+        return ELF::R_RISCV_GOT32_PCREL;
+    }
     return ELF::R_RISCV_32;
   case FK_Data_8:
     return ELF::R_RISCV_64;

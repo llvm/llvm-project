@@ -18,11 +18,6 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {RISCVMCExpr::VK_GOTPCREL, "GOTPCREL"},
-    {RISCVMCExpr::VK_PLT, "PLT"},
-};
-
 void RISCVMCAsmInfo::anchor() {}
 
 RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
@@ -33,8 +28,6 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT) {
   ExceptionsType = ExceptionHandling::DwarfCFI;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
-
-  initializeVariantKinds(variantKindDescs);
 }
 
 const MCExpr *RISCVMCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,

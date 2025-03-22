@@ -3382,7 +3382,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     return lowerBlockAddressConstant(*BA);
 
   if (const auto *Equiv = dyn_cast<DSOLocalEquivalent>(CV))
-    return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, TM);
+    return getObjFileLowering().lowerDSOLocalEquivalent(Equiv, nullptr, TM);
 
   if (const NoCFIValue *NC = dyn_cast<NoCFIValue>(CV))
     return MCSymbolRefExpr::create(getSymbol(NC->getGlobalValue()), Ctx);
@@ -3481,12 +3481,13 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
         if (!RelocExpr) {
           const MCExpr *LHSExpr =
               MCSymbolRefExpr::create(getSymbol(LHSGV), Ctx);
+          auto *RHSExpr = MCSymbolRefExpr::create(getSymbol(RHSGV), Ctx);
           if (DSOEquiv &&
               getObjFileLowering().supportDSOLocalEquivalentLowering())
-            LHSExpr =
-                getObjFileLowering().lowerDSOLocalEquivalent(DSOEquiv, TM);
-          RelocExpr = MCBinaryExpr::createSub(
-              LHSExpr, MCSymbolRefExpr::create(getSymbol(RHSGV), Ctx), Ctx);
+            RelocExpr = getObjFileLowering().lowerDSOLocalEquivalent(
+                DSOEquiv, RHSExpr, TM);
+          else
+            RelocExpr = MCBinaryExpr::createSub(LHSExpr, RHSExpr, Ctx);
         }
         int64_t Addend = (LHSOffset - RHSOffset).getSExtValue();
         if (Addend != 0)

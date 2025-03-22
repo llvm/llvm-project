@@ -199,7 +199,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
   ParseStatus parseZeroOffsetMemOp(OperandVector &Operands);
-  ParseStatus parseOperandWithModifier(OperandVector &Operands);
+  ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
@@ -225,6 +225,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
   }
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
+  bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
+  bool parseDataExpr(const MCExpr *&Res) override;
 
   bool parseDirectiveOption();
   bool parseDirectiveAttribute();
@@ -1746,7 +1748,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 1,
-        "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an "
+        "operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an "
         "integer in the range");
   case Match_InvalidSImm12Lsb0:
     return generateImmOutOfRangeError(
@@ -1765,17 +1767,19 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1,
         "immediate must be non-zero in the range");
   case Match_InvalidUImm20LUI:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1,
-                                      "operand must be a symbol with "
-                                      "%hi/%tprel_hi modifier or an integer in "
-                                      "the range");
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, 0, (1 << 20) - 1,
+        "operand must be a symbol with "
+        "%hi/%tprel_hi specifier or an integer in "
+        "the range");
   case Match_InvalidUImm20:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 20) - 1);
   case Match_InvalidUImm20AUIPC:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,
         "operand must be a symbol with a "
-        "%pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or "
+        "%pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier "
+        "or "
         "an integer in the range");
   case Match_InvalidSImm21Lsb0JAL:
     return generateImmOutOfRangeError(
@@ -2220,38 +2224,51 @@ ParseStatus RISCVAsmParser::parseImmediate(OperandVector &Operands) {
       return ParseStatus::Failure;
     break;
   case AsmToken::Percent:
-    return parseOperandWithModifier(Operands);
+    return parseOperandWithSpecifier(Operands);
   }
 
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
+ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (parseToken(AsmToken::Percent, "expected '%' for operand modifier"))
-    return ParseStatus::Failure;
+  if (!parseOptionalToken(AsmToken::Percent))
+    return Error(getLoc(), "expected '%' relocation specifier");
+  const MCExpr *Expr = nullptr;
+  bool Failed = parseExprWithSpecifier(Expr, E);
+  if (!Failed)
+    Operands.push_back(RISCVOperand::createImm(Expr, S, E, isRV64()));
+  return Failed;
+}
 
+bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   if (getLexer().getKind() != AsmToken::Identifier)
-    return Error(getLoc(), "expected valid identifier for operand modifier");
+    return Error(getLoc(), "expected '%' relocation specifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   auto Spec = RISCVMCExpr::getSpecifierForName(Identifier);
   if (!Spec)
-    return Error(getLoc(), "unrecognized operand modifier");
+    return Error(getLoc(), "invalid relocation specifier");
 
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
-    return ParseStatus::Failure;
+    return true;
 
   const MCExpr *SubExpr;
   if (getParser().parseParenExpression(SubExpr, E))
-    return ParseStatus::Failure;
+    return true;
 
-  const MCExpr *ModExpr = RISCVMCExpr::create(SubExpr, *Spec, getContext());
-  Operands.push_back(RISCVOperand::createImm(ModExpr, S, E, isRV64()));
-  return ParseStatus::Success;
+  Res = RISCVMCExpr::create(SubExpr, *Spec, getContext());
+  return false;
+}
+
+bool RISCVAsmParser::parseDataExpr(const MCExpr *&Res) {
+  SMLoc E;
+  if (parseOptionalToken(AsmToken::Percent))
+    return parseExprWithSpecifier(Res, E);
+  return getParser().parseExpression(Res);
 }
 
 ParseStatus RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
@@ -3732,7 +3749,7 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
   if (Inst.getOperand(2).getReg() != RISCV::X4) {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[3]).getStartLoc();
     return Error(ErrorLoc, "the second input operand must be tp/x4 when using "
-                           "%tprel_add modifier");
+                           "%tprel_add specifier");
   }
 
   return false;
@@ -3745,7 +3762,7 @@ bool RISCVAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
   if (Inst.getOperand(0).getReg() != RISCV::X5) {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[3]).getStartLoc();
     return Error(ErrorLoc, "the output operand must be t0/x5 when using "
-                           "%tlsdesc_call modifier");
+                           "%tlsdesc_call specifier");
   }
 
   return false;

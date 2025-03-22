@@ -38,6 +38,7 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
 
 protected:
   uint8_t PLTRelativeSpecifier = 0;
+  bool UseTargetMCExprForPLTRelative = true;
 
 public:
   TargetLoweringObjectFileELF();
@@ -112,11 +113,16 @@ public:
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
+  virtual const MCExpr *createTargetMCExpr(const MCExpr *Expr,
+                                           uint8_t Specifier) const {
+    return nullptr;
+  }
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
                                        const GlobalValue *RHS,
                                        const TargetMachine &TM) const override;
 
   const MCExpr *lowerDSOLocalEquivalent(const DSOLocalEquivalent *Equiv,
+                                        const MCSymbolRefExpr *RHS,
                                         const TargetMachine &TM) const override;
 
   MCSection *getSectionForCommandLines() const override;

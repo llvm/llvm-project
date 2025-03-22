@@ -28,6 +28,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
   PLTRelativeSpecifier = RISCVMCExpr::VK_PLT;
+  UseTargetMCExprForPLTRelative = true;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
@@ -179,4 +180,11 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
                                                             Alignment);
+}
+
+const MCExpr *
+RISCVELFTargetObjectFile::createTargetMCExpr(const MCExpr *Expr,
+                                             uint8_t Specifier) const {
+  return RISCVMCExpr::create(Expr, RISCVMCExpr::Specifier(Specifier),
+                             getContext());
 }
