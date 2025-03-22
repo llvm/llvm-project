@@ -942,9 +942,14 @@ static BasicBlock *updateOriginalBlock(BasicBlock *const BB,
                                     AliasAnalysis &AA, DomTreeUpdater &DTU) {
   BasicBlock *MultBB = BasicBlock::Create(Context, BB->getName(),
                          NextCmpBlock->getParent(), InsertBefore);
+  auto *const BranchI = cast<BranchInst>(BB->getTerminator());
+  Value* CondResult = nullptr;
+  if (BranchI->isUnconditional())
+    CondResult = Phi.getIncomingValueForBlock(BB);
+  else
+    CondResult = cast<Value>(BranchI->getCondition());
   // Transfer all instructions except the branching terminator to the new block.
   MultBB->splice(MultBB->end(), BB, BB->begin(), std::prev(BB->end()));
-  Value* CondResult = cast<Value>(&MultBB->back());
   IRBuilder<> Builder(MultBB);
   updateBranching(CondResult, Builder, MultBB, NextCmpBlock, Phi, Context, TLI, AA, DTU);
   return MultBB;
