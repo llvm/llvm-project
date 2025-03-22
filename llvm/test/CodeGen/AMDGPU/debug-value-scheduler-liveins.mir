@@ -3,6 +3,8 @@
 # REQUIRES: asserts
 
 # CHECK: ********** MI Scheduling **********
+# CHECK-NEXT: test_get_liveins:%bb.0
+# CHECK: ********** MI Scheduling **********
 # CHECK-NEXT: test_get_liveins:%bb.1
 # CHECK: Region live-in pressure:  VGPRs: 1 AGPRs: 0, SGPRs: 0, LVGPR WT: 0, LSGPR WT: 0
 # CHECK: ScheduleDAGMILive::schedule starting

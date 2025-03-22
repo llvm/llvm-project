@@ -6570,3 +6570,12 @@ bool LoongArchTargetLowering::shouldAlignPointerArgs(CallInst *CI,
 
   return true;
 }
+
+TargetLoweringBase::LegalizeTypeAction
+LoongArchTargetLowering::getPreferredVectorAction(MVT VT) const {
+  if (!VT.isScalableVector() && VT.getVectorNumElements() != 1 &&
+      VT.getVectorElementType() != MVT::i1)
+    return TypeWidenVector;
+
+  return TargetLoweringBase::getPreferredVectorAction(VT);
+}

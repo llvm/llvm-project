@@ -142,6 +142,23 @@ function (add_flangrt_library name)
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    if (Threads_FOUND) 
+      target_link_libraries(${name_shared} PUBLIC Threads::Threads)
+    endif ()
+
+    # Special dependencies handling for shared libraries only:
+    #
+    # flang-rt libraries must not depend on libc++/libstdc++,
+    # so set the linker language to C to avoid the unnecessary
+    # library dependence. Note that libc++/libstdc++ may still
+    # come through CMAKE_CXX_IMPLICIT_LINK_LIBRARIES.
+    set_target_properties(${name_shared} PROPERTIES LINKER_LANGUAGE C)
+    # Use --as-needed to avoid unnecessary dependencies.
+    if (LINKER_AS_NEEDED_OPT)
+      target_link_options(${name_shared} BEFORE PRIVATE
+        "${LINKER_AS_NEEDED_OPT}"
+        )
+    endif()
   endif ()
 
   if (libtargets)
@@ -195,7 +212,7 @@ function (add_flangrt_library name)
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
+          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE

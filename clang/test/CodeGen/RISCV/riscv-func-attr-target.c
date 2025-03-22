@@ -65,6 +65,20 @@ void test_rvv_f64_type_w_zve64d() {
   vfloat64m1_t v;
 }
 
+__attribute__((target("arch=+v")))
+int test_vsetvl_e64m1(unsigned avl) {
+// CHECK-LABEL: test_vsetvl_e64m1
+// CHECK-SAME: #13
+    return __riscv_vsetvl_e64m1(avl);
+}
+
+__attribute__((target("arch=+v")))
+int test_vsetvlmax_e64m1() {
+// CHECK-LABEL: test_vsetvlmax_e64m1
+// CHECK-SAME: #13
+    return __riscv_vsetvlmax_e64m1();
+}
+
 //.
 // CHECK: attributes #0 = { {{.*}}"target-features"="+64bit,+a,+m,+save-restore,+zaamo,+zalrsc,+zifencei,+zmmul,-relax,-zbb,-zfa" }
 // CHECK: attributes #1 = { {{.*}}"target-cpu"="rocket-rv64" "target-features"="+64bit,+a,+d,+f,+m,+save-restore,+v,+zaamo,+zalrsc,+zicsr,+zifencei,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-relax,-zbb,-zfa" "tune-cpu"="generic-rv64" }

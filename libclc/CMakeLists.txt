@@ -28,6 +28,11 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   spirv/lib/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
+  clc/lib/amdgcn/SOURCES;
+  clc/lib/amdgpu/SOURCES;
+  clc/lib/clspv/SOURCES;
+  clc/lib/r600/SOURCES;
+  clc/lib/spirv/SOURCES;
 )
 
 set( LIBCLC_MIN_LLVM 3.9.0 )
@@ -207,7 +212,7 @@ set( cayman_aliases aruba )
 set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
   mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
   gfx602 gfx705 gfx805
-  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942
+  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942 gfx950
   gfx1010 gfx1011 gfx1012 gfx1013
   gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
   gfx1100 gfx1101 gfx1102 gfx1103
@@ -218,7 +223,6 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
@@ -256,13 +260,6 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
     DEPENDS ${script_loc} )
   add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
   set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-
-  add_custom_command(
-    OUTPUT clc-clspv-convert.cl
-    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc --clspv > clc-clspv-convert.cl
-    DEPENDS ${script_loc} )
-  add_custom_target( generate-clc-clspv-convert.cl DEPENDS clc-clspv-convert.cl )
-  set_target_properties( generate-clc-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
 
 enable_testing()
@@ -312,12 +309,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   set( clc_lib_files )
-
-  if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
-    set( clc_gen_files clc-clspv-convert.cl )
-  else()
-    set( clc_gen_files clc-convert.cl )
-  endif()
+  set( clc_gen_files clc-convert.cl )
 
   libclc_configure_lib_source(
     clc_lib_files
@@ -386,8 +378,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -409,6 +399,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
     list( APPEND build_flags
       -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
+      # FIXME: Fix libclc to not require disabling this noisy warning
+      -Wno-bitwise-conditional-parentheses
     )
 
     add_libclc_builtin_set(

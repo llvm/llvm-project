@@ -416,11 +416,25 @@ public:
     return ShiftValueTy;
   }
 
+  /// Returns the type to be used for the index operand vector operations. By
+  /// default we assume it will have the same size as an address space 0
+  /// pointer.
+  virtual unsigned getVectorIdxWidth(const DataLayout &DL) const {
+    return DL.getPointerSizeInBits(0);
+  }
+
   /// Returns the type to be used for the index operand of:
   /// ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
   /// ISD::INSERT_SUBVECTOR, and ISD::EXTRACT_SUBVECTOR
-  virtual MVT getVectorIdxTy(const DataLayout &DL) const {
-    return getPointerTy(DL);
+  MVT getVectorIdxTy(const DataLayout &DL) const {
+    return MVT::getIntegerVT(getVectorIdxWidth(DL));
+  }
+
+  /// Returns the type to be used for the index operand of:
+  /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
+  /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
+  LLT getVectorIdxLLT(const DataLayout &DL) const {
+    return LLT::scalar(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -1817,7 +1831,7 @@ public:
                                      EVT NewVT) const {
     // By default, assume that it is cheaper to extract a subvector from a wide
     // vector load rather than creating multiple narrow vector loads.
-    if (NewVT.isVector() && !Load->hasOneUse())
+    if (NewVT.isVector() && !SDValue(Load, 0).hasOneUse())
       return false;
 
     return true;
@@ -2148,8 +2162,8 @@ public:
     return MaxDivRemBitWidthSupported;
   }
 
-  /// Returns the size in bits of the maximum larget fp convert the backend
-  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Returns the size in bits of the maximum fp to/from int conversion the
+  /// backend supports. Larger operations will be expanded by ExpandFp.
   unsigned getMaxLargeFPConvertBitWidthSupported() const {
     return MaxLargeFPConvertBitWidthSupported;
   }
@@ -2171,6 +2185,14 @@ public:
   /// weak memory ordering. Defaults to false.
   virtual bool shouldInsertFencesForAtomic(const Instruction *I) const {
     return false;
+  }
+
+  // The memory ordering that AtomicExpandPass should assign to a atomic
+  // instruction that it has lowered by adding fences. This can be used
+  // to "fold" one of the fences into the atomic instruction.
+  virtual AtomicOrdering
+  atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
+    return AtomicOrdering::Monotonic;
   }
 
   /// Whether AtomicExpandPass should automatically insert a trailing fence
@@ -2774,8 +2796,8 @@ protected:
     MaxDivRemBitWidthSupported = SizeInBits;
   }
 
-  /// Set the size in bits of the maximum fp convert the backend supports.
-  /// Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Set the size in bits of the maximum fp to/from int conversion the backend
+  /// supports. Larger operations will be expanded by ExpandFp.
   void setMaxLargeFPConvertBitWidthSupported(unsigned SizeInBits) {
     MaxLargeFPConvertBitWidthSupported = SizeInBits;
   }
@@ -3572,8 +3594,9 @@ private:
   /// Larger operations will be expanded by ExpandLargeDivRem.
   unsigned MaxDivRemBitWidthSupported;
 
-  /// Size in bits of the maximum larget fp convert size the backend
-  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Size in bits of the maximum fp to/from int conversion size the
+  /// backend supports. Larger operations will be expanded by
+  /// ExpandFp.
   unsigned MaxLargeFPConvertBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
@@ -4515,7 +4538,7 @@ public:
   virtual bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                          const TargetRegisterInfo *TRI,
                                          const TargetInstrInfo *TII,
-                                         unsigned &PhysReg, int &Cost) const {
+                                         MCRegister &PhysReg, int &Cost) const {
     return false;
   }
 
@@ -4741,6 +4764,8 @@ public:
     // shouldExtendTypeInLibCall can get the original type before soften.
     ArrayRef<EVT> OpsVTBeforeSoften;
     EVT RetVTBeforeSoften;
+    ArrayRef<Type *> OpsTypeOverrides;
+
     bool IsSigned : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
@@ -4776,6 +4801,13 @@ public:
       OpsVTBeforeSoften = OpsVT;
       RetVTBeforeSoften = RetVT;
       IsSoften = Value;
+      return *this;
+    }
+
+    /// Override the argument type for an operand. Leave the type as null to use
+    /// the type from the operand's node.
+    MakeLibCallOptions &setOpsTypeOverrides(ArrayRef<Type *> OpsTypes) {
+      OpsTypeOverrides = OpsTypes;
       return *this;
     }
   };

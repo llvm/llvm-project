@@ -72,6 +72,7 @@ public:
                              StringRef RegisterName) const;
   void clearDebugRegisterMap() const;
   int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const override;
+  int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const override;
 };
 
 StringRef getNVPTXRegClassName(const TargetRegisterClass *RC);

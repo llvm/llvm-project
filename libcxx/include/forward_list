@@ -295,7 +295,6 @@ struct __forward_node_traits {
                 "the _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__begin_node_pointer __p) { return __p; }
   _LIBCPP_HIDE_FROM_ABI static __begin_node_pointer __as_iter_node(__node_pointer __p) {
     return static_cast<__begin_node_pointer>(static_cast<__void_pointer>(__p));
   }
@@ -373,8 +372,7 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_iterator {
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(nullptr_t) _NOEXCEPT : __ptr_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__begin_node_pointer __p) _NOEXCEPT
-      : __ptr_(__traits::__as_iter_node(__p)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__begin_node_pointer __p) _NOEXCEPT : __ptr_(__p) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__node_pointer __p) _NOEXCEPT
       : __ptr_(__traits::__as_iter_node(__p)) {}
@@ -438,8 +436,7 @@ class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(nullptr_t) _NOEXCEPT : __ptr_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__begin_node_pointer __p) _NOEXCEPT
-      : __ptr_(__traits::__as_iter_node(__p)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__begin_node_pointer __p) _NOEXCEPT : __ptr_(__p) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__node_pointer __p) _NOEXCEPT
       : __ptr_(__traits::__as_iter_node(__p)) {}
@@ -1557,7 +1554,7 @@ erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred) {
 template <class _Tp, class _Allocator, class _Up>
 inline _LIBCPP_HIDE_FROM_ABI typename forward_list<_Tp, _Allocator>::size_type
 erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v) {
-  return std::erase_if(__c, [&](auto& __elem) { return __elem == __v; });
+  return std::erase_if(__c, [&](const auto& __elem) -> bool { return __elem == __v; });
 }
 #  endif
 

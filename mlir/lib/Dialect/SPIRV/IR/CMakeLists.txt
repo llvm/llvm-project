@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   ControlFlowOps.cpp
   CooperativeMatrixOps.cpp
   GroupOps.cpp
+  ImageOps.cpp
   IntegerDotProductOps.cpp
   MemoryOps.cpp
   MeshOps.cpp

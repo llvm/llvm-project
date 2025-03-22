@@ -213,12 +213,12 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
   if (auto Idx =
           createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init)) {
     for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
+      unsigned &PIdx = GlobalIndices[P];
       if (P != VD) {
-        unsigned PIdx = GlobalIndices[P];
         if (Globals[PIdx]->block()->isExtern())
           Globals[PIdx] = Globals[*Idx];
       }
-      GlobalIndices[P] = *Idx;
+      PIdx = *Idx;
     }
     return *Idx;
   }
@@ -393,6 +393,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable);
+    return allocateDescriptor(D, MDSize);
   }
 
   // Arrays.
@@ -419,7 +420,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, ElemDesc, MDSize, NumElems, IsConst,
+        return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
       }
     }

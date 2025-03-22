@@ -439,12 +439,14 @@ set(files
   __fwd/get.h
   __fwd/ios.h
   __fwd/istream.h
+  __fwd/map.h
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
+  __fwd/set.h
   __fwd/span.h
   __fwd/sstream.h
   __fwd/stack.h
@@ -513,6 +515,7 @@ set(files
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
+  __locale_dir/support/linux.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
@@ -866,6 +869,8 @@ set(files
   __type_traits/negation.h
   __type_traits/promote.h
   __type_traits/rank.h
+  __type_traits/reference_constructs_from_temporary.h
+  __type_traits/reference_converts_from_temporary.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_const_ref.h

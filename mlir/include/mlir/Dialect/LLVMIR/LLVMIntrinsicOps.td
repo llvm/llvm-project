@@ -173,6 +173,7 @@ def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;
 def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
 def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
 def LLVM_ATanOp : LLVM_UnaryIntrOpF<"atan">;
+def LLVM_ATan2Op : LLVM_BinarySameArgsIntrOpF<"atan2">;
 
 def LLVM_SinhOp : LLVM_UnaryIntrOpF<"sinh">;
 def LLVM_CoshOp : LLVM_UnaryIntrOpF<"cosh">;
@@ -312,6 +313,16 @@ def LLVM_NoAliasScopeDeclOp
       $_location, (*scopeAttrs)[0]);
   }];
   let assemblyFormat = "$scope attr-dict";
+}
+
+def LLVM_PtrMaskOp
+  : LLVM_OneResultIntrOp<"ptrmask", [], [0, 1],
+                          [Pure, AllTypesMatch<["ptr", "res"]>]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$ptr,
+                   LLVM_ScalarOrVectorOf<AnyInteger>:$mask);
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
+
+  let assemblyFormat = "$ptr `,` $mask attr-dict `:` functional-type(operands, results)";
 }
 
 //

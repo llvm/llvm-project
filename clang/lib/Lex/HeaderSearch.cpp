@@ -80,7 +80,7 @@ HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
 
 ExternalHeaderFileInfoSource::~ExternalHeaderFileInfoSource() = default;
 
-HeaderSearch::HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
+HeaderSearch::HeaderSearch(std::shared_ptr<const HeaderSearchOptions> HSOpts,
                            SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                            const LangOptions &LangOpts,
                            const TargetInfo *Target)
@@ -149,11 +149,17 @@ std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
 
   llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
   // TODO: This only works if the `RedirectingFileSystem`s were all created by
-  //       `createVFSFromOverlayFiles`.
+  //       `createVFSFromOverlayFiles`. But at least exclude the ones with null
+  //       OverlayFileDir.
   RootFS.visit([&](llvm::vfs::FileSystem &FS) {
     if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
-      VFSUsage.push_back(RFS->hasBeenUsed());
-      RFS->clearHasBeenUsed();
+      // Skip a `RedirectingFileSystem` with null OverlayFileDir which indicates
+      // that they aren't created by createVFSFromOverlayFiles from the overlays
+      // in HeaderSearchOption::VFSOverlayFiles.
+      if (!RFS->getOverlayFileDir().empty()) {
+        VFSUsage.push_back(RFS->hasBeenUsed());
+        RFS->clearHasBeenUsed();
+      }
     }
   });
   assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&

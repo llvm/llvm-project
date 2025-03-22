@@ -93,6 +93,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
+    libc.src.strings.ffs
+    libc.src.strings.ffsl
+    libc.src.strings.ffsll
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp
@@ -212,8 +215,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.realloc
 
     # stdio.h entrypoints
-    libc.src.stdio.fdopen
-    libc.src.stdio.fileno
     libc.src.stdio.fprintf
     libc.src.stdio.fscanf
     libc.src.stdio.vfscanf
@@ -410,6 +411,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.canonicalize
@@ -909,6 +911,13 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_getcpuisset
+
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
 
     # setjmp.h entrypoints
     libc.src.setjmp.longjmp
@@ -918,6 +927,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
     libc.src.stdio.fclose
+    libc.src.stdio.fdopen
     libc.src.stdio.feof
     libc.src.stdio.feof_unlocked
     libc.src.stdio.ferror
@@ -926,6 +936,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
     libc.src.stdio.fgets
+    libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
     libc.src.stdio.fopencookie
@@ -992,6 +1003,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.search.hsearch_r
     libc.src.search.insque
     libc.src.search.lfind
+    libc.src.search.lsearch
     libc.src.search.remque
 
     # threads.h entrypoints

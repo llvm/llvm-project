@@ -1594,13 +1594,13 @@ static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
   case ISD::UMULO:
     PromoteMULO(ISD::ZERO_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::UMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::UMUL;
     CC = M68k::COND_VS;
     break;
   case ISD::SMULO:
     PromoteMULO(ISD::SIGN_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::SMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::SMUL;
     CC = M68k::COND_VS;
     break;
   }

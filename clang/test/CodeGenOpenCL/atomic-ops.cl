@@ -70,19 +70,19 @@ void test_addr(global atomic_int *ig, private atomic_int *ip, local atomic_int *
 
 void fi3(atomic_int *i, atomic_uint *ui) {
   // CHECK-LABEL: @fi3
-  // CHECK: atomicrmw and ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE:![0-9]+]]{{$}}
+  // CHECK: atomicrmw and ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE:![0-9]+]], [[$DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
   int x = __opencl_atomic_fetch_and(i, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw min ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw min ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   x = __opencl_atomic_fetch_min(i, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw max ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw max ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   x = __opencl_atomic_fetch_max(i, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw umin ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw umin ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   x = __opencl_atomic_fetch_min(ui, 1, memory_order_seq_cst, memory_scope_work_group);
 
-  // CHECK: atomicrmw umax ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw umax ptr %{{[.0-9A-Z_a-z]+}}, i32 %{{[.0-9A-Z_a-z]+}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   x = __opencl_atomic_fetch_max(ui, 1, memory_order_seq_cst, memory_scope_work_group);
 }
 
@@ -186,31 +186,31 @@ void ff2(atomic_float *d) {
 
 float ff3(atomic_float *d) {
   // CHECK-LABEL: @ff3
-  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw xchg ptr {{.*}} syncscope("workgroup") seq_cst, align 4, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   return __opencl_atomic_exchange(d, 2, memory_order_seq_cst, memory_scope_work_group);
 }
 
 float ff4(global atomic_float *d, float a) {
   // CHECK-LABEL: @ff4
-  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4{{$}}
+  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 4, [[$DEFMD]]
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff5(global atomic_double *d, double a) {
   // CHECK-LABEL: @ff5
-  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 8{{$}}
+  // CHECK: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic, align 8, [[$DEFMD]]
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff4_generic(atomic_float *d, float a) {
   // CHECK-LABEL: @ff4_generic
-  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 4, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 float ff5_generic(atomic_double *d, double a) {
   // CHECK-LABEL: @ff5_generic
-  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace [[$NOPRIVATE]]{{$}}
+  // CHECK: atomicrmw fadd ptr {{.*}} syncscope("workgroup-one-as") monotonic, align 8, !noalias.addrspace [[$NOPRIVATE]], [[$DEFMD]]
   return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 

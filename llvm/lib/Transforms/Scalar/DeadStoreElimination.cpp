@@ -1200,7 +1200,7 @@ struct DSEState {
       if (!isInvisibleToCallerOnUnwind(V)) {
         I.first->second = false;
       } else if (isNoAliasCall(V)) {
-        I.first->second = !PointerMayBeCaptured(V, true, false);
+        I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
       }
     }
     return I.first->second;
@@ -1219,7 +1219,7 @@ struct DSEState {
       // with the killing MemoryDef. But we refrain from doing so for now to
       // limit compile-time and this does not cause any changes to the number
       // of stores removed on a large test set in practice.
-      I.first->second = PointerMayBeCaptured(V, false, true);
+      I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
     return !I.first->second;
   }
 

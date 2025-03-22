@@ -875,30 +875,15 @@ TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST_F(RtsanOpenedFileTest, StatDiesWhenRealtime) {
-  auto Func = [&]() {
-    struct stat s{};
-    stat(GetTemporaryFilePath(), &s);
-  };
-  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("stat"));
+TEST_F(RtsanOpenedFileTest, TruncateDiesWhenRealtime) {
+  auto Func = [&]() { truncate(GetTemporaryFilePath(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("truncate"));
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST_F(RtsanOpenedFileTest, LstatDiesWhenRealtime) {
-  auto Func = [&]() {
-    struct stat s{};
-    lstat(GetTemporaryFilePath(), &s);
-  };
-  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("lstat"));
-  ExpectNonRealtimeSurvival(Func);
-}
-
-TEST_F(RtsanOpenedFileTest, FstatDiesWhenRealtime) {
-  auto Func = [&]() {
-    struct stat s{};
-    fstat(GetOpenFd(), &s);
-  };
-  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fstat"));
+TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
+  auto Func = [&]() { ftruncate(GetOpenFd(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftruncate"));
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -1135,6 +1120,25 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
     os_unfair_lock_lock(&unfair_lock);
   };
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+// We intercept _os_nospin_lock_lock because it's the internal
+// locking mechanism for MacOS's atomic implementation for data
+// types that are larger than the hardware's maximum lock-free size.
+// However, it's a private implementation detail and not visible in any headers,
+// so we must duplicate the required type definitions to forward declaration
+// what we need here.
+extern "C" {
+struct _os_nospin_lock_s {
+  unsigned int oul_value;
+};
+void _os_nospin_lock_lock(_os_nospin_lock_s *);
+}
+TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
+  _os_nospin_lock_s lock{};
+  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
+  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif

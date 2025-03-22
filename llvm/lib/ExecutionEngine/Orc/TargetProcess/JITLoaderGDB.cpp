@@ -75,10 +75,10 @@ static void appendJITDebugDescriptor(const char *ObjAddr, size_t Size) {
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderGDBAllocAction(const char *Data, size_t Size) {
+llvm_orc_registerJITLoaderGDBAllocAction(const char *ArgData, size_t ArgSize) {
   using namespace orc::shared;
   return WrapperFunction<SPSError(SPSExecutorAddrRange, bool)>::handle(
-             Data, Size,
+             ArgData, ArgSize,
              [](ExecutorAddrRange R, bool AutoRegisterCode) {
                appendJITDebugDescriptor(R.Start.toPtr<const char *>(),
                                         R.size());
@@ -91,10 +91,10 @@ llvm_orc_registerJITLoaderGDBAllocAction(const char *Data, size_t Size) {
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
+llvm_orc_registerJITLoaderGDBWrapper(const char *ArgData, size_t ArgSize) {
   using namespace orc::shared;
   return WrapperFunction<SPSError(SPSExecutorAddrRange, bool)>::handle(
-             Data, Size,
+             ArgData, ArgSize,
              [](ExecutorAddrRange R, bool AutoRegisterCode) {
                appendJITDebugDescriptor(R.Start.toPtr<const char *>(),
                                         R.size());

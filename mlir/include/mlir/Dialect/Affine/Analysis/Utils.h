@@ -500,6 +500,8 @@ struct MemRefRegion {
   ///    to slice operands (which correspond to symbols).
   /// If 'addMemRefDimBounds' is true, constant upper/lower bounds
   /// [0, memref.getDimSize(i)) are added for each MemRef dimension 'i'.
+  /// If `dropLocalVars` is true, all local variables in `cst` are projected
+  /// out.
   ///
   ///  For example, the memref region for this operation at loopDepth = 1 will
   ///  be:
@@ -513,9 +515,14 @@ struct MemRefRegion {
   ///   {memref = %A, write = false, {%i <= m0 <= %i + 7} }
   /// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
   ///
+  /// If `dropOuterIVs` is true, project out any IVs other than those among
+  /// `loopDepth` surrounding IVs, which would be symbols. If `dropOuterIVs`
+  /// is false, the IVs would be turned into local variables instead of being
+  /// projected out.
   LogicalResult compute(Operation *op, unsigned loopDepth,
                         const ComputationSliceState *sliceState = nullptr,
-                        bool addMemRefDimBounds = true);
+                        bool addMemRefDimBounds = true,
+                        bool dropLocalVars = true, bool dropOuterIVs = true);
 
   FlatAffineValueConstraints *getConstraints() { return &cst; }
   const FlatAffineValueConstraints *getConstraints() const { return &cst; }
@@ -530,30 +537,17 @@ struct MemRefRegion {
   /// corresponding dimension-wise bounds major to minor. The number of elements
   /// and all the dimension-wise bounds are guaranteed to be non-negative. We
   /// use int64_t instead of uint64_t since index types can be at most
-  /// int64_t. `lbs` are set to the lower bounds for each of the rank
-  /// dimensions, and lbDivisors contains the corresponding denominators for
-  /// floorDivs.
+  /// int64_t. `lbs` are set to the lower bound maps for each of the rank
+  /// dimensions where each of these maps is purely symbolic in the constraints
+  /// set's symbols.
   std::optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
-      std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
-      SmallVectorImpl<int64_t> *lbDivisors = nullptr) const;
+      SmallVectorImpl<AffineMap> *lbs = nullptr) const;
 
   /// Gets the lower and upper bound map for the dimensional variable at
   /// `pos`.
   void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
                              AffineMap &ubMap) const;
-
-  /// A wrapper around FlatAffineValueConstraints::getConstantBoundOnDimSize().
-  /// 'pos' corresponds to the position of the memref shape's dimension (major
-  /// to minor) which matches 1:1 with the dimensional variable positions in
-  /// 'cst'.
-  std::optional<int64_t>
-  getConstantBoundOnDimSize(unsigned pos,
-                            SmallVectorImpl<int64_t> *lb = nullptr,
-                            int64_t *lbFloorDivisor = nullptr) const {
-    assert(pos < getRank() && "invalid position");
-    return cst.getConstantBoundOnDimSize64(pos, lb);
-  }
 
   /// Returns the size of this MemRefRegion in bytes.
   std::optional<int64_t> getRegionSize();

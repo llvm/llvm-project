@@ -55,6 +55,7 @@ bool SPIRVInstrInfo::isSpecConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpSpecConstantFalse:
   case SPIRV::OpSpecConstant:
   case SPIRV::OpSpecConstantComposite:
+  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
   case SPIRV::OpSpecConstantOp:
     return true;
   default:
@@ -96,6 +97,17 @@ bool SPIRVInstrInfo::isDecorationInstr(const MachineInstr &MI) const {
   }
 }
 
+bool SPIRVInstrInfo::isAliasingInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpAliasDomainDeclINTEL:
+  case SPIRV::OpAliasScopeDeclINTEL:
+  case SPIRV::OpAliasScopeListDeclINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpCapability:
@@ -114,7 +126,8 @@ bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   case SPIRV::OpModuleProcessed:
     return true;
   default:
-    return isTypeDeclInstr(MI) || isConstantInstr(MI) || isDecorationInstr(MI);
+    return isTypeDeclInstr(MI) || isConstantInstr(MI) ||
+           isDecorationInstr(MI) || isAliasingInstr(MI);
   }
 }
 
@@ -258,8 +271,8 @@ unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 void SPIRVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   // Actually we don't need this COPY instruction. However if we do nothing with
   // it, post RA pseudo instrs expansion just removes it and we get the code

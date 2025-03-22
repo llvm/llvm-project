@@ -626,3 +626,13 @@ func.func @print_error_on_correct_line() {
     sparse <> : i32
   return
 }
+
+// -----
+
+// Prevent assertions when parsing a dense attribute expected to be a string 
+// but encountering a different type. 
+func.func @expect_to_parse_literal() {
+  // expected-error@below {{expected string token, got 23}}
+  %0 = arith.constant dense<[23]> : tensor<1x!unknown<>>
+  return
+}

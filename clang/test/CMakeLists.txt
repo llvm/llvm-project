@@ -85,7 +85,14 @@ list(APPEND CLANG_TEST_DEPS
   diagtool
   hmaptool
   )
-  
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND CLANG_TEST_DEPS
+    cir-opt
+    cir-translate
+    )
+endif()
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
@@ -130,6 +137,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dis
     llvm-dwarfdump
     llvm-ifs
+    llvm-link
     llvm-lto2
     llvm-mc
     llvm-modextract

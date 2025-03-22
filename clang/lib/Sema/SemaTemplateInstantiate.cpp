@@ -1574,6 +1574,8 @@ namespace {
     TransformStmtAlwaysInlineAttr(const Stmt *OrigS, const Stmt *InstS,
                                   const AlwaysInlineAttr *A);
     const CodeAlignAttr *TransformCodeAlignAttr(const CodeAlignAttr *CA);
+    const OpenACCRoutineDeclAttr *
+    TransformOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
     ExprResult TransformPredefinedExpr(PredefinedExpr *E);
     ExprResult TransformDeclRefExpr(DeclRefExpr *E);
     ExprResult TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E);
@@ -2252,6 +2254,12 @@ const CodeAlignAttr *
 TemplateInstantiator::TransformCodeAlignAttr(const CodeAlignAttr *CA) {
   Expr *TransformedExpr = getDerived().TransformExpr(CA->getAlignment()).get();
   return getSema().BuildCodeAlignAttr(*CA, TransformedExpr);
+}
+const OpenACCRoutineDeclAttr *
+TemplateInstantiator::TransformOpenACCRoutineDeclAttr(
+    const OpenACCRoutineDeclAttr *A) {
+  llvm_unreachable("RoutineDecl should only be a declaration attribute, as it "
+                   "applies to a Function Decl (and a few places for VarDecl)");
 }
 
 ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
@@ -4496,6 +4504,17 @@ Sema::SubstExpr(Expr *E, const MultiLevelTemplateArgumentList &TemplateArgs) {
                                     SourceLocation(),
                                     DeclarationName());
   return Instantiator.TransformExpr(E);
+}
+
+ExprResult
+Sema::SubstCXXIdExpr(Expr *E,
+                     const MultiLevelTemplateArgumentList &TemplateArgs) {
+  if (!E)
+    return E;
+
+  TemplateInstantiator Instantiator(*this, TemplateArgs, SourceLocation(),
+                                    DeclarationName());
+  return Instantiator.TransformAddressOfOperand(E);
 }
 
 ExprResult

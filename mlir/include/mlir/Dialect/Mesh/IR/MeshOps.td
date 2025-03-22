@@ -345,24 +345,32 @@ def Mesh_GetShardingOp : Mesh_Op<"get_sharding", [Pure]> {
   }];
 }
 
-def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [Pure]> {
-  let summary = "Get the shard shape of a given process/device.";
+def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [
+    Pure, AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
+  let summary = "Get the shard shape for a given process/device.";
   let description = [{
-    The device/process id is a linearized id of the device/process in the mesh.
+    The device/process id is a multi-index of the device/process in the mesh.
     This operation might be used during spmdization when the shard shape depends
     on (non-constant) values used in `mesh.sharding`.
   }];
   let arguments = (ins
-    DenseI64ArrayAttr:$shape,
+    DenseI64ArrayAttr:$dims,
+    Variadic<Index>:$dims_dynamic,
     Mesh_Sharding:$sharding,
-    Index:$device
+    DenseI64ArrayAttr:$device,
+    Variadic<Index>:$device_dynamic
   );
   let results = (outs Variadic<Index>:$result);
   let assemblyFormat = [{
-      custom<DimensionList>($shape) $sharding $device attr-dict `:` type($result)
+      `dims` `=` custom<DynamicIndexList>($dims_dynamic, $dims)
+      `sharding` `=` $sharding
+      `device` `=` custom<DynamicIndexList>($device_dynamic, $device)
+      attr-dict `:` type(results)
   }];
   let builders = [
-    OpBuilder<(ins "ArrayRef<int64_t>":$shape, "Value":$sharding, "Value":$device)>
+    OpBuilder<(ins "ArrayRef<int64_t>":$dims, "ArrayRef<Value>":$dims_dyn, "Value":$sharding, "ValueRange":$device)>
   ];
 }
 

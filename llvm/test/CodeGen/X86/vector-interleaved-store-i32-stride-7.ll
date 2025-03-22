@@ -473,7 +473,7 @@ define void @store_i32_stride7_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm8
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm9
 ; AVX-NEXT:    vshufps {{.*#+}} ymm10 = ymm9[1,0],ymm8[1,0],ymm9[5,4],ymm8[5,4]
-; AVX-NEXT:    vshufps {{.*#+}} ymm10 = ymm10[2,0],ymm8[2,1],ymm10[6,4],ymm8[6,5]
+; AVX-NEXT:    vshufps {{.*#+}} ymm10 = ymm10[2,0],ymm1[2,1],ymm10[6,4],ymm1[6,5]
 ; AVX-NEXT:    vinsertf128 $1, %xmm5, %ymm6, %ymm5
 ; AVX-NEXT:    vunpckhpd {{.*#+}} ymm6 = ymm7[1],ymm5[1],ymm7[3],ymm5[3]
 ; AVX-NEXT:    vshufps {{.*#+}} ymm6 = ymm5[1,1],ymm6[2,0],ymm5[5,5],ymm6[6,4]
