@@ -82,6 +82,23 @@ public:
                                    const MCSymbol *Lo) override;
 };
 
+class SystemZTargetELFStreamer : public SystemZTargetStreamer {
+public:
+  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
+  void emitMachine(StringRef CPU) override {}
+};
+
+class SystemZTargetGNUStreamer : public SystemZTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  SystemZTargetGNUStreamer(MCStreamer &S, formatted_raw_ostream &OS)
+      : SystemZTargetStreamer(S), OS(OS) {}
+  void emitMachine(StringRef CPU) override {
+    OS << "\t.machine " << CPU << "\n";
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZTARGETSTREAMER_H
