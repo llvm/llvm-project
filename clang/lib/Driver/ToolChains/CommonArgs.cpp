@@ -1446,19 +1446,22 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid() && !TC.getTriple().isOHOSFamily()) {
     CmdArgs.push_back("-lpthread");
-    if (!TC.getTriple().isOSOpenBSD())
+    if (!TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSHaiku())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
       !TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSDragonFly() &&
+      !TC.getTriple().isOSHaiku() &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
   if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
       TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
     CmdArgs.push_back("-lexecinfo");
+  if (TC.getTriple().isOSHaiku())
+    CmdArgs.push_back("-lbsd");
   // There is no libresolv on Android, FreeBSD, OpenBSD, etc. On musl
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
