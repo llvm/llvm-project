@@ -16,6 +16,7 @@ func.func @host_function(%arg0 : f32, %arg1 : memref<?xf32>) {
     return
 }
 
+// CHECK: ptxas executable:
 // CHECK: ptxas -arch sm_80
 // CHECK-SAME: -v 
 // CHECK-SAME: --register-usage-level=8
