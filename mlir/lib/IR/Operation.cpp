@@ -26,6 +26,42 @@
 
 using namespace mlir;
 
+WeakOpRef::WeakOpRef(const std::shared_ptr<WeakOpRefHolder> &r) : holder(r) {}
+
+// copy constructor
+WeakOpRef::WeakOpRef(const WeakOpRef &r) : holder(r.holder) {}
+
+// move constructor
+WeakOpRef::WeakOpRef(WeakOpRef &&r) : holder(r.holder) { r.holder = nullptr; }
+
+WeakOpRef::~WeakOpRef() {}
+
+// copy assignment
+WeakOpRef &WeakOpRef::operator=(const WeakOpRef &r) {
+  WeakOpRef(r).swap(*this);
+  return *this;
+}
+
+// move assignment
+WeakOpRef &WeakOpRef::operator=(WeakOpRef &&r) {
+  WeakOpRef(std::move(r)).swap(*this);
+  return *this;
+}
+
+void WeakOpRef::swap(WeakOpRef &r) { std::swap(holder, r.holder); }
+
+void swap(WeakOpRef &x, WeakOpRef &y) { x.swap(y); }
+
+Operation *WeakOpRef::operator->() const { return this->holder->op; }
+
+Operation &WeakOpRef::operator*() const { return *this->holder->op; }
+
+bool WeakOpRef::expired() const {
+  return !bool(holder) || holder.use_count() == 0;
+}
+
+WeakOpRefHolder::~WeakOpRefHolder() { op->getContext()->expireWeakRefs(op); }
+
 //===----------------------------------------------------------------------===//
 // Operation
 //===----------------------------------------------------------------------===//
@@ -177,7 +213,7 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
 // Operations are deleted through the destroy() member because they are
 // allocated via malloc.
 Operation::~Operation() {
-  assert(block == nullptr && "operation destroyed but still in a block");
+  assert(getBlock() == nullptr && "operation destroyed but still in a block");
 #ifndef NDEBUG
   if (!use_empty()) {
     {
@@ -202,6 +238,9 @@ Operation::~Operation() {
     region.~Region();
   if (propertiesStorageSize)
     name.destroyOpProperties(getPropertiesStorage());
+
+  if (hasWeakReference())
+    getContext()->expireWeakRefs(this);
 }
 
 /// Destroy this operation or one of its subclasses.
@@ -322,8 +361,8 @@ void Operation::setAttrs(DictionaryAttr newAttrs) {
 }
 void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
   if (getPropertiesStorageSize()) {
-    // We're spliting the providing array of attributes by removing the inherentAttr
-    // which will be stored in the properties.
+    // We're spliting the providing array of attributes by removing the
+    // inherentAttr which will be stored in the properties.
     SmallVector<NamedAttribute> discardableAttrs;
     discardableAttrs.reserve(newAttrs.size());
     for (NamedAttribute attr : newAttrs) {
@@ -384,13 +423,13 @@ constexpr unsigned Operation::kOrderStride;
 /// Note: This function has an average complexity of O(1), but worst case may
 /// take O(N) where N is the number of operations within the parent block.
 bool Operation::isBeforeInBlock(Operation *other) {
-  assert(block && "Operations without parent blocks have no order.");
-  assert(other && other->block == block &&
+  assert(getBlock() && "Operations without parent blocks have no order.");
+  assert(other && other->getBlock() == getBlock() &&
          "Expected other operation to have the same parent block.");
   // If the order of the block is already invalid, directly recompute the
   // parent.
-  if (!block->isOpOrderValid()) {
-    block->recomputeOpOrder();
+  if (!getBlock()->isOpOrderValid()) {
+    getBlock()->recomputeOpOrder();
   } else {
     // Update the order either operation if necessary.
     updateOrderIfNecessary();
@@ -403,13 +442,13 @@ bool Operation::isBeforeInBlock(Operation *other) {
 /// Update the order index of this operation of this operation if necessary,
 /// potentially recomputing the order of the parent block.
 void Operation::updateOrderIfNecessary() {
-  assert(block && "expected valid parent");
+  assert(getBlock() && "expected valid parent");
 
   // If the order is valid for this operation there is nothing to do.
   if (hasValidOrder() || llvm::hasSingleElement(*block))
     return;
-  Operation *blockFront = &block->front();
-  Operation *blockBack = &block->back();
+  Operation *blockFront = &getBlock()->front();
+  Operation *blockBack = &getBlock()->back();
 
   // This method is expected to only be invoked on blocks with more than one
   // operation.
@@ -419,7 +458,7 @@ void Operation::updateOrderIfNecessary() {
   if (this == blockBack) {
     Operation *prevNode = getPrevNode();
     if (!prevNode->hasValidOrder())
-      return block->recomputeOpOrder();
+      return getBlock()->recomputeOpOrder();
 
     // Add the stride to the previous operation.
     orderIndex = prevNode->orderIndex + kOrderStride;
@@ -431,10 +470,10 @@ void Operation::updateOrderIfNecessary() {
   if (this == blockFront) {
     Operation *nextNode = getNextNode();
     if (!nextNode->hasValidOrder())
-      return block->recomputeOpOrder();
+      return getBlock()->recomputeOpOrder();
     // There is no order to give this operation.
     if (nextNode->orderIndex == 0)
-      return block->recomputeOpOrder();
+      return getBlock()->recomputeOpOrder();
 
     // If we can't use the stride, just take the middle value left. This is safe
     // because we know there is at least one valid index to assign to.
@@ -449,12 +488,12 @@ void Operation::updateOrderIfNecessary() {
   // the middle of the previous and next if possible.
   Operation *prevNode = getPrevNode(), *nextNode = getNextNode();
   if (!prevNode->hasValidOrder() || !nextNode->hasValidOrder())
-    return block->recomputeOpOrder();
+    return getBlock()->recomputeOpOrder();
   unsigned prevOrder = prevNode->orderIndex, nextOrder = nextNode->orderIndex;
 
   // Check to see if there is a valid order between the two.
   if (prevOrder + 1 == nextOrder)
-    return block->recomputeOpOrder();
+    return getBlock()->recomputeOpOrder();
   orderIndex = prevOrder + ((nextOrder - prevOrder) / 2);
 }
 
@@ -502,7 +541,7 @@ Block *llvm::ilist_traits<::mlir::Operation>::getContainingBlock() {
 /// keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
   assert(!op->getBlock() && "already in an operation block!");
-  op->block = getContainingBlock();
+  op->blockHasWeakRefPair.setPointer(getContainingBlock());
 
   // Invalidate the order on the operation.
   op->orderIndex = Operation::kInvalidOrderIdx;
@@ -511,8 +550,8 @@ void llvm::ilist_traits<::mlir::Operation>::addNodeToList(Operation *op) {
 /// This is a trait method invoked when an operation is removed from a block.
 /// We keep the block pointer up to date.
 void llvm::ilist_traits<::mlir::Operation>::removeNodeFromList(Operation *op) {
-  assert(op->block && "not already in an operation block!");
-  op->block = nullptr;
+  assert(op->getBlock() && "not already in an operation block!");
+  op->blockHasWeakRefPair.setPointer(nullptr);
 }
 
 /// This is a trait method invoked when an operation is moved from one block
@@ -531,7 +570,7 @@ void llvm::ilist_traits<::mlir::Operation>::transferNodesFromList(
 
   // Update the 'block' member of each operation.
   for (; first != last; ++first)
-    first->block = curParent;
+    first->blockHasWeakRefPair.setPointer(curParent);
 }
 
 /// Remove this operation (and its descendants) from its Block and delete

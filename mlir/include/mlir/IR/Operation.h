@@ -22,6 +22,39 @@
 #include <optional>
 
 namespace mlir {
+class WeakOpRef;
+class WeakOpRefHolder {
+private:
+  mlir::Operation *op;
+
+public:
+  WeakOpRefHolder(mlir::Operation *op) : op(op) {}
+  ~WeakOpRefHolder();
+  friend class WeakOpRef;
+};
+
+class WeakOpRef {
+private:
+  std::shared_ptr<WeakOpRefHolder> holder;
+
+public:
+  WeakOpRef(std::shared_ptr<WeakOpRefHolder> const &r);
+
+  WeakOpRef(WeakOpRef const &r);
+  WeakOpRef(WeakOpRef &&r);
+  ~WeakOpRef();
+
+  WeakOpRef &operator=(WeakOpRef const &r);
+  WeakOpRef &operator=(WeakOpRef &&r);
+
+  void swap(WeakOpRef &r);
+  bool expired() const;
+  long use_count() const { return holder ? holder.use_count() : 0; }
+
+  mlir::Operation *operator->() const;
+  mlir::Operation &operator*() const;
+};
+
 namespace detail {
 /// This is a "tag" used for mapping the properties storage in
 /// llvm::TrailingObjects.
@@ -210,7 +243,7 @@ public:
   Operation *cloneWithoutRegions();
 
   /// Returns the operation block that contains this operation.
-  Block *getBlock() { return block; }
+  Block *getBlock() { return blockHasWeakRefPair.getPointer(); }
 
   /// Return the context this operation is associated with.
   MLIRContext *getContext() { return location->getContext(); }
@@ -227,11 +260,15 @@ public:
 
   /// Returns the region to which the instruction belongs. Returns nullptr if
   /// the instruction is unlinked.
-  Region *getParentRegion() { return block ? block->getParent() : nullptr; }
+  Region *getParentRegion() {
+    return getBlock() ? getBlock()->getParent() : nullptr;
+  }
 
   /// Returns the closest surrounding operation that contains this operation
   /// or nullptr if this is a top-level operation.
-  Operation *getParentOp() { return block ? block->getParentOp() : nullptr; }
+  Operation *getParentOp() {
+    return getBlock() ? getBlock()->getParentOp() : nullptr;
+  }
 
   /// Return the closest surrounding parent operation that is of type 'OpTy'.
   template <typename OpTy>
@@ -550,6 +587,7 @@ public:
   AttrClass getAttrOfType(StringAttr name) {
     return llvm::dyn_cast_or_null<AttrClass>(getAttr(name));
   }
+
   template <typename AttrClass>
   AttrClass getAttrOfType(StringRef name) {
     return llvm::dyn_cast_or_null<AttrClass>(getAttr(name));
@@ -564,6 +602,7 @@ public:
     }
     return attrs.contains(name);
   }
+
   bool hasAttr(StringRef name) {
     if (getPropertiesStorageSize()) {
       if (std::optional<Attribute> inherentAttr = getInherentAttr(name))
@@ -571,6 +610,7 @@ public:
     }
     return attrs.contains(name);
   }
+
   template <typename AttrClass, typename NameT>
   bool hasAttrOfType(NameT &&name) {
     return static_cast<bool>(
@@ -590,6 +630,7 @@ public:
     if (attributes.set(name, value) != value)
       attrs = attributes.getDictionary(getContext());
   }
+
   void setAttr(StringRef name, Attribute value) {
     setAttr(StringAttr::get(getContext(), name), value);
   }
@@ -610,6 +651,7 @@ public:
       attrs = attributes.getDictionary(getContext());
     return removedAttr;
   }
+
   Attribute removeAttr(StringRef name) {
     return removeAttr(StringAttr::get(getContext(), name));
   }
@@ -631,6 +673,7 @@ public:
     // Allow access to the constructor.
     friend Operation;
   };
+
   using dialect_attr_range = iterator_range<dialect_attr_iterator>;
 
   /// Return a range corresponding to the dialect attributes for this operation.
@@ -639,10 +682,12 @@ public:
     return {dialect_attr_iterator(attrs.begin(), attrs.end()),
             dialect_attr_iterator(attrs.end(), attrs.end())};
   }
+
   dialect_attr_iterator dialect_attr_begin() {
     auto attrs = getAttrs();
     return dialect_attr_iterator(attrs.begin(), attrs.end());
   }
+
   dialect_attr_iterator dialect_attr_end() {
     auto attrs = getAttrs();
     return dialect_attr_iterator(attrs.end(), attrs.end());
@@ -710,6 +755,7 @@ public:
     assert(index < getNumSuccessors());
     return getBlockOperands()[index].get();
   }
+
   void setSuccessor(Block *block, unsigned index);
 
   //===--------------------------------------------------------------------===//
@@ -897,12 +943,14 @@ public:
   int getPropertiesStorageSize() const {
     return ((int)propertiesStorageSize) * 8;
   }
+
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
     if (propertiesStorageSize)
       return getPropertiesStorageUnsafe();
     return {nullptr};
   }
+
   OpaqueProperties getPropertiesStorage() const {
     if (propertiesStorageSize)
       return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
@@ -937,6 +985,11 @@ public:
 
   /// Compute a hash for the op properties (if any).
   llvm::hash_code hashProperties();
+
+  bool hasWeakReference() { return blockHasWeakRefPair.getInt(); }
+  void setHasWeakReference(bool hasWeakRef) {
+    blockHasWeakRefPair.setInt(hasWeakRef);
+  }
 
 private:
   //===--------------------------------------------------------------------===//
@@ -1021,7 +1074,7 @@ private:
   /// requires a 'getParent() const' method. Once ilist_node removes this
   /// constraint, we should drop the const to fit the rest of the MLIR const
   /// model.
-  Block *getParent() const { return block; }
+  Block *getParent() const { return blockHasWeakRefPair.getPointer(); }
 
   /// Expose a few methods explicitly for the debugger to call for
   /// visualization.
@@ -1036,8 +1089,9 @@ private:
   }
 #endif
 
-  /// The operation block that contains this operation.
-  Block *block = nullptr;
+  /// The operation block that contains this operation and a bit that signifies
+  /// if the operation has a weak reference.
+  llvm::PointerIntPair<Block *, /*IntBits=*/1, bool> blockHasWeakRefPair;
 
   /// This holds information about the source location the operation was defined
   /// or derived from.
