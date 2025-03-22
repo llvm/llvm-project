@@ -2,7 +2,7 @@ FROM docker.io/library/ubuntu:22.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as stage1-toolchain
-ENV LLVM_VERSION=19.1.5
+ENV LLVM_VERSION=20.1.1
 
 RUN apt-get update && \
     apt-get install -y \
@@ -19,12 +19,6 @@ RUN apt-get update && \
 RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
 
 WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
-
-# Patch to enable better PGO profile data.
-# TODO: Remove this for llvm 20
-ADD https://github.com/llvm/llvm-project/commit/738250989ce516f02f809bdfde474a039c77e81f.patch .
-
-RUN patch -p1 < 738250989ce516f02f809bdfde474a039c77e81f.patch
 
 RUN cmake -B ./build -G Ninja ./llvm \
   -C ./clang/cmake/caches/BOLT-PGO.cmake \
