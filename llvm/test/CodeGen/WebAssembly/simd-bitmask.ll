@@ -175,15 +175,74 @@ define i8 @bitmask_v8i8(<8 x i8> %v) {
 define i32 @bitmask_v32i8(<32 x i8> %v) {
 ; CHECK-LABEL: bitmask_v32i8:
 ; CHECK:         .functype bitmask_v32i8 (v128, v128) -> (i32)
-; CHECK-NEXT:    .local v128
+; CHECK-NEXT:    .local v128, i32
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    global.get __stack_pointer
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32.sub
 ; CHECK-NEXT:    drop
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i8x16.eq
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i8x16.extract_lane_u 7
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 23
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 6
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 22
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 5
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 21
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 4
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 20
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 3
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 19
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 2
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 18
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 1
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 17
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.extract_lane_u 0
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.const 16
+; CHECK-NEXT:    i32.shl
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i8x16.eq
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    i8x16.extract_lane_u 0
@@ -295,109 +354,52 @@ define i32 @bitmask_v32i8(<32 x i8> %v) {
 ; CHECK-NEXT:    i32.const 65535
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i8x16.eq
-; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    i8x16.extract_lane_u 15
 ; CHECK-NEXT:    i32.const 31
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 14
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 30
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 13
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 29
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 12
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 28
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 11
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 27
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 10
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 26
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 9
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 25
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i8x16.extract_lane_u 8
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.const 24
 ; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 7
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 23
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 6
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 22
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 5
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 21
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 4
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 20
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 3
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 19
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 2
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 18
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 1
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 17
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.extract_lane_u 0
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.or
+; CHECK-NEXT:    local.get 3
 ; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    i32.or
 ; CHECK-NEXT:    i32.or
