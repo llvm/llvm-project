@@ -12,17 +12,14 @@
 
 namespace llvm {
 
-void EphemeralValuesCache::collectEphemeralValues() {
-  CodeMetrics::collectEphemeralValues(&F, &AC, EphValues);
-  Collected = true;
-}
-
 AnalysisKey EphemeralValuesAnalysis::Key;
 
-EphemeralValuesCache
+EphemeralValuesAnalysis::Result
 EphemeralValuesAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
-  return EphemeralValuesCache(F, AC);
+  SmallPtrSet<const Value *, 32> EphValues;
+  CodeMetrics::collectEphemeralValues(&F, &AC, EphValues);
+  return EphValues;
 }
 
 } // namespace llvm
