@@ -10,6 +10,7 @@
 #include "include/llvm-libc-types/EFI_HANDLE.h"
 #include "include/llvm-libc-types/EFI_STATUS.h"
 #include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
+#include "src/__support/OSUtil/uefi/error.h"
 #include "src/__support/macros/config.h"
 
 extern "C" {
@@ -24,9 +25,6 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
 
   // TODO: we need the EFI_SHELL_PROTOCOL, malloc, free, and UTF16 -> UTF8
   // conversion.
-  main(0, nullptr, nullptr);
-
-  // TODO: convert the return value of main to EFI_STATUS
-  return EFI_SUCCESS;
+  return LIBC_NAMESPACE::errno_to_uefi_status(main(0, nullptr, nullptr));
 }
 }

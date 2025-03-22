@@ -31,7 +31,9 @@ endfunction()
 add_startup_object(
   crt1
   SRCS
-  crt1.cpp
+    crt1.cpp
+  DEPENDS
+    libc.src.__support.OSUtil.uefi.uefi_util
 )
 
 add_custom_target(libc-startup)
