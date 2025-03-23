@@ -1,0 +1,247 @@
+# REQUIRES: enable_bspriv_aarch64
+# RUN: llc -o - %s -mtriple=aarch64-unknown-unknown -run-pass=machine-combiner | FileCheck %s
+
+---
+name:            _Z18adc_combine_64bitsmmRmS_S_
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: gpr64 }
+  - { id: 6, class: gpr64 }
+  - { id: 7, class: gpr64 }
+  - { id: 8, class: gpr64 }
+  - { id: 9, class: gpr64 }
+  - { id: 10, class: gpr64common }
+  - { id: 11, class: gpr64common }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+  - { reg: '$x2', virtual-reg: '%2' }
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$x4', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: _Z18adc_combine_64bitsmmRmS_S_
+  ; CHECK: bb.0.entry:
+  ; CHECK:   ADCSXr
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2, $x3, $x4
+
+    %4:gpr64common = COPY $x4
+    %3:gpr64common = COPY $x3
+    %2:gpr64common = COPY $x2
+    %1:gpr64 = COPY $x1
+    %0:gpr64 = COPY $x0
+    %5:gpr64 = LDRXui %2, 0
+    %6:gpr64 = ADDSXrr killed %5, %0, implicit-def $nzcv
+    STRXui killed %6, %2, 0
+    %7:gpr64 = CSINCXr %1, %1, 3, implicit $nzcv
+    %8:gpr64 = LDRXui %3, 0
+    %9:gpr64 = ADDSXrr killed %7, killed %8, implicit-def $nzcv
+    STRXui killed %9, %3, 0
+    Bcc 3, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    %10:gpr64common = LDRXui %4, 0
+    %11:gpr64common = ADDXri killed %10, 1, 0
+    STRXui killed %11, %4, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
+---
+name:            _Z18adc_combine_32bitsjjRjS_S_
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+  - { id: 8, class: gpr32 }
+  - { id: 9, class: gpr32 }
+  - { id: 10, class: gpr32common }
+  - { id: 11, class: gpr32common }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+  - { reg: '$x2', virtual-reg: '%2' }
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$x4', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: _Z18adc_combine_32bitsjjRjS_S_
+  ; CHECK: bb.0.entry:
+  ; CHECK:   ADCSWr
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $x2, $x3, $x4
+
+    %4:gpr64common = COPY $x4
+    %3:gpr64common = COPY $x3
+    %2:gpr64common = COPY $x2
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %5:gpr32 = LDRWui %2, 0
+    %6:gpr32 = ADDSWrr killed %5, %0, implicit-def $nzcv
+    STRWui killed %6, %2, 0
+    %7:gpr32 = CSINCWr %1, %1, 3, implicit $nzcv
+    %8:gpr32 = LDRWui %3, 0
+    %9:gpr32 = ADDSWrr killed %7, killed %8, implicit-def $nzcv
+    STRWui killed %9, %3, 0
+    Bcc 3, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    %10:gpr32common = LDRWui %4, 0
+    %11:gpr32common = ADDWri killed %10, 1, 0
+    STRWui killed %11, %4, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
+---
+name:            _Z23adc_combine_fail_64bitsmmRmS_S_
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64 }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: gpr64 }
+  - { id: 6, class: gpr64common }
+  - { id: 7, class: gpr64 }
+  - { id: 8, class: gpr64 }
+  - { id: 9, class: gpr64 }
+  - { id: 10, class: gpr64 }
+  - { id: 11, class: gpr64 }
+  - { id: 12, class: gpr64common }
+  - { id: 13, class: gpr64common }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+  - { reg: '$x2', virtual-reg: '%2' }
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$x4', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: _Z23adc_combine_fail_64bitsmmRmS_S_
+  ; CHECK: bb.0.entry:
+  ; CHECK-NOT:   ADCSXr
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2, $x3, $x4
+
+    %4:gpr64common = COPY $x4
+    %3:gpr64common = COPY $x3
+    %2:gpr64common = COPY $x2
+    %1:gpr64 = COPY $x1
+    %0:gpr64 = COPY $x0
+    %5:gpr64 = LDRXui %2, 0
+    %6:gpr64common = ADDSXrr killed %5, %0, implicit-def $nzcv
+    %7:gpr64 = CSINCXr %1, %1, 3, implicit $nzcv
+    %8:gpr64 = SUBSXri %6, 0, 0, implicit-def $nzcv
+    %9:gpr64 = CSINCXr %6, $xzr, 1, implicit $nzcv
+    STRXui killed %9, %2, 0
+    %10:gpr64 = LDRXui %3, 0
+    %11:gpr64 = ADDSXrr killed %7, killed %10, implicit-def $nzcv
+    STRXui killed %11, %3, 0
+    Bcc 3, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    %12:gpr64common = LDRXui %4, 0
+    %13:gpr64common = ADDXri killed %12, 1, 0
+    STRXui killed %13, %4, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
+---
+name:            _Z23adc_combine_fail_32bitsjjRjS_S_
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32 }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32common }
+  - { id: 7, class: gpr32 }
+  - { id: 8, class: gpr32 }
+  - { id: 9, class: gpr32 }
+  - { id: 10, class: gpr32 }
+  - { id: 11, class: gpr32 }
+  - { id: 12, class: gpr32common }
+  - { id: 13, class: gpr32common }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+  - { reg: '$x2', virtual-reg: '%2' }
+  - { reg: '$x3', virtual-reg: '%3' }
+  - { reg: '$x4', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  ; CHECK-LABEL: name: _Z23adc_combine_fail_32bitsjjRjS_S_
+  ; CHECK: bb.0.entry:
+  ; CHECK-NOT:   ADCSWr
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $x2, $x3, $x4
+
+    %4:gpr64common = COPY $x4
+    %3:gpr64common = COPY $x3
+    %2:gpr64common = COPY $x2
+    %1:gpr32 = COPY $w1
+    %0:gpr32 = COPY $w0
+    %5:gpr32 = LDRWui %2, 0
+    %6:gpr32common = ADDSWrr killed %5, %0, implicit-def $nzcv
+    %7:gpr32 = CSINCWr %1, %1, 3, implicit $nzcv
+    %8:gpr32 = SUBSWri %6, 0, 0, implicit-def $nzcv
+    %9:gpr32 = CSINCWr %6, $wzr, 1, implicit $nzcv
+    STRWui killed %9, %2, 0
+    %10:gpr32 = LDRWui %3, 0
+    %11:gpr32 = ADDSWrr killed %7, killed %10, implicit-def $nzcv
+    STRWui killed %11, %3, 0
+    Bcc 3, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1:
+    %12:gpr32common = LDRWui %4, 0
+    %13:gpr32common = ADDWri killed %12, 1, 0
+    STRWui killed %13, %4, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
