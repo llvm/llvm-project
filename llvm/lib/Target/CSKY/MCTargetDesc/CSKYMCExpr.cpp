@@ -64,7 +64,7 @@ void CSKYMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 
 void CSKYMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Expr->print(OS, MAI);
-  OS << getVariantKindName(getKind());
+  OS << getVariantKindName(getSpecifier());
 }
 
 static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
@@ -97,7 +97,7 @@ static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
 }
 
 void CSKYMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getKind()) {
+  switch (getSpecifier()) {
   default:
     return;
   case VK_TLSLE:
@@ -116,7 +116,7 @@ bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
 
   // Some custom fixup types are not valid with symbol difference expressions
   if (Res.getSymA() && Res.getSymB()) {
-    switch (getKind()) {
+    switch (getSpecifier()) {
     default:
       return true;
     case VK_GOT:
