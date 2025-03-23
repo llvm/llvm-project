@@ -1,44 +1,5 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-unknown -passes=mergeicmps -verify-dom-info -S | FileCheck %s
 
-; define dso_local noundef zeroext i1 @cmp_mixed_split(ptr noundef nonnull readonly align 4 captures(none) dereferenceable(40) %a, ptr noundef nonnull readonly align 4 captures(none) dereferenceable(40) %b) local_unnamed_addr {
-; entry:
-;   %0 = load i32, ptr %a, align 4
-;   %1 = load i32, ptr %b, align 4
-;   %cmp = icmp eq i32 %0, %1
-;   br i1 %cmp, label %land.lhs.true, label %land.end
-; 
-; land.lhs.true:                                    ; preds = %entry
-;   %e = getelementptr inbounds nuw i8, ptr %a, i64 20
-;   %2 = load i32, ptr %e, align 4
-;   %a3 = getelementptr inbounds nuw i8, ptr %b, i64 4
-;   %3 = load i32, ptr %a3, align 4
-;   %b2 = getelementptr inbounds nuw i8, ptr %a, i64 8
-;   %4 = load i32, ptr %b2, align 4
-;   %c = getelementptr inbounds nuw i8, ptr %a, i64 12
-;   %5 = load i8, ptr %c, align 4
-;   %a1 = getelementptr inbounds nuw i8, ptr %a, i64 4
-;   %6 = load i32, ptr %a1, align 4
-;   %d = getelementptr inbounds nuw i8, ptr %a, i64 16
-;   %7 = load i32, ptr %d, align 4
-;   %cmp5 = icmp eq i32 %6, %3
-;   %cmp7 = icmp eq i8 %5, 43
-;   %or.cond = select i1 %cmp5, i1 %cmp7, i1 false
-;   %cmp9 = icmp eq i32 %4, 1
-;   %or.cond13 = select i1 %or.cond, i1 %cmp9, i1 false
-;   %cmp11 = icmp eq i32 %7, 12
-;   %or.cond14 = select i1 %or.cond13, i1 %cmp11, i1 false
-;   %cmp12 = icmp eq i32 %2, 3
-;   %spec.select = select i1 %or.cond14, i1 %cmp12, i1 false
-;   br label %land.end
-; 
-; land.end:                                         ; preds = %land.lhs.true, %entry
-;   %8 = phi i1 [ false, %entry ], [ %spec.select, %land.lhs.true ]
-;   ret i1 %8
-; }
-
-
-
-
 declare void @foo(...)
 
 ; Tests that if both const-cmp and bce-cmp chains can be merged that the splitted block is still at the beginning.
