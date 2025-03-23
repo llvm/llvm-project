@@ -122,6 +122,9 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
     return VPBB;
   }
 
+  if (!TheLoop->contains(BB))
+    return Plan.getExitBlock(BB);
+
   // Create new VPBB.
   StringRef Name = isHeaderBB(BB, TheLoop) ? "vector.body" : BB->getName();
   LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
@@ -154,14 +157,6 @@ bool PlainCFGBuilder::isExternalDef(Value *Val) {
   if (InstParent == PH)
     // Instruction definition is in outermost loop PH.
     return false;
-
-  // Check whether Instruction definition is in a loop exit.
-  SmallVector<BasicBlock *> ExitBlocks;
-  TheLoop->getExitBlocks(ExitBlocks);
-  if (is_contained(ExitBlocks, InstParent)) {
-    // Instruction definition is in outermost loop exit.
-    return false;
-  }
 
   // Check whether Instruction definition is in loop body.
   return !TheLoop->contains(Inst);
@@ -211,11 +206,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
            "Instruction shouldn't have been visited.");
 
     if (auto *Br = dyn_cast<BranchInst>(Inst)) {
-      if (TheLoop->getLoopLatch() == BB ||
-          any_of(successors(BB),
-                 [this](BasicBlock *Succ) { return !TheLoop->contains(Succ); }))
+      if (TheLoop->getLoopLatch() == BB)
         continue;
-
       // Conditional branch instruction are represented using BranchOnCond
       // recipes.
       if (Br->isConditional()) {
@@ -305,7 +297,6 @@ void PlainCFGBuilder::buildPlainCFG(
   for (BasicBlock *BB : RPO) {
     // Create or retrieve the VPBasicBlock for this BB.
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
-    Loop *LoopForBB = LI.getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     setVPBBPredsFromBB(VPBB, BB);
 
@@ -339,24 +330,12 @@ void PlainCFGBuilder::buildPlainCFG(
     BasicBlock *IRSucc1 = BI->getSuccessor(1);
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
     VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
-
-    // Don't connect any blocks outside the current loop except the latch, which
-    // is handled below.
-    if (LoopForBB &&
-        (LoopForBB == TheLoop || BB != LoopForBB->getLoopLatch())) {
-      if (!LoopForBB->contains(IRSucc0)) {
-        VPBB->setOneSuccessor(Successor1);
-        continue;
-      }
-      if (!LoopForBB->contains(IRSucc1)) {
-        VPBB->setOneSuccessor(Successor0);
-        continue;
-      }
-    }
-
     VPBB->setTwoSuccessors(Successor0, Successor1);
   }
 
+  for (auto *EB : Plan.getExitBlocks()) {
+    setVPBBPredsFromBB(EB, EB->getIRBasicBlock());
+  }
   // 2. The whole CFG has been built at this point so all the input Values must
   // have a VPlan counterpart. Fix VPlan header phi by adding their
   // corresponding VPlan operands.
@@ -413,10 +392,15 @@ static VPRegionBlock *introduceRegion(VPlan &Plan, VPBasicBlock *PreheaderVPBB,
   auto *R = Plan.createVPRegionBlock(HeaderVPBB, LatchVPBB, "",
                                      false /*isReplicator*/);
   R->setParent(HeaderVPBB->getParent());
+
   // All VPBB's reachable shallowly from HeaderVPBB belong to top level loop,
   // because VPlan is expected to end at top level latch disconnected above.
-  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB))
-    VPBB->setParent(R);
+  SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan.getExitBlocks().begin(),
+                                           Plan.getExitBlocks().end());
+  for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPBB)) {
+    if (!ExitBlocks.contains(VPBB))
+      VPBB->setParent(R);
+  }
 
   VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
   if (Succ)
@@ -466,7 +450,11 @@ void VPlanTransforms::introduceRegions(VPlan &Plan, Type *InductionTy,
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
+  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
+  auto *VPExitBlock = IRExitBlock ? Plan.getExitBlock(IRExitBlock) : nullptr;
   if (!RequiresScalarEpilogueCheck) {
+    if (VPExitBlock)
+      VPBlockUtils::disconnectBlocks(MiddleVPBB, VPExitBlock);
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
     for (auto *EB : Plan.getExitBlocks()) {
       for (VPRecipeBase &R : *EB)
@@ -484,10 +472,7 @@ void VPlanTransforms::introduceRegions(VPlan &Plan, Type *InductionTy,
   // 2) If we require a scalar epilogue, there is no conditional branch as
   //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
-  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
-  auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.
-  VPBlockUtils::insertBlockAfter(VPExitBlock, MiddleVPBB);
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();

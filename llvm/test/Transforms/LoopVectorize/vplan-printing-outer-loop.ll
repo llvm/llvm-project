@@ -31,7 +31,10 @@ define void @foo(i64 %n) {
 ; CHECK-NEXT: outer.latch:
 ; CHECK-NEXT:   EMIT ir<%outer.iv.next> = add ir<%outer.iv>, ir<1>
 ; CHECK-NEXT:   EMIT ir<%outer.ec> = icmp ir<%outer.iv.next>, ir<8>
-; CHECK-NEXT: Successor(s): vector.body
+; CHECK-NEXT: Successor(s): ir-bb<exit>, vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:
   br label %outer.header

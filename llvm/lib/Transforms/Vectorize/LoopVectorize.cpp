@@ -9350,6 +9350,24 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW, DL);
 
+  if (auto *UncountableExitingBlock =
+          Legal->getUncountableEarlyExitingBlock()) {
+    VPlanTransforms::runPass(VPlanTransforms::handleUncountableEarlyExit, *Plan,
+                             *PSE.getSE(), OrigLoop, UncountableExitingBlock);
+  } else {
+    SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan->getExitBlocks().begin(),
+                                             Plan->getExitBlocks().end());
+    for (VPBlockBase *VPBB : to_vector(
+             vp_depth_first_shallow(Plan->getVectorLoopRegion()->getEntry()))) {
+      for (VPBlockBase *EB : ExitBlocks) {
+        if (is_contained(VPBB->getSuccessors(), EB)) {
+          cast<VPBasicBlock>(VPBB)->getTerminator()->eraseFromParent();
+          VPBlockUtils::disconnectBlocks(VPBB, EB);
+        }
+      }
+    }
+  }
+
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder);
 
@@ -9528,12 +9546,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     R->setOperand(1, WideIV->getStepValue());
   }
 
-  if (auto *UncountableExitingBlock =
-          Legal->getUncountableEarlyExitingBlock()) {
-    VPlanTransforms::runPass(VPlanTransforms::handleUncountableEarlyExit, *Plan,
-                             *PSE.getSE(), OrigLoop, UncountableExitingBlock,
-                             RecipeBuilder);
-  }
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
   SetVector<VPIRInstruction *> ExitUsersToFix =
@@ -9631,6 +9643,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
   VPlanTransforms::introduceRegions(*Plan, Legal->getWidestInductionType(), PSE,
                                     true, false, OrigLoop);
+  SmallPtrSet<VPBlockBase *, 2> ExitBlocks(Plan->getExitBlocks().begin(),
+                                           Plan->getExitBlocks().end());
+  for (VPBlockBase *VPBB : to_vector(
+           vp_depth_first_shallow(Plan->getVectorLoopRegion()->getEntry()))) {
+    for (VPBlockBase *EB : ExitBlocks) {
+      if (is_contained(VPBB->getSuccessors(), EB)) {
+        cast<VPBasicBlock>(VPBB)->getTerminator()->eraseFromParent();
+        VPBlockUtils::disconnectBlocks(VPBB, EB);
+      }
+    }
+  }
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
