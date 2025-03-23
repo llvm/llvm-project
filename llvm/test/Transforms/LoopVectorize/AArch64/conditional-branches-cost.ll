@@ -460,12 +460,18 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 104
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
-; PRED-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 104, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
+; PRED-NEXT:    store i8 0, ptr [[GEP]], align 1
+; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; PRED-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; PRED:       [[EXIT]]:
 ; PRED-NEXT:    ret void
 ;
 entry:
@@ -606,6 +612,10 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ;
 ; PRED-LABEL: define i32 @header_mask_and_invariant_compare(
 ; PRED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], ptr [[E:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
+; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
+; PRED:       [[LOOP_HEADER]]:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; PRED-NEXT:    [[L_A:%.*]] = load i32, ptr [[A]], align 4
 ; PRED-NEXT:    [[L_B:%.*]] = load i32, ptr [[B]], align 4
 ; PRED-NEXT:    [[OR:%.*]] = or i32 [[L_B]], [[L_A]]
@@ -732,6 +742,16 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP10]])
 ; PRED-NEXT:    [[TMP16:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; PRED-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 2 x i1> [[TMP16]], i32 0
+; PRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PRED:       [[MIDDLE_BLOCK]]:
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[SCALAR_PH]]:
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    br label %[[LOOP:.*]]
+; PRED:       [[LOOP]]:
+; PRED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[L:%.*]] = load i16, ptr [[SRC]], align 2
 ; PRED-NEXT:    [[O:%.*]] = or i16 [[L]], 1
 ; PRED-NEXT:    [[CONV:%.*]] = uitofp i16 [[O]] to double
@@ -850,6 +870,14 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT:       [[PRED_STORE_CONTINUE14]]:
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; DEFAULT-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[EXIT:.*]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    br label %[[LOOP:.*]]
+; DEFAULT:       [[LOOP]]:
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; DEFAULT-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; DEFAULT-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
@@ -944,6 +972,14 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED:       [[PRED_STORE_CONTINUE14]]:
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; PRED-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; PRED:       [[MIDDLE_BLOCK]]:
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[SCALAR_PH]]:
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    br label %[[LOOP:.*]]
+; PRED:       [[LOOP]]:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
 ; PRED-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; PRED-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
@@ -1373,6 +1409,14 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP84:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; PRED-NEXT:    [[TMP85:%.*]] = extractelement <8 x i1> [[TMP84]], i32 0
+; PRED-NEXT:    br i1 [[TMP85]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; PRED:       [[MIDDLE_BLOCK]]:
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[SCALAR_PH]]:
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
+; PRED:       [[LOOP_HEADER]]:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; PRED-NEXT:    [[TMP86:%.*]] = load float, ptr [[SRC_1]], align 4
 ; PRED-NEXT:    [[TMP87:%.*]] = load float, ptr [[SRC_2]], align 4
 ; PRED-NEXT:    [[MUL8_I_US:%.*]] = fmul float [[TMP87]], 0.000000e+00
@@ -1478,6 +1522,18 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
+; DEFAULT-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[EXIT:.*]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    br label %[[LOOP_HEADER:.*]]
+; DEFAULT:       [[LOOP_HEADER]]:
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; DEFAULT-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; DEFAULT:       [[THEN]]:
+; DEFAULT-NEXT:    br label %[[LOOP_LATCH]]
+; DEFAULT:       [[LOOP_LATCH]]:
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
 ; DEFAULT-NEXT:    store i32 [[T]], ptr [[DST]], align 4
@@ -1529,6 +1585,18 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) optsize {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
+; PRED-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; PRED:       [[MIDDLE_BLOCK]]:
+; PRED-NEXT:    br label %[[EXIT:.*]]
+; PRED:       [[SCALAR_PH]]:
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
+; PRED:       [[LOOP_HEADER]]:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; PRED-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; PRED:       [[THEN]]:
+; PRED-NEXT:    br label %[[LOOP_LATCH]]
+; PRED:       [[LOOP_LATCH]]:
 ; PRED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; PRED-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[IV_NEXT]] to i32
 ; PRED-NEXT:    store i32 [[T]], ptr [[DST]], align 4

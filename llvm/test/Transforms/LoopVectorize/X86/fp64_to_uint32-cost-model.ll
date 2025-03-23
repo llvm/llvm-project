@@ -29,7 +29,7 @@ for.body:                                         ; preds = %for.body.preheader,
   store i32 %conv, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %2 = trunc i64 %indvars.iv.next to i32
-  %cmp = icmp ult i32 %2, 1000
+  %cmp = icmp ult i32 %2, %0
   br i1 %cmp, label %for.body, label %for.end.loopexit
 
 for.end.loopexit:                                 ; preds = %for.body

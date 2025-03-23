@@ -2660,6 +2660,9 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
+  // NOTE: The Plan's scalar preheader isn't replaced with a VPIRBasicBlock
+  // wrapping LoopScalarPreHeader here at the moment, because the Plan's scalar
+  // preheader may be unreachable at this point.
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -8021,6 +8024,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
       Phi->removeIncomingValue(EPI.MemSafetyCheck);
   }
 
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 

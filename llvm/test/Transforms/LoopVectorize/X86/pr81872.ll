@@ -96,7 +96,7 @@ attributes #0 = {"target-cpu"="haswell" "target-features"="+avx2" }
 
 
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 23}
 ; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}

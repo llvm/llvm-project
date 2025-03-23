@@ -3498,12 +3498,14 @@ public:
   /// latch. If the scalar tail loop or exit block are known to always execute,
   /// the middle block may branch directly to the block.
   VPBasicBlock *getMiddleBlock() {
-    if (!getScalarPreheader()->getPredecessors().empty())
-      return cast<VPBasicBlock>(
-          getScalarPreheader()->getPredecessors().front());
-    if (getExitBlocks().size() == 1)
-      return cast<VPBasicBlock>(getExitBlocks()[0]->getPredecessors().front());
-    return nullptr;
+    VPRegionBlock *LoopRegion = getVectorLoopRegion();
+    if (!LoopRegion)
+      return nullptr;
+    auto *RegionSucc = LoopRegion->getSingleSuccessor();
+    if (RegionSucc->getSingleSuccessor() ||
+        is_contained(RegionSucc->getSuccessors(), getScalarPreheader()))
+      return cast<VPBasicBlock>(RegionSucc);
+    return cast<VPBasicBlock>(RegionSucc->getSuccessors()[1]);
   }
   const VPBasicBlock *getMiddleBlock() const {
     return const_cast<VPlan *>(this)->getMiddleBlock();
