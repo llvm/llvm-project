@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Config/config.h" // C_INCLUDE_DIRS
@@ -340,13 +341,11 @@ void InitHeaderSearch::AddDefaultIncludePaths(
   if (triple.isOSDarwin()) {
     if (HSOpts.UseStandardSystemIncludes) {
       // Add the default framework include paths on Darwin.
-      if (triple.isDriverKit()) {
-        AddPath("/System/DriverKit/System/Library/Frameworks", System, true);
-      } else {
-        AddPath("/System/Library/Frameworks", System, true);
-        AddPath("/System/Library/SubFrameworks", System, true);
+      for (const StringRef Path : getCommonSystemPaths(triple))
+        AddPath(Path, System, true);
+
+      if (!triple.isDriverKit())
         AddPath("/Library/Frameworks", System, true);
-      }
     }
     return;
   }
