@@ -708,11 +708,11 @@ void MachineVerifier::visitMachineFunctionBefore() {
     FunctionBlocks.insert(&MBB);
     BBInfo &MInfo = MBBInfoMap[&MBB];
 
-    MInfo.Preds.insert(MBB.pred_begin(), MBB.pred_end());
+    MInfo.Preds.insert_range(MBB.predecessors());
     if (MInfo.Preds.size() != MBB.pred_size())
       report("MBB has duplicate entries in its predecessor list.", &MBB);
 
-    MInfo.Succs.insert(MBB.succ_begin(), MBB.succ_end());
+    MInfo.Succs.insert_range(MBB.successors());
     if (MInfo.Succs.size() != MBB.succ_size())
       report("MBB has duplicate entries in its successor list.", &MBB);
   }
@@ -1070,7 +1070,7 @@ bool MachineVerifier::verifyGIntrinsicSideEffects(const MachineInstr *MI) {
                        Opcode == TargetOpcode::G_INTRINSIC_CONVERGENT;
   unsigned IntrID = cast<GIntrinsic>(MI)->getIntrinsicID();
   if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
-    AttributeList Attrs = Intrinsic::getAttributes(
+    AttributeSet Attrs = Intrinsic::getFnAttributes(
         MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
     bool DeclHasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
     if (NoSideEffects && DeclHasSideEffects) {
@@ -1094,9 +1094,9 @@ bool MachineVerifier::verifyGIntrinsicConvergence(const MachineInstr *MI) {
                        Opcode == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
   unsigned IntrID = cast<GIntrinsic>(MI)->getIntrinsicID();
   if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
-    AttributeList Attrs = Intrinsic::getAttributes(
+    AttributeSet Attrs = Intrinsic::getFnAttributes(
         MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
-    bool DeclIsConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+    bool DeclIsConvergent = Attrs.hasAttribute(Attribute::Convergent);
     if (NotConvergent && DeclIsConvergent) {
       report(Twine(TII->getName(Opcode), " used with a convergent intrinsic"),
              MI);
@@ -3286,7 +3286,7 @@ void MachineVerifier::calcRegsPassed() {
       VRegs.add(PredInfo.vregsPassed);
     }
     Info.vregsPassed.reserve(VRegs.size());
-    Info.vregsPassed.insert(VRegs.begin(), VRegs.end());
+    Info.vregsPassed.insert_range(VRegs);
   }
 }
 

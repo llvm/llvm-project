@@ -197,24 +197,14 @@ public:
     VK_None,
 
     VK_GOT,
-    VK_GOTENT,
     VK_GOTOFF,
-    VK_GOTREL,
-    VK_PCREL,
     VK_GOTPCREL,
-    VK_GOTPCREL_NORELAX,
     VK_GOTTPOFF,
-    VK_INDNTPOFF,
-    VK_NTPOFF,
-    VK_GOTNTPOFF,
     VK_PLT,
     VK_TLSGD,
     VK_TLSLD,
     VK_TLSLDM,
     VK_TPOFF,
-    VK_DTPOFF,
-    VK_TLSCALL, // symbol(tlscall)
-    VK_TLSDESC, // symbol(tlsdesc)
     VK_TLVP,    // Mach-O thread local variable relocations
     VK_TLVPPAGE,
     VK_TLVPPAGEOFF,
@@ -223,26 +213,7 @@ public:
     VK_GOTPAGE,
     VK_GOTPAGEOFF,
     VK_SECREL,
-    VK_SIZE,    // symbol@SIZE
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
-    VK_FUNCDESC,
-    VK_GOTFUNCDESC,
-    VK_GOTOFFFUNCDESC,
-    VK_TLSGD_FDPIC,
-    VK_TLSLDM_FDPIC,
-    VK_GOTTPOFF_FDPIC,
-
-    VK_X86_ABS8,
-    VK_X86_PLTOFF,
-
-    VK_ARM_NONE,
-    VK_ARM_GOT_PREL,
-    VK_ARM_TARGET1,
-    VK_ARM_TARGET2,
-    VK_ARM_PREL31,
-    VK_ARM_SBREL,  // symbol(sbrel)
-    VK_ARM_TLSLDO, // symbol(tlsldo)
-    VK_ARM_TLSDESCSEQ,
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
@@ -261,8 +232,7 @@ public:
     VK_AMDGPU_ABS32_LO,      // symbol@abs32@lo
     VK_AMDGPU_ABS32_HI,      // symbol@abs32@hi
 
-    VK_TPREL,
-    VK_DTPREL
+    FirstTargetSpecifier,
   };
 
 private:

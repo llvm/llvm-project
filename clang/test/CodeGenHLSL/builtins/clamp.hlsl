@@ -174,22 +174,6 @@ double4 test_clamp_double4_mismatch(double4 p0, double p1) { return clamp(p0, p0
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.[[TARGET]].nclamp.v4f64
 double4 test_clamp_double4_mismatch2(double4 p0, double p1) { return clamp(p0, p1,p0); }
 
-// CHECK: define [[FNATTRS]] <2 x i32> {{.*}}_overloads1
-// CHECK: call <2 x i32> @llvm.[[TARGET]].sclamp.v2i32
-int2 test_overloads1(int2 p0, float2 p1, uint p2) { return clamp(p0, p1, p2); }
-
-// CHECK: define [[FNATTRS]] [[FFNATTRS]] <2 x float> {{.*}}test_overloads2
-// CHECK: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].nclamp.v2f32
-float2 test_overloads2(float2 p0, uint p1, int2 p2) { return clamp(p0, p1, p2); }
-
 // CHECK: define [[FNATTRS]] <3 x i32> {{.*}}test_overloads3
 // CHECK: call <3 x i32> @llvm.[[TARGET]].uclamp.v3i32
-uint3 test_overloads3(uint3 p0, int p1, float p2) { return clamp(p0, p1, p2); }
-
-// CHECK: define [[FNATTRS]] [[FFNATTRS]] <4 x double> {{.*}}test_overloads4
-// CHECK: call reassoc nnan ninf nsz arcp afn <4 x double> @llvm.[[TARGET]].nclamp.v4f64
-double4 test_overloads4(double4 p0, float4 p1, int4 p2) { return clamp(p0, p1, p2); }
-
-// CHECK: define [[FNATTRS]] i32 {{.*}}test_overloads5
-// CHECK: call i32 @llvm.[[TARGET]].sclamp.i32(
-int test_overloads5(int p0, uint p1, double p2) { return clamp(p0, p1, p2); }
+uint3 test_overloads3(uint3 p0, uint p1, uint p2) { return clamp(p0, p1, p2); }

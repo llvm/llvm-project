@@ -706,8 +706,7 @@ static void interpretValues(const MachineInstr *CurMI,
   getForwardingRegsDefinedByMI(*CurMI, FwdRegDefs);
   if (FwdRegDefs.empty()) {
     // Any definitions by this instruction will clobber earlier reg movements.
-    ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                             NewClobberedRegUnits.end());
+    ClobberedRegUnits.insert_range(NewClobberedRegUnits);
     return;
   }
 
@@ -756,8 +755,7 @@ static void interpretValues(const MachineInstr *CurMI,
     ForwardedRegWorklist.erase(ParamFwdReg);
 
   // Any definitions by this instruction will clobber earlier reg movements.
-  ClobberedRegUnits.insert(NewClobberedRegUnits.begin(),
-                           NewClobberedRegUnits.end());
+  ClobberedRegUnits.insert_range(NewClobberedRegUnits);
 
   // Now that we are done handling this instruction, add items from the
   // temporary worklist to the real one.

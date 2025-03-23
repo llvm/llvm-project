@@ -801,7 +801,7 @@ def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -828,7 +828,7 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -856,7 +856,7 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -884,7 +884,7 @@ def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -912,7 +912,7 @@ def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
   );
 
   list<Availability> availability = [
-    Profile<[Tosa_PRO_INT]>,
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[]>,
   ];
 }
@@ -1108,7 +1108,7 @@ def Tosa_TableOp : Tosa_InferShapedTypeOp<"table"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT16]>,
   ];
 
   let assemblyFormat = [{
