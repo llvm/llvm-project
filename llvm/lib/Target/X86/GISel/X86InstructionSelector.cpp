@@ -1910,9 +1910,6 @@ X86InstructionSelector::selectAddr(MachineOperand &Root) const {
   X86AddressMode AM;
   X86SelectAddress(*Ptr, TM, MRI, STI, AM);
 
-  if (AM.Scale != 1)
-    return std::nullopt;
-
   if (AM.IndexReg)
     return std::nullopt;
 
