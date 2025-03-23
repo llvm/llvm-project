@@ -213,7 +213,7 @@ void AArch64MachObjectWriter::recordRelocation(
       // FIXME: x86_64 sets the type to a branch reloc here. Should we do
       // something similar?
     }
-  } else if (Target.getSymB()) { // A - B + constant
+  } else if (Target.getSubSym()) { // A - B + constant
     const MCSymbol *A = &Target.getSymA()->getSymbol();
     const MCSymbol *A_Base = Writer->getAtom(*A);
 

@@ -122,7 +122,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   if (!Expr->evaluateAsRelocatable(V, nullptr))
     return false;
 
-  if (V.getSymB() || V.getRefKind() != MCSymbolRefExpr::VK_None)
+  if (V.getSubSym() || V.getRefKind() != MCSymbolRefExpr::VK_None)
     return false;
 
   const MCSymbolRefExpr *Ref = V.getSymA();
@@ -236,7 +236,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
   // recordRelocation handle non-VK_None cases like A@plt-B+C.
-  if (!IsResolved && Target.getSymA() && Target.getSymB() &&
+  if (!IsResolved && Target.getSymA() && Target.getSubSym() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None &&
       getBackend().handleAddSubRelocations(*this, *DF, Fixup, Target, Value))
     return true;
