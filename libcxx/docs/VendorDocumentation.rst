@@ -582,3 +582,8 @@ situations will give the same result:
   $ clang++ -stdlib=libc++ helloworld.cpp -lcxxrt
 
 .. _`libcxxrt`: https://github.com/libcxxrt/libcxxrt
+
+libc++'s ABI guarantees
+=======================
+
+The ABI guarantees are documented :ref:`here <ABIGuarantees>`.
