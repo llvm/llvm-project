@@ -756,6 +756,7 @@ public:
     PP.AllowPeeling = true;
     PP.AllowLoopNestsPeeling = false;
     PP.PeelProfiledIterations = true;
+    PP.AggresiveEliminateCompares = true;
   }
 
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
