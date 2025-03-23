@@ -94,9 +94,22 @@ LLVM_LIBC_FUNCTION(float16, cbrtf16, (float16 x)) {
   float xf = static_cast<float>(x);
   FloatBits xf_bits(xf);
 
-  uint32_t x_e = xf_bits.get_biased_exponent();
-  uint32_t out_e = (x_e - 1) / 3 + (127 - 42);
-  uint32_t shift_e = (x_e - 1) % 3;
+  // for single precision float, x_e_biased = x_e + 127
+  // Since x_e / 3 will round to 0, we will get incorrect
+  // results for x_e < 0 and x mod 3 != 0, so we take x_e_biased
+  // which is always positive.
+  // To calculate the correct biased exponent of the result,
+  // we need to calculate the exponent as:
+  // out_e = floor(x_e / 3) + 127
+  // now, floor((x_e_biased-1) / 3) = floor((x_e + 127 - 1) / 3)
+  //                                = floor((x_e + 126) / 3)
+  //                                = floor(x_e/3 + 42)
+  //                                = floor(x_e/3) + 42
+  // => out_e = (floor((x_e_biased-1) / 3) - 42) + 127
+  // => out_e = (x_e_biased-1) / 3 + (127 - 42);
+  uint32_t x_e_biased = xf_bits.get_biased_exponent();
+  uint32_t out_e = (x_e_biased - 1) / 3 + (127 - 42);
+  uint32_t shift_e = (x_e_biased - 1) % 3;
 
   // Set x_m = 2^(x_e % 3) * (1 + mantissa)
   uint32_t x_m = xf_bits.get_mantissa();
