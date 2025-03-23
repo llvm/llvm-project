@@ -48,6 +48,26 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets"],
             "check-cxx check-cxxabi check-unwind",
         )
+    
+    def test_llvm_mac(self):
+        env_variables = compute_projects.get_env_variables(
+            ["llvm/CMakeLists.txt"], "Darwin"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "clang;clang-tools-extra;lld;llvm;mlir",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "check-clang check-clang-tools check-lld check-llvm check-mlir",
+        )
+        self.assertEqual(
+            env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-cxx check-cxxabi check-unwind",
+        )
 
     def test_clang(self):
         env_variables = compute_projects.get_env_variables(

@@ -51,6 +51,20 @@ EXCLUDE_WINDOWS = {
     "bolt",  # No Windows Support.
 }
 
+EXCLUDE_MAC = {
+    "bolt",
+    "compiler-rt",
+    "cross-project-tests",
+    "flang",
+    "libc",
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
+    "lldb",
+    "openmp",
+    "polly",
+}
+
 PROJECT_CHECK_TARGETS = {
     "clang-tools-extra": "check-clang-tools",
     "compiler-rt": "check-compiler-rt",
@@ -86,7 +100,6 @@ def _add_dependencies(projects: Set[str]) -> Set[str]:
 
 
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
-    """Computes the list of projects that should be passed to LLVM_ENABLE_PROJECTS"""
     projects_to_test = set()
     for modified_project in modified_projects:
         # Skip all projects where we cannot run tests.
@@ -104,6 +117,10 @@ def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set
         for to_exclude in EXCLUDE_WINDOWS:
             if to_exclude in projects_to_test:
                 projects_to_test.remove(to_exclude)
+    elif platform == "Darwin":
+        for to_exclude in EXCLUDE_MAC:
+            if to_exclude in projects_to_test:
+                projects_to_test.remove(to_exclude)
     else:
         raise ValueError("Unexpected platform.")
     return projects_to_test
@@ -114,7 +131,6 @@ def _compute_projects_to_build(projects_to_test: Set[str]) -> Set[str]:
 
 
 def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
-    """blah blah blah"""
     check_targets = set()
     for project_to_test in projects_to_test:
         if project_to_test not in PROJECT_CHECK_TARGETS:
@@ -124,7 +140,6 @@ def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
 
 
 def _compute_runtimes_to_test(projects_to_test: Set[str]) -> Set[str]:
-    """blah blah blah"""
     runtimes_to_test = set()
     for project_to_test in projects_to_test:
         if project_to_test not in DEPENDENT_RUNTIMES_TO_TEST:
@@ -134,7 +149,6 @@ def _compute_runtimes_to_test(projects_to_test: Set[str]) -> Set[str]:
 
 
 def _compute_runtime_check_targets(runtimes_to_test: Set[str]) -> Set[str]:
-    """blah blah blah"""
     check_targets = set()
     for runtime_to_test in runtimes_to_test:
         check_targets.add(PROJECT_CHECK_TARGETS[runtime_to_test])
@@ -142,7 +156,6 @@ def _compute_runtime_check_targets(runtimes_to_test: Set[str]) -> Set[str]:
 
 
 def _get_modified_projects(modified_files: list[str]) -> Set[str]:
-    """blah blah blah"""
     modified_projects = set()
     for modified_file in modified_files:
         modified_projects.add(pathlib.Path(modified_file).parts[0])
@@ -165,6 +178,9 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
 
 
 if __name__ == "__main__":
-    env_variables = get_env_variables(sys.stdin.readlines(), platform.system())
+    current_platform = platform.system()
+    if len(sys.argv) == 2:
+        current_platform = sys.argv[1]
+    env_variables = get_env_variables(sys.stdin.readlines(), current_platform)
     for env_variable in env_variables:
-        print(f"{env_variable}={env_variables[env_variable]}")
+        print(f"{env_variable}=\"{env_variables[env_variable]}\"")
