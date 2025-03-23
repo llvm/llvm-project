@@ -1044,7 +1044,7 @@ struct ReorderElementwiseOpsOnBroadcast final
 };
 
 /// Pattern to rewrite a ExtractOp(Elementwise) -> Elementwise(ExtractOp).
-/// This may result in cleaner code when we extracting a single value
+/// This may result in cleaner code when extracting a single value
 /// from multi-element vector and also to help canonicalize 1-element vectors to
 /// scalars.
 /// ```
