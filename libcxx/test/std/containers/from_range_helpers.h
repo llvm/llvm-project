@@ -50,7 +50,7 @@ constexpr auto wrap_input(std::vector<T>& input) {
   return std::ranges::subrange(std::move(b), std::move(e));
 }
 
-template <class Iter, class Sent = Iter>
+template <class Iter, class Sent>
 class forward_range_wrapper {
 public:
   using _Iter = forward_iterator<Iter>;
@@ -69,7 +69,7 @@ private:
 template <class Iter, class Sent>
 forward_range_wrapper(Iter, Sent) -> forward_range_wrapper<Iter, Sent>;
 
-template <class Iter, class Sent = Iter>
+template <class Iter, class Sent>
 class random_access_range_wrapper {
 public:
   using _Iter = cpp20_random_access_iterator<Iter>;
