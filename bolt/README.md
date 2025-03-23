@@ -7,7 +7,6 @@ An overview of the ideas implemented in BOLT along with a discussion of its
 potential and current results is available in
 [CGO'19 paper](https://research.fb.com/publications/bolt-a-practical-binary-optimizer-for-data-centers-and-beyond/).
 
-
 ## Input Binary Requirements
 
 BOLT operates on X86-64 and AArch64 ELF binaries. At the minimum, the binaries
