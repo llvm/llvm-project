@@ -359,9 +359,9 @@ inline _LIBCPP_HIDE_FROM_ABI void __swap_bitmap_pos(
   // Swap one pair on each iteration as long as both bitsets have at least one
   // element for swapping.
   while (__left_bitset != 0 && __right_bitset != 0) {
-    difference_type __tz_left  = __libcpp_ctz(__left_bitset);
+    difference_type __tz_left  = __countr_zero(__left_bitset);
     __left_bitset              = __libcpp_blsr(__left_bitset);
-    difference_type __tz_right = __libcpp_ctz(__right_bitset);
+    difference_type __tz_right = __countr_zero(__right_bitset);
     __right_bitset             = __libcpp_blsr(__right_bitset);
     _Ops::iter_swap(__first + __tz_left, __last - __tz_right);
   }
