@@ -1009,7 +1009,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     unsigned TotalNumElts =
         std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
                      ->getMinNumElements(),
-                 RISCV::RVVBitsPerBlock / 8) *
+                 RISCV::RVVBytesPerBlock) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts),

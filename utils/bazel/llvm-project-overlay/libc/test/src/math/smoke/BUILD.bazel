@@ -26,6 +26,8 @@ math_test(name = "atan2")
 
 math_test(name = "atan2f")
 
+math_test(name = "atan")
+
 math_test(name = "atanf")
 
 math_test(name = "atanhf")
