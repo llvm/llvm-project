@@ -127,7 +127,18 @@ public:
   static int runTests(const TestOptions &Options);
 
 protected:
-  static void addTest(Test *T);
+  constexpr static void *addTest(Test *T) {
+    if (End == nullptr) {
+      Start = T;
+      End = T;
+      // read  of constexpr
+      return nullptr;
+    }
+
+    End->Next = T;
+    End = T;
+    return nullptr;
+  }
 
   // We make use of a template function, with |LHS| and |RHS| as explicit
   // parameters, for enhanced type checking. Other gtest like unittest
