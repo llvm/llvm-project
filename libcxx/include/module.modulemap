@@ -1296,6 +1296,19 @@ module std [system] {
     export *
   }
 
+  module flat_set {
+    module flat_set                       {
+      header "__flat_set/flat_set.h"
+      export std.vector.vector
+      export std.vector.fwd
+    }
+    module ra_iterator                    { header "__flat_set/ra_iterator.h" }
+
+    header "flat_set"
+    export std.flat_map.sorted_unique
+    export *
+  }
+
   module format {
     module buffer                             {
       header "__format/buffer.h"
