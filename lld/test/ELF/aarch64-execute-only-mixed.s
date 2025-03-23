@@ -16,20 +16,20 @@
 // CHECK-XO:      PHDR
 // CHECK-XO-NEXT: LOAD
 // CHECK-XO-NEXT: LOAD 0x000120 0x0000000000210120 0x0000000000210120 0x00000c 0x00000c   E 0x10000
-/// Index should match the index of the LOAD section above.
+/// Index should match the index of the LOAD segment above.
 // CHECK-XO:      02   .text .foo
 
 // CHECK-MERGED:      PHDR
 // CHECK-MERGED-NEXT: LOAD
 // CHECK-MERGED-NEXT: LOAD 0x000120 0x0000000000210120 0x0000000000210120 0x00000c 0x00000c R E 0x10000
-/// Index should match the index of the LOAD section above.
+/// Index should match the index of the LOAD segment above.
 // CHECK-MERGED:      02   .text .foo
 
 // CHECK-SEPARATE:      PHDR
 // CHECK-SEPARATE-NEXT: LOAD
 // CHECK-SEPARATE-NEXT: LOAD 0x000158 0x0000000000210158 0x0000000000210158 0x000008 0x000008   E 0x10000
 // CHECK-SEPARATE-NEXT: LOAD 0x000160 0x0000000000220160 0x0000000000220160 0x000004 0x000004 R E 0x10000
-/// Index should match the index of the LOAD section above.
+/// Index should match the index of the LOAD segment above.
 // CHECK-SEPARATE:      02   .text
 // CHECK-SEPARATE:      03   .foo
 
@@ -47,7 +47,7 @@ foo:
   ret
 
 //--- rx.s
-/// An empty .text section is implicitly created without the SHF_AARCH64_PURECODE flag without this.
+/// Ensure that the implicitly-created .text section has the SHF_AARCH64_PURECODE flag.
 .section .text,"axy",@progbits,unique,0
 .section .foo,"ax",@progbits,unique,0
 .global foo
