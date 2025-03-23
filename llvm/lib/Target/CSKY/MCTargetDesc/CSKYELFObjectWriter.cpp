@@ -39,6 +39,18 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
   uint8_t Modifier = Target.getAccessVariant();
+  switch (Modifier) {
+  case CSKYMCExpr::VK_TLSGD:
+  case CSKYMCExpr::VK_TLSLDM:
+  case CSKYMCExpr::VK_TLSLDO:
+  case CSKYMCExpr::VK_TLSIE:
+  case CSKYMCExpr::VK_TLSLE:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
 
   if (IsPCRel) {
     switch (Kind) {
