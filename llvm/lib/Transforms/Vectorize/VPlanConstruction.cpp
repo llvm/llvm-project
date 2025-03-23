@@ -352,6 +352,19 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
   Plan->getEntry()->setOneSuccessor(getOrCreateVPBB(TheLoop->getHeader()));
   Plan->getEntry()->setPlan(&*Plan);
 
+  // Add incoming operands for the VPIRInstructions wrapping the exit phis.
+  for (auto *EB : Plan->getExitBlocks()) {
+    for (VPRecipeBase &R : *EB) {
+      auto *PhiR = dyn_cast<VPIRPhi>(&R);
+      if (!PhiR)
+        break;
+      PHINode &Phi = PhiR->getIRPhi();
+      for (BasicBlock *Pred : predecessors(EB->getIRBasicBlock()))
+        PhiR->addOperand(
+            getOrCreateVPOperand(Phi.getIncomingValueForBlock(Pred)));
+    }
+  }
+
   for (const auto &[IRBB, VPB] : BB2VPBB)
     VPB2IRBB[VPB] = IRBB;
 
@@ -464,6 +477,12 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
   if (!RequiresScalarEpilogueCheck) {
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    // The exit blocks are dead, remove any recipes to make sure no users remain
+    // that may pessimize transforms.
+    for (auto *EB : Plan.getExitBlocks()) {
+      for (VPRecipeBase &R : make_early_inc_range(*EB))
+        R.eraseFromParent();
+    }
     return;
   }
 

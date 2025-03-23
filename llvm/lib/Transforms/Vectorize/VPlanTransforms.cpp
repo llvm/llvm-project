@@ -2501,20 +2501,24 @@ void VPlanTransforms::handleUncountableEarlyExit(
     if (!ExitIRI)
       break;
 
-    PHINode &ExitPhi = ExitIRI->getIRPhi();
-    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
-
+    unsigned EarlyExitIdx = 0;
     if (OrigLoop->getUniqueExitBlock()) {
+      // After the transform, the first incoming value is coming from the
+      // orignial loop latch, while the second operand is from the early exit.
+      // Sawp the phi operands, if the first predecessor in the original IR is
+      // not the loop latch.
+      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) !=
+          OrigLoop->getLoopLatch())
+        ExitIRI->swapOperands();
+
+      EarlyExitIdx = 1;
       // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
       // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
       // which is coming from the original latch.
-      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      ExitIRI->addOperand(IncomingFromLatch);
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
 
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     auto IsVector = [](ElementCount VF) { return VF.isVector(); };
     // When the VFs are vectors, need to add `extract` to get the incoming value
     // from early exit. When the range contains scalar VF, limit the range to
@@ -2522,14 +2526,16 @@ void VPlanTransforms::handleUncountableEarlyExit(
     // and vector VFs.
     if (!IncomingFromEarlyExit->isLiveIn() &&
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
+      // Add the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
-      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
-          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
-          nullptr, "early.exit.value");
+      ExitIRI->setOperand(
+          EarlyExitIdx,
+          EarlyExitB.createNaryOp(Instruction::ExtractElement,
+                                  {IncomingFromEarlyExit, FirstActiveLane},
+                                  nullptr, "early.exit.value"));
     }
-    ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 

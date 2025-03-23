@@ -9392,11 +9392,7 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
         continue;
       }
 
-      PHINode &ExitPhi = ExitIRI->getIRPhi();
-      BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
-      Value *IncomingValue = ExitPhi.getIncomingValueForBlock(ExitingBB);
-      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-      ExitIRI->addOperand(V);
+      VPValue *V = ExitIRI->getOperand(0);
       if (V->isLiveIn())
         continue;
       assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
