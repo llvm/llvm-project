@@ -37,6 +37,7 @@ Getting Started with libc++
    ReleaseNotes
    UserDocumentation
    VendorDocumentation
+   ABIGuarantees
    Contributing
    CodingGuidelines
    TestingLibcxx
