@@ -9,9 +9,11 @@
 #include "CSKYFixupKinds.h"
 #include "CSKYMCExpr.h"
 #include "CSKYMCTargetDesc.h"
+#include "MCTargetDesc/CSKYMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSymbolELF.h"
 
 #define DEBUG_TYPE "csky-elf-object-writer"
 
@@ -27,6 +29,8 @@ public:
 
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
+                               unsigned Type) const override;
 };
 
 } // namespace
@@ -39,6 +43,19 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
   uint8_t Modifier = Target.getAccessVariant();
+
+  switch (Target.getRefKind()) {
+  case CSKYMCExpr::VK_TLSIE:
+  case CSKYMCExpr::VK_TLSLE:
+  case CSKYMCExpr::VK_TLSGD:
+  case CSKYMCExpr::VK_TLSLDM:
+  case CSKYMCExpr::VK_TLSLDO:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
 
   if (IsPCRel) {
     switch (Kind) {
@@ -147,6 +164,18 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_CKCORE_GOT_IMM18_4;
   case CSKY::fixup_csky_plt_imm18_scale4:
     return ELF::R_CKCORE_PLT_IMM18_4;
+  }
+}
+
+bool CSKYELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
+                                                  const MCSymbol &,
+                                                  unsigned Type) const {
+  switch (V.getRefKind()) {
+  case CSKYMCExpr::VK_PLT:
+  case CSKYMCExpr::VK_GOT:
+    return true;
+  default:
+    return false;
   }
 }
 
