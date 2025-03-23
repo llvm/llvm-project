@@ -1464,9 +1464,6 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
   }
 
-  if (Fixup.getValue())
-    fixSymbolsInTLSFixups(Asm, Fixup.getValue());
-
   const MCSymbolELF *RenamedSymA = SymA;
   if (SymA) {
     if (const MCSymbolELF *R = Renames.lookup(SymA))
@@ -1499,45 +1496,6 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
       return false;
   }
   return &SymA.getSection() == FB.getParent();
-}
-
-void ELFObjectWriter::fixSymbolsInTLSFixups(MCAssembler &Asm,
-                                            const MCExpr *expr) {
-  switch (expr->getKind()) {
-  case MCExpr::Target:
-    cast<MCTargetExpr>(expr)->fixELFSymbolsInTLSFixups(Asm);
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *be = cast<MCBinaryExpr>(expr);
-    fixSymbolsInTLSFixups(Asm, be->getLHS());
-    fixSymbolsInTLSFixups(Asm, be->getRHS());
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &symRef = *cast<MCSymbolRefExpr>(expr);
-    switch (symRef.getKind()) {
-    default:
-      return;
-    case MCSymbolRefExpr::VK_GOTTPOFF:
-    case MCSymbolRefExpr::VK_TLSGD:
-    case MCSymbolRefExpr::VK_TLSLD:
-    case MCSymbolRefExpr::VK_TLSLDM:
-    case MCSymbolRefExpr::VK_TPOFF:
-      break;
-    }
-    Asm.registerSymbol(symRef.getSymbol());
-    cast<MCSymbolELF>(symRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixSymbolsInTLSFixups(Asm, cast<MCUnaryExpr>(expr)->getSubExpr());
-    break;
-  }
 }
 
 uint64_t ELFObjectWriter::writeObject(MCAssembler &Asm) {
