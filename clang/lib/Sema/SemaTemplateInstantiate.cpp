@@ -2876,8 +2876,11 @@ TemplateInstantiator::TransformNestedRequirement(
       return nullptr;
     llvm::SmallVector<Expr *> Result;
     if (!SemaRef.CheckConstraintSatisfaction(
-            nullptr, {Req->getConstraintExpr()}, Result, TemplateArgs,
-            Req->getConstraintExpr()->getSourceRange(), Satisfaction) &&
+            nullptr,
+            AssociatedConstraint(Req->getConstraintExpr(),
+                                 SemaRef.ArgumentPackSubstitutionIndex),
+            Result, TemplateArgs, Req->getConstraintExpr()->getSourceRange(),
+            Satisfaction) &&
         !Result.empty())
       TransConstraint = Result[0];
     assert(!Trap.hasErrorOccurred() && "Substitution failures must be handled "
@@ -3159,9 +3162,12 @@ bool Sema::SubstTypeConstraint(
       TC->getTemplateArgsAsWritten();
 
   if (!EvaluateConstraints) {
-      Inst->setTypeConstraint(TC->getConceptReference(),
-                              TC->getImmediatelyDeclaredConstraint());
-      return false;
+    auto Index = TC->getArgumentPackSubstitutionIndex();
+    if (Index == -1)
+      Index = SemaRef.ArgumentPackSubstitutionIndex;
+    Inst->setTypeConstraint(TC->getConceptReference(),
+                            TC->getImmediatelyDeclaredConstraint(), Index);
+    return false;
   }
 
   TemplateArgumentListInfo InstArgs;

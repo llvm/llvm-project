@@ -5975,7 +5975,8 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Err)
       return std::move(Err);
 
-    ToD->setTypeConstraint(ToConceptRef, ToIDC);
+    ToD->setTypeConstraint(ToConceptRef, ToIDC,
+                           TC->getArgumentPackSubstitutionIndex());
   }
 
   if (Error Err = importTemplateParameterDefaultArgument(D, ToD))
