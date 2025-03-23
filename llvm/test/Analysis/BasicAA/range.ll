@@ -271,6 +271,18 @@ entry:
   ret i32 %load_
 }
 
+; CHECK-LABEL: Function: range_assume
+; CHECK: NoAlias: i32* %gep1, i32* %gep2
+define void @range_assume(ptr %s, ptr %q) {
+  %in_array = load i32, ptr %q
+  call void @llvm.assume(i1 true) ["range"(i32 %in_array, i32 0, i32 2)]
+  %gep1 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 1, i32 %in_array
+  %gep2 = getelementptr inbounds %struct.S, ptr %s, i64 0, i32 2
+  load i32, ptr %gep1
+  load i32, ptr %gep2
+  ret void
+}
+
 declare void @llvm.assume(i1)
 
 !0 = !{ i32 0, i32 2 }
