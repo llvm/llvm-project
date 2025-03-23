@@ -19,41 +19,41 @@ using namespace llvm;
 
 #define DEBUG_TYPE "csky-mc-expr"
 
-const CSKYMCExpr *CSKYMCExpr::create(const MCExpr *Expr, VariantKind Kind,
+const CSKYMCExpr *CSKYMCExpr::create(const MCExpr *Expr, Specifier Kind,
                                      MCContext &Ctx) {
-  return new (Ctx) CSKYMCExpr(Kind, Expr);
+  return new (Ctx) CSKYMCExpr(Expr, Kind);
 }
 
-StringRef CSKYMCExpr::getVariantKindName(VariantKind Kind) {
+StringRef CSKYMCExpr::getVariantKindName(Specifier Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("Invalid ELF symbol kind");
-  case VK_CSKY_None:
-  case VK_CSKY_ADDR:
+  case VK_None:
+  case VK_ADDR:
     return "";
-  case VK_CSKY_ADDR_HI16:
+  case VK_ADDR_HI16:
     return "@HI16";
-  case VK_CSKY_ADDR_LO16:
+  case VK_ADDR_LO16:
     return "@LO16";
-  case VK_CSKY_GOT_IMM18_BY4:
-  case VK_CSKY_GOT:
+  case VK_GOT_IMM18_BY4:
+  case VK_GOT:
     return "@GOT";
-  case VK_CSKY_GOTPC:
+  case VK_GOTPC:
     return "@GOTPC";
-  case VK_CSKY_GOTOFF:
+  case VK_GOTOFF:
     return "@GOTOFF";
-  case VK_CSKY_PLT_IMM18_BY4:
-  case VK_CSKY_PLT:
+  case VK_PLT_IMM18_BY4:
+  case VK_PLT:
     return "@PLT";
-  case VK_CSKY_TLSLE:
+  case VK_TLSLE:
     return "@TPOFF";
-  case VK_CSKY_TLSIE:
+  case VK_TLSIE:
     return "@GOTTPOFF";
-  case VK_CSKY_TLSGD:
+  case VK_TLSGD:
     return "@TLSGD32";
-  case VK_CSKY_TLSLDO:
+  case VK_TLSLDO:
     return "@TLSLDO32";
-  case VK_CSKY_TLSLDM:
+  case VK_TLSLDM:
     return "@TLSLDM32";
   }
 }
@@ -64,7 +64,7 @@ void CSKYMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 
 void CSKYMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Expr->print(OS, MAI);
-  OS << getVariantKindName(getKind());
+  OS << getVariantKindName(getSpecifier());
 }
 
 static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
@@ -96,19 +96,6 @@ static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
   }
 }
 
-void CSKYMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getKind()) {
-  default:
-    return;
-  case VK_CSKY_TLSLE:
-  case VK_CSKY_TLSIE:
-  case VK_CSKY_TLSGD:
-    break;
-  }
-
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
-}
-
 bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                            const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
@@ -116,20 +103,20 @@ bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
 
   // Some custom fixup types are not valid with symbol difference expressions
   if (Res.getSymA() && Res.getSymB()) {
-    switch (getKind()) {
+    switch (getSpecifier()) {
     default:
       return true;
-    case VK_CSKY_GOT:
-    case VK_CSKY_GOT_IMM18_BY4:
-    case VK_CSKY_GOTPC:
-    case VK_CSKY_GOTOFF:
-    case VK_CSKY_PLT:
-    case VK_CSKY_PLT_IMM18_BY4:
-    case VK_CSKY_TLSIE:
-    case VK_CSKY_TLSLE:
-    case VK_CSKY_TLSGD:
-    case VK_CSKY_TLSLDO:
-    case VK_CSKY_TLSLDM:
+    case VK_GOT:
+    case VK_GOT_IMM18_BY4:
+    case VK_GOTPC:
+    case VK_GOTOFF:
+    case VK_PLT:
+    case VK_PLT_IMM18_BY4:
+    case VK_TLSIE:
+    case VK_TLSLE:
+    case VK_TLSGD:
+    case VK_TLSLDO:
+    case VK_TLSLDM:
       return false;
     }
   }
