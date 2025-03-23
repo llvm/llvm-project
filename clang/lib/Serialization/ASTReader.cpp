@@ -90,6 +90,7 @@
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/ModuleManager.h"
@@ -3318,9 +3319,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                 StoredSignature, Capabilities);
 
       // If we diagnosed a problem, produce a backtrace.
-      bool recompilingFinalized =
-          Result == OutOfDate && (Capabilities & ARR_OutOfDate) &&
-          getModuleManager().getModuleCache().isPCMFinal(F.FileName);
+      bool recompilingFinalized = Result == OutOfDate &&
+                                  (Capabilities & ARR_OutOfDate) &&
+                                  getModuleManager()
+                                      .getModuleCache()
+                                      .getInMemoryModuleCache()
+                                      .isPCMFinal(F.FileName);
       if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
         Diag(diag::note_module_file_imported_by)
             << F.FileName << !F.ModuleName.empty() << F.ModuleName;
@@ -4897,7 +4901,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
     }
   }
 
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
   if (HSOpts.ModulesValidateOncePerBuildSession) {
     // Now we are certain that the module and all modules it depends on are
     // up-to-date. For implicitly-built module files, ensure the corresponding
@@ -5006,7 +5011,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   bool ShouldFinalizePCM = false;
   auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
-    auto &MC = getModuleManager().getModuleCache();
+    auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
     else
@@ -5143,7 +5148,8 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     // validation will fail during the as-system import since the PCM on disk
     // doesn't guarantee that -Werror was respected.  However, the -Werror
     // flags were checked during the initial as-user import.
-    if (getModuleManager().getModuleCache().isPCMFinal(F.FileName)) {
+    if (getModuleManager().getModuleCache().getInMemoryModuleCache().isPCMFinal(
+            F.FileName)) {
       Diag(diag::warn_module_system_bit_conflict) << F.FileName;
       return Success;
     }
@@ -5651,14 +5657,14 @@ namespace {
 } // namespace
 
 bool ASTReader::readASTFileControlBlock(
-    StringRef Filename, FileManager &FileMgr,
-    const InMemoryModuleCache &ModuleCache,
+    StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
     ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
     unsigned ClientLoadCapabilities) {
   // Open the AST file.
   std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
-  llvm::MemoryBuffer *Buffer = ModuleCache.lookupPCM(Filename);
+  llvm::MemoryBuffer *Buffer =
+      ModCache.getInMemoryModuleCache().lookupPCM(Filename);
   if (!Buffer) {
     // FIXME: We should add the pcm to the InMemoryModuleCache if it could be
     // read again later, but we do not have the context here to determine if it
@@ -5947,19 +5953,15 @@ bool ASTReader::readASTFileControlBlock(
   return false;
 }
 
-bool ASTReader::isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
-                                    const InMemoryModuleCache &ModuleCache,
-                                    const PCHContainerReader &PCHContainerRdr,
-                                    const LangOptions &LangOpts,
-                                    const TargetOptions &TargetOpts,
-                                    const PreprocessorOptions &PPOpts,
-                                    StringRef ExistingModuleCachePath,
-                                    bool RequireStrictOptionMatches) {
+bool ASTReader::isAcceptableASTFile(
+    StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
+    const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
+    const TargetOptions &TargetOpts, const PreprocessorOptions &PPOpts,
+    StringRef ExistingModuleCachePath, bool RequireStrictOptionMatches) {
   SimplePCHValidator validator(LangOpts, TargetOpts, PPOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
-  return !readASTFileControlBlock(Filename, FileMgr, ModuleCache,
-                                  PCHContainerRdr,
+  return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
                                   /*FindModuleFileExtensions=*/false, validator,
                                   /*ValidateDiagnosticOptions=*/true);
 }
@@ -6496,7 +6498,10 @@ ASTReader::getModulePreprocessedEntities(ModuleFile &Mod) const {
 bool ASTReader::canRecoverFromOutOfDate(StringRef ModuleFileName,
                                         unsigned int ClientLoadCapabilities) {
   return ClientLoadCapabilities & ARR_OutOfDate &&
-         !getModuleManager().getModuleCache().isPCMFinal(ModuleFileName);
+         !getModuleManager()
+              .getModuleCache()
+              .getInMemoryModuleCache()
+              .isPCMFinal(ModuleFileName);
 }
 
 llvm::iterator_range<ASTReader::ModuleDeclIterator>
@@ -7099,7 +7104,7 @@ void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(readSourceLocation());
-  TL.setClassTInfo(GetTypeSourceInfo());
+  TL.setQualifierLoc(ReadNestedNameSpecifierLoc());
 }
 
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
@@ -10178,12 +10183,12 @@ void ASTReader::visitTopLevelModuleMaps(
 }
 
 void ASTReader::finishPendingActions() {
-  while (
-      !PendingIdentifierInfos.empty() || !PendingDeducedFunctionTypes.empty() ||
-      !PendingDeducedVarTypes.empty() || !PendingIncompleteDeclChains.empty() ||
-      !PendingDeclChains.empty() || !PendingMacroIDs.empty() ||
-      !PendingDeclContextInfos.empty() || !PendingUpdateRecords.empty() ||
-      !PendingObjCExtensionIvarRedeclarations.empty()) {
+  while (!PendingIdentifierInfos.empty() ||
+         !PendingDeducedFunctionTypes.empty() ||
+         !PendingDeducedVarTypes.empty() || !PendingDeclChains.empty() ||
+         !PendingMacroIDs.empty() || !PendingDeclContextInfos.empty() ||
+         !PendingUpdateRecords.empty() ||
+         !PendingObjCExtensionIvarRedeclarations.empty()) {
     // If any identifiers with corresponding top-level declarations have
     // been loaded, load those declarations now.
     using TopLevelDeclsMap =
@@ -10230,13 +10235,6 @@ void ASTReader::finishPendingActions() {
       VD->setType(GetType(PendingDeducedVarTypes[I].second));
     }
     PendingDeducedVarTypes.clear();
-
-    // For each decl chain that we wanted to complete while deserializing, mark
-    // it as "still needs to be completed".
-    for (unsigned I = 0; I != PendingIncompleteDeclChains.size(); ++I) {
-      markIncompleteDeclChain(PendingIncompleteDeclChains[I]);
-    }
-    PendingIncompleteDeclChains.clear();
 
     // Load pending declaration chains.
     for (unsigned I = 0; I != PendingDeclChains.size(); ++I)
@@ -10475,6 +10473,43 @@ void ASTReader::finishPendingActions() {
   for (auto *ND : PendingMergedDefinitionsToDeduplicate)
     getContext().deduplicateMergedDefinitonsFor(ND);
   PendingMergedDefinitionsToDeduplicate.clear();
+
+  // For each decl chain that we wanted to complete while deserializing, mark
+  // it as "still needs to be completed".
+  for (Decl *D : PendingIncompleteDeclChains)
+    markIncompleteDeclChain(D);
+  PendingIncompleteDeclChains.clear();
+
+  assert(PendingIdentifierInfos.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeducedFunctionTypes.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeducedVarTypes.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeclChains.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingMacroIDs.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeclContextInfos.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingUpdateRecords.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingObjCExtensionIvarRedeclarations.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingFakeDefinitionData.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDefinitions.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingWarningForDuplicatedDefsInModuleUnits.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingBodies.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingAddedClassMembers.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingMergedDefinitionsToDeduplicate.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingIncompleteDeclChains.empty() &&
+         "Should be empty at the end of finishPendingActions");
 }
 
 void ASTReader::diagnoseOdrViolations() {
@@ -10788,47 +10823,55 @@ void ASTReader::FinishedDeserializing() {
   --NumCurrentElementsDeserializing;
 
   if (NumCurrentElementsDeserializing == 0) {
-    // Propagate exception specification and deduced type updates along
-    // redeclaration chains.
-    //
-    // We do this now rather than in finishPendingActions because we want to
-    // be able to walk the complete redeclaration chains of the updated decls.
-    while (!PendingExceptionSpecUpdates.empty() ||
-           !PendingDeducedTypeUpdates.empty() ||
-           !PendingUndeducedFunctionDecls.empty()) {
-      auto ESUpdates = std::move(PendingExceptionSpecUpdates);
-      PendingExceptionSpecUpdates.clear();
-      for (auto Update : ESUpdates) {
-        ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
-        auto *FPT = Update.second->getType()->castAs<FunctionProtoType>();
-        auto ESI = FPT->getExtProtoInfo().ExceptionSpec;
-        if (auto *Listener = getContext().getASTMutationListener())
-          Listener->ResolvedExceptionSpec(cast<FunctionDecl>(Update.second));
-        for (auto *Redecl : Update.second->redecls())
-          getContext().adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
+    {
+      // Guard variable to avoid recursively entering the process of passing
+      // decls to consumer.
+      SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
+                                                 /*NewValue=*/false);
+
+      // Propagate exception specification and deduced type updates along
+      // redeclaration chains.
+      //
+      // We do this now rather than in finishPendingActions because we want to
+      // be able to walk the complete redeclaration chains of the updated decls.
+      while (!PendingExceptionSpecUpdates.empty() ||
+             !PendingDeducedTypeUpdates.empty() ||
+             !PendingUndeducedFunctionDecls.empty()) {
+        auto ESUpdates = std::move(PendingExceptionSpecUpdates);
+        PendingExceptionSpecUpdates.clear();
+        for (auto Update : ESUpdates) {
+          ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
+          auto *FPT = Update.second->getType()->castAs<FunctionProtoType>();
+          auto ESI = FPT->getExtProtoInfo().ExceptionSpec;
+          if (auto *Listener = getContext().getASTMutationListener())
+            Listener->ResolvedExceptionSpec(cast<FunctionDecl>(Update.second));
+          for (auto *Redecl : Update.second->redecls())
+            getContext().adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
+        }
+
+        auto DTUpdates = std::move(PendingDeducedTypeUpdates);
+        PendingDeducedTypeUpdates.clear();
+        for (auto Update : DTUpdates) {
+          ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
+          // FIXME: If the return type is already deduced, check that it
+          // matches.
+          getContext().adjustDeducedFunctionResultType(Update.first,
+                                                       Update.second);
+        }
+
+        auto UDTUpdates = std::move(PendingUndeducedFunctionDecls);
+        PendingUndeducedFunctionDecls.clear();
+        // We hope we can find the deduced type for the functions by iterating
+        // redeclarations in other modules.
+        for (FunctionDecl *UndeducedFD : UDTUpdates)
+          (void)UndeducedFD->getMostRecentDecl();
       }
 
-      auto DTUpdates = std::move(PendingDeducedTypeUpdates);
-      PendingDeducedTypeUpdates.clear();
-      for (auto Update : DTUpdates) {
-        ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
-        // FIXME: If the return type is already deduced, check that it matches.
-        getContext().adjustDeducedFunctionResultType(Update.first,
-                                                     Update.second);
-      }
+      if (ReadTimer)
+        ReadTimer->stopTimer();
 
-      auto UDTUpdates = std::move(PendingUndeducedFunctionDecls);
-      PendingUndeducedFunctionDecls.clear();
-      // We hope we can find the deduced type for the functions by iterating
-      // redeclarations in other modules.
-      for (FunctionDecl *UndeducedFD : UDTUpdates)
-        (void)UndeducedFD->getMostRecentDecl();
+      diagnoseOdrViolations();
     }
-
-    if (ReadTimer)
-      ReadTimer->stopTimer();
-
-    diagnoseOdrViolations();
 
     // We are not in recursive loading, so it's safe to pass the "interesting"
     // decls to the consumer.
@@ -10862,7 +10905,7 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
   }
 }
 
-ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      ASTContext *Context,
                      const PCHContainerReader &PCHContainerRdr,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
@@ -10878,7 +10921,7 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
       StackHandler(Diags), PP(PP), ContextObj(Context),
-      ModuleMgr(PP.getFileManager(), ModuleCache, PCHContainerRdr,
+      ModuleMgr(PP.getFileManager(), ModCache, PCHContainerRdr,
                 PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidationKind(DisableValidationKind),
@@ -11716,6 +11759,12 @@ void OMPClauseReader::VisitOMPReductionClause(OMPReductionClause *C) {
       Vars.push_back(Record.readSubExpr());
     C->setInscanCopyArrayElems(Vars);
   }
+  unsigned NumFlags = Record.readInt();
+  SmallVector<bool, 16> Flags;
+  Flags.reserve(NumFlags);
+  for ([[maybe_unused]] unsigned I : llvm::seq<unsigned>(NumFlags))
+    Flags.push_back(Record.readInt());
+  C->setPrivateVariableReductionFlags(Flags);
 }
 
 void OMPClauseReader::VisitOMPTaskReductionClause(OMPTaskReductionClause *C) {
@@ -12821,6 +12870,12 @@ void ASTRecordReader::readOpenACCClauseList(
     MutableArrayRef<const OpenACCClause *> Clauses) {
   for (unsigned I = 0; I < Clauses.size(); ++I)
     Clauses[I] = readOpenACCClause();
+}
+
+void ASTRecordReader::readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A) {
+  unsigned NumVars = readInt();
+  A->Clauses.resize(NumVars);
+  readOpenACCClauseList(A->Clauses);
 }
 
 static unsigned getStableHashForModuleName(StringRef PrimaryModuleName) {

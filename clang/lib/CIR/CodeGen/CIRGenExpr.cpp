@@ -165,6 +165,73 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   return LValue();
 }
 
+mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
+  QualType boolTy = getContext().BoolTy;
+  SourceLocation loc = e->getExprLoc();
+
+  assert(!cir::MissingFeatures::pgoUse());
+  if (const MemberPointerType *MPT = e->getType()->getAs<MemberPointerType>()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "evaluateExprAsBool: member pointer type");
+    return createDummyValue(getLoc(loc), boolTy);
+  }
+
+  assert(!cir::MissingFeatures::CGFPOptionsRAII());
+  if (!e->getType()->isAnyComplexType())
+    return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
+
+  cgm.errorNYI(e->getSourceRange(), "evaluateExprAsBool: complex type");
+  return createDummyValue(getLoc(loc), boolTy);
+}
+
+LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
+  UnaryOperatorKind op = e->getOpcode();
+
+  // __extension__ doesn't affect lvalue-ness.
+  if (op == UO_Extension)
+    return emitLValue(e->getSubExpr());
+
+  switch (op) {
+  case UO_Deref: {
+    cgm.errorNYI(e->getSourceRange(), "UnaryOp dereference");
+    return LValue();
+  }
+  case UO_Real:
+  case UO_Imag: {
+    cgm.errorNYI(e->getSourceRange(), "UnaryOp real/imag");
+    return LValue();
+  }
+  case UO_PreInc:
+  case UO_PreDec: {
+    bool isInc = e->isIncrementOp();
+    LValue lv = emitLValue(e->getSubExpr());
+
+    assert(e->isPrefix() && "Prefix operator in unexpected state!");
+
+    if (e->getType()->isAnyComplexType()) {
+      cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
+      return LValue();
+    } else {
+      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
+    }
+
+    return lv;
+  }
+  case UO_Extension:
+    llvm_unreachable("UnaryOperator extension should be handled above!");
+  case UO_Plus:
+  case UO_Minus:
+  case UO_Not:
+  case UO_LNot:
+  case UO_AddrOf:
+  case UO_PostInc:
+  case UO_PostDec:
+  case UO_Coawait:
+    llvm_unreachable("UnaryOperator of non-lvalue kind!");
+  }
+  llvm_unreachable("Unknown unary operator kind!");
+}
+
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
 RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
@@ -214,6 +281,13 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
+}
+
+mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
+                                             clang::QualType qt) {
+  mlir::Type t = convertType(qt);
+  CharUnits alignment = getContext().getTypeAlignInChars(qt);
+  return builder.createDummyValue(loc, t, alignment);
 }
 
 /// This creates an alloca and inserts it  at the current insertion point of the

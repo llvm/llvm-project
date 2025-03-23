@@ -733,7 +733,6 @@ private:
       _CharT __c   = __str[__mp - 1 - __i];
       (*this)[__i] = _Traits::eq(__c, __one);
     }
-    std::fill(__base::__make_iter(__i), __base::__make_iter(_Size), false);
   }
 
   _LIBCPP_HIDE_FROM_ABI size_t __hash_code() const _NOEXCEPT { return __base::__hash_code(); }

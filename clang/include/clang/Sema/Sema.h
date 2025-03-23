@@ -1348,6 +1348,12 @@ public:
                                     unsigned DiagID, bool ForceCheck = false,
                                     bool ForceUnprivileged = false);
 
+  AccessResult CheckBaseClassAccess(
+      SourceLocation AccessLoc, CXXRecordDecl *Base, CXXRecordDecl *Derived,
+      const CXXBasePath &Path, unsigned DiagID,
+      llvm::function_ref<void(PartialDiagnostic &PD)> SetupPDiag,
+      bool ForceCheck = false, bool ForceUnprivileged = false);
+
   /// Checks access to all the declarations in the given result set.
   void CheckLookupAccess(const LookupResult &R);
 
@@ -2353,9 +2359,18 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
+  enum class EltwiseBuiltinArgTyRestriction {
+    None,
+    FloatTy,
+    IntegerTy,
+    SignedIntOrFloatTy,
+  };
+
   /// \param FPOnly restricts the arguments to floating-point types.
-  std::optional<QualType> BuiltinVectorMath(CallExpr *TheCall,
-                                            bool FPOnly = false);
+  std::optional<QualType>
+  BuiltinVectorMath(CallExpr *TheCall,
+                    EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                        EltwiseBuiltinArgTyRestriction::None);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
@@ -2459,9 +2474,13 @@ public:
                                bool *ICContext = nullptr,
                                bool IsListInit = false);
 
-  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                     bool CheckForFloatArgs = true);
-  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
+  bool
+  BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                                    EltwiseBuiltinArgTyRestriction::FloatTy);
+  bool PrepareBuiltinElementwiseMathOneArgCall(
+      CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                             EltwiseBuiltinArgTyRestriction::None);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2499,9 +2518,9 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
-  /// Check the arguments to '__builtin_va_start' or '__builtin_ms_va_start'
-  /// for validity.  Emit an error and return true on failure; return false
-  /// on success.
+  /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
+  /// or '__builtin_c23_va_start' for validity. Emit an error and return true
+  /// on failure; return false on success.
   bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
 
@@ -2570,7 +2589,9 @@ private:
                                  AtomicExpr::AtomicOp Op);
 
   /// \param FPOnly restricts the arguments to floating-point types.
-  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
+  bool BuiltinElementwiseMath(CallExpr *TheCall,
+                              EltwiseBuiltinArgTyRestriction ArgTyRestr =
+                                  EltwiseBuiltinArgTyRestriction::None);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -5585,9 +5606,15 @@ public:
   void ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
 
-  bool EvaluateStaticAssertMessageAsString(Expr *Message, std::string &Result,
-                                           ASTContext &Ctx,
-                                           bool ErrorOnInvalidMessage);
+  enum class StringEvaluationContext { StaticAssert = 0, Asm = 1 };
+
+  bool EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+  bool EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
+                        StringEvaluationContext EvalContext,
+                        bool ErrorOnInvalidMessage);
+
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc);
@@ -5748,10 +5775,11 @@ public:
 
   /// Determine whether the type \p Derived is a C++ class that is
   /// derived from the type \p Base.
+  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                     CXXRecordDecl *Base, CXXBasePaths &Paths);
+  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
+                     CXXRecordDecl *Base);
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base);
-
-  /// Determine whether the type \p Derived is a C++ class that is
-  /// derived from the type \p Base.
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
                      CXXBasePaths &Paths);
 
@@ -6095,7 +6123,8 @@ public:
                                          RecordDecl *ClassDecl,
                                          const IdentifierInfo *Name);
 
-  unsigned GetDecompositionElementCount(QualType DecompType);
+  std::optional<unsigned int> GetDecompositionElementCount(QualType DecompType,
+                                                           SourceLocation Loc);
   void CheckCompleteDecompositionDeclaration(DecompositionDecl *DD);
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -10034,15 +10063,24 @@ public:
                                  bool InOverloadResolution,
                                  QualType &ConvertedType);
 
+  enum class MemberPointerConversionResult {
+    Success,
+    DifferentPointee,
+    NotDerived,
+    Ambiguous,
+    Virtual,
+    Inaccessible
+  };
+  enum class MemberPointerConversionDirection : bool { Downcast, Upcast };
   /// CheckMemberPointerConversion - Check the member pointer conversion from
   /// the expression From to the type ToType. This routine checks for ambiguous
   /// or virtual or inaccessible base-to-derived member pointer conversions for
-  /// which IsMemberPointerConversion has already returned true. It returns true
-  /// and produces a diagnostic if there was an error, or returns false
-  /// otherwise.
-  bool CheckMemberPointerConversion(Expr *From, QualType ToType, CastKind &Kind,
-                                    CXXCastPath &BasePath,
-                                    bool IgnoreBaseAccess);
+  /// which IsMemberPointerConversion has already returned true. It produces a
+  // diagnostic if there was an error.
+  MemberPointerConversionResult CheckMemberPointerConversion(
+      QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
+      CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
+      bool IgnoreBaseAccess, MemberPointerConversionDirection Direction);
 
   /// IsQualificationConversion - Determines whether the conversion from
   /// an rvalue of type FromType to ToType is a qualification conversion
@@ -10755,11 +10793,6 @@ public:
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
 
-  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
-  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
-  /// value has been discarded.
-  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
-
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
   void DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID);
@@ -11040,6 +11073,7 @@ private:
   ///@{
 
 public:
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -11250,13 +11284,11 @@ public:
 
   /// Determine whether we would be unable to instantiate this template (because
   /// it either has no definition, or is in the process of being instantiated).
-  bool DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
-                                      NamedDecl *Instantiation,
-                                      bool InstantiatedFromMember,
-                                      const NamedDecl *Pattern,
-                                      const NamedDecl *PatternDef,
-                                      TemplateSpecializationKind TSK,
-                                      bool Complain = true);
+  bool DiagnoseUninstantiableTemplate(
+      SourceLocation PointOfInstantiation, NamedDecl *Instantiation,
+      bool InstantiatedFromMember, const NamedDecl *Pattern,
+      const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
+      bool Complain = true, bool *Unreachable = nullptr);
 
   /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
   /// that the template parameter 'PrevDecl' is being shadowed by a new
@@ -12588,6 +12620,10 @@ public:
   void MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                   bool OnlyDeduced, unsigned Depth,
                                   llvm::SmallBitVector &Used);
+
+  void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
+                                  unsigned Depth, llvm::SmallBitVector &Used);
+
   void
   MarkDeducedTemplateParameters(const FunctionTemplateDecl *FunctionTemplate,
                                 llvm::SmallBitVector &Deduced) {
@@ -14853,8 +14889,9 @@ public:
   ///
   /// \returns a member pointer type, if successful, or a NULL type if there was
   /// an error.
-  QualType BuildMemberPointerType(QualType T, QualType Class,
-                                  SourceLocation Loc, DeclarationName Entity);
+  QualType BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
+                                  CXXRecordDecl *Cls, SourceLocation Loc,
+                                  DeclarationName Entity);
 
   /// Build a block pointer type.
   ///
@@ -15328,6 +15365,13 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
+  DB << llvm::to_underlying(Ctx);
+  return DB;
+}
+
 } // end namespace clang
 
 #endif

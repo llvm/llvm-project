@@ -52,6 +52,7 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
         self.expect(
             "frame variable -d run-target *nscfDictionary",
+            ordered=False,
             patterns=[
                 r"\(__NSCFDictionary\) \*nscfDictionary =",
                 'key = 0x.* @"foo"',
@@ -67,6 +68,7 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
         self.expect(
             "frame variable -d run-target *cfDictionaryRef",
+            ordered=False,
             patterns=[
                 r"\(const __CFDictionary\) \*cfDictionaryRef =",
                 'key = 0x.* @"foo"',

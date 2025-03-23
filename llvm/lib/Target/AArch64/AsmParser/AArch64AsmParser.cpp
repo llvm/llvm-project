@@ -1794,8 +1794,8 @@ public:
         AArch64MCRegisterClasses[AArch64::GPR64RegClassID].contains(getReg()));
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR32RegClassID).getRegister(
-        RI->getEncodingValue(getReg()));
+    MCRegister Reg = RI->getRegClass(AArch64::GPR32RegClassID)
+                         .getRegister(RI->getEncodingValue(getReg()));
 
     Inst.addOperand(MCOperand::createReg(Reg));
   }
@@ -1806,8 +1806,8 @@ public:
         AArch64MCRegisterClasses[AArch64::GPR32RegClassID].contains(getReg()));
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR64RegClassID).getRegister(
-        RI->getEncodingValue(getReg()));
+    MCRegister Reg = RI->getRegClass(AArch64::GPR64RegClassID)
+                         .getRegister(RI->getEncodingValue(getReg()));
 
     Inst.addOperand(MCOperand::createReg(Reg));
   }
@@ -2227,8 +2227,8 @@ public:
       return;
 
     const MCRegisterInfo *RI = Ctx.getRegisterInfo();
-    uint32_t Reg = RI->getRegClass(AArch64::GPR64RegClassID)
-                       .getRegister(RI->getEncodingValue(getReg()));
+    MCRegister Reg = RI->getRegClass(AArch64::GPR64RegClassID)
+                         .getRegister(RI->getEncodingValue(getReg()));
     if (Reg != AArch64::XZR)
       llvm_unreachable("wrong register");
 
@@ -8226,7 +8226,7 @@ AArch64AsmParser::classifySymbolRef(const MCExpr *Expr,
 
   // Check that it looks like a symbol + an addend
   MCValue Res;
-  bool Relocatable = Expr->evaluateAsRelocatable(Res, nullptr, nullptr);
+  bool Relocatable = Expr->evaluateAsRelocatable(Res, nullptr);
   if (!Relocatable || Res.getSymB())
     return false;
 

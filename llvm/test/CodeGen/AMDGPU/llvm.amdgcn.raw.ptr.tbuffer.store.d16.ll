@@ -3,7 +3,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx810 -verify-machineinstrs | FileCheck -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck -check-prefixes=PREGFX10-PACKED %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GFX10-PACKED %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX11-PACKED %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX11-PACKED,GFX11-PACKED-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs | FileCheck -check-prefixes=GFX11-PACKED,GFX11-PACKED-FAKE16 %s
 
 define amdgpu_kernel void @tbuffer_store_d16_x(ptr addrspace(8) %rsrc, half %data) {
 ; PREGFX10-UNPACKED-LABEL: tbuffer_store_d16_x:
@@ -34,15 +35,25 @@ define amdgpu_kernel void @tbuffer_store_d16_x(ptr addrspace(8) %rsrc, half %dat
 ; GFX10-PACKED-NEXT:    tbuffer_store_format_d16_x v0, off, s[0:3], 0 format:[BUF_FMT_10_11_11_SSCALED]
 ; GFX10-PACKED-NEXT:    s_endpgm
 ;
-; GFX11-PACKED-LABEL: tbuffer_store_d16_x:
-; GFX11-PACKED:       ; %bb.0: ; %main_body
-; GFX11-PACKED-NEXT:    s_clause 0x1
-; GFX11-PACKED-NEXT:    s_load_b32 s6, s[4:5], 0x34
-; GFX11-PACKED-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s6
-; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
-; GFX11-PACKED-NEXT:    s_endpgm
+; GFX11-PACKED-TRUE16-LABEL: tbuffer_store_d16_x:
+; GFX11-PACKED-TRUE16:       ; %bb.0: ; %main_body
+; GFX11-PACKED-TRUE16-NEXT:    s_clause 0x1
+; GFX11-PACKED-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX11-PACKED-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-PACKED-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-PACKED-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s6
+; GFX11-PACKED-TRUE16-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-PACKED-FAKE16-LABEL: tbuffer_store_d16_x:
+; GFX11-PACKED-FAKE16:       ; %bb.0: ; %main_body
+; GFX11-PACKED-FAKE16-NEXT:    s_clause 0x1
+; GFX11-PACKED-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX11-PACKED-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-PACKED-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-PACKED-FAKE16-NEXT:    v_mov_b32_e32 v0, s6
+; GFX11-PACKED-FAKE16-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-FAKE16-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.f16(half %data, ptr addrspace(8) %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void

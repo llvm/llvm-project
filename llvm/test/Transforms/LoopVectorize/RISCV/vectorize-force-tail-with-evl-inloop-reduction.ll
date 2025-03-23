@@ -1553,10 +1553,10 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT3]], <8 x i64> poison, <8 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT2]], <8 x float> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -1667,10 +1667,10 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT]], <8 x float> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT3]], <8 x i64> poison, <8 x i32> zeroinitializer
+; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <8 x float> poison, float [[START:%.*]], i64 0
+; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT2]], <8 x float> poison, <8 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]

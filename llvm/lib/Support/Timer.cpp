@@ -231,6 +231,7 @@ public:
   }
 
   TimerGroup &getTimerGroup(StringRef GroupName, StringRef GroupDescription) {
+    sys::SmartScopedLock<true> L(timerLock());
     return *getGroupEntry(GroupName, GroupDescription).first;
   }
 

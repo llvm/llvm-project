@@ -209,7 +209,7 @@ define amdgpu_ps <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp
 main_body:
   %c.1 = mul i32 %c, %d
 
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> undef, <4 x i32> poison, i32 %c.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> poison, <4 x i32> poison, i32 %c.1, i32 0, i32 0, i32 0)
   %c.1.bc = bitcast i32 %c.1 to float
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
@@ -247,7 +247,7 @@ define amdgpu_ps <4 x float> @test4_ptr_buf(<8 x i32> inreg %rsrc, <4 x i32> inr
 main_body:
   %c.1 = mul i32 %c, %d
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> undef, ptr addrspace(8) poison, i32 %c.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> poison, ptr addrspace(8) poison, i32 %c.1, i32 0, i32 0, i32 0)
   %c.1.bc = bitcast i32 %c.1 to float
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
@@ -1338,7 +1338,7 @@ define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
   %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src1.0 = bitcast float %src1 to i32
-  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 undef)
+  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 poison)
   %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src0.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %src0.0)

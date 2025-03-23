@@ -164,10 +164,10 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
+; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT1]]
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = extractelement <8 x i1> [[TMP2]], i32 0
 ; VF8UF1-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -251,10 +251,10 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF2:       [[VECTOR_BODY]]:
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
+; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8UF2:       [[VECTOR_BODY]]:
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT1]]
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp ule <8 x i64> <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT1]]
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP2]], i32 0
@@ -395,10 +395,10 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF16UF1:       [[VECTOR_BODY]]:
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
+; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF16UF1:       [[VECTOR_BODY]]:
 ; VF16UF1-NEXT:    [[TMP2:%.*]] = icmp ule <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT1]]
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = extractelement <16 x i1> [[TMP2]], i32 0
 ; VF16UF1-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -724,10 +724,10 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
+; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT]]
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
 ; VF8UF1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -840,10 +840,10 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF8UF2:       [[VECTOR_BODY]]:
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
+; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF8UF2:       [[VECTOR_BODY]]:
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp ule <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[BROADCAST_SPLAT]]
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = icmp ule <8 x i64> <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT]]
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[TMP3]], i32 0
@@ -1037,10 +1037,10 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
-; VF16UF1:       [[VECTOR_BODY]]:
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
+; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF16UF1:       [[VECTOR_BODY]]:
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp ule <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT]]
 ; VF16UF1-NEXT:    [[TMP4:%.*]] = extractelement <16 x i1> [[TMP3]], i32 0
 ; VF16UF1-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

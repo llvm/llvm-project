@@ -20,7 +20,39 @@ namespace cir {
 
 namespace direct {
 
+/// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
+/// lowering attributes to-be-stored in memory.
+mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                const mlir::TypeConverter *converter);
+
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
+
+class CIRToLLVMBrCondOpLowering
+    : public mlir::OpConversionPattern<cir::BrCondOp> {
+public:
+  using mlir::OpConversionPattern<cir::BrCondOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BrCondOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMCastOpLowering : public mlir::OpConversionPattern<cir::CastOp> {
+  mlir::DataLayout const &dataLayout;
+
+  mlir::Type convertTy(mlir::Type ty) const;
+
+public:
+  CIRToLLVMCastOpLowering(const mlir::TypeConverter &typeConverter,
+                          mlir::MLIRContext *context,
+                          mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CastOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
 
 class CIRToLLVMReturnOpLowering
     : public mlir::OpConversionPattern<cir::ReturnOp> {
@@ -134,6 +166,16 @@ private:
 
   void setupRegionInitializedLLVMGlobalOp(
       cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+};
+
+class CIRToLLVMUnaryOpLowering
+    : public mlir::OpConversionPattern<cir::UnaryOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnaryOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
 };
 
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {

@@ -178,9 +178,10 @@ MODULE_PASS_WITH_PARAMS(
     "global-merge", "GlobalMergePass",
     [TM = TM](GlobalMergeOptions Opts) { return GlobalMergePass(TM, Opts); },
     parseGlobalMergeOptions,
-    "group-by-use;ignore-single-use;max-offset=N;merge-const;merge-external;"
-    "no-group-by-use;no-ignore-single-use;no-merge-const;no-merge-external;"
-    "size-only")
+    "group-by-use;ignore-single-use;max-offset=N;merge-const;"
+    "merge-const-aggressive;merge-external;no-group-by-use;"
+    "no-ignore-single-use;no-merge-const;no-merge-const-aggressive;"
+    "no-merge-external;size-only")
 MODULE_PASS_WITH_PARAMS(
     "embed-bitcode", "EmbedBitcodePass",
     [](EmbedBitcodeOptions Opts) { return EmbedBitcodePass(Opts); },
@@ -289,6 +290,7 @@ FUNCTION_ANALYSIS("debug-ata", DebugAssignmentTrackingAnalysis())
 FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
 FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
+FUNCTION_ANALYSIS("ephemerals", EphemeralValuesAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
 FUNCTION_ANALYSIS("machine-function-info", MachineFunctionAnalysis(TM))
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
@@ -366,7 +368,7 @@ FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
-FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM))
+FUNCTION_PASS("expand-fp", ExpandFpPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("extra-vector-passes",
                   ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
