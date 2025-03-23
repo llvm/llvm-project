@@ -18,7 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
 // TODO: clean this up in a followup patch
-TMParse mktime_internal(const tm *tm_out) {
+cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
   int64_t tm_year_from_base = tm_out->tm_year + time_constants::TIME_YEAR_BASE;
@@ -26,23 +26,21 @@ TMParse mktime_internal(const tm *tm_out) {
   // 32-bit end-of-the-world is 03:14:07 UTC on 19 January 2038.
   if (sizeof(time_t) == 4 &&
       tm_year_from_base >= time_constants::END_OF32_BIT_EPOCH_YEAR) {
-    if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR) {
-      return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
-    }
-    if (tm_out->tm_mon > 0) {
-      return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
-    }
+    if (tm_year_from_base > time_constants::END_OF32_BIT_EPOCH_YEAR)
+      return {};
+    if (tm_out->tm_mon > 0)
+      return {};
     if (tm_out->tm_mday > 19) {
-      return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+      return {};
     } else if (tm_out->tm_mday == 19) {
       if (tm_out->tm_hour > 3) {
-        return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+        return {};
       } else if (tm_out->tm_hour == 3) {
         if (tm_out->tm_min > 14) {
-          return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+          return {};
         } else if (tm_out->tm_min == 14) {
           if (tm_out->tm_sec > 7) {
-            return {time_constants::OUT_OF_RANGE_RETURN_VALUE, true};
+            return {};
           }
         }
       }
@@ -109,7 +107,7 @@ TMParse mktime_internal(const tm *tm_out) {
                    tm_out->tm_min * time_constants::SECONDS_PER_MIN +
                    tm_out->tm_hour * time_constants::SECONDS_PER_HOUR +
                    total_days * time_constants::SECONDS_PER_DAY;
-  return {seconds, false};
+  return {seconds};
 }
 
 static int64_t computeRemainingYears(int64_t daysPerYears,
