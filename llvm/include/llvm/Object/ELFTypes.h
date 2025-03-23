@@ -1027,6 +1027,44 @@ struct PGOAnalysisMap {
   }
 };
 
+// Struct representing the FuncAddrMap for one function.
+struct FuncAddrMap {
+
+  // Bitfield of optional features to control the extra information
+  // emitted/encoded in the the section.
+  struct Features {
+    bool DynamicInstCount : 1;
+
+    // Encodes to minimum bit width representation.
+    uint8_t encode() const {
+      return (static_cast<uint8_t>(DynamicInstCount) << 0);
+    }
+
+    // Decodes from minimum bit width representation and validates no
+    // unnecessary bits are used.
+    static Expected<Features> decode(uint8_t Val) {
+      Features Feat{static_cast<bool>(Val & (1 << 0))};
+      if (Feat.encode() != Val)
+        return createStringError(
+            std::error_code(),
+            "invalid encoding for FuncAddrMap::Features: 0x%x", Val);
+      return Feat;
+    }
+
+    bool operator==(const Features &Other) const {
+      return DynamicInstCount == Other.DynamicInstCount;
+    }
+  };
+
+  uint64_t FunctionAddress = 0;  // Function entry address.
+  uint64_t DynamicInstCount = 0; // Dynamic instruction count for this function
+
+  // Flags to indicate if each feature was enabled in this function
+  Features FeatEnable;
+
+  uint64_t getFunctionAddress() const { return FunctionAddress; }
+};
+
 } // end namespace object.
 } // end namespace llvm.
 
