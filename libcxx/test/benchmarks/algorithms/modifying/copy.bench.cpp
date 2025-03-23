@@ -52,6 +52,7 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<int>>("rng::copy(deque<int>)", std::ranges::copy);
     bm.operator()<std::list<int>>("rng::copy(list<int>)", std::ranges::copy);
 
+#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
     // Copy from normal containers to vector<bool>
     bm.operator()<std::vector<int>, std::vector<bool>>("std::copy(vector<int>, std::vector<bool>)", std_copy);
     bm.operator()<std::deque<int>, std::vector<bool>>("std::copy(deque<int>, std::vector<bool>)", std_copy);
@@ -59,6 +60,7 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>, std::vector<bool>>("rng::copy(vector<int>, std::vector<bool>)", std::ranges::copy);
     bm.operator()<std::deque<int>, std::vector<bool>>("rng::copy(deque<int>, std::vector<bool>)", std::ranges::copy);
     bm.operator()<std::list<int>, std::vector<bool>>("rng::copy(list<int>, std::vector<bool>)", std::ranges::copy);
+#endif
   }
 
   // {std,ranges}::copy(vector<bool>)

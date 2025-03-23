@@ -248,11 +248,7 @@ struct __copy_impl {
     return std::make_pair(__last, std::__copy_unaligned(__first, __last, __result));
   }
 
-  template <class _InIter,
-            class _OutIter,
-            class _Cp,
-            bool _IsConst,
-            __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
+  template <class _InIter, class _Cp, __enable_if_t<__is_segmented_iterator<_InIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, __bit_iterator<_Cp, false> >
   operator()(_InIter __first, _InIter __last, __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
     std::__for_each_segment(__first, __last, _CopySegment<_InIter, __bit_iterator<_Cp, false> >(__result));
