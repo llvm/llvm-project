@@ -12,7 +12,9 @@
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include <memory>
 
 namespace llvm {
 namespace objcopy {
@@ -61,13 +63,13 @@ static Error deepWriteArchive(StringRef ArcName,
                               ArrayRef<NewArchiveMember> NewMembers,
                               SymtabWritingMode WriteSymtab,
                               object::Archive::Kind Kind, bool Deterministic,
-                              bool Thin) {
+                              bool Thin, std::unique_ptr<MemoryBuffer> Buffer) {
   if (Kind == object::Archive::K_BSD && !NewMembers.empty() &&
       NewMembers.front().detectKindFromObject() == object::Archive::K_DARWIN)
     Kind = object::Archive::K_DARWIN;
 
   if (Error E = writeArchive(ArcName, NewMembers, WriteSymtab, Kind,
-                             Deterministic, Thin))
+                             Deterministic, Thin, std::move(Buffer)))
     return createFileError(ArcName, std::move(E));
 
   if (!Thin)
@@ -95,7 +97,8 @@ static Error deepWriteArchive(StringRef ArcName,
 }
 
 Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
-                              const object::Archive &Ar) {
+                              const object::Archive &Ar,
+                              std::unique_ptr<MemoryBuffer> Buffer) {
   Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
       createNewArchiveMembers(Config, Ar);
   if (!NewArchiveMembersOrErr)
@@ -105,7 +108,7 @@ Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
                           Ar.hasSymbolTable() ? SymtabWritingMode::NormalSymtab
                                               : SymtabWritingMode::NoSymtab,
                           Ar.kind(), CommonConfig.DeterministicArchives,
-                          Ar.isThin());
+                          Ar.isThin(), std::move(Buffer));
 }
 
 } // end namespace objcopy
