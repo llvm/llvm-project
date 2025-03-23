@@ -258,7 +258,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
-
+  const SanitizerArgs &Sanitize = ToolChain.getSanitizerArgs(Args);
   if (D.isUsingLTO()) {
     assert(!Inputs.empty() && "Must have at least one input.");
     // Find the first filename InputInfo object.
@@ -364,6 +364,13 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-lpthread");
   }
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
+    
+// Required for 64-bit atomic operations used in sanitizer runtimes 
+// (e.g., sanitizer_common's atomic utilities). On 32-bit AIX, these 
+// are not natively supported, necessitating linkage with -latomic.
+  if (Sanitize.hasAnySanitizer() && IsArch32Bit) {
+    CmdArgs.push_back("-latomic");
+  }
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));
 }
