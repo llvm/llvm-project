@@ -56,7 +56,7 @@ void test() {
   }
 
   int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-  int expected[] = {1, 1,1,2,2,2,3,3,3};
+  int expected[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
   {
     // flat_multiset(InputIterator , InputIterator)
     // cpp17_input_iterator

@@ -80,8 +80,17 @@ void test() {
     // self-assignment
     using M = std::flat_multiset<int>;
     M m     = {{1, 2}};
-    m       = static_cast<const M&>(m);
+    m       = std::as_const(m);
     assert((m == M{{1, 2}}));
+  }
+  {
+    // was empty
+    using M = std::flat_multiset<int>;
+    M m;
+    assert(m.size() == 0);
+    m              = {3, 1, 2, 2, 3, 4, 3, 5, 6, 5};
+    int expected[] = {1, 2, 2, 3, 3, 3, 4, 5, 5, 6};
+    assert(std::ranges::equal(m, expected));
   }
   {
     // Validate whether the container can be copy-assigned (move-assigned, swapped)
