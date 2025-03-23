@@ -64,5 +64,21 @@ TEST(LlvmLibcMemAlignmentTest, SpecificAlignment) {
   uintptr_t addr_complex = 0x1234560; // 16-byte aligned (ends in 0)
   void *ptr_complex = reinterpret_cast<void *>(addr_complex);
   EXPECT_EQ(LIBC_NAMESPACE::memalignment(ptr_complex), static_cast<size_t>(16));
-} 
+}
+
+TEST(LlvmLibcMemAlignmentTest, AlignasSpecifiedAlignment) {
+  alignas(16) static int aligned_16;
+  alignas(32) static int aligned_32;
+  alignas(64) static int aligned_64;
+  alignas(128) static int aligned_128;
+  alignas(256) static int aligned_256;
+
+  EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_16), static_cast<size_t>(16));
+  EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_32), static_cast<size_t>(32));
+  EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_64), static_cast<size_t>(64));
+  EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_128),
+            static_cast<size_t>(128));
+  EXPECT_GE(LIBC_NAMESPACE::memalignment(&aligned_256),
+            static_cast<size_t>(256));
+}
  
