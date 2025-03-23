@@ -229,16 +229,13 @@ define void @test_udiv_as_shift(ptr %a, i8 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[E:%.*]] = icmp sgt i8 [[N:%.*]], 3
 ; CHECK-NEXT:    br i1 [[E]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i8 [[TMP1]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I1:%.*]] = phi i8 [ [[I1_INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[I1_INC]] = add nuw nsw i8 [[I1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i8 [ [[I_INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add nsw i8 [[I]], 4
 ; CHECK-NEXT:    store volatile i8 0, ptr [[A:%.*]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[I1_INC]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[I]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
