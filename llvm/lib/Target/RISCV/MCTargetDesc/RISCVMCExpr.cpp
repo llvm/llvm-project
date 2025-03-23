@@ -91,9 +91,8 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
+  Res.setSpecifier(specifier);
 
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
   // Custom fixup types are not valid with symbol difference expressions.
   return Res.getSymB() ? getSpecifier() == VK_None : true;
 }
