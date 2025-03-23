@@ -325,7 +325,7 @@ void foo(int *List, int Length) {
     List[i] = i;
   }
 
-#pragma clang loop pipeline(disable, extra)
+#pragma clang loop pipeline(enable, extra)
 /* expected-warning {{extra tokens at end of '#pragma clang loop pipeline' - ignored}}*/ while (i-6 < Length) {
     List[i] = i;
   }
