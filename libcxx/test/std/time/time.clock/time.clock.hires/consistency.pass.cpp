@@ -30,7 +30,7 @@ int main(int, char**)
     static_assert((std::is_same<C::rep, C::duration::rep>::value), "");
     static_assert((std::is_same<C::period, C::duration::period>::value), "");
     static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
-    static_assert(C::is_steady || !C::is_steady, "");
+    static_assert(std::is_same<decltype(C::is_steady), const bool>::value, "");
     test(std::chrono::high_resolution_clock::is_steady);
 
   return 0;
