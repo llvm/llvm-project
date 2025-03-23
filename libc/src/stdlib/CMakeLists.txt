@@ -350,6 +350,16 @@ add_entrypoint_external(
   DEPENDS
     ${SCUDO_DEPS}
 )
+add_entrypoint_object(
+  memalignment
+  SRCS
+    memalignment.cpp
+  HDRS
+    memalignment.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.cstddef
+)
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -419,9 +429,6 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   else()
     add_entrypoint_external(
       malloc
-    )
-    add_entrypoint_external(
-      memalignment
     )
     add_entrypoint_external(
       calloc

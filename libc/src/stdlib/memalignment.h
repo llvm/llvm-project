@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDLIB_MEM_ALIGNMENT_H
 
 #include "src/__support/macros/config.h"
-#include <stddef.h>
+#include "src/__support/CPP/cstddef.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
