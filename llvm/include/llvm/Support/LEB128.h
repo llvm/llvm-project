@@ -150,7 +150,10 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
       Value = 0;
       break;
     }
-    Value += Slice << Shift;
+    // We might still have Shift > 63 && Slice == 0 here, so we need to protect
+    // against UB in <<.
+    if (LLVM_LIKELY(Shift <= 63))
+      Value += Slice << Shift;
     Shift += 7;
   } while (*p++ >= 128);
   if (n)
@@ -188,7 +191,10 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
         *n = (unsigned)(p - orig_p);
       return 0;
     }
-    Value |= Slice << Shift;
+    // We might still have Shift > 63 here, so we need to protect against UB
+    // in <<.
+    if (LLVM_LIKELY(Shift <= 63))
+      Value |= Slice << Shift;
     Shift += 7;
     ++p;
   } while (Byte >= 128);
