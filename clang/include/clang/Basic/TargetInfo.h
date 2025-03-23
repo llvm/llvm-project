@@ -1079,6 +1079,7 @@ public:
   ///
   /// This is used by Sema for inline asm statements.
   virtual bool isValidGCCRegisterName(StringRef Name) const;
+  virtual bool isValidSystemRegisterName(StringRef Name) const;
 
   /// Returns the "normalized" GCC register name.
   ///
@@ -1884,6 +1885,9 @@ protected:
     return PtrDiffType;
   }
   virtual ArrayRef<const char *> getGCCRegNames() const = 0;
+  virtual ArrayRef<const char *> getSystemRegNames() const {
+    return std::nullopt;
+  }
   virtual ArrayRef<GCCRegAlias> getGCCRegAliases() const = 0;
   virtual ArrayRef<AddlRegName> getGCCAddlRegNames() const { return {}; }
 
