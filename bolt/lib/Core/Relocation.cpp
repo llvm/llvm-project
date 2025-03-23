@@ -977,7 +977,7 @@ void Relocation::print(raw_ostream &OS) const {
     OS << "RType:" << Twine::utohexstr(Type);
     break;
 
-  case Triple::aarch64:
+  case Triple::aarch64: {
     static const char *const AArch64RelocNames[] = {
 #define ELF_RELOC(name, value) #name,
 #include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
@@ -986,6 +986,7 @@ void Relocation::print(raw_ostream &OS) const {
     assert(Type < ArrayRef(AArch64RelocNames).size());
     OS << AArch64RelocNames[Type];
     break;
+  }
 
   case Triple::riscv64:
     // RISC-V relocations are not sequentially numbered so we cannot use an
@@ -1002,7 +1003,7 @@ void Relocation::print(raw_ostream &OS) const {
     }
     break;
 
-  case Triple::x86_64:
+  case Triple::x86_64: {
     static const char *const X86RelocNames[] = {
 #define ELF_RELOC(name, value) #name,
 #include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
@@ -1011,6 +1012,7 @@ void Relocation::print(raw_ostream &OS) const {
     assert(Type < ArrayRef(X86RelocNames).size());
     OS << X86RelocNames[Type];
     break;
+  }
   }
   OS << ", 0x" << Twine::utohexstr(Offset);
   if (Symbol) {
