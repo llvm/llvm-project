@@ -121,7 +121,6 @@ class Test {
 
 public:
   constexpr Test() = default;
-  virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
