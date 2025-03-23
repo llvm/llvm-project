@@ -62,7 +62,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, tuple<_Tp...> > {
   using type _LIBCPP_NODEBUG = typename tuple_element<_Ip, __tuple_types<_Tp...> >::type;
 };
 
-struct _LIBCPP_EXPORTED_FROM_ABI __check_tuple_constructor_fail {
+struct __check_tuple_constructor_fail {
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit_default() { return false; }
   static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit_default() { return false; }
   template <class...>
