@@ -216,6 +216,16 @@ using BinaryVPInstruction_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, /*Commutative*/ false,
                        VPInstruction>;
 
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
+          bool Commutative, typename... RecipeTys>
+using TernaryRecipe_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>,
+                                         Opcode, Commutative, RecipeTys...>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
+using TernaryVPInstruction_match =
+    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, /*Commutative*/ false,
+                        VPInstruction>;
+
 template <typename Op0_t, typename Op1_t, unsigned Opcode,
           bool Commutative = false>
 using AllBinaryRecipe_match =
@@ -232,6 +242,13 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>
 m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
   return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
+}
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
+m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(
+      {Op0, Op1, Op2});
 }
 
 template <typename Op0_t>
