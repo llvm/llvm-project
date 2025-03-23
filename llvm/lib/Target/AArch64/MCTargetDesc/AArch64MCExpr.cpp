@@ -155,9 +155,6 @@ bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  if (Res.getSymB())
-    report_fatal_error("Auth relocation can't reference two symbols");
-
   Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getKind());
   return true;
 }
