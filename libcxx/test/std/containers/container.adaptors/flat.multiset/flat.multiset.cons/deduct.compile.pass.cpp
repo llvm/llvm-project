@@ -23,21 +23,21 @@ struct NotAnAllocator {
 };
 
 template <class... Args>
-concept CanDeductFlatSet = requires { std::flat_multiset(std::declval<Args>()...); };
+concept CanDeductFlatMultiSet = requires { std::flat_multiset(std::declval<Args>()...); };
 
-static_assert(CanDeductFlatSet<std::vector<int>>);
+static_assert(CanDeductFlatMultiSet<std::vector<int>>);
 
 // cannot deduce Key and T from nothing
-static_assert(!CanDeductFlatSet<>);
+static_assert(!CanDeductFlatMultiSet<>);
 
 // cannot deduce Key and T from just (Compare)
-static_assert(!CanDeductFlatSet<std::less<int>>);
+static_assert(!CanDeductFlatMultiSet<std::less<int>>);
 
 // cannot deduce Key and T from just (Compare, Allocator)
-static_assert(!CanDeductFlatSet<std::less<int>, std::allocator<int>>);
+static_assert(!CanDeductFlatMultiSet<std::less<int>, std::allocator<int>>);
 
 // cannot deduce Key and T from just (Allocator)
-static_assert(!CanDeductFlatSet<std::allocator<int>>);
+static_assert(!CanDeductFlatMultiSet<std::allocator<int>>);
 
 // cannot convert from some arbitrary unrelated type
-static_assert(!CanDeductFlatSet<NotAnAllocator>);
+static_assert(!CanDeductFlatMultiSet<NotAnAllocator>);

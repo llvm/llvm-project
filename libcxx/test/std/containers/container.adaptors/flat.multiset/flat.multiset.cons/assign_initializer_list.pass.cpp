@@ -43,6 +43,14 @@ void test() {
     double expected[] = {3};
     assert(std::ranges::equal(m, expected));
   }
+  {
+    // was empty
+    M m;
+    assert(m.size() == 0);
+    m              = {3, 1, 2, 2, 3, 4, 3, 5, 6, 5};
+    int expected[] = {1, 2, 2, 3, 3, 3, 4, 5, 5, 6};
+    assert(std::ranges::equal(m, expected));
+  }
 }
 
 void test() {
