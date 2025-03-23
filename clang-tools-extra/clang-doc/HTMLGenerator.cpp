@@ -518,16 +518,15 @@ writeFileDefinition(const ClangDocContext &CDCtx, const Location &L) {
       std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
   // The links to a specific line in the source code use the github /
   // googlesource notation so it won't work for all hosting pages.
-  std::string LineAnchor =
-      formatv("#{0}{1}", RepositoryLinePrefix, L.LineNumber);
-
-  LocNumberNode->Attributes.emplace_back("href", (FileURL + LineAnchor).str());
+  LocNumberNode->Attributes.emplace_back(
+      "href",
+      (FileURL + formatv("#{0}{1}", CDCtx.RepositoryLinePrefix.value_or(""),
+                         L.LineNumber))
+          .str());
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
-
   auto LocFileNode = std::make_unique<TagNode>(
       HTMLTag::TAG_A, llvm::sys::path::filename(FileURL));
-
   LocFileNode->Attributes.emplace_back("href", std::string(FileURL));
   Node->Children.emplace_back(std::move(LocFileNode));
   return Node;

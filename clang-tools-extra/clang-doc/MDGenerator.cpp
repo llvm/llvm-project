@@ -59,11 +59,9 @@ static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
        << "*";
   } else {
 
-    std::string LineAnchor =
-        formatv("#{0}{1}", CDCtx.RepositoryLinePrefix.value_or(""),
-                std::to_string(L.LineNumber));
-
-    OS << formatv("*Defined at [{0}{1}]({0}{2})*", LineAnchor, L.Filename,
+    OS << formatv("*Defined at [#{0}{1}{2}](#{0}{1}{3})*",
+                  CDCtx.RepositoryLinePrefix.value_or(""),
+                  std::to_string(L.LineNumber), L.Filename,
                   StringRef{*CDCtx.RepositoryUrl});
   }
   OS << "\n\n";
