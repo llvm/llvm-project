@@ -152,11 +152,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Live-in ir<[[VF:%.+]]> = VF
 ; CHECK-NEXT:  Live-in ir<[[VFxUF:%.+]]>.1 = VF * UF
 ; CHECK-NEXT:  Live-in ir<[[VEC_TC:%.+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
+; CHECK-NEXT:  ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
-; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.scevcheck>:
@@ -213,7 +212,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<%0>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
@@ -402,11 +401,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Live-in ir<[[VF:%.+]]> = VF
 ; CHECK-NEXT:  Live-in ir<[[VFxUF:%.+]]>.1 = VF * UF
 ; CHECK-NEXT:  Live-in ir<[[VEC_TC:%.+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[TC:%.+]]> = original trip-count
+; CHECK-NEXT:  ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body.preheader>:
 ; CHECK-NEXT:    IR %0 = zext i32 %n to i64
-; CHECK-NEXT:    EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 %n to i64)
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.scevcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.scevcheck>:
@@ -463,7 +461,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<%0>, ir<[[VEC_TC]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
