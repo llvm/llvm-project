@@ -2086,6 +2086,26 @@ cc_library(
 )
 
 cc_library(
+    name = "MCLinker",
+    srcs = glob([
+        "lib/MCLinker/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ModuleSplitter/*.h",
+        "include/llvm/MCLinker/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BitReader",
+        ":BitWriter",
+        ":Core",
+        ":IRReader",
+        ":Support",
+        ":TransformUtils",
+    ],
+)
+
+cc_library(
     name = "ModuleSplitter",
     srcs = glob([
         "lib/ModuleSplitter/*.cpp",
