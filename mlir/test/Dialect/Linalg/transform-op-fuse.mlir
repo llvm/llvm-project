@@ -443,9 +443,9 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape(
 // CHECK:      scf.for %[[X:[A-Za-z0-9]+]] = {{.*}} -> (tensor<8x1800x32xf32>) {
-// CHECK:             %[[EXTRACT1:.*]] = tensor.extract_slice
-// CHECK:             %[[COLLAPSE1:.*]] = tensor.collapse_shape %[[EXTRACT1]]
-// CHECK:             %[[EXP1:.*]] = linalg.exp ins(%[[COLLAPSE1]]
+// CHECK:             %[[EXTRACT:.*]] = tensor.extract_slice
+// CHECK:             %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]]
+// CHECK:             %[[EXP1:.*]] = linalg.exp ins(%[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape(%0: tensor<1x8x1800x32xf32>) -> tensor<8x1800x32xf32> {
   %expand = tensor.collapse_shape %0 [[0, 1], [2], [3]] : tensor<1x8x1800x32xf32> into tensor<8x1800x32xf32>
   %empty = tensor.empty() : tensor<8x1800x32xf32>
@@ -467,10 +467,10 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(
 // CHECK:           scf.for %[[X:[A-Za-z0-9]+]] = {{.*}}
-// CHECK:             %[[VAL_9:.*]] = tensor.extract_slice
-// CHECK:             %[[VAL_11:.*]] = linalg.abs ins(%[[VAL_9]]
-// CHECK:             %[[VAL_12:.*]] = tensor.collapse_shape %[[VAL_11]]
-// CHECK:             %[[VAL_14:.*]] = linalg.exp ins(%[[VAL_12]]
+// CHECK:             %[[EXTRACT:.*]] = tensor.extract_slice
+// CHECK:             %[[ABS:.*]] = linalg.abs ins(%[[EXTRACT]]
+// CHECK:             %[[COLLAPSE:.*]] = tensor.collapse_shape %[[ABS]]
+// CHECK:             %[[EXP:.*]] = linalg.exp ins(%[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_with_collapse_producer(%0: tensor<1x8x1800x32xf32>) -> tensor<8x1800x32xf32> {
   %empty1 = tensor.empty() : tensor<1x8x1800x32xf32>
   %abs = linalg.abs ins(%0 : tensor<1x8x1800x32xf32>) outs(%empty1 : tensor<1x8x1800x32xf32>) -> tensor<1x8x1800x32xf32>

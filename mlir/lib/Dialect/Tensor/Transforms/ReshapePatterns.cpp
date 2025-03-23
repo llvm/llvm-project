@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
-#include <algorithm>
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -533,13 +532,13 @@ struct BubbleUpCollapseShapeThroughExtractSlice
         for (int64_t expandedShapeIdx : reassocIndices) {
           if (srcShape[expandedShapeIdx] != 1) {
             nonUnitSizeCount++;
-            expandedSizes.emplace_back(collapsedSize);
-            expandedOffsets.emplace_back(collapsedOffset);
+            expandedSizes.push_back(collapsedSize);
+            expandedOffsets.push_back(collapsedOffset);
             continue;
           }
 
-          expandedSizes.emplace_back(rewriter.getIndexAttr(1));
-          expandedOffsets.emplace_back(rewriter.getIndexAttr(0));
+          expandedSizes.push_back(rewriter.getIndexAttr(1));
+          expandedOffsets.push_back(rewriter.getIndexAttr(0));
         }
 
         if (nonUnitSizeCount != 1) {
@@ -586,9 +585,9 @@ struct BubbleUpCollapseShapeThroughExtractSlice
                        "slice of the src of the collapse_shape");
         }
 
-        groupExpandedSizes.emplace_back(rewriter.getIndexAttr(
+        groupExpandedSizes.push_back(rewriter.getIndexAttr(
             std::min(collapsedSizeValue, expandedShapeSize)));
-        groupExpandedOffsets.emplace_back(rewriter.getIndexAttr(offsetInDim));
+        groupExpandedOffsets.push_back(rewriter.getIndexAttr(offsetInDim));
 
         // Remove the size and offset of trailing dimensions from the size and
         // offset of the slice.

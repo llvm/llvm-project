@@ -1,5 +1,15 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter  %s | FileCheck %s
 
+///----------------------------------------------------------------------------------------
+/// [Pattern: BubbleUpExpandShapeThroughExtractSlice]
+///
+/// IN: tensor.expand_shape(tensor.extract_slice)
+/// OUT:tensor.extract_slice(tensor.expand_shape)
+///
+/// Note: tensor.extract_slice is bubbled up to be before tensor.expand_shape.
+///       Some tests are negative tests for cases where the pattern cannot be applied.
+///----------------------------------------------------------------------------------------
+
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_expand_shape(
 // CHECK-SAME:                %[[SRC:.*]]: tensor<60xf32>) -> tensor<1x1x5xf32> {
 // CHECK:           %[[C1:.+]] = arith.constant 5 : index
@@ -113,6 +123,16 @@ func.func @bubble_up_extract_slice_affine_apply_not_folded(%src: tensor<60xf32>,
   return %extract : tensor<?x5x2xf32>
 }
 
+///----------------------------------------------------------------------------------------
+/// [Pattern: BubbleUpCollapseShapeThroughExtractSlice]
+///
+/// IN: tensor.collapse_shape(tensor.extract_slice)
+/// OUT:tensor.extract_slice(tensor.collapse_shape)
+///
+/// Note: tensor.extract_slice is bubbled up to be before tensor.collapse_shape.
+///       Some tests are negative tests for cases where the pattern cannot be applied.
+///----------------------------------------------------------------------------------------
+
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(
 // CHECK-SAME:                   %[[SRC:.*]]: tensor<6x5x2xf32>) -> tensor<1xf32> {
 // CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][0, 0, 0] [1, 1, 1] [1, 1, 1]
@@ -209,9 +229,13 @@ func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_and_static_gro
   return %extract : tensor<20x?xf32>
 }
 
-// This is a case where the bubble up cannot occur because the contiguous size extracted from the collapsed
-// shape cannot be defined as a contiguous size in the expanded shape due to size extracted not being suited
-// for the expanded shape.
+/// The 2 following tests are cases where the bubble up cannot occur because the contiguous size extracted 
+/// from the collapsed shape cannot be expressed via a single extract_slice op.
+/// In the first test it is because the size extracted cannot be expressed as a slice
+/// of the form [ 1, 1, ..., 1, Sk, Ak + 1, Ak + 2, ...,An ] (see the pattern documentation for more details).
+/// In the second test, the size can be expressed as the required form, but the offset is such that the pattern
+/// cannot be applied.
+
 // CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_1(
 // CHECK-SAME:                              %[[SRC:.*]]: tensor<2x3x10xf32>) -> tensor<15xf32> {
 // CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
@@ -222,9 +246,6 @@ func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_1
   return %extract : tensor<15xf32>
 }
 
-// This is a case where the bubble up cannot occur because the contiguous size extracted from the collapsed
-// shape cannot be defined as a contiguous size in the expanded shape due to an unsuitable offset even though
-// the size extracted is suited for the expanded shape.
 // CHECK-LABEL:   func.func @no_bubble_up_extract_slice_through_collapse_shape_on_non_contiguous_2(
 // CHECK-SAME:                              %[[SRC:.*]]: tensor<2x3x10xf32>) -> tensor<20xf32> {
 // CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
