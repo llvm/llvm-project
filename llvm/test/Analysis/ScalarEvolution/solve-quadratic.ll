@@ -41,7 +41,7 @@
 ; {14,+,14,+,14} -> X=0, Y=14, Z=14
 ;
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test01'
-; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {-2,+,-2,+,-2}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {-2,+,-2,+,-2}<sw><%loop>
 ; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 4
 ; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation -2x^2 + -2x + -4, coeff bw: 5, multiplied by 2
 ; CHECK: {{.*}}SolveQuadraticAddRecExact{{.*}}: solving for unsigned overflow
@@ -117,7 +117,7 @@ exit:
 ; {17,+,-1,+,2} -> X=-3, Y=20, Z=2
 ;
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test03':
-; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {1,+,-1,+,2}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {1,+,-1,+,2}<sw><%loop>
 ; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 4
 ; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 2x^2 + -4x + 2, coeff bw: 5, multiplied by 2
 ; CHECK: {{.*}}SolveQuadraticAddRecExact{{.*}}: solving for unsigned overflow
