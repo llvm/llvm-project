@@ -38,9 +38,22 @@ void VarSizeStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
     trace_buffer[cnt] = extra_top_pc;
 }
 
+void VarSizeStackTrace::Init(const StackTrace &trace) {
+  ResizeBuffer(trace.size);
+  internal_memcpy(trace_buffer, trace.trace,
+                  trace.size * sizeof(trace.trace[0]));
+}
+
 void VarSizeStackTrace::ReverseOrder() {
   for (u32 i = 0; i < (size >> 1); i++)
     Swap(trace_buffer[i], trace_buffer[size - 1 - i]);
+}
+
+void VarSizeStackTrace::Reset() {
+  size = 0;
+  trace = nullptr;
+  Free(trace_buffer);
+  trace_buffer = nullptr;
 }
 
 }  // namespace __tsan

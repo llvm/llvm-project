@@ -2092,13 +2092,17 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeErrnoInSignal);
-  rep.SetSigNum(sig);
-  if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
-    rep.AddStack(stack, true);
-    OutputReport(thr, rep);
+  if (IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
+    return;
   }
+  ScopedReport rep(ReportTypeErrnoInSignal);
+  {
+    // ThreadRegistryLock l(&ctx->thread_registry);
+    rep.SetSigNum(sig);
+    rep.AddStack(stack, true);
+  }
+  rep.SymbolizeReport();
+  OutputReport(thr, rep);
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
