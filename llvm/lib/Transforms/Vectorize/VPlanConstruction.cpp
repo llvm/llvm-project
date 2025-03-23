@@ -365,6 +365,23 @@ void PlainCFGBuilder::buildPlainCFG(
   Plan.getEntry()->setOneSuccessor(getOrCreateVPBB(TheLoop->getHeader()));
   Plan.getEntry()->setPlan(&Plan);
 
+  for (auto *EB : Plan.getExitBlocks()) {
+    for (VPRecipeBase &R : *EB) {
+      auto *PhiR = cast<VPIRInstruction>(&R);
+      auto *Phi = dyn_cast<PHINode>(&PhiR->getInstruction());
+      if (!Phi)
+        break;
+      for (Value *Inc : Phi->incoming_values())
+        PhiR->addOperand(getOrCreateVPOperand(Inc));
+      if (R.getNumOperands() > 1 &&
+          Phi->getIncomingBlock(0) != TheLoop->getLoopLatch()) {
+        VPValue *Tmp = R.getOperand(0);
+        R.setOperand(0, R.getOperand(1));
+        R.setOperand(1, Tmp);
+      }
+    }
+  }
+
   for (const auto &[IRBB, VPB] : BB2VPBB)
     VPB2IRBB[VPB] = IRBB;
 
@@ -451,6 +468,11 @@ void VPlanTransforms::introduceRegions(VPlan &Plan, Type *InductionTy,
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
   if (!RequiresScalarEpilogueCheck) {
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    for (auto *EB : Plan.getExitBlocks()) {
+      for (VPRecipeBase &R : *EB)
+        for (unsigned Idx = 0; Idx != R.getNumOperands(); ++Idx)
+          R.setOperand(Idx, Plan.getOrAddLiveIn(PoisonValue::get(InductionTy)));
+    }
     return;
   }
 
