@@ -112,10 +112,7 @@ bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                               const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
+  Res.setSpecifier(getSpecifier());
   return true;
 }
 
