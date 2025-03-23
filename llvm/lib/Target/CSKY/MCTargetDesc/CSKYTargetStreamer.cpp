@@ -84,7 +84,7 @@ CSKYTargetStreamer::CSKYTargetStreamer(MCStreamer &S)
 const MCExpr *
 CSKYTargetStreamer::addConstantPoolEntry(const MCExpr *Expr, SMLoc Loc,
                                          const MCExpr *AdjustExpr) {
-  auto ELFRefKind = CSKYMCExpr::VK_CSKY_Invalid;
+  auto ELFRefKind = CSKYMCExpr::VK_Invalid;
   ConstantCounter++;
 
   const MCExpr *OrigExpr = Expr;

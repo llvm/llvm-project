@@ -80,27 +80,27 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target) {
       auto TK = cast<CSKYMCExpr>(Expr)->getKind();
-      if (TK == CSKYMCExpr::VK_CSKY_ADDR)
+      if (TK == CSKYMCExpr::VK_ADDR)
         return ELF::R_CKCORE_ADDR32;
-      if (TK == CSKYMCExpr::VK_CSKY_GOT)
+      if (TK == CSKYMCExpr::VK_GOT)
         return ELF::R_CKCORE_GOT32;
-      if (TK == CSKYMCExpr::VK_CSKY_GOTOFF)
+      if (TK == CSKYMCExpr::VK_GOTOFF)
         return ELF::R_CKCORE_GOTOFF;
-      if (TK == CSKYMCExpr::VK_CSKY_PLT)
+      if (TK == CSKYMCExpr::VK_PLT)
         return ELF::R_CKCORE_PLT32;
-      if (TK == CSKYMCExpr::VK_CSKY_TLSIE)
+      if (TK == CSKYMCExpr::VK_TLSIE)
         return ELF::R_CKCORE_TLS_IE32;
-      if (TK == CSKYMCExpr::VK_CSKY_TLSLE)
+      if (TK == CSKYMCExpr::VK_TLSLE)
         return ELF::R_CKCORE_TLS_LE32;
-      if (TK == CSKYMCExpr::VK_CSKY_TLSGD)
+      if (TK == CSKYMCExpr::VK_TLSGD)
         return ELF::R_CKCORE_TLS_GD32;
-      if (TK == CSKYMCExpr::VK_CSKY_TLSLDM)
+      if (TK == CSKYMCExpr::VK_TLSLDM)
         return ELF::R_CKCORE_TLS_LDM32;
-      if (TK == CSKYMCExpr::VK_CSKY_TLSLDO)
+      if (TK == CSKYMCExpr::VK_TLSLDO)
         return ELF::R_CKCORE_TLS_LDO32;
-      if (TK == CSKYMCExpr::VK_CSKY_GOTPC)
+      if (TK == CSKYMCExpr::VK_GOTPC)
         return ELF::R_CKCORE_GOTPC;
-      if (TK == CSKYMCExpr::VK_CSKY_None)
+      if (TK == CSKYMCExpr::VK_None)
         return ELF::R_CKCORE_ADDR32;
 
       LLVM_DEBUG(dbgs() << "Unknown FK_Data_4 TK  = " << TK);
