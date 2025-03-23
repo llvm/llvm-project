@@ -1172,6 +1172,12 @@ CHECK_TYPE_SIZE(__kernel_old_gid_t);
 CHECK_TYPE_SIZE(__kernel_off_t);
 CHECK_TYPE_SIZE(__kernel_loff_t);
 CHECK_TYPE_SIZE(__kernel_fd_set);
+
+CHECK_TYPE_SIZE(gaicb);
+CHECK_SIZE_AND_OFFSET(gaicb, ar_name);
+CHECK_SIZE_AND_OFFSET(gaicb, ar_service);
+CHECK_SIZE_AND_OFFSET(gaicb, ar_request);
+CHECK_SIZE_AND_OFFSET(gaicb, ar_result);
 #endif
 
 #if !SANITIZER_ANDROID
