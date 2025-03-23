@@ -86,49 +86,6 @@ bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   return true;
 }
 
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expr!");
-    break;
-
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
 void VEMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
-}
-
-void VEMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getSpecifier()) {
-  default:
-    return;
-  case VK_TLS_GD_HI32:
-  case VK_TLS_GD_LO32:
-  case VK_TPOFF_HI32:
-  case VK_TPOFF_LO32:
-    break;
-  }
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
