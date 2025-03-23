@@ -7,24 +7,31 @@ function(add_math_entrypoint_object name)
   # We prefer machine specific implementation if available. Hence we check
   # that first and return early if we are able to add an alias target for the
   # machine specific implementation.
-  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
+  if(NOT ARGN)
+    set(alias_entrypoint ${name})
+  else()
+    message(STATUS "Banananana ${name} ${ARGN}")
+    set(alias_entrypoint ${ARGN})
+  endif()
+
+  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${alias_entrypoint}" fq_machine_specific_target_name)
   if(TARGET ${fq_machine_specific_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .${LIBC_TARGET_ARCHITECTURE}.${name}
+        .${LIBC_TARGET_ARCHITECTURE}.${alias_entrypoint}
     )
     return()
   endif()
 
-  get_fq_target_name("generic.${name}" fq_generic_target_name)
+  get_fq_target_name("generic.${alias_entrypoint}" fq_generic_target_name)
   if(TARGET ${fq_generic_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .generic.${name}
+        .generic.${alias_entrypoint}
     )
     return()
   endif()
@@ -38,6 +45,20 @@ function(add_math_entrypoint_object name)
     HDRS
       dummy_hdrs
   )
+endfunction()
+
+function(add_long_double_math_entrypoint_object name)
+  get_fq_target_name(${name} fq_double_math_target)
+  get_fq_target_name("${name}l" fq_long_double_math_target)
+  get_fq_target_name("${name}f128" fq_float128_math_target)
+
+  if(LIBC_TARGET_LONG_DOUBLE_IS_DOUBLE)
+    add_math_entrypoint_object("${name}l" "${name}")
+  elseif(LIBC_TARGET_LONG_DOUBLE_IS_FLOAT128)
+    add_math_entrypoint_object("${name}l" "${name}f128")
+  else()
+    add_math_entrypoint_object("${name}l")
+  endif()
 endfunction()
 
 add_math_entrypoint_object(acos)
@@ -88,9 +109,9 @@ add_math_entrypoint_object(ceilf128)
 
 add_math_entrypoint_object(copysign)
 add_math_entrypoint_object(copysignf)
-add_math_entrypoint_object(copysignl)
 add_math_entrypoint_object(copysignf16)
 add_math_entrypoint_object(copysignf128)
+add_long_double_math_entrypoint_object(copysign)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)

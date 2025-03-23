@@ -118,6 +118,8 @@ function(_get_common_compile_options output_var flags)
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
+    list(APPEND compile_options "-DLIBC_ALIAS_LONG_DOUBLE")
+
     if(LLVM_LIBC_FULL_BUILD)
       # Only add -ffreestanding flag in non-GPU full build mode.
       if(NOT LIBC_TARGET_OS_IS_GPU)
