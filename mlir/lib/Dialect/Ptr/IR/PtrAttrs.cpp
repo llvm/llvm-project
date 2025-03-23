@@ -11,12 +11,58 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
 
 constexpr const static unsigned kBitsInByte = 8;
+
+//===----------------------------------------------------------------------===//
+// IAddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult IAddressSpaceAttr::isValidLoad(
+    Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return success();
+}
+
+LogicalResult IAddressSpaceAttr::isValidStore(
+    Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return success();
+}
+
+LogicalResult IAddressSpaceAttr::isValidAtomicOp(
+    ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
+    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
+  return success();
+}
+
+LogicalResult IAddressSpaceAttr::isValidAtomicXchg(
+    Type type, ptr::AtomicOrdering successOrdering,
+    ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return success();
+}
+
+LogicalResult IAddressSpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the `addrspace_cast` op is added to the
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return failure();
+}
+
+LogicalResult IAddressSpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the int-cast ops are added to the dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return failure();
+}
 
 //===----------------------------------------------------------------------===//
 // SpecAttr

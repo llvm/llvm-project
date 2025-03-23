@@ -15,6 +15,8 @@
 
 #include "mlir/IR/OpImplementation.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.h.inc"
 
