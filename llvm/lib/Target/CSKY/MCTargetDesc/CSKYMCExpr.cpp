@@ -96,19 +96,6 @@ static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
   }
 }
 
-void CSKYMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getSpecifier()) {
-  default:
-    return;
-  case VK_TLSLE:
-  case VK_TLSIE:
-  case VK_TLSGD:
-    break;
-  }
-
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
-}
-
 bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                            const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
