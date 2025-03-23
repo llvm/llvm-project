@@ -5001,7 +5001,8 @@ static bool isLikePadUnPad(PackOrUnpackOp packOp, ShapedType packedTensorType) {
 }
 
 bool PackOp::isLikePad() {
-  auto packedTensorType = llvm::dyn_cast<ShapedType>((*this)->getResultTypes().front());
+  auto packedTensorType =
+      llvm::dyn_cast<ShapedType>((*this)->getResultTypes().front());
   return isLikePadUnPad(*this, packedTensorType);
 }
 
