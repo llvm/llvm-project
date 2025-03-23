@@ -120,25 +120,14 @@ class Test {
   static int getNumTests();
 
 public:
-  constexpr Test() = default;
+  virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
   static int runTests(const TestOptions &Options);
 
 protected:
-  constexpr static void *addTest(Test *T) {
-    if (End == nullptr) {
-      Start = T;
-      End = T;
-      // read  of constexpr
-      return nullptr;
-    }
-
-    End->Next = T;
-    End = T;
-    return nullptr;
-  }
+  static void addTest(Test *T);
 
   // We make use of a template function, with |LHS| and |RHS| as explicit
   // parameters, for enhanced type checking. Other gtest like unittest
@@ -354,7 +343,7 @@ CString libc_make_test_file_path_func(const char *file_name);
   public:                                                                      \
     using ParamType = T;                                                       \
     char name[256];                                                            \
-    constexpr SuiteName##_##TestName() {                                       \
+    SuiteName##_##TestName() {                                                 \
       addTest(this);                                                           \
       LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
           name, sizeof(name), #SuiteName "." #TestName);                       \
@@ -362,7 +351,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
   };                                                                           \
-  constexpr TypeList::Tests<SuiteName##_##TestName>::type                      \
+  TypeList::Tests<SuiteName##_##TestName>::type                                \
       SuiteName##_##TestName##_Instance;                                       \
   template <typename T> void SuiteName##_##TestName<T>::Run()
 
@@ -374,7 +363,7 @@ CString libc_make_test_file_path_func(const char *file_name);
   public:                                                                      \
     using ParamType = T;                                                       \
     char name[256];                                                            \
-    constexpr SuiteClass##_##TestName() {                                      \
+    SuiteClass##_##TestName() {                                                \
       SuiteClass<T>::addTest(this);                                            \
       LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
           name, sizeof(name), #SuiteClass "." #TestName);                      \
@@ -382,7 +371,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
   };                                                                           \
-  static constexpr TypeList::Tests<SuiteClass##_##TestName>::type              \
+  TypeList::Tests<SuiteClass##_##TestName>::type                               \
       SuiteClass##_##TestName##_Instance;                                      \
   template <typename T> void SuiteClass##_##TestName<T>::Run()
 
@@ -391,11 +380,11 @@ CString libc_make_test_file_path_func(const char *file_name);
                 "All LLVM-libc TEST suite names must start with 'LlvmLibc'."); \
   class SuiteName##_##TestName : public LIBC_NAMESPACE::testing::Test {        \
   public:                                                                      \
-    constexpr SuiteName##_##TestName() { addTest(this); }                      \
+    SuiteName##_##TestName() { addTest(this); }                                \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
   };                                                                           \
-  static constexpr SuiteName##_##TestName SuiteName##_##TestName##_Instance;   \
+  SuiteName##_##TestName SuiteName##_##TestName##_Instance;                    \
   void SuiteName##_##TestName::Run()
 
 #define TEST_F(SuiteClass, TestName)                                           \
@@ -404,11 +393,11 @@ CString libc_make_test_file_path_func(const char *file_name);
       "All LLVM-libc TEST_F suite class names must start with 'LlvmLibc'.");   \
   class SuiteClass##_##TestName : public SuiteClass {                          \
   public:                                                                      \
-    constexpr SuiteClass##_##TestName() { addTest(this); }                     \
+    SuiteClass##_##TestName() { addTest(this); }                               \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
   };                                                                           \
-  static constexpr SuiteClass##_##TestName SuiteClass##_##TestName##_Instance; \
+  SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
 
 // Helper to trick the compiler into ignoring lack of braces on the else

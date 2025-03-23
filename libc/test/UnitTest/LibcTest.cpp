@@ -116,6 +116,17 @@ char **envp = nullptr;
 
 using internal::RunContext;
 
+void Test::addTest(Test *T) {
+  if (End == nullptr) {
+    Start = T;
+    End = T;
+    return;
+  }
+
+  End->Next = T;
+  End = T;
+}
+
 int Test::getNumTests() {
   int N = 0;
   for (Test *T = Start; T; T = T->Next, ++N)
