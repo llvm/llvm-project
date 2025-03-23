@@ -343,7 +343,7 @@ CString libc_make_test_file_path_func(const char *file_name);
   public:                                                                      \
     using ParamType = T;                                                       \
     char name[256];                                                            \
-    SuiteName##_##TestName() {                                                 \
+    constexpr SuiteName##_##TestName() {                                       \
       addTest(this);                                                           \
       LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
           name, sizeof(name), #SuiteName "." #TestName);                       \
@@ -363,7 +363,7 @@ CString libc_make_test_file_path_func(const char *file_name);
   public:                                                                      \
     using ParamType = T;                                                       \
     char name[256];                                                            \
-    SuiteClass##_##TestName() {                                                \
+    constexpr SuiteClass##_##TestName() {                                      \
       SuiteClass<T>::addTest(this);                                            \
       LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
           name, sizeof(name), #SuiteClass "." #TestName);                      \
@@ -380,7 +380,7 @@ CString libc_make_test_file_path_func(const char *file_name);
                 "All LLVM-libc TEST suite names must start with 'LlvmLibc'."); \
   class SuiteName##_##TestName : public LIBC_NAMESPACE::testing::Test {        \
   public:                                                                      \
-    SuiteName##_##TestName() { addTest(this); }                                \
+    constexpr SuiteName##_##TestName() { addTest(this); }                      \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
     static SuiteName##_##TestName SuiteName##_##TestName##_Instance;           \
@@ -393,7 +393,7 @@ CString libc_make_test_file_path_func(const char *file_name);
       "All LLVM-libc TEST_F suite class names must start with 'LlvmLibc'.");   \
   class SuiteClass##_##TestName : public SuiteClass {                          \
   public:                                                                      \
-    SuiteClass##_##TestName() { addTest(this); }                               \
+    constexpr SuiteClass##_##TestName() { addTest(this); }                     \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
     static SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;         \
