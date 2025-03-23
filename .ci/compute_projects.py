@@ -87,8 +87,12 @@ def _add_dependencies(projects: Set[str]) -> Set[str]:
 
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
     """Computes the list of projects that should be passed to LLVM_ENABLE_PROJECTS"""
-    projects_to_test = set(modified_projects)
+    projects_to_test = set()
     for modified_project in modified_projects:
+        # Skip all projects where we cannot run tests.
+        if modified_project not in PROJECT_CHECK_TARGETS:
+            continue
+        projects_to_test.add(modified_project)
         if modified_project not in DEPENDENTS_TO_TEST:
             continue
         projects_to_test.update(DEPENDENTS_TO_TEST[modified_project])
