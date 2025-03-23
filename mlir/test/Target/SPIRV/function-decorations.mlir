@@ -86,3 +86,16 @@ spirv.module PhysicalStorageBuffer64 GLSL450 requires #spirv.vce<v1.0,
     spirv.Return
   }
 }
+
+// -----
+
+// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  // CHECK: spirv.func @compute_with_relaxed_precision(%[[ARG:.*]]: f32 {spirv.decoration = #spirv.decoration<RelaxedPrecision>})
+  // CHECK-NEXT: %[[RESULT:.*]] = spirv.FAdd %[[ARG]], %[[ARG]]
+  // CHECK-NEXT: spirv.Return
+  spirv.func @compute_with_relaxed_precision(%arg0: f32 {spirv.decoration = #spirv.decoration<RelaxedPrecision>}) "None" {
+    %0 = spirv.FAdd %arg0, %arg0 : f32
+    spirv.Return
+  }
+}
