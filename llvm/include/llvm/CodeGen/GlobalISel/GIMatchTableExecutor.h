@@ -550,10 +550,14 @@ enum {
   /// Combines both a GIR_EraseFromParent 0 + GIR_Done
   GIR_EraseRootFromParent_Done,
 
-  /// Create a new temporary register that's not constrained.
+  /// Create a new generic temporary register that's not constrained.
   /// - TempRegID(ULEB128) - The temporary register ID to initialize.
   /// - Ty(1) - Expected type
-  GIR_MakeTempReg,
+  GIR_MakeGenericTempReg,
+
+  /// Create a new virtual temporary register that doesn't have register class.
+  /// - TempRegID(ULEB128) - The temporary register ID to initialize.
+  GIR_MakeVirtualTempReg,
 
   /// Replaces all references to a register from an instruction
   /// with another register from another instruction.

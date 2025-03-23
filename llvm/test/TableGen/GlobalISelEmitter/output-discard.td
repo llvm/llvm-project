@@ -13,7 +13,7 @@ def ADD_CO : I<(outs GPR32:$dst, GPR8:$flag),
 // GISEL-NEXT: GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
 // GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // (add:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1)  =>  (ADD_CO:{ *:[i32] }:{ *:[i8] } GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// GISEL-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s8,
+// GISEL-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ADD_CO),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
