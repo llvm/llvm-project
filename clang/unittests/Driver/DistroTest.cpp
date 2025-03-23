@@ -86,6 +86,36 @@ TEST(DistroTest, DetectUbuntu) {
   ASSERT_FALSE(UbuntuYakkety.IsOpenSUSE());
   ASSERT_FALSE(UbuntuYakkety.IsDebian());
   ASSERT_FALSE(UbuntuYakkety.IsGentoo());
+
+  llvm::vfs::InMemoryFileSystem UbuntuUnknownFileSystem;
+  UbuntuUnknownFileSystem.addFile("/etc/debian_version", 0,
+      llvm::MemoryBuffer::getMemBuffer("random/sid\n"));
+  UbuntuUnknownFileSystem.addFile("/etc/lsb-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("DISTRIB_ID=Ubuntu\n"
+                                       "DISTRIB_RELEASE=28.04\n"
+                                       "DISTRIB_CODENAME=fancycodename\n"
+                                       "DISTRIB_DESCRIPTION=\"Ubuntu 28.04\"\n"));
+  UbuntuUnknownFileSystem.addFile("/etc/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("NAME=\"Ubuntu\"\n"
+                                       "VERSION=\"28.04 (Fancy Codename)\"\n"
+                                       "ID=ubuntu\n"
+                                       "ID_LIKE=debian\n"
+                                       "PRETTY_NAME=\"Ubuntu 28.04\"\n"
+                                       "VERSION_ID=\"28.04\"\n"
+                                       "HOME_URL=\"http://www.ubuntu.com/\"\n"
+                                       "SUPPORT_URL=\"http://help.ubuntu.com/\"\n"
+                                       "BUG_REPORT_URL=\"http://bugs.launchpad.net/ubuntu/\"\n"
+                                       "PRIVACY_POLICY_URL=\"http://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\n"
+                                       "VERSION_CODENAME=fancycodename\n"
+                                       "UBUNTU_CODENAME=fancycodename\n"));
+
+  Distro UbuntuUnknown{UbuntuUnknownFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::UbuntuUnknown), UbuntuUnknown);
+  ASSERT_TRUE(UbuntuUnknown.IsUbuntu());
+  ASSERT_FALSE(UbuntuUnknown.IsRedhat());
+  ASSERT_FALSE(UbuntuUnknown.IsOpenSUSE());
+  ASSERT_FALSE(UbuntuUnknown.IsDebian());
+  ASSERT_FALSE(UbuntuUnknown.IsGentoo());
 }
 
 TEST(DistroTest, DetectRedhat) {
@@ -271,6 +301,102 @@ TEST(DistroTest, DetectDebian) {
   ASSERT_FALSE(DebianStretchSid.IsOpenSUSE());
   ASSERT_TRUE(DebianStretchSid.IsDebian());
   ASSERT_FALSE(DebianStretchSid.IsGentoo());
+
+  llvm::vfs::InMemoryFileSystem DebianUnknownReleaseFileSystem;
+  DebianUnknownReleaseFileSystem.addFile("/etc/debian_version", 0,
+                                 llvm::MemoryBuffer::getMemBuffer("42.2\n"));
+  DebianUnknownReleaseFileSystem.addFile("/etc/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("PRETTY_NAME=\"Debian GNU/Linux 42 (fortytwo)\"\n"
+                                       "NAME=\"Debian GNU/Linux\"\n"
+                                       "VERSION_ID=\"42\"\n"
+                                       "VERSION=\"42 (fortytwo)\"\n"
+                                       "ID=debian\n"
+                                       "HOME_URL=\"http://www.debian.org/\"\n"
+                                       "SUPPORT_URL=\"http://www.debian.org/support\"\n"
+                                       "BUG_REPORT_URL=\"https://bugs.debian.org/\"\n"));
+
+  Distro DebianUnknownRelease{DebianUnknownReleaseFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::DebianUnknown), DebianUnknownRelease);
+  ASSERT_FALSE(DebianUnknownRelease.IsUbuntu());
+  ASSERT_FALSE(DebianUnknownRelease.IsRedhat());
+  ASSERT_FALSE(DebianUnknownRelease.IsOpenSUSE());
+  ASSERT_TRUE(DebianUnknownRelease.IsDebian());
+  ASSERT_FALSE(DebianUnknownRelease.IsGentoo());
+
+  llvm::vfs::InMemoryFileSystem DebianUnknownCodenameFileSystem;
+  DebianUnknownCodenameFileSystem.addFile("/etc/debian_version", 0,
+                                 llvm::MemoryBuffer::getMemBuffer("fancycodename/sid\n"));
+  DebianUnknownCodenameFileSystem.addFile("/etc/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("PRETTY_NAME=\"Debian GNU/Linux fancycodename/sid\"\n"
+                                       "NAME=\"Debian GNU/Linux\"\n"
+                                       "ID=debian\n"
+                                       "HOME_URL=\"http://www.debian.org/\"\n"
+                                       "SUPPORT_URL=\"http://www.debian.org/support\"\n"
+                                       "BUG_REPORT_URL=\"https://bugs.debian.org/\"\n"));
+
+  Distro DebianUnknownCodename{DebianUnknownCodenameFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::DebianUnknown), DebianUnknownCodename);
+  ASSERT_FALSE(DebianUnknownCodename.IsUbuntu());
+  ASSERT_FALSE(DebianUnknownCodename.IsRedhat());
+  ASSERT_FALSE(DebianUnknownCodename.IsOpenSUSE());
+  ASSERT_TRUE(DebianUnknownCodename.IsDebian());
+  ASSERT_FALSE(DebianUnknownCodename.IsGentoo());
+}
+
+TEST(DistroTest, DetectLinuxMint) {
+  llvm::vfs::InMemoryFileSystem LinuxMintFileSystem;
+  // LinuxMint is based on Ubuntu, which uses Debian Sid version.
+  LinuxMintFileSystem.addFile("/etc/debian_version", 0,
+      llvm::MemoryBuffer::getMemBuffer("jessie/sid\n"));
+  LinuxMintFileSystem.addFile("/etc/lsb-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("DISTRIB_ID=LinuxMint\n"
+                                       "DISTRIB_RELEASE=17.3\n"
+                                       "DISTRIB_CODENAME=rosa\n"
+                                       "DISTRIB_DESCRIPTION=\"Linux Mint 17.3 Rosa\"\n"));
+  // LinuxMint doesn't touch /etc/os-release in such ancient release.
+  // LinuxMint now symbolic link it to /usr/lib/os-release with its own contents.
+  // Anyway we don't use the info inside it for Debian/Ubuntu/LinuxMint after all.
+  LinuxMintFileSystem.addFile("/etc/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("NAME=\"Ubuntu\"\n"
+                                       "VERSION=\"14.04, Trusty Tahr\"\n"
+                                       "ID=ubuntu\n"
+                                       "ID_LIKE=debian\n"
+                                       "PRETTY_NAME=\"Ubuntu 14.04 LTS\"\n"
+                                       "VERSION_ID=\"14.04\"\n"
+                                       "HOME_URL=\"http://www.ubuntu.com/\"\n"
+                                       "SUPPORT_URL=\"http://help.ubuntu.com/\"\n"
+                                       "BUG_REPORT_URL=\"http://bugs.launchpad.net/ubuntu/\"\n"));
+
+  Distro LinuxMint{LinuxMintFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::LinuxMint), LinuxMint);
+  ASSERT_TRUE(LinuxMint.IsUbuntu());
+  ASSERT_FALSE(LinuxMint.IsRedhat());
+  ASSERT_FALSE(LinuxMint.IsOpenSUSE());
+  ASSERT_FALSE(LinuxMint.IsDebian());
+  ASSERT_FALSE(LinuxMint.IsGentoo());
+
+  llvm::vfs::InMemoryFileSystem LMDEFileSystem;
+  LMDEFileSystem.addFile("/etc/debian_version", 0,
+                                 llvm::MemoryBuffer::getMemBuffer("8.6\n"));
+  LMDEFileSystem.addFile("/etc/lsb-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("DISTRIB_ID=LinuxMint\n"
+                                       "DISTRIB_RELEASE=2\n"
+                                       "DISTRIB_CODENAME=betsy\n"
+                                       "DISTRIB_DESCRIPTION=\"LMDE 2 Betsy\"\n"));
+  // LinuxMint now symbolic link /etc/os-release to /usr/lib/os-release with its own contents.
+  LMDEFileSystem.addFile("/usr/lib/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("PRETTY_NAME=\"Linux Mint LMDE\"\n"
+                                       "NAME=\"Linux Mint LMDE\"\n"
+                                       "ID=linuxmint\n"));
+  LMDEFileSystem.addSymbolicLink("/etc/os-release", "../usr/lib/os-release", 0);
+
+  Distro LMDE{LMDEFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::LMDE), LMDE);
+  ASSERT_FALSE(LMDE.IsUbuntu());
+  ASSERT_FALSE(LMDE.IsRedhat());
+  ASSERT_FALSE(LMDE.IsOpenSUSE());
+  ASSERT_TRUE(LMDE.IsDebian());
+  ASSERT_FALSE(LMDE.IsGentoo());
 }
 
 TEST(DistroTest, DetectExherbo) {

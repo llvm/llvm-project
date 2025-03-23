@@ -39,6 +39,8 @@ public:
     DebianBullseye,
     DebianBookworm,
     DebianTrixie,
+    DebianUnknown, // Unknown (likely newer) release of Debian
+    LMDE, // Just treat LMDE as Debian
     Exherbo,
     RHEL5,
     RHEL6,
@@ -81,6 +83,8 @@ public:
     UbuntuNoble,
     UbuntuOracular,
     UbuntuPlucky,
+    UbuntuUnknown, // Unknown (likely newer) release of Ubuntu
+    LinuxMint, // Just treat LinuxMint as Ubuntu
     UnknownDistro
   };
 
@@ -128,11 +132,11 @@ public:
   bool IsOpenSUSE() const { return DistroVal == OpenSUSE; }
 
   bool IsDebian() const {
-    return DistroVal >= DebianLenny && DistroVal <= DebianTrixie;
+    return DistroVal >= DebianLenny && DistroVal <= LMDE;
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuPlucky;
+    return DistroVal >= UbuntuHardy && DistroVal <= LinuxMint;
   }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }

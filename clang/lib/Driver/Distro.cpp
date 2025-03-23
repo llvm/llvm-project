@@ -57,6 +57,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
   File.get()->getBuffer().split(Lines, "\n");
   Distro::DistroType Version = Distro::UnknownDistro;
 
+  // ...for Ubuntu known releases
   for (StringRef Line : Lines)
     if (Version == Distro::UnknownDistro &&
         Line.starts_with("DISTRIB_CODENAME="))
@@ -97,6 +98,70 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("oracular", Distro::UbuntuOracular)
                     .Case("plucky", Distro::UbuntuPlucky)
                     .Default(Distro::UnknownDistro);
+  // ...for Ubuntu newer releases or LinuxMint/LMDE
+  if (Version == Distro::UnknownDistro)
+    for (StringRef Line : Lines)
+      if (Line.starts_with("DISTRIB_ID="))
+        Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(11))
+                      .Case("Ubuntu", Distro::UbuntuUnknown)
+                      .Case("LinuxMint", Distro::LinuxMint)
+                      .Default(Distro::UnknownDistro);
+  return Version;
+}
+
+static Distro::DistroType DetectDebianFamily(llvm::vfs::FileSystem &VFS) {
+  Distro::DistroType Version = DetectLsbRelease(VFS);
+  if (Version != Distro::UnknownDistro && Version != Distro::LinuxMint)
+    return Version; // Ubuntu some codename or UbuntuUnknown
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
+      VFS.getBufferForFile("/etc/debian_version");
+  if (File) {
+    StringRef Data = File.get()->getBuffer();
+    // Contents: < major.minor > or < codename/sid >
+    // For LinuxMint/LMDE:
+    //   LMDE is based on < major.minor > debian
+    //   LinuxMint is based on Ubuntu, which is based on < codename/sid > debian
+    int MajorVersion;
+    if (!Data.split('.').first.getAsInteger(10, MajorVersion)) {
+      if (Version == Distro::LinuxMint)
+        return Distro::LMDE;
+      switch (MajorVersion) {
+      case 5:
+        return Distro::DebianLenny;
+      case 6:
+        return Distro::DebianSqueeze;
+      case 7:
+        return Distro::DebianWheezy;
+      case 8:
+        return Distro::DebianJessie;
+      case 9:
+        return Distro::DebianStretch;
+      case 10:
+        return Distro::DebianBuster;
+      case 11:
+        return Distro::DebianBullseye;
+      case 12:
+        return Distro::DebianBookworm;
+      case 13:
+        return Distro::DebianTrixie;
+      default:
+        return Distro::DebianUnknown;
+      }
+    }
+    if (Version == Distro::LinuxMint)
+      return Version;
+    return llvm::StringSwitch<Distro::DistroType>(Data.split("\n").first)
+        .Case("squeeze/sid", Distro::DebianSqueeze)
+        .Case("wheezy/sid", Distro::DebianWheezy)
+        .Case("jessie/sid", Distro::DebianJessie)
+        .Case("stretch/sid", Distro::DebianStretch)
+        .Case("buster/sid", Distro::DebianBuster)
+        .Case("bullseye/sid", Distro::DebianBullseye)
+        .Case("bookworm/sid", Distro::DebianBookworm)
+        .Case("trixie/sid", Distro::DebianTrixie)
+        .Default(Distro::DebianUnknown);
+  }
   return Version;
 }
 
@@ -110,7 +175,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
     return Version;
 
   // Older systems might provide /etc/lsb-release.
-  Version = DetectLsbRelease(VFS);
+  Version = DetectDebianFamily(VFS);
   if (Version != Distro::UnknownDistro)
     return Version;
 
@@ -132,48 +197,6 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         return Distro::RHEL5;
     }
     return Distro::UnknownDistro;
-  }
-
-  // ...for Debian
-  File = VFS.getBufferForFile("/etc/debian_version");
-  if (File) {
-    StringRef Data = File.get()->getBuffer();
-    // Contents: < major.minor > or < codename/sid >
-    int MajorVersion;
-    if (!Data.split('.').first.getAsInteger(10, MajorVersion)) {
-      switch (MajorVersion) {
-      case 5:
-        return Distro::DebianLenny;
-      case 6:
-        return Distro::DebianSqueeze;
-      case 7:
-        return Distro::DebianWheezy;
-      case 8:
-        return Distro::DebianJessie;
-      case 9:
-        return Distro::DebianStretch;
-      case 10:
-        return Distro::DebianBuster;
-      case 11:
-        return Distro::DebianBullseye;
-      case 12:
-        return Distro::DebianBookworm;
-      case 13:
-        return Distro::DebianTrixie;
-      default:
-        return Distro::UnknownDistro;
-      }
-    }
-    return llvm::StringSwitch<Distro::DistroType>(Data.split("\n").first)
-        .Case("squeeze/sid", Distro::DebianSqueeze)
-        .Case("wheezy/sid", Distro::DebianWheezy)
-        .Case("jessie/sid", Distro::DebianJessie)
-        .Case("stretch/sid", Distro::DebianStretch)
-        .Case("buster/sid", Distro::DebianBuster)
-        .Case("bullseye/sid", Distro::DebianBullseye)
-        .Case("bookworm/sid", Distro::DebianBookworm)
-        .Case("trixie/sid", Distro::DebianTrixie)
-        .Default(Distro::UnknownDistro);
   }
 
   // ...for SUSE
