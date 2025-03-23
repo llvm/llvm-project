@@ -40,3 +40,8 @@ Options
   A semicolon-separated list of names of types. Used to specify function
   wrapper that can hold lambda expressions.
   Default is `::std::function;::std::move_only_function;::boost::function`.
+
+.. option:: BindFunctions
+
+  A semicolon-separated list of fully qualified names of functions that can
+  capture ``this`` pointer. Default is `::std::bind;::boost::bind`.
