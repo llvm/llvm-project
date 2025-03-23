@@ -1,5 +1,5 @@
 ! RUN: not llvm-mc %s -triple=sparcv9 -show-encoding 2>&1 | FileCheck %s --check-prefixes=NO-VIS2
-! RUN: llvm-mc %s -triple=sparcv9 -mattr=+vis2 -show-encoding | FileCheck %s --check-prefixes=VIS2
+! RUN: llvm-mc %s -triple=sparcv9 -mattr=+vis2 -show-encoding | FileCheck %s --check-prefixes=VIS2 --implicit-check-not=error:
 
 !! VIS 2 instructions.
 

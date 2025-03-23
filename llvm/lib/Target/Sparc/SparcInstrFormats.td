@@ -205,7 +205,7 @@ class F3_3c<bits<2> opVal, bits<6> op3val, bits<9> opfval, dag outs, dag ins,
 class F3_3_siam<bits<2> opVal, bits<6> op3val, bits<9> opfval, dag outs, dag ins,
            string asmstr, list<dag> pattern, InstrItinClass itin = NoItinerary>
    : F3<outs, ins, asmstr, pattern, itin> {
-  bits<3> siam_mode;
+  bits<3> uimm3;
 
   let op         = opVal;
   let op3        = op3val;
@@ -213,7 +213,7 @@ class F3_3_siam<bits<2> opVal, bits<6> op3val, bits<9> opfval, dag outs, dag ins
   let rs1        = 0;
   let Inst{13-5} = opfval;   // fp opcode
   let Inst{4-3}  = 0;
-  let Inst{2-0}  = siam_mode;
+  let Inst{2-0}  = uimm3;
 }
 
 // Shift by register rs2.

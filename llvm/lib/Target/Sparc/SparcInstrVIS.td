@@ -172,7 +172,7 @@ def BSHUFFLE  : VISInst<0b001001100, "bshuffle">;
 
 let rd = 0, rs1 = 0 in
 def SIAM      : F3_3_siam<0b10, 0b110110, 0b010000001, (outs),
-                (ins i32imm:$siam_mode), "siam $siam_mode", []>;
+                (ins i32imm:$uimm3), "siam $uimm3", []>;
 
 def EDGE8N    : VISInst<0b000000001,  "edge8n",   I64Regs>;
 def EDGE8LN   : VISInst<0b000000011,  "edge8ln",  I64Regs>;
