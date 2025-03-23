@@ -205,7 +205,7 @@ void test() {
     }
     {
       // This deduces to flat_set(sorted_unique_t, InputIterator, InputIterator)
-      std::flat_set s{std::sorted_unique, arr, arr + 3};
+      std::flat_set s{std::sorted_unique, sorted_arr, sorted_arr + 3};
       static_assert(std::is_same_v<decltype(s), std::flat_set<int>>);
       assert(s.size() == 3);
     }
