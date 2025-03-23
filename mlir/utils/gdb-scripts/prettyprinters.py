@@ -70,10 +70,7 @@ class StorageTypeMap:
             concrete_type = gdb.lookup_type(type_name)
             try:
                 # detail::TypeIDExported has been deprecated
-
-                storage = gdb.parse_and_eval(
-                    "&mlir::TypeID::get<%s>()" % type_name
-                )
+                storage = gdb.parse_and_eval("&mlir::TypeID::get<%s>()" % type_name)
             except gdb.error:
                 # Skip when TypeID instance cannot be found in current context.
                 continue
@@ -102,10 +99,10 @@ def get_type_id_printer(val):
     concrete_type = val["storage"]
     if not concrete_type:
         return None
-    pattern = re.compile(r'<mlir::detail::TypeIDResolver<([^,]+),')
+    pattern = re.compile(r"<mlir::detail::TypeIDResolver<([^,]+),")
     match = pattern.search(str(concrete_type))
     if match:
-        return TypeIdPrinter('mlir::TypeID::get<%s>()' % match.group(1))
+        return TypeIdPrinter("mlir::TypeID::get<%s>()" % match.group(1))
     return None
 
 
