@@ -350,7 +350,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
-    static TypeList::Tests<SuiteName##_##TestName>::type                       \
+    static constexpr TypeList::Tests<SuiteName##_##TestName>::type             \
         SuiteName##_##TestName##_Instance;                                     \
   };                                                                           \
   template <typename T> void SuiteName##_##TestName<T>::Run()
@@ -370,7 +370,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
-    static TypeList::Tests<SuiteClass##_##TestName>::type                      \
+    static constexpr TypeList::Tests<SuiteClass##_##TestName>::type            \
         SuiteClass##_##TestName##_Instance;                                    \
   };                                                                           \
   template <typename T> void SuiteClass##_##TestName<T>::Run()
@@ -383,7 +383,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     constexpr SuiteName##_##TestName() { addTest(this); }                      \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
-    static SuiteName##_##TestName SuiteName##_##TestName##_Instance;           \
+    static constexpr SuiteName##_##TestName SuiteName##_##TestName##_Instance; \
   };                                                                           \
   void SuiteName##_##TestName::Run()
 
@@ -396,7 +396,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     constexpr SuiteClass##_##TestName() { addTest(this); }                     \
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
-    static SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;         \
+    static constexpr SuiteClass##_##TestName                                   \
+        SuiteClass##_##TestName##_Instance;                                    \
   };                                                                           \
   void SuiteClass##_##TestName::Run()
 
