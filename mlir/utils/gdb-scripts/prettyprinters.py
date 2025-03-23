@@ -1,6 +1,7 @@
 """GDB pretty printers for MLIR types."""
 
 import gdb.printing
+import re
 
 
 class StoragePrinter:
@@ -68,8 +69,10 @@ class StorageTypeMap:
         for type_name in self.type_names:
             concrete_type = gdb.lookup_type(type_name)
             try:
+                # detail::TypeIDExported has been deprecated
+
                 storage = gdb.parse_and_eval(
-                    "&'mlir::detail::TypeIDExported::get<%s>()::instance'" % type_name
+                    "&mlir::TypeID::get<%s>()" % type_name
                 )
             except gdb.error:
                 # Skip when TypeID instance cannot be found in current context.
@@ -95,10 +98,15 @@ def get_type_id_printer(val):
         def to_string(self):
             return self.string
 
-    concrete_type = storage_type_map[val]
+    # Extract the concrete type from the string of storage field info of TypeID.
+    concrete_type = val["storage"]
     if not concrete_type:
         return None
-    return TypeIdPrinter("mlir::TypeID::get<%s>()" % concrete_type)
+    pattern = re.compile(r'<mlir::detail::TypeIDResolver<([^,]+),')
+    match = pattern.search(str(concrete_type))
+    if match:
+        return TypeIdPrinter('mlir::TypeID::get<%s>()' % match.group(1))
+    return None
 
 
 def get_attr_or_type_printer(val, get_type_id):
