@@ -538,10 +538,6 @@ public:
   virtual void visitUsedExpr(MCStreamer& Streamer) const = 0;
   virtual MCFragment *findAssociatedFragment() const = 0;
 
-  // Deprecated way to set the type of referenced ELF symbols to STT_TLS when
-  // the derived MCELFObjectTargetWriter::getRelocType does not update symbols.
-  virtual void fixELFSymbolsInTLSFixups(MCAssembler &) const {}
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
