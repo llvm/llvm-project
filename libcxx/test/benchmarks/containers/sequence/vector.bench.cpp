@@ -17,6 +17,7 @@
 int main(int argc, char** argv) {
   support::sequence_container_benchmarks<std::vector<int>>("std::vector<int>");
   support::sequence_container_benchmarks<std::vector<std::string>>("std::vector<std::string>");
+  support::sequence_container_benchmarks<std::vector<bool>>("std::vector<bool>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
