@@ -24,8 +24,7 @@ the letters **P**, **Y**, **N** for the implementation status:
 - **Y** : When the implementation is complete
 - **N** : When the implementation is absent
 
-Note 1 : No distinction is made between the support in the Parser/Semantics and MLIR or Lowering support.
-Note 2 : Besides the features listed below a few intrinsics like MIN/MAX are not supported for a few cases with CHARACTER type.
+Note : No distinction is made between the support in the Parser/Semantics and MLIR or Lowering support.
 
 ## Fortran 2023
 See [document](F202X.md) for a brief discussion about the new features in Fortran 2023. The following table summarizes the
@@ -105,6 +104,7 @@ All features except those listed in the following table are supported.
 | Assignment to allocatable                                  | P      | Assignment to whole allocatable in FORALL is not implemented       |
 | The VOLATILE attribute                                     | P      | VOLATILE in procedure interfaces is not implemented     |
 | Asynchronous input/output                                  | P      | IO will happen synchronously                            |
+| MIN/MAX extensions for CHARACTER                           | P      | Some variants are not supported                         |
 
 ## Fortran 95
 All features are supported.
