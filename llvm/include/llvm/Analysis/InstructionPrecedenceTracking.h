@@ -33,9 +33,6 @@ class InstructionPrecedenceTracking {
   // special instructions.
   DenseMap<const BasicBlock *, const Instruction *> FirstSpecialInsts;
 
-  // Fills information about the given block's special instructions.
-  void fill(const BasicBlock *BB);
-
 #ifndef NDEBUG
   /// Asserts that the cached info for \p BB is up-to-date. This helps to catch
   /// the usage error of accessing a block without properly invalidating after a
