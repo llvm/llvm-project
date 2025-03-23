@@ -803,6 +803,7 @@ void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
                                      ArrayRef<StringRef> elidedProps) {
   if (!properties)
     return;
+  p << ' ';
   auto dictAttr = dyn_cast_or_null<::mlir::DictionaryAttr>(properties);
   if (dictAttr && !elidedProps.empty()) {
     ArrayRef<NamedAttribute> attrs = dictAttr.getValue();
