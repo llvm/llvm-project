@@ -38,11 +38,9 @@ Region *CallGraphNode::getCallableRegion() const {
   return callableRegion;
 }
 
-/// Adds an reference edge to the given node. This is only valid on the
-/// external node.
-void CallGraphNode::addAbstractEdge(CallGraphNode *node) {
-  assert(isExternal() && "abstract edges are only valid on external nodes");
-  addEdge(node, Edge::Kind::Abstract);
+/// Adds an reference edge to the given node.
+void CallGraphNode::addRefEdge(CallGraphNode *node) {
+  addEdge(node, Edge::Kind::Ref);
 }
 
 /// Add an outgoing call edge from this node.
@@ -60,9 +58,28 @@ bool CallGraphNode::hasChildren() const {
   return llvm::any_of(edges, [](const Edge &edge) { return edge.isChild(); });
 }
 
+/// Remove edges to the target callgraph node.
+void CallGraphNode::removeEdgesTo(CallGraphNode *target) {
+  edges.remove_if([target](const CallGraphNode::Edge &edge) {
+    if (edge.getTarget() != target)
+      return false;
+    target->dropRef();
+    return true;
+  });
+}
+
+/// Remove all edges for this callgraph node.
+void CallGraphNode::removeAllEdges() {
+  edges.remove_if([](const CallGraphNode::Edge &edge) {
+    edge.getTarget()->dropRef();
+    return true;
+  });
+}
+
 /// Add an edge to 'node' with the given kind.
 void CallGraphNode::addEdge(CallGraphNode *node, Edge::Kind kind) {
-  edges.insert({node, kind});
+  if (edges.insert({node, kind}))
+    node->addRef();
 }
 
 //===----------------------------------------------------------------------===//
@@ -73,14 +90,29 @@ void CallGraphNode::addEdge(CallGraphNode *node, Edge::Kind kind) {
 /// edges are placed into the given callgraph object.
 static void computeCallGraph(Operation *op, CallGraph &cg,
                              SymbolTableCollection &symbolTable,
-                             CallGraphNode *parentNode, bool resolveCalls) {
-  if (CallOpInterface call = dyn_cast<CallOpInterface>(op)) {
-    // If there is no parent node, we ignore this operation. Even if this
-    // operation was a call, there would be no callgraph node to attribute it
-    // to.
-    if (resolveCalls && parentNode)
-      parentNode->addCallEdge(cg.resolveCallable(call, symbolTable));
-    return;
+                             CallGraphNode *parentNode, bool resolveSymbolRef) {
+  if (resolveSymbolRef) {
+    SymbolRefAttr calleeSymbolRef;
+    if (auto call = dyn_cast<CallOpInterface>(op)) {
+      // If there is no parent node, there would be no callgraph node to call it
+      // directly, we use a reference egde to represent this call.
+      if (!parentNode->isExternal()) {
+        parentNode->addCallEdge(cg.resolveCallable(call, symbolTable));
+        calleeSymbolRef = dyn_cast<SymbolRefAttr>(call.getCallableForCallee());
+      }
+    }
+    // If an operation reference a callable symbol, create a reference edge.
+    op->getAttrDictionary().walk([&](SymbolRefAttr symbolRef) {
+      // Skip if it's the first occurence of the resolved callee.
+      if (symbolRef == calleeSymbolRef) {
+        calleeSymbolRef = nullptr;
+        return WalkResult::skip();
+      }
+      auto *node = cg.resolveCallable(op, symbolRef, symbolTable);
+      if (!node->isExternal())
+        parentNode->addRefEdge(node);
+      return WalkResult::skip();
+    });
   }
 
   // Compute the callgraph nodes and edges for each of the nested operations.
@@ -93,42 +125,49 @@ static void computeCallGraph(Operation *op, CallGraph &cg,
 
   for (Region &region : op->getRegions())
     for (Operation &nested : region.getOps())
-      computeCallGraph(&nested, cg, symbolTable, parentNode, resolveCalls);
+      computeCallGraph(&nested, cg, symbolTable, parentNode, resolveSymbolRef);
 }
 
 CallGraph::CallGraph(Operation *op)
     : externalCallerNode(/*callableRegion=*/nullptr),
       unknownCalleeNode(/*callableRegion=*/nullptr) {
   // Make two passes over the graph, one to compute the callables and one to
-  // resolve the calls. We split these up as we may have nested callable objects
-  // that need to be reserved before the calls.
+  // resolve the calls and symbol references. We split these up as we may have
+  // nested callable objects that need to be reserved before the calls.
   SymbolTableCollection symbolTable;
-  computeCallGraph(op, *this, symbolTable, /*parentNode=*/nullptr,
-                   /*resolveCalls=*/false);
-  computeCallGraph(op, *this, symbolTable, /*parentNode=*/nullptr,
-                   /*resolveCalls=*/true);
+  computeCallGraph(op, *this, symbolTable, getExternalCallerNode(),
+                   /*resolveSymbolRef=*/false);
+  computeCallGraph(op, *this, symbolTable, getExternalCallerNode(),
+                   /*resolveSymbolRef=*/true);
 }
 
 /// Get or add a call graph node for the given region.
 CallGraphNode *CallGraph::getOrAddNode(Region *region,
                                        CallGraphNode *parentNode) {
-  assert(region && isa<CallableOpInterface>(region->getParentOp()) &&
+  Operation *parentOp = region->getParentOp();
+  assert(region && isa<CallableOpInterface>(parentOp) &&
          "expected parent operation to be callable");
   std::unique_ptr<CallGraphNode> &node = nodes[region];
   if (!node) {
     node.reset(new CallGraphNode(region));
 
     // Add this node to the given parent node if necessary.
-    if (parentNode) {
+    assert(parentNode && "expected non-empty parent node");
+    if (!parentNode->isExternal()) {
       parentNode->addChildEdge(node.get());
     } else {
-      // Otherwise, connect all callable nodes to the external node, this allows
-      // for conservatively including all callable nodes within the graph.
-      // FIXME This isn't correct, this is only necessary for callable nodes
-      // that *could* be called from external sources. This requires extending
-      // the interface for callables to check if they may be referenced
-      // externally.
-      externalCallerNode.addAbstractEdge(node.get());
+      // No real parent node, add a reference edge if neccessary.
+      if (auto symbolOp = dyn_cast<SymbolOpInterface>(parentOp)) {
+        // For symbol, connect all symbol nodes with public visibility to the
+        // entry node, which may be referenced externally. If a symbol is not
+        // discardable on empty use, it should also be considered as having
+        // potential references.
+        if (symbolOp.isPublic() || !symbolOp.canDiscardOnUseEmpty())
+          parentNode->addRefEdge(node.get());
+      } else {
+        // Otherwise, connect non-symbolic callable node to the external node.
+        parentNode->addRefEdge(node.get());
+      }
     }
   }
   return node.get();
@@ -154,6 +193,20 @@ CallGraph::resolveCallable(CallOpInterface call,
   return getUnknownCalleeNode();
 }
 
+/// Resolve the callable for given symbol to a node in the callgraph, or the
+/// external node if a valid node was not resolved.
+CallGraphNode *
+CallGraph::resolveCallable(Operation *op, SymbolRefAttr symbolRef,
+                           SymbolTableCollection &symbolTable) const {
+  auto *symbolOp = symbolTable.lookupNearestSymbolFrom(op, symbolRef);
+  if (auto callableOp = dyn_cast_or_null<CallableOpInterface>(symbolOp)) {
+    if (auto *node = lookupNode(callableOp.getCallableRegion()))
+      return node;
+  }
+
+  return getUnknownCalleeNode();
+}
+
 /// Erase the given node from the callgraph.
 void CallGraph::eraseNode(CallGraphNode *node) {
   // Erase any children of this node first.
@@ -163,11 +216,12 @@ void CallGraph::eraseNode(CallGraphNode *node) {
         eraseNode(edge.getTarget());
   }
   // Erase any edges to this node from any other nodes.
-  for (auto &it : nodes) {
-    it.second->edges.remove_if([node](const CallGraphNode::Edge &edge) {
-      return edge.getTarget() == node;
-    });
-  }
+  for (auto &it : nodes)
+    it.second->removeEdgesTo(node);
+  // Erase all edges from this node to any other nodes.
+  node->removeAllEdges();
+
+  assert(node->isDead() && "expected no references");
   nodes.erase(node->getCallableRegion());
 }
 
@@ -199,13 +253,12 @@ void CallGraph::print(raw_ostream &os) const {
       os << " : " << attrs;
   };
 
-  for (auto &nodeIt : nodes) {
-    const CallGraphNode *node = nodeIt.second.get();
-
+  // Functor used to emit the given node and edges.
+  auto emitNodeAndEdge = [&](const CallGraphNode *node) {
     // Dump the header for this node.
     os << "// - Node : ";
     emitNodeName(node);
-    os << "\n";
+    os << " : References = " << node->getNumReferences() << "\n";
 
     // Emit each of the edges.
     for (auto &edge : *node) {
@@ -214,13 +267,21 @@ void CallGraph::print(raw_ostream &os) const {
         os << "Call";
       else if (edge.isChild())
         os << "Child";
+      else if (edge.isRef())
+        os << "Ref";
 
       os << "-Edge : ";
       emitNodeName(edge.getTarget());
       os << "\n";
     }
     os << "//\n";
-  }
+  };
+
+  // Emit all graph nodes including entry and exit node.
+  for (auto &nodeIt : nodes)
+    emitNodeAndEdge(nodeIt.second.get());
+  emitNodeAndEdge(getExternalCallerNode());
+  emitNodeAndEdge(getUnknownCalleeNode());
 
   os << "// -- SCCs --\n";
 
