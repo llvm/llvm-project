@@ -120,6 +120,7 @@ class Test {
   static int getNumTests();
 
 public:
+  constexpr Test() = default;
   virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
