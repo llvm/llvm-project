@@ -111,6 +111,80 @@ struct CopyFromForwardIterToBitIter {
   }
 };
 
+// Test std::copy with segmented iterators: deque<T>::iterator, join_view::iterator
+TEST_CONSTEXPR_CXX23 void test_segmented_iterator() {
+  // std::deque iterator
+  { // Copy from segmented input to contiguous output (deque<int> to vector<int>)
+    std::deque<int> in(20);
+    for (std::size_t i = 0; i < in.size(); ++i)
+      in[i] = i;
+    std::vector<int> out(in.size());
+    std::copy(in.begin(), in.end(), out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+  { // Copy from contiguous input to segmented output (vector<int> to deque<int>)
+    std::vector<int> in(20);
+    for (std::size_t i = 0; i < in.size(); ++i)
+      in[i] = i;
+    std::deque<int> out(in.size());
+    std::copy(in.begin(), in.end(), out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+  { // Copy from segmented input to segmented output (deque<int> to deque<int>)
+    std::deque<int> in(20);
+    for (std::size_t i = 0; i < in.size(); ++i)
+      in[i] = i;
+    std::deque<int> out(in.size());
+    std::copy(in.begin(), in.end(), out.begin());
+    assert(in == out);
+  }
+  { // Copy from segmented input to vector<bool> output
+    std::deque<bool> in(199, false);
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+    std::vector<bool> out(in.size());
+    std::copy(in.begin(), in.end(), out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+  { // Copy from vector<bool> input to segmented output
+    std::vector<bool> in(199, false);
+    for (std::size_t i = 0; i < in.size(); i += 2)
+      in[i] = true;
+    std::deque<bool> out(in.size());
+    std::copy(in.begin(), in.end(), out.begin());
+    assert(std::equal(in.begin(), in.end(), out.begin()));
+  }
+
+#if TEST_STD_VER >= 20
+  // join_view iterator
+  { // Copy from segmented input to contiguous output (join_viw to vector<int>)
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::vector<int> expected(jv.begin(), jv.end());
+    std::vector<int> out(expected.size());
+    std::copy(jv.begin(), jv.end(), out.begin());
+    assert(out == expected);
+  }
+  // Copy from segmented input to segmented output (join_view to deque)
+  if (!TEST_IS_CONSTANT_EVALUATED) { // TODO: enable this for constant evaluation when std::deque is fully constexpr
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::deque<int> expected(jv.begin(), jv.end());
+    std::deque<int> out(expected.size());
+    std::copy(jv.begin(), jv.end(), out.begin());
+    assert(out == expected);
+  }
+  { // Copy from segmented input to vector<bool> output
+    std::vector<std::vector<int>> v{{1, 1}, {1, 0, 1}, {0, 0}, {1, 1, 1}, {1}, {1, 1, 1, 1}, {0, 0, 1, 1, 0, 1, 1}};
+    auto jv = std::ranges::join_view(v);
+    std::vector<bool> expected(jv.begin(), jv.end());
+    std::vector<bool> out(expected.size());
+    std::copy(jv.begin(), jv.end(), out.begin());
+    assert(out == expected);
+  }
+#endif
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<const int*>(), TestInIters());
 
@@ -294,81 +368,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
     types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<299>());
   }
 
-  // Test std::copy with segmented iterators: deque<T>::iterator, join_view::iterator
-  {
-    // std::deque iterator
-    if (!TEST_IS_CONSTANT_EVALUATED) { // TODO: enable this for constant evaluation when std::deque is fully constexpr
-      {                                // Copy from segmented input to contiguous output (deque<int> to vector<int>)
-        std::deque<int> in(20);
-        for (std::size_t i = 0; i < in.size(); ++i)
-          in[i] = i;
-        std::vector<int> out(in.size());
-        std::copy(in.begin(), in.end(), out.begin());
-        assert(std::equal(in.begin(), in.end(), out.begin()));
-      }
-      { // Copy from contiguous input to segmented output (vector<int> to deque<int>)
-        std::vector<int> in(20);
-        for (std::size_t i = 0; i < in.size(); ++i)
-          in[i] = i;
-        std::deque<int> out(in.size());
-        std::copy(in.begin(), in.end(), out.begin());
-        assert(std::equal(in.begin(), in.end(), out.begin()));
-      }
-      { // Copy from segmented input to segmented output (deque<int> to deque<int>)
-        std::deque<int> in(20);
-        for (std::size_t i = 0; i < in.size(); ++i)
-          in[i] = i;
-        std::deque<int> out(in.size());
-        std::copy(in.begin(), in.end(), out.begin());
-        assert(in == out);
-      }
-      { // Copy from segmented input to vector<bool> output
-        std::deque<bool> in(199, false);
-        for (std::size_t i = 0; i < in.size(); i += 2)
-          in[i] = true;
-        std::vector<bool> out(in.size());
-        std::copy(in.begin(), in.end(), out.begin());
-        assert(std::equal(in.begin(), in.end(), out.begin()));
-      }
-      { // Copy from vector<bool> input to segmented output
-        std::vector<bool> in(199, false);
-        for (std::size_t i = 0; i < in.size(); i += 2)
-          in[i] = true;
-        std::deque<bool> out(in.size());
-        std::copy(in.begin(), in.end(), out.begin());
-        assert(std::equal(in.begin(), in.end(), out.begin()));
-      }
-    }
-
-#if TEST_STD_VER >= 20
-    // join_view iterator
-    { // Copy from segmented input to contiguous output (join_viw to vector<int>)
-      std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
-      auto jv = std::ranges::join_view(v);
-      std::vector<int> expected(jv.begin(), jv.end());
-      std::vector<int> out(expected.size());
-      std::copy(jv.begin(), jv.end(), out.begin());
-      assert(out == expected);
-    }
-    // Copy from segmented input to segmented output (join_view to deque)
-    if (!TEST_IS_CONSTANT_EVALUATED) { // TODO: enable this for constant evaluation when std::deque is fully constexpr
-      std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
-      auto jv = std::ranges::join_view(v);
-      std::deque<int> expected(jv.begin(), jv.end());
-      std::deque<int> out(expected.size());
-      std::copy(jv.begin(), jv.end(), out.begin());
-      assert(out == expected);
-    }
-    { // Copy from segmented input to vector<bool> output
-      std::vector<std::vector<int>> v{{1, 1}, {1, 0, 1}, {0, 0}, {1, 1, 1}, {1}, {1, 1, 1, 1}, {0, 0, 1, 1, 0, 1, 1}};
-      auto jv = std::ranges::join_view(v);
-      std::vector<bool> expected(jv.begin(), jv.end());
-      std::vector<bool> out(expected.size());
-      std::copy(jv.begin(), jv.end(), out.begin());
-      assert(out == expected);
-    }
-#endif
-  }
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: enable this unconditionally when std::deque is fully constexpr
+    test_segmented_iterator();
 
   return true;
 }
