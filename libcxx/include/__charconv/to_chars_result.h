@@ -21,7 +21,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 17
 
-struct _LIBCPP_EXPORTED_FROM_ABI to_chars_result {
+struct to_chars_result {
   char* ptr;
   errc ec;
 #  if _LIBCPP_STD_VER >= 20
