@@ -4898,12 +4898,6 @@ private:
     tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                       const InstructionsState &S);
 
-<<<<<<< HEAD
-    /// Un-bundles a group of instructions.
-    void cancelScheduling(ArrayRef<Value *> VL, Value *Inst);
-
-=======
->>>>>>> upstream/main
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
 
@@ -18698,48 +18692,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
   ScheduleBundle &Bundle = buildBundle(VL);
   TryScheduleBundleImpl(ReSchedule, Bundle);
-<<<<<<< HEAD
-  if (!Bundle->isReady()) {
-    cancelScheduling(VL, Bundle->Inst);
-    return std::nullopt;
-  }
-  return Bundle;
-}
-
-void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
-                                                Value *Inst) {
-  if (isa<PHINode>(Inst) || isVectorLikeInstWithConstOps(Inst) ||
-      doesNotNeedToSchedule(VL))
-    return;
-
-  if (doesNotNeedToBeScheduled(Inst))
-    Inst = *find_if_not(VL, doesNotNeedToBeScheduled);
-  ScheduleData *Bundle = getScheduleData(Inst);
-  LLVM_DEBUG(dbgs() << "SLP:  cancel scheduling of " << *Bundle << "\n");
-  assert(!Bundle->IsScheduled &&
-         "Can't cancel bundle which is already scheduled");
-  assert(Bundle->isSchedulingEntity() &&
-         (Bundle->isPartOfBundle() || needToScheduleSingleInstruction(VL)) &&
-         "tried to unbundle something which is not a bundle");
-
-  // Remove the bundle from the ready list.
-  if (Bundle->isReady())
-    ReadyInsts.remove(Bundle);
-
-  // Un-bundle: make single instructions out of the bundle.
-  ScheduleData *BundleMember = Bundle;
-  while (BundleMember) {
-    assert(BundleMember->FirstInBundle == Bundle && "corrupt bundle links");
-    BundleMember->FirstInBundle = BundleMember;
-    ScheduleData *Next = BundleMember->NextInBundle;
-    BundleMember->NextInBundle = nullptr;
-    BundleMember->TE = nullptr;
-    if (BundleMember->unscheduledDepsInBundle() == 0) {
-      ReadyInsts.insert(BundleMember);
-    }
-    BundleMember = Next;
-  }
-=======
   if (!Bundle.isReady()) {
     for (ScheduleData *BD : Bundle.getBundle()) {
       if (BD->isReady())
@@ -18754,7 +18706,6 @@ void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
     return std::nullopt;
   }
   return &Bundle;
->>>>>>> upstream/main
 }
 
 BoUpSLP::ScheduleData *BoUpSLP::BlockScheduling::allocateScheduleDataChunks() {
