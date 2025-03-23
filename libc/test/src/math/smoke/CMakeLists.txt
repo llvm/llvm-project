@@ -3946,6 +3946,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acoshf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acoshf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.acoshf16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   asinf_test
   SUITE
     libc-math-smoke-tests
