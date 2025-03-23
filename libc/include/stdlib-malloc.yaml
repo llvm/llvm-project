@@ -42,7 +42,7 @@ functions:
       - type: size_t
   - name: memalignment
     standards:
-      - gnu
+      - stdc
     return_type: size_t
     arguments:
       - type: const void *
