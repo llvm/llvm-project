@@ -33,6 +33,7 @@
 #include "Utils/SIDefinesUtils.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -89,6 +90,22 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
 }
+
+namespace {
+class AMDGPUAsmPrinterHandler : public AsmPrinterHandler {
+protected:
+  AMDGPUAsmPrinter *Asm;
+
+public:
+  AMDGPUAsmPrinterHandler(AMDGPUAsmPrinter *A) : Asm(A) {}
+
+  void beginFunction(const MachineFunction *MF) override {}
+
+  void endFunction(const MachineFunction *MF) override { Asm->endFunction(MF); }
+
+  void endModule() override {}
+};
+} // End anonymous namespace
 
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
@@ -209,13 +226,12 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
 }
 
-void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
+void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   const SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   if (!MFI.isEntryFunction())
     return;
 
-  if (TM.getTargetTriple().getOS() != Triple::AMDHSA)
-    return;
+  assert(TM.getTargetTriple().getOS() == Triple::AMDHSA);
 
   auto &Streamer = getTargetStreamer()->getStreamer();
   auto &Context = Streamer.getContext();
@@ -351,6 +367,8 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
     default:
       report_fatal_error("Unexpected code object version");
     }
+
+    addAsmPrinterHandler(std::make_unique<AMDGPUAsmPrinterHandler>(this));
   }
 
   return AsmPrinter::doInitialization(M);
