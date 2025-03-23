@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -276,6 +277,97 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
       NameFS.second.findAllNames(NameSet);
     }
   }
+}
+
+// CanonicalName is invariant in this function. It should already contain the
+// canonical name of the current FunctionSamples.
+uint64_t FunctionSamples::removeCallTargetsAndCallsites(
+    const llvm::Regex &Re, std::string &CanonicalName, bool Inverse) {
+  uint64_t Result = 0;
+  CanonicalName.push_back(':');
+  size_t Length1 = CanonicalName.size();
+
+  // Match call targets.
+  for (auto BodySampleIt = BodySamples.begin();
+       BodySampleIt != BodySamples.end();) {
+    auto &[Loc, BodySample] = *BodySampleIt;
+    SampleRecord::CallTargetMap &CallTargets =
+        const_cast<SampleRecord::CallTargetMap &>(BodySample.getCallTargets());
+    if (!CallTargets.empty()) {
+      CanonicalName += Loc.toString();
+      CanonicalName += " @@ ";
+      size_t Length2 = CanonicalName.size();
+
+      uint64_t RemovedCallTargetCount = 0;
+      for (auto CallTargetIt = CallTargets.begin();
+           CallTargetIt != CallTargets.end();) {
+        CanonicalName += CallTargetIt->first.str();
+
+        if (Re.match(CanonicalName) != Inverse) {
+          RemovedCallTargetCount += CallTargetIt->second;
+          CallTargetIt = CallTargets.erase(CallTargetIt);
+        } else
+          ++CallTargetIt;
+
+        CanonicalName.resize(Length2);
+      }
+      CanonicalName.resize(Length1);
+
+      // Adjust sample count as if they were removed with
+      // removeCalledTargetAndBodySample.
+      Result += BodySample.removeSamples(RemovedCallTargetCount);
+      if (BodySample.getSamples() == 0) {
+        BodySampleIt = BodySamples.erase(BodySampleIt);
+        continue;
+      }
+    }
+    ++BodySampleIt;
+  }
+
+  assert(CanonicalName.size() == Length1);
+
+  // Match inlined callsites.
+  for (auto CallsiteSampleIt = CallsiteSamples.begin();
+       CallsiteSampleIt != CallsiteSamples.end();) {
+    auto &[Loc, FSMap] = *CallsiteSampleIt;
+    CanonicalName += Loc.toString();
+    CanonicalName += " @ ";
+    size_t Length2 = CanonicalName.size();
+
+    for (auto FunctionSampleIt = FSMap.begin();
+         FunctionSampleIt != FSMap.end();) {
+      FunctionSamples &InlinedFS = FunctionSampleIt->second;
+      CanonicalName.append(InlinedFS.getContext().toString());
+
+      if (Re.match(CanonicalName) != Inverse) {
+        Result += InlinedFS.getTotalSamples();
+        FunctionSampleIt = FSMap.erase(FunctionSampleIt);
+      } else {
+        // Recursively process inlined callsites.
+        Result +=
+            InlinedFS.removeCallTargetsAndCallsites(Re, CanonicalName, Inverse);
+        // If every sample in the inlined callsite is removed, remove the
+        // callsite as well.
+        if (InlinedFS.getTotalSamples() == 0)
+          FunctionSampleIt = FSMap.erase(FunctionSampleIt);
+        else
+          ++FunctionSampleIt;
+        CanonicalName.resize(Length2);
+      }
+    }
+
+    // If FSMap has no more entries, remove it as well.
+    if (FSMap.empty())
+      CallsiteSampleIt = CallsiteSamples.erase(CallsiteSampleIt);
+    else
+      ++CallsiteSampleIt;
+    CanonicalName.resize(Length1);
+  }
+
+  assert(CanonicalName.size() == Length1);
+  CanonicalName.pop_back();
+  // Adjust total sample count after removals.
+  return removeTotalSamples(Result);
 }
 
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
