@@ -1325,7 +1325,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // Found a cycle.
     C.insert(&I);
     classifyCycle(&I, C, Early, Late);
-    Cycled.insert(C.begin(), C.end());
+    Cycled.insert_range(C);
     RShifts.insert(&I);
   }
 
@@ -2406,7 +2406,7 @@ bool HexagonLoopIdiomRecognize::runOnCountableLoop(Loop *L) {
 
 bool HexagonLoopIdiomRecognize::run(Loop *L) {
   const Module &M = *L->getHeader()->getParent()->getParent();
-  if (Triple(M.getTargetTriple()).getArch() != Triple::hexagon)
+  if (M.getTargetTriple().getArch() != Triple::hexagon)
     return false;
 
   // If the loop could not be converted to canonical form, it must have an

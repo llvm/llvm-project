@@ -12,10 +12,9 @@ program test
   !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'a=' is not definable
   !BECAUSE: 'null(mold=a)' is a null pointer
   call foo0(null(mold=a))
-  !WARNING: A null pointer should not be associated with allocatable dummy argument 'a=' without INTENT(IN)
+  !WARNING: A null allocatable should not be associated with allocatable dummy argument 'a=' without INTENT(IN)
   call foo1(null(mold=a))
-  !PORTABILITY: Allocatable dummy argument 'a=' is associated with a null pointer
-  call foo2(null(mold=a))
+  call foo2(null(mold=a)) ! ok
   call foo3(null(mold=a)) ! ok
  contains
   subroutine foo0(a)

@@ -57,7 +57,7 @@ module m3
   private
 contains
   ! Error bad # of args
-  subroutine unformattedReadProc(dtv, unit, iostat, iomsg, iotype) 
+  subroutine unformattedReadProc(dtv, unit, iostat, iomsg, iotype)
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
     integer, intent(out) :: iostat
@@ -119,7 +119,7 @@ contains
 end module m5
 
 module m6
-  interface read(formatted) 
+  interface read(formatted)
     procedure :: formattedReadProc
   end interface
 
@@ -169,7 +169,7 @@ module m8
 contains
   subroutine formattedWriteProc(dtv, unit, iotype, vlist, iostat, iomsg)
     !ERROR: Dummy argument 'dtv' of a defined input/output procedure must have intent 'INTENT(IN)'
-    class(t), intent(inout) :: dtv ! Error, must be intent(inout)
+    class(t), intent(inout) :: dtv ! Error, must be intent(in)
     integer, intent(in) :: unit
     character(len=*), intent(in) :: iotype
     integer, intent(in) :: vlist(:)
@@ -195,7 +195,7 @@ contains
     !ERROR: Dummy argument 'unit' of a defined input/output procedure may not have any attributes
     integer,  pointer, intent(in) :: unit
     character(len=*), intent(in) :: iotype
-    integer, intent(in) :: vlist(:) 
+    integer, intent(in) :: vlist(:)
     integer, intent(out) :: iostat
     character(len=*), intent(inout) :: iomsg
 
@@ -416,7 +416,7 @@ contains
 end module
 
 module m19
-  ! Test two different defined input/output procedures specified as a 
+  ! Test two different defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type
   type t
     integer c
@@ -446,7 +446,7 @@ contains
 end module
 
 module m20
-  ! Test read and write defined input/output procedures specified as a 
+  ! Test read and write defined input/output procedures specified as a
   ! type-bound procedure and as a generic for the same derived type
   type t
     integer c
@@ -742,5 +742,27 @@ module m28
   procedure(absWrite) write1, write2
   interface write(formatted)
     procedure write2
+  end interface
+end
+
+module m29
+  type t
+  end type
+  interface write(formatted)
+    subroutine wf(dtv, unit, iotype, v_list, iostat, iomsg)
+    import t
+    !ERROR: Dummy argument 'dtv' of defined input/output procedure 'wf' may not be a coarray
+    class(t), intent(in) :: dtv[*]
+    !ERROR: Dummy argument 'unit' of defined input/output procedure 'wf' may not be a coarray
+    integer, intent(in) :: unit[*]
+    !ERROR: Dummy argument 'iotype' of defined input/output procedure 'wf' may not be a coarray
+    character(len=*), intent(in) :: iotype[*]
+    !ERROR: Dummy argument 'v_list' of defined input/output procedure 'wf' may not be a coarray
+    integer, intent(in) :: v_list(:)[*]
+    !ERROR: Dummy argument 'iostat' of defined input/output procedure 'wf' may not be a coarray
+    integer, intent(out) :: iostat[*]
+    !ERROR: Dummy argument 'iomsg' of defined input/output procedure 'wf' may not be a coarray
+    character(len=*), intent(inout) :: iomsg[*]
+    end
   end interface
 end

@@ -597,7 +597,7 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI %17(s32), %bb.1, [[C1]](s32), %bb.0
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sgpr(s32) = G_PHI %15(s32), %bb.1, [[C1]](s32), %bb.0
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %9(s32), %bb.1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[PHI1]], [[C2]]
@@ -609,11 +609,9 @@ body: |
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:vgpr(s32) = G_PHI [[ADD]](s32), %bb.1
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:sgpr(s32) = G_PHI [[INT]](s32), %bb.1
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s32)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 10
-  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[PHI2]], [[C3]]
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:vgpr(s32) = G_MUL [[ADD]], [[C3]]
   ; CHECK-NEXT:   G_STORE [[MUL]](s32), [[MV]](p1) :: (store (s32), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -641,12 +639,10 @@ body: |
     G_BR %bb.2
 
   bb.2:
-    %13:_(s32) = G_PHI %9(s32), %bb.1
-    %14:_(s32) = G_PHI %7(s32), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %14(s32)
-    %15:_(s32) = G_CONSTANT i32 10
-    %16:_(s32) = G_MUL %13, %15
-    G_STORE %16(s32), %3(p1) :: (store (s32), addrspace 1)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %7(s32)
+    %13:_(s32) = G_CONSTANT i32 10
+    %14:_(s32) = G_MUL %9, %13
+    G_STORE %14(s32), %3(p1) :: (store (s32), addrspace 1)
     S_ENDPGM 0
 ...
 
@@ -677,7 +673,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[DEF1]](s1), %bb.0, %13(s1), %bb.3
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI %68(s32), %bb.3, [[C]](s32), %bb.0
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sgpr(s32) = G_PHI %67(s32), %bb.3, [[C]](s32), %bb.0
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sgpr(s32) = G_PHI [[C]](s32), %bb.0, %17(s32), %bb.3
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:sgpr(s64) = G_SEXT [[PHI2]](s32)
@@ -760,8 +756,7 @@ body: |
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
-  ; CHECK-NEXT:   [[PHI7:%[0-9]+]]:sgpr(s32) = G_PHI [[INT]](s32), %bb.3
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI7]](s32)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT]](s32)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
@@ -861,7 +856,6 @@ body: |
     G_BR %bb.3
 
   bb.6:
-    %64:_(s32) = G_PHI %15(s32), %bb.3
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %64(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %15(s32)
     S_ENDPGM 0
 ...

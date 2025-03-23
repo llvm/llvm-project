@@ -443,7 +443,7 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
 
   // The virtual register number is a tie breaker for same-sized ranges.
   // Give lower vreg numbers higher priority to assign them first.
-  CurQueue.push(std::make_pair(Ret, ~Reg));
+  CurQueue.push(std::make_pair(Ret, ~Reg.id()));
 }
 
 unsigned DefaultPriorityAdvisor::getPriority(const LiveInterval &LI) const {
@@ -2375,10 +2375,12 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
-  // We use the larger one out of the command-line option and the value report
-  // by TRI.
+  // We use the command-line option if it is explicitly set, otherwise use the
+  // larger one out of the command-line option and the value reported by TRI.
   CSRCost = BlockFrequency(
-      std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
+      CSRFirstTimeCost.getNumOccurrences()
+          ? CSRFirstTimeCost
+          : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
   if (!CSRCost.getFrequency())
     return;
 

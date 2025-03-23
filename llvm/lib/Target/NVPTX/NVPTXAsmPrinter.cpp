@@ -245,8 +245,7 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
 
 MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
   const MCExpr *Expr;
-  Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None,
-                                 OutContext);
+  Expr = MCSymbolRefExpr::create(Symbol, OutContext);
   return MCOperand::createExpr(Expr);
 }
 

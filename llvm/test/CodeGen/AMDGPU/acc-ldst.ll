@@ -190,11 +190,11 @@ bb:
 
 ; NB: for atomics both vdata and vdst shall be either VGPR or AGPR
 ; GCN-LABEL: {{^}}test_atomic_mfma_4xi32_atomic_store:
+; GCN: v_accvgpr_write_b32 [[A_ZERO:a[0-9]+]], 0
 ; GCN:     global_atomic_sub [[IN:v[0-9]+]], v{{[0-9:]+}}, v{{[0-9]+}}, s[{{[0-9:]+}}] glc
+; GCN-DAG: v_accvgpr_mov_b32 a{{[0-9]+}}, [[A_ZERO]]
+; GCN-DAG: v_accvgpr_mov_b32 a{{[0-9]+}}, [[A_ZERO]]
 ; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, [[IN]]
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:     v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:
 ; GCN:     v_accvgpr_read_b32 [[V:v[0-9]+]], a[[N]]{{$}}
 ; GCN:     global_atomic_add v{{[0-9]+}}, v{{[0-9:]+}}, [[V]], s[{{[0-9:]+}}] glc
@@ -217,7 +217,10 @@ bb:
 
 ; GCN-LABEL: {{^}}test_atomic_mfma_4xi32_atomic64_store:
 ; GCN:         global_atomic_sub_x2 v[{{[0-9:]+}}], v{{[0-9:]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}] glc
-; GCN-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_accvgpr_write_b32 [[A_ZERO:a[0-9]+]], 0
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, [[A_ZERO]]
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN:         v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}

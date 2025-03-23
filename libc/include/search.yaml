@@ -69,3 +69,13 @@ functions:
       - type: size_t *
       - type: size_t
       - type: __lsearchcompare_t
+  - name: lsearch
+    standards:
+      - POSIX
+    return_type: void *
+    arguments:
+      - type: const void *
+      - type: void *
+      - type: size_t *
+      - type: size_t
+      - type: __lsearchcompare_t

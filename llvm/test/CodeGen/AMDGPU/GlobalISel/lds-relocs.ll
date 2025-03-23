@@ -2,7 +2,7 @@
 ; FIXME: Merge with DAG test
 
 @lds.external = external unnamed_addr addrspace(3) global [0 x i32]
-@lds.defined = unnamed_addr addrspace(3) global [8 x i32] undef, align 8
+@lds.defined = unnamed_addr addrspace(3) global [8 x i32] poison, align 8
 
 ; GCN-LABEL: {{^}}test_basic:
 ; GCN: s_add_u32 s0, lds.defined@abs32@lo, s0 ; encoding: [0xff,0x00,0x00,0x80,A,A,A,A]

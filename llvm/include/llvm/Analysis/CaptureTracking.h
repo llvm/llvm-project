@@ -44,6 +44,15 @@ namespace llvm {
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
                             unsigned MaxUsesToExplore = 0);
 
+  /// Return which components of the pointer may be captured. Only consider
+  /// components that are part of \p Mask. Once \p StopFn on the accumulated
+  /// components returns true, the traversal is aborted early. By default, this
+  /// happens when *any* of the components in \p Mask are captured.
+  CaptureComponents PointerMayBeCaptured(
+      const Value *V, bool ReturnCaptures, CaptureComponents Mask,
+      function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
+      unsigned MaxUsesToExplore = 0);
+
   /// PointerMayBeCapturedBefore - Return true if this pointer value may be
   /// captured by the enclosing function (which is required to exist). If a
   /// DominatorTree is provided, only captures which happen before the given
@@ -61,6 +70,17 @@ namespace llvm {
                                   unsigned MaxUsesToExplore = 0,
                                   const LoopInfo *LI = nullptr);
 
+  /// Return which components of the pointer may be captured on the path to
+  /// \p I. Only consider components that are part of \p Mask. Once \p StopFn
+  /// on the accumulated components returns true, the traversal is aborted
+  /// early. By default, this happens when *any* of the components in \p Mask
+  /// are captured.
+  CaptureComponents PointerMayBeCapturedBefore(
+      const Value *V, bool ReturnCaptures, const Instruction *I,
+      const DominatorTree *DT, bool IncludeI, CaptureComponents Mask,
+      function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
+      const LoopInfo *LI = nullptr, unsigned MaxUsesToExplore = 0);
+
   // Returns the 'earliest' instruction that captures \p V in \F. An instruction
   // A is considered earlier than instruction B, if A dominates B. If 2 escapes
   // do not dominate each other, the terminator of the common dominator is
@@ -69,8 +89,11 @@ namespace llvm {
   // nullptr is returned. Note that the caller of the function has to ensure
   // that the instruction the result value is compared against is not in a
   // cycle.
+  //
+  // Only consider components that are part of \p Mask.
   Instruction *FindEarliestCapture(const Value *V, Function &F,
                                    bool ReturnCaptures, const DominatorTree &DT,
+                                   CaptureComponents Mask,
                                    unsigned MaxUsesToExplore = 0);
 
   /// Capture information for a specific Use.

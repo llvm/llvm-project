@@ -1189,7 +1189,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
     return nullptr;
 
   return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeSpecifier,
                               getContext()),
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
@@ -1204,7 +1204,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
   if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
     return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeVariantKind,
+  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
                                  getContext());
 }
 
@@ -1581,10 +1581,8 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
     StubSym = MachineModuleInfoImpl::StubValueTy(const_cast<MCSymbol *>(Sym),
                                                  !GV->hasLocalLinkage());
 
-  const MCExpr *BSymExpr =
-    MCSymbolRefExpr::create(BaseSym, MCSymbolRefExpr::VK_None, Ctx);
-  const MCExpr *LHS =
-    MCSymbolRefExpr::create(Stub, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *BSymExpr = MCSymbolRefExpr::create(BaseSym, Ctx);
+  const MCExpr *LHS = MCSymbolRefExpr::create(Stub, Ctx);
 
   if (!Offset)
     return MCBinaryExpr::createSub(LHS, BSymExpr, Ctx);
@@ -2306,8 +2304,7 @@ const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
     return nullptr;
 
   return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), MCSymbolRefExpr::VK_None,
-                              getContext()),
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), getContext()),
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 

@@ -215,7 +215,8 @@ bool ABISysV_arm64::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (value_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      std::optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
+      std::optional<uint64_t> bit_size =
+          llvm::expectedToOptional(value_type.GetBitSize(&thread));
       if (!bit_size)
         return false;
       if (value_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -388,14 +389,14 @@ UnwindPlanSP ABISysV_arm64::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = arm64_dwarf::lr;
   uint32_t sp_reg_num = arm64_dwarf::sp;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer, all other registers
   // are the same.
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetReturnAddressRegister(lr_reg_num);
   plan_sp->SetSourceName("arm64 at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
@@ -408,18 +409,17 @@ UnwindPlanSP ABISysV_arm64::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = arm64_dwarf::fp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 8;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("arm64 default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
@@ -524,8 +524,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  std::optional<uint64_t> byte_size =
-      value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> byte_size = llvm::expectedToOptional(
+      value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
 
   if (byte_size || *byte_size == 0)
     return false;
@@ -543,8 +543,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      std::optional<uint64_t> base_byte_size =
-          base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+      std::optional<uint64_t> base_byte_size = llvm::expectedToOptional(
+          base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
       if (!base_byte_size)
         return false;
       uint32_t data_offset = 0;
@@ -673,7 +673,8 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  std::optional<uint64_t> byte_size = return_compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> byte_size =
+      llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
   if (!byte_size)
     return return_valobj_sp;
 

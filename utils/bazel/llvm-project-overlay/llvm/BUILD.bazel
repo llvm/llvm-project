@@ -1029,6 +1029,15 @@ cc_library(
 )
 
 cc_library(
+    name = "Telemetry",
+    srcs = glob(["lib/Telemetry/*.cpp"]),
+    hdrs = glob(["include/llvm/Telemetry/*.h"]),
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [":Support"],
+)
+
+cc_library(
     name = "TextAPI",
     srcs = glob(
         [
@@ -5105,6 +5114,11 @@ llvm_driver_cc_binary(
     name = "llvm-ml",
     stamp = 0,
     deps = [":llvm-ml-lib"],
+)
+
+binary_alias(
+    name = "llvm-ml64",
+    binary = ":llvm-ml",
 )
 
 cc_binary(

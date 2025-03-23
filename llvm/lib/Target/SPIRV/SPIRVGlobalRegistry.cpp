@@ -22,12 +22,29 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <functional>
 
 using namespace llvm;
+
+namespace {
+
+bool allowEmitFakeUse(const Value *Arg) {
+  if (isSpvIntrinsic(Arg))
+    return false;
+  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
+      dyn_cast<UndefValue>(Arg))
+    return false;
+  if (const auto *LI = dyn_cast<LoadInst>(Arg))
+    if (LI->getType()->isAggregateType())
+      return false;
+  return true;
+}
 
 inline unsigned typeToAddressSpace(const Type *Ty) {
   if (auto PType = dyn_cast<TypedPointerType>(Ty))
@@ -39,6 +56,8 @@ inline unsigned typeToAddressSpace(const Type *Ty) {
     return ExtTy->getIntParameter(0);
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
+
+} // anonymous namespace
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -989,8 +1008,8 @@ SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
-  if (ForwardPointerTypes.contains(Ty))
-    return ForwardPointerTypes[Ty];
+  if (auto It = ForwardPointerTypes.find(Ty); It != ForwardPointerTypes.end())
+    return It->second;
   return restOfCreateSPIRVType(Ty, MIRBuilder, AccQual, EmitIR);
 }
 
@@ -1084,14 +1103,15 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
   // Null pointer means we have a loop in type definitions, make and
   // return corresponding OpTypeForwardPointer.
   if (SpvElementType == nullptr) {
-    if (!ForwardPointerTypes.contains(Ty))
-      ForwardPointerTypes[Ty] = getOpTypeForwardPointer(SC, MIRBuilder);
-    return ForwardPointerTypes[Ty];
+    auto [It, Inserted] = ForwardPointerTypes.try_emplace(Ty);
+    if (Inserted)
+      It->second = getOpTypeForwardPointer(SC, MIRBuilder);
+    return It->second;
   }
   // If we have forward pointer associated with this type, use its register
   // operand to create OpTypePointer.
-  if (ForwardPointerTypes.contains(Ty)) {
-    Register Reg = getSPIRVTypeID(ForwardPointerTypes[Ty]);
+  if (auto It = ForwardPointerTypes.find(Ty); It != ForwardPointerTypes.end()) {
+    Register Reg = getSPIRVTypeID(It->second);
     return getOpTypePointer(SC, SpvElementType, MIRBuilder, Reg);
   }
 
@@ -1436,6 +1456,32 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
   return SpirvTy;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateUnknownType(
+    const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode,
+    const ArrayRef<MCOperand> Operands) {
+  Register ResVReg = DT.find(Ty, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+
+  DT.add(Ty, &MIRBuilder.getMF(), ResVReg);
+
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    MachineInstrBuilder MIB = MIRBuilder.buildInstr(SPIRV::UNKNOWN_type)
+                                  .addDef(ResVReg)
+                                  .addImm(Opcode);
+    for (MCOperand Operand : Operands) {
+      if (Operand.isReg()) {
+        MIB.addUse(Operand.getReg());
+      } else if (Operand.isImm()) {
+        MIB.addImm(Operand.getImm());
+      }
+    }
+
+    return MIB;
+  });
+}
+
 const MachineInstr *
 SPIRVGlobalRegistry::checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
                                        MachineIRBuilder &MIRBuilder) {
@@ -1738,4 +1784,132 @@ LLT SPIRVGlobalRegistry::getRegType(SPIRVType *SpvType) const {
   }
   }
   return LLT::scalar(64);
+}
+
+// Aliasing list MD contains several scope MD nodes whithin it. Each scope MD
+// has a selfreference and an extra MD node for aliasing domain and also it
+// can contain an optional string operand. Domain MD contains a self-reference
+// with an optional string operand. Here we unfold the list, creating SPIR-V
+// aliasing instructions.
+// TODO: add support for an optional string operand.
+MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
+    MachineIRBuilder &MIRBuilder, const MDNode *AliasingListMD) {
+  if (AliasingListMD->getNumOperands() == 0)
+    return nullptr;
+  if (auto L = AliasInstMDMap.find(AliasingListMD); L != AliasInstMDMap.end())
+    return L->second;
+
+  SmallVector<MachineInstr *> ScopeList;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  for (const MDOperand &MDListOp : AliasingListMD->operands()) {
+    if (MDNode *ScopeMD = dyn_cast<MDNode>(MDListOp)) {
+      if (ScopeMD->getNumOperands() < 2)
+        return nullptr;
+      MDNode *DomainMD = dyn_cast<MDNode>(ScopeMD->getOperand(1));
+      if (!DomainMD)
+        return nullptr;
+      auto *Domain = [&] {
+        auto D = AliasInstMDMap.find(DomainMD);
+        if (D != AliasInstMDMap.end())
+          return D->second;
+        const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+        auto MIB =
+            MIRBuilder.buildInstr(SPIRV::OpAliasDomainDeclINTEL).addDef(Ret);
+        return MIB.getInstr();
+      }();
+      AliasInstMDMap.insert(std::make_pair(DomainMD, Domain));
+      auto *Scope = [&] {
+        auto S = AliasInstMDMap.find(ScopeMD);
+        if (S != AliasInstMDMap.end())
+          return S->second;
+        const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+        auto MIB = MIRBuilder.buildInstr(SPIRV::OpAliasScopeDeclINTEL)
+                       .addDef(Ret)
+                       .addUse(Domain->getOperand(0).getReg());
+        return MIB.getInstr();
+      }();
+      AliasInstMDMap.insert(std::make_pair(ScopeMD, Scope));
+      ScopeList.push_back(Scope);
+    }
+  }
+
+  const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+  auto MIB =
+      MIRBuilder.buildInstr(SPIRV::OpAliasScopeListDeclINTEL).addDef(Ret);
+  for (auto *Scope : ScopeList)
+    MIB.addUse(Scope->getOperand(0).getReg());
+  auto List = MIB.getInstr();
+  AliasInstMDMap.insert(std::make_pair(AliasingListMD, List));
+  return List;
+}
+
+void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
+    Register Reg, MachineIRBuilder &MIRBuilder, uint32_t Dec,
+    const MDNode *AliasingListMD) {
+  MachineInstr *AliasList =
+      getOrAddMemAliasingINTELInst(MIRBuilder, AliasingListMD);
+  if (!AliasList)
+    return;
+  MIRBuilder.buildInstr(SPIRV::OpDecorate)
+      .addUse(Reg)
+      .addImm(Dec)
+      .addUse(AliasList->getOperand(0).getReg());
+}
+void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
+                                             bool DeleteOld) {
+  Old->replaceAllUsesWith(New);
+  updateIfExistDeducedElementType(Old, New, DeleteOld);
+  updateIfExistAssignPtrTypeInstr(Old, New, DeleteOld);
+}
+
+void SPIRVGlobalRegistry::buildAssignType(IRBuilder<> &B, Type *Ty,
+                                          Value *Arg) {
+  Value *OfType = getNormalizedPoisonValue(Ty);
+  CallInst *AssignCI = nullptr;
+  if (Arg->getType()->isAggregateType() && Ty->isAggregateType() &&
+      allowEmitFakeUse(Arg)) {
+    LLVMContext &Ctx = Arg->getContext();
+    SmallVector<Metadata *, 2> ArgMDs{
+        MDNode::get(Ctx, ValueAsMetadata::getConstant(OfType)),
+        MDString::get(Ctx, Arg->getName())};
+    B.CreateIntrinsic(Intrinsic::spv_value_md, {},
+                      {MetadataAsValue::get(Ctx, MDTuple::get(Ctx, ArgMDs))});
+    AssignCI = B.CreateIntrinsic(Intrinsic::fake_use, {}, {Arg});
+  } else {
+    AssignCI = buildIntrWithMD(Intrinsic::spv_assign_type, {Arg->getType()},
+                               OfType, Arg, {}, B);
+  }
+  addAssignPtrTypeInstr(Arg, AssignCI);
+}
+
+void SPIRVGlobalRegistry::buildAssignPtr(IRBuilder<> &B, Type *ElemTy,
+                                         Value *Arg) {
+  Value *OfType = PoisonValue::get(ElemTy);
+  CallInst *AssignPtrTyCI = findAssignPtrTypeInstr(Arg);
+  Function *CurrF =
+      B.GetInsertBlock() ? B.GetInsertBlock()->getParent() : nullptr;
+  if (AssignPtrTyCI == nullptr ||
+      AssignPtrTyCI->getParent()->getParent() != CurrF) {
+    AssignPtrTyCI = buildIntrWithMD(
+        Intrinsic::spv_assign_ptr_type, {Arg->getType()}, OfType, Arg,
+        {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
+    addDeducedElementType(AssignPtrTyCI, ElemTy);
+    addDeducedElementType(Arg, ElemTy);
+    addAssignPtrTypeInstr(Arg, AssignPtrTyCI);
+  } else {
+    updateAssignType(AssignPtrTyCI, Arg, OfType);
+  }
+}
+
+void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
+                                           Value *OfType) {
+  AssignCI->setArgOperand(1, buildMD(OfType));
+  if (cast<IntrinsicInst>(AssignCI)->getIntrinsicID() !=
+      Intrinsic::spv_assign_ptr_type)
+    return;
+
+  // update association with the pointee type
+  Type *ElemTy = OfType->getType();
+  addDeducedElementType(AssignCI, ElemTy);
+  addDeducedElementType(Arg, ElemTy);
 }
