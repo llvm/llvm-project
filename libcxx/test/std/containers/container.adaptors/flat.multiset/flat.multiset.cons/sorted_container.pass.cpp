@@ -55,14 +55,14 @@ void test() {
   {
     // flat_multiset(sorted_equivalent_t, container_type)
     using M             = std::flat_multiset<int>;
-    std::vector<int> ks = {1, 2, 4, 10};
+    std::vector<int> ks = {1, 2, 2, 4, 10};
     auto ks2            = ks;
 
     auto m = M(std::sorted_equivalent, ks);
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 2, 4, 10}));
     m = M(std::sorted_equivalent, std::move(ks));
     assert(ks.empty()); // it was moved-from
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 2, 4, 10}));
 
     // explicit(false)
     M m2 = {std::sorted_equivalent, std::move(ks2)};
@@ -73,32 +73,32 @@ void test() {
     // non-default container, comparator and allocator type
     using Ks = std::deque<int, min_allocator<int>>;
     using M  = std::flat_multiset<int, std::greater<int>, Ks>;
-    Ks ks    = {10, 4, 2, 1};
+    Ks ks    = {10, 4, 4, 2, 1};
     auto m   = M(std::sorted_equivalent, ks);
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 4, 4, 10}));
     m = M(std::sorted_equivalent, std::move(ks));
     assert(ks.empty()); // it was moved-from
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 4, 4, 10}));
   }
   {
     // flat_multiset(sorted_equivalent_t, container_type)
     // allocator copied into the containers
     using A = test_allocator<int>;
     using M = std::flat_multiset<int, std::less<int>, std::deque<int, A>>;
-    auto ks = std::deque<int, A>({1, 2, 4, 10}, A(4));
+    auto ks = std::deque<int, A>({1, 2, 2, 4, 10}, A(4));
     auto m  = M(std::sorted_equivalent, std::move(ks));
     assert(ks.empty()); // it was moved-from
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 2, 4, 10}));
     assert(std::move(m).extract().get_allocator() == A(4));
   }
   {
     // flat_multiset(sorted_equivalent_t, container_type ,  key_compare)
     using C             = test_less<int>;
     using M             = std::flat_multiset<int, C>;
-    std::vector<int> ks = {1, 2, 4, 10};
+    std::vector<int> ks = {1, 2, 2, 4, 10};
 
     auto m = M(std::sorted_equivalent, ks, C(4));
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 2, 4, 10}));
     assert(m.key_comp() == C(4));
 
     // explicit(false)
@@ -111,9 +111,9 @@ void test() {
     using C                = test_less<int>;
     using A                = test_allocator<int>;
     using M                = std::flat_multiset<int, C, std::vector<int, A>>;
-    std::vector<int, A> ks = {1, 2, 4, 10};
+    std::vector<int, A> ks = {1, 2, 2, 4, 10};
     auto m                 = M(std::sorted_equivalent, ks, C(4), A(5));
-    assert((m == M{1, 2, 4, 10}));
+    assert((m == M{1, 2, 2, 4, 10}));
     assert(m.key_comp() == C(4));
     assert(M(m).extract().get_allocator() == A(5));
 
@@ -127,10 +127,10 @@ void test() {
     // flat_multiset(sorted_equivalent_t, container_type , const Allocator&)
     using A = test_allocator<int>;
     using M = std::flat_multiset<int, std::less<int>, std::deque<int, A>>;
-    auto ks = std::deque<int, A>({1, 2, 4, 10}, A(4));
+    auto ks = std::deque<int, A>({1, 2, 2, 4, 10}, A(4));
     auto m  = M(std::sorted_equivalent, ks, A(6)); // replaces the allocators
-    assert(!ks.empty());                       // it was an lvalue above
-    assert((m == M{1, 2, 4, 10}));
+    assert(!ks.empty());                           // it was an lvalue above
+    assert((m == M{1, 2, 2, 4, 10}));
     assert(M(m).extract().get_allocator() == A(6));
 
     // explicit(false)

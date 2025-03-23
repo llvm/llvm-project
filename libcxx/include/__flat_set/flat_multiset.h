@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___FLAT_MAP_FLAT_MULTISET_H
 #define _LIBCPP___FLAT_MAP_FLAT_MULTISET_H
 
+#include "utils.h"
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/min.h>
 #include <__algorithm/ranges_equal.h>
@@ -32,6 +33,7 @@
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_equivalent.h>
 #include <__flat_set/ra_iterator.h>
+#include <__flat_set/utils.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
@@ -66,6 +68,7 @@
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
+#include <algorithm>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -83,6 +86,8 @@ template <class _Key, class _Compare = less<_Key>, class _KeyContainer = vector<
 class flat_multiset {
   template <class, class, class>
   friend class flat_multiset;
+
+  friend __flat_set_utils;
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
   static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
@@ -356,9 +361,9 @@ public:
     requires is_constructible_v<value_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator emplace(_Args&&... __args) {
     if constexpr (sizeof...(__args) == 1 && (is_same_v<remove_cvref_t<_Args>, _Key> && ...)) {
-      return __try_emplace(std::forward<_Args>(__args)...);
+      return __emplace(std::forward<_Args>(__args)...);
     } else {
-      return __try_emplace(_Key(std::forward<_Args>(__args)...));
+      return __emplace(_Key(std::forward<_Args>(__args)...));
     }
   }
 
@@ -448,7 +453,7 @@ public:
       __reserve(ranges::size(__range));
     }
 
-    __append_sort_merge</*WasSorted = */ false>(ranges::begin(__range), ranges::end(__range));
+    __append_sort_merge</*WasSorted = */ false>(std::forward<_Range>(__range));
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
@@ -627,32 +632,11 @@ public:
   friend _LIBCPP_HIDE_FROM_ABI void swap(flat_multiset& __x, flat_multiset& __y) noexcept { __x.swap(__y); }
 
 private:
-  // todo: share with flat_set
-  template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void __append(_InputIterator __first, _InputIterator __last) {
-    __keys_.insert(__keys_.end(), std::move(__first), std::move(__last));
-  }
-
-  template <class _Range>
-  _LIBCPP_HIDE_FROM_ABI void __append(_Range&& __rng) {
-    if constexpr (requires { __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng)); }) {
-      // C++23 Sequence Container should have insert_range member function
-      // Note that not all Sequence Containers provide append_range.
-      __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng));
-    } else if constexpr (ranges::common_range<_Range>) {
-      __keys_.insert(__keys_.end(), ranges::begin(__rng), ranges::end(__rng));
-    } else {
-      for (auto&& __x : __rng) {
-        __keys_.insert(__keys_.end(), std::forward<decltype(__x)>(__x));
-      }
-    }
-  }
-
   template <bool _WasSorted, class... _Args>
   _LIBCPP_HIDE_FROM_ABI void __append_sort_merge(_Args&&... __args) {
     auto __on_failure    = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
     size_type __old_size = size();
-    __append(std::forward<_Args>(__args)...);
+    __flat_set_utils::__append(*this, std::forward<_Args>(__args)...);
     if (size() != __old_size) {
       if constexpr (!_WasSorted) {
         ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
@@ -665,11 +649,17 @@ private:
     __on_failure.__complete();
   }
 
+  template <class _Kp>
+  _LIBCPP_HIDE_FROM_ABI iterator __emplace(_Kp&& __key) {
+    auto __it = upper_bound(__key);
+    return __flat_set_utils::__emplace_exact_pos(*this, __it, std::forward<_Kp>(__key));
+  }
+
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __find_impl(_Self&& __self, const _Kp& __key) {
     auto __it   = __self.lower_bound(__key);
     auto __last = __self.end();
-    if (__it == __last || __self.__compare_(__key, __it->first)) {
+    if (__it == __last || __self.__compare_(__key, *__it)) {
       return __last;
     }
     return __it;
