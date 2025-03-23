@@ -329,9 +329,10 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
 }
 
 /// Primitives.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+                       MetadataSize MD, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
+    : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)), Size(ElemSize),
       MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
       CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)),
