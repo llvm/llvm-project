@@ -67,15 +67,6 @@ void test() {
   test_one<std::vector<int, min_allocator<int>>>();
 }
 
-void test() {
-  test_one<std::vector<int>>();
-  test_one<std::vector<int>>();
-  test_one<std::deque<int>>();
-  test_one<MinSequenceContainer<int>>();
-  test_one<std::vector<int, min_allocator<int>>>();
-  test_one<std::vector<int, min_allocator<int>>>();
-}
-
 int main(int, char**) {
   test();
 

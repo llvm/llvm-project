@@ -26,6 +26,7 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "test_allocator.h"
+#include "../helpers.h"
 #include "../../../test_compare.h"
 
 void test() {
@@ -62,7 +63,7 @@ void test() {
     assert(ks.get_allocator().resource() != &mr);
     vm.emplace_back(ks);
     assert(ks.size() == 9); // ks' value is unchanged, since it was an lvalue above
-    assert((vm[0] == M{1, 2, 3}));
+    assert((vm[0] == M{1, 1, 1, 2, 2, 2, 3, 3, 3}));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
   {
@@ -135,7 +136,7 @@ void test() {
     std::pmr::vector<M> vm(&mr);
     std::initializer_list<M::value_type> il = {3, 1, 4, 1, 5};
     vm.emplace_back(il);
-    assert((vm[0] == M{1, 3, 4, 5}));
+    assert((vm[0] == M{1, 1, 3, 4, 5}));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
   {
@@ -146,14 +147,14 @@ void test() {
     std::pmr::vector<M> vm(&mr);
     std::initializer_list<M::value_type> il = {3, 1, 4, 1, 5};
     vm.emplace_back(il, C(5));
-    assert((vm[0] == M{1, 3, 4, 5}));
+    assert((vm[0] == M{1, 1, 3, 4, 5}));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
     assert(vm[0].key_comp() == C(5));
   }
   {
     // flat_multiset(InputIterator first, InputIterator last, const Allocator& a);
     int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-    int expected[] = {1, 2, 3};
+    int expected[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
     {
       //  cpp17 iterator
       using M = std::flat_multiset<int, std::less<int>, std::pmr::vector<int>>;
@@ -174,7 +175,7 @@ void test() {
   }
   {
     // flat_multiset(flat_multiset&&, const allocator_type&);
-    int expected[] = {1, 2, 3};
+    int expected[] = {1, 1, 2, 3};
     using C        = test_less<int>;
     using M        = std::flat_multiset<int, C, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr1;
@@ -183,8 +184,8 @@ void test() {
     M m  = {std::move(mo), &mr2}; // also test the implicitness of this constructor
 
     assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
-    assert(std::equal(m.begin(), m.end(), expected, expected + 3));
+    assert(m.size() == 4);
+    assert(std::ranges::equal(m, expected));
     assert(std::move(m).extract().get_allocator().resource() == &mr2);
 
     // The original flat_multiset is moved-from.
@@ -198,7 +199,7 @@ void test() {
     std::pmr::vector<M> vs;
     M m = {1, 3, 1, 2};
     vs.push_back(std::move(m));
-    assert((std::move(vs[0]).extract() == std::pmr::deque<int>{1, 2, 3}));
+    assert((std::move(vs[0]).extract() == std::pmr::deque<int>{1, 1, 2, 3}));
   }
   {
     // flat_multiset& operator=(flat_multiset&&);
@@ -211,17 +212,17 @@ void test() {
     M m = M({"don't care"}, &mr2);
     m   = std::move(mo);
     assert(m.size() == 2);
-    assert(std::is_sorted(m.begin(), m.end(), m.value_comp()));
+    check_invariant(m);
     assert(m.begin()->get_allocator().resource() == &mr2);
 
-    assert(std::is_sorted(mo.begin(), mo.end(), mo.value_comp()));
+    check_invariant(mo);
     mo.insert("foo");
     assert(mo.begin()->get_allocator().resource() == &mr1);
   }
   {
     //  flat_multiset(from_range_t, R&&, const Alloc&);
     int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-    int expected[] = {1, 2, 3};
+    int expected[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
     {
       // input_range
       using M    = std::flat_multiset<int, std::less<int>, std::pmr::vector<int>>;
@@ -249,10 +250,10 @@ void test() {
     using M = std::flat_multiset<int, std::less<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks = {1, 2, 4, 10};
+    std::pmr::vector<int> ks = {1, 1, 2, 4, 10};
     vm.emplace_back(std::sorted_equivalent, ks);
     assert(!ks.empty()); // it was an lvalue above
-    assert((vm[0] == M{1, 2, 4, 10}));
+    assert((vm[0] == M{1, 1, 2, 4, 10}));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
   {
@@ -260,9 +261,9 @@ void test() {
     using M = std::flat_multiset<int, std::less<int>, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    std::pmr::vector<int> ks({1, 2, 4, 10}, &mr);
+    std::pmr::vector<int> ks({1, 1, 2, 4, 10}, &mr);
     vm.emplace_back(std::sorted_equivalent, ks);
-    assert((vm[0] == M{1, 2, 4, 10}));
+    assert((vm[0] == M{1, 1, 2, 4, 10}));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
   {
@@ -272,10 +273,10 @@ void test() {
     using M = std::flat_multiset<int, C, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    int ar[] = {1, 2, 4, 5};
+    int ar[] = {1, 1, 2, 4, 5};
     vm.emplace_back(
-        std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 4), C(3));
-    assert((vm[0] == M{1, 2, 4, 5}));
+        std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 5), C(3));
+    assert((vm[0] == M{1, 1, 2, 4, 5}));
     assert(vm[0].key_comp() == C(3));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }
@@ -298,10 +299,10 @@ void test() {
     using M = std::flat_multiset<int, C, std::pmr::vector<int>>;
     std::pmr::monotonic_buffer_resource mr;
     std::pmr::vector<M> vm(&mr);
-    int ar[] = {1, 2, 4, 5};
+    int ar[] = {1, 1, 2, 4, 5};
     vm.emplace_back(
-        std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 4), C(3));
-    assert((vm[0] == M{1, 2, 4, 5}));
+        std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 5), C(3));
+    assert((vm[0] == M{1, 1, 2, 4, 5}));
     assert(vm[0].key_comp() == C(3));
     assert(std::move(vm[0]).extract().get_allocator().resource() == &mr);
   }

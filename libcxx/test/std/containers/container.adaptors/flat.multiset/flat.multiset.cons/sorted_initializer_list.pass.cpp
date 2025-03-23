@@ -31,7 +31,7 @@
 #include "../../../test_compare.h"
 
 template <class T>
-std::initializer_list<T> il = {1, 2, 4, 5};
+std::initializer_list<T> il = {1, 2, 4, 4, 5};
 
 void test() {
   const auto il1 = il<int>;
@@ -66,18 +66,22 @@ void test() {
     using C = typename M::key_compare;
     static_assert(std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<int>>);
     static_assert(std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<int>, C>);
-    static_assert(std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<int>, C, std::allocator<int>>);
-    static_assert(std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<int>, std::allocator<int>>);
+    static_assert(
+        std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<int>, C, std::allocator<int>>);
+    static_assert(
+        std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<int>, std::allocator<int>>);
     static_assert(!std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>>);
     static_assert(!std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, C>);
     static_assert(
-        !std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, C, std::allocator<int>>);
+        !std::
+            is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, C, std::allocator<int>>);
     static_assert(
         !std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, std::allocator<int>>);
     static_assert(!std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>>);
     static_assert(!std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, C>);
     static_assert(
-        !std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, C, std::allocator<int>>);
+        !std::
+            is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, C, std::allocator<int>>);
     static_assert(
         !std::is_constructible_v<M, std::sorted_equivalent_t, std::initializer_list<const int>, std::allocator<int>>);
   }
@@ -86,7 +90,7 @@ void test() {
     // flat_multiset(sorted_equivalent_t, initializer_list<value_type>);
     using M       = std::flat_multiset<int>;
     auto m        = M(std::sorted_equivalent, il1);
-    auto expected = M{1, 2, 4, 5};
+    auto expected = M{1, 2, 4, 4, 5};
     assert(m == expected);
 
     // explicit(false)
@@ -97,7 +101,7 @@ void test() {
     // flat_multiset(sorted_equivalent_t, initializer_list<value_type>, const key_compare&);
     using M = std::flat_multiset<int, std::function<bool(int, int)>>;
     auto m  = M(std::sorted_equivalent, il1, std::less<int>());
-    assert(m == M({1, 2, 4, 5}, std::less<>()));
+    assert(m == M({1, 2, 4, 4, 5}, std::less<>()));
     assert(m.key_comp()(1, 2) == true);
 
     // explicit(false)
@@ -108,16 +112,16 @@ void test() {
     // flat_multiset(sorted_equivalent_t, initializer_list<value_type>, const key_compare&);
     // greater
     using M = std::flat_multiset<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    std::initializer_list<int> il4{5, 4, 2, 1};
+    std::initializer_list<int> il4{5, 4, 4, 2, 1};
     auto m = M(std::sorted_equivalent, il4, std::greater<int>());
-    assert((m == M{5, 4, 2, 1}));
+    assert((m == M{5, 4, 4, 2, 1}));
   }
   {
     // flat_multiset(sorted_equivalent_t, initializer_list<value_type>,  const Allocator&)
     using A1      = test_allocator<short>;
     using M       = std::flat_multiset<short, std::less<int>, std::deque<short, A1>>;
     auto m        = M(std::sorted_equivalent, il2, A1(5));
-    auto expected = M{1, 2, 4, 5};
+    auto expected = M{1, 2, 4, 4, 5};
     assert(m == expected);
     assert(M(m).extract().get_allocator() == A1(5));
 
@@ -132,7 +136,7 @@ void test() {
     using A1 = test_allocator<short>;
     using M  = std::flat_multiset<short, C, std::vector<short, A1>>;
     auto m   = M(std::sorted_equivalent, il2, C(3), A1(5));
-    assert((m == M{1, 2, 4, 5}));
+    assert((m == M{1, 2, 4, 4, 5}));
     assert(m.key_comp() == C(3));
     assert(std::move(m).extract().get_allocator() == A1(5));
   }
@@ -142,7 +146,7 @@ void test() {
     using A1 = test_allocator<short>;
     using M  = std::flat_multiset<short, std::less<int>, std::deque<short, A1>>;
     M m      = {std::sorted_equivalent, il2, {}, A1(5)}; // implicit ctor
-    assert((m == M{1, 2, 4, 5}));
+    assert((m == M{1, 2, 4, 4, 5}));
     assert(std::move(m).extract().get_allocator() == A1(5));
   }
 }

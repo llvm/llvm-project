@@ -372,6 +372,7 @@ set(files
   __flat_set/flat_multiset.h
   __flat_set/flat_set.h
   __flat_set/ra_iterator.h
+  __flat_set/utils.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h

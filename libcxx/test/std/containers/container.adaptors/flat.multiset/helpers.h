@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_FLAT_SET_HELPERS_H
-#define SUPPORT_FLAT_SET_HELPERS_H
+#ifndef SUPPORT_flat_multiset_HELPERS_H
+#define SUPPORT_flat_multiset_HELPERS_H
 
 #include <algorithm>
 #include <cassert>
@@ -19,15 +19,9 @@
 #include "test_macros.h"
 
 template <class... Args>
-void check_invariant(const std::flat_set<Args...>& m) {
+void check_invariant(const std::flat_multiset<Args...>& m) {
   assert(std::is_sorted(m.begin(), m.end(), m.key_comp()));
-  auto key_equal = [&](const auto& x, const auto& y) {
-    const auto& c = m.key_comp();
-    return !c(x, y) && !c(y, x);
-  };
-  assert(std::adjacent_find(m.begin(), m.end(), key_equal) == m.end());
 }
-
 struct StartsWith {
   explicit StartsWith(char ch) : lower_(1, ch), upper_(1, ch + 1) {}
   StartsWith(const StartsWith&)     = delete;
@@ -185,6 +179,7 @@ struct ThrowOnMoveContainer : std::vector<T> {
 
 #endif
 
+#if 0
 template <class F>
 void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -192,7 +187,7 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
   {
     // Throw on emplace the key, and underlying has strong exception guarantee
     using KeyContainer = std::vector<int, test_allocator<int>>;
-    using M            = std::flat_set<int, C, KeyContainer>;
+    using M            = std::flat_multiset<int, C, KeyContainer>;
 
     LIBCPP_STATIC_ASSERT(std::__container_traits<KeyContainer>::__emplacement_has_strong_exception_safety_guarantee);
 
@@ -200,7 +195,7 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
 
     KeyContainer a({1, 2, 3, 4}, test_allocator<int>{&stats});
     [[maybe_unused]] auto expected_keys = a;
-    M m(std::sorted_unique, std::move(a));
+    M m(std::sorted_equivalent, std::move(a));
 
     stats.throw_after = 1;
     try {
@@ -208,7 +203,7 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
       assert(false);
     } catch (const std::bad_alloc&) {
       check_invariant(m);
-      // In libc++, the flat_set is unchanged
+      // In libc++, the flat_multiset is unchanged
       LIBCPP_ASSERT(m.size() == 4);
       LIBCPP_ASSERT(std::ranges::equal(m, expected_keys));
     }
@@ -216,17 +211,17 @@ void test_emplace_exception_guarantee([[maybe_unused]] F&& emplace_function) {
   {
     // Throw on emplace the key, and underlying has no strong exception guarantee
     using KeyContainer = EmplaceUnsafeContainer<int>;
-    using M            = std::flat_set<int, C, KeyContainer>;
+    using M            = std::flat_multiset<int, C, KeyContainer>;
 
     LIBCPP_STATIC_ASSERT(!std::__container_traits<KeyContainer>::__emplacement_has_strong_exception_safety_guarantee);
     KeyContainer a = {1, 2, 3, 4};
-    M m(std::sorted_unique, std::move(a));
+    M m(std::sorted_equivalent, std::move(a));
     try {
       emplace_function(m, 0);
       assert(false);
     } catch (int) {
       check_invariant(m);
-      // In libc++, the flat_set is cleared
+      // In libc++, the flat_multiset is cleared
       LIBCPP_ASSERT(m.size() == 0);
     }
   }
@@ -237,10 +232,10 @@ template <class F>
 void test_insert_range_exception_guarantee([[maybe_unused]] F&& insert_function) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
   using KeyContainer = EmplaceUnsafeContainer<int>;
-  using M            = std::flat_set<int, std::ranges::less, KeyContainer>;
+  using M            = std::flat_multiset<int, std::ranges::less, KeyContainer>;
   test_allocator_statistics stats;
   KeyContainer a{1, 2, 3, 4};
-  M m(std::sorted_unique, std::move(a));
+  M m(std::sorted_equivalent, std::move(a));
 
   std::vector<int> newValues = {0, 1, 5, 6, 7, 8};
   stats.throw_after          = 1;
@@ -261,10 +256,10 @@ void test_erase_exception_guarantee([[maybe_unused]] F&& erase_function) {
   {
     // key erase throws
     using KeyContainer = ThrowOnEraseContainer<int>;
-    using M            = std::flat_set<int, TransparentComparator, KeyContainer>;
+    using M            = std::flat_multiset<int, TransparentComparator, KeyContainer>;
 
     KeyContainer a{1, 2, 3, 4};
-    M m(std::sorted_unique, std::move(a));
+    M m(std::sorted_equivalent, std::move(a));
     try {
       erase_function(m, 3);
       assert(false);
@@ -304,4 +299,5 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-#endif // SUPPORT_FLAT_SET_HELPERS_H
+#endif // 0 
+#endif // SUPPORT_flat_multiset_HELPERS_H

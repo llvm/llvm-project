@@ -80,7 +80,7 @@ void test() {
   }
 
   int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-  int expected[] = {1, 2, 3};
+  int expected[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
   {
     // flat_multiset(from_range_t, R&&)
     // input_range && !common
@@ -90,7 +90,6 @@ void test() {
     using R    = std::ranges::subrange<Iter, Sent>;
     auto m     = M(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
     assert(std::ranges::equal(m, expected));
-    LIBCPP_ASSERT(std::ranges::equal(m, expected));
 
     // explicit(false)
     M m2 = {std::from_range, R(Iter(ar), Sent(Iter(ar + 9)))};
@@ -104,7 +103,7 @@ void test() {
     using Sent = sentinel_wrapper<Iter>;
     using R    = std::ranges::subrange<Iter, Sent>;
     auto m     = M(std::from_range, R(Iter(ar), Sent(Iter(ar + 9))));
-    assert(std::ranges::equal(m, std::deque<int, min_allocator<int>>{3, 2, 1}));
+    assert(std::ranges::equal(m, std::deque<int, min_allocator<int>>{3, 3, 3, 2, 2, 2, 1, 1, 1}));
   }
   {
     // flat_multiset(from_range_t, R&&)

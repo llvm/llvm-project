@@ -56,13 +56,13 @@ void test() {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator);
     // cpp17_input_iterator
     using M  = std::flat_multiset<int>;
-    int ar[] = {1, 2, 4, 5};
-    auto m   = M(std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 4));
-    auto expected = M{1, 2, 4, 5};
+    int ar[] = {1, 2, 2, 4, 5};
+    auto m = M(std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 5));
+    auto expected = M{1, 2, 2, 4, 5};
     assert(m == expected);
 
     // explicit(false)
-    M m2 = {std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 4)};
+    M m2 = {std::sorted_equivalent, cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 5)};
     assert(m2 == m);
   }
   {
@@ -70,27 +70,27 @@ void test() {
     // contiguous iterator
     using C       = test_less<int>;
     using M       = std::flat_multiset<int, C, std::vector<int, min_allocator<int>>>;
-    int ar[]      = {1, 2, 4, 5};
-    auto m        = M(std::sorted_equivalent, ar, ar + 4);
-    auto expected = M{1, 2, 4, 5};
+    int ar[]      = {1, 2, 4, 4, 5};
+    auto m        = M(std::sorted_equivalent, ar, ar + 5);
+    auto expected = M{1, 2, 4, 4, 5};
     assert(m == expected);
   }
   {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&);
     // cpp_17_input_iterator
     using M  = std::flat_multiset<int, std::function<bool(int, int)>>;
-    int ar[] = {1, 2, 4, 5};
+    int ar[] = {1, 2, 4, 4, 5};
     auto m   = M(std::sorted_equivalent,
                cpp17_input_iterator<const int*>(ar),
-               cpp17_input_iterator<const int*>(ar + 4),
+               cpp17_input_iterator<const int*>(ar + 5),
                std::less<int>());
-    assert(m == M({1, 2, 4, 5}, std::less<>()));
+    assert(m == M({1, 2, 4, 4, 5}, std::less<>()));
     assert(m.key_comp()(1, 2) == true);
 
     // explicit(false)
     M m2 = {std::sorted_equivalent,
             cpp17_input_iterator<const int*>(ar),
-            cpp17_input_iterator<const int*>(ar + 4),
+            cpp17_input_iterator<const int*>(ar + 5),
             std::less<int>()};
     assert(m2 == m);
   }
@@ -98,12 +98,12 @@ void test() {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&);
     // greater
     using M  = std::flat_multiset<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
-    int ar[] = {5, 4, 2, 1};
+    int ar[] = {5, 4, 4, 2, 1};
     auto m   = M(std::sorted_equivalent,
                cpp17_input_iterator<const int*>(ar),
-               cpp17_input_iterator<const int*>(ar + 4),
+               cpp17_input_iterator<const int*>(ar + 5),
                std::greater<int>());
-    assert((m == M{5, 4, 2, 1}));
+    assert((m == M{5, 4, 4, 2, 1}));
   }
   {
     // flat_multiset(sorted_equivalent_t, InputIterator, InputIterator, const key_compare&);
@@ -119,14 +119,14 @@ void test() {
     // flat_multiset(sorted_equivalent_t, InputIterator , InputIterator, const Allocator&)
     using A1      = test_allocator<int>;
     using M       = std::flat_multiset<int, std::less<int>, std::vector<int, A1>>;
-    int ar[]      = {1, 2, 4, 5};
-    auto m        = M(std::sorted_equivalent, ar, ar + 4, A1(5));
-    auto expected = M{1, 2, 4, 5};
+    int ar[]      = {1, 2, 4, 4, 5};
+    auto m        = M(std::sorted_equivalent, ar, ar + 5, A1(5));
+    auto expected = M{1, 2, 4, 4, 5};
     assert(m == expected);
     assert(M(m).extract().get_allocator() == A1(5));
 
     // explicit(false)
-    M m2 = {std::sorted_equivalent, ar, ar + 4, A1(5)};
+    M m2 = {std::sorted_equivalent, ar, ar + 5, A1(5)};
     assert(m2 == m);
     assert(std::move(m2).extract().get_allocator() == A1(5));
   }
@@ -135,9 +135,9 @@ void test() {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
     using M  = std::flat_multiset<int, C, std::deque<int, A1>>;
-    int ar[] = {1, 2, 4, 5};
-    auto m   = M(std::sorted_equivalent, ar, ar + 4, C(3), A1(5));
-    assert((m == M{1, 2, 4, 5}));
+    int ar[] = {1, 2, 4, 4, 5};
+    auto m   = M(std::sorted_equivalent, ar, ar + 5, C(3), A1(5));
+    assert((m == M{1, 2, 4, 4, 5}));
     assert(m.key_comp() == C(3));
     assert(std::move(m).extract().get_allocator() == A1(5));
   }
@@ -146,9 +146,9 @@ void test() {
     // explicit(false)
     using A1 = test_allocator<short>;
     using M  = std::flat_multiset<short, std::less<int>, std::deque<short, A1>>;
-    int ar[] = {1, 2, 4, 5};
-    M m      = {std::sorted_equivalent, ar, ar + 4, {}, A1(5)}; // implicit ctor
-    assert((m == M{1, 2, 4, 5}));
+    int ar[] = {1, 2, 4, 4, 5};
+    M m      = {std::sorted_equivalent, ar, ar + 5, {}, A1(5)}; // implicit ctor
+    assert((m == M{1, 2, 4, 4, 5}));
     assert(std::move(m).extract().get_allocator() == A1(5));
   }
 }
