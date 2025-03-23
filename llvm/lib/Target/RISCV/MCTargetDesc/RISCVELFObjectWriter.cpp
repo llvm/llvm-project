@@ -67,6 +67,12 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     if (auto *S = Target.getSymA())
       cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
     break;
+  case RISCVMCExpr::VK_PLT:
+    if (IsPCRel && Kind == FK_Data_4)
+      break;
+    Ctx.reportError(Fixup.getLoc(),
+                    "%plt must be PC-relative in a .word directive");
+    return ELF::R_RISCV_NONE;
   }
 
   if (IsPCRel) {

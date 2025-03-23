@@ -35,8 +35,17 @@ data1:
 .word %gotpcrel(extern-5)
 
 .ifdef ERR
+# ERR: [[#@LINE+1]]:7: error: %plt must be PC-relative in a .word directive
+.word %plt(g)
+
+# ERR: [[#@LINE+1]]:7: error: %plt must be PC-relative in a .word directive
+.quad %plt(g-.)
+
 # ERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
 .word %plt(extern - und)
+
+# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+.word %gotpcrel(extern - .)
 
 # ERR: [[#@LINE+1]]:7: error: expected relocatable expression
 .word %gotpcrel(extern - und)

@@ -38,7 +38,6 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
 
 protected:
   uint8_t PLTRelativeSpecifier = 0;
-  bool UseTargetMCExprForPLTRelative = true;
 
 public:
   TargetLoweringObjectFileELF();
