@@ -43,13 +43,13 @@
 ; CHECK:   no-rvc-hints                     - Disable RVC Hint Instructions..
 ; CHECK:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
 ; CHECK:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
-; CHECK:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v areimplemented as a wide memory op and shuffle.
-; CHECK:   optimized-nf3-segment-load-store - vlseg3eN.v and vsseg3eN.v areimplemented as a wide memory op and shuffle.
-; CHECK:   optimized-nf4-segment-load-store - vlseg4eN.v and vsseg4eN.v areimplemented as a wide memory op and shuffle.
-; CHECK:   optimized-nf5-segment-load-store - vlseg5eN.v and vsseg5eN.v areimplemented as a wide memory op and shuffle.
-; CHECK:   optimized-nf6-segment-load-store - vlseg6eN.v and vsseg6eN.v areimplemented as a wide memory op and shuffle.
-; CHECK:   optimized-nf7-segment-load-store - vlseg7eN.v and vsseg7eN.v areimplemented as a wide memory op and shuffle.
-; CHECK:   optimized-nf8-segment-load-store - vlseg8eN.v and vsseg8eN.v areimplemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v are implemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf3-segment-load-store - vlseg3eN.v and vsseg3eN.v are implemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf4-segment-load-store - vlseg4eN.v and vsseg4eN.v are implemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf5-segment-load-store - vlseg5eN.v and vsseg5eN.v are implemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf6-segment-load-store - vlseg6eN.v and vsseg6eN.v are implemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf7-segment-load-store - vlseg7eN.v and vsseg7eN.v are implemented as a wide memory op and shuffle.
+; CHECK:   optimized-nf8-segment-load-store - vlseg8eN.v and vsseg8eN.v are implemented as a wide memory op and shuffle.
 ; CHECK:   optimized-zero-stride-load       - Optimized (perform fewer memory operations)zero-stride vector load.
 ; CHECK:   predictable-select-expensive     - Prefer likely predicted branches over selects.
 ; CHECK:   prefer-w-inst                    - Prefer instructions with W suffix.

@@ -6,24 +6,28 @@
 //
 //===----------------------------------------------------------------------===/
 
-#include "gtest/gtest.h"
-
 // Use the umbrella header for -Wdocumentation.
 #include "lldb/API/LLDB.h"
 
+#include "TestingSupport/SubsystemRAII.h"
+#include "lldb/API/SBDebugger.h"
+#include "gtest/gtest.h"
 #include <cstring>
 #include <string>
 
 using namespace lldb;
+using namespace lldb_private;
 
 class SBCommandInterpreterTest : public testing::Test {
 protected:
   void SetUp() override {
-    SBDebugger::Initialize();
-    m_dbg = SBDebugger::Create(/*source_init_files=*/false);
+    debugger = SBDebugger::Create(/*source_init_files=*/false);
   }
 
-  SBDebugger m_dbg;
+  void TearDown() override { SBDebugger::Destroy(debugger); }
+
+  SubsystemRAII<lldb::SBDebugger> subsystems;
+  SBDebugger debugger;
 };
 
 class DummyCommand : public SBCommandPluginInterface {
@@ -44,7 +48,7 @@ private:
 TEST_F(SBCommandInterpreterTest, SingleWordCommand) {
   // We first test a command without autorepeat
   DummyCommand dummy("It worked");
-  SBCommandInterpreter interp = m_dbg.GetCommandInterpreter();
+  SBCommandInterpreter interp = debugger.GetCommandInterpreter();
   interp.AddCommand("dummy", &dummy, /*help=*/nullptr);
   {
     SBCommandReturnObject result;
@@ -78,7 +82,7 @@ TEST_F(SBCommandInterpreterTest, SingleWordCommand) {
 }
 
 TEST_F(SBCommandInterpreterTest, MultiWordCommand) {
-  SBCommandInterpreter interp = m_dbg.GetCommandInterpreter();
+  SBCommandInterpreter interp = debugger.GetCommandInterpreter();
   auto command = interp.AddMultiwordCommand("multicommand", /*help=*/nullptr);
   // We first test a subcommand without autorepeat
   DummyCommand subcommand("It worked again");

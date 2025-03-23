@@ -266,8 +266,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   if (OldFunc->isDeclaration())
     return;
 
-  DebugInfoFinder DIFinder;
-
   if (Changes < CloneFunctionChangeType::DifferentModule) {
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() == OldFunc->getParent()) &&
@@ -320,7 +318,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     Visited.insert(Operand);
 
   // Collect and clone all the compile units referenced from the instructions in
-  // the function (e.g. as a scope).
+  // the function (e.g. as instructions' scope).
+  DebugInfoFinder DIFinder;
   collectDebugInfoFromInstructions(*OldFunc, DIFinder);
   for (auto *Unit : DIFinder.compile_units()) {
     MDNode *MappedUnit =

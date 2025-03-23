@@ -114,6 +114,14 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
+  /// Whether this module is fully composed of file & module inputs from
+  /// locations likely to stay the same across the active development and build
+  /// cycle. For example, when all those input paths only resolve in Sysroot.
+  ///
+  /// External paths, as opposed to virtual file paths, are always used
+  /// for computing this value.
+  bool IsInStableDirectories;
+
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
@@ -219,6 +227,9 @@ private:
                               llvm::DenseSet<const Module *> &AddedModules);
   void addAffectingClangModule(const Module *M, ModuleDeps &MD,
                           llvm::DenseSet<const Module *> &AddedModules);
+
+  /// Add discovered module dependency for the given module.
+  void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -319,6 +330,13 @@ private:
 void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                const LangOptions &LangOpts,
                                CodeGenOptions &CGOpts);
+
+/// Determine if \c Input can be resolved within a stable directory.
+///
+/// \param Directories Paths known to be in a stable location. e.g. Sysroot.
+/// \param Input Path to evaluate.
+bool isPathInStableDir(const ArrayRef<StringRef> Directories,
+                       const StringRef Input);
 
 } // end namespace dependencies
 } // end namespace tooling
