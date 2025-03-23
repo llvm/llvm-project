@@ -1314,7 +1314,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   // expected to be handled separately.
   auto IsVisibleToRegularObj = [&](StringRef name) {
     auto It = GlobalResolutions->find(name);
-    return (It == GlobalResolutions->end() || It->second.VisibleOutsideSummary);
+    return (It == GlobalResolutions->end() ||
+            It->second.VisibleOutsideSummary || !It->second.Prevailing);
   };
 
   // If allowed, upgrade public vcall visibility metadata to linkage unit
@@ -1438,9 +1439,9 @@ public:
         AddStream(std::move(AddStream)), Cache(std::move(Cache)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
-    CfiFunctionDefs.insert(Defs.guid_begin(), Defs.guid_end());
+    CfiFunctionDefs.insert_range(Defs.guids());
     auto &Decls = CombinedIndex.cfiFunctionDecls();
-    CfiFunctionDecls.insert(Decls.guid_begin(), Decls.guid_end());
+    CfiFunctionDecls.insert_range(Decls.guids());
   }
 
   virtual Error runThinLTOBackendThread(
@@ -1905,7 +1906,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     auto IsVisibleToRegularObj = [&](StringRef name) {
       auto It = GlobalResolutions->find(name);
       return (It == GlobalResolutions->end() ||
-              It->second.VisibleOutsideSummary);
+              It->second.VisibleOutsideSummary || !It->second.Prevailing);
     };
 
     getVisibleToRegularObjVtableGUIDs(ThinLTO.CombinedIndex,

@@ -42,5 +42,5 @@ end
 ! CHECK: ^bb2:
 ! CHECK: cf.br ^bb3
 ! CHECK: ^bb3:
-! CHECK: cuf.free %[[DECL]]#1 : !fir.ref<!fir.array<10xi32>>
+! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.array<10xi32>>
 ! CHECK: }

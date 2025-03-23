@@ -74,6 +74,12 @@ class IndexNode {
 };
 } // namespace internal
 
+// Setting initial capacity to 1 because all contexts must have at least 1
+// counter, and then, because all contexts belonging to a function have the same
+// size, there'll be at most one other heap allocation.
+using CtxProfFlatProfile =
+    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
+
 /// A node (context) in the loaded contextual profile, suitable for mutation
 /// during IPO passes. We generally expect a fraction of counters and
 /// callsites to be populated. We continue to model counters as vectors, but
@@ -93,11 +99,16 @@ private:
   GlobalValue::GUID GUID = 0;
   SmallVector<uint64_t, 16> Counters;
   const std::optional<uint64_t> RootEntryCount{};
+  std::optional<CtxProfFlatProfile> Unhandled{};
   CallsiteMapTy Callsites;
 
-  PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters,
-                    std::optional<uint64_t> RootEntryCount = std::nullopt)
-      : GUID(G), Counters(std::move(Counters)), RootEntryCount(RootEntryCount) {
+  PGOCtxProfContext(
+      GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters,
+      std::optional<uint64_t> RootEntryCount = std::nullopt,
+      std::optional<CtxProfFlatProfile> &&Unhandled = std::nullopt)
+      : GUID(G), Counters(std::move(Counters)), RootEntryCount(RootEntryCount),
+        Unhandled(std::move(Unhandled)) {
+    assert(RootEntryCount.has_value() == Unhandled.has_value());
   }
 
   Expected<PGOCtxProfContext &>
@@ -120,6 +131,8 @@ public:
 
   bool isRoot() const { return RootEntryCount.has_value(); }
   uint64_t getTotalRootEntryCount() const { return RootEntryCount.value(); }
+
+  const CtxProfFlatProfile &getUnhandled() const { return Unhandled.value(); }
 
   uint64_t getEntrycount() const {
     assert(!Counters.empty() &&
@@ -170,12 +183,6 @@ public:
   }
 };
 
-// Setting initial capacity to 1 because all contexts must have at least 1
-// counter, and then, because all contexts belonging to a function have the same
-// size, there'll be at most one other heap allocation.
-using CtxProfFlatProfile =
-    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
-
 using CtxProfContextualProfiles =
     std::map<GlobalValue::GUID, PGOCtxProfContext>;
 struct PGOCtxProfile {
@@ -205,6 +212,7 @@ class PGOCtxProfileReader final {
 
   Error loadContexts(CtxProfContextualProfiles &P);
   Error loadFlatProfiles(CtxProfFlatProfile &P);
+  Error loadFlatProfileList(CtxProfFlatProfile &P);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)
