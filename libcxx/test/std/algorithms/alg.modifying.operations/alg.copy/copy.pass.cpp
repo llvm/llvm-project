@@ -112,7 +112,7 @@ struct CopyFromForwardIterToBitIter {
 };
 
 // Test std::copy with segmented iterators: deque<T>::iterator, join_view::iterator
-TEST_CONSTEXPR_CXX23 void test_segmented_iterator() {
+void test_segmented_iterator() { // TODO: Mark this test as TEST_CONSTEXPR_CXX23 when std::deque is constexpr
   // std::deque iterator
   { // Copy from segmented input to contiguous output (deque<int> to vector<int>)
     std::deque<int> in(20);
@@ -165,8 +165,7 @@ TEST_CONSTEXPR_CXX23 void test_segmented_iterator() {
     std::copy(jv.begin(), jv.end(), out.begin());
     assert(out == expected);
   }
-  // Copy from segmented input to segmented output (join_view to deque)
-  if (!TEST_IS_CONSTANT_EVALUATED) { // TODO: enable this for constant evaluation when std::deque is fully constexpr
+  { // Copy from segmented input to segmented output (join_view to deque)
     std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
     auto jv = std::ranges::join_view(v);
     std::deque<int> expected(jv.begin(), jv.end());
@@ -368,7 +367,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     types::for_each(types::forward_iterator_list<bool*>(), CopyFromForwardIterToBitIter<299>());
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: enable this unconditionally when std::deque is fully constexpr
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED when std::deque is made constexpr
     test_segmented_iterator();
 
   return true;
