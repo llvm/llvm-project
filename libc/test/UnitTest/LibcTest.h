@@ -334,6 +334,9 @@ CString libc_make_test_file_path_func(const char *file_name);
     return "[ParamType = " #TYPE "]";                                          \
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wglobal-constructors"
+
 #define TYPED_TEST(SuiteName, TestName, TypeList)                              \
   static_assert(                                                               \
       LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),             \
@@ -399,6 +402,8 @@ CString libc_make_test_file_path_func(const char *file_name);
   };                                                                           \
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
   void SuiteClass##_##TestName::Run()
+
+#pragma GCC diagnostic pop
 
 // Helper to trick the compiler into ignoring lack of braces on the else
 // branch.  We cannot introduce braces at this point, since it would prevent
