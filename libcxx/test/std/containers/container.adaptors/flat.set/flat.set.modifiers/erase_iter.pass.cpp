@@ -45,11 +45,11 @@ void test_one() {
   M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
 
   auto make = [](std::initializer_list<int> il) {
-    M m;
+    M m2;
     for (int i : il) {
-      m.emplace(i);
+      m2.emplace(i);
     }
-    return m;
+    return m2;
   };
   assert(m.size() == 8);
   assert(m == make({1, 2, 3, 4, 5, 6, 7, 8}));
