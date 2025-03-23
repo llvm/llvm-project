@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file is cut out of llvm/Support/FileSystem.h to allow UniqueID to be
-// reused without bloating the includes.
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
 #define LLVM_SUPPORT_FILESYSTEM_UNIQUEID_H
@@ -23,6 +18,12 @@ namespace llvm {
 namespace sys {
 namespace fs {
 
+/// fs::UniqueID is the identity of a file, independent of its path.
+///
+/// Files with multiple paths (hard links) will have the same UniqueID.
+/// Symlinks have a UniqueID distinct from the file they point to.
+///
+/// UniqueID corresponds to the inode number on POSIX platforms.
 class UniqueID {
   uint64_t Device;
   uint64_t File;
