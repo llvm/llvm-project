@@ -13,11 +13,11 @@ declare dso_local m68k_rtdcc void @va_callee(i32 noundef, ...)
 define dso_local i32 @caller(ptr noundef %y) {
   ; CHECK-LABEL: name: caller
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   [[MOV32rp:%[0-9]+]]:ar32 = MOV32rp 0, %fixed-stack.0, implicit-def dead $ccr :: (load (s32) from %fixed-stack.0, align 8)
-  ; CHECK-NEXT:   [[MOV32rj:%[0-9]+]]:xr32 = MOV32rj killed [[MOV32rp]], implicit-def dead $ccr :: (load (s32) from %ir.y)
+  ; CHECK-NEXT:   [[MOV32rp:%[0-9]+]]:ar32 = MOV32rp 0, %fixed-stack.0, implicit-def dead $ccr, implicit-def dead $sr :: (load (s32) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   [[MOV32rj:%[0-9]+]]:xr32 = MOV32rj killed [[MOV32rp]], implicit-def dead $ccr, implicit-def dead $sr :: (load (s32) from %ir.y)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def dead $sp, implicit-def dead $ccr, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:ar32 = COPY $sp
-  ; CHECK-NEXT:   MOV32jr [[COPY]], [[MOV32rj]], implicit-def dead $ccr :: (store (s32) into stack, align 2)
+  ; CHECK-NEXT:   MOV32jr [[COPY]], [[MOV32rj]], implicit-def dead $ccr, implicit-def dead $sr :: (store (s32) into stack, align 2)
   ; CHECK-NEXT:   CALLb @callee, csr_std, implicit $sp, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 4, 4, implicit-def dead $sp, implicit-def dead $ccr, implicit $sp
   ; CHECK-NEXT:   $d0 = COPY [[MOV32rj]]
@@ -31,11 +31,11 @@ entry:
 define dso_local i32 @va_caller(ptr noundef %y) {
   ; CHECK-LABEL: name: va_caller
   ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   [[MOV32rp:%[0-9]+]]:ar32 = MOV32rp 0, %fixed-stack.0, implicit-def dead $ccr :: (load (s32) from %fixed-stack.0, align 8)
-  ; CHECK-NEXT:   [[MOV32rj:%[0-9]+]]:xr32 = MOV32rj killed [[MOV32rp]], implicit-def dead $ccr :: (load (s32) from %ir.y)
+  ; CHECK-NEXT:   [[MOV32rp:%[0-9]+]]:ar32 = MOV32rp 0, %fixed-stack.0, implicit-def dead $ccr, implicit-def dead $sr :: (load (s32) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   [[MOV32rj:%[0-9]+]]:xr32 = MOV32rj killed [[MOV32rp]], implicit-def dead $ccr, implicit-def dead $sr :: (load (s32) from %ir.y)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 4, 0, implicit-def dead $sp, implicit-def dead $ccr, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:ar32 = COPY $sp
-  ; CHECK-NEXT:   MOV32jr [[COPY]], [[MOV32rj]], implicit-def dead $ccr :: (store (s32) into stack, align 2)
+  ; CHECK-NEXT:   MOV32jr [[COPY]], [[MOV32rj]], implicit-def dead $ccr, implicit-def dead $sr :: (store (s32) into stack, align 2)
   ; CHECK-NEXT:   CALLb @va_callee, csr_std, implicit $sp, implicit-def $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def dead $sp, implicit-def dead $ccr, implicit $sp
   ; CHECK-NEXT:   $d0 = COPY [[MOV32rj]]
