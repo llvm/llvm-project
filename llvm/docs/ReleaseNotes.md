@@ -178,6 +178,10 @@ Changes to the C API
   * `LLVMConstNUWMul`
   * `LLVMConstNSWMul`
 
+* Added `LLVMIntrinsicCopyName` and changed `LLVMIntrinsicCopyOverloadedName`
+  and `LLVMIntrinsicCopyOverloadedName2` to return `char *` instead of
+  `const char *`.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
