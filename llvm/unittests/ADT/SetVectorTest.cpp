@@ -100,3 +100,9 @@ TEST(SetVector, InsertRange) {
   Set.insert_range(Args);
   EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
 }
+
+TEST(SmallSetVector, CtorRange) {
+  constexpr unsigned Args[] = {3, 1, 2};
+  SmallSetVector<unsigned, 4> Set(llvm::from_range, Args);
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}
