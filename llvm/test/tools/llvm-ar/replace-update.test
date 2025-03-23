@@ -57,7 +57,7 @@
 
 # MULTIPLE-SYM:      symbolnew1
 # MULTIPLE-SYM-NEXT: symbol2
-# MULTIPLE-SYM-NEXTs: symbolnew3
+# MULTIPLE-SYM-NEXT: symbolnew3
 
 ## Replace newer members with multiple older files:
 # RUN: llvm-ar ruU %t/multiple.a %t/1.o %t/2.o

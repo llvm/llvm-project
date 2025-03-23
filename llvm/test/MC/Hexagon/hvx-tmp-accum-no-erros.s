@@ -34,4 +34,4 @@
     r0 += add(r1, r2)
 }
 
-# CHECK { r0 += add(r1,r2) }
+# CHECK:{ r0 += add(r1,r2) }

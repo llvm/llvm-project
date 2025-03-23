@@ -56,7 +56,7 @@ entry:
 
   call void @llvm.lifetime.start.p0(i64 1, ptr %text)
   call void @llvm.lifetime.end.p0(i64 1, ptr %text)
-  ; CHECK-NO: call void @llvm.lifetime
+  ; CHECK-NOT: call void @llvm.lifetime
 
   call void @foo(ptr %text) ; Keep alloca alive
 

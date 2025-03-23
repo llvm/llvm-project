@@ -29,7 +29,7 @@ foo:
 // CHECK: .long 11
         .long "a 0"
 
-// XXCHCK: .section "a 1,a 2"
+// COM: CHECK: .section "a 1,a 2"
 //.section "a 1", "a 2"
 
 // CHECK: .globl "a 3"
@@ -46,7 +46,7 @@ foo:
 
 // FIXME: We don't bother to support .lsym.
 
-// CHECX: .lsym "a 8",1
+// COM: CHECK: .lsym "a 8",1
 //        .lsym "a 8", 1
 
 // CHECK: .set "a 9", a-b
