@@ -24,14 +24,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64symbolrefexpr"
 
-const AArch64MCExpr *AArch64MCExpr::create(const MCExpr *Expr, VariantKind Kind,
-                                       MCContext &Ctx) {
-  return new (Ctx) AArch64MCExpr(Expr, Kind);
+const AArch64MCExpr *AArch64MCExpr::create(const MCExpr *Expr, Specifier S,
+                                           MCContext &Ctx) {
+  return new (Ctx) AArch64MCExpr(Expr, S);
 }
 
 StringRef AArch64MCExpr::getVariantKindName() const {
   // clang-format off
-  switch (static_cast<uint32_t>(getKind())) {
+  switch (static_cast<uint32_t>(getSpecifier())) {
   case VK_CALL:                return "";
   case VK_LO12:                return ":lo12:";
   case VK_ABS_G3:              return ":abs_g3:";
@@ -113,8 +113,8 @@ bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
+                     getSpecifier());
 
   return true;
 }
@@ -158,6 +158,6 @@ bool AArch64AuthMCExpr::evaluateAsRelocatableImpl(
   if (Res.getSymB())
     report_fatal_error("Auth relocation can't reference two symbols");
 
-  Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getKind());
+  Res = MCValue::get(Res.getSymA(), nullptr, Res.getConstant(), getSpecifier());
   return true;
 }

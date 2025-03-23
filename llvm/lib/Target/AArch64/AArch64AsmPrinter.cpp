@@ -923,14 +923,14 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
           MCInstBuilder(AArch64::ADRP)
               .addReg(AArch64::X16)
               .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
+                  HwasanTagMismatchRef, AArch64MCExpr::Specifier::VK_GOT_PAGE,
                   OutContext)));
       EmitToStreamer(
           MCInstBuilder(AArch64::LDRXui)
               .addReg(AArch64::X16)
               .addReg(AArch64::X16)
               .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
+                  HwasanTagMismatchRef, AArch64MCExpr::Specifier::VK_GOT_LO12,
                   OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
