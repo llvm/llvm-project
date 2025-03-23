@@ -1066,7 +1066,10 @@ public:
                                 PatternRewriter &rewriter) const override {
     Operation *eltwise = op.getVector().getDefiningOp();
 
-    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise))
+    // TODO: vector::FMAOp is not ElemetwiseMappable eve if it claims to be, as
+    // it doesn't support scalars.
+    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise) ||
+        isa<vector::FMAOp>(eltwise))
       return rewriter.notifyMatchFailure(op, "not an elementwise op");
 
     if (eltwise->getNumResults() != 1)

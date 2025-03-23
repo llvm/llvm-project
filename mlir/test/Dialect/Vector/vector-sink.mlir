@@ -501,3 +501,15 @@ func.func @negative_extract_not_elementwise(%arg0: vector<4xi64>) -> i64 {
   %1 = vector.extract %0[1] : i64 from vector<4xi64>
   return %1 : i64
 }
+
+// CHECK-LABEL: @negative_extract_vec_fma
+//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>, %[[ARG2:.*]]: vector<4xf32>)
+func.func @negative_extract_vec_fma(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> f32 {
+// `vector.fma` doesn't suppport scalars.
+// CHECK:   %[[FMA:.*]] = vector.fma %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<4xf32>
+// CHECK:   %[[RES:.*]] = vector.extract %[[FMA]][1] : f32 from vector<4xf32>
+// CHECK:   return %[[RES]] : f32
+  %0 = vector.fma %arg0, %arg1, %arg2: vector<4xf32>
+  %1 = vector.extract %0[1] : f32 from vector<4xf32>
+  return %1 : f32
+}
