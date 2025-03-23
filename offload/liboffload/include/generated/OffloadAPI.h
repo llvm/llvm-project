@@ -461,6 +461,69 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSize(
     size_t *PropSizeRet);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Represents the type of allocation made with olMemAlloc
+typedef enum ol_alloc_type_t {
+  /// Host allocation
+  OL_ALLOC_TYPE_HOST = 0,
+  /// Device allocation
+  OL_ALLOC_TYPE_DEVICE = 1,
+  /// Shared allocation
+  OL_ALLOC_TYPE_SHARED = 2,
+  /// @cond
+  OL_ALLOC_TYPE_FORCE_UINT32 = 0x7fffffff
+  /// @endcond
+
+} ol_alloc_type_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Creates a memory allocation on the specified device
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_SIZE
+///         + `Size == 0`
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == AllocationOut`
+OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(
+    // [in] handle of the device to allocate on
+    ol_device_handle_t Device,
+    // [in] type of the allocation
+    ol_alloc_type_t Type,
+    // [in] size of the allocation in bytes
+    size_t Size,
+    // [in] alignment of the allocation in bytes
+    size_t Aligment,
+    // [out] output for the allocated pointer
+    void **AllocationOut);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Frees a memory allocation previously made by olMemAlloc
+///
+/// @details
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == Address`
+OL_APIEXPORT ol_result_t OL_APICALL olMemFree(
+    // [in] handle of the device to allocate on
+    ol_device_handle_t Device,
+    // [in] type of the allocation
+    ol_alloc_type_t Type,
+    // [in] address of the allocation to free
+    void *Address);
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatform
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_get_platform_params_t {
@@ -529,6 +592,26 @@ typedef struct ol_get_device_info_size_params_t {
   ol_device_info_t *pPropName;
   size_t **pPropSizeRet;
 } ol_get_device_info_size_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olMemAlloc
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_mem_alloc_params_t {
+  ol_device_handle_t *pDevice;
+  ol_alloc_type_t *pType;
+  size_t *pSize;
+  size_t *pAligment;
+  void ***pAllocationOut;
+} ol_mem_alloc_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olMemFree
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_mem_free_params_t {
+  ol_device_handle_t *pDevice;
+  ol_alloc_type_t *pType;
+  void **pAddress;
+} ol_mem_free_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
@@ -604,6 +687,20 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoWithCodeLoc(
 OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceInfoSizeWithCodeLoc(
     ol_device_handle_t Device, ol_device_info_t PropName, size_t *PropSizeRet,
     ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olMemAlloc that also sets source code location information
+/// @details See also ::olMemAlloc
+OL_APIEXPORT ol_result_t OL_APICALL olMemAllocWithCodeLoc(
+    ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
+    size_t Aligment, void **AllocationOut, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olMemFree that also sets source code location information
+/// @details See also ::olMemFree
+OL_APIEXPORT ol_result_t OL_APICALL
+olMemFreeWithCodeLoc(ol_device_handle_t Device, ol_alloc_type_t Type,
+                     void *Address, ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)
 } // extern "C"

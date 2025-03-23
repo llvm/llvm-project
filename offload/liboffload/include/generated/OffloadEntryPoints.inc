@@ -439,3 +439,100 @@ ol_result_t olGetDeviceInfoSizeWithCodeLoc(ol_device_handle_t Device,
   currentCodeLocation() = nullptr;
   return Result;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olMemAlloc_val(ol_device_handle_t Device, ol_alloc_type_t Type,
+                                size_t Size, size_t Aligment,
+                                void **AllocationOut) {
+  if (true /*enableParameterValidation*/) {
+    if (Size == 0) {
+      return OL_ERRC_INVALID_SIZE;
+    }
+
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == AllocationOut) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olMemAlloc_impl(Device, Type, Size, Aligment, AllocationOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olMemAlloc(ol_device_handle_t Device,
+                                               ol_alloc_type_t Type,
+                                               size_t Size, size_t Aligment,
+                                               void **AllocationOut) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olMemAlloc";
+  }
+
+  ol_result_t Result =
+      olMemAlloc_val(Device, Type, Size, Aligment, AllocationOut);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_mem_alloc_params_t Params = {&Device, &Type, &Size, &Aligment,
+                                    &AllocationOut};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olMemAllocWithCodeLoc(ol_device_handle_t Device,
+                                  ol_alloc_type_t Type, size_t Size,
+                                  size_t Aligment, void **AllocationOut,
+                                  ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olMemAlloc(Device, Type, Size, Aligment, AllocationOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olMemFree_val(ol_device_handle_t Device, ol_alloc_type_t Type,
+                               void *Address) {
+  if (true /*enableParameterValidation*/) {
+    if (NULL == Device) {
+      return OL_ERRC_INVALID_NULL_HANDLE;
+    }
+
+    if (NULL == Address) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return olMemFree_impl(Device, Type, Address);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olMemFree(ol_device_handle_t Device,
+                                              ol_alloc_type_t Type,
+                                              void *Address) {
+  if (offloadConfig().TracingEnabled) {
+    std::cout << "---> olMemFree";
+  }
+
+  ol_result_t Result = olMemFree_val(Device, Type, Address);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_mem_free_params_t Params = {&Device, &Type, &Address};
+    std::cout << "(" << &Params << ")";
+    std::cout << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      std::cout << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olMemFreeWithCodeLoc(ol_device_handle_t Device,
+                                 ol_alloc_type_t Type, void *Address,
+                                 ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = olMemFree(Device, Type, Address);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
