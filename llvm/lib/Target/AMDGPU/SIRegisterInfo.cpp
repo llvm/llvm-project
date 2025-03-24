@@ -636,7 +636,8 @@ BitVector SIRegisterInfo::getAlwaysReservedRegs() const {
   if (AlwaysReservedRegs.size() == getNumRegs())
     return AlwaysReservedRegs;
 
-  BitVector Reserved(getNumRegs());
+  AlwaysReservedRegs = BitVector(getNumRegs());
+  auto &Reserved = AlwaysReservedRegs;
   Reserved.set(AMDGPU::MODE);
 
   // Reserve special purpose registers.
@@ -684,7 +685,7 @@ BitVector SIRegisterInfo::getAlwaysReservedRegs() const {
   // Reserve null register - it shall never be allocated
   reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL64);
 
-  return this->AlwaysReservedRegs = Reserved;
+  return Reserved;
 }
 
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
