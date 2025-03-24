@@ -5,7 +5,7 @@
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
-// RUN: llvm-readobj --dynamic-table -r %tout | FileCheck %s
+// RUN: llvm-readobj --dynamic-table -r -S %tout | FileCheck %s
 
 // RUN: llvm-mc -filetype=obj -triple=aarch64_be %S/Inputs/shared2.s -o %t1.be.o
 // RUN: ld.lld %t1.be.o --shared --soname=t.so -o %t.be.so
@@ -13,7 +13,23 @@
 // RUN: ld.lld --hash-style=sysv %t.be.so %t.be.o -o %t.be
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.be | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %t.be | FileCheck %s --check-prefix=GOTPLT_BE
-// RUN: llvm-readobj --dynamic-table -r %t.be | FileCheck %s
+// RUN: llvm-readobj --dynamic-table -r -S %t.be | FileCheck %s
+
+// Check that the .iplt section has the SHF_AARCH64_PURECODE section flag set
+// CHECK:      Sections [
+// CHECK:        Name: .iplt
+// CHECK-NEXT:   Type: SHT_PROGBITS
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_AARCH64_PURECODE
+// CHECK-NEXT:     SHF_ALLOC
+// CHECK-NEXT:     SHF_EXECINSTR
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Address: 0x210330
+// CHECK-NEXT:   Offset:
+// CHECK-NEXT:   Size: 32
+// CHECK-NEXT:   Link:
+// CHECK-NEXT:   Info:
+// CHECK-NEXT:   AddressAlignment: 16
 
 // Check that the PLTRELSZ tag does not include the IRELATIVE relocations
 // CHECK: DynamicSection [

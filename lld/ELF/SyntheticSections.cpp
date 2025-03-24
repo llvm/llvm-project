@@ -2610,6 +2610,11 @@ PltSection::PltSection(Ctx &ctx)
   // modify the instructions in the PLT entries.
   if (ctx.arg.emachine == EM_SPARCV9)
     this->flags |= SHF_WRITE;
+
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .plt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
 }
 
 void PltSection::writeTo(uint8_t *buf) {
@@ -2658,6 +2663,11 @@ IpltSection::IpltSection(Ctx &ctx)
     name = ".glink";
     addralign = 4;
   }
+
+  // On AArch64, PLT entries only do loads from the .got.plt section, so the
+  // .iplt section can be marked with the SHF_AARCH64_PURECODE section flag.
+  if (ctx.arg.emachine == EM_AARCH64)
+    this->flags |= SHF_AARCH64_PURECODE;
 }
 
 void IpltSection::writeTo(uint8_t *buf) {
