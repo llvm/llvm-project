@@ -182,13 +182,13 @@ void DataAggregator::start() {
 
   if (opts::ArmSPE) {
     if (!opts::BasicAggregation) {
-      // pid    from_ip      to_ip        predicted?
-      // 12345  0x123/0x456/P/-/-/8/RET/-
-      launchPerfProcess("SPE branch events", MainEventsPPI,
+      // pid    from_ip      to_ip        predicted/missed not-taken?
+      // 12345  0x123/0x456/PN/-/-/8/RET/-
+      launchPerfProcess("SPE brstack events", MainEventsPPI,
                         "script -F pid,brstack --itrace=bl",
                         /*Wait = */ false);
     } else {
-      launchPerfProcess("SPE brstack events", MainEventsPPI,
+      launchPerfProcess("SPE branch events (non-lbr)", MainEventsPPI,
                         "script -F pid,event,ip,addr --itrace=i1i",
                         /*Wait = */ false);
     }
@@ -1022,12 +1022,19 @@ ErrorOr<LBREntry> DataAggregator::parseLBREntry() {
     return EC;
   StringRef MispredStr = MispredStrRes.get();
   // SPE brstack mispredicted flags might be two characters long: 'PN' or 'MN'.
-  bool ProperStrSize = (MispredStr.size() == 2 && opts::ArmSPE)
-                           ? (MispredStr[1] == 'N')
-                           : (MispredStr.size() == 1);
-  if (!ProperStrSize ||
-      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-')) {
-    reportError("expected single char for mispred bit");
+  bool ValidStrSize = opts::ArmSPE ?
+    MispredStr.size() >= 1 && MispredStr.size() <= 2 : MispredStr.size() == 1;
+  bool SpeTakenBitErr =
+         (opts::ArmSPE && MispredStr.size() == 2 && MispredStr[1] != 'N');
+  bool PredictionBitErr =
+         !ValidStrSize ||
+         (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-');
+  if (SpeTakenBitErr)
+    reportError("expected 'N' as SPE prediction bit for a not-taken branch");
+  if (PredictionBitErr)
+    reportError("expected 'P', 'M' or '-' char as a prediction bit");
+
+ if (SpeTakenBitErr || PredictionBitErr) {
     Diag << "Found: " << MispredStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
