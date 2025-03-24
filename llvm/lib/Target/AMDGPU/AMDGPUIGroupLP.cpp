@@ -75,9 +75,9 @@ enum class SchedGroupMask {
   DS_READ = 1u << 8,
   DS_WRITE = 1u << 9,
   TRANS = 1u << 10,
-  PACK = 1u << 11,
+  NONCOISSUE = 1u << 11,
   ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS | PACK,
+        DS_READ | DS_WRITE | TRANS | NONCOISSUE,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
@@ -2457,8 +2457,9 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
            TII->isTRANS(MI))
     Result = true;
 
-  else if (((SGMask & SchedGroupMask::PACK) != SchedGroupMask::NONE) &&
-           TII->isVOP3P(MI) && !TII->isMFMAorWMMA(MI))
+  else if (((SGMask & SchedGroupMask::NONCOISSUE) != SchedGroupMask::NONE) &&
+           TII->isNeverCoissue(MI) && !TII->isMFMAorWMMA(MI) &&
+           !TII->isTRANS(MI))
     Result = true;
 
   LLVM_DEBUG(
@@ -2640,17 +2641,17 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
-  // ALU implies VALU, SALU, MFMA, TRANS, PACK.
+  // ALU implies VALU, SALU, MFMA, TRANS, NONCOISSUE.
   if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
                     ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS &
-                    ~SchedGroupMask::PACK;
-  // VALU, SALU, MFMA, TRANS, PACK implies ALU.
+                    ~SchedGroupMask::NONCOISSUE;
+  // VALU, SALU, MFMA, TRANS, NONCOISSUE implies ALU.
   else if ((InvertedMask & SchedGroupMask::VALU) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::SALU) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE ||
            (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::PACK) == SchedGroupMask::NONE)
+           (InvertedMask & SchedGroupMask::NONCOISSUE) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::ALU;
 
   // VMEM implies VMEM_READ, VMEM_WRITE.

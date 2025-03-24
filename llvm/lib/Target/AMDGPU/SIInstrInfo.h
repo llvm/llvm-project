@@ -1031,6 +1031,8 @@ public:
     }
   }
 
+  bool isNeverCoissue(const MachineInstr &MI) const;
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(isCopyInstr(MI));
     Register Dest = MI.getOperand(0).getReg();
