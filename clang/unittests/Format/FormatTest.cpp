@@ -29097,10 +29097,9 @@ TEST_F(FormatTest, BreakBeforeClassName) {
 }
 
 TEST_F(FormatTest, DoesNotCrashOnNonNullTerminatedStringRefs) {
-  llvm::StringRef TwoLines = "namespace foo {}\n"
-                             "namespace bar {}";
-  llvm::StringRef FirstLine =
-      TwoLines.take_until([](char c) { return c == '\n'; });
+  StringRef TwoLines = "namespace foo {}\n"
+                       "namespace bar {}";
+  StringRef FirstLine = TwoLines.take_until([](char c) { return c == '\n'; });
 
   // The internal API used to crash when passed a non-null-terminated StringRef.
   // Check this does not happen anymore.
