@@ -77,6 +77,10 @@ static cl::opt<bool> DisableAdvancedPeeling(
     cl::desc(
         "Disable advance peeling. Issues for convergent targets (D134803)."));
 
+static cl::opt<bool>
+    EnablePeelingForIV("enable-peeling-for-iv", cl::init(false), cl::Hidden,
+                       cl::desc("Enable peeling to make a PHI into an IV"));
+
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
 // Check whether we are capable of peeling this loop.
@@ -182,7 +186,7 @@ namespace {
 // respecting the maximum specified.
 class PhiAnalyzer {
 public:
-  PhiAnalyzer(const Loop &L, unsigned MaxIterations);
+  PhiAnalyzer(const Loop &L, unsigned MaxIterations, bool PeelForIV);
 
   // Calculate the sufficient minimum number of iterations of the loop to peel
   // such that phi instructions become determined (subject to allowable limits)
@@ -227,13 +231,14 @@ protected:
 
   const Loop &L;
   const unsigned MaxIterations;
+  const bool PeelForIV;
 
   // Map of Values to number of iterations to invariance or induction
   SmallDenseMap<const Value *, PeelCounter> IterationsToInvarianceOrInduction;
 };
 
-PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
-    : L(L), MaxIterations(MaxIterations) {
+PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations, bool PeelForIV)
+    : L(L), MaxIterations(MaxIterations), PeelForIV(PeelForIV) {
   assert(canPeel(&L) && "loop is not suitable for peeling");
   assert(MaxIterations > 0 && "no peeling is allowed?");
 }
@@ -351,7 +356,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(const Value &V) {
     }
 
     // If Phi is an induction, register it as a starting point.
-    if (isInductionPHI(Phi))
+    if (PeelForIV && isInductionPHI(Phi))
       return (IterationsToInvarianceOrInduction[&V] =
                   makeZero(PeelCounterType::Induction));
 
@@ -729,8 +734,13 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // induction, and try to peel the maximum number of iterations among these
   // values, thus turning all those Phis into invariants or inductions.
   if (MaxPeelCount > DesiredPeelCount) {
-    // Check how many iterations are useful for resolving Phis
-    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount).calculateIterationsToPeel();
+    // Check how many iterations are useful for resolving Phis.
+    // TODO: Compute `PeelForIV` with some heuristic. Peeling a loop to make a
+    // PHI into an IV is usually good for loop vectorization, so we should
+    // perform such peelings if the loop body is vectorizable (e.g., doesn't
+    // contain function calls).
+    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount, EnablePeelingForIV)
+                        .calculateIterationsToPeel();
     if (NumPeels)
       DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
