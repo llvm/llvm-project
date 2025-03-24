@@ -1177,7 +1177,7 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIO
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
-  using __replaceable = conditional_t<_And<__is_replaceable<_Types>...>::value, variant, void>;
+  using __replaceable _LIBCPP_NODEBUG = conditional_t<_And<__is_replaceable<_Types>...>::value, variant, void>;
 
   template <bool _Dummy                                                                               = true,
             enable_if_t<__dependent_type<is_default_constructible<__first_type>, _Dummy>::value, int> = 0>

@@ -176,7 +176,7 @@ template <class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS array {
   using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, array, void>;
-  using __replaceable _LIBCPP_NODEBUG = __conditional_t<__is_replaceable<_Tp>::value, array, void>;
+  using __replaceable _LIBCPP_NODEBUG = __conditional_t<__is_replaceable_v<_Tp>, array, void>;
 
   // types:
   using __self _LIBCPP_NODEBUG = array;

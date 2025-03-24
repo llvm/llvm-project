@@ -146,7 +146,7 @@ public:
       unique_ptr,
       void>;
   using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable<pointer>::value && __is_replaceable<deleter_type>::value, unique_ptr, void>;
+      __conditional_t<__is_replaceable_v<pointer> && __is_replaceable_v<deleter_type>, unique_ptr, void>;
 
 private:
   _LIBCPP_COMPRESSED_PAIR(pointer, __ptr_, deleter_type, __deleter_);
@@ -414,7 +414,7 @@ public:
       unique_ptr,
       void>;
   using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable<pointer>::value && __is_replaceable<deleter_type>::value, unique_ptr, void>;
+      __conditional_t<__is_replaceable_v<pointer> && __is_replaceable_v<deleter_type>, unique_ptr, void>;
 
 private:
   template <class _Up, class _OtherDeleter>

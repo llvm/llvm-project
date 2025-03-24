@@ -74,8 +74,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
       __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
                       pair,
                       void>;
-  using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable<_T1>::value && __is_replaceable<_T2>::value, pair, void>;
+  using __replaceable _LIBCPP_NODEBUG = __conditional_t<__is_replaceable_v<_T1> && __is_replaceable_v<_T2>, pair, void>;
 
   _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
   _LIBCPP_HIDE_FROM_ABI pair(pair&&)      = default;

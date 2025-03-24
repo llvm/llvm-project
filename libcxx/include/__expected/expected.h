@@ -472,7 +472,7 @@ public:
                       expected,
                       void>;
   using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable<_Tp>::value && __is_replaceable<_Err>::value, expected, void>;
+      __conditional_t<__is_replaceable_v<_Tp> && __is_replaceable_v<_Err>, expected, void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;

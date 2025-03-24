@@ -591,7 +591,7 @@ public:
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
-  using __replaceable _LIBCPP_NODEBUG = conditional_t<__is_replaceable<_Tp>::value, optional, void>;
+  using __replaceable _LIBCPP_NODEBUG = conditional_t<__is_replaceable_v<_Tp>, optional, void>;
 
 private:
   // Disable the reference extension using this static assert.

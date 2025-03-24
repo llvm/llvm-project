@@ -38,6 +38,9 @@ struct __is_replaceable : is_trivially_copyable<_Tp> {};
 template <class _Tp>
 struct __is_replaceable<_Tp, __enable_if_t<is_same<_Tp, typename _Tp::__replaceable>::value> > : true_type {};
 
+template <class _Tp>
+inline const bool __is_replaceable_v = __is_replaceable<_Tp>::value;
+
 // Determines whether an allocator member of a container is replaceable.
 //
 // We take into account whether the allocator is propagated on assignments. If the allocator
@@ -52,7 +55,7 @@ struct __container_allocator_is_replaceable
                         _AllocatorTraits::is_always_equal::value ||
                             (_AllocatorTraits::propagate_on_container_move_assignment::value &&
                              _AllocatorTraits::propagate_on_container_copy_assignment::value &&
-                             __is_replaceable<typename _AllocatorTraits::allocator_type>::value)> {};
+                             __is_replaceable_v<typename _AllocatorTraits::allocator_type>)> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

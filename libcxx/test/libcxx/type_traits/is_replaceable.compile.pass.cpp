@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__type_traits/is_replaceable.h>
 #include <array>
 #include <deque>
@@ -31,25 +33,43 @@ template <class T>
 struct NonPropagatingStatefulMoveAssignAlloc : std::allocator<T> {
   using propagate_on_container_move_assignment = std::false_type;
   using is_always_equal                        = std::false_type;
+  template <class U>
+  struct rebind {
+    using other = NonPropagatingStatefulMoveAssignAlloc<U>;
+  };
 };
 
 template <class T>
 struct NonPropagatingStatefulCopyAssignAlloc : std::allocator<T> {
   using propagate_on_container_copy_assignment = std::false_type;
   using is_always_equal                        = std::false_type;
+  template <class U>
+  struct rebind {
+    using other = NonPropagatingStatefulCopyAssignAlloc<U>;
+  };
 };
 
 template <class T>
 struct NonPropagatingStatelessMoveAssignAlloc : std::allocator<T> {
   using propagate_on_container_move_assignment = std::false_type;
   using is_always_equal                        = std::true_type;
+  template <class U>
+  struct rebind {
+    using other = NonPropagatingStatelessMoveAssignAlloc<U>;
+  };
 };
 
 template <class T>
 struct NonPropagatingStatelessCopyAssignAlloc : std::allocator<T> {
   using propagate_on_container_copy_assignment = std::false_type;
   using is_always_equal                        = std::true_type;
+  template <class U>
+  struct rebind {
+    using other = NonPropagatingStatelessCopyAssignAlloc<U>;
+  };
 };
+
+static_assert(!std::__is_replaceable<test_allocator<char> >::value, ""); // we use that property below
 
 struct Empty {};
 static_assert(std::__is_replaceable<char>::value, "");

@@ -122,7 +122,7 @@ public:
       vector,
       void>;
   using __replaceable _LIBCPP_NODEBUG =
-      __conditional_t<__is_replaceable<pointer>::value && __container_allocator_is_replaceable<__alloc_traits>::value,
+      __conditional_t<__is_replaceable_v<pointer> && __container_allocator_is_replaceable<__alloc_traits>::value,
                       vector,
                       void>;
 
