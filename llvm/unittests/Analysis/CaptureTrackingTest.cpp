@@ -132,3 +132,31 @@ TEST(CaptureTracking, MultipleUsesInSameInstruction) {
   EXPECT_EQ(ICmp, CT.Captures[6]->getUser());
   EXPECT_EQ(1u, CT.Captures[6]->getOperandNo());
 }
+
+TEST(CaptureTracking, DerivedPointerIfBasePointerCaptured) {
+  StringRef Assembly = R"(
+    declare void @bar(ptr)
+
+    define void @test() {
+      %stkobj = alloca [2 x i32]
+      %derived = getelementptr inbounds [2 x i32], ptr %stkobj, i64 0, i64 1
+      store i32 1, ptr %derived
+      call void @bar(ptr %stkobj)
+      ret void
+    }
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M) << "Bad assembly?";
+
+  Function *F = M->getFunction("test");
+  BasicBlock *BB = &F->getEntryBlock();
+  Instruction *StackObj = &*BB->begin();
+  Instruction *DerviedPtr = StackObj->getNextNode();
+  
+  // The base object and its derived pointer are both captured.
+  EXPECT_TRUE(PointerMayBeCaptured(StackObj, true));
+  EXPECT_TRUE(PointerMayBeCaptured(DerviedPtr, true));
+}

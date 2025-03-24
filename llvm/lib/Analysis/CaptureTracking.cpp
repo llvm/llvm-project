@@ -424,6 +424,10 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   if (MaxUsesToExplore == 0)
     MaxUsesToExplore = DefaultMaxUsesToExplore;
 
+  // When analyzing a derived pointer, we need to analyze its underlying
+  // object to determine whether it is captured.
+  // E.g., `ptr + 1` is captured if `ptr` is captured.
+  V = getUnderlyingObjectAggressive(V);
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
   SmallSet<const Use *, 20> Visited;
