@@ -59,7 +59,7 @@ status of all important Fortran 2023 features.
 
 ## Fortran 2018
 All features except those listed in the following table are supported. Almost all of the unsupported features are related to
-the additional parallel features (coarrays/teams/collectives).
+the multi-image execution.
 
 | Feature                                                    | Status | Comments                                                |
 |------------------------------------------------------------|--------|---------------------------------------------------------|
