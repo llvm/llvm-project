@@ -882,7 +882,7 @@ getUnwidenedIntegerType(const ASTContext &astContext, const Expr *e) {
   return baseTy;
 }
 
-/// Check if \p E is a widened promoted integer.
+/// Check if \p e is a widened promoted integer.
 [[maybe_unused]] static bool isWidenedIntegerOp(const ASTContext &astContext,
                                                 const Expr *e) {
   return getUnwidenedIntegerType(astContext, e).has_value();
