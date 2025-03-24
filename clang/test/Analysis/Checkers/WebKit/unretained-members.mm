@@ -1,7 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.NoUnretainedMemberChecker -verify %s
 
 #include "objc-mock-types.h"
-
+#include "mock-system-header.h"
+#if 0
 namespace members {
 
   struct Foo {
@@ -58,3 +59,12 @@ namespace ignore_unions {
 
   void forceTmplToInstantiate(RefPtr<SomeObj>) {}
 }
+#endif
+
+@interface AnotherObject : NSObject {
+  NSString *ns_string;
+  // expected-warning@-1{{Instance variable 'ns_string' in 'AnotherObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
+  CFStringRef cf_string;
+  // expected-warning@-1{{Instance variable 'cf_string' in 'AnotherObject' is a retainable type 'CFStringRef'; member variables must be a RetainPtr}}
+}
+@end

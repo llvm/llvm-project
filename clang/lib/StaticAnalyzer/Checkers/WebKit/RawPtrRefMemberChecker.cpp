@@ -111,6 +111,8 @@ public:
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
+    if (BR->getSourceManager().isInSystemHeader(CD->getLocation()))
+      return;
     if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
       for (auto *Ivar : ID->ivars())
         visitIvarDecl(CD, Ivar);
@@ -133,6 +135,14 @@ public:
       std::optional<bool> IsCompatible = isPtrCompatible(QT, IvarCXXRD);
       if (IsCompatible && *IsCompatible)
         reportBug(Ivar, IvarType, IvarCXXRD, CD);
+    } else {
+      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
+      auto *PointeeType = IvarType->getPointeeType().getTypePtrOrNull();
+      if (IsCompatible && *IsCompatible) {
+        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
+          reportBug(Ivar, IvarType, ObjCType->getDecl(), CD);
+      }
     }
   }
 
