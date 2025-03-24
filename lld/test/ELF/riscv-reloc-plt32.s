@@ -18,6 +18,6 @@
 .globl _start
 _start:
 .data
-  .word %plt(foo - .)
-  .word %plt(foo - . + 1)
-  .word %plt(foo - . - 1)
+  .word %pltpcrel(foo)
+  .word %pltpcrel(foo + 1)
+  .word %pltpcrel(foo - 1)

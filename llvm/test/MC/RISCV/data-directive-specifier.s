@@ -9,18 +9,13 @@ l:
 
 # CHECK:      Section ({{.*}}) .rela.data {
 # CHECK-NEXT:   0x0 R_RISCV_PLT32 l 0x0
-# CHECK-NEXT:   0x4 R_RISCV_PLT32 l 0x4
-# CHECK-NEXT:   0x8 R_RISCV_PLT32 extern 0x4
-# CHECK-NEXT:   0xC R_RISCV_PLT32 g 0x8
-# CHECK-NEXT:   0x10 R_RISCV_PLT32 g 0x18
+# CHECK-NEXT:   0x4 R_RISCV_PLT32 extern 0x4
+# CHECK-NEXT:   0x8 R_RISCV_PLT32 g 0x8
 # CHECK-NEXT: }
 .data
-.word %plt(l - .)
-.word %plt(l - .data)
-
-.word %plt(extern - . + 4)
-.word %plt(g - . + 8)
-.word %plt(g - .data + 8)
+.word %pltpcrel(l)
+.word %pltpcrel(extern + 4)
+.word %pltpcrel(g + 8)
 
 # CHECK:      Section ({{.*}}) .rela.data1 {
 # CHECK-NEXT:   0x0 R_RISCV_GOT32_PCREL data1 0x0
@@ -35,14 +30,17 @@ data1:
 .word %gotpcrel(extern-5)
 
 .ifdef ERR
-# ERR: [[#@LINE+1]]:7: error: %plt must be PC-relative in a .word directive
-.word %plt(g)
+# ERR: [[#@LINE+1]]:7: error: %pltpcrel can only be used in a .word directive
+.quad %pltpcrel(g)
 
-# ERR: [[#@LINE+1]]:7: error: %plt must be PC-relative in a .word directive
-.quad %plt(g-.)
+# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+.word %pltpcrel(g-.)
 
-# ERR: [[#@LINE+1]]:7: error: symbol 'und' can not be undefined in a subtraction expression
-.word %plt(extern - und)
+# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+.word %pltpcrel(extern - und)
+
+# ERR: [[#@LINE+1]]:7: error: %gotpcrel can only be used in a .word directive
+.quad %gotpcrel(g)
 
 # ERR: [[#@LINE+1]]:7: error: expected relocatable expression
 .word %gotpcrel(extern - .)

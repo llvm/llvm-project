@@ -91,13 +91,10 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
+  Res.setSpecifier(specifier);
 
-  Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                     getSpecifier());
-  // When the subtrahend (SymB) is present, the relocatable expression
-  // only allows None and PLT as the specifier.
-  return !Res.getSymB() ||
-         llvm::is_contained({VK_None, VK_PLT}, getSpecifier());
+  // Custom fixup types are not valid with symbol difference expressions.
+  return Res.getSymB() ? getSpecifier() == VK_None : true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
@@ -122,7 +119,7 @@ RISCVMCExpr::getSpecifierForName(StringRef name) {
       .Case("tlsdesc_add_lo", VK_TLSDESC_ADD_LO)
       .Case("tlsdesc_call", VK_TLSDESC_CALL)
       // Used in data directives
-      .Case("plt", VK_PLT)
+      .Case("pltpcrel", VK_PLTPCREL)
       .Case("gotpcrel", VK_GOTPCREL)
       .Default(std::nullopt);
 }
@@ -165,10 +162,10 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     return "call_plt";
   case VK_32_PCREL:
     return "32_pcrel";
-  case VK_PLT:
-    return "plt";
   case VK_GOTPCREL:
     return "gotpcrel";
+  case VK_PLTPCREL:
+    return "pltpcrel";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }

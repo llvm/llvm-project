@@ -40,7 +40,6 @@ protected:
   uint8_t PLTRelativeSpecifier = 0;
 
 public:
-  TargetLoweringObjectFileELF();
   ~TargetLoweringObjectFileELF() override = default;
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
@@ -116,12 +115,18 @@ public:
                                            uint8_t Specifier) const {
     return nullptr;
   }
+  const MCExpr *
+  lowerSymbolDifference(const MCSymbol *LHS, const MCSymbol *RHS,
+                        int64_t Addend,
+                        std::optional<int64_t> PCRelativeOffset) const;
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
+                                       const GlobalValue *RHS, int64_t Addend,
+                                       std::optional<int64_t> PCRelativeOffset,
                                        const TargetMachine &TM) const override;
 
-  const MCExpr *lowerDSOLocalEquivalent(const DSOLocalEquivalent *Equiv,
-                                        const MCSymbolRefExpr *RHS,
+  const MCExpr *lowerDSOLocalEquivalent(const MCSymbol *LHS,
+                                        const MCSymbol *RHS, int64_t Addend,
+                                        std::optional<int64_t> PCRelativeOffset,
                                         const TargetMachine &TM) const override;
 
   MCSection *getSectionForCommandLines() const override;
@@ -211,7 +216,8 @@ public:
                                   const MCSymbol *KeySym) const override;
 
   const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
+                                       const GlobalValue *RHS, int64_t Addend,
+                                       std::optional<int64_t> PCRelativeOffset,
                                        const TargetMachine &TM) const override;
 
   /// Given a mergeable constant with the specified size and relocation
@@ -245,10 +251,6 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
-
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
 };
 
 class TargetLoweringObjectFileXCOFF : public TargetLoweringObjectFile {
@@ -273,10 +275,6 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
-
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;

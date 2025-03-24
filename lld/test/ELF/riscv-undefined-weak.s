@@ -97,4 +97,4 @@ branch:
 # PC-NOT:      .plt:
 # PLT:         .plt:
 
-.word %plt(target - .)
+.word %pltpcrel(target)

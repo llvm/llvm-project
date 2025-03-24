@@ -59,7 +59,8 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
 
-  switch (Target.getRefKind()) {
+  auto Spec = RISCVMCExpr::Specifier(Target.getRefKind());
+  switch (Spec) {
   case RISCVMCExpr::VK_TPREL_HI:
   case RISCVMCExpr::VK_TLS_GOT_HI:
   case RISCVMCExpr::VK_TLS_GD_HI:
@@ -67,12 +68,16 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     if (auto *S = Target.getSymA())
       cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
     break;
-  case RISCVMCExpr::VK_PLT:
-    if (IsPCRel && Kind == FK_Data_4)
+  case RISCVMCExpr::VK_PLTPCREL:
+  case RISCVMCExpr::VK_GOTPCREL:
+    if (Kind == FK_Data_4)
       break;
     Ctx.reportError(Fixup.getLoc(),
-                    "%plt must be PC-relative in a .word directive");
+                    "%" + RISCVMCExpr::getSpecifierName(Spec) +
+                        " can only be used in a .word directive");
     return ELF::R_RISCV_NONE;
+  default:
+    break;
   }
 
   if (IsPCRel) {
@@ -82,8 +87,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_RISCV_NONE;
     case FK_Data_4:
     case FK_PCRel_4:
-      return Target.getRefKind() == RISCVMCExpr::VK_PLT ? ELF::R_RISCV_PLT32
-                                                        : ELF::R_RISCV_32_PCREL;
+      return ELF::R_RISCV_32_PCREL;
     case RISCV::fixup_riscv_pcrel_hi20:
       return ELF::R_RISCV_PCREL_HI20;
     case RISCV::fixup_riscv_pcrel_lo12_i:
@@ -138,10 +142,16 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target) {
-      if (cast<RISCVMCExpr>(Expr)->getSpecifier() == RISCVMCExpr::VK_32_PCREL)
+      switch (cast<RISCVMCExpr>(Expr)->getSpecifier()) {
+      case RISCVMCExpr::VK_32_PCREL:
         return ELF::R_RISCV_32_PCREL;
-      if (cast<RISCVMCExpr>(Expr)->getSpecifier() == RISCVMCExpr::VK_GOTPCREL)
+      case RISCVMCExpr::VK_GOTPCREL:
         return ELF::R_RISCV_GOT32_PCREL;
+      case RISCVMCExpr::VK_PLTPCREL:
+        return ELF::R_RISCV_PLT32;
+      default:
+        break;
+      }
     }
     return ELF::R_RISCV_32;
   case FK_Data_8:
