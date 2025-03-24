@@ -61,6 +61,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -111,6 +112,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      NestedNameSpecifier *NNS1,
                                      NestedNameSpecifier *NNS2);
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const Attr *Attr1, const Attr *Attr2);
 static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
                                      const IdentifierInfo *Name2);
 
@@ -449,6 +452,107 @@ public:
   }
 };
 } // namespace
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const Attr *Attr1, const Attr *Attr2) {
+  // Two attributes are structurally equivalent if they are the same kind
+  // of attribute, spelled with the same spelling kind, and have the same
+  // arguments. This means that [[noreturn]] and __attribute__((noreturn)) are
+  // not structurally equivalent, nor are [[nodiscard("foo")]] and
+  // [[nodiscard("bar")]].
+  if (Attr1->getKind() != Attr2->getKind())
+    return false;
+
+  if (Attr1->getSyntax() != Attr2->getSyntax())
+    return false;
+
+  if (Attr1->getSpellingListIndex() != Attr2->getSpellingListIndex())
+    return false;
+
+  auto GetAttrName = [](const Attr *A) {
+    if (const IdentifierInfo *II = A->getAttrName())
+      return II->getName();
+    return StringRef{};
+  };
+
+  if (GetAttrName(Attr1) != GetAttrName(Attr2))
+    return false;
+
+  // FIXME: check the attribute arguments. Attr does not track the arguments on
+  // the base class, which makes this awkward. We may want to tablegen a
+  // comparison function for attributes? In the meantime, we're doing this the
+  // cheap way by pretty printing the attributes and checking they produce
+  // equivalent string representations.
+  std::string AttrStr1, AttrStr2;
+  PrintingPolicy DefaultPolicy(Context.LangOpts);
+  llvm::raw_string_ostream SS1(AttrStr1), SS2(AttrStr2);
+  Attr1->printPretty(SS1, DefaultPolicy);
+  Attr2->printPretty(SS2, DefaultPolicy);
+
+  return SS1.str() == SS2.str();
+}
+
+static bool CheckStructurallyEquivalentAttributes(
+    StructuralEquivalenceContext &Context, const Decl *D1, const Decl *D2,
+    unsigned ApplicableDiagnostic, const Decl *PrimaryDecl = nullptr) {
+  // Gather the attributes and sort them by name so that they're in equivalent
+  // orders. This means that __attribute__((foo, bar)) is equivalent to
+  // __attribute__((bar, foo)).
+  llvm::SmallVector<const Attr *, 2> Attrs1, Attrs2;
+  auto CopyAttrs = [](auto &&Range, llvm::SmallVectorImpl<const Attr *> &Cont) {
+    for (const Attr *A : Range)
+      Cont.push_back(A);
+  };
+  CopyAttrs(D1->attrs(), Attrs1);
+  CopyAttrs(D2->attrs(), Attrs2);
+
+  auto Sorter = [](const Attr *LHS, const Attr *RHS) {
+    const IdentifierInfo *II1 = LHS->getAttrName(), *II2 = RHS->getAttrName();
+    if (!II1 || !II2)
+      return II1 == II2;
+    return *II1 < *II2;
+  };
+  llvm::sort(Attrs1, Sorter);
+  llvm::sort(Attrs2, Sorter);
+
+  auto A2 = Attrs2.begin(), A2End = Attrs2.end();
+  const NamedDecl *DiagnoseDecl =
+      cast<NamedDecl>(PrimaryDecl ? PrimaryDecl : D2);
+  for (auto A1 = Attrs1.begin(), A1End = Attrs1.end(); A1 != A1End;
+       ++A1, ++A2) {
+    if (A2 == A2End) {
+      if (Context.Complain) {
+        Context.Diag2(DiagnoseDecl->getLocation(), ApplicableDiagnostic)
+            << DiagnoseDecl << (&Context.FromCtx != &Context.ToCtx);
+        Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
+        Context.Diag2(D2->getLocation(), diag::note_odr_attr_missing);
+      }
+      return false;
+    }
+
+    if (!IsStructurallyEquivalent(Context, *A1, *A2)) {
+      if (Context.Complain) {
+        Context.Diag2(DiagnoseDecl->getLocation(), ApplicableDiagnostic)
+            << DiagnoseDecl << (&Context.FromCtx != &Context.ToCtx);
+        Context.Diag2((*A2)->getLocation(), diag::note_odr_attr) << *A2;
+        Context.Diag1((*A1)->getLocation(), diag::note_odr_attr) << *A1;
+      }
+      return false;
+    }
+  }
+
+  if (A2 != A2End) {
+    if (Context.Complain) {
+      Context.Diag2(DiagnoseDecl->getLocation(), ApplicableDiagnostic)
+          << DiagnoseDecl << (&Context.FromCtx != &Context.ToCtx);
+      Context.Diag1(D1->getLocation(), diag::note_odr_attr_missing);
+      Context.Diag1((*A2)->getLocation(), diag::note_odr_attr) << *A2;
+    }
+    return false;
+  }
+
+  return true;
+}
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const UnaryOperator *E1,
@@ -1500,6 +1604,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, Field1->getBitWidth(),
                                     Field2->getBitWidth());
 
+  // In C23 mode, check for structural equivalence of attributes on the fields.
+  // FIXME: Should this happen in C++ as well?
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(
+          Context, Field1, Field2,
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent),
+          Owner2))
+    return false;
+
   return true;
 }
 
@@ -1686,6 +1799,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       }
     }
   }
+
+  // In C23 mode, check for structural equivalence of attributes on the record
+  // itself. FIXME: Should this happen in C++ as well?
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(
+          Context, D1, D2,
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent)))
+    return false;
 
   // If the records occur in different context (namespace), these should be
   // different. This is specially important if the definition of one or both
@@ -1911,26 +2032,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
-static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     EnumConstantDecl *D1,
-                                     EnumConstantDecl *D2) {
-  const llvm::APSInt &FromVal = D1->getInitVal();
-  const llvm::APSInt &ToVal = D2->getInitVal();
-  if (FromVal.isSigned() != ToVal.isSigned())
-    return false;
-  if (FromVal.getBitWidth() != ToVal.getBitWidth())
-    return false;
-  if (FromVal != ToVal)
-    return false;
-
-  if (!IsStructurallyEquivalent(D1->getIdentifier(), D2->getIdentifier()))
-    return false;
-
-  // Init expressions are the most expensive check, so do them last.
-  return IsStructurallyEquivalent(Context, D1->getInitExpr(),
-                                  D2->getInitExpr());
-}
-
 /// Determine structural equivalence of two enums.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      EnumDecl *D1, EnumDecl *D2) {
@@ -1946,6 +2047,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   D2 = D2->getDefinition();
   if (!D1 || !D2)
     return true;
+
+  if (Context.LangOpts.C23 &&
+      !CheckStructurallyEquivalentAttributes(
+          Context, D1, D2,
+          Context.getApplicableDiagnostic(diag::err_odr_tag_type_inconsistent)))
+    return false;
 
   llvm::SmallVector<const EnumConstantDecl *, 8> D1Enums, D2Enums;
   auto CopyEnumerators =
@@ -2001,6 +2108,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       }
       return false;
     }
+    if (Context.LangOpts.C23 && !CheckStructurallyEquivalentAttributes(
+                                    Context, *EC1, *EC2,
+                                    Context.getApplicableDiagnostic(
+                                        diag::err_odr_tag_type_inconsistent),
+                                    D2))
+      return false;
   }
 
   if (EC2 != EC2End) {
@@ -2449,6 +2562,8 @@ unsigned StructuralEquivalenceContext::getApplicableDiagnostic(
     return ErrorDiagnostic;
 
   switch (ErrorDiagnostic) {
+  case diag::err_odr_attr_inconsistent:
+    return diag::warn_odr_attr_inconsistent;
   case diag::err_odr_variable_type_inconsistent:
     return diag::warn_odr_variable_type_inconsistent;
   case diag::err_odr_variable_multiple_def:

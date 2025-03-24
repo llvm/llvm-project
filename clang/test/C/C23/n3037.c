@@ -58,23 +58,123 @@ union purr { float y; int x; }; // c23-error {{type 'union purr' has incompatibl
                                    c23-note {{field has name 'y' here}} \
                                    c17-error {{redefinition of 'purr'}}
 
-// FIXME: this should have a structural equivalence error in C23.
-struct [[gnu::packed]] attr_test { // c17-note {{previous definition is here}}
+// Different attributes on the tag type are an error.
+struct [[gnu::packed]] attr_test { // c17-note {{previous definition is here}} \
+                                      c23-note {{attribute 'packed' here}}
   int x;
 };
 
-struct attr_test { // c17-error {{redefinition of 'attr_test'}}
+struct attr_test { // c17-error {{redefinition of 'attr_test'}} \
+                      c23-error {{type 'attr_test' has incompatible definitions}} \
+                      c23-note {{no corresponding attribute here}}
   int x;
 };
 
-// FIXME: this should have a structural equivalence error in C23.
-struct field_attr_test { // c17-note {{previous definition is here}}
+struct attr_test_2 { // c17-note {{previous definition is here}} \
+                        c23-note {{no corresponding attribute here}}
   int x;
-  [[gnu::packed]] int y;
 };
 
-struct field_attr_test { // c17-error {{redefinition of 'field_attr_test'}}
+struct [[gnu::packed]] attr_test_2 { // c17-error {{redefinition of 'attr_test_2'}} \
+                                        c23-error {{type 'attr_test_2' has incompatible definitions}} \
+                                        c23-note {{attribute 'packed' here}}
   int x;
+};
+
+struct [[deprecated]] attr_test_3 { // c17-note {{previous definition is here}} \
+                                       c23-note {{attribute 'deprecated' here}}
+  int x;
+};
+
+struct [[gnu::packed]] attr_test_3 { // c17-error {{redefinition of 'attr_test_3'}} \
+                                        c23-error {{type 'attr_test_3' has incompatible definitions}} \
+                                        c23-note {{attribute 'packed' here}}
+  int x;
+};
+
+// Same attribute works fine!
+struct [[deprecated]] attr_test_4 { // c17-note {{previous definition is here}}
+  int x;
+};
+
+struct [[deprecated]] attr_test_4 { // c17-error {{redefinition of 'attr_test_4'}}
+  int x;
+};
+
+// Same attribute with the same arguments is also fine.
+struct [[deprecated("testing")]] attr_test_5 { // c17-note {{previous definition is here}}
+  int x;
+};
+
+struct [[deprecated("testing")]] attr_test_5 { // c17-error {{redefinition of 'attr_test_5'}}
+  int x;
+};
+
+// Same attribute with different arguments is not allowed. FIXME: it would be
+// nicer to explain that the arguments are different, but attribute argument
+// handling is already challenging.
+struct [[deprecated("testing")]] attr_test_6 { // c17-note {{previous definition is here}} \
+                                                  c23-note {{attribute 'deprecated' here}}
+  int x;
+};
+
+struct [[deprecated("oh no!")]] attr_test_6 { // c17-error {{redefinition of 'attr_test_6'}} \
+                                                 c23-error {{type 'attr_test_6' has incompatible definitions}} \
+                                                 c23-note {{attribute 'deprecated' here}}
+  int x;
+};
+
+// Different attributes on the fields make them incompatible.
+struct field_attr_test_1 { // c17-note {{previous definition is here}}
+  int x;
+  [[gnu::packed]] int y; // c23-note {{attribute 'packed' here}}
+};
+
+struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} \
+                              c23-error {{type 'field_attr_test_1' has incompatible definitions}}
+  int x;
+  int y; // c23-note {{no corresponding attribute here}}
+};
+
+struct field_attr_test_2 { // c17-note {{previous definition is here}}
+  [[gnu::packed]] int x; // c23-note {{attribute 'packed' here}}
+  int y;
+};
+
+struct field_attr_test_2 { // c17-error {{redefinition of 'field_attr_test_2'}} \
+                              c23-error {{type 'field_attr_test_2' has incompatible definitions}}
+  int x; // c23-note {{no corresponding attribute here}}
+  int y;
+};
+
+struct field_attr_test_3 { // c17-note {{previous definition is here}}
+  [[gnu::packed]] int x;
+  int y;
+};
+
+struct field_attr_test_3 { // c17-error {{redefinition of 'field_attr_test_3'}}
+  int x [[gnu::packed]];
+  int y;
+};
+
+struct field_attr_test_4 { // c17-note {{previous definition is here}}
+  [[gnu::packed]] int x; // c23-note {{attribute 'packed' here}}
+  int y;
+};
+
+struct field_attr_test_4 { // c17-error {{redefinition of 'field_attr_test_4'}} \
+                              c23-error {{type 'field_attr_test_4' has incompatible definitions}}
+  [[deprecated]] int x; // c23-note {{attribute 'deprecated' here}}
+  int y;
+};
+
+struct field_attr_test_5 { // c17-note {{previous definition is here}}
+  [[deprecated("testing")]] int x;
+  int y;
+};
+
+struct field_attr_test_5 { // c17-error {{redefinition of 'field_attr_test_5'}}
+  [[deprecated("testing")]] int x;
   int y;
 };
 
@@ -138,3 +238,67 @@ enum Y { YA = 1, YB = 3 }; // c23-error {{type 'enum Y' has incompatible definit
 // Different enumeration names, same named constants.
 enum Z1 { ZC = 1 }; // both-note {{previous definition is here}}
 enum Z2 { ZC = 1 }; // both-error {{redefinition of enumerator 'ZC'}}
+
+// Test attributes on the enumeration and enumerators.
+enum [[deprecated]] enum_attr_test_1 { // c17-note {{previous definition is here}}
+  EAT1 [[deprecated]] // c17-note {{previous definition is here}}
+};
+
+enum [[deprecated]] enum_attr_test_1 { // c17-error {{redefinition of 'enum_attr_test_1'}}
+  EAT1 [[deprecated]] // c17-error {{redefinition of enumerator 'EAT1'}}
+};
+
+enum [[deprecated]] enum_attr_test_2 { // c17-note {{previous definition is here}} \
+                                          c23-note {{attribute 'deprecated' here}}
+  EAT2 // c17-note {{previous definition is here}}
+};
+
+enum enum_attr_test_2 { // c17-error {{redefinition of 'enum_attr_test_2'}} \
+                           c23-error {{type 'enum_attr_test_2' has incompatible definition}} \
+                           c23-note {{no corresponding attribute here}}
+  EAT2 // c17-error {{redefinition of enumerator 'EAT2'}}
+};
+
+enum enum_attr_test_3 { // c17-note {{previous definition is here}} \
+                           c23-note {{no corresponding attribute here}}
+  EAT3 // c17-note {{previous definition is here}}
+};
+
+enum [[deprecated]] enum_attr_test_3 { // c17-error {{redefinition of 'enum_attr_test_3'}} \
+                                          c23-error {{type 'enum_attr_test_3' has incompatible definition}} \
+                                          c23-note {{attribute 'deprecated' here}}
+  EAT3 // c17-error {{redefinition of enumerator 'EAT3'}}
+};
+
+enum [[clang::flag_enum]] enum_attr_test_4 { // c17-note {{previous definition is here}} \
+                                                c23-note {{attribute 'flag_enum' here}}
+  EAT4 // c17-note {{previous definition is here}}
+};
+
+enum [[deprecated]] enum_attr_test_4 { // c17-error {{redefinition of 'enum_attr_test_4'}} \
+                                          c23-error {{type 'enum_attr_test_4' has incompatible definition}} \
+                                          c23-note {{attribute 'deprecated' here}}
+  EAT4 // c17-error {{redefinition of enumerator 'EAT4'}}
+};
+
+enum enum_attr_test_5 { // c17-note {{previous definition is here}}
+  EAT5 [[deprecated]] // c17-note {{previous definition is here}} \
+                         c23-note {{attribute 'deprecated' here}}
+};
+
+enum enum_attr_test_5 { // c17-error {{redefinition of 'enum_attr_test_5'}} \
+                           c23-error {{type 'enum_attr_test_5' has incompatible definition}}
+  EAT5 // c17-error {{redefinition of enumerator 'EAT5'}} \
+          c23-note {{no corresponding attribute here}}
+};
+
+enum enum_attr_test_6 { // c17-note {{previous definition is here}}
+  EAT6 // c17-note {{previous definition is here}} \
+          c23-note {{no corresponding attribute here}}
+};
+
+enum enum_attr_test_6 { // c17-error {{redefinition of 'enum_attr_test_6'}} \
+                           c23-error {{type 'enum_attr_test_6' has incompatible definition}}
+  EAT6 [[deprecated]] // c17-error {{redefinition of enumerator 'EAT6'}} \
+                         c23-note {{attribute 'deprecated' here}}
+};
