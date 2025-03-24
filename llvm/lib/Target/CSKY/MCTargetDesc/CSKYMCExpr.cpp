@@ -67,59 +67,12 @@ void CSKYMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << getVariantKindName(getSpecifier());
 }
 
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expression");
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
 bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                            const MCAssembler *Asm) const {
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  // Some custom fixup types are not valid with symbol difference expressions
-  if (Res.getSymA() && Res.getSymB()) {
-    switch (getSpecifier()) {
-    default:
-      return true;
-    case VK_GOT:
-    case VK_GOT_IMM18_BY4:
-    case VK_GOTPC:
-    case VK_GOTOFF:
-    case VK_PLT:
-    case VK_PLT_IMM18_BY4:
-    case VK_TLSIE:
-    case VK_TLSLE:
-    case VK_TLSGD:
-    case VK_TLSLDO:
-    case VK_TLSLDM:
-      return false;
-    }
-  }
-
-  return true;
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), specifier);
+  return !Res.getSymB();
 }
