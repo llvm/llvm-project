@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -287,11 +288,8 @@ entry:
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
-  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
   LLVMContext Context;
@@ -304,14 +302,13 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
       MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getName() != "a.func") {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
       continue;
     }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findByUse(Handle);
+      const auto Bindings = DBM.findByUse(CI);
       ASSERT_EQ(Bindings.size(), 1u);
       ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Decrement);
     }
@@ -328,11 +325,8 @@ entry:
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
-  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
   LLVMContext Context;
@@ -345,14 +339,13 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
       MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getName() != "a.func") {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
       continue;
     }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findByUse(Handle);
+      const auto Bindings = DBM.findByUse(CI);
       ASSERT_EQ(Bindings.size(), 1u);
       ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Increment);
     }
@@ -366,11 +359,8 @@ TEST_F(UniqueResourceFromUseTest, TestResourceCounterUnknown) {
 define void @main() {
 entry:
   %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false)
-  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
   LLVMContext Context;
@@ -383,14 +373,13 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
       MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getName() != "a.func") {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
       continue;
     }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findByUse(Handle);
+      const auto Bindings = DBM.findByUse(CI);
       ASSERT_EQ(Bindings.size(), 1u);
       ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Unknown);
     }
@@ -407,13 +396,8 @@ entry:
   %handle2 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 4, i32 3, i32 2, i32 1, i1 false)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle1, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle2, i8 1)
-  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle1)
-  call void @b.func(target("dx.RawBuffer", float, 1, 0) %handle2)
   ret void
 }
-
-declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
-declare void @b.func(target("dx.RawBuffer", float, 1, 0) %handle)
   )";
 
   LLVMContext Context;
@@ -425,21 +409,21 @@ declare void @b.func(target("dx.RawBuffer", float, 1, 0) %handle)
   const DXILResourceCounterDirectionMap &DCDM =
       MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
 
+  ResourceCounterDirection Dirs[2] = {ResourceCounterDirection::Decrement,
+                                      ResourceCounterDirection::Increment};
+  ResourceCounterDirection *Dir = Dirs;
+
   for (const Function &F : M->functions()) {
-    StringRef FName = F.getName();
-    if (FName != "a.func" && FName != "b.func") {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
       continue;
     }
 
-    auto Dir = FName == "a.func" ? ResourceCounterDirection::Decrement
-                                 : ResourceCounterDirection::Increment;
-
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const Value *Handle = CI->getArgOperand(0);
-      const auto Bindings = DBM.findByUse(Handle);
+      const auto Bindings = DBM.findByUse(CI);
       ASSERT_EQ(Bindings.size(), 1u);
-      ASSERT_EQ(DCDM[Bindings.front()], Dir);
+      ASSERT_EQ(DCDM[Bindings.front()], *Dir);
+      Dir++;
     }
   }
 }
