@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -Wno-unused-value -verify %s
 
 // A glvalue of type "cv1 T1" can be cast to type "rvalue reference to
 // cv2 T2" if "cv2 T2" is reference-compatible with "cv1 T1" (8.5.3).
@@ -27,11 +27,11 @@ struct C : private A { // expected-note 4 {{declared private here}}
     C&& that();
 
     void f() {
-        (void)static_cast<A&&>(*this);
-        (void)static_cast<const A&&>(*this);
+        static_cast<A&&>(*this);
+        static_cast<const A&&>(*this);
 
-        (void)static_cast<A&&>(that());
-        (void)static_cast<const A&&>(that());
+        static_cast<A&&>(that());
+        static_cast<const A&&>(that());
     }
 };
 C c;
@@ -45,23 +45,25 @@ void f() {
     static_cast<const A&&>(c.that()); // expected-error {{cannot cast 'C' to its private base class 'const A'}}
 }
 
-constexpr auto v = (
-    (A&&)c,
-    (A&&)(C&&)c,
-    (A&&)cc,
-    (A&&)(const C&&)c,
-    (const A&&)c,
-    (const A&&)(C&&)c,
-    (const A&&)cc,
-    (const A&&)(const C&&)c
-);
+constexpr bool g() {
+    (A&&)c;
+    (A&&)(C&&)c;
+    (A&&)cc;
+    (A&&)(const C&&)c;
+    (const A&&)c;
+    (const A&&)(C&&)c;
+    (const A&&)cc;
+    (const A&&)(const C&&)c;
+    return true;
+}
+static_assert(g(), "");
 
 struct D : A, B { // expected-warning {{direct base 'A' is inaccessible due to ambiguity}}
     D&& rv();
 };
 D d;
 
-void g(const D cd) {
+void h(const D cd) {
     static_cast<A&&>(d);      // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
     static_cast<A&&>(d.rv()); // expected-error {{ambiguous conversion from derived class 'D' to base class 'A'}}
 
@@ -79,10 +81,7 @@ void g(const D cd) {
 }
 
 template<class T, class U>
-auto h(U u = {}) -> decltype(static_cast<T&&>(u));
+auto s(U u = {}) -> decltype(static_cast<T&&>(u)); // expected-note 2 {{substitution failure}}
 
-template<class, class>
-int h();
-
-int i = h<A, C>();
-int j = h<A, D>();
+int i = s<A, C>(); // expected-error {{no matching function}}
+int j = s<A, D>(); // expected-error {{no matching function}}
