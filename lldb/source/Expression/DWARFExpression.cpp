@@ -38,8 +38,6 @@
 #include "lldb/Target/Thread.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
-#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -389,6 +387,16 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
     return dwarf_cu->GetVendorDWARFOpcodeSize(data, data_offset, op);
 
   return LLDB_INVALID_OFFSET;
+}
+
+static const char *DW_OP_value_to_name(uint32_t val) {
+  static char invalid[100];
+  llvm::StringRef llvmstr = llvm::dwarf::OperationEncodingString(val);
+  if (llvmstr.empty()) {
+    snprintf(invalid, sizeof(invalid), "Unknown DW_OP constant: 0x%x", val);
+    return invalid;
+  }
+  return llvmstr.data();
 }
 
 llvm::Expected<lldb::addr_t> DWARFExpression::GetLocation_DW_OP_addr(
