@@ -47,10 +47,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Prepare CMAKE_CXX_FLAGS so that they can be passed to execute_process
     # as separate flags.
     separate_arguments(flags UNIX_COMMAND "${CMAKE_CXX_FLAGS}")
-    set(hash_flag "-###")
-    set(command ${CMAKE_CXX_COMPILER} ${flags} ${hash_flag} -v)
     execute_process(
-      COMMAND ${command}
+      COMMAND "${CMAKE_CXX_COMPILER}" ${flags} -v "-###"
       ERROR_FILE "${CMAKE_CURRENT_BINARY_DIR}/clang_gcc_root_result"
     )
     file(STRINGS "${CMAKE_CURRENT_BINARY_DIR}/clang_gcc_root_result" _errorresult)
