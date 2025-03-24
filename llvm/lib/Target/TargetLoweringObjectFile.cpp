@@ -104,14 +104,14 @@ static bool isSuitableForBSS(const GlobalVariable *GV) {
 static bool IsNullTerminatedString(const Constant *C) {
   // First check: is we have constant array terminated with zero
   if (const ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(C)) {
-    unsigned NumElts = CDS->getNumElements();
+    uint64_t NumElts = CDS->getNumElements();
     assert(NumElts != 0 && "Can't have an empty CDS");
 
     if (CDS->getElementAsInteger(NumElts-1) != 0)
       return false; // Not null terminated.
 
     // Verify that the null doesn't occur anywhere else in the string.
-    for (unsigned i = 0; i != NumElts-1; ++i)
+    for (uint64_t i = 0; i != NumElts - 1; ++i)
       if (CDS->getElementAsInteger(i) == 0)
         return false;
     return true;
