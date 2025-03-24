@@ -1,4 +1,4 @@
-//===------ extensible_rtti.h - Extensible RTTI for ORC RT ------*- C++ -*-===//
+//===------------- rtti.h - RTTI support for ORC RT -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,8 +56,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_EXTENSIBLE_RTTI_H
-#define ORC_RT_EXTENSIBLE_RTTI_H
+#ifndef ORC_RT_RTTI_H
+#define ORC_RT_RTTI_H
 
 namespace orc_rt {
 
@@ -142,4 +142,4 @@ template <typename To, typename From> bool isa(const From &Value) {
 
 } // namespace orc_rt
 
-#endif // ORC_RT_EXTENSIBLE_RTTI_H
+#endif // ORC_RT_RTTI_H
