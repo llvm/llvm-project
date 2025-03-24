@@ -51,7 +51,7 @@
 #define LLVM_LIBC_ALIASING_FUNCTION(name, alias)                               \
   namespace LIBC_NAMESPACE_DECL {                                              \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#alias)]];                  \
-  asm(#name " = " #alias)                                                      \
+  asm(#name " = " #alias);                                                     \
   }                                                                            \
   static_assert(true, "Require semicolon")
 #else
@@ -65,7 +65,7 @@
 #define LLVM_LIBC_ALIASING_FUNCTION(name, alias)                               \
   namespace LIBC_NAMESPACE_DECL {                                              \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias("__" #alias "_impl__")]];   \
-  asm(#name " = __" #alias "_impl__")                                          \
+  asm(#name " = __" #alias "_impl__");                                         \
   }                                                                            \
   static_assert(true, "Require semicolon")
 #endif // LIBC_COPT_PUBLIC_PACKAGING
