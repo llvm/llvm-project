@@ -32,6 +32,7 @@
 #include "check-select-rank.h"
 #include "check-select-type.h"
 #include "check-stop.h"
+#include "check-warning.h"
 #include "compute-offsets.h"
 #include "mod-file.h"
 #include "resolve-labels.h"
@@ -202,6 +203,7 @@ using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     MiscChecker, NamelistChecker, NullifyChecker, PurityChecker,
     ReturnStmtChecker, SelectRankConstructChecker, SelectTypeChecker,
     StopChecker>;
+using StatementSemanticsPass3 = SemanticsVisitor<WarningChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
@@ -221,6 +223,7 @@ static bool PerformStatementSemantics(
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);
   }
+  StatementSemanticsPass3{context}.Walk(program);
   if (!context.messages().AnyFatalError()) {
     WarnUndefinedFunctionResult(context, context.globalScope());
   }
@@ -346,9 +349,9 @@ SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
     const common::LangOptions &langOpts,
-    parser::AllCookedSources &allCookedSources)
+    parser::AllCookedSources &allCookedSources, clang::DiagnosticsEngine &diags)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      langOpts_{langOpts}, allCookedSources_{allCookedSources},
+      langOpts_{langOpts}, allCookedSources_{allCookedSources}, diags_{diags},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},

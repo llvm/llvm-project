@@ -31,6 +31,11 @@ target_link_libraries(bbc PRIVATE
   FlangOpenMPTransforms
 )
 
+clang_target_link_libraries(bbc PRIVATE
+  PRIVATE
+  clangBasic
+)
+
 mlir_target_link_libraries(bbc PRIVATE
   ${dialect_libs}
   ${extension_libs}
