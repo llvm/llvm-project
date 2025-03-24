@@ -49,6 +49,7 @@ class MCSymbol;
 class raw_ostream;
 
 namespace bolt {
+class BinaryBasicBlock;
 class BinaryFunction;
 
 /// Different types of indirect branches encountered during disassembly.
@@ -572,6 +573,11 @@ public:
     return false;
   }
 
+  virtual MCPhysReg getSignedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
@@ -620,6 +626,44 @@ public:
   analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return std::make_pair(getNoRegister(), getNoRegister());
+  }
+
+  /// Analyzes if a pointer is checked to be authenticated successfully
+  /// by the end of the basic block.
+  ///
+  /// It is possible for pointer authentication instructions not to terminate
+  /// the program abnormally on authentication failure and return some invalid
+  /// pointer instead (like it is done on AArch64 when FEAT_FPAC is not
+  /// implemented). This might be enough to crash on invalid memory access when
+  /// the pointer is later used as the destination of a load, store, or branch
+  /// instruction. On the other hand, when the pointer is not used right away,
+  /// it may be important for the compiler to check the address explicitly not
+  /// to introduce a signing or authentication oracle.
+  ///
+  /// If this function returns a (Reg, Inst) pair and before execution of Inst
+  /// Reg was last written to by an authentication instruction, then it is known
+  /// that in any successor of BB either
+  /// * the authentication instruction that last wrote to Reg succeeded, or
+  /// * the program is terminated abnormally without introducing any signing
+  ///   or authentication oracles
+  virtual std::optional<std::pair<MCPhysReg, MCInst *>>
+  getAuthCheckedReg(BinaryBasicBlock &BB) const {
+    llvm_unreachable("not implemented");
+    return std::nullopt;
+  }
+
+  /// Returns the register that is checked to be authenticated successfully.
+  ///
+  /// If the returned register was last written to by an authentication
+  /// instruction and that authentication failed, then the program is known
+  /// to be terminated abnormally as a result of execution of Inst.
+  ///
+  /// Additionally, if MayOverwrite is false, it is known that the authenticated
+  /// pointer is not clobbered by Inst itself.
+  virtual MCPhysReg getAuthCheckedReg(const MCInst &Inst,
+                                      bool MayOverwrite) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
   }
 
   virtual bool isTerminator(const MCInst &Inst) const;
