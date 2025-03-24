@@ -154,7 +154,7 @@ public:
 
     rewriter.setInsertionPointAfter(doConcurentOp);
     fir::DoLoopOp innermostUnorderdLoop;
-    mlir::IRMapping mapper;
+    mlir::SmallVector<mlir::Value> ivArgs;
 
     for (auto [lb, ub, st, iv] :
          llvm::zip_equal(loop.getLowerBound(), loop.getUpperBound(),
@@ -164,13 +164,12 @@ public:
           /*unordred=*/true, /*finalCountValue=*/false,
           /*iterArgs=*/std::nullopt, loop.getReduceOperands(),
           loop.getReduceAttrsAttr());
-      mapper.map(iv, innermostUnorderdLoop.getInductionVar());
+      ivArgs.push_back(innermostUnorderdLoop.getInductionVar());
       rewriter.setInsertionPointToStart(innermostUnorderdLoop.getBody());
     }
 
-    for (mlir::Operation &op : loopBlock)
-      rewriter.clone(op, mapper);
-
+    rewriter.inlineBlockBefore(
+        &loopBlock, innermostUnorderdLoop.getBody()->getTerminator(), ivArgs);
     rewriter.eraseOp(doConcurentOp);
     return mlir::success();
   }
