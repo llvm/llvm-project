@@ -333,15 +333,10 @@ define <4 x i32> @test_x86_avx_cvt_pd2dq_256(<4 x double> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn()
-; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double> [[A0:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.x86.avx.cvt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
@@ -355,15 +350,10 @@ define <8 x i32> @test_x86_avx_cvt_ps2dq_256(<8 x float> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn()
-; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP3]] to <8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> [[A0:%.*]])
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
   %res = call <8 x i32> @llvm.x86.avx.cvt.ps2dq.256(<8 x float> %a0) ; <<8 x i32>> [#uses=1]
@@ -377,15 +367,10 @@ define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn()
-; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> [[A0:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
@@ -399,15 +384,10 @@ define <8 x i32> @test_x86_avx_cvtt_ps2dq_256(<8 x float> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__msan_va_arg_overflow_size_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP5:%.*]], !prof [[PROF1]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_noreturn()
-; CHECK-NEXT:    unreachable
-; CHECK:       5:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i1> [[TMP3]] to <8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> [[A0:%.*]])
-; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
 ;
   %res = call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %a0) ; <<8 x i32>> [#uses=1]
