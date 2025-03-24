@@ -518,12 +518,15 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableCGP)
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
+  SET_BOOLEAN_OPTION(DisableReplaceWithVecLib)
+  SET_BOOLEAN_OPTION(DisableLayoutFSProfileLoader)
   SET_BOOLEAN_OPTION(PrintISelInput)
   SET_BOOLEAN_OPTION(DebugifyAndStripAll)
   SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
   SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
   SET_BOOLEAN_OPTION(DisableCFIFixup)
   SET_BOOLEAN_OPTION(EnableMachineFunctionSplitter)
+  SET_BOOLEAN_OPTION(SplitStaticData)
 
   return Opt;
 }
