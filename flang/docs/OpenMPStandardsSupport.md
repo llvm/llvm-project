@@ -16,7 +16,7 @@ local:
 
 This document summarizes OpenMP standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
-Standards support is provided upto OpenMP 4.0 for now. It will be extended later for OpenMP 4.5, OpenMP 5.* and OpenMP 6.0.
+As of March 2025, standards support is provided upto OpenMP 4.0. We are actively working towards supporting OpenMP 4.5, OpenMP 5.* and OpenMP 6.0.
 
 The standards support information is provided as a table with three columns that are self explanatory. The Status column uses
 the letters **P**, **Y**, **N** for the implementation status:
