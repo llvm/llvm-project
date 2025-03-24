@@ -4677,7 +4677,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     case Intrinsic::x86_sse2_cvtps2dq:
-    case Intrinsic::x86_sse2_cvtpd2dq: {
+    case Intrinsic::x86_sse2_cvtpd2dq:
+    case Intrinsic::x86_sse2_cvttps2dq:
+    case Intrinsic::x86_sse2_cvttpd2dq: {
       handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/false);
       break;
     }
