@@ -13195,6 +13195,10 @@ public:
   void MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                   bool OnlyDeduced, unsigned Depth,
                                   llvm::SmallBitVector &Used);
+
+  void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
+                                  unsigned Depth, llvm::SmallBitVector &Used);
+
   void
   MarkDeducedTemplateParameters(const FunctionTemplateDecl *FunctionTemplate,
                                 llvm::SmallBitVector &Deduced) {
