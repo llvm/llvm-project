@@ -33,6 +33,7 @@ public:
     VK_TLSGD,
     VK_TLSLDO,
     VK_TLSLDM,
+    VK_TPOFF,
     VK_Invalid
   };
 
@@ -48,7 +49,7 @@ public:
                                   MCContext &Ctx);
 
   // Returns the kind of this expression.
-  Specifier getKind() const { return specifier; }
+  Specifier getSpecifier() const { return specifier; }
 
   // Returns the child of this expression.
   const MCExpr *getSubExpr() const { return Expr; }
