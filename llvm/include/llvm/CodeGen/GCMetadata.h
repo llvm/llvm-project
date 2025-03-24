@@ -33,6 +33,7 @@
 #define LLVM_CODEGEN_GCMETADATA_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -151,15 +152,47 @@ public:
   size_t live_size(const iterator &p) const { return roots_size(); }
 };
 
-struct GCStrategyMap {
-  StringMap<std::unique_ptr<GCStrategy>> StrategyMap;
+class GCStrategyMap {
+  using MapT =
+      MapVector<std::string, std::unique_ptr<GCStrategy>, StringMap<unsigned>>;
+  MapT Strategies;
 
+public:
   GCStrategyMap() = default;
   GCStrategyMap(GCStrategyMap &&) = default;
 
   /// Handle invalidation explicitly.
   bool invalidate(Module &M, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &Inv);
+
+  using iterator = MapT::iterator;
+  using const_iterator = MapT::const_iterator;
+  using reverse_iterator = MapT::reverse_iterator;
+  using const_reverse_iterator = MapT::const_reverse_iterator;
+
+  iterator begin() { return Strategies.begin(); }
+  const_iterator begin() const { return Strategies.begin(); }
+  iterator end() { return Strategies.end(); }
+  const_iterator end() const { return Strategies.end(); }
+
+  reverse_iterator rbegin() { return Strategies.rbegin(); }
+  const_reverse_iterator rbegin() const { return Strategies.rbegin(); }
+  reverse_iterator rend() { return Strategies.rend(); }
+  const_reverse_iterator rend() const { return Strategies.rend(); }
+
+  bool empty() const { return Strategies.empty(); }
+
+  std::unique_ptr<GCStrategy> &operator[](const std::string &GCName) {
+    return Strategies[GCName];
+  }
+
+  std::pair<iterator, bool> try_emplace(const std::string &GCName) {
+    return Strategies.try_emplace(GCName);
+  }
+
+  bool contains(const std::string &GCName) const {
+    return Strategies.find(GCName) != Strategies.end();
+  }
 };
 
 /// An analysis pass which caches information about the entire Module.

@@ -26,7 +26,7 @@ bool GCStrategyMap::invalidate(Module &M, const PreservedAnalyses &PA,
   for (const auto &F : M) {
     if (F.isDeclaration() || !F.hasGC())
       continue;
-    if (!StrategyMap.contains(F.getGC()))
+    if (!contains(F.getGC()))
       return true;
   }
   return false;
@@ -36,17 +36,16 @@ AnalysisKey CollectorMetadataAnalysis::Key;
 
 CollectorMetadataAnalysis::Result
 CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
-  Result R;
-  auto &Map = R.StrategyMap;
+  Result StrategyMap;
   for (auto &F : M) {
     if (F.isDeclaration() || !F.hasGC())
       continue;
     auto GCName = F.getGC();
-    auto [It, Inserted] = Map.try_emplace(GCName);
+    auto [It, Inserted] = StrategyMap.try_emplace(GCName);
     if (Inserted)
       It->second = getGCStrategy(GCName);
   }
-  return R;
+  return StrategyMap;
 }
 
 AnalysisKey GCFunctionAnalysis::Key;
@@ -61,8 +60,7 @@ GCFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
       MAMProxy.cachedResultExists<CollectorMetadataAnalysis>(*F.getParent()) &&
       "This pass need module analysis `collector-metadata`!");
   auto &Map =
-      MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent())
-          ->StrategyMap;
+      *MAMProxy.getCachedResult<CollectorMetadataAnalysis>(*F.getParent());
   GCFunctionInfo Info(F, *Map[F.getGC()]);
   return Info;
 }
