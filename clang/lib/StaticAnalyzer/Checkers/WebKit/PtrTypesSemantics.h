@@ -142,6 +142,9 @@ std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
 
+/// \returns true if \p F is a builtin function which is considered trivial.
+bool isTrivialBuiltinFunction(const FunctionDecl *F);
+
 /// \returns true if \p F is a static singleton function.
 bool isSingleton(const FunctionDecl *F);
 

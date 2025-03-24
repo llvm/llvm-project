@@ -416,11 +416,25 @@ public:
     return ShiftValueTy;
   }
 
+  /// Returns the type to be used for the index operand vector operations. By
+  /// default we assume it will have the same size as an address space 0
+  /// pointer.
+  virtual unsigned getVectorIdxWidth(const DataLayout &DL) const {
+    return DL.getPointerSizeInBits(0);
+  }
+
   /// Returns the type to be used for the index operand of:
   /// ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
   /// ISD::INSERT_SUBVECTOR, and ISD::EXTRACT_SUBVECTOR
-  virtual MVT getVectorIdxTy(const DataLayout &DL) const {
-    return getPointerTy(DL);
+  MVT getVectorIdxTy(const DataLayout &DL) const {
+    return MVT::getIntegerVT(getVectorIdxWidth(DL));
+  }
+
+  /// Returns the type to be used for the index operand of:
+  /// G_INSERT_VECTOR_ELT, G_EXTRACT_VECTOR_ELT,
+  /// G_INSERT_SUBVECTOR, and G_EXTRACT_SUBVECTOR
+  LLT getVectorIdxLLT(const DataLayout &DL) const {
+    return LLT::scalar(getVectorIdxWidth(DL));
   }
 
   /// Returns the type to be used for the EVL/AVL operand of VP nodes:
@@ -2148,8 +2162,8 @@ public:
     return MaxDivRemBitWidthSupported;
   }
 
-  /// Returns the size in bits of the maximum larget fp convert the backend
-  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Returns the size in bits of the maximum fp to/from int conversion the
+  /// backend supports. Larger operations will be expanded by ExpandFp.
   unsigned getMaxLargeFPConvertBitWidthSupported() const {
     return MaxLargeFPConvertBitWidthSupported;
   }
@@ -2782,8 +2796,8 @@ protected:
     MaxDivRemBitWidthSupported = SizeInBits;
   }
 
-  /// Set the size in bits of the maximum fp convert the backend supports.
-  /// Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Set the size in bits of the maximum fp to/from int conversion the backend
+  /// supports. Larger operations will be expanded by ExpandFp.
   void setMaxLargeFPConvertBitWidthSupported(unsigned SizeInBits) {
     MaxLargeFPConvertBitWidthSupported = SizeInBits;
   }
@@ -3506,6 +3520,10 @@ public:
   /// The default implementation just freezes the set of reserved registers.
   virtual void finalizeLowering(MachineFunction &MF) const;
 
+  /// Returns true if it's profitable to allow merging store of loads when there
+  /// are functions calls between the load and the store.
+  virtual bool shouldMergeStoreOfLoadsOverCall(EVT, EVT) const { return true; }
+
   //===----------------------------------------------------------------------===//
   //  GlobalISel Hooks
   //===----------------------------------------------------------------------===//
@@ -3580,8 +3598,9 @@ private:
   /// Larger operations will be expanded by ExpandLargeDivRem.
   unsigned MaxDivRemBitWidthSupported;
 
-  /// Size in bits of the maximum larget fp convert size the backend
-  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Size in bits of the maximum fp to/from int conversion size the
+  /// backend supports. Larger operations will be expanded by
+  /// ExpandFp.
   unsigned MaxLargeFPConvertBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the

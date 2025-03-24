@@ -202,7 +202,11 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+#if SANITIZER_MUSL
+INTERCEPTOR(int, ioctl, int filedes, int request, ...) {
+#else
 INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+#endif
   __rtsan_notify_intercepted_call("ioctl");
 
   // See fcntl for discussion on why we use intptr_t
@@ -1027,6 +1031,17 @@ INTERCEPTOR(int, shm_unlink, const char *name) {
   return REAL(shm_unlink)(name);
 }
 
+#if !SANITIZER_APPLE
+// is supported by freebsd too
+INTERCEPTOR(int, memfd_create, const char *path, unsigned int flags) {
+  __rtsan_notify_intercepted_call("memfd_create");
+  return REAL(memfd_create)(path, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE INTERCEPT_FUNCTION(memfd_create)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE
+#endif
+
 // Sockets
 INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
             const struct addrinfo *hints, struct addrinfo **res) {
@@ -1461,6 +1476,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mincore);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
+  RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE;
   RTSAN_MAYBE_INTERCEPT_MEMALIGN;
   RTSAN_MAYBE_INTERCEPT_PVALLOC;
 

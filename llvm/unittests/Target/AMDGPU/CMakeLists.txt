@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   GlobalISel
   MC
+  MIRParser
   Support
   TargetParser
   )

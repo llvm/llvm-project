@@ -30,11 +30,12 @@
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
-#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -44,10 +45,12 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -662,7 +665,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
   addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandLargeFpConvertPass(&TM));
+  addPass(ExpandFpPass(&TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -1000,7 +1003,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   addPass(FuncletLayoutPass());
 
   addPass(StackMapLivenessPass());
-  addPass(LiveDebugValuesPass());
+  addPass(LiveDebugValuesPass(
+      getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
   addPass(MachineSanitizerBinaryMetadata());
 
   if (TM.Options.EnableMachineOutliner &&
@@ -1226,7 +1230,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addBlockPlacement(
     AddMachinePass &addPass) const {
-  addPass(MachineBlockPlacementPass());
+  addPass(MachineBlockPlacementPass(Opt.EnableTailMerge));
   // Run a separate pass to collect block placement statistics.
   if (Opt.EnableBlockPlacementStats)
     addPass(MachineBlockPlacementStatsPass());

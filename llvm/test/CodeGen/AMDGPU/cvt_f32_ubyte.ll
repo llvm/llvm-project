@@ -2993,7 +2993,7 @@ entry:
 
 for.body.i:                                       ; preds = %for.body.i, %entry
   %retval.sroa.0.0.copyload = load ptr, ptr addrspace(1) poison, align 8
-  %add.ptr = getelementptr inbounds %Vec, ptr %retval.sroa.0.0.copyload, i64 undef
+  %add.ptr = getelementptr inbounds %Vec, ptr %retval.sroa.0.0.copyload, i64 0
   %retval.sroa.0.0..sroa_cast_adr = addrspacecast ptr %add.ptr to ptr addrspace(1)
   %retval.sroa.0.0.copyload.i = load i32, ptr addrspace(1) %retval.sroa.0.0..sroa_cast_adr, align 1
   %p1.sroa.6.0.extract.shift = lshr i32 %retval.sroa.0.0.copyload.i, 24

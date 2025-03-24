@@ -1056,10 +1056,10 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<-1>
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr inbounds ir<%src>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:     vp<[[REVERSE_GEP_SRC:%.+]]> = reverse-vector-pointer inbounds ir<%gep.src>, vp<[[VF]]>
+; CHECK-NEXT:     vp<[[REVERSE_GEP_SRC:%.+]]> = vector-end-pointer inbounds ir<%gep.src>, vp<[[VF]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[REVERSE_GEP_SRC]]>
 ; CHECK-NEXT:     CLONE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[SCALAR_STEPS]]>
-; CHECK-NEXT:     vp<[[REVERSE_GEP_DST:%.+]]> = reverse-vector-pointer inbounds ir<%gep.dst>, vp<[[VF]]>
+; CHECK-NEXT:     vp<[[REVERSE_GEP_DST:%.+]]> = vector-end-pointer inbounds ir<%gep.dst>, vp<[[VF]]>
 ; CHECK-NEXT:     WIDEN store vp<[[REVERSE_GEP_DST]]>, ir<%l>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, vp<[[VEC_TC]]>
@@ -1132,7 +1132,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:     EMIT vp<[[PTR_IV:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = reverse-vector-pointer inbounds ir<%ptr.iv.next>, vp<[[VF]]>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%ptr.iv.next>, vp<[[VF]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
 ; CHECK-NEXT:     EMIT vp<[[NEG:%.+]]> = not ir<%c.1>

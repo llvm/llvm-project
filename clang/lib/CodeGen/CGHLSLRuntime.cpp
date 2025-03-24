@@ -31,7 +31,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
-
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -245,12 +244,12 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::TargetExtType *TargetTy =
       cast<llvm::TargetExtType>(convertHLSLSpecificType(
           ResHandleTy, BufDecl->hasValidPackoffset() ? &Layout : nullptr));
-  llvm::GlobalVariable *BufGV =
-      new GlobalVariable(TargetTy, /*isConstant*/ true,
-                         GlobalValue::LinkageTypes::ExternalLinkage, nullptr,
-                         llvm::formatv("{0}{1}", BufDecl->getName(),
-                                       BufDecl->isCBuffer() ? ".cb" : ".tb"),
-                         GlobalValue::NotThreadLocal);
+  llvm::GlobalVariable *BufGV = new GlobalVariable(
+      TargetTy, /*isConstant*/ false,
+      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(TargetTy),
+      llvm::formatv("{0}{1}", BufDecl->getName(),
+                    BufDecl->isCBuffer() ? ".cb" : ".tb"),
+      GlobalValue::NotThreadLocal);
   CGM.getModule().insertGlobalVariable(BufGV);
 
   // Add globals for constant buffer elements and create metadata nodes
@@ -289,135 +288,6 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 
   generateGlobalCtorDtorCalls();
-}
-
-void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
-                                                llvm::hlsl::ResourceClass RC,
-                                                llvm::hlsl::ResourceKind RK,
-                                                bool IsROV,
-                                                llvm::hlsl::ElementType ET,
-                                                BufferResBinding &Binding) {
-  llvm::Module &M = CGM.getModule();
-
-  NamedMDNode *ResourceMD = nullptr;
-  switch (RC) {
-  case llvm::hlsl::ResourceClass::UAV:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.uavs");
-    break;
-  case llvm::hlsl::ResourceClass::SRV:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.srvs");
-    break;
-  case llvm::hlsl::ResourceClass::CBuffer:
-    ResourceMD = M.getOrInsertNamedMetadata("hlsl.cbufs");
-    break;
-  default:
-    assert(false && "Unsupported buffer type!");
-    return;
-  }
-  assert(ResourceMD != nullptr &&
-         "ResourceMD must have been set by the switch above.");
-
-  llvm::hlsl::FrontendResource Res(
-      GV, RK, ET, IsROV, Binding.Reg.value_or(UINT_MAX), Binding.Space);
-  ResourceMD->addOperand(Res.getMetadata());
-}
-
-static llvm::hlsl::ElementType
-calculateElementType(const ASTContext &Context, const clang::Type *ResourceTy) {
-  using llvm::hlsl::ElementType;
-
-  // TODO: We may need to update this when we add things like ByteAddressBuffer
-  // that don't have a template parameter (or, indeed, an element type).
-  const auto *TST = ResourceTy->getAs<TemplateSpecializationType>();
-  assert(TST && "Resource types must be template specializations");
-  ArrayRef<TemplateArgument> Args = TST->template_arguments();
-  assert(!Args.empty() && "Resource has no element type");
-
-  // At this point we have a resource with an element type, so we can assume
-  // that it's valid or we would have diagnosed the error earlier.
-  QualType ElTy = Args[0].getAsType();
-
-  // We should either have a basic type or a vector of a basic type.
-  if (const auto *VecTy = ElTy->getAs<clang::VectorType>())
-    ElTy = VecTy->getElementType();
-
-  if (ElTy->isSignedIntegerType()) {
-    switch (Context.getTypeSize(ElTy)) {
-    case 16:
-      return ElementType::I16;
-    case 32:
-      return ElementType::I32;
-    case 64:
-      return ElementType::I64;
-    }
-  } else if (ElTy->isUnsignedIntegerType()) {
-    switch (Context.getTypeSize(ElTy)) {
-    case 16:
-      return ElementType::U16;
-    case 32:
-      return ElementType::U32;
-    case 64:
-      return ElementType::U64;
-    }
-  } else if (ElTy->isSpecificBuiltinType(BuiltinType::Half))
-    return ElementType::F16;
-  else if (ElTy->isSpecificBuiltinType(BuiltinType::Float))
-    return ElementType::F32;
-  else if (ElTy->isSpecificBuiltinType(BuiltinType::Double))
-    return ElementType::F64;
-
-  // TODO: We need to handle unorm/snorm float types here once we support them
-  llvm_unreachable("Invalid element type for resource");
-}
-
-void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
-  const Type *Ty = D->getType()->getPointeeOrArrayElementType();
-  if (!Ty)
-    return;
-  const auto *RD = Ty->getAsCXXRecordDecl();
-  if (!RD)
-    return;
-  // the resource related attributes are on the handle member
-  // inside the record decl
-  for (auto *FD : RD->fields()) {
-    const auto *HLSLResAttr = FD->getAttr<HLSLResourceAttr>();
-    const HLSLAttributedResourceType *AttrResType =
-        dyn_cast<HLSLAttributedResourceType>(FD->getType().getTypePtr());
-    if (!HLSLResAttr || !AttrResType)
-      continue;
-
-    llvm::hlsl::ResourceClass RC = AttrResType->getAttrs().ResourceClass;
-    if (RC == llvm::hlsl::ResourceClass::UAV ||
-        RC == llvm::hlsl::ResourceClass::SRV)
-      // UAVs and SRVs have already been converted to use LLVM target types,
-      // we can disable generating of these resource annotations. This will
-      // enable progress on structured buffers with user defined types this
-      // resource annotations code does not handle and it crashes.
-      // This whole function is going to be removed as soon as cbuffers are
-      // converted to target types (llvm/llvm-project #114126).
-      return;
-
-    bool IsROV = AttrResType->getAttrs().IsROV;
-    llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
-    llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
-
-    BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
-    addBufferResourceAnnotation(GV, RC, RK, IsROV, ET, Binding);
-  }
-}
-
-CGHLSLRuntime::BufferResBinding::BufferResBinding(
-    HLSLResourceBindingAttr *Binding) {
-  if (Binding) {
-    llvm::APInt RegInt(64, 0);
-    Binding->getSlot().substr(1).getAsInteger(10, RegInt);
-    Reg = RegInt.getLimitedValue();
-    llvm::APInt SpaceInt(64, 0);
-    Binding->getSpace().substr(5).getAsInteger(10, SpaceInt);
-    Space = SpaceInt.getLimitedValue();
-  } else {
-    Space = 0;
-  }
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
@@ -468,9 +338,9 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
-    llvm::Function *DxGroupIndex =
-        CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
-    return B.CreateCall(FunctionCallee(DxGroupIndex));
+    llvm::Function *GroupIndex =
+        CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
+    return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =

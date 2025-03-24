@@ -1891,7 +1891,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
       telemetry::TelemetryManager::GetInstance()
           ->GetConfig()
           ->detailed_command_telemetry;
-  const int command_id = telemetry::CommandInfo::GetNextId();
+  const int command_id = telemetry::CommandInfo::GetNextID();
 
   std::string command_string(command_line);
   std::string original_command_string(command_string);
@@ -2603,7 +2603,8 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
     const StopReason reason = stop_info->GetStopReason();
     if (reason == eStopReasonException ||
         reason == eStopReasonInstrumentation ||
-        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt)
+        reason == eStopReasonProcessorTrace || reason == eStopReasonInterrupt ||
+        reason == eStopReasonHistoryBoundary)
       return true;
 
     if (reason == eStopReasonSignal) {

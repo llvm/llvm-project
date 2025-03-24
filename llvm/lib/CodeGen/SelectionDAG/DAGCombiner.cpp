@@ -792,6 +792,10 @@ namespace {
         SmallVectorImpl<MemOpLink> &StoreNodes, unsigned NumStores,
         SDNode *RootNode);
 
+    /// Helper function for tryStoreMergeOfLoads. Checks if the load/store
+    /// chain has a call in it. \return True if a call is found.
+    bool hasCallInLdStChain(StoreSDNode *St, LoadSDNode *Ld);
+
     /// This is a helper function for mergeConsecutiveStores. Given a list of
     /// store candidates, find the first N that are consecutive in memory.
     /// Returns 0 if there are not at least 2 consecutive stores to try merging.
@@ -3963,6 +3967,20 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       if (N1S && N1S.getOpcode() == ISD::SUB &&
           isNullConstant(N1S.getOperand(0)))
         return DAG.getSplat(VT, DL, N1S.getOperand(1));
+    }
+
+    // sub 0, (and x, 1)  -->  SIGN_EXTEND_INREG x, i1
+    if (N1.getOpcode() == ISD::AND && N1.hasOneUse() &&
+        isOneOrOneSplat(N1->getOperand(1))) {
+      EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), 1);
+      if (VT.isVector())
+        ExtVT = EVT::getVectorVT(*DAG.getContext(), ExtVT,
+                                 VT.getVectorElementCount());
+      if (TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
+          TargetLowering::Legal) {
+        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N1->getOperand(0),
+                           DAG.getValueType(ExtVT));
+      }
     }
   }
 
@@ -13922,14 +13940,22 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
     return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, SDLoc(N), VT,
                        N0.getOperand(0));
 
-  // fold (sext (sext_inreg x)) -> (sext (trunc x))
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     SDValue N00 = N0.getOperand(0);
     EVT ExtVT = cast<VTSDNode>(N0->getOperand(1))->getVT();
-    if ((N00.getOpcode() == ISD::TRUNCATE || TLI.isTruncateFree(N00, ExtVT)) &&
-        (!LegalTypes || TLI.isTypeLegal(ExtVT))) {
-      SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00);
-      return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
+    if (N00.getOpcode() == ISD::TRUNCATE || TLI.isTruncateFree(N00, ExtVT)) {
+      // fold (sext (sext_inreg x)) -> (sext (trunc x))
+      if ((!LegalTypes || TLI.isTypeLegal(ExtVT))) {
+        SDValue T = DAG.getNode(ISD::TRUNCATE, DL, ExtVT, N00);
+        return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, T);
+      }
+
+      // If the trunc wasn't legal, try to fold to (sext_inreg (anyext x))
+      if ((!LegalTypes || TLI.isTypeLegal(VT)) && N0.hasOneUse()) {
+        SDValue ExtSrc = DAG.getAnyExtOrTrunc(N00, DL, VT);
+        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ExtSrc,
+                           N0->getOperand(1));
+      }
     }
   }
 
@@ -21138,6 +21164,38 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
   return true;
 }
 
+bool DAGCombiner::hasCallInLdStChain(StoreSDNode *St, LoadSDNode *Ld) {
+  SmallPtrSet<const SDNode *, 32> Visited;
+  SmallVector<std::pair<const SDNode *, bool>, 8> Worklist;
+  Worklist.emplace_back(St->getChain().getNode(), false);
+
+  while (!Worklist.empty()) {
+    auto [Node, FoundCall] = Worklist.pop_back_val();
+    if (!Visited.insert(Node).second || Node->getNumOperands() == 0)
+      continue;
+
+    switch (Node->getOpcode()) {
+    case ISD::CALLSEQ_END:
+      Worklist.emplace_back(Node->getOperand(0).getNode(), true);
+      break;
+    case ISD::TokenFactor:
+      for (SDValue Op : Node->ops())
+        Worklist.emplace_back(Op.getNode(), FoundCall);
+      break;
+    case ISD::LOAD:
+      if (Node == Ld)
+        return FoundCall;
+      [[fallthrough]];
+    default:
+      assert(Node->getOperand(0).getValueType() == MVT::Other &&
+             "Invalid chain type");
+      Worklist.emplace_back(Node->getOperand(0).getNode(), FoundCall);
+      break;
+    }
+  }
+  return false;
+}
+
 unsigned
 DAGCombiner::getConsecutiveStores(SmallVectorImpl<MemOpLink> &StoreNodes,
                                   int64_t ElementSizeBytes) const {
@@ -21582,6 +21640,16 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     } else {
       unsigned SizeInBits = NumElem * ElementSizeBytes * 8;
       JointMemOpVT = EVT::getIntegerVT(Context, SizeInBits);
+    }
+
+    // Check if there is a call in the load/store chain.
+    if (!TLI.shouldMergeStoreOfLoadsOverCall(MemVT, JointMemOpVT) &&
+        hasCallInLdStChain(cast<StoreSDNode>(StoreNodes[0].MemNode),
+                           cast<LoadSDNode>(LoadNodes[0].MemNode))) {
+      StoreNodes.erase(StoreNodes.begin(), StoreNodes.begin() + NumElem);
+      LoadNodes.erase(LoadNodes.begin(), LoadNodes.begin() + NumElem);
+      NumConsecutiveStores -= NumElem;
+      continue;
     }
 
     SDLoc LoadDL(LoadNodes[0].MemNode);

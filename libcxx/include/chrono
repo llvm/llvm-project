@@ -1072,6 +1072,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #    endif
 
 #    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
+#      include <__chrono/gps_clock.h>
 #      include <__chrono/leap_second.h>
 #      include <__chrono/tai_clock.h>
 #      include <__chrono/time_zone.h>

@@ -355,10 +355,6 @@ struct VPTransformState {
   /// memchecks.  The actually versioning is performed manually.
   LoopVersioning *LVer = nullptr;
 
-  /// Map SCEVs to their expanded values. Populated when executing
-  /// VPExpandSCEVRecipes.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
-
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
 
