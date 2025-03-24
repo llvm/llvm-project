@@ -91,7 +91,8 @@ define i32 @v_sdot4_fnegf32_a(float %a, i32 %b, i32 %c) {
 ; GFX906-LABEL: v_sdot4_fnegf32_a:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot4_i32_i8 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX906-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GFX906-NEXT:    v_dot4_i32_i8 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot4_fnegf32_a:
@@ -111,7 +112,8 @@ define i32 @v_sdot4_fnegv2f16_a(<2 x half> %a, i32 %b, i32 %c) {
 ; GFX906-LABEL: v_sdot4_fnegv2f16_a:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot4_i32_i8 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX906-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX906-NEXT:    v_dot4_i32_i8 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_sdot4_fnegv2f16_a:

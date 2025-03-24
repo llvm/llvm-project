@@ -4318,9 +4318,12 @@ enum class SrcStatus {
   IS_SAME,
   IS_UPPER_HALF,
   IS_LOWER_HALF,
-  IS_NEG,
+  IS_HI_NEG,
+  IS_LO_NEG,
+  IS_BOTH_NEG,
   IS_UPPER_HALF_NEG,
-  IS_LOWER_HALF_NEG
+  IS_LOWER_HALF_NEG,
+  INVALID
 };
 
 static bool isTruncHalf(const MachineInstr *MI,
@@ -4365,8 +4368,9 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
 
 static bool retOpStat(const MachineOperand *Op, SrcStatus Stat,
                       std::pair<const MachineOperand *, SrcStatus> &Curr) {
-  if ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
-      Op->isCImm() || Op->isFPImm()) {
+  if (Stat != SrcStatus::INVALID &&
+      ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
+       Op->isCImm() || Op->isFPImm())) {
     Curr = {Op, Stat};
     return true;
   }
@@ -4374,20 +4378,164 @@ static bool retOpStat(const MachineOperand *Op, SrcStatus Stat,
   return false;
 }
 
-SrcStatus getNegStatus(SrcStatus S) {
+// 0  = Vector of 2,
+// 1  = Scalar
+// -1 = non of them
+static int isVectorOfTwoOrScalar(const MachineOperand *Op,
+                                 const MachineRegisterInfo &MRI) {
+  if (!Op->isReg() || Op->getReg().isPhysical())
+    return -1;
+  LLT OpTy = MRI.getType(Op->getReg());
+  if (OpTy.isScalar())
+    return 1;
+  if (OpTy.isVector() && OpTy.getNumElements() == 2)
+    return 0;
+  return -1;
+}
+
+SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
+                       const MachineRegisterInfo &MRI) {
+  int NegType = isVectorOfTwoOrScalar(Op, MRI);
+  if (NegType != 0 && NegType != 1)
+    return SrcStatus::INVALID;
+
   switch (S) {
   case SrcStatus::IS_SAME:
-    return SrcStatus::IS_NEG;
+    if (NegType == 0) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [-OpHi, -OpLo]
+      return SrcStatus::IS_BOTH_NEG;
+    } else if (NegType == 1) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [-OpHi, OpLo]
+      return SrcStatus::IS_HI_NEG;
+    }
+    break;
+  case SrcStatus::IS_HI_NEG:
+    if (NegType == 0) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [-(-OpHi), -OpLo] = [OpHi, -OpLo]
+      return SrcStatus::IS_LO_NEG;
+    } else if (NegType == 1) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [-(-OpHi), OpLo] = [OpHi, OpLo]
+      return SrcStatus::IS_SAME;
+    }
+    break;
+  case SrcStatus::IS_LO_NEG:
+    if (NegType == 0) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [-OpHi, -(-OpLo)] = [-OpHi, OpLo]
+      return SrcStatus::IS_HI_NEG;
+    } else if (NegType == 1) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [-OpHi, -OpLo]
+      return SrcStatus::IS_BOTH_NEG;
+    }
+    break;
+  case SrcStatus::IS_BOTH_NEG:
+    if (NegType == 0) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [OpHi, OpLo]
+      return SrcStatus::IS_SAME;
+    } else if (NegType == 1) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [OpHi, -OpLo]
+      return SrcStatus::IS_LO_NEG;
+    }
+    break;
   case SrcStatus::IS_UPPER_HALF:
+    // Vector of 2:
+    // Src = CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+    // Src = -OpUpper
+    //
+    // Scalar:
+    // Src = CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+    // Src = -OpUpper
     return SrcStatus::IS_UPPER_HALF_NEG;
   case SrcStatus::IS_LOWER_HALF:
-    return SrcStatus::IS_LOWER_HALF_NEG;
-  case SrcStatus::IS_NEG:
-    return SrcStatus::IS_SAME;
+    if (NegType == 0) {
+      // Vector of 2:
+      // Src = CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+      // Src = -OpLower
+      return SrcStatus::IS_LOWER_HALF_NEG;
+    } else if (NegType == 1) {
+      // Scalar:
+      // Src = CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+      // Src = OpLower
+      return SrcStatus::IS_LOWER_HALF;
+    }
+    break;
   case SrcStatus::IS_UPPER_HALF_NEG:
+    // Vector of 2:
+    // Src = -CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+    // Src = -(-OpUpper) = OpUpper
+    //
+    // Scalar:
+    // Src = -CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+    // Src = -(-OpUpper) = OpUpper
     return SrcStatus::IS_UPPER_HALF;
   case SrcStatus::IS_LOWER_HALF_NEG:
-    return SrcStatus::IS_LOWER_HALF;
+    if (NegType == 0) {
+      // Vector of 2:
+      // Src = -CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+      // Src = -(-OpLower) = OpLower
+      return SrcStatus::IS_LOWER_HALF_NEG;
+    } else if (NegType == 1) {
+      // Scalar:
+      // Src = -CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+      // Src = -OpLower
+      return SrcStatus::IS_LOWER_HALF;
+    }
+    break;
   }
   llvm_unreachable("unexpected SrcStatus");
 }
@@ -4417,7 +4565,8 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
   case AMDGPU::COPY:
     return retOpStat(&MI->getOperand(1), Curr.second, Curr);
   case AMDGPU::G_FNEG:
-    return retOpStat(&MI->getOperand(1), getNegStatus(Curr.second), Curr);
+    return retOpStat(&MI->getOperand(1),
+                     getNegStatus(Curr.first, Curr.second, MRI), Curr);
   default:
     break;
   }
@@ -4428,9 +4577,16 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
     if (isTruncHalf(MI, MRI))
       return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
     break;
-  case SrcStatus::IS_NEG:
-    if (isTruncHalf(MI, MRI))
+  case SrcStatus::IS_HI_NEG:
+    if (isTruncHalf(MI, MRI)) {
+      // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = trunc [OpUpper, OpLower] = OpLower
+      //                  = [OpLowerHi, OpLowerLo]
+      // Src = [SrcHi, SrcLo] = [-CurrHi, CurrLo]
+      //     = [-OpLowerHi, OpLowerLo]
+      //     = -OpLower
       return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG, Curr);
+    }
     break;
   case SrcStatus::IS_UPPER_HALF:
     if (isShlHalf(MI, MRI))
@@ -4464,7 +4620,9 @@ getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
   while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
     Depth++;
     if ((OnlyLastSameOrNeg && (Curr.second != SrcStatus::IS_SAME &&
-                               Curr.second != SrcStatus::IS_NEG)))
+                               Curr.second != SrcStatus::IS_HI_NEG &&
+                               Curr.second != SrcStatus::IS_LO_NEG &&
+                               Curr.second != SrcStatus::IS_BOTH_NEG)))
       break;
 
     if (!OnlyLastSameOrNeg)
@@ -4523,12 +4681,12 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
       return true;
     }
   } else {
-    if ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_NEG) &&
-        (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_NEG) &&
+    if ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
+        (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
         isInlinableConstant(*NewOp, TII)) {
-      if (HiStat == SrcStatus::IS_NEG)
+      if (HiStat == SrcStatus::IS_HI_NEG)
         Mods ^= SISrcMods::NEG_HI;
-      if (LoStat == SrcStatus::IS_NEG)
+      if (LoStat == SrcStatus::IS_HI_NEG)
         Mods ^= SISrcMods::NEG;
       // opsel = opsel_hi = 0, since the upper half and lower half both
       // the same as the target inlinable constant.
@@ -4543,6 +4701,12 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
                                                const MachineRegisterInfo &MRI,
                                                bool IsDOT) const {
   unsigned Mods = 0;
+  // No modification if Root type is not form of <2 x Type>
+  if (isVectorOfTwoOrScalar(Op, MRI) != 0) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Op, Mods};
+  }
+
   const MachineOperand *RootOp = Op;
   std::pair<const MachineOperand *, SrcStatus> Stat =
       getSrcStats(Op, MRI, true)[0];
@@ -4550,8 +4714,12 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
-  if (Stat.second == SrcStatus::IS_NEG)
+  if (Stat.second == SrcStatus::IS_BOTH_NEG)
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  else if (Stat.second == SrcStatus::IS_HI_NEG)
+    Mods ^= SISrcMods::NEG_HI;
+  else if (Stat.second == SrcStatus::IS_LO_NEG)
+    Mods ^= SISrcMods::NEG;
 
   Op = Stat.first;
   MachineInstr *MI = MRI.getVRegDef(Op->getReg());
