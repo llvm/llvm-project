@@ -6,15 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Helper classes for creating HLSL builtin class types. Used by external HLSL
+// sema source.
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
+#define LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H
 
 #include "clang/AST/Type.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringMap.h"
 
 using llvm::hlsl::ResourceClass;
-using llvm::hlsl::ResourceKind;
 
 namespace clang {
 
@@ -68,7 +72,7 @@ public:
                     AccessSpecifier Access = AccessSpecifier::AS_private);
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, ResourceKind RK, bool IsROV, bool RawBuffer,
+  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
@@ -94,3 +98,5 @@ private:
 } // namespace hlsl
 
 } // namespace clang
+
+#endif // LLVM_CLANG_SEMA_HLSLBUILTINTYPEDECLBUILDER_H

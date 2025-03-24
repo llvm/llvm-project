@@ -22,7 +22,7 @@ using namespace llvm;
 static StringRef getRCName(dxil::ResourceClass RC) {
   switch (RC) {
   case dxil::ResourceClass::SRV:
-    return "SRV";
+    return "texture";
   case dxil::ResourceClass::UAV:
     return "UAV";
   case dxil::ResourceClass::CBuffer:

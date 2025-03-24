@@ -27,6 +27,7 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2352,37 +2353,6 @@ static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
   }
 }
 
-/// Verify that the offsets/sizes/strides-style access into the given tensor
-/// is in-bounds. Only static information is verified.
-static LogicalResult verifyInBoundsSlice(Operation *op,
-                                         RankedTensorType tensorType,
-                                         ArrayRef<int64_t> staticOffsets,
-                                         ArrayRef<int64_t> staticSizes,
-                                         ArrayRef<int64_t> staticStrides) {
-  for (int64_t i = 0, e = tensorType.getRank(); i < e; ++i) {
-    // Nothing to verify for dynamic source dims.
-    if (tensorType.isDynamicDim(i))
-      continue;
-    // Nothing to verify if the offset is dynamic.
-    if (ShapedType::isDynamic(staticOffsets[i]))
-      continue;
-    if (staticOffsets[i] >= tensorType.getDimSize(i))
-      return op->emitOpError("offset ")
-             << i << " is out-of-bounds: " << staticOffsets[i]
-             << " >= " << tensorType.getDimSize(i);
-    if (ShapedType::isDynamic(staticSizes[i]) ||
-        ShapedType::isDynamic(staticStrides[i]))
-      continue;
-    int64_t lastPos =
-        staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i];
-    if (lastPos >= tensorType.getDimSize(i))
-      return op->emitOpError("slice along dimension ")
-             << i << " runs out-of-bounds: " << lastPos
-             << " >= " << tensorType.getDimSize(i);
-  }
-  return success();
-}
-
 /// Verifier for ExtractSliceOp.
 LogicalResult ExtractSliceOp::verify() {
   RankedTensorType sourceType = getSourceType();
@@ -2396,8 +2366,13 @@ LogicalResult ExtractSliceOp::verify() {
 
   // Verify that offsets, sizes, strides do not run out-of-bounds with respect
   // to the source tensor.
-  return verifyInBoundsSlice(getOperation(), sourceType, getStaticOffsets(),
-                             getStaticSizes(), getStaticStrides());
+  SliceBoundsVerificationResult boundsResult = verifyInBoundsSlice(
+      sourceType.getShape(), getStaticOffsets(), getStaticSizes(),
+      getStaticStrides(), /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
+
+  return success();
 }
 
 llvm::SmallBitVector ExtractSliceOp::getDroppedDims() {
@@ -2470,14 +2445,20 @@ public:
     if (!canFoldIntoConsumerOp(castOp))
       return failure();
 
+    // Pattern does not apply if the produced op would not verify.
+    SliceBoundsVerificationResult sliceResult = verifyInBoundsSlice(
+        cast<RankedTensorType>(castOp.getSource().getType()).getShape(),
+        sliceOp.getStaticOffsets(), sliceOp.getStaticSizes(),
+        sliceOp.getStaticStrides());
+    if (!sliceResult.isValid)
+      return failure();
+
     // Create folded extract.
     Location loc = sliceOp.getLoc();
     Value newResult = rewriter.create<ExtractSliceOp>(
         loc, sliceOp.getType(), castOp.getSource(), sliceOp.getOffsets(),
         sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
         sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
-    if (newResult.getType() != sliceOp.getType())
-      newResult = rewriter.create<CastOp>(loc, sliceOp.getType(), newResult);
     rewriter.replaceOp(sliceOp, newResult);
     return success();
   }
@@ -2636,10 +2617,10 @@ struct SliceCanonicalizer {
 
 void ExtractSliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<
-      OpWithOffsetSizesAndStridesConstantArgumentFolder<
-          ExtractSliceOp, SliceReturnTypeCanonicalizer, SliceCanonicalizer>,
-      ExtractSliceOpCastFolder>(context);
+  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+                  ExtractSliceOp, SliceReturnTypeCanonicalizer,
+                  SliceCanonicalizer, /*CheckInBounds=*/true>,
+              ExtractSliceOpCastFolder>(context);
 }
 
 //
@@ -2777,9 +2758,14 @@ LogicalResult InsertSliceOp::verify() {
     return produceSliceErrorMsg(result, *this, expectedType);
 
   // Verify that offsets, sizes, strides do not run out-of-bounds with respect
-  // to the source tensor.
-  return verifyInBoundsSlice(getOperation(), getDestType(), getStaticOffsets(),
-                             getStaticSizes(), getStaticStrides());
+  // to the destination tensor.
+  SliceBoundsVerificationResult boundsResult = verifyInBoundsSlice(
+      getDestType().getShape(), getStaticOffsets(), getStaticSizes(),
+      getStaticStrides(), /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
+
+  return success();
 }
 
 /// If we have two consecutive InsertSliceOp writing to the same slice, we
@@ -2872,6 +2858,13 @@ public:
     if (failed(foldDynamicOffsetSizeList(mixedOffsets)) &&
         failed(foldDynamicOffsetSizeList(mixedSizes)) &&
         failed(foldDynamicStrideList(mixedStrides)))
+      return failure();
+
+    // Pattern does not apply if the produced op would not verify.
+    SliceBoundsVerificationResult sliceResult =
+        verifyInBoundsSlice(insertSliceOp.getDest().getType().getShape(),
+                            mixedOffsets, mixedSizes, mixedStrides);
+    if (!sliceResult.isValid)
       return failure();
 
     // Create the new op in canonical form.
@@ -2971,9 +2964,16 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
         size = srcType.getDimSize(rankReducedIdx++);
       }
     }
+
+    // Pattern does not apply if the produced op would not verify.
     if (verifyInsertSliceOp(srcType, dstType, insertSliceOp.getStaticOffsets(),
                             staticSizes, insertSliceOp.getStaticStrides()) !=
         SliceVerificationResult::Success)
+      return failure();
+    SliceBoundsVerificationResult sliceResult =
+        verifyInBoundsSlice(dstType.getShape(), insertSliceOp.getMixedOffsets(),
+                            mixedSizes, insertSliceOp.getMixedStrides());
+    if (!sliceResult.isValid)
       return failure();
 
     Operation *replacement = rewriter.create<InsertOpTy>(
@@ -3802,9 +3802,14 @@ LogicalResult ParallelInsertSliceOp::verify() {
     return produceSliceErrorMsg(result, *this, expectedType);
 
   // Verify that offsets, sizes, strides do not run out-of-bounds with respect
-  // to the source tensor.
-  return verifyInBoundsSlice(getOperation(), getDestType(), getStaticOffsets(),
-                             getStaticSizes(), getStaticStrides());
+  // to the destination tensor.
+  SliceBoundsVerificationResult boundsResult = verifyInBoundsSlice(
+      getDestType().getShape(), getStaticOffsets(), getStaticSizes(),
+      getStaticStrides(), /*generateErrorMessage=*/true);
+  if (!boundsResult.isValid)
+    return getOperation()->emitError(boundsResult.errorMessage);
+
+  return success();
 }
 
 void ParallelInsertSliceOp::getCanonicalizationPatterns(

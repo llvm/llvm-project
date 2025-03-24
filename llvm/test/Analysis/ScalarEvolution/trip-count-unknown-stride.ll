@@ -329,10 +329,9 @@ define void @ne_nsw_nonneg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nsw_nonneg_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nsw_nonneg_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %nonneg_step = icmp sge i32 %s, 0
@@ -442,10 +441,9 @@ define void @ne_nuw_nonneg_step(ptr nocapture %A, i32 %n, i32 %s) mustprogress {
 ;
 ; CHECK-LABEL: 'ne_nuw_nonneg_step'
 ; CHECK-NEXT:  Determining loop execution counts for: @ne_nuw_nonneg_step
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (((-1 * %s) + %n) /u %s)
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %nonneg_step = icmp sge i32 %s, 0
@@ -493,6 +491,26 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+define i32 @pr131465(i1 %x) mustprogress {
+; CHECK-LABEL: 'pr131465'
+; CHECK-NEXT:  Determining loop execution counts for: @pr131465
+; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %inc = zext i1 %x to i32
+  br label %for.body
+
+for.body:
+  %indvar = phi i32 [ 2, %entry ], [ %next, %for.body ]
+  %next = add nsw i32 %indvar, %inc
+  %exitcond = icmp eq i32 %next, 2
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret i32 0
+}
 
 declare void @llvm.assume(i1)
 

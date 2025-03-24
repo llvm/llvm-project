@@ -152,7 +152,7 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
   for (llvm::BasicBlock *basicBlock : basicBlocks) {
     if (!blocks.contains(basicBlock)) {
       llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(basicBlock);
-      blocks.insert(traversal.begin(), traversal.end());
+      blocks.insert_range(traversal);
     }
   }
   assert(blocks.size() == basicBlocks.size() && "some blocks are not sorted");
@@ -162,7 +162,8 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
-                           bool importEmptyDICompositeTypes)
+                           bool importEmptyDICompositeTypes,
+                           bool preferUnregisteredIntrinsics)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
@@ -171,7 +172,8 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
           mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
-      emitExpensiveWarnings(emitExpensiveWarnings) {
+      emitExpensiveWarnings(emitExpensiveWarnings),
+      preferUnregisteredIntrinsics(preferUnregisteredIntrinsics) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -517,6 +519,33 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertModuleFlagsMetadata() {
+  SmallVector<llvm::Module::ModuleFlagEntry> llvmModuleFlags;
+  llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
+
+  SmallVector<Attribute> moduleFlags;
+  for (const auto [behavior, key, val] : llvmModuleFlags) {
+    // Currently only supports most common: int constant values.
+    auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
+    if (!constInt) {
+      emitWarning(mlirModule.getLoc())
+          << "unsupported module flag value: " << diagMD(val, llvmModule.get())
+          << ", only constant integer currently supported";
+      continue;
+    }
+
+    moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
+        convertModFlagBehaviorFromLLVM(behavior),
+        builder.getStringAttr(key->getString()), constInt->getZExtValue()));
+  }
+
+  if (!moduleFlags.empty())
+    builder.create<LLVM::ModuleFlagsOp>(mlirModule.getLoc(),
+                                        builder.getArrayAttr(moduleFlags));
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     if (named.getName() != "llvm.linker.options")
@@ -595,6 +624,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertModuleFlagsMetadata()))
     return failure();
   if (failed(convertIdentMetadata()))
     return failure();
@@ -1217,6 +1248,18 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<UndefOp>(loc, type).getResult();
   }
 
+  // Convert dso_local_equivalent.
+  if (auto *dsoLocalEquivalent = dyn_cast<llvm::DSOLocalEquivalent>(constant)) {
+    Type type = convertType(dsoLocalEquivalent->getType());
+    return builder
+        .create<DSOLocalEquivalentOp>(
+            loc, type,
+            FlatSymbolRefAttr::get(
+                builder.getContext(),
+                dsoLocalEquivalent->getGlobalValue()->getName()))
+        .getResult();
+  }
+
   // Convert global variable accesses.
   if (auto *globalObj = dyn_cast<llvm::GlobalObject>(constant)) {
     Type type = convertType(globalObj->getType());
@@ -1315,6 +1358,15 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   StringRef error = "";
   if (isa<llvm::BlockAddress>(constant))
     error = " since blockaddress(...) is unsupported";
+
+  if (isa<llvm::ConstantPtrAuth>(constant))
+    error = " since ptrauth(...) is unsupported";
+
+  if (isa<llvm::NoCFIValue>(constant))
+    error = " since no_cfi is unsupported";
+
+  if (isa<llvm::GlobalValue>(constant))
+    error = " since global value is unsupported";
 
   return emitError(loc) << "unhandled constant: " << diag(*constant) << error;
 }
@@ -2527,11 +2579,35 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
   return loopAnnotationImporter->translateLoopAnnotation(node, loc);
 }
 
-OwningOpRef<ModuleOp>
-mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context, bool emitExpensiveWarnings,
-                              bool dropDICompositeTypeElements,
-                              bool loadAllDialects) {
+FailureOr<DereferenceableAttr>
+ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
+                                           unsigned kindID) {
+  Location loc = mlirModule.getLoc();
+
+  // The only operand should be a constant integer representing the number of
+  // dereferenceable bytes.
+  if (node->getNumOperands() != 1)
+    return emitError(loc) << "dereferenceable metadata must have one operand: "
+                          << diagMD(node, llvmModule.get());
+
+  auto *numBytesMD = dyn_cast<llvm::ConstantAsMetadata>(node->getOperand(0));
+  auto *numBytesCst = dyn_cast<llvm::ConstantInt>(numBytesMD->getValue());
+  if (!numBytesCst || !numBytesCst->getValue().isNonNegative())
+    return emitError(loc) << "dereferenceable metadata operand must be a "
+                             "non-negative constant integer: "
+                          << diagMD(node, llvmModule.get());
+
+  bool mayBeNull = kindID == llvm::LLVMContext::MD_dereferenceable_or_null;
+  auto derefAttr = builder.getAttr<DereferenceableAttr>(
+      numBytesCst->getZExtValue(), mayBeNull);
+
+  return derefAttr;
+}
+
+OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
+    std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
+    bool emitExpensiveWarnings, bool dropDICompositeTypeElements,
+    bool loadAllDialects, bool preferUnregisteredIntrinsics) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2548,7 +2624,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings, dropDICompositeTypeElements);
+                            emitExpensiveWarnings, dropDICompositeTypeElements,
+                            preferUnregisteredIntrinsics);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

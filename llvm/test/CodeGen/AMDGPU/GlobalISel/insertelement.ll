@@ -874,10 +874,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1085,10 +1085,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1233,10 +1233,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1293,10 +1293,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1498,10 +1498,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1621,10 +1621,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1681,10 +1681,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1798,10 +1798,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -2405,10 +2405,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -2529,10 +2529,10 @@ entry:
   %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
   %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
   %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 

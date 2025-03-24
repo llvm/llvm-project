@@ -386,7 +386,7 @@ done:
 ; GCN-NEXT: s_cselect_b32 s{{[0-9]+}}, 0, 1{{$}}
 define amdgpu_kernel void @ifcvt_undef_scc(i32 %cond, ptr addrspace(1) %out) {
 entry:
-  br i1 undef, label %else, label %if
+  br i1 poison, label %else, label %if
 
 if:
   br label %done

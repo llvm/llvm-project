@@ -127,10 +127,10 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 
 /// Set up common members and attributes for buffer types
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
-                                              ResourceClass RC, ResourceKind RK,
-                                              bool IsROV, bool RawBuffer) {
+                                              ResourceClass RC, bool IsROV,
+                                              bool RawBuffer) {
   return BuiltinTypeDeclBuilder(S, Decl)
-      .addHandleMember(RC, RK, IsROV, RawBuffer)
+      .addHandleMember(RC, IsROV, RawBuffer)
       .addDefaultHandleConstructor();
 }
 
@@ -269,8 +269,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .finalizeForwardDeclaration();
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/false,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
                     /*RawBuffer=*/false)
         .addArraySubscriptOperators()
         .addLoadMethods()
@@ -282,8 +281,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
           .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
           .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV,
-                    ResourceKind::TypedBuffer, /*IsROV=*/true,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/false)
         .addArraySubscriptOperators()
         .addLoadMethods()
@@ -294,8 +292,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
-                    /*IsROV=*/false, /*RawBuffer=*/true)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                    /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .addLoadMethods()
         .completeDefinition();
@@ -305,8 +303,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
-                    /*IsROV=*/false, /*RawBuffer=*/true)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
+                    /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .addLoadMethods()
         .addIncrementCounterMethod()
@@ -319,8 +317,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
           .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
           .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
-                    /*IsROV=*/false, /*RawBuffer=*/true)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
+                    /*RawBuffer=*/true)
         .addAppendMethod()
         .completeDefinition();
   });
@@ -330,8 +328,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
           .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
           .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
-                    /*IsROV=*/false, /*RawBuffer=*/true)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
+                    /*RawBuffer=*/true)
         .addConsumeMethod()
         .completeDefinition();
   });
@@ -341,8 +339,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .addSimpleTemplateParams({"element_type"}, StructuredBufferConcept)
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
-                    /*IsROV=*/true, /*RawBuffer=*/true)
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
+                    /*RawBuffer=*/true)
         .addArraySubscriptOperators()
         .addLoadMethods()
         .addIncrementCounterMethod()
@@ -353,16 +351,14 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "ByteAddressBuffer")
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, ResourceKind::RawBuffer,
-                    /*IsROV=*/false,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                     /*RawBuffer=*/true)
         .completeDefinition();
   });
   Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "RWByteAddressBuffer")
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
-                    /*IsROV=*/false,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
                     /*RawBuffer=*/true)
         .completeDefinition();
   });
@@ -370,8 +366,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                                 "RasterizerOrderedByteAddressBuffer")
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, ResourceKind::RawBuffer,
-                    /*IsROV=*/true,
+    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/true)
         .completeDefinition();
   });

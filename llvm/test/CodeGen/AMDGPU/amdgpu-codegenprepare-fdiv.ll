@@ -4009,7 +4009,7 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 ; IEEE-GOODFREXP-NEXT:    [[TMP14:%.*]] = extractvalue { float, i32 } [[TMP13]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP15:%.*]] = extractvalue { float, i32 } [[TMP13]], 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP16:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP14]])
-; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
+; IEEE-GOODFREXP-NEXT:    [[TMP17:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float poison)
 ; IEEE-GOODFREXP-NEXT:    [[TMP18:%.*]] = extractvalue { float, i32 } [[TMP17]], 0
 ; IEEE-GOODFREXP-NEXT:    [[TMP19:%.*]] = extractvalue { float, i32 } [[TMP17]], 1
 ; IEEE-GOODFREXP-NEXT:    [[TMP20:%.*]] = fmul float [[TMP18]], [[TMP16]]
@@ -4049,9 +4049,9 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 ; IEEE-BADFREXP-NEXT:    [[TMP14:%.*]] = extractvalue { float, i32 } [[TMP13]], 0
 ; IEEE-BADFREXP-NEXT:    [[TMP15:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float 3.200000e+01)
 ; IEEE-BADFREXP-NEXT:    [[TMP16:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP14]])
-; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
+; IEEE-BADFREXP-NEXT:    [[TMP17:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float poison)
 ; IEEE-BADFREXP-NEXT:    [[TMP18:%.*]] = extractvalue { float, i32 } [[TMP17]], 0
-; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float undef)
+; IEEE-BADFREXP-NEXT:    [[TMP19:%.*]] = call i32 @llvm.amdgcn.frexp.exp.i32.f32(float poison)
 ; IEEE-BADFREXP-NEXT:    [[TMP20:%.*]] = fmul float [[TMP18]], [[TMP16]]
 ; IEEE-BADFREXP-NEXT:    [[TMP21:%.*]] = sub i32 [[TMP19]], [[TMP15]]
 ; IEEE-BADFREXP-NEXT:    [[TMP22:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP20]], i32 [[TMP21]])
@@ -4079,7 +4079,7 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractvalue { float, i32 } [[TMP3]], 0
 ; DAZ-NEXT:    [[TMP5:%.*]] = extractvalue { float, i32 } [[TMP3]], 1
 ; DAZ-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP4]])
-; DAZ-NEXT:    [[TMP7:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float undef)
+; DAZ-NEXT:    [[TMP7:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float poison)
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractvalue { float, i32 } [[TMP7]], 0
 ; DAZ-NEXT:    [[TMP9:%.*]] = extractvalue { float, i32 } [[TMP7]], 1
 ; DAZ-NEXT:    [[TMP10:%.*]] = fmul float [[TMP8]], [[TMP6]]
@@ -4101,7 +4101,7 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
 ; DAZ-NEXT:    [[CONST_PARTIAL_RCP:%.*]] = insertelement <4 x float> [[TMP25]], float [[TMP22]], i64 3
 ; DAZ-NEXT:    ret <4 x float> [[CONST_PARTIAL_RCP]]
 ;
-  %const.partial.rcp = fdiv <4 x float> <float 1.0, float -1.0, float undef, float 2.0>, <float 0.5, float 2.0, float 32.0, float 10.0>, !fpmath !2
+  %const.partial.rcp = fdiv <4 x float> <float 1.0, float -1.0, float poison, float 2.0>, <float 0.5, float 2.0, float 32.0, float 10.0>, !fpmath !2
   ret <4 x float> %const.partial.rcp
 }
 

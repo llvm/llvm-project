@@ -4020,12 +4020,16 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineUtils",
+        ":Analysis",
+        ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
         ":MemRefDialect",
         ":Pass",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
+        ":VectorDialect",
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
         "//llvm:Support",
@@ -7234,8 +7238,10 @@ gentbl_cc_library(
 td_library(
     name = "PtrTdFiles",
     srcs = [
+        "include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td",
         "include/mlir/Dialect/Ptr/IR/PtrAttrDefs.td",
         "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
+        "include/mlir/Dialect/Ptr/IR/PtrEnums.td",
         "include/mlir/Dialect/Ptr/IR/PtrOps.td",
     ],
     includes = ["include"],
@@ -7269,6 +7275,52 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrOpsEnumsGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrEnums.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrMemorySpaceInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.cpp.inc",
+        ),
+        (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/Dialect/Ptr/IR/MemorySpaceAttrInterfaces.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/Dialect/Ptr/IR/MemorySpaceAttrInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td",
     deps = [
         ":PtrTdFiles",
     ],
@@ -7330,6 +7382,8 @@ cc_library(
         ":InliningUtils",
         ":PtrAttrsIncGen",
         ":PtrDialectIncGen",
+        ":PtrMemorySpaceInterfacesIncGen",
+        ":PtrOpsEnumsGen",
         ":PtrOpsIncGen",
         "//llvm:Support",
     ],
@@ -7337,7 +7391,12 @@ cc_library(
 
 td_library(
     name = "SPIRVOpsTdFiles",
-    srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
+    srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]) + [
+        # TODO: resolve circular dep, e.g.
+        # * SPIRVImageInterfaces.td uses SPIRVBase.td
+        # * SPIRVOps.h uses SPIRVImageInterfaces.h
+        "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
+    ],
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
@@ -7477,14 +7536,33 @@ gentbl_cc_library(
     deps = [":SPIRVOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "SPIRVImageInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
+    deps = [":SPIRVOpsTdFiles"],
+)
+
 cc_library(
     name = "SPIRVDialect",
     srcs = glob([
         "lib/Dialect/SPIRV/IR/*.cpp",
         "lib/Dialect/SPIRV/IR/*.h",
+        "lib/Dialect/SPIRV/Interfaces/*.cpp",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/SPIRV/IR/*.h",
+        "include/mlir/Dialect/SPIRV/Interfaces/*.h",
     ]),
     includes = ["include"],
     deps = [
@@ -7502,6 +7580,7 @@ cc_library(
         ":SPIRVAttributesIncGen",
         ":SPIRVAvailabilityIncGen",
         ":SPIRVCanonicalizationIncGen",
+        ":SPIRVImageInterfacesIncGen",
         ":SPIRVOpsIncGen",
         ":SideEffectInterfaces",
         ":Support",
@@ -8775,6 +8854,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":DialectUtils",
         ":IR",
         ":MemRefDialect",
         ":Pass",
@@ -10971,6 +11051,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefToLLVM",
         ":OpenMPDialect",
+        ":OpenMPOpsIncGen",
         ":Pass",
     ],
 )
@@ -11032,6 +11113,7 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Quant/IR/QuantDialectBytecode.td",
     deps = [
+        ":BuiltinDialectBytecodeTdFiles",
         ":BytecodeTdFiles",
     ],
 )

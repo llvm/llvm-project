@@ -19,6 +19,7 @@ include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
+include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
@@ -77,6 +78,156 @@ class LLVMLoweringInfo {
 
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
+
+//===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+// CK_Dependent
+def CK_BitCast : I32EnumAttrCase<"bitcast", 1>;
+// CK_LValueBitCast
+// CK_LValueToRValueBitCast
+// CK_LValueToRValue
+// CK_NoOp
+// CK_BaseToDerived
+// CK_DerivedToBase
+// CK_UncheckedDerivedToBase
+// CK_Dynamic
+// CK_ToUnion
+def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 11>;
+// CK_FunctionToPointerDecay
+// CK_NullToPointer
+// CK_NullToMemberPointer
+// CK_BaseToDerivedMemberPointer
+// CK_DerivedToBaseMemberPointer
+def CK_MemberPointerToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 17>;
+// CK_ReinterpretMemberPointer
+// CK_UserDefinedConversion
+// CK_ConstructorConversion
+def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 21>;
+def CK_PointerToIntegral : I32EnumAttrCase<"ptr_to_int", 22>;
+def CK_PointerToBoolean : I32EnumAttrCase<"ptr_to_bool", 23>;
+// CK_ToVoid
+// CK_MatrixCast
+// CK_VectorSplat
+def CK_IntegralCast : I32EnumAttrCase<"integral", 27>;
+def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 28>;
+def CK_IntegralToFloating : I32EnumAttrCase<"int_to_float", 29>;
+// CK_FloatingToFixedPoint
+// CK_FixedPointToFloating
+// CK_FixedPointCast
+// CK_FixedPointToIntegral
+// CK_IntegralToFixedPoint
+// CK_FixedPointToBoolean
+def CK_FloatingToIntegral : I32EnumAttrCase<"float_to_int", 36>;
+def CK_FloatingToBoolean : I32EnumAttrCase<"float_to_bool", 37>;
+def CK_BooleanToSignedIntegral : I32EnumAttrCase<"bool_to_int", 38>;
+def CK_FloatingCast : I32EnumAttrCase<"floating", 39>;
+// CK_CPointerToObjCPointerCast
+// CK_BlockPointerToObjCPointerCast
+// CK_AnyPointerToBlockPointerCast
+// CK_ObjCObjectLValueCast
+// CK_FloatingRealToComplex
+// CK_FloatingComplexToReal
+// CK_FloatingComplexToBoolean
+def CK_FloatingComplexCast : I32EnumAttrCase<"float_complex", 47>;
+// CK_FloatingComplexToIntegralComplex
+// CK_IntegralRealToComplex
+def CK_IntegralComplexToReal : I32EnumAttrCase<"int_complex_to_real", 50>;
+def CK_IntegralComplexToBoolean : I32EnumAttrCase<"int_complex_to_bool", 51>;
+def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 52>;
+def CK_IntegralComplexToFloatingComplex
+    : I32EnumAttrCase<"int_complex_to_float_complex", 53>;
+// CK_ARCProduceObject
+// CK_ARCConsumeObject
+// CK_ARCReclaimReturnedObject
+// CK_ARCExtendBlockObject
+// CK_AtomicToNonAtomic
+// CK_NonAtomicToAtomic
+// CK_CopyAndAutoreleaseBlockObject
+// CK_BuiltinFnToFnPtr
+// CK_ZeroToOCLOpaqueType
+def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 63>;
+// CK_IntToOCLSampler
+// CK_HLSLVectorTruncation
+// CK_HLSLArrayRValue
+// CK_HLSLElementwiseCast
+// CK_HLSLAggregateSplatCast
+
+// Enums below are specific to CIR and don't have a correspondence to classic
+// codegen:
+def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 1000>;
+
+def CastKind : I32EnumAttr<
+    "CastKind",
+    "cast kind",
+    [CK_BitCast, CK_ArrayToPointerDecay, CK_MemberPointerToBoolean,
+     CK_IntegralToPointer, CK_PointerToIntegral, CK_PointerToBoolean,
+     CK_IntegralCast, CK_IntegralToBoolean, CK_IntegralToFloating,
+     CK_FloatingToIntegral, CK_FloatingToBoolean, CK_BooleanToSignedIntegral,
+     CK_FloatingCast, CK_FloatingComplexCast, CK_IntegralComplexToReal,
+     CK_IntegralComplexToBoolean, CK_IntegralComplexCast,
+     CK_IntegralComplexToFloatingComplex, CK_AddressSpaceConversion,
+     CK_BooleanToFloat]> {
+  let cppNamespace = "::cir";
+}
+
+def CastOp : CIR_Op<"cast",
+             [Pure,
+              DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+  // FIXME: not all conversions are free of side effects.
+  let summary = "Conversion between values of different types";
+  let description = [{
+    Apply C/C++ usual conversions rules between values. Currently supported kinds:
+
+    - `array_to_ptrdecay`
+    - `bitcast`
+    - `integral`
+    - `int_to_bool`
+    - `int_to_float`
+    - `floating`
+    - `float_to_int`
+    - `float_to_bool`
+    - `ptr_to_int`
+    - `ptr_to_bool`
+    - `bool_to_int`
+    - `bool_to_float`
+    - `address_space`
+    - `float_to_complex`
+    - `int_to_complex`
+    - `float_complex_to_real`
+    - `int_complex_to_real`
+    - `float_complex_to_bool`
+    - `int_complex_to_bool`
+    - `float_complex`
+    - `float_complex_to_int_complex`
+    - `int_complex`
+    - `int_complex_to_float_complex`
+
+    This is effectively a subset of the rules from
+    `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some
+    of the conversions aren't implemented in terms of `cir.cast`, `lvalue-to-rvalue`
+    for instance is modeled as a regular `cir.load`.
+
+    ```mlir
+    %4 = cir.cast (int_to_bool, %3 : i32), !cir.bool
+    ...
+    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CastKind:$kind, CIR_AnyType:$src);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $src `:` type($src) `)`
+    `,` type($result) attr-dict
+  }];
+
+  // The input and output types should match the cast kind.
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // ConstantOp
@@ -273,7 +424,7 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp"]>,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -311,11 +462,56 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp"]>,
 }
 
 //===----------------------------------------------------------------------===//
+// ConditionOp
+//===----------------------------------------------------------------------===//
+
+def ConditionOp : CIR_Op<"condition", [
+  Terminator,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                            ["getSuccessorRegions"]>
+]> {
+  let summary = "Loop continuation condition.";
+  let description = [{
+    The `cir.condition` terminates conditional regions. It takes a single
+    `cir.bool` operand and, depending on its value, may branch to different
+    regions:
+
+     - When in the `cond` region of a `cir.loop`, it continues the loop
+       if true, or exits it if false.
+     - When in the `ready` region of a `cir.await`, it branches to the `resume`
+       region when true, and to the `suspend` region when false.
+
+    Example:
+
+    ```mlir
+    cir.loop for(cond : {
+      cir.condition(%arg0) // Branches to `step` region or exits.
+    }, step : {
+      [...]
+    }) {
+      [...]
+    }
+
+    cir.await(user, ready : {
+      cir.condition(%arg0) // Branches to `resume` or `suspend` region.
+    }, suspend : {
+      [...]
+    }, resume : {
+      [...]
+    },)
+    ```
+  }];
+  let arguments = (ins CIR_BoolType:$condition);
+  let assemblyFormat = " `(` $condition `)` attr-dict ";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["ScopeOp"]>]> {
+                               ParentOneOf<["ScopeOp", "ForOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -465,6 +661,168 @@ def BrOp : CIR_Op<"br",
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// UnaryOp
+//===----------------------------------------------------------------------===//
+
+def UnaryOpKind_Inc   : I32EnumAttrCase<"Inc",   1, "inc">;
+def UnaryOpKind_Dec   : I32EnumAttrCase<"Dec",   2, "dec">;
+def UnaryOpKind_Plus  : I32EnumAttrCase<"Plus",  3, "plus">;
+def UnaryOpKind_Minus : I32EnumAttrCase<"Minus", 4, "minus">;
+def UnaryOpKind_Not   : I32EnumAttrCase<"Not",   5, "not">;
+
+def UnaryOpKind : I32EnumAttr<
+    "UnaryOpKind",
+    "unary operation kind",
+    [UnaryOpKind_Inc,
+     UnaryOpKind_Dec,
+     UnaryOpKind_Plus,
+     UnaryOpKind_Minus,
+     UnaryOpKind_Not,
+     ]> {
+  let cppNamespace = "::cir";
+}
+
+def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
+  let summary = "Unary operations";
+  let description = [{
+    `cir.unary` performs the unary operation according to
+    the specified opcode kind: [inc, dec, plus, minus, not].
+
+    It requires one input operand and has one result, both types
+    should be the same.
+
+    ```mlir
+    %7 = cir.unary(inc, %1) : i32 -> i32
+    %8 = cir.unary(dec, %2) : i32 -> i32
+    ```
+  }];
+
+  let results = (outs CIR_AnyType:$result);
+  let arguments = (ins Arg<UnaryOpKind, "unary op kind">:$kind, Arg<CIR_AnyType>:$input);
+
+  let assemblyFormat = [{
+      `(` $kind `,` $input `)` `:` type($input) `,` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+def BrCondOp : CIR_Op<"brcond",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+       Pure, Terminator, AttrSizedOperandSegments]> {
+  let summary = "Conditional branch";
+  let description = [{
+    The `cir.brcond %cond, ^bb0, ^bb1` branches to 'bb0' block in case
+    %cond (which must be a !cir.bool type) evaluates to true, otherwise
+    it branches to 'bb1'.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.brcond %a, ^bb3, ^bb4
+      ^bb3:
+        cir.return
+      ^bb4:
+        cir.yield
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$cond, "mlir::Block *":$destTrue, "mlir::Block *":$destFalse,
+               CArg<"mlir::ValueRange", "{}">:$destOperandsTrue,
+               CArg<"mlir::ValueRange", "{}">:$destOperandsFalse), [{
+      build($_builder, $_state, cond, destOperandsTrue,
+            destOperandsFalse, destTrue, destFalse);
+    }]>
+  ];
+
+  let arguments = (ins CIR_BoolType:$cond,
+                       Variadic<CIR_AnyType>:$destOperandsTrue,
+                       Variadic<CIR_AnyType>:$destOperandsFalse);
+  let successors = (successor AnySuccessor:$destTrue, AnySuccessor:$destFalse);
+  let assemblyFormat = [{
+    $cond
+    $destTrue (`(` $destOperandsTrue^ `:` type($destOperandsTrue) `)`)?
+    `,`
+    $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+def ForOp : CIR_Op<"for", [LoopOpInterface, NoRegionArguments]> {
+  let summary = "C/C++ for loop counterpart";
+  let description = [{
+    Represents a C/C++ for loop. It consists of three regions:
+
+     - `cond`: single block region with the loop's condition. Should be
+     terminated with a `cir.condition` operation.
+     - `body`: contains the loop body and an arbitrary number of blocks.
+     - `step`: single block region with the loop's step.
+
+    Example:
+
+    ```mlir
+    cir.for cond {
+      cir.condition(%val)
+    } body {
+      cir.break
+    ^bb2:
+      cir.yield
+    } step {
+      cir.yield
+    }
+    ```
+  }];
+
+  let regions = (region SizedRegion<1>:$cond,
+                        MinSizedRegion<1>:$body,
+                        SizedRegion<1>:$step);
+  let assemblyFormat = [{
+    `:` `cond` $cond
+    `body` $body
+    `step` $step
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$condBuilder,
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$stepBuilder), [{
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+
+        // Build condition region.
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+
+        // Build body region.
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+
+        // Build step region.
+        $_builder.createBlock($_state.addRegion());
+        stepBuilder($_builder, $_state.location);
+      }]>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Region *maybeGetStep() { return &getStep(); }
+    llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
+      return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
+    }
   }];
 }
 
@@ -632,6 +990,22 @@ def FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
+  let summary = "invoke immediate undefined behavior";
+  let description = [{
+    If the program control flow reaches a `cir.unreachable` operation, the
+    program exhibits undefined behavior immediately. This operation is useful
+    in cases where the unreachability of a program point needs to be explicitly
+    marked.
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

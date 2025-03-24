@@ -1446,19 +1446,22 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid() && !TC.getTriple().isOHOSFamily()) {
     CmdArgs.push_back("-lpthread");
-    if (!TC.getTriple().isOSOpenBSD())
+    if (!TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSHaiku())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
   if (!TC.getTriple().isOSFreeBSD() && !TC.getTriple().isOSNetBSD() &&
       !TC.getTriple().isOSOpenBSD() && !TC.getTriple().isOSDragonFly() &&
+      !TC.getTriple().isOSHaiku() &&
       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
   if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
       TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
     CmdArgs.push_back("-lexecinfo");
+  if (TC.getTriple().isOSHaiku())
+    CmdArgs.push_back("-lbsd");
   // There is no libresolv on Android, FreeBSD, OpenBSD, etc. On musl
   // libresolv.a, even if exists, is an empty archive to satisfy POSIX -lresolv
   // requirement.
@@ -2577,7 +2580,8 @@ static void GetSDLFromOffloadArchive(
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
-  std::string NormalizedTriple = T.getToolChain().getTriple().normalize();
+  std::string NormalizedTriple = T.getToolChain().getTriple().normalize(
+      llvm::Triple::CanonicalForm::FOUR_IDENT);
   DeviceTriple += NormalizedTriple;
   if (!Target.empty()) {
     DeviceTriple += '-';
@@ -2756,7 +2760,7 @@ void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
 
 unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
                                            const llvm::opt::ArgList &Args) {
-  unsigned CodeObjVer = 5; // default
+  unsigned CodeObjVer = 6; // default
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args))
     StringRef(CodeObjArg->getValue()).getAsInteger(0, CodeObjVer);
   return CodeObjVer;

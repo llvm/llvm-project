@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Helper classes for creating HLSL builtin class types. Used by external HLSL
+// sema source.
 //
 //===----------------------------------------------------------------------===//
 
@@ -602,10 +604,8 @@ BuiltinTypeDeclBuilder::addMemberVariable(StringRef Name, QualType Type,
   return *this;
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC, ResourceKind RK,
-                                        bool IsROV, bool RawBuffer,
-                                        AccessSpecifier Access) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
+    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &Ctx = SemaRef.getASTContext();
@@ -621,10 +621,9 @@ BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC, ResourceKind RK,
       ElementTypeInfo
           ? HLSLContainedTypeAttr::CreateImplicit(Ctx, ElementTypeInfo)
           : nullptr};
-  Attr *ResourceAttr = HLSLResourceAttr::CreateImplicit(Ctx, RK);
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                        AttributedResTy))
-    addMemberVariable("__handle", AttributedResTy, {ResourceAttr}, Access);
+    addMemberVariable("__handle", AttributedResTy, {}, Access);
   return *this;
 }
 

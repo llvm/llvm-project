@@ -87,7 +87,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   DumpValueObjectOptions dump_options = m_varobj_options.GetAsDumpOptions(
       m_expr_options.m_verbosity, m_format_options.GetFormat());
-  dump_options.SetHideRootName(suppress_result);
+  dump_options.SetHideRootName(suppress_result)
+      .SetExpandPointerTypeFlags(lldb::eTypeIsObjC);
 
   bool is_po = m_varobj_options.use_objc;
 

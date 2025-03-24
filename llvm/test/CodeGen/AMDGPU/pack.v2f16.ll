@@ -317,7 +317,7 @@ define amdgpu_kernel void @v_pack_v2f16_user(ptr addrspace(1) %in0, ptr addrspac
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   %foo = add i32 %vec.i32, 9
-  store volatile i32 %foo, ptr addrspace(1) undef
+  store volatile i32 %foo, ptr addrspace(1) poison
   ret void
 }
 

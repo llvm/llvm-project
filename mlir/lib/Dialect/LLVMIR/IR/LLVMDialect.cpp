@@ -940,6 +940,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
+        /*dereferenceable=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
@@ -2119,6 +2120,57 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // AddressOfOp constant-folds to the global symbol name.
 OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
   return getGlobalNameAttr();
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM::DSOLocalEquivalentOp
+//===----------------------------------------------------------------------===//
+
+LLVMFuncOp
+DSOLocalEquivalentOp::getFunction(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<LLVMFuncOp>(symbolTable.lookupSymbolIn(
+      parentLLVMModule(*this), getFunctionNameAttr()));
+}
+
+AliasOp DSOLocalEquivalentOp::getAlias(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<AliasOp>(symbolTable.lookupSymbolIn(
+      parentLLVMModule(*this), getFunctionNameAttr()));
+}
+
+LogicalResult
+DSOLocalEquivalentOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symbol = symbolTable.lookupSymbolIn(parentLLVMModule(*this),
+                                                 getFunctionNameAttr());
+  auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
+  auto alias = dyn_cast_or_null<AliasOp>(symbol);
+
+  if (!function && !alias)
+    return emitOpError(
+        "must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'");
+
+  if (alias) {
+    if (alias.getInitializer()
+            .walk([&](AddressOfOp addrOp) {
+              if (addrOp.getGlobal(symbolTable))
+                return WalkResult::interrupt();
+              return WalkResult::advance();
+            })
+            .wasInterrupted())
+      return emitOpError("must reference an alias to a function");
+  }
+
+  if ((function && function.getLinkage() == LLVM::Linkage::ExternWeak) ||
+      (alias && alias.getLinkage() == LLVM::Linkage::ExternWeak))
+    return emitOpError(
+        "target function with 'extern_weak' linkage not allowed");
+
+  return success();
+}
+
+/// Fold a dso_local_equivalent operation to a dedicated dso_local_equivalent
+/// attribute.
+OpFoldResult DSOLocalEquivalentOp::fold(FoldAdaptor) {
+  return DSOLocalEquivalentAttr::get(getContext(), getFunctionNameAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3708,6 +3760,20 @@ LogicalResult LinkerOptionsOp::verify() {
   if (mlir::Operation *parentOp = (*this)->getParentOp();
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagsOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ModuleFlagsOp::verify() {
+  if (Operation *parentOp = (*this)->getParentOp();
+      parentOp && !satisfiesLLVMModule(parentOp))
+    return emitOpError("must appear at the module level");
+  for (Attribute flag : getFlags())
+    if (!isa<ModuleFlagAttr>(flag))
+      return emitOpError("expected a module flag attribute");
   return success();
 }
 
