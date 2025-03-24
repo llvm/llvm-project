@@ -601,42 +601,6 @@ struct RootSignatureHeader {
     sys::swapByteOrder(Flags);
   }
 };
-
-struct RootSignatureValidations {
-
-  static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
-
-  static bool isValidVersion(uint32_t Version) {
-    return (Version == 1 || Version == 2);
-  }
-
-  static bool isValidParameterType(dxbc::RootParameterType Type) {
-    switch (Type) {
-    case dxbc::RootParameterType::Constants32Bit:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  static bool isValidShaderVisibility(dxbc::ShaderVisibility Visibility) {
-    switch (Visibility) {
-
-    case ShaderVisibility::All:
-    case ShaderVisibility::Vertex:
-    case ShaderVisibility::Hull:
-    case ShaderVisibility::Domain:
-    case ShaderVisibility::Geometry:
-    case ShaderVisibility::Pixel:
-    case ShaderVisibility::Amplification:
-    case ShaderVisibility::Mesh:
-      return true;
-    default:
-      return false;
-    }
-  }
-};
-
 } // namespace dxbc
 } // namespace llvm
 
