@@ -1169,7 +1169,7 @@ void StdLibraryFunctionsChecker::NullnessConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
     const Summary &Summary, llvm::raw_ostream &Out) const {
   assert(CannotBeNull &&
-         "Describe should not be used when the value must be NULL");
+         "'describe' is not implemented when the value must be NULL");
   if (DK == Violation)
     Out << "should not be NULL";
   else
@@ -1179,7 +1179,8 @@ void StdLibraryFunctionsChecker::NullnessConstraint::describe(
 bool StdLibraryFunctionsChecker::NullnessConstraint::describeArgumentValue(
     const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
     llvm::raw_ostream &Out) const {
-  assert(!CannotBeNull && "This function is used when the value is NULL");
+  assert(!CannotBeNull && "'describeArgumentValue' is not implemented when the "
+                          "value must be non-NULL");
   Out << "is NULL";
   return true;
 }
@@ -1217,7 +1218,7 @@ void StdLibraryFunctionsChecker::BufferNullnessConstraint::describe(
     DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
     const Summary &Summary, llvm::raw_ostream &Out) const {
   assert(CannotBeNull &&
-         "Describe should not be used when the value must be NULL");
+         "'describe' is not implemented when the buffer must be NULL");
   if (DK == Violation)
     Out << "should not be NULL";
   else
@@ -1227,7 +1228,8 @@ void StdLibraryFunctionsChecker::BufferNullnessConstraint::describe(
 bool StdLibraryFunctionsChecker::BufferNullnessConstraint::describeArgumentValue(
     const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
     llvm::raw_ostream &Out) const {
-  assert(!CannotBeNull && "This function is used when the value is NULL");
+  assert(!CannotBeNull && "'describeArgumentValue' is not implemented when the "
+                          "buffer must be non-NULL");
   Out << "is NULL";
   return true;
 }
