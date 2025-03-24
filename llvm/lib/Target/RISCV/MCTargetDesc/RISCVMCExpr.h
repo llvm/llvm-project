@@ -22,9 +22,9 @@ class StringRef;
 
 class RISCVMCExpr : public MCTargetExpr {
 public:
-  enum Specifier {
+  enum Specifier : uint8_t {
     VK_None,
-    VK_LO,
+    VK_LO = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_HI,
     VK_PCREL_LO,
     VK_PCREL_HI,
