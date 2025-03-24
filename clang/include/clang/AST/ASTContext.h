@@ -3127,7 +3127,7 @@ public:
   QualType mergeTransparentUnionType(QualType, QualType,
                                      bool OfBlockPointer=false,
                                      bool Unqualified = false);
-  QualType mergeRecordTypes(QualType, QualType);
+  QualType mergeTagTypes(QualType, QualType);
 
   QualType mergeObjCGCQualifiers(QualType, QualType);
 

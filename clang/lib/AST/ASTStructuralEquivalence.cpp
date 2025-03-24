@@ -1635,6 +1635,28 @@ static bool NameIsStructurallyEquivalent(const TagDecl &D1, const TagDecl &D2) {
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
+  // C23 6.2.7p1:
+  // ... Moreover, two complete structure, union, or enumerated types declared
+  // with the same tag are compatible if members satisfy the following
+  // requirements:
+  //  - there shall be a one-to-one correspondence between their members such
+  //    that each pair of corresponding members are declared with compatible
+  //    types;
+  //  - if one member of the pair is declared with an alignment specifier, the
+  //    other is declared with an equivalent alignment specifier;
+  //  - and, if one member of the pair is declared with a name, the other is
+  //    declared with the same name.
+  // For two structures, corresponding members shall be declared in the same
+  // order. For two unions declared in the same translation unit, corresponding
+  // members shall be declared in the same order. For two structures or unions,
+  // corresponding bit-fields shall have the same widths. ... For determining
+  // type compatibility, anonymous structures and unions are considered a
+  // regular member of the containing structure or union type, and the type of
+  // an anonymous structure or union is considered compatible to the type of
+  // another anonymous structure or union, respectively, if their members
+  // fulfill the preceding requirements. ... Otherwise, the structure, union,
+  // or enumerated types are incompatible.
+
   if (!NameIsStructurallyEquivalent(*D1, *D2)) {
     return false;
   }
@@ -1667,7 +1689,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // If the records occur in different context (namespace), these should be
   // different. This is specially important if the definition of one or both
-  // records is missing.
+  // records is missing. In C23, different contexts do not make for a different
+  // structural type (a local struct definition can be a valid redefinition of
+  // a file scope struct definition).
   if (!Context.LangOpts.C23 &&
       !IsRecordContextStructurallyEquivalent(Context, D1, D2))
     return false;
@@ -1916,16 +1940,35 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Compare the definitions of these two enums. If either or both are
   // incomplete (i.e. forward declared), we assume that they are equivalent.
+  // In C23, the order of the enumerations does not matter, only the names and
+  // values do.
   D1 = D1->getDefinition();
   D2 = D2->getDefinition();
   if (!D1 || !D2)
     return true;
 
-  EnumDecl::enumerator_iterator EC2 = D2->enumerator_begin(),
-                                EC2End = D2->enumerator_end();
-  for (EnumDecl::enumerator_iterator EC1 = D1->enumerator_begin(),
-                                     EC1End = D1->enumerator_end();
-       EC1 != EC1End; ++EC1, ++EC2) {
+  llvm::SmallVector<const EnumConstantDecl *, 8> D1Enums, D2Enums;
+  auto CopyEnumerators =
+      [](auto &&Range, llvm::SmallVectorImpl<const EnumConstantDecl *> &Cont) {
+        for (const EnumConstantDecl *ECD : Range)
+          Cont.push_back(ECD);
+      };
+  CopyEnumerators(D1->enumerators(), D1Enums);
+  CopyEnumerators(D2->enumerators(), D2Enums);
+
+  // In C23 mode, the order of the enumerations does not matter, so sort them
+  // by name to get them both into a consistent ordering.
+  if (Context.LangOpts.C23) {
+    auto Sorter = [](const EnumConstantDecl *LHS, const EnumConstantDecl *RHS) {
+      return LHS->getName() < RHS->getName();
+    };
+    llvm::sort(D1Enums, Sorter);
+    llvm::sort(D2Enums, Sorter);
+  }
+
+  auto EC2 = D2Enums.begin(), EC2End = D2Enums.end();
+  for (auto EC1 = D1Enums.begin(), EC1End = D1Enums.end(); EC1 != EC1End;
+       ++EC1, ++EC2) {
     if (EC2 == EC2End) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
@@ -1933,27 +1976,28 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                           diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(D2)
             << (&Context.FromCtx != &Context.ToCtx);
-        Context.Diag1(EC1->getLocation(), diag::note_odr_enumerator)
-            << EC1->getDeclName() << toString(EC1->getInitVal(), 10);
+        Context.Diag1((*EC1)->getLocation(), diag::note_odr_enumerator)
+            << (*EC1)->getDeclName() << toString((*EC1)->getInitVal(), 10);
         Context.Diag2(D2->getLocation(), diag::note_odr_missing_enumerator);
       }
       return false;
     }
 
-    llvm::APSInt Val1 = EC1->getInitVal();
-    llvm::APSInt Val2 = EC2->getInitVal();
+    llvm::APSInt Val1 = (*EC1)->getInitVal();
+    llvm::APSInt Val2 = (*EC2)->getInitVal();
     if (!llvm::APSInt::isSameValue(Val1, Val2) ||
-        !IsStructurallyEquivalent(EC1->getIdentifier(), EC2->getIdentifier())) {
+        !IsStructurallyEquivalent((*EC1)->getIdentifier(),
+                                  (*EC2)->getIdentifier())) {
       if (Context.Complain) {
         Context.Diag2(D2->getLocation(),
                       Context.getApplicableDiagnostic(
                           diag::err_odr_tag_type_inconsistent))
             << Context.ToCtx.getTypeDeclType(D2)
             << (&Context.FromCtx != &Context.ToCtx);
-        Context.Diag2(EC2->getLocation(), diag::note_odr_enumerator)
-            << EC2->getDeclName() << toString(EC2->getInitVal(), 10);
-        Context.Diag1(EC1->getLocation(), diag::note_odr_enumerator)
-            << EC1->getDeclName() << toString(EC1->getInitVal(), 10);
+        Context.Diag2((*EC2)->getLocation(), diag::note_odr_enumerator)
+            << (*EC2)->getDeclName() << toString((*EC2)->getInitVal(), 10);
+        Context.Diag1((*EC1)->getLocation(), diag::note_odr_enumerator)
+            << (*EC1)->getDeclName() << toString((*EC1)->getInitVal(), 10);
       }
       return false;
     }
@@ -1965,8 +2009,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                            diag::err_odr_tag_type_inconsistent))
           << Context.ToCtx.getTypeDeclType(D2)
           << (&Context.FromCtx != &Context.ToCtx);
-      Context.Diag2(EC2->getLocation(), diag::note_odr_enumerator)
-          << EC2->getDeclName() << toString(EC2->getInitVal(), 10);
+      Context.Diag2((*EC2)->getLocation(), diag::note_odr_enumerator)
+          << (*EC2)->getDeclName() << toString((*EC2)->getInitVal(), 10);
       Context.Diag1(D1->getLocation(), diag::note_odr_missing_enumerator);
     }
     return false;

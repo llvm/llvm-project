@@ -11433,75 +11433,20 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   return {};
 }
 
-QualType ASTContext::mergeRecordTypes(QualType LHS, QualType RHS) {
-  // C17 and earlier and C++ disallow two struct or union definitions within
-  // the same TU from being compatible.
+QualType ASTContext::mergeTagTypes(QualType LHS, QualType RHS) {
+  // C17 and earlier and C++ disallow two tag definitions within the same TU
+  // from being compatible.
   if (LangOpts.CPlusPlus || !LangOpts.C23)
     return {};
 
+  // C23, on the other hand, requires the members to be "the same enough", so
+  // we use a structural equivalence check.
   StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
       getLangOpts(), *this, *this, NonEquivalentDecls,
       StructuralEquivalenceKind::Default, false /*StrictTypeSpelling*/,
       false /*Complain*/, true /*ErrorOnTagTypeMismatch*/);
   return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
-
-  // C23, on the other hand, requires the members to be "the same enough".
-  // C23 6.2.7p1:
-  // ... Moreover, two complete structure, union, or enumerated types declared
-  // with the same tag are compatible if members satisfy the following
-  // requirements:
-  //  - there shall be a one-to-one correspondence between their members such
-  //    that each pair of corresponding members are declared with compatible
-  //    types;
-  //  - if one member of the pair is declared with an alignment specifier, the
-  //    other is declared with an equivalent alignment specifier;
-  //  - and, if one member of the pair is declared with a name, the other is
-  //    declared with the same name.
-  // For two structures, corresponding members shall be declared in the same
-  // order. For two unions declared in the same translation unit, corresponding
-  // members shall be declared in the same order. For two structures or unions,
-  // corresponding bit-fields shall have the same widths. ... For determining
-  // type compatibility, anonymous structures and unions are considered a
-  // regular member of the containing structure or union type, and the type of
-  // an anonymous structure or union is considered compatible to the type of
-  // another anonymous structure or union, respectively, if their members
-  // fulfill the preceding requirements. ... Otherwise, the structure, union,
-  // or enumerated types are incompatible.
-
-  const RecordDecl *LHSRecord = LHS->getAsRecordDecl(),
-                   *RHSRecord = RHS->getAsRecordDecl();
-
-  // Test for different tag kinds; that makes them incompatible.
-  if (LHSRecord->getTagKind() != RHSRecord->getTagKind())
-    return {};
-
-  // Walk over both lists of members. It would be nice to use a zip iterator
-  // for this, but we don't know whether the two records have the same number
-  // of fields and we don't want to walk the list of fields more often than we
-  // need to.
-  auto LHSIter = LHSRecord->field_begin(), LHSEnd = LHSRecord->field_end(),
-       RHSIter = RHSRecord->field_begin(), RHSEnd = RHSRecord->field_end();
-  for (; LHSIter != LHSEnd && RHSIter != RHSEnd; ++LHSIter, ++RHSIter) {
-    const FieldDecl *LField = *LHSIter;
-    const FieldDecl *RField = *RHSIter;
-
-    // Check that the field names are identical.
-    if (LField->getIdentifier() != RField->getIdentifier())
-      return {};
-    // Check alignment specifiers.
-    if (LField->getMaxAlignment() != RField->getMaxAlignment())
-      return {};
-    // Finally, check if the field types cannot be merged.
-    if (mergeTypes(LField->getType(), RField->getType()).isNull())
-      return {};
-  }
-  // Different number of fields between the two structures, so they're not
-  // compatible.
-  if (LHSIter != LHSEnd || RHSIter != RHSEnd)
-    return {};
-
-  return LHS;
 }
 
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
@@ -11799,9 +11744,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified,
                               /*AllowCXX=*/false, IsConditionalOperator);
   case Type::Record:
-    return mergeRecordTypes(LHS, RHS);
   case Type::Enum:
-    return {};
+    return mergeTagTypes(LHS, RHS);
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.
     return {};

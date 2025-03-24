@@ -104,3 +104,37 @@ struct qual_order_does_not_matter { // c17-note {{previous definition is here}}
 struct qual_order_does_not_matter { // c17-error {{redefinition of 'qual_order_does_not_matter'}}
   volatile const int x;
 };
+
+struct nested { // both-note {{previous definition is here}}
+  int x;
+  struct nested { // both-error {{nested redefinition of 'nested'}}
+    int x;
+  };
+};
+
+enum E { A }; // c17-note 2 {{previous definition is here}}
+enum E { A }; // c17-error {{redefinition of 'E'}} \
+                 c17-error {{redefinition of enumerator 'A'}}
+
+enum Q { D = 1 }; // c17-note 2 {{previous definition is here}}
+enum Q { D = D }; // c17-error {{redefinition of 'Q'}} \
+                     c17-error {{redefinition of enumerator 'D'}}
+
+// The order of the enumeration constants does not matter, only the values do.
+enum X { B = 1, C = 1 + 1 }; // c17-note 3 {{previous definition is here}}
+enum X { C = 2, B = 1 };     // c17-error {{redefinition of 'X'}} \
+                                c17-error {{redefinition of enumerator 'C'}} \
+                                c17-error {{redefinition of enumerator 'B'}}
+
+// Different enumeration constants.
+enum Y { YA = 1, YB = 2 }; // c23-note {{enumerator 'YB' with value 2 here}} \
+                              c17-note 3 {{previous definition is here}}
+enum Y { YA = 1, YB = 3 }; // c23-error {{type 'enum Y' has incompatible definitions}} \
+                              c23-note {{enumerator 'YB' with value 3 here}} \
+                              c17-error {{redefinition of 'Y'}} \
+							  c17-error {{redefinition of enumerator 'YA'}} \
+                              c17-error {{redefinition of enumerator 'YB'}}
+
+// Different enumeration names, same named constants.
+enum Z1 { ZC = 1 }; // both-note {{previous definition is here}}
+enum Z2 { ZC = 1 }; // both-error {{redefinition of enumerator 'ZC'}}
