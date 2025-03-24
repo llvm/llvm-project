@@ -430,10 +430,10 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
   }
-  MVT getVectorIdxTy(const DataLayout &DL) const override {
+  unsigned getVectorIdxWidth(const DataLayout &DL) const override {
     // Only the lower 12 bits of an element index are used, so we don't
     // want to clobber the upper 32 bits of a GPR unnecessarily.
-    return MVT::i32;
+    return 32;
   }
   TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
     const override {
@@ -830,13 +830,17 @@ private:
   getTargetMMOFlags(const Instruction &I) const override;
   const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
-  bool isFullyInternal(const Function *Fn) const;
+private:
+  bool isInternal(const Function *Fn) const;
+  mutable std::map<const Function *, bool> IsInternalCache;
   void verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                     const Function *F, SDValue Callee) const;
   void verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
                                    const Function *F) const;
-  bool verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
-                               bool IsInternal) const;
+  bool
+  verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs) const;
+
+public:
 };
 
 struct SystemZVectorConstantInfo {

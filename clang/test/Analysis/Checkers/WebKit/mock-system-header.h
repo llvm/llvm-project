@@ -28,4 +28,4 @@ enum os_log_type_t : uint8_t {
 
 typedef struct os_log_s *os_log_t;
 os_log_t os_log_create(const char *subsystem, const char *category);
-void os_log_msg(os_log_t oslog, os_log_type_t type, const char *msg);
+void os_log_msg(os_log_t oslog, os_log_type_t type, const char *msg, ...);

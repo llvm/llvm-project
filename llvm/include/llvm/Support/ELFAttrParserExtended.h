@@ -35,6 +35,7 @@ protected:
                        const unsigned Tag);
 
 public:
+  virtual ~ELFExtendedAttrParser() { static_cast<void>(!Cursor.takeError()); }
   Error parse(ArrayRef<uint8_t> Section, llvm::endianness Endian) override;
 
   std::optional<unsigned> getAttributeValue(unsigned Tag) const override;

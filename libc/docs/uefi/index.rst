@@ -8,7 +8,7 @@ libc for UEFI
 
 The *UEFI* support for LLVM's libc project aims to provide a standard libc
 frontend to the UEFI protocols. This allows for many existing
-applications to be easily ported to UEFI. Nagivate using the links below to
+applications to be easily ported to UEFI. Navigate using the links below to
 learn more about this project.
 
 .. toctree::

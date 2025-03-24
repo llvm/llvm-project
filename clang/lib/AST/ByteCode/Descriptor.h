@@ -175,8 +175,8 @@ public:
   const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
@@ -207,6 +207,7 @@ public:
 
   QualType getType() const;
   QualType getElemQualType() const;
+  QualType getDataType(const ASTContext &Ctx) const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
