@@ -533,7 +533,7 @@ class VALUmVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
                 (ins VR:$vs2, optype:$imm, VMaskCarryInOp:$vm),
                 opcodestr, "$vd, $vs2, $imm, $vm">;
 
-// op vd, vs2, imm, vm
+// op vd, vs2, imm
 class VALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : RVInstIVI<funct6, (outs VR:$vd),
                 (ins VR:$vs2, optype:$imm),
