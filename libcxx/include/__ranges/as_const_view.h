@@ -114,22 +114,22 @@ inline constexpr bool __is_span_v = false; // true if and only if _Tp is a speci
 template <class _Tp, size_t _Extent>
 inline constexpr bool __is_span_v<span<_Tp, _Extent>> = true;
 
-template <class _UType>
+template <class>
 struct __xtype {
-  using type = void;
+  using type _LIBCPP_NODEBUG = void;
 };
 template <class _XType>
 struct __xtype<empty_view<_XType>> {
-  using type = _XType;
+  using type _LIBCPP_NODEBUG = _XType;
 };
 template <class _XType, size_t _Extent>
 struct __xtype<span<_XType, _Extent>> {
-  using type                       = _XType;
+  using type _LIBCPP_NODEBUG       = _XType;
   constexpr static size_t __extent = _Extent;
 };
 template <class _XType>
 struct __xtype<ref_view<_XType>> {
-  using type = _XType;
+  using type _LIBCPP_NODEBUG = _XType;
 };
 
 struct __fn : __range_adaptor_closure<__fn> {
@@ -146,12 +146,10 @@ struct __fn : __range_adaptor_closure<__fn> {
 
   template <class _Type>
   static consteval pair<__strategy, bool> __choose_strategy() {
-    using _UType = std::remove_cvref_t<_Type>;
+    using _UType = remove_cvref_t<_Type>;
     using _XType = __xtype<_UType>::type;
 
-    if constexpr (!requires { typename all_t<_Type>; }) {
-      return {__strategy::__none, false};
-    } else if constexpr (constant_range<all_t<_Type>>) {
+    if constexpr (requires { requires constant_range<views::all_t<_Type>>; }) {
       return {__strategy::__already_const, noexcept(views::all(std::declval<_Type>()))};
     } else if constexpr (__is_specialization_v<_UType, empty_view>) {
       return {__strategy::__empty_view, true};
@@ -162,8 +160,10 @@ struct __fn : __range_adaptor_closure<__fn> {
     } else if constexpr (is_lvalue_reference_v<_Type> && constant_range<const _UType> && !view<_UType>) {
       return {__strategy::__const_is_constant_range,
               noexcept(ref_view(static_cast<const _UType&>(std::declval<_Type>())))};
-    } else {
+    } else if (requires { as_const_view(std::declval<_Type>()); }) {
       return {__strategy::__otherwise, noexcept(as_const_view(std::declval<_Type>()))};
+    } else {
+      return {__strategy::__none, false};
     }
   }
 
@@ -171,7 +171,7 @@ struct __fn : __range_adaptor_closure<__fn> {
     requires(__choose_strategy<_Type>().first != __strategy::__none)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
   operator()(_Type&& __range) noexcept(__choose_strategy<_Type>().second) {
-    using _UType = std::remove_cvref_t<_Type>;
+    using _UType = remove_cvref_t<_Type>;
     using _XType = __xtype<_UType>::type;
 
     constexpr auto __st = __choose_strategy<_Type>().first;

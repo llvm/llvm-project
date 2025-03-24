@@ -44,16 +44,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto& __possibly_const_range(_Rp& __rng) noexcep
 
 // [range.access.cbegin]
 
-template <class _Type>
-concept __const_accessible_range = (!is_rvalue_reference_v<_Type&&> || enable_borrowed_range<remove_cv_t<_Type>>);
-
 namespace __cbegin {
 struct __fn {
 #  if _LIBCPP_STD_VER >= 23
   template <class _Rng>
   using _UType _LIBCPP_NODEBUG = decltype(ranges::begin(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
-  template <__const_accessible_range _Rng>
+  template <__can_borrow _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
       noexcept(const_iterator<_UType<_Rng>>(ranges::begin(ranges::__possibly_const_range(__rng)))))
       -> const_iterator<_UType<_Rng>> {
@@ -97,7 +94,7 @@ struct __fn {
   template <class _Rng>
   using _UType _LIBCPP_NODEBUG = decltype(ranges::end(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
-  template <__const_accessible_range _Rng>
+  template <__can_borrow _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
       noexcept(const_sentinel<_UType<_Rng>>(ranges::end(ranges::__possibly_const_range(__rng)))))
       -> const_sentinel<_UType<_Rng>> {
@@ -140,7 +137,7 @@ struct __fn {
   template <class _Rng>
   using _UType _LIBCPP_NODEBUG = decltype(ranges::rbegin(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
-  template <__const_accessible_range _Rng>
+  template <__can_borrow _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
       noexcept(const_iterator<_UType<_Rng>>(ranges::rbegin(ranges::__possibly_const_range(__rng)))))
       -> const_iterator<_UType<_Rng>> {
@@ -177,7 +174,7 @@ struct __fn {
   template <class _Rng>
   using _UType _LIBCPP_NODEBUG = decltype(ranges::rend(ranges::__possibly_const_range(std::declval<_Rng&>())));
 
-  template <__const_accessible_range _Rng>
+  template <__can_borrow _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto operator()(_Rng&& __rng) noexcept(
       noexcept(const_sentinel<_UType<_Rng>>(ranges::rend(ranges::__possibly_const_range(__rng)))))
       -> const_sentinel<_UType<_Rng>> {
@@ -217,7 +214,7 @@ struct __fn {
     return __ptr;
   }
 
-  template <__const_accessible_range _Rng>
+  template <__can_borrow _Rng>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto
   operator()(_Rng&& __rng) noexcept(noexcept(__as_const_pointer(ranges::data(ranges::__possibly_const_range(__rng)))))
       -> decltype(__as_const_pointer(ranges::data(ranges::__possibly_const_range(__rng)))) {
