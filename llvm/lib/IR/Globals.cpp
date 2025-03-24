@@ -266,6 +266,16 @@ void GlobalValue::setNoSanitizeMetadata() {
   setSanitizerMetadata(Meta);
 }
 
+void GlobalValue::disableSanitizerMetadataGlobalTagging() {
+  if (!isTagged()) {
+    return;
+  }
+
+  auto MD = getSanitizerMetadata();
+  MD.Memtag = false;
+  setSanitizerMetadata(MD);
+}
+
 StringRef GlobalObject::getSectionImpl() const {
   assert(hasSection());
   return getContext().pImpl->GlobalObjectSections[this];
