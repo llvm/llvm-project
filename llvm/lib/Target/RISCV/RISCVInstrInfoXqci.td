@@ -50,21 +50,6 @@ def uimm5ge6_plus1 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   let OperandType = "OPERAND_UIMM5_GE6_PLUS1";
 }
 
-def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
-  [{return ((Imm == 0)  ||
-            (Imm == 1)  ||
-            (Imm == 2)  ||
-            (Imm == 4)  ||
-            (Imm == 8)  ||
-            (Imm == 16) ||
-            (Imm == 15) ||
-            (Imm == 31));}]> {
-  let ParserMatchClass = UImmAsmOperand<5, "Slist">;
-  let EncoderMethod = "getImmOpValueSlist";
-  let DecoderMethod = "decodeUImmSlistOperand";
-  let OperandType = "OPERAND_UIMM5_SLIST";
-}
-
 def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
@@ -377,27 +362,6 @@ class QCISim_RS1<bits<4> imm11_8, string opcodestr>
     : RVInstI<0b010, OPC_OP_IMM, (outs), (ins GPR:$rs1), opcodestr, "$rs1"> {
   let rd = 0;
   let imm12 = {imm11_8, 0b00000000};
-}
-
-let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
-class QCISync_UIMM5<bits<4> imm11_8, string opcodestr>
-    : RVInstI<0b011, OPC_OP_IMM, (outs), (ins uimm5:$imm5), opcodestr, "$imm5">
-{
-  bits<5> imm5;
-
-  let rs1 = 0;
-  let rd = 0;
-  let imm12 = {imm11_8, 0b000, imm5};
-}
-
-let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
-class QCIRVInst16CBSYNC<bits<3> imm5_func2, string OpcodeStr>
-    : RVInst16CB<0b100, 0b01, (outs), (ins uimm5slist:$slist), OpcodeStr, "$slist"> {
-    bits<3> slist;
-
-    let Inst{6-2} = 0;
-    let Inst{9-7} = slist;
-    let Inst{12-10} = imm5_func2;
 }
 
 class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
@@ -788,27 +752,6 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_E_ANDI  : QCIRVInstEI<0b011, 0b11, "qc.e.andi">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcilia, IsRV32]
-
-let Predicates = [HasVendorXqcisync, IsRV32] in {
-  def QC_SYNC : QCISync_UIMM5<0b0001, "qc.sync">;
-  def QC_SYNCR : QCISync_UIMM5<0b0010, "qc.syncr">;
-  def QC_SYNCWF : QCISync_UIMM5<0b0100, "qc.syncwf">;
-  def QC_SYNCWL : QCISync_UIMM5<0b1000, "qc.syncwl">;
-
-  def QC_C_SYNC   : QCIRVInst16CBSYNC<0b000, "qc.c.sync">;
-  def QC_C_SYNCR  : QCIRVInst16CBSYNC<0b001, "qc.c.syncr">;
-  def QC_C_SYNCWF : QCIRVInst16CBSYNC<0b100, "qc.c.syncwf">;
-  def QC_C_SYNCWL : QCIRVInst16CBSYNC<0b101, "qc.c.syncwl">;
-
-  let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
-  def QC_C_DELAY : RVInst16CI<0b000, 0b10, (outs),
-                              (ins uimm5nonzero:$imm),
-                              "qc.c.delay", "$imm"> {
-    let Inst{12} = 0;
-    let Inst{11-7} = 0;
-    let Inst{6-2} = imm{4-0};
-  }
-} // Predicates = [HasVendorXqcisync, IsRV32]
 
 let Predicates = [HasVendorXqcisim, IsRV32] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
