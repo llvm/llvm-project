@@ -104,8 +104,8 @@ core.FixedAddressDereference (C, C++, ObjC)
 Check for dereferences of fixed addresses.
 
 A pointer contains a fixed address if it was set to a hard-coded value or it
-becomes otherwise obvious that at that point it can have only a single specific
-value.
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
 
 .. code-block:: c
 
