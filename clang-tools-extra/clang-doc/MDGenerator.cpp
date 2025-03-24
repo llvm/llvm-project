@@ -12,6 +12,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 using namespace llvm;
@@ -65,6 +66,13 @@ static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
                   StringRef{*CDCtx.RepositoryUrl});
   }
   OS << "\n\n";
+}
+
+static void createFileDefinition(llvm::raw_ostream &OS,
+                                 const ClangDocContext &CDCtx,
+                                 const std::optional<Location> &DefLoc) {
+  if (DefLoc)
+    writeFileDefinition(CDCtx, *DefLoc, OS);
 }
 
 static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
@@ -143,8 +151,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
     for (const auto &N : I.Members)
       Members << "| " << N.Name << " |\n";
   writeLine(Members.str(), OS);
-  if (I.DefLoc)
-    writeFileDefinition(CDCtx, *I.DefLoc, OS);
+
+  createFileDefinition(OS, CDCtx, I.DefLoc);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -171,8 +179,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
     writeLine(genItalic(I.ReturnType.Type.QualName + " " + I.Name + "(" +
                         Stream.str() + ")"),
               OS);
-  if (I.DefLoc)
-    writeFileDefinition(CDCtx, *I.DefLoc, OS);
+
+  createFileDefinition(OS, CDCtx, I.DefLoc);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
@@ -231,8 +239,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
 static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
                         llvm::raw_ostream &OS) {
   writeHeader(getTagType(I.TagType) + " " + I.Name, 1, OS);
-  if (I.DefLoc)
-    writeFileDefinition(CDCtx, *I.DefLoc, OS);
+
+  createFileDefinition(OS, CDCtx, I.DefLoc);
 
   if (!I.Description.empty()) {
     for (const auto &C : I.Description)

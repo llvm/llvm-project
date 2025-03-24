@@ -530,6 +530,13 @@ writeFileDefinition(const ClangDocContext &CDCtx, const Location &L) {
   return Node;
 }
 
+static void createFileDefinition(std::vector<std::unique_ptr<TagNode>> &Out,
+                                 const ClangDocContext &CDCtx,
+                                 const std::optional<Location> &DefLoc) {
+  if (DefLoc)
+    Out.emplace_back(writeFileDefinition(CDCtx, *DefLoc));
+}
+
 static std::vector<std::unique_ptr<TagNode>>
 genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList);
 
@@ -749,8 +756,7 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   Out.emplace_back(std::move(Table));
 
-  if (I.DefLoc)
-    Out.emplace_back(writeFileDefinition(CDCtx, *I.DefLoc));
+  createFileDefinition(Out, CDCtx, I.DefLoc);
 
   std::string Description;
   if (!I.Description.empty())
@@ -793,8 +799,7 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   }
   FunctionHeader->Children.emplace_back(std::make_unique<TextNode>(")"));
 
-  if (I.DefLoc)
-    Out.emplace_back(writeFileDefinition(CDCtx, *I.DefLoc));
+  createFileDefinition(Out, CDCtx, I.DefLoc);
 
   std::string Description;
   if (!I.Description.empty())
@@ -855,8 +860,7 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   InfoTitle = (getTagType(I.TagType) + " " + I.Name).str();
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
-  if (I.DefLoc)
-    Out.emplace_back(writeFileDefinition(CDCtx, *I.DefLoc));
+  createFileDefinition(Out, CDCtx, I.DefLoc);
 
   std::string Description;
   if (!I.Description.empty())
