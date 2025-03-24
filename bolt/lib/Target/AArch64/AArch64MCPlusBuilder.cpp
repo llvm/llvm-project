@@ -1321,12 +1321,11 @@ public:
 
   int getUncondBranchEncodingSize() const override { return 28; }
 
-  // This helper function creates the snippet of code
-  // that compares a register RegNo with an immedaite Imm,
-  // and jumps to Target if they are equal.
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are equal.
   // cmp RegNo, #Imm
   // b.eq Target
-  // where cmp is an for subs, which results in the code below:
+  // where cmp is an alias for subs, which results in the code below:
   // subs xzr, RegNo, #Imm
   // b.eq Target.
   InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
@@ -1345,12 +1344,11 @@ public:
     return Code;
   }
 
-  // This helper function creates the snippet of code
-  // that compares a register RegNo with an immedaite Imm,
-  // and jumps to Target if they are not equal.
+  // This helper function creates the snippet of code that compares a register
+  // RegNo with an immedaite Imm, and jumps to Target if they are not equal.
   // cmp RegNo, #Imm
   // b.ne Target
-  // where cmp is an for subs, which results in the code below:
+  // where cmp is an alias for subs, which results in the code below:
   // subs xzr, RegNo, #Imm
   // b.ne Target.
   InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
