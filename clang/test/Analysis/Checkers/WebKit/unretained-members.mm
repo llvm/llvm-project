@@ -2,7 +2,7 @@
 
 #include "objc-mock-types.h"
 #include "mock-system-header.h"
-#if 0
+
 namespace members {
 
   struct Foo {
@@ -59,7 +59,6 @@ namespace ignore_unions {
 
   void forceTmplToInstantiate(RefPtr<SomeObj>) {}
 }
-#endif
 
 @interface AnotherObject : NSObject {
   NSString *ns_string;
