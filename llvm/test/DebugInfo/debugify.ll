@@ -1,6 +1,9 @@
 ; RUN: opt -passes=debugify -S -o - < %s | FileCheck %s
 ; RUN: opt -passes=debugify -S -o - < %s | FileCheck %s
 
+; RUN: opt -passes=debugify --debugify-atoms -S -o - < %s \
+; RUN: | FileCheck %s -check-prefixes=CHECK-ATOMS
+
 ; RUN: opt -passes=debugify,debugify -S -o - < %s 2>&1 | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
 ; RUN: opt -passes=debugify,debugify -S -o - < %s 2>&1 | \
@@ -100,6 +103,13 @@ define i32 @boom() {
 ; CHECK-DAG: ![[RET2]] = !DILocation(line: 4, column: 1
 ; CHECK-DAG: ![[musttail]] = !DILocation(line: 5, column: 1
 ; CHECK-DAG: ![[musttailRes]] = !DILocation(line: 6, column: 1
+
+; CHECK-ATOMS-DAG: !DILocation(line: 1{{.*}}, atomGroup: 1, atomRank: 1
+; CHECK-ATOMS-DAG: !DILocation(line: 2{{.*}}, atomGroup: 2, atomRank: 1
+; CHECK-ATOMS-DAG: !DILocation(line: 3{{.*}}, atomGroup: 3, atomRank: 1
+; CHECK-ATOMS-DAG: !DILocation(line: 4{{.*}}, atomGroup: 4, atomRank: 1
+; CHECK-ATOMS-DAG: !DILocation(line: 5{{.*}}, atomGroup: 5, atomRank: 1
+; CHECK-ATOMS-DAG: !DILocation(line: 6{{.*}}, atomGroup: 6, atomRank: 1
 
 ; --- DILocalVariables
 ; CHECK-DAG: ![[TY32:.*]] = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_unsigned)
