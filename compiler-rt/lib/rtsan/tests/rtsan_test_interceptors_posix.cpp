@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #if SANITIZER_LINUX
+#include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <sys/timerfd.h>
 #endif
@@ -1675,6 +1676,12 @@ TEST(TestRtsanInterceptors, TimerfdGettimeDiesWhenRealtime) {
   itimerspec ts{};
   auto Func = [fd, &ts]() { timerfd_gettime(fd, &ts); };
   ExpectRealtimeDeath(Func, "timerfd_gettime");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, EventfdDiesWhenRealtime) {
+  auto Func = []() { eventfd(EFD_CLOEXEC, 0); };
+  ExpectRealtimeDeath(Func, "eventfd");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
