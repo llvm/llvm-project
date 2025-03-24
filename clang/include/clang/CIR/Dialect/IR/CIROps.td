@@ -424,7 +424,8 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "ForOp"]>,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "DoWhileOp",
+                                              "WhileOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -511,7 +512,8 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["ScopeOp", "ForOp"]>]> {
+                               ParentOneOf<["ScopeOp", "WhileOp", "ForOp",
+                                            "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -756,6 +758,84 @@ def BrCondOp : CIR_Op<"brcond",
     `,`
     $destFalse (`(` $destOperandsFalse^ `:` type($destOperandsFalse) `)`)?
     attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// While & DoWhileOp
+//===----------------------------------------------------------------------===//
+
+class WhileOpBase<string mnemonic> : CIR_Op<mnemonic, [
+  LoopOpInterface,
+  NoRegionArguments,
+]> {
+  defvar isWhile = !eq(mnemonic, "while");
+  let summary = "C/C++ " # !if(isWhile, "while", "do-while") # " loop";
+  let builders = [
+    OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$condBuilder,
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder), [{
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        $_builder.createBlock($_state.addRegion());
+      }] # !if(isWhile, [{
+        condBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+      }], [{
+        bodyBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+      }])>
+  ];
+}
+
+def WhileOp : WhileOpBase<"while"> {
+  let regions = (region SizedRegion<1>:$cond, MinSizedRegion<1>:$body);
+  let assemblyFormat = "$cond `do` $body attr-dict";
+
+  let description = [{
+    Represents a C/C++ while loop. It consists of two regions:
+
+     - `cond`: single block region with the loop's condition. Should be
+     terminated with a `cir.condition` operation.
+     - `body`: contains the loop body and an arbitrary number of blocks.
+
+    Example:
+
+    ```mlir
+    cir.while {
+      cir.break
+    ^bb2:
+      cir.yield
+    } do {
+      cir.condition %cond : cir.bool
+    }
+    ```
+  }];
+}
+
+def DoWhileOp : WhileOpBase<"do"> {
+  let regions = (region MinSizedRegion<1>:$body, SizedRegion<1>:$cond);
+  let assemblyFormat = " $body `while` $cond attr-dict";
+
+  let extraClassDeclaration = [{
+    mlir::Region &getEntry() { return getBody(); }
+  }];
+
+  let description = [{
+    Represents a C/C++ do-while loop. Identical to `cir.while` but the
+    condition is evaluated after the body.
+
+    Example:
+
+    ```mlir
+    cir.do {
+      cir.break
+    ^bb2:
+      cir.yield
+    } while {
+      cir.condition %cond : cir.bool
+    }
+    ```
   }];
 }
 
