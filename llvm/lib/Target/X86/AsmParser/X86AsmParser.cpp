@@ -2585,7 +2585,6 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size,
 }
 
 uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
-  uint16_t Size = 0;
   if (X86MCRegisterClasses[X86::GR8RegClassID].contains(RegNo))
     return 8;
   if (X86MCRegisterClasses[X86::GR16RegClassID].contains(RegNo))
