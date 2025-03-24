@@ -239,7 +239,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
   let extraClassDeclaration = [{
     bool isForWorkgroupLevel() {
       if (!getScope())
-        return getSgLayout() && getSgData();
+        return getSgLayout() != nullptr;
       return getScope() == ScopeAttr::get(getContext(), Scope::WG);
     }
 
