@@ -134,16 +134,16 @@ double4 abs(double4);
 /// \brief Returns the arccosine of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 half acos(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 half2 acos(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 half3 acos(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 half4 acos(half4);
 
@@ -449,16 +449,16 @@ double4 asdouble(uint4, uint4);
 /// \brief Returns the arcsine of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 half asin(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 half2 asin(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 half3 asin(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
 half4 asin(half4);
 
@@ -479,16 +479,16 @@ float4 asin(float4);
 /// \brief Returns the arctangent of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 half atan(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 half2 atan(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 half3 atan(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
 half4 atan(half4);
 
@@ -511,16 +511,16 @@ float4 atan(float4);
 /// \param y The y-coordinate.
 /// \param x The x-coordinate.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
 half atan2(half y, half x);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
 half2 atan2(half2 y, half2 x);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
 half3 atan2(half3 y, half3 x);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan2)
 half4 atan2(half4 y, half4 x);
 
@@ -729,16 +729,16 @@ float4 cos(float4);
 /// \brief Returns the hyperbolic cosine of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 half cosh(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 half2 cosh(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 half3 cosh(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
 half4 cosh(half4);
 
@@ -2134,16 +2134,16 @@ float4 sin(float4);
 /// \brief Returns the hyperbolic sine of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
 half sinh(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
 half2 sinh(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
 half3 sinh(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
 half4 sinh(half4);
 
@@ -2227,16 +2227,16 @@ float4 step(float4, float4);
 /// \brief Returns the tangent of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 half tan(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 half2 tan(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 half3 tan(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 half4 tan(half4);
 
@@ -2257,16 +2257,16 @@ float4 tan(float4);
 /// \brief Returns the hyperbolic tangent of the input value, \a Val.
 /// \param Val The input value.
 
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
 half tanh(half);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
 half2 tanh(half2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
 half3 tanh(half3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
 half4 tanh(half4);
 
