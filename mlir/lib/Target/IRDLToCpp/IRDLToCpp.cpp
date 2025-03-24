@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -58,6 +59,30 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   nameArrayStream << "{\"" << llvm::join(names, "\", \"") << "\"}";
 
   return nameArray;
+}
+
+static llvm::LogicalResult isSnakeCase(llvm::StringRef in,
+                                       mlir::Operation *loc) {
+  bool allowUnderscore = false;
+  for (auto &elem : in) {
+    if (elem == '_') {
+      if (!allowUnderscore)
+        return loc->emitError(
+            "Error in dialect name: No leading or double underscores allowed.");
+    } else {
+      if (!isalnum(elem))
+        return loc->emitError("Error in dialect name: Only numbers and "
+                              "lower-case characters allowed");
+
+      if (llvm::isUpper(elem))
+        return loc->emitError(
+            "Error in dialect name: Upper-case characters are not allowed");
+    }
+
+    allowUnderscore = elem != '_';
+  }
+
+  return success();
 }
 
 static std::string snakeToCamel(llvm::StringRef in, bool capitalize = false) {
@@ -472,28 +497,54 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
 }
 
 static LogicalResult verifySupported(irdl::DialectOp dialect) {
-  for (auto operation : dialect.getOps<irdl::OperationOp>()) {
-    // scan operands of operation
-    for (auto operands : operation.getOps<irdl::OperandsOp>()) {
-      for (auto operand : operands.getOperands()) {
-        if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp())) {
-          return operands.emitError(
-              "IRDL C++ translation only supports irdl.any "
-              "constraint for types");
-        }
-      }
-    }
+  if (failed(isSnakeCase(dialect.getSymName(), dialect)))
+    return failure();
 
-    // scan results of operation
-    for (auto results : operation.getOps<irdl::ResultsOp>()) {
-      for (auto operand : results.getOperands()) {
-        if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp())) {
-          return results.emitError(
-              "IRDL C++ translation only supports irdl.any "
-              "constraint for types");
-        }
-      }
+  llvm::SmallVector<Operation *> frontier;
+  for (auto &block : dialect.getBody()) {
+    for (auto &op : block) {
+      llvm::TypeSwitch<Operation *>(&op)
+          .Case<irdl::TypeOp>([&frontier](irdl::TypeOp type) {
+            for (auto &typeblocks : type.getBody())
+              for (auto &typeOps : typeblocks)
+                frontier.push_back(&typeOps);
+          })
+          .Case<irdl::OperationOp>([&frontier](irdl::OperationOp op) {
+            for (auto &opblocks : op.getBody())
+              for (auto &opOps : opblocks)
+                frontier.push_back(&opOps);
+          });
     }
+  }
+
+  while (frontier.size()) {
+    auto *front = frontier.back();
+    frontier.pop_back();
+
+    auto res =
+        llvm::TypeSwitch<Operation *, LogicalResult>(front)
+            .Case<irdl::AnyOfOp>([](irdl::AnyOfOp op) -> LogicalResult {
+              return op.emitError("IRDL C++ translation only supports irdl.any "
+                                  "constraint for types");
+            })
+            .Case<irdl::AllOfOp>([](irdl::AllOfOp op) -> LogicalResult {
+              return op.emitError("IRDL C++ translation only supports irdl.any "
+                                  "constraint for types");
+            })
+            .Case<irdl::ParametricOp>(
+                [](irdl::ParametricOp op) -> LogicalResult {
+                  return op.emitError(
+                      "IRDL C++ translation only supports irdl.any "
+                      "constraint for types");
+                })
+            .Case<irdl::IsOp>([](irdl::IsOp op) -> LogicalResult {
+              return op.emitError("IRDL C++ translation only supports irdl.any "
+                                  "constraint for types");
+            })
+            .Default(success());
+
+    if (failed(res))
+      return res;
   }
 
   return success();
@@ -511,25 +562,10 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
   for (auto dialect : dialects) {
     StringRef dialectName = dialect.getSymName();
 
-    // TODO: deal with no more constraints than the verifier allows.
-    if (dialectName.size() < 1) {
-      result =
-          dialect->emitError("dialect name must be more than one character");
-      continue;
-    }
-    if (!llvm::isAlpha(dialectName[0])) {
-      result = dialect->emitError("dialect name must start with a letter");
-      continue;
-    }
-    if (!llvm::all_of(dialectName,
-                      [](char c) { return llvm::isAlnum(c) || c == '_'; })) {
-      result = dialect->emitError(
-          "dialect name must only contain letters, numbers or underscores");
-      continue;
-    }
-
-    if (failed(verifySupported(dialect)))
+    if (failed(verifySupported(dialect))) {
       result = failure();
+      continue;
+    }
 
     llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
                                                                   dialectName};
