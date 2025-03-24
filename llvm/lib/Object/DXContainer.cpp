@@ -12,7 +12,9 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -23,6 +25,18 @@ static Error parseFailed(const Twine &Msg) {
 
 static Error validationFailed(const Twine &Msg) {
   return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
+}
+
+template <typename E> static Error safeConvertEnum(uint32_t Value, E &Result) {
+  static_assert(std::is_enum_v<E>, "Template must be an enum type");
+
+  if (Value >= 0 && Value < static_cast<int>(E::Empty)) {
+    Result = static_cast<E>(Value);
+    return Error::success();
+  }
+
+  // Throw an exception if the value is out of range
+  return parseFailed("Value is not within range for enum");
 }
 
 template <typename T>
@@ -290,13 +304,17 @@ Error DirectX::RootSignature::parse(StringRef Data) {
                             llvm::Twine(FValue));
   Flags = FValue;
 
-  Current = Begin + RootParametersOffset;
-  for (uint32_t It = 0; It < NumParameters; It++) {
+  assert(Current == Begin + RootParametersOffset);
+  for (uint32_t I = 0; I < NumParameters; I++) {
     DirectX::RootParameter NewParam;
 
-    NewParam.Header.ParameterType =
-        support::endian::read<dxbc::RootParameterType,
-                              llvm::endianness::little>(Current);
+    uint32_t MaybeParamType =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+
+    if (Error Err =
+            safeConvertEnum(MaybeParamType, NewParam.Header.ParameterType))
+      return Err;
+
     if (!dxbc::RootSignatureValidations::isValidParameterType(
             NewParam.Header.ParameterType))
       return validationFailed(
@@ -305,9 +323,13 @@ Error DirectX::RootSignature::parse(StringRef Data) {
 
     Current += sizeof(dxbc::RootParameterType);
 
-    NewParam.Header.ShaderVisibility =
-        support::endian::read<dxbc::ShaderVisibility, llvm::endianness::little>(
-            Current);
+    uint32_t MaybeVisibility =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+
+    if (Error Err =
+            safeConvertEnum(MaybeVisibility, NewParam.Header.ShaderVisibility))
+      return Err;
+
     if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
             NewParam.Header.ShaderVisibility))
       return validationFailed(

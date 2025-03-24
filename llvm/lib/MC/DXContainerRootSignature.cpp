@@ -21,7 +21,8 @@ static uint32_t writePlaceholder(raw_svector_ostream &Stream) {
   return Offset;
 }
 
-static void rewriteOffset(raw_svector_ostream &Stream, uint32_t Offset) {
+static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
+                                       uint32_t Offset) {
   uint32_t Value =
       support::endian::byte_swap<uint32_t, llvm::endianness::little>(
           Stream.tell());
@@ -58,16 +59,15 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
 
   assert(NumParameters == ParamsOffsets.size());
   for (size_t I = 0; I < NumParameters; ++I) {
-    rewriteOffset(BOS, ParamsOffsets[I]);
+    rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
     const auto &P = Parameters[I];
 
     switch (P.Header.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit: {
-      support::endian::write(BOS, P.Constants.ShaderRegister,
+      support::endian::write(BOS, P.Constants.Register,
                              llvm::endianness::little);
-      support::endian::write(BOS, P.Constants.RegisterSpace,
-                             llvm::endianness::little);
-      support::endian::write(BOS, P.Constants.Num32BitValues,
+      support::endian::write(BOS, P.Constants.Space, llvm::endianness::little);
+      support::endian::write(BOS, P.Constants.NumOfConstants,
                              llvm::endianness::little);
     } break;
     case dxbc::RootParameterType::Empty:

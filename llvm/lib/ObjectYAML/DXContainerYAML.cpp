@@ -35,7 +35,7 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-  for (auto const &P : Data.getParameters()) {
+  for (auto const &P : Data.params()) {
 
     Parameters.push_back(RootParameterYamlDesc(P));
   }
@@ -224,9 +224,9 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
 
 void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
     IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
-  IO.mapRequired("Num32BitValues", C.Num32BitValues);
-  IO.mapRequired("RegisterSpace", C.RegisterSpace);
-  IO.mapRequired("ShaderRegister", C.ShaderRegister);
+  IO.mapRequired("Num32BitValues", C.NumOfConstants);
+  IO.mapRequired("RegisterSpace", C.Space);
+  IO.mapRequired("ShaderRegister", C.Register);
 }
 
 void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(

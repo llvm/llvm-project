@@ -276,11 +276,11 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
         switch (Param.Type) {
 
-        case dxbc::RootParameterType::Constants32Bit: {
-          NewParam.Constants.Num32BitValues = Param.Constants.Num32BitValues;
-          NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
-          NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;
-        } break;
+        case dxbc::RootParameterType::Constants32Bit:
+          NewParam.Constants.NumOfConstants = Param.Constants.NumOfConstants;
+          NewParam.Constants.Space = Param.Constants.Space;
+          NewParam.Constants.Register = Param.Constants.Register;
+          break;
         case dxbc::RootParameterType::Empty:
           llvm_unreachable("Invalid parameter type");
           break;

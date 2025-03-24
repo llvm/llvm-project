@@ -829,7 +829,7 @@ TEST(RootSignature, ParseRootFlags) {
         0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00, 0x00, 0x00,
         0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
         0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
     };
     DXContainer C =
@@ -839,7 +839,7 @@ TEST(RootSignature, ParseRootFlags) {
     ASSERT_TRUE(RS.has_value());
     ASSERT_EQ(RS->getVersion(), 2u);
     ASSERT_EQ(RS->getNumParameters(), 0u);
-    ASSERT_EQ(RS->getRootParametersOffset(), 0u);
+    ASSERT_EQ(RS->getRootParametersOffset(), 24u);
     ASSERT_EQ(RS->getNumStaticSamplers(), 0u);
     ASSERT_EQ(RS->getStaticSamplersOffset(), 0u);
     ASSERT_EQ(RS->getFlags(), 0x01u);
@@ -918,12 +918,12 @@ TEST(RootSignature, ParseRootConstant) {
     ASSERT_EQ(RS->getStaticSamplersOffset(), 44u);
     ASSERT_EQ(RS->getFlags(), 17u);
 
-    for (auto const &RootParam : RS->getParameters()) {
+    for (auto const &RootParam : RS->params()) {
       ASSERT_EQ((uint32_t)RootParam.Header.ParameterType, 1u);
       ASSERT_EQ((uint32_t)RootParam.Header.ShaderVisibility, 2u);
-      ASSERT_EQ(RootParam.Constants.ShaderRegister, 15u);
-      ASSERT_EQ(RootParam.Constants.RegisterSpace, 14u);
-      ASSERT_EQ(RootParam.Constants.Num32BitValues, 16u);
+      ASSERT_EQ(RootParam.Constants.Register, 15u);
+      ASSERT_EQ(RootParam.Constants.Space, 14u);
+      ASSERT_EQ(RootParam.Constants.NumOfConstants, 16u);
     }
   }
   {
@@ -943,7 +943,7 @@ TEST(RootSignature, ParseRootConstant) {
         0x00};
     EXPECT_THAT_EXPECTED(
         DXContainer::create(getMemoryBuffer<133>(Buffer)),
-        FailedWithMessage("unsupported parameter type value read: 255"));
+        FailedWithMessage("Value is not within range for enum"));
   }
   {
     // ShaderVisibility has been set to an invalid value
@@ -962,7 +962,7 @@ TEST(RootSignature, ParseRootConstant) {
         0x00};
     EXPECT_THAT_EXPECTED(
         DXContainer::create(getMemoryBuffer<133>(Buffer)),
-        FailedWithMessage("unsupported shader visility flag value read: 255"));
+        FailedWithMessage("Value is not within range for enum"));
   }
   {
     // Offset has been set to an invalid value

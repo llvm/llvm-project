@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <limits>
 
@@ -32,7 +33,20 @@ struct RootSignatureDesc {
   void write(raw_ostream &OS) const;
 
   size_t getSize() const {
-    return sizeof(dxbc::RootSignatureHeader) + Parameters.size_in_bytes();
+    size_t size = sizeof(dxbc::RootSignatureHeader);
+
+    for (const auto &P : Parameters) {
+      switch (P.Header.ParameterType) {
+
+      case dxbc::RootParameterType::Constants32Bit:
+        size += sizeof(dxbc::RootConstants);
+        break;
+      case dxbc::RootParameterType::Empty:
+        llvm_unreachable("Parameter shouldn't be Empty here");
+        break;
+      }
+    }
+    return size;
   }
 };
 } // namespace mcdxbc

@@ -30,9 +30,10 @@ struct RootSignatureValidations {
     switch (Type) {
     case dxbc::RootParameterType::Constants32Bit:
       return true;
-    default:
+    case RootParameterType::Empty:
       return false;
     }
+    return false;
   }
 
   static bool isValidShaderVisibility(dxbc::ShaderVisibility Visibility) {
@@ -47,10 +48,11 @@ struct RootSignatureValidations {
     case ShaderVisibility::Amplification:
     case ShaderVisibility::Mesh:
       return true;
-    default:
+    case ShaderVisibility::Empty:
       return false;
     }
-  }
+    return false;
+  };
 };
 } // namespace dxbc
 } // namespace llvm

@@ -561,14 +561,14 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
 struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
+  uint32_t Register;
+  uint32_t Space;
+  uint32_t NumOfConstants;
 
   void swapBytes() {
-    sys::swapByteOrder(ShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-    sys::swapByteOrder(Num32BitValues);
+    sys::swapByteOrder(Register);
+    sys::swapByteOrder(Space);
+    sys::swapByteOrder(NumOfConstants);
   }
 };
 

@@ -76,9 +76,9 @@ struct ShaderHash {
 #define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
 
 struct RootConstantsYaml {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
+  uint32_t Register;
+  uint32_t Space;
+  uint32_t NumOfConstants;
 };
 
 struct RootParameterYamlDesc {
@@ -94,11 +94,11 @@ struct RootParameterYamlDesc {
     Offset = Parameter.Header.ParameterOffset;
     switch (Parameter.Header.ParameterType) {
 
-    case dxbc::RootParameterType::Constants32Bit: {
-      Constants.Num32BitValues = Parameter.Constants.Num32BitValues;
-      Constants.RegisterSpace = Parameter.Constants.RegisterSpace;
-      Constants.ShaderRegister = Parameter.Constants.ShaderRegister;
-    } break;
+    case dxbc::RootParameterType::Constants32Bit:
+      Constants.NumOfConstants = Parameter.Constants.NumOfConstants;
+      Constants.Space = Parameter.Constants.Space;
+      Constants.Register = Parameter.Constants.Register;
+      break;
     case dxbc::RootParameterType::Empty:
       llvm_unreachable("Invalid Root Parameter Type. It should be verified "
                        "before reaching here.");
