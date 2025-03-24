@@ -12777,9 +12777,9 @@ SDValue RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
   SDValue Result;
   if (VT.getScalarType() == MVT::i1) {
     if (auto *C = dyn_cast<ConstantSDNode>(Val)) {
-      Result = C->isZero()
-                   ? DAG.getNode(RISCVISD::VMCLR_VL, DL, ContainerVT, VL)
-                   : DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
+      Result =
+          DAG.getNode(C->isZero() ? RISCVISD::VMCLR_VL : RISCVISD::VMSET_VL, DL,
+                      ContainerVT, VL);
     } else {
       MVT WidenVT = ContainerVT.changeVectorElementType(MVT::i8);
       SDValue LHS =
