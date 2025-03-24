@@ -132,6 +132,10 @@ Changes to the RISC-V Backend
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
   extension.
+* Adds experimental assembler support for SiFive CLIC CSRs, under the names
+  `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
+* Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
+  interrupt handlers without using inline assembly.
 
 Changes to the WebAssembly Backend
 ----------------------------------
