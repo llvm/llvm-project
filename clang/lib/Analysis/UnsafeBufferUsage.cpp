@@ -4838,7 +4838,7 @@ void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
           HasParm = true;
       }
       if (HasParm)
-        GrpsUnionForParms.insert(VarGroup.begin(), VarGroup.end());
+        GrpsUnionForParms.insert_range(VarGroup);
     }
   }
 
