@@ -145,13 +145,12 @@ public:
     for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
       opsToMove.push_back(&op);
 
-    mlir::Block &parentRegionEntry = doConcurentOp->getParentRegion()->front();
-    auto allocIt = (&parentRegionEntry == doConcurentOp->getBlock())
-                       ? doConcurentOp->getIterator()
-                       : parentRegionEntry.getTerminator()->getIterator();
+    fir::FirOpBuilder firBuilder(
+        rewriter, doConcurentOp->getParentOfType<mlir::ModuleOp>());
+    auto *allocIt = firBuilder.getAllocaBlock();
 
-    for (mlir::Operation *op : opsToMove)
-      rewriter.moveOpBefore(op, allocIt->getBlock(), allocIt);
+    for (mlir::Operation *op : llvm::reverse(opsToMove))
+      rewriter.moveOpBefore(op, allocIt, allocIt->begin());
 
     rewriter.setInsertionPointAfter(doConcurentOp);
     fir::DoLoopOp innermostUnorderdLoop;

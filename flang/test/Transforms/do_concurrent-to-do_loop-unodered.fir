@@ -105,9 +105,9 @@ func.func @dc_2d_reduction(%i_lb: index, %i_ub: index, %i_st: index,
 // CHECK-SAME:                     %[[J_UB:[^[:space:]]+]]: index,
 // CHECK-SAME:                     %[[J_ST:[^[:space:]]+]]: index) {
 
-// CHECK:           %[[SUM:.*]] = fir.alloca i32
 // CHECK:           %[[I:.*]] = fir.alloca i32
 // CHECK:           %[[J:.*]] = fir.alloca i32
+// CHECK:           %[[SUM:.*]] = fir.alloca i32
 
 // CHECK:           fir.do_loop %[[I_IV:.*]] = %[[I_LB]] to %[[I_UB]] step %[[I_ST]] unordered reduce({{.*}}<add>] -> %[[SUM]] : !fir.ref<i32>) {
 // CHECK:             fir.do_loop %[[J_IV:.*]] = %[[J_LB]] to %[[J_UB]] step %[[J_ST]] unordered reduce({{.*}}<add>] -> %[[SUM]] : !fir.ref<i32>) {
