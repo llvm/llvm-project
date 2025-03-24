@@ -15,7 +15,6 @@
 // CHECK-NEXT:     FEAT_CHK                                               Enable Armv8.0-A Check Feature Status Extension
 // CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     FEAT_CSV2_2                                            Enable architectural speculation restriction
-// CHECK-NEXT:     FEAT_Crypto                                            Enable cryptographic instructions
 // CHECK-NEXT:     FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions
 // CHECK-NEXT:     FEAT_DPB                                               Enable Armv8.2-A data Cache Clean to Point of Persistence
 // CHECK-NEXT:     FEAT_DPB2                                              Enable Armv8.5-A Cache Clean to Point of Deep Persistence

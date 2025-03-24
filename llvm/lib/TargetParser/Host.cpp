@@ -289,6 +289,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     return StringSwitch<const char *>(Part)
         .Case("0x004", "carmel")
         .Case("0x10", "olympus")
+        .Case("0x010", "olympus")
         .Default("generic");
   }
 
