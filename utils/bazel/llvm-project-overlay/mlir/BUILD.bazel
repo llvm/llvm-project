@@ -11089,6 +11089,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Quant/IR/QuantDialectBytecode.td",
     deps = [
         ":BytecodeTdFiles",
+        ":BuiltinDialectBytecodeTdFiles",
     ],
 )
 

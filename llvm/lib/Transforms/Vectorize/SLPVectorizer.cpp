@@ -5342,6 +5342,9 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, Type *ScalarTy,
   InstructionCost Cost = 0;
   if (!ForPoisonSrc && Insert) {
     // Handle insert into non-poison vector.
+    // TODO: Need to teach getScalarizationOverhead about insert elements into
+    // non-poison input vector to better handle such cases. Currently, it is
+    // very conservative and may "pessimize" the vectorization.
     for (unsigned I : seq(DemandedElts.getBitWidth())) {
       if (!DemandedElts[I])
         continue;
