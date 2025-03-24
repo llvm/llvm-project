@@ -934,6 +934,16 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::SGMapAttr sgMap,
   return newVectorType;
 }
 
+/// An operation can be sinked out of WarpExecuteOnLane0 if all ops in its
+/// use-def chain are already sinked.
+static bool canBeSinked(Operation *op) {
+  DenseSet<Operation *> visited;
+  visited.insert(op);
+  while (!visited.empty()) {
+  }
+  return true;
+}
+
 LogicalResult MoveFuncBodyToWarpExecuteOnLane0::matchAndRewrite(
     gpu::GPUFuncOp gpuFuncOp, PatternRewriter &rewriter) const {
   /// If the function already moved inside a warp_execute_on_lane0, skip.
@@ -1052,17 +1062,13 @@ SubgroupOpLoadNd::matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
   SmallVector<size_t> newRetIndices;
   gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
       rewriter, subgroupOp, /* new yielded values = */ loadOp.getTensorDesc(),
-      /* new yielded types = */ TypeRange{tensorDescTy}, newRetIndices);
+      /* new yielded types = */ tensorDescTy, newRetIndices);
 
   // Create a new load op outside the warp op with the distributed vector type.
   rewriter.setInsertionPointAfter(newWarpOp);
   auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
-      loadOp.getLoc(), newVectorType, loadOp.getTensorDesc(),
-      loadOp.getPackedAttr(), loadOp.getTransposeAttr(), loadOp.getL1HintAttr(),
-      loadOp.getL2HintAttr(), loadOp.getL3HintAttr());
-
-  newLoadOp.getTensorDescMutable().assign(
-      newWarpOp.getResult(newRetIndices[0]));
+      newWarpOp.getLoc(), newVectorType, newWarpOp->getResults()[0],
+      loadOp->getAttrs());
   Value distributedVal = newWarpOp.getResult(operandIdx);
   rewriter.replaceAllUsesWith(distributedVal, newLoadOp);
   return success();
@@ -1219,13 +1225,13 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
   /// We want to avoid ops from hoisted out of the gpu.warp_execute_on_lane0
   /// region.
-  GreedyRewriteConfig config;
-  config.cseConstants = false;
-  config.fold = false;
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
+  // GreedyRewriteConfig config;
+  // config.cseConstants = false;
+  // config.fold = false;
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 
   /// Finally, do the SIMD to SIMT distribution.
   patterns.clear();
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
