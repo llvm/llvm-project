@@ -99,6 +99,37 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
+static std::optional<unsigned> getLMULForRVVWholeLoadStore(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return std::nullopt;
+  case RISCV::VS1R_V:
+  case RISCV::VL1RE8_V:
+  case RISCV::VL1RE16_V:
+  case RISCV::VL1RE32_V:
+  case RISCV::VL1RE64_V:
+    return 1;
+  case RISCV::VS2R_V:
+  case RISCV::VL2RE8_V:
+  case RISCV::VL2RE16_V:
+  case RISCV::VL2RE32_V:
+  case RISCV::VL2RE64_V:
+    return 2;
+  case RISCV::VS4R_V:
+  case RISCV::VL4RE8_V:
+  case RISCV::VL4RE16_V:
+  case RISCV::VL4RE32_V:
+  case RISCV::VL4RE64_V:
+    return 4;
+  case RISCV::VS8R_V:
+  case RISCV::VL8RE8_V:
+  case RISCV::VL8RE16_V:
+  case RISCV::VL8RE32_V:
+  case RISCV::VL8RE64_V:
+    return 8;
+  }
+}
+
 Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex,
                                              TypeSize &MemBytes) const {
@@ -125,6 +156,17 @@ Register RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   case RISCV::FLD:
     MemBytes = TypeSize::getFixed(8);
     break;
+  case RISCV::VL1RE8_V:
+  case RISCV::VL2RE8_V:
+  case RISCV::VL4RE8_V:
+  case RISCV::VL8RE8_V:
+    if (!MI.getOperand(1).isFI())
+      return Register();
+    FrameIndex = MI.getOperand(1).getIndex();
+    unsigned BytesPerBlock = RISCV::RVVBitsPerBlock / 8;
+    unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
+    MemBytes = TypeSize::getScalable(BytesPerBlock * LMUL);
+    return MI.getOperand(0).getReg();
   }
 
   if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
@@ -165,6 +207,17 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case RISCV::FSD:
     MemBytes = TypeSize::getFixed(8);
     break;
+  case RISCV::VS1R_V:
+  case RISCV::VS2R_V:
+  case RISCV::VS4R_V:
+  case RISCV::VS8R_V:
+    if (!MI.getOperand(1).isFI())
+      return Register();
+    FrameIndex = MI.getOperand(1).getIndex();
+    unsigned BytesPerBlock = RISCV::RVVBitsPerBlock / 8;
+    unsigned LMUL = *getLMULForRVVWholeLoadStore(MI.getOpcode());
+    MemBytes = TypeSize::getScalable(BytesPerBlock * LMUL);
+    return MI.getOperand(0).getReg();
   }
 
   if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
@@ -4071,40 +4124,12 @@ bool RISCV::isZEXT_B(const MachineInstr &MI) {
          MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 255;
 }
 
-static bool isRVVWholeLoadStore(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-  case RISCV::VS1R_V:
-  case RISCV::VS2R_V:
-  case RISCV::VS4R_V:
-  case RISCV::VS8R_V:
-  case RISCV::VL1RE8_V:
-  case RISCV::VL2RE8_V:
-  case RISCV::VL4RE8_V:
-  case RISCV::VL8RE8_V:
-  case RISCV::VL1RE16_V:
-  case RISCV::VL2RE16_V:
-  case RISCV::VL4RE16_V:
-  case RISCV::VL8RE16_V:
-  case RISCV::VL1RE32_V:
-  case RISCV::VL2RE32_V:
-  case RISCV::VL4RE32_V:
-  case RISCV::VL8RE32_V:
-  case RISCV::VL1RE64_V:
-  case RISCV::VL2RE64_V:
-  case RISCV::VL4RE64_V:
-  case RISCV::VL8RE64_V:
-    return true;
-  }
-}
-
 bool RISCV::isRVVSpill(const MachineInstr &MI) {
   // RVV lacks any support for immediate addressing for stack addresses, so be
   // conservative.
   unsigned Opcode = MI.getOpcode();
   if (!RISCVVPseudosTable::getPseudoInfo(Opcode) &&
-      !isRVVWholeLoadStore(Opcode) && !isRVVSpillForZvlsseg(Opcode))
+      !getLMULForRVVWholeLoadStore(Opcode) && !isRVVSpillForZvlsseg(Opcode))
     return false;
   return true;
 }
