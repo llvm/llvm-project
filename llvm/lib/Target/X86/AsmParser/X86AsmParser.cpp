@@ -2595,9 +2595,8 @@ uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
     return 64;
   if (X86MCRegisterClasses[X86::RFP80RegClassID].contains(RegNo))
     return 80;
-  if (X86MCRegisterClasses[X86::VR128RegClassID].contains(RegNo))
-    return 128;
-  if (X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
+  if (X86MCRegisterClasses[X86::VR128RegClassID].contains(RegNo) ||
+      X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
     return 128;
   if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
     return 256;
