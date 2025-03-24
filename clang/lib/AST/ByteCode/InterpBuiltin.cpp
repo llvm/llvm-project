@@ -1792,6 +1792,17 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
   }
 
+  // Diagnose integral src/dest pointers specially.
+  if (SrcPtr.isIntegralPointer() || DestPtr.isIntegralPointer()) {
+    std::string DiagVal = "(void *)";
+    DiagVal += SrcPtr.isIntegralPointer()
+                   ? std::to_string(SrcPtr.getIntegerRepresentation())
+                   : std::to_string(DestPtr.getIntegerRepresentation());
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_null)
+        << Move << false << DestPtr.isIntegralPointer() << DiagVal;
+    return false;
+  }
+
   // Can't read from dummy pointers.
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
@@ -2052,7 +2063,8 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   }
 
   bool StopAtZero =
-      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr);
+      (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr ||
+       ID == Builtin::BIwcschr || ID == Builtin::BI__builtin_wcschr);
 
   PrimType ElemT =
       IsRawByte ? PT_Sint8 : *S.getContext().classify(getElemType(Ptr));
@@ -2574,10 +2586,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_strchr:
   case Builtin::BIwmemchr:
   case Builtin::BI__builtin_wmemchr:
-#if 0
   case Builtin::BIwcschr:
   case Builtin::BI__builtin_wcschr:
-#endif
   case Builtin::BI__builtin_char_memchr:
     if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
       return false;
