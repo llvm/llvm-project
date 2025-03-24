@@ -325,20 +325,20 @@ INSTANTIATE_TEST_SUITE_P(SortAndDedupTest, SortAndDedupTest,
                          ::testing::ValuesIn(kSortAndDedupTests));
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-TEST(SanitizerCommon, FindPathToBinary) {
-  char *true_path = FindPathToBinary("true");
+TEST(SanitizerCommon, FindPathToBinaryOrLibrary) {
+  char *true_path = FindPathToBinaryOrLibrary("true");
   EXPECT_NE((char*)0, internal_strstr(true_path, "/bin/true"));
   InternalFree(true_path);
-  EXPECT_EQ(0, FindPathToBinary("unexisting_binary.ergjeorj"));
+  EXPECT_EQ(0, FindPathToBinaryOrLibrary("unexisting_binary.ergjeorj"));
 }
 #elif SANITIZER_WINDOWS
-TEST(SanitizerCommon, FindPathToBinary) {
+TEST(SanitizerCommon, FindPathToBinaryOrLibrary) {
   // ntdll.dll should be on PATH in all supported test environments on all
   // supported Windows versions.
-  char *ntdll_path = FindPathToBinary("ntdll.dll");
+  char *ntdll_path = FindPathToBinaryOrLibrary("ntdll.dll");
   EXPECT_NE((char*)0, internal_strstr(ntdll_path, "ntdll.dll"));
   InternalFree(ntdll_path);
-  EXPECT_EQ(0, FindPathToBinary("unexisting_binary.ergjeorj"));
+  EXPECT_EQ(0, FindPathToBinaryOrLibrary("unexisting_binary.ergjeorj"));
 }
 #endif
 
