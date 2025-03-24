@@ -492,15 +492,13 @@ genReferencesBlock(const std::vector<Reference> &References,
 }
 static std::unique_ptr<TagNode>
 writeFileDefinition(const ClangDocContext &CDCtx, const Location &L) {
-  std::string RepositoryUrl = CDCtx.RepositoryUrl.value_or("");
-  std::string RepositoryLinePrefix = CDCtx.RepositoryLinePrefix.value_or("");
 
-  if (!L.IsFileInRootDir && RepositoryUrl.empty())
+  if (!L.IsFileInRootDir && !CDCtx.RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
 
-  SmallString<128> FileURL(RepositoryUrl);
+  SmallString<128> FileURL(CDCtx.RepositoryUrl.value_or(""));
   llvm::sys::path::append(
       FileURL, llvm::sys::path::Style::posix,
       // If we're on Windows, the file name will be in the wrong format, and
