@@ -62,7 +62,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?
     enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
-    layout-attr = (, layout `<` (scope = value,)? (sg_layout = value, sg_data = value, order = value)? wi_layout = value, wi_data = value `>`)?
+    layout-attr = (, layout `<` (scope = value,)? (sg_layout = value, sg_data = value, order = value)? lane_layout = value, lane_data = value `>`)?
     ```
 
     Examples:
@@ -78,13 +78,13 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     xegpu.tensor_desc<8x16xf32, #xegpu.tdesc_attr<memory_space = slm>>
 
     // A TensorDesc with a layout for workgroup level programming
-    xegpu.tensor_desc<32x64xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], wi_layout = [1, 16], wi_data = [1, 1]>>
+    xegpu.tensor_desc<32x64xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
 
     // A TensorDesc with a layout for subgroup level programming
-    xegpu.tensor_desc<8x16xf32, #xegpu.layout<scope = sg, wi_layout = [1, 16], wi_data = [1, 1]>>
+    xegpu.tensor_desc<8x16xf32, #xegpu.layout<scope = sg, lane_layout = [1, 16], lane_data = [1, 1]>>
 
     // A TensorDesc with a layout for workitem level programming
-    xegpu.tensor_desc<8x16xf32, #xegpu.layout<scope = wi, wi_layout = [1, 16], wi_data = [1, 1]>>
+    xegpu.tensor_desc<8x16xf32, #xegpu.layout<scope = wi, lane_layout = [1, 16], lane_data = [1, 1]>>
     ```
   }];
 

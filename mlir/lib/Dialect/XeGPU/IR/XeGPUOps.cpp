@@ -113,8 +113,8 @@ static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
     data = attr.getSgData().asArrayRef();
     layout = attr.getSgLayout().asArrayRef();
   } else {
-    data = attr.getWiData().asArrayRef();
-    layout = attr.getWiLayout().asArrayRef();
+    data = attr.getLaneData().asArrayRef();
+    layout = attr.getLaneLayout().asArrayRef();
   }
   for (auto [s, d, l] : llvm::zip_equal(shape, data, layout)) {
     // check s % (d * l) != 0
@@ -627,17 +627,17 @@ LogicalResult DpasOp::verify() {
     if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
       return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
 
-    auto wiLayoutA = aLayout.getWiLayout();
-    auto wiLayoutB = bLayout.getWiLayout();
-    auto wiLayoutC = cLayout.getWiLayout();
-    // Obtain the expanded shapes of the operands and result using wi_layout.
+    auto laneLayoutA = aLayout.getLaneLayout();
+    auto laneLayoutB = bLayout.getLaneLayout();
+    auto laneLayoutC = cLayout.getLaneLayout();
+    // Obtain the expanded shapes of the operands and result using lane_layout.
     // NOTE: For B, get rid of the packed dimension for the expanded shape.
-    SmallVector<int64_t> expandedShapeA = {lhsShape[0] * wiLayoutA[0],
-                                           lhsShape[1] * wiLayoutA[1]};
+    SmallVector<int64_t> expandedShapeA = {lhsShape[0] * laneLayoutA[0],
+                                           lhsShape[1] * laneLayoutA[1]};
     SmallVector<int64_t> expandedShapeB = {
-        rhsShape[0] * rhsShape[1] * wiLayoutB[0], 1 * wiLayoutB[1]};
-    SmallVector<int64_t> expandedShapeC = {resShape[0] * wiLayoutC[0],
-                                           resShape[1] * wiLayoutC[1]};
+        rhsShape[0] * rhsShape[1] * laneLayoutB[0], 1 * laneLayoutB[1]};
+    SmallVector<int64_t> expandedShapeC = {resShape[0] * laneLayoutC[0],
+                                           resShape[1] * laneLayoutC[1]};
     auto bK = expandedShapeB[0];
     if (bK != expandedShapeA[1])
       return emitOpError("K-dimension mismatch.");

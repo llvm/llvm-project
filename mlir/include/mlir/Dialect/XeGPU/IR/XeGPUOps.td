@@ -113,7 +113,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 8 : index
     %1 = xegpu.create_nd_tdesc %0[%c0, %c0] : memref<1024x1024xf32>
-          -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<wi_layout = [1, 16], wi_data = [1, 1]>>
+          -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     ```
   }];
 
@@ -323,7 +323,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
       xegpu.load_nd %1 {l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>}>
         : !xegpu.tensor_desc<8x16xf32,
-          #xegpu.layout<wi_layout = [1, 16], wi_data = [1, 1]>> -> vector<8x1xf32>
+          #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x1xf32>
     ```
 
 
@@ -381,7 +381,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                              l2_hint = #xegpu.cache_hint<write_back>,
                              l3_hint = #xegpu.cache_hint<write_through>}
                              : vector<8x1xf16>, !xegpu.tensor_desc<8x16xf16,
-                               #xegpu.layout<wi_layout = [1, 16], wi_data = [1, 1]>>
+                               #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     ```
 
 
@@ -422,7 +422,7 @@ def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
   Example 2 (SIMT mode):
   ```
     %2 = xegpu.update_nd_offset %1, [0, 16]:
-      !xegpu.tensor_desc<8x16xf32, #xegpu.layout<wi_layout = [1, 16], wi_data = [1, 1]>>
+      !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   ```
   }];
 
@@ -517,7 +517,7 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     %off = arith.constant dense<[0, 16, 32, 64]> : vector<4xindex>
     %1 = xegpu.create_tdesc %0, %off : memref<1024xf32>, vector<4xindex>
           -> TensorDesc<4x8xf32, #xegpu.scattered_tdesc_attr<chunk_size = 8>,
-          #xegpu.layout<wi_layout = [4, 1], wi_data = [1, 1]>>
+          #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>
     ```
   }];
 
@@ -653,7 +653,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [
                             l2_hint = #xegpu.cache_hint<uncached>,
                             l3_hint = #xegpu.cache_hint<uncached>}
           : !xegpu.tensor_desc<16x8xf32, #xegpu.scatter_tdesc_attr<memory_space=global, chunk_size=8>,
-            !xegpu.layout<wi_layout = [16, 1], wi_data = [1, 1]>>
+            !xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>>
             vector<16xi1> -> vector<8x1xf32>
   ```
 
@@ -732,7 +732,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [
                                  l2_hint = #xegpu.cache_hint<write_back>,
                                  l3_hint = #xegpu.cache_hint<write_through>}
           : vector<8x1xf32>, !xegpu.tensor_desc<16x8xf32, #xegpu.scattered_tdesc_attr<chunk_size=8>,
-            !xegpu.layout<wi_layout = [16, 1], wi_data = [1, 1]>> vector<16xi1>
+            !xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>> vector<16xi1>
   ```
 
   }];
@@ -790,7 +790,7 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
       %off = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
       %2 = xegpu.update_offset %1, %off :
               !xegpu.tensor_desc<4x2xf32, #xegpu.scattered_tdesc_attr<chunk_size=2>,
-              #xegpu.layout<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xindex>
+              #xegpu.layout<lane_layout = [4, 1], lane_data = [1, 1]>>, vector<4xindex>
     ```
   }];
 
