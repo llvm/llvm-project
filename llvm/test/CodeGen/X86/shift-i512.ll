@@ -8,32 +8,24 @@
 define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ; AVX512VL-LABEL: shl_i512_1:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
-; AVX512VL-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
+; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm0[3,4,5,6,7,0,1,2]
+; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512VL-NEXT:    vpsllq $1, %xmm0, %xmm3
+; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; AVX512VL-NEXT:    vpsrlq $63, %xmm4, %xmm4
+; AVX512VL-NEXT:    vpaddq %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpor %xmm4, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; AVX512VL-NEXT:    vpaddq %ymm2, %ymm2, %ymm4
-; AVX512VL-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm3
-; AVX512VL-NEXT:    vpshufd {{.*#+}} ymm3 = ymm3[2,3,2,3,6,7,6,7]
-; AVX512VL-NEXT:    vpsrlq $63, %ymm3, %ymm3
-; AVX512VL-NEXT:    vpor %ymm3, %ymm4, %ymm3
-; AVX512VL-NEXT:    vpsllq $1, %xmm0, %xmm4
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,2,3]
-; AVX512VL-NEXT:    vpsrlq $63, %xmm5, %xmm6
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm1, %xmm7
-; AVX512VL-NEXT:    vpor %xmm6, %xmm7, %xmm6
-; AVX512VL-NEXT:    vinserti128 $1, %xmm6, %ymm4, %ymm4
-; AVX512VL-NEXT:    vinserti64x4 $1, %ymm3, %zmm4, %zmm3
-; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpsrlq $63, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
-; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm5, %ymm1
-; AVX512VL-NEXT:    vpshufd {{.*#+}} ymm2 = ymm2[2,3,2,3,6,7,6,7]
-; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
-; AVX512VL-NEXT:    vpaddq %zmm1, %zmm1, %zmm1
-; AVX512VL-NEXT:    vporq %zmm0, %zmm1, %zmm0
-; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm3[0],zmm0[0],zmm3[2],zmm0[2],zmm3[4],zmm0[4],zmm3[6],zmm0[6]
+; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; AVX512VL-NEXT:    vpaddq %ymm3, %ymm3, %ymm3
+; AVX512VL-NEXT:    vpsrlq $63, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpor %ymm1, %ymm3, %ymm1
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; AVX512VL-NEXT:    vpsrlq $63, %zmm0, %zmm2
+; AVX512VL-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[2,3,2,3,6,7,6,7,10,11,10,11,14,15,14,15]
+; AVX512VL-NEXT:    vpaddq %zmm0, %zmm0, %zmm0
+; AVX512VL-NEXT:    vporq %zmm2, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm1[0],zmm0[0],zmm1[2],zmm0[2],zmm1[4],zmm0[4],zmm1[6],zmm0[6]
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: shl_i512_1:
