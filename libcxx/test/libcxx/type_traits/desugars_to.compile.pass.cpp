@@ -28,21 +28,15 @@ void tests() {
     static_assert(!std::__desugars_to_v<Tag, Foo>, "");
   }
 
-  // Make sure that __desugars_to bypasses cv and ref qualifiers on the operation
+  // Make sure that __desugars_to bypasses const and ref qualifiers on the operation
   {
     static_assert(std::__desugars_to_v<Tag, Operation>, ""); // no quals
     static_assert(std::__desugars_to_v<Tag, Operation const>, "");
-    static_assert(std::__desugars_to_v<Tag, Operation volatile>, "");
-    static_assert(std::__desugars_to_v<Tag, Operation const volatile>, "");
 
     static_assert(std::__desugars_to_v<Tag, Operation&>, "");
     static_assert(std::__desugars_to_v<Tag, Operation const&>, "");
-    static_assert(std::__desugars_to_v<Tag, Operation volatile&>, "");
-    static_assert(std::__desugars_to_v<Tag, Operation const volatile&>, "");
 
     static_assert(std::__desugars_to_v<Tag, Operation&&>, "");
     static_assert(std::__desugars_to_v<Tag, Operation const&&>, "");
-    static_assert(std::__desugars_to_v<Tag, Operation volatile&&>, "");
-    static_assert(std::__desugars_to_v<Tag, Operation const volatile&&>, "");
   }
 }
