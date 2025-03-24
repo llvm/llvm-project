@@ -334,11 +334,11 @@ CString libc_make_test_file_path_func(const char *file_name);
     return "[ParamType = " #TYPE "]";                                          \
   }
 
-#define DO_PRAGMA_BEGIN #pragma GCC diagnostic push
+#define DO_PRAGMA_BEGIN 
 
-#define DO_PRAGMA #pragma GCC diagnostic ignored "-Wglobal-constructors"
+#define DO_PRAGMA 
 
-#define DO_PRAGMA_END #pragma GCC diagnostic pop
+#define DO_PRAGMA_END 
 
 #define TYPED_TEST(SuiteName, TestName, TypeList)                              \
   static_assert(                                                               \
