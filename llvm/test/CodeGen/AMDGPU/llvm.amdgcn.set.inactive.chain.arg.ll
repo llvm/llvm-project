@@ -861,6 +861,68 @@ define amdgpu_cs_chain void @set_inactive_chain_arg_last_vgpr(ptr addrspace(1) %
   ret void
 }
 
+define amdgpu_cs_chain void @set_inactive_chain_arg_i16(ptr addrspace(1) %out, i16 %inactive, i16 %active) {
+; GFX11-LABEL: set_inactive_chain_arg_i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
+; GFX11-NEXT:    v_mov_b32_e32 v0, v10
+; GFX11-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s0
+; GFX11-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-NEXT:    global_store_b16 v[8:9], v1, off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX10-LABEL: set_inactive_chain_arg_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_or_saveexec_b32 s0, -1
+; GFX10-NEXT:    v_mov_b32_e32 v0, v10
+; GFX10-NEXT:    s_mov_b32 exec_lo, s0
+; GFX10-NEXT:    s_or_saveexec_b32 s0, -1
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s0
+; GFX10-NEXT:    s_mov_b32 exec_lo, s0
+; GFX10-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10-NEXT:    global_store_short v[8:9], v1, off
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11_W64-LABEL: set_inactive_chain_arg_i16:
+; GFX11_W64:       ; %bb.0:
+; GFX11_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GFX11_W64-NEXT:    v_mov_b32_e32 v0, v10
+; GFX11_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX11_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GFX11_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11_W64-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s[0:1]
+; GFX11_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX11_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11_W64-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11_W64-NEXT:    global_store_b16 v[8:9], v1, off
+; GFX11_W64-NEXT:    s_endpgm
+;
+; GFX10_W64-LABEL: set_inactive_chain_arg_i16:
+; GFX10_W64:       ; %bb.0:
+; GFX10_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GFX10_W64-NEXT:    v_mov_b32_e32 v0, v10
+; GFX10_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX10_W64-NEXT:    s_or_saveexec_b64 s[0:1], -1
+; GFX10_W64-NEXT:    v_cndmask_b32_e64 v0, v0, v11, s[0:1]
+; GFX10_W64-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX10_W64-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10_W64-NEXT:    global_store_short v[8:9], v1, off
+; GFX10_W64-NEXT:    s_endpgm
+  %tmp = call i16 @llvm.amdgcn.set.inactive.chain.arg.i16(i16 %active, i16 %inactive) #0
+  %wwm = call i16 @llvm.amdgcn.strict.wwm.i16(i16 %tmp)
+  store i16 %wwm, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.set.inactive.chain.arg.i32(i32, i32) #0
 declare i64 @llvm.amdgcn.set.inactive.chain.arg.i64(i64, i64) #0
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32 immarg, i32 immarg, i32 immarg, i1 immarg)

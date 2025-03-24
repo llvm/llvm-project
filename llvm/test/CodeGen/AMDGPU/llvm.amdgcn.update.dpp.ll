@@ -576,6 +576,24 @@ define amdgpu_kernel void @dpp_test_v2f16_imm_comb8(ptr addrspace(1) %out, <2 x 
   ret void
 }
 
+; GCN-LABEL: {{^}}dpp_i8:
+; GCN: v_mov_b32_dpp v2, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN: store_{{byte|b8}} v[0:1], v2
+define void @dpp_i8(ptr addrspace(1) %out, i8 %in) {
+  %tmp0 = call i8 @llvm.amdgcn.update.dpp.i8(i8 %in, i8 %in, i32 1, i32 1, i32 1, i1 false) #0
+  store i8 %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}dpp_i1:
+; GCN: v_mov_b32_dpp v2, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN: store_{{byte|b8}} v[0:1], v2
+define void @dpp_i1(ptr addrspace(1) %out, i1 %in) {
+  %tmp0 = call i1 @llvm.amdgcn.update.dpp.i8(i1 %in, i1 %in, i32 1, i32 1, i32 1, i1 false) #0
+  store i1 %tmp0, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare void @llvm.amdgcn.s.barrier()
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
