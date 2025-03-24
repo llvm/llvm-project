@@ -726,7 +726,16 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Inst{15-12} = imm20{18-15};
   }
 
-  def QC_E_LI : QCIRVInstEAI<0b000, 0b0, "qc.e.li">;
+  def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins simm32:$imm),
+                         "qc.e.li", "$rd, $imm", [], InstFormatOther> {
+    bits<5> rd;
+    bits<32> imm;
+
+    let Inst{47-16} = imm;
+    let Inst{15-12} = 0b0000;
+    let Inst{11-7} = rd;
+    let Inst{6-0} = 0b0011111;
+  }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVendorXqcili, IsRV32]
 
