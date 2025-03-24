@@ -1827,9 +1827,9 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
                              Instruction *TheCall, bool CalleeHasDebugInfo) {
-  const DebugLoc &TheCallDL = TheCall->getDebugLoc();
-  if (!TheCallDL)
+  if (!TheCall->getDebugLoc())
     return;
+  DebugLoc TheCallDL = TheCall->getDebugLoc().get()->getOrCloneWithoutAtom();
 
   auto &Ctx = Fn->getContext();
   DILocation *InlinedAtNode = TheCallDL;
