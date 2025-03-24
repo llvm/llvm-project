@@ -118,8 +118,6 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     // the latter as that's the variant exposed by CUDA API.
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
-  default:
-    llvm_unreachable("unknown match sync kind");
   }
 }
 

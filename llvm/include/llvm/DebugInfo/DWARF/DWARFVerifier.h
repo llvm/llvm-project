@@ -37,7 +37,7 @@ struct AggregationData {
 
 class OutputCategoryAggregator {
 private:
-  std::map<std::string, AggregationData> Aggregation;
+  std::map<std::string, AggregationData, std::less<>> Aggregation;
   bool IncludeDetail;
 
 public:
