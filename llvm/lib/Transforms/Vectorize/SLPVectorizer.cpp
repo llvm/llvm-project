@@ -851,7 +851,7 @@ bool isValidForAlternation(unsigned Opcode) {
 /// equal to x * 2. x * 1 is equal to x | 0.
 class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast16_t;
-  // Sort SupportedOp because it is used by binary_search.
+  /// Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
@@ -867,11 +867,11 @@ class BinOpSameOpcodeHelper {
     MainOpBIT = 0b100000000,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
-  // Return a non-nullptr if either operand of I is a ConstantInt.
-  // The second return value represents the operand position. We check the
-  // right-hand side first (1). If the right hand side is not a ConstantInt and
-  // the instruction is neither Sub, Shl, nor AShr, we then check the left hand
-  // side (0).
+  /// Return a non-nullptr if either operand of I is a ConstantInt.
+  /// The second return value represents the operand position. We check the
+  /// right-hand side first (1). If the right hand side is not a ConstantInt and
+  /// the instruction is neither Sub, Shl, nor AShr, we then check the left hand
+  /// side (0).
   static std::pair<ConstantInt *, unsigned>
   isBinOpWithConstantInt(Instruction *I) {
     unsigned Opcode = I->getOpcode();
@@ -888,18 +888,18 @@ class BinOpSameOpcodeHelper {
   }
   struct InterchangeableInfo {
     Instruction *I = nullptr;
-    // The bit it sets represents whether MainOp can be converted to.
+    /// The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
                     MulBIT | AShrBIT | ShlBIT;
-    // We cannot create an interchangeable instruction that does not exist in
-    // VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
-    // but << does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
-    // SeenBefore is used to know what operations have been seen before.
+    /// We cannot create an interchangeable instruction that does not exist in
+    /// VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
+    /// but << does not exist in VL. In the end, we convert VL to [x * 1, y *
+    /// 1]. SeenBefore is used to know what operations have been seen before.
     MaskType SeenBefore = 0;
     InterchangeableInfo(Instruction *I) : I(I) {}
-    // Return false allows BinOpSameOpcodeHelper to find an alternate
-    // instruction. Directly setting the mask will destroy the mask state,
-    // preventing us from determining which instruction it should convert to.
+    /// Return false allows BinOpSameOpcodeHelper to find an alternate
+    /// instruction. Directly setting the mask will destroy the mask state,
+    /// preventing us from determining which instruction it should convert to.
     bool trySet(MaskType OpcodeInMaskForm, MaskType InterchangeableMask) {
       if (Mask & InterchangeableMask) {
         SeenBefore |= OpcodeInMaskForm;
