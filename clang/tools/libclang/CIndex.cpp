@@ -5090,7 +5090,7 @@ CXString clang_getFileName(CXFile SFile) {
     return cxstring::createNull();
 
   FileEntryRef FEnt = *cxfile::getFileEntryRef(SFile);
-  return cxstring::createRef(FEnt.getName());
+  return cxstring::createDup(FEnt.getName());
 }
 
 time_t clang_getFileTime(CXFile SFile) {
@@ -5178,7 +5178,7 @@ CXString clang_File_tryGetRealPathName(CXFile SFile) {
     return cxstring::createNull();
 
   FileEntryRef FEnt = *cxfile::getFileEntryRef(SFile);
-  return cxstring::createRef(FEnt.getFileEntry().tryGetRealPathName());
+  return cxstring::createDup(FEnt.getFileEntry().tryGetRealPathName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -9264,7 +9264,7 @@ CXString clang_Cursor_getRawCommentText(CXCursor C) {
 
   // Don't duplicate the string because RawText points directly into source
   // code.
-  return cxstring::createRef(RawText);
+  return cxstring::createDup(RawText);
 }
 
 CXString clang_Cursor_getBriefCommentText(CXCursor C) {
@@ -9280,7 +9280,7 @@ CXString clang_Cursor_getBriefCommentText(CXCursor C) {
 
     // Don't duplicate the string because RawComment ensures that this memory
     // will not go away.
-    return cxstring::createRef(BriefText);
+    return cxstring::createDup(BriefText);
   }
 
   return cxstring::createNull();
@@ -10111,7 +10111,7 @@ cxindex::Logger::~Logger() {
 }
 
 CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
-  return cxstring::createRef(
+  return cxstring::createDup(
       BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(kind - 1)));
 }
 
@@ -10130,7 +10130,7 @@ enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
 }
 
 CXString clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind) {
-  return cxstring::createRef(
+  return cxstring::createDup(
       UnaryOperator::getOpcodeStr(static_cast<UnaryOperatorKind>(kind - 1)));
 }
 

@@ -46,7 +46,7 @@ CXSourceLocation CXStoredDiagnostic::getLocation() const {
 }
 
 CXString CXStoredDiagnostic::getSpelling() const {
-  return cxstring::createRef(Diag.getMessage());
+  return cxstring::createDup(Diag.getMessage());
 }
 
 CXString CXStoredDiagnostic::getDiagnosticOption(CXString *Disable) const {
@@ -75,7 +75,7 @@ unsigned CXStoredDiagnostic::getCategory() const {
 
 CXString CXStoredDiagnostic::getCategoryText() const {
   unsigned catID = DiagnosticIDs::getCategoryNumberForDiag(Diag.getID());
-  return cxstring::createRef(DiagnosticIDs::getCategoryNameFromID(catID));
+  return cxstring::createDup(DiagnosticIDs::getCategoryNameFromID(catID));
 }
 
 unsigned CXStoredDiagnostic::getNumRanges() const {
