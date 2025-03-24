@@ -983,7 +983,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def SEL_S : R6MMR6Rel, SEL_S_ENC, SEL_S_DESC, ISA_MIPS32R6, HARDFLOAT;
   def SDC2_R6 : SDC2_R6_ENC, SDC2_R6_DESC, ISA_MIPS32R6;
   def SWC2_R6 : SWC2_R6_ENC, SWC2_R6_DESC, ISA_MIPS32R6;
-  def SIGRIE : SIGRIE_ENC, SIGRIE_DESC, ISA_MIPS32R6;
+  
+  let hasNoSchedulingInfo = 1 in {
+    def SIGRIE : SIGRIE_ENC, SIGRIE_DESC, ISA_MIPS32R6;
+  }
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -996,8 +999,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
-  def GINVI : R6MMR6Rel, GINVI_ENC, GINVI_DESC, ISA_MIPS32R6, ASE_GINV;
-  def GINVT : R6MMR6Rel, GINVT_ENC, GINVT_DESC, ISA_MIPS32R6, ASE_GINV;
+  let hasNoSchedulingInfo = 1 in {
+    def GINVI : R6MMR6Rel, GINVI_ENC, GINVI_DESC, ISA_MIPS32R6, ASE_GINV;
+    def GINVT : R6MMR6Rel, GINVT_ENC, GINVT_DESC, ISA_MIPS32R6, ASE_GINV;
+  }
 }
 
 //===----------------------------------------------------------------------===//
