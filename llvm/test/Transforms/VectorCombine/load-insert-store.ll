@@ -16,6 +16,71 @@ entry:
   ret void
 }
 
+define void @insert_store2(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 6
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 7
+; CHECK-NEXT:    store <8 x i16> [[VEC2]], ptr [[Q]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 6
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 7
+  store <8 x i16> %vec2, ptr %q, align 1
+  ret void
+}
+
+define void @insert_store3(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 5
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 6
+; CHECK-NEXT:    [[VEC3:%.*]] = insertelement <8 x i16> [[VEC2]], i16 [[S]], i32 7
+; CHECK-NEXT:    store <8 x i16> [[VEC3]], ptr [[Q]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 5
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 6
+  %vec3 = insertelement <8 x i16> %vec2, i16 %s, i32 7
+  store <8 x i16> %vec3, ptr %q, align 1
+  ret void
+}
+
+define void @insert_store8(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 0
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 1
+; CHECK-NEXT:    [[VEC3:%.*]] = insertelement <8 x i16> [[VEC2]], i16 [[S]], i32 2
+; CHECK-NEXT:    [[VEC4:%.*]] = insertelement <8 x i16> [[VEC3]], i16 [[S]], i32 3
+; CHECK-NEXT:    [[VEC5:%.*]] = insertelement <8 x i16> [[VEC4]], i16 [[S]], i32 4
+; CHECK-NEXT:    [[VEC6:%.*]] = insertelement <8 x i16> [[VEC5]], i16 [[S]], i32 5
+; CHECK-NEXT:    [[VEC7:%.*]] = insertelement <8 x i16> [[VEC6]], i16 [[S]], i32 6
+; CHECK-NEXT:    [[VEC8:%.*]] = insertelement <8 x i16> [[VEC7]], i16 [[S]], i32 7
+; CHECK-NEXT:    store <8 x i16> [[VEC8]], ptr [[Q]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 0
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 1
+  %vec3 = insertelement <8 x i16> %vec2, i16 %s, i32 2
+  %vec4 = insertelement <8 x i16> %vec3, i16 %s, i32 3
+  %vec5 = insertelement <8 x i16> %vec4, i16 %s, i32 4
+  %vec6 = insertelement <8 x i16> %vec5, i16 %s, i32 5
+  %vec7 = insertelement <8 x i16> %vec6, i16 %s, i32 6
+  %vec8 = insertelement <8 x i16> %vec7, i16 %s, i32 7
+  store <8 x i16> %vec8, ptr %q, align 1
+  ret void
+}
+
 define void @insert_store_i16_align1(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_i16_align1(
 ; CHECK-NEXT:  entry:
@@ -827,3 +892,256 @@ bb:
 
 declare i32 @bar(i32, i1) readonly
 declare double @llvm.log2.f64(double)
+
+define void @insert_store_gap(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_gap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 2
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 5
+; CHECK-NEXT:    store <8 x i16> [[VEC2]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 2
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 5
+  store <8 x i16> %vec2, ptr %q
+  ret void
+}
+
+define void @insert_store_reverse(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_reverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 7
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 6
+; CHECK-NEXT:    [[VEC3:%.*]] = insertelement <8 x i16> [[VEC2]], i16 [[S]], i32 5
+; CHECK-NEXT:    store <8 x i16> [[VEC3]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 7
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 6
+  %vec3 = insertelement <8 x i16> %vec2, i16 %s, i32 5
+  store <8 x i16> %vec3, ptr %q
+  ret void
+}
+
+define void @insert_store_duplicate(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_duplicate(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 3
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 3
+; CHECK-NEXT:    store <8 x i16> [[VEC2]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 3
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 3
+  store <8 x i16> %vec2, ptr %q
+  ret void
+}
+
+define void @insert_store_i32(ptr %q, i32 zeroext %s) {
+; CHECK-LABEL: @insert_store_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[S:%.*]], i32 2
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <4 x i32> [[VEC1]], i32 [[S]], i32 3
+; CHECK-NEXT:    store <4 x i32> [[VEC2]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <4 x i32>, ptr %q
+  %vec1 = insertelement <4 x i32> %0, i32 %s, i32 2
+  %vec2 = insertelement <4 x i32> %vec1, i32 %s, i32 3
+  store <4 x i32> %vec2, ptr %q
+  ret void
+}
+
+define void @insert_store_i8(ptr %q, i8 zeroext %s) {
+; CHECK-LABEL: @insert_store_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 8
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <16 x i8> [[VEC1]], i8 [[S]], i32 9
+; CHECK-NEXT:    store <16 x i8> [[VEC2]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, ptr %q
+  %vec1 = insertelement <16 x i8> %0, i8 %s, i32 8
+  %vec2 = insertelement <16 x i8> %vec1, i8 %s, i32 9
+  store <16 x i8> %vec2, ptr %q
+  ret void
+}
+
+define void @insert_store_alignment(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_alignment(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[S:%.*]], i32 0
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <8 x i16> [[VEC1]], i16 [[S]], i32 4
+; CHECK-NEXT:    store <8 x i16> [[VEC2]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <8 x i16>, ptr %q, align 16
+  %vec1 = insertelement <8 x i16> %0, i16 %s, i32 0
+  %vec2 = insertelement <8 x i16> %vec1, i16 %s, i32 4
+  store <8 x i16> %vec2, ptr %q, align 16
+  ret void
+}
+
+define void @insert_store_size(ptr %q, i16 zeroext %s) {
+; CHECK-LABEL: @insert_store_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i16>, ptr [[Q:%.*]], align 32
+; CHECK-NEXT:    [[VEC1:%.*]] = insertelement <16 x i16> [[TMP0]], i16 [[S:%.*]], i32 8
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <16 x i16> [[VEC1]], i16 [[S]], i32 12
+; CHECK-NEXT:    store <16 x i16> [[VEC2]], ptr [[Q]], align 32
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i16>, ptr %q
+  %vec1 = insertelement <16 x i16> %0, i16 %s, i32 8
+  %vec2 = insertelement <16 x i16> %vec1, i16 %s, i32 12
+  store <16 x i16> %vec2, ptr %q
+  ret void
+}
+
+define void @insert_store_nonconst4(ptr %q, i8 zeroext %s, i32 %idx1, i32 %idx2, i32 %idx3, i32 %idx4) {
+; CHECK-LABEL: @insert_store_nonconst4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS1:%.*]] = insertelement <16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX1:%.*]]
+; CHECK-NEXT:    [[VECINS2:%.*]] = insertelement <16 x i8> [[VECINS1]], i8 [[S]], i32 [[IDX2:%.*]]
+; CHECK-NEXT:    [[VECINS3:%.*]] = insertelement <16 x i8> [[VECINS2]], i8 [[S]], i32 [[IDX3:%.*]]
+; CHECK-NEXT:    [[VECINS4:%.*]] = insertelement <16 x i8> [[VECINS3]], i8 [[S]], i32 [[IDX4:%.*]]
+; CHECK-NEXT:    store <16 x i8> [[VECINS4]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <16 x i8>, ptr %q
+  %vecins1 = insertelement <16 x i8> %0, i8 %s, i32 %idx1
+  %vecins2 = insertelement <16 x i8> %vecins1, i8 %s, i32 %idx2
+  %vecins3 = insertelement <16 x i8> %vecins2, i8 %s, i32 %idx3
+  %vecins4 = insertelement <16 x i8> %vecins3, i8 %s, i32 %idx4
+  store <16 x i8> %vecins4, ptr %q
+  ret void
+}
+
+define void @insert_store_vscale_nonconst2(ptr %q, i8 zeroext %s, i32 %idx1, i32 %idx2) {
+; CHECK-LABEL: @insert_store_vscale_nonconst2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 16 x i8>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    [[VECINS1:%.*]] = insertelement <vscale x 16 x i8> [[TMP0]], i8 [[S:%.*]], i32 [[IDX1:%.*]]
+; CHECK-NEXT:    [[VECINS2:%.*]] = insertelement <vscale x 16 x i8> [[VECINS1]], i8 [[S]], i32 [[IDX2:%.*]]
+; CHECK-NEXT:    store <vscale x 16 x i8> [[VECINS2]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load <vscale x 16 x i8>, ptr %q
+  %vecins1 = insertelement <vscale x 16 x i8> %0, i8 %s, i32 %idx1
+  %vecins2 = insertelement <vscale x 16 x i8> %vecins1, i8 %s, i32 %idx2
+  store <vscale x 16 x i8> %vecins2, ptr %q
+  ret void
+}
+
+define void @insert_store_nonconst_large_alignment2(ptr %q, i32 zeroext %s, i32 %idx1, i32 %idx2) {
+; CHECK-LABEL: @insert_store_nonconst_large_alignment2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[IDX1:%.*]], 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
+; CHECK-NEXT:    [[I:%.*]] = load <4 x i32>, ptr [[Q:%.*]], align 128
+; CHECK-NEXT:    [[VECINS1:%.*]] = insertelement <4 x i32> [[I]], i32 [[S:%.*]], i32 [[IDX1]]
+; CHECK-NEXT:    [[VECINS2:%.*]] = insertelement <4 x i32> [[VECINS1]], i32 [[S]], i32 [[IDX2]]
+; CHECK-NEXT:    store <4 x i32> [[VECINS2]], ptr [[Q]], align 128
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp1 = icmp ult i32 %idx1, 4
+  %cmp2 = icmp ult i32 %idx2, 4
+  call void @llvm.assume(i1 %cmp1)
+  call void @llvm.assume(i1 %cmp2)
+  %i = load <4 x i32>, ptr %q, align 128
+  %vecins1 = insertelement <4 x i32> %i, i32 %s, i32 %idx1
+  %vecins2 = insertelement <4 x i32> %vecins1, i32 %s, i32 %idx2
+  store <4 x i32> %vecins2, ptr %q, align 128
+  ret void
+}
+
+define void @insert_store_nonconst_align_maximum_8_2(ptr %q, i64 %s, i32 %idx1, i32 %idx2) {
+; CHECK-LABEL: @insert_store_nonconst_align_maximum_8_2(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
+; CHECK-NEXT:    [[I:%.*]] = load <8 x i64>, ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    [[VECINS1:%.*]] = insertelement <8 x i64> [[I]], i64 [[S:%.*]], i32 [[IDX1]]
+; CHECK-NEXT:    [[VECINS2:%.*]] = insertelement <8 x i64> [[VECINS1]], i64 [[S]], i32 [[IDX2]]
+; CHECK-NEXT:    store <8 x i64> [[VECINS2]], ptr [[Q]], align 8
+; CHECK-NEXT:    ret void
+;
+  %cmp1 = icmp ult i32 %idx1, 2
+  %cmp2 = icmp ult i32 %idx2, 2
+  call void @llvm.assume(i1 %cmp1)
+  call void @llvm.assume(i1 %cmp2)
+  %i = load <8 x i64>, ptr %q, align 8
+  %vecins1 = insertelement <8 x i64> %i, i64 %s, i32 %idx1
+  %vecins2 = insertelement <8 x i64> %vecins1, i64 %s, i32 %idx2
+  store <8 x i64> %vecins2, ptr %q, align 8
+  ret void
+}
+
+define void @insert_store_nonconst_align_maximum_4_2(ptr %q, i64 %s, i32 %idx1, i32 %idx2) {
+; CHECK-LABEL: @insert_store_nonconst_align_maximum_4_2(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
+; CHECK-NEXT:    [[I:%.*]] = load <8 x i64>, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[VECINS1:%.*]] = insertelement <8 x i64> [[I]], i64 [[S:%.*]], i32 [[IDX1]]
+; CHECK-NEXT:    [[VECINS2:%.*]] = insertelement <8 x i64> [[VECINS1]], i64 [[S]], i32 [[IDX2]]
+; CHECK-NEXT:    store <8 x i64> [[VECINS2]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+  %cmp1 = icmp ult i32 %idx1, 2
+  %cmp2 = icmp ult i32 %idx2, 2
+  call void @llvm.assume(i1 %cmp1)
+  call void @llvm.assume(i1 %cmp2)
+  %i = load <8 x i64>, ptr %q, align 4
+  %vecins1 = insertelement <8 x i64> %i, i64 %s, i32 %idx1
+  %vecins2 = insertelement <8 x i64> %vecins1, i64 %s, i32 %idx2
+  store <8 x i64> %vecins2, ptr %q, align 4
+  ret void
+}
+
+define void @insert_store_nonconst_align_larger_2(ptr %q, i64 %s, i32 %idx1, i32 %idx2) {
+; CHECK-LABEL: @insert_store_nonconst_align_larger_2(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[IDX2:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP2]])
+; CHECK-NEXT:    [[I:%.*]] = load <8 x i64>, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[VECINS1:%.*]] = insertelement <8 x i64> [[I]], i64 [[S:%.*]], i32 [[IDX1]]
+; CHECK-NEXT:    [[VECINS2:%.*]] = insertelement <8 x i64> [[VECINS1]], i64 [[S]], i32 [[IDX2]]
+; CHECK-NEXT:    store <8 x i64> [[VECINS2]], ptr [[Q]], align 2
+; CHECK-NEXT:    ret void
+;
+  %cmp1 = icmp ult i32 %idx1, 2
+  %cmp2 = icmp ult i32 %idx2, 2
+  call void @llvm.assume(i1 %cmp1)
+  call void @llvm.assume(i1 %cmp2)
+  %i = load <8 x i64>, ptr %q, align 4
+  %vecins1 = insertelement <8 x i64> %i, i64 %s, i32 %idx1
+  %vecins2 = insertelement <8 x i64> %vecins1, i64 %s, i32 %idx2
+  store <8 x i64> %vecins2, ptr %q, align 2
+  ret void
+}
