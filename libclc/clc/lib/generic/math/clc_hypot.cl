@@ -15,6 +15,7 @@
 #include <clc/math/clc_sqrt.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 

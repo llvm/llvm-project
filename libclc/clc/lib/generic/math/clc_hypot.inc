@@ -32,9 +32,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_hypot(__CLC_GENTYPE x,
   __CLC_GENTYPE retval = __clc_sqrt(__clc_mad(fx, fx, fy * fy)) * fx_exp;
 
   retval = (ux > PINFBITPATT_SP32 || uy == 0) ? __CLC_AS_GENTYPE(ux) : retval;
-  retval = (ux == PINFBITPATT_SP32 || uy == PINFBITPATT_SP32)
-               ? __CLC_AS_GENTYPE((__CLC_UINTN)PINFBITPATT_SP32)
-               : retval;
+  retval = __clc_isinf(x) || __clc_isinf(y) ? __CLC_GENTYPE_INF : retval;
   return retval;
 }
 
@@ -72,13 +70,10 @@ _CLC_DEF _CLC_OVERLOAD __CLC_GENTYPE __clc_hypot(__CLC_GENTYPE x,
   r = c ? s : r;
 
   // Check for NaN
-  c = __clc_isnan(x) || __clc_isnan(y);
-  r = c ? __CLC_AS_GENTYPE((__CLC_ULONGN)QNANBITPATT_DP64) : r;
+  r = __clc_isnan(x) || __clc_isnan(y) ? __CLC_GENTYPE_NAN : r;
 
   // If either is Inf, we must return Inf
-  c = x == __CLC_AS_GENTYPE((__CLC_ULONGN)PINFBITPATT_DP64) ||
-      y == __CLC_AS_GENTYPE((__CLC_ULONGN)PINFBITPATT_DP64);
-  r = c ? __CLC_AS_GENTYPE((__CLC_ULONGN)PINFBITPATT_DP64) : r;
+  r = __clc_isinf(x) || __clc_isinf(y) ? __CLC_GENTYPE_INF : r;
 
   return r;
 }
