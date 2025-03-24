@@ -866,14 +866,16 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   }
 
   // Sort by the Binding and Direction for fast lookup
-  std::sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
-            [](const auto &LHS, const auto &RHS) {
-              const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
-                                       std::get<ResourceCounterDirection>(LHS)};
-              const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
-                                       std::get<ResourceCounterDirection>(RHS)};
-              return L < R;
-            });
+  std::stable_sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
+                   [](const auto &LHS, const auto &RHS) {
+                     const auto L =
+                         std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
+                                   std::get<ResourceCounterDirection>(LHS)};
+                     const auto R =
+                         std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
+                                   std::get<ResourceCounterDirection>(RHS)};
+                     return L < R;
+                   });
 
   // Remove the duplicate entries. Since direction is considered for equality
   // a unique resource with more than one direction will not be deduped.
