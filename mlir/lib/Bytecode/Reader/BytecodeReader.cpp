@@ -21,6 +21,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
@@ -291,6 +292,16 @@ public:
   }
 
   Location getLoc() const { return fileLoc; }
+
+  /// Snapshot the location of the BytecodeReader so that parsing can be rewound
+  /// if needed.
+  struct Snapshot {
+    EncodingReader &reader;
+    const uint8_t *dataIt;
+
+    Snapshot(EncodingReader &reader) : reader(reader), dataIt(reader.dataIt) {}
+    void rewind() { reader.dataIt = dataIt; }
+  };
 
 private:
   /// Parse a variable length encoded integer from the byte stream. This method
@@ -1410,8 +1421,9 @@ private:
   /// Parse an operation name reference using the given reader, and set the
   /// `wasRegistered` flag that indicates if the bytecode was produced by a
   /// context where opName was registered.
-  FailureOr<OperationName> parseOpName(EncodingReader &reader,
-                                       std::optional<bool> &wasRegistered);
+  FailureOr<BytecodeOperationName *>
+  parseOpName(EncodingReader &reader, std::optional<bool> &wasRegistered,
+              bool useDialectFallback);
 
   //===--------------------------------------------------------------------===//
   // Attribute/Type Section
@@ -1476,7 +1488,8 @@ private:
                              RegionReadState &readState);
   FailureOr<Operation *> parseOpWithoutRegions(EncodingReader &reader,
                                                RegionReadState &readState,
-                                               bool &isIsolatedFromAbove);
+                                               bool &isIsolatedFromAbove,
+                                               bool useDialectFallback);
 
   LogicalResult parseRegion(RegionReadState &readState);
   LogicalResult parseBlockHeader(EncodingReader &reader,
@@ -1506,7 +1519,7 @@ private:
     UseListOrderStorage(bool isIndexPairEncoding,
                         SmallVector<unsigned, 4> &&indices)
         : indices(std::move(indices)),
-          isIndexPairEncoding(isIndexPairEncoding){};
+          isIndexPairEncoding(isIndexPairEncoding) {};
     /// The vector containing the information required to reorder the
     /// use-list of a value.
     SmallVector<unsigned, 4> indices;
@@ -1843,16 +1856,20 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
   return success();
 }
 
-FailureOr<OperationName>
+FailureOr<BytecodeOperationName *>
 BytecodeReader::Impl::parseOpName(EncodingReader &reader,
-                                  std::optional<bool> &wasRegistered) {
+                                  std::optional<bool> &wasRegistered,
+                                  bool useDialectFallback) {
   BytecodeOperationName *opName = nullptr;
   if (failed(parseEntry(reader, opNames, opName, "operation name")))
     return failure();
   wasRegistered = opName->wasRegistered;
   // Check to see if this operation name has already been resolved. If we
   // haven't, load the dialect and build the operation name.
-  if (!opName->opName) {
+  // If `useDialectFallback`, it's likely that parsing previously failed. We'll
+  // need to reset any previously resolved OperationName with that of the
+  // fallback op.
+  if (!opName->opName || useDialectFallback) {
     // If the opName is empty, this is because we use to accept names such as
     // `foo` without any `.` separator. We shouldn't tolerate this in textual
     // format anymore but for now we'll be backward compatible. This can only
@@ -1865,11 +1882,26 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
                                   dialectsMap, reader, version);
       if (failed(opName->dialect->load(dialectReader, getContext())))
         return failure();
-      opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
-                             getContext());
+
+      const BytecodeDialectInterface *dialectIface = opName->dialect->interface;
+      if (useDialectFallback) {
+        FailureOr<OperationName> fallbackOp =
+            dialectIface ? dialectIface->getFallbackOperationName()
+                         : FailureOr<OperationName>{};
+
+        // If the dialect doesn't have a fallback operation, we can't parse as
+        // instructed.
+        if (failed(fallbackOp))
+          return failure();
+
+        opName->opName.emplace(*fallbackOp);
+      } else {
+        opName->opName.emplace(
+            (opName->dialect->name + "." + opName->name).str(), getContext());
+      }
     }
   }
-  return *opName->opName;
+  return opName;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2143,10 +2175,30 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
         // Read in the next operation. We don't read its regions directly, we
         // handle those afterwards as necessary.
         bool isIsolatedFromAbove = false;
-        FailureOr<Operation *> op =
-            parseOpWithoutRegions(reader, readState, isIsolatedFromAbove);
-        if (failed(op))
-          return failure();
+        FailureOr<Operation *> op;
+
+        // Parse the bytecode.
+        {
+          // If the op is registered (and serialized in a compatible manner), or
+          // unregistered but uses standard properties encoding, parsing without
+          // going through the fallback path should work.
+          EncodingReader::Snapshot snapshot(reader);
+          op = parseOpWithoutRegions(reader, readState, isIsolatedFromAbove,
+                                     /*useDialectFallback=*/false);
+
+          // If reading fails, try parsing the op again as a dialect fallback
+          // op (if supported).
+          if (failed(op)) {
+            snapshot.rewind();
+            op = parseOpWithoutRegions(reader, readState, isIsolatedFromAbove,
+                                       /*useDialectFallback=*/true);
+          }
+
+          // If the dialect doesn't have a fallback op, or parsing as a fallback
+          // op fails, we can no longer continue.
+          if (failed(op))
+            return failure();
+        }
 
         // If the op has regions, add it to the stack for processing and return:
         // we stop the processing of the current region and resume it after the
@@ -2208,14 +2260,17 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
   return success();
 }
 
-FailureOr<Operation *>
-BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
-                                            RegionReadState &readState,
-                                            bool &isIsolatedFromAbove) {
+FailureOr<Operation *> BytecodeReader::Impl::parseOpWithoutRegions(
+    EncodingReader &reader, RegionReadState &readState,
+    bool &isIsolatedFromAbove, bool useDialectFallback) {
   // Parse the name of the operation.
   std::optional<bool> wasRegistered;
-  FailureOr<OperationName> opName = parseOpName(reader, wasRegistered);
-  if (failed(opName))
+  FailureOr<BytecodeOperationName *> bytecodeOp =
+      parseOpName(reader, wasRegistered, useDialectFallback);
+  if (failed(bytecodeOp))
+    return failure();
+  auto opName = (*bytecodeOp)->opName;
+  if (!opName)
     return failure();
 
   // Parse the operation mask, which indicates which components of the operation
@@ -2232,6 +2287,12 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
   // With the location and name resolved, we can start building the operation
   // state.
   OperationState opState(opLoc, *opName);
+  // If this is a fallback op, provide the original name of the operation.
+  if (auto *iface = opName->getInterface<FallbackBytecodeOpInterface>()) {
+    const Twine originalName =
+        opName->getDialect()->getNamespace() + "." + (*bytecodeOp)->name;
+    iface->setOriginalOperationName(originalName, opState);
+  }
 
   // Parse the attributes of the operation.
   if (opMask & bytecode::OpEncodingMask::kHasAttrs) {

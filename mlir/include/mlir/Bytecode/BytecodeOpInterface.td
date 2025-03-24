@@ -40,4 +40,28 @@ def BytecodeOpInterface : OpInterface<"BytecodeOpInterface"> {
   ];
 }
 
+// `FallbackBytecodeOpInterface`
+def FallbackBytecodeOpInterface : OpInterface<"FallbackBytecodeOpInterface"> {
+  let description = [{
+    This interface allows fallback operations sideband access to the 
+    original operation's intrinsic details.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    StaticInterfaceMethod<[{
+      Set the original name for this operation from the bytecode.
+      }],
+      "void", "setOriginalOperationName", (ins
+          "const ::mlir::Twine&":$opName,
+          "::mlir::OperationState &":$state)
+    >,
+    InterfaceMethod<[{
+      Get the original name for this operation from the bytecode.
+      }],
+      "::mlir::StringRef", "getOriginalOperationName", (ins)
+    >
+  ];
+}
+
 #endif // MLIR_BYTECODE_BYTECODEOPINTERFACES

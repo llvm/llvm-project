@@ -21,6 +21,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace mlir {
 //===--------------------------------------------------------------------===//
@@ -443,6 +444,14 @@ public:
     reader.emitError() << "dialect " << getDialect()->getNamespace()
                        << " does not support reading types from bytecode";
     return Type();
+  }
+
+  /// Fall back to an operation of this type if parsing an op from bytecode
+  /// fails for any reason. This can be used to handle new ops emitted from a
+  /// different version of the dialect, that cannot be read by an older version
+  /// of the dialect.
+  virtual FailureOr<OperationName> getFallbackOperationName() const {
+    return failure();
   }
 
   //===--------------------------------------------------------------------===//
