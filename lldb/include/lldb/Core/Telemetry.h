@@ -234,7 +234,7 @@ public:
 
   virtual void
   DispatchClientTelemetry(const lldb_private::StructuredDataImpl &entry,
-                         Debugger *debugger);
+                          Debugger *debugger);
   virtual llvm::StringRef GetInstanceName() const = 0;
 
   static TelemetryManager *GetInstance();

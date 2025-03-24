@@ -132,7 +132,7 @@ void TelemetryManager::DispatchClientTelemetry(
 
   ClientInfo client_info;
   client_info.debugger = debugger;
-  auto* dict = entry.GetObjectSP()->GetAsDictionary();
+  auto *dict = entry.GetObjectSP()->GetAsDictionary();
 
   llvm::StringRef request_name;
   if (dict->GetValueForKeyAsString("request_name", request_name))
@@ -150,7 +150,6 @@ void TelemetryManager::DispatchClientTelemetry(
     LLDB_LOG(GetLog(LLDBLog::Object),
              "Cannot determine start-time from client-telemetry entry");
     client_info.start_time = epoch;
-
   }
 
   int64_t end_time;
@@ -182,7 +181,8 @@ public:
 
   explicit NoOpTelemetryManager()
       : TelemetryManager(std::make_unique<LLDBConfig>(
-            /*EnableTelemetry*/ false, /*DetailedCommand*/ false, /*ClientTelemery*/ false)) {}
+            /*EnableTelemetry*/ false, /*DetailedCommand*/ false,
+            /*ClientTelemery*/ false)) {}
 
   virtual llvm::StringRef GetInstanceName() const override {
     return "NoOpTelemetryManager";
