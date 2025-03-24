@@ -273,7 +273,7 @@ public:
     if (vType.getRank() > 1)
       return failure();
 
-    auto loc = gather->getLoc();
+    Location loc = gather->getLoc();
 
     // Resolve alignment.
     unsigned align;
@@ -284,12 +284,10 @@ public:
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
     Value base = adaptor.getBase();
-
-    // Handle the simple case of 1-D vector.
-    // Resolve address.
     Value ptrs =
         getIndexedPtrs(rewriter, loc, *this->getTypeConverter(), memRefType,
                        base, ptr, adaptor.getIndexVec(), vType);
+
     // Replace with the gather intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
         gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),

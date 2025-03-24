@@ -107,8 +107,8 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
 /// ```mlir
 ///   %subview = memref.subview %M (...)
 ///     : memref<100x3xf32> to memref<100xf32, strided<[3]>>
-///   %gather = vector.gather %subview[%idxs] (...) : memref<100xf32,
-///   strided<[3]>>
+///   %gather = vector.gather %subview[%idxs] (...)
+///     : memref<100xf32, strided<[3]>>
 /// ```
 /// ==>
 /// ```mlir

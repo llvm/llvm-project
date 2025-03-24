@@ -241,8 +241,8 @@ void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
-/// [FlattenGather]
-/// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
+/// [UnrollGather]
+/// Unrolls 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.
 void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit = 1);
