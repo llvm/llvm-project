@@ -105,6 +105,9 @@ def My_IntegerType : MyDialect_Type<"Integer", "int"> {
 
   /// Indicate that our type will add additional verification to the parameters.
   let genVerifyDecl = 1;
+
+  /// Indicate that our type will use the mnemonic as alias in assembly.
+  let genMnemonicAlias = 1;
 }
 ```
 
@@ -160,6 +163,9 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   /// Indicate to the ODS generator that we do not want the default builders,
   /// as we have defined our own simpler ones.
   let skipDefaultBuilders = 1;
+
+  /// Indicate that our attribute will use the mnemonic as alias in assembly.
+  let genMnemonicAlias = 1;
 }
 ```
 
@@ -1181,6 +1187,14 @@ by the Attribute or Type's C++ class name.
 Note that these are mechanisms intended for long-tail cases by power users; for
 not-yet-implemented widely-applicable cases, improving the infrastructure is
 preferable.
+
+### Mnemonic Alias in Assembly
+
+Attribute and Type might want to use aliases in the assembly to reduce verbosity.
+In such cases, `OpAsmAttrInterface` and `OpAsmTypeInterface` could be used to
+generate aliases. In many cases, a simple mnemonic alias is enough, then
+`genMnemonicAlias` could be turned on to automatically generate
+an `getAlias` implementation using the `mnemonic` of the Attribute or Type.
 
 ### Registering with the Dialect
 
