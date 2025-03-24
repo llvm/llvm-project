@@ -7241,8 +7241,8 @@ td_library(
         "include/mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td",
         "include/mlir/Dialect/Ptr/IR/PtrAttrDefs.td",
         "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
-        "include/mlir/Dialect/Ptr/IR/PtrOps.td",
         "include/mlir/Dialect/Ptr/IR/PtrEnums.td",
+        "include/mlir/Dialect/Ptr/IR/PtrOps.td",
     ],
     includes = ["include"],
     deps = [
@@ -7391,7 +7391,12 @@ cc_library(
 
 td_library(
     name = "SPIRVOpsTdFiles",
-    srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
+    srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]) + [
+        # TODO: resolve circular dep, e.g.
+        # * SPIRVImageInterfaces.td uses SPIRVBase.td
+        # * SPIRVOps.h uses SPIRVImageInterfaces.h
+        "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
+    ],
     includes = ["include"],
     deps = [
         ":BuiltinDialectTdFiles",
@@ -7531,14 +7536,33 @@ gentbl_cc_library(
     deps = [":SPIRVOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "SPIRVImageInterfacesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.td",
+    deps = [":SPIRVOpsTdFiles"],
+)
+
 cc_library(
     name = "SPIRVDialect",
     srcs = glob([
         "lib/Dialect/SPIRV/IR/*.cpp",
         "lib/Dialect/SPIRV/IR/*.h",
+        "lib/Dialect/SPIRV/Interfaces/*.cpp",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/SPIRV/IR/*.h",
+        "include/mlir/Dialect/SPIRV/Interfaces/*.h",
     ]),
     includes = ["include"],
     deps = [
@@ -7556,6 +7580,7 @@ cc_library(
         ":SPIRVAttributesIncGen",
         ":SPIRVAvailabilityIncGen",
         ":SPIRVCanonicalizationIncGen",
+        ":SPIRVImageInterfacesIncGen",
         ":SPIRVOpsIncGen",
         ":SideEffectInterfaces",
         ":Support",
@@ -11088,8 +11113,8 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Quant/IR/QuantDialectBytecode.td",
     deps = [
-        ":BytecodeTdFiles",
         ":BuiltinDialectBytecodeTdFiles",
+        ":BytecodeTdFiles",
     ],
 )
 
