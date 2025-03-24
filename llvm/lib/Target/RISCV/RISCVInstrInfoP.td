@@ -87,6 +87,42 @@ class RVPUnaryImm8Rdp<bits<8> funct8, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPUnaryImm5<bits<3> f, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd),
+    (ins GPR:$rs1, uimm5:$uimm5), opcodestr, "$rd, $rs1, $uimm5"> {
+  bits<5> uimm5;
+  let Inst{31}    = 0b1;
+  let Inst{30-28} = f;
+  let Inst{27}    = 0b0;
+  let Inst{26-25} = 0b01;
+  let Inst{24-20} = uimm5;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPUnaryImm4<bits<3> f, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd),
+    (ins GPR:$rs1, uimm4:$uimm4), opcodestr, "$rd, $rs1, $uimm4"> {
+  bits<4> uimm4;
+  let Inst{31}    = 0b1;
+  let Inst{30-28} = f;
+  let Inst{27}    = 0b0;
+  let Inst{26-24} = 0b001;
+  let Inst{23-20} = uimm4;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class RVPUnaryImm3<bits<3> f, string opcodestr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd),
+    (ins GPR:$rs1, uimm3:$uimm3), opcodestr, "$rd, $rs1, $uimm3"> {
+  bits<3> uimm3;
+  let Inst{31}    = 0b1;
+  let Inst{30-28} = f;
+  let Inst{27}    = 0b0;
+  let Inst{26-23} = 0b0001;
+  let Inst{22-20} = uimm3;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryWUF<bits<2> w, bits<5> uf, string opcodestr>
     : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), (ins GPR:$rs1),
                   opcodestr, "$rd, $rs1">  {
@@ -290,16 +326,16 @@ def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-def PSLLI_B  : UnaryW_r<0b100000001000, 0b010, "pslli.b">;
-def PSLLI_H  : UnaryW_r<0b100000010000, 0b010, "pslli.h">;
-def PSSLAI_H : UnaryW_r<0b110100010000, 0b010, "psslai.h">;
+def PSLLI_B  : RVPUnaryImm3<0b000, "pslli.b">;
+def PSLLI_H  : RVPUnaryImm4<0b000, "pslli.h">;
+def PSSLAI_H : RVPUnaryImm4<0b101, "psslai.h">;
 } // Predicates = [HasStdExtP]
 let DecoderNamespace = "RV32Only",
     Predicates = [HasStdExtP, IsRV32] in
-def SSLAI    : UnaryW_r<0b110100100000, 0b010, "sslai">;
+def SSLAI    : RVPUnaryImm5<0b101, "sslai">;
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSLLI_W  : UnaryW_r<0b100000100000, 0b010, "pslli.w">;
-def PSSLAI_W : UnaryW_r<0b110100100000, 0b010, "psslai.w">;
+def PSLLI_W  : RVPUnaryImm5<0b000, "pslli.w">;
+def PSSLAI_W : RVPUnaryImm5<0b101, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in

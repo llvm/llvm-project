@@ -57,19 +57,19 @@ max t3, t4, t5
 maxu a4, a5, a6
 # CHECK-ASM-AND-OBJ: pslli.b a6, a7
 # CHECK-ASM: encoding: [0x1b,0xa8,0x88,0x80]
-pslli.b a6, a7
-# CHECK-ASM-AND-OBJ: pslli.h ra, sp
-# CHECK-ASM: encoding: [0x9b,0x20,0x01,0x81]
-pslli.h ra, sp
-# CHECK-ASM-AND-OBJ: pslli.w ra, sp
-# CHECK-ASM: encoding: [0x9b,0x20,0x01,0x82]
-pslli.w ra, sp
-# CHECK-ASM-AND-OBJ: psslai.h t0, t1
-# CHECK-ASM: encoding: [0x9b,0x22,0x03,0xd1]
-psslai.h t0, t1
-# CHECK-ASM-AND-OBJ: psslai.w a4, a5
-# CHECK-ASM: encoding: [0x1b,0xa7,0x07,0xd2]
-psslai.w a4, a5
+pslli.b a6, a7, 0
+# CHECK-ASM-AND-OBJ: pslli.h ra, sp, 1
+# CHECK-ASM: encoding: [0x9b,0x20,0x11,0x81]
+pslli.h ra, sp, 1
+# CHECK-ASM-AND-OBJ: pslli.w ra, sp, 2
+# CHECK-ASM: encoding: [0x9b,0x20,0x21,0x82]
+pslli.w ra, sp, 2
+# CHECK-ASM-AND-OBJ: psslai.h t0, t1, 3
+# CHECK-ASM: encoding: [0x9b,0x22,0x33,0xd1]
+psslai.h t0, t1, 3
+# CHECK-ASM-AND-OBJ: psslai.w a4, a5, 4
+# CHECK-ASM: encoding: [0x1b,0xa7,0x47,0xd2]
+psslai.w a4, a5, 4
 # CHECK-ASM-AND-OBJ: pli.h a5, 5
 # CHECK-ASM: encoding: [0x9b,0xa7,0x02,0xb0]
 pli.h a5, 5
