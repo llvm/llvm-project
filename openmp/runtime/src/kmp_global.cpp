@@ -296,6 +296,7 @@ kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
 
 int __kmp_memkind_available = 0;
+bool __kmp_hwloc_available = false;
 omp_allocator_handle_t const omp_null_allocator = NULL;
 omp_allocator_handle_t const omp_default_mem_alloc =
     (omp_allocator_handle_t const)1;
