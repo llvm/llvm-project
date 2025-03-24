@@ -37,7 +37,16 @@ PROJECT_DEPENDENCIES = {
 # just invert the dependencies list to give more control over what exactly is
 # tested.
 DEPENDENTS_TO_TEST = {
-    "llvm": {"bolt", "clang", "clang-tools-extra", "lld", "lldb", "mlir", "polly"},
+    "llvm": {
+        "bolt",
+        "clang",
+        "clang-tools-extra",
+        "lld",
+        "lldb",
+        "mlir",
+        "polly",
+        "flang",
+    },
     "lld": {"bolt", "cross-project-tests"},
     # TODO(issues/132795): LLDB should be enabled on clang changes.
     "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
@@ -59,6 +68,13 @@ EXCLUDE_WINDOWS = {
     "libc",  # No Windows Support.
     "lldb",  # TODO(issues/132800): Needs environment setup.
     "bolt",  # No Windows Support.
+}
+
+# These are projects that we should test if the project itself is changed but
+# where testing is not yet stable enough for it to be enabled on changes to
+# dependencies.
+EXCLUDE_DEPENDENTS_WINDOWS = {
+    "flang",  # TODO(issues/132803): Flang is not stable.
 }
 
 EXCLUDE_MAC = {
@@ -118,7 +134,13 @@ def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set
         projects_to_test.add(modified_project)
         if modified_project not in DEPENDENTS_TO_TEST:
             continue
-        projects_to_test.update(DEPENDENTS_TO_TEST[modified_project])
+        for dependent_project in DEPENDENTS_TO_TEST[modified_project]:
+            if (
+                platform == "Windows"
+                and dependent_project in EXCLUDE_DEPENDENTS_WINDOWS
+            ):
+                continue
+            projects_to_test.add(dependent_project)
     if platform == "Linux":
         for to_exclude in EXCLUDE_LINUX:
             if to_exclude in projects_to_test:

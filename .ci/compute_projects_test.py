@@ -15,11 +15,11 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["projects_to_build"],
-            "bolt;clang;clang-tools-extra;lld;lldb;llvm;mlir;polly",
+            "bolt;clang;clang-tools-extra;flang;lld;lldb;llvm;mlir;polly",
         )
         self.assertEqual(
             env_variables["project_check_targets"],
-            "check-bolt check-clang check-clang-tools check-lld check-lldb check-llvm check-mlir check-polly",
+            "check-bolt check-clang check-clang-tools check-flang check-lld check-lldb check-llvm check-mlir check-polly",
         )
         self.assertEqual(
             env_variables["runtimes_to_build"], "libcxx;libcxxabi;libunwind"
