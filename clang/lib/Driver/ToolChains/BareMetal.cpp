@@ -529,8 +529,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
-
   CmdArgs.push_back("-Bstatic");
 
   if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
@@ -580,6 +578,22 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
 
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    // Find the first filename InputInfo object.
+    auto Input = llvm::find_if(
+        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+    if (Input == Inputs.end())
+      // For a very rare case, all of the inputs to the linker are
+      // InputArg. If that happens, just use the first InputInfo.
+      Input = Inputs.begin();
+
+    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
+                  D.getLTOMode() == LTOK_Thin);
+  }
+
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
   if (TC.ShouldLinkCXXStdlib(Args)) {
     bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                !Args.hasArg(options::OPT_static);
@@ -598,20 +612,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D))
       CmdArgs.push_back("-lgloss");
     CmdArgs.push_back("--end-group");
-  }
-
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
-                  D.getLTOMode() == LTOK_Thin);
   }
 
   if ((TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D)) &&
