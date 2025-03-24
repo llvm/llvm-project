@@ -418,8 +418,8 @@ class StdLibraryFunctionsChecker
 
   public:
     BufferNullnessConstraint(ArgNo ArgN, ArgNo SizeArg1N,
-                            std::optional<ArgNo> SizeArg2N,
-                            bool CannotBeNull = true)
+                             std::optional<ArgNo> SizeArg2N,
+                             bool CannotBeNull = true)
         : ValueConstraint(ArgN), SizeArg1N(SizeArg1N), SizeArg2N(SizeArg2N),
           CannotBeNull(CannotBeNull) {}
 
@@ -1225,9 +1225,10 @@ void StdLibraryFunctionsChecker::BufferNullnessConstraint::describe(
     Out << "is not NULL";
 }
 
-bool StdLibraryFunctionsChecker::BufferNullnessConstraint::describeArgumentValue(
-    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
-    llvm::raw_ostream &Out) const {
+bool StdLibraryFunctionsChecker::BufferNullnessConstraint::
+    describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                          const Summary &Summary,
+                          llvm::raw_ostream &Out) const {
   assert(!CannotBeNull && "'describeArgumentValue' is not implemented when the "
                           "buffer must be non-NULL");
   Out << "is NULL";
@@ -1802,7 +1803,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N,
                            std::optional<ArgNo> SizeArg2N = std::nullopt) {
     return std::make_shared<BufferNullnessConstraint>(ArgN, SizeArg1N,
-                                                     SizeArg2N);
+                                                      SizeArg2N);
   };
 
   std::optional<QualType> FileTy = lookupTy("FILE");
