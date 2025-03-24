@@ -700,8 +700,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
 
-    SmallPtrSet<BasicBlock *, 8> blocks;
-    blocks.insert_range(L->blocks());
+    SmallPtrSet<BasicBlock *, 8> blocks(llvm::from_range, L->blocks());
     for (BasicBlock *BB : blocks)
       LI->removeBlock(BB);
 
