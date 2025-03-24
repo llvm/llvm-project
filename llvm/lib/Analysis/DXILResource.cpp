@@ -832,7 +832,7 @@ static bool isUpdateCounterIntrinsic(Function &F) {
 }
 
 void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
-  std::vector<std::tuple<dxil::ResourceBindingInfo, ResourceCounterDirection,
+  SmallVector<std::tuple<dxil::ResourceBindingInfo, ResourceCounterDirection,
                          const Function *, const CallInst *>>
       DiagCounterDirs;
 
@@ -846,14 +846,16 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
 
       // Determine if the use is an increment or decrement
       Value *CountArg = CI->getArgOperand(1);
-      ConstantInt *CountValue = dyn_cast<ConstantInt>(CountArg);
+      ConstantInt *CountValue = cast<ConstantInt>(CountArg);
       int64_t CountLiteral = CountValue->getSExtValue();
 
-      ResourceCounterDirection Direction = ResourceCounterDirection::Unknown;
+      // 0 is an unknown direction and shouldn't result in an insert
+      if (CountLiteral == 0)
+        continue;
+
+      ResourceCounterDirection Direction = ResourceCounterDirection::Decrement;
       if (CountLiteral > 0)
         Direction = ResourceCounterDirection::Increment;
-      if (CountLiteral < 0)
-        Direction = ResourceCounterDirection::Decrement;
 
       // Collect all potential creation points for the handle arg
       Value *HandleArg = CI->getArgOperand(0);
@@ -863,17 +865,8 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
     }
   }
 
-  // An entry that is not in the map is considered unknown so its wasted
-  // overhead and increased complexity to keep an entry explicitly marked
-  // unknown
-  const auto RemoveEnd = std::remove_if(
-      DiagCounterDirs.begin(), DiagCounterDirs.end(), [](const auto &Item) {
-        return std::get<ResourceCounterDirection>(Item) ==
-               ResourceCounterDirection::Unknown;
-      });
-
   // Sort by the Binding and Direction for fast lookup
-  std::sort(DiagCounterDirs.begin(), RemoveEnd,
+  std::sort(DiagCounterDirs.begin(), DiagCounterDirs.end(),
             [](const auto &LHS, const auto &RHS) {
               const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
                                        std::get<ResourceCounterDirection>(LHS)};
@@ -884,8 +877,9 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
 
   // Remove the duplicate entries. Since direction is considered for equality
   // a unique resource with more than one direction will not be deduped.
-  const auto UniqueEnd = std::unique(
-      DiagCounterDirs.begin(), RemoveEnd, [](const auto &LHS, const auto &RHS) {
+  auto *const UniqueEnd = std::unique(
+      DiagCounterDirs.begin(), DiagCounterDirs.end(),
+      [](const auto &LHS, const auto &RHS) {
         const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
                                  std::get<ResourceCounterDirection>(LHS)};
         const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
@@ -893,16 +887,16 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
         return L == R;
       });
 
-  // Actually erase the items invalidated by remove_if + unique
+  // Actually erase the invalidated items
   DiagCounterDirs.erase(UniqueEnd, DiagCounterDirs.end());
 
   // If any duplicate entries still exist at this point then it must be a
   // resource that was both incremented and decremented which is not allowed.
   // Mark all those entries as invalid.
   {
-    auto DupFirst = DiagCounterDirs.begin();
-    auto DupNext = DupFirst + 1;
-    auto DupLast = DiagCounterDirs.end();
+    auto *DupFirst = DiagCounterDirs.begin();
+    auto *DupNext = DupFirst + 1;
+    auto *DupLast = DiagCounterDirs.end();
     for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
       if (std::get<dxil::ResourceBindingInfo>(*DupFirst) ==
           std::get<dxil::ResourceBindingInfo>(*DupNext)) {
@@ -915,7 +909,7 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   }
 
   // Raise an error for every invalid entry
-  for (const auto Entry : DiagCounterDirs) {
+  for (const auto &Entry : DiagCounterDirs) {
     ResourceCounterDirection Dir = std::get<ResourceCounterDirection>(Entry);
     const Function *F = std::get<const Function *>(Entry);
     const CallInst *CI = std::get<const CallInst *>(Entry);

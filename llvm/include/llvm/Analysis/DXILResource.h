@@ -593,10 +593,9 @@ public:
 
   ResourceCounterDirection
   operator[](const dxil::ResourceBindingInfo &Info) const {
-    auto Lower = std::lower_bound(
-        CounterDirections.begin(), CounterDirections.end(),
-        std::pair{Info, ResourceCounterDirection::Unknown},
-        [](auto LHS, auto RHS) { return LHS.first < RHS.first; });
+    auto Lower = llvm::lower_bound(
+        CounterDirections, Info,
+        [](const auto &LHS, const auto &RHS) { return LHS.first < RHS; });
 
     if (Lower == CounterDirections.end()) {
       return ResourceCounterDirection::Unknown;
