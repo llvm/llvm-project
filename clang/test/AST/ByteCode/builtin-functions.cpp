@@ -1290,6 +1290,12 @@ namespace BuiltinMemcpy {
     return Result1 && Result2;
   }
   static_assert(memmoveOverlapping());
+
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
+  static_assert(__builtin_memcpy(&global, fold((wchar_t*)123), sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                  // both-note {{source of 'memcpy' is (void *)123}}
+  static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
+                                                                                                    // both-note {{destination of 'memcpy' is (void *)123}}
 }
 
 namespace Memcmp {
