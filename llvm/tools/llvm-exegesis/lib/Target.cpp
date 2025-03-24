@@ -15,6 +15,8 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
+#include "AArch64.h"
+#include "AArch64RegisterInfo.h"
 
 namespace llvm {
 namespace exegesis {
@@ -36,12 +38,35 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
 }
 
 static bool isPointerAuthOpcode(unsigned Opcode) {
-  return (Opcode >= 1648 && Opcode <= 1667); // AUT instruction class range
+  switch (Opcode) {
+    case AArch64::AUTDA:
+    case AArch64::AUTDB:
+    case AArch64::AUTDZA:
+    case AArch64::AUTDZB:
+    case AArch64::AUTIA:
+    case AArch64::AUTIA1716:
+    case AArch64::AUTIASP:
+    case AArch64::AUTIAZ:
+    case AArch64::AUTIB:
+    case AArch64::AUTIB1716:
+    case AArch64::AUTIBSP:
+    case AArch64::AUTIBZ:
+    case AArch64::AUTIZA:
+    case AArch64::AUTIZB:
+      return true;
+    default:
+      return false;
+  }
 }
 
 static bool isUncheckedAccessOpcode(unsigned Opcode) {
-  return Opcode == 4694; // LDGM instruction
-}
+  switch (Opcode) {
+    case AArch64::LDGM:
+      return true;
+    default:
+      return false;
+  }
+  }
 
 const char *
 ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,

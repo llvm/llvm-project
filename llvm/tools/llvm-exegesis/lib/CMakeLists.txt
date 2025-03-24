@@ -1,3 +1,7 @@
+include_directories(
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/AArch64
+  ${LLVM_BINARY_DIR}/lib/Target/AArch64
+  )
 
 set(LLVM_EXEGESIS_TARGETS)
 if (LLVM_TARGETS_TO_BUILD MATCHES "X86")
