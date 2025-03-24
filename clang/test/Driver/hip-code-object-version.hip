@@ -22,7 +22,7 @@
 
 // Check bundle ID for code object version 6.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -mcode-object-version=6 \
 // RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=V6 %s
