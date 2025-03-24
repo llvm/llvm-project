@@ -2145,6 +2145,13 @@ public:
     return 0;
   }
 
+  const DILocation *getOrCloneWithoutAtom() const {
+    if (!getAtomGroup() && !getAtomRank())
+      return this;
+    return get(getContext(), getLine(), getColumn(), getScope(), getInlinedAt(),
+               isImplicitCode());
+  }
+
   // Disallow replacing operands.
   void replaceOperandWith(unsigned I, Metadata *New) = delete;
 
