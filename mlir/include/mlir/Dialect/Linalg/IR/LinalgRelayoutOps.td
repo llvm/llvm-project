@@ -229,7 +229,6 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     /// 2. pads the other ones, and
     /// 3. doesn't shuffle the dimensions
     bool isLikePad();
-
   }];
 
   let hasCanonicalizeMethod = 1;
