@@ -40,6 +40,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -10724,15 +10725,13 @@ bool clang::isBetterOverloadCandidate(
   //   -- F1 is a constructor for a class D, F2 is a constructor for a base
   //      class B of D, and for all arguments the corresponding parameters of
   //      F1 and F2 have the same type.
-  // FIXME: Implement the "all parameters have the same type" check.
-  bool Cand1IsInherited =
-      isa_and_nonnull<ConstructorUsingShadowDecl>(Cand1.FoundDecl.getDecl());
-  bool Cand2IsInherited =
-      isa_and_nonnull<ConstructorUsingShadowDecl>(Cand2.FoundDecl.getDecl());
-  if (Cand1IsInherited != Cand2IsInherited)
-    return Cand2IsInherited;
-  else if (Cand1IsInherited) {
-    assert(Cand2IsInherited);
+  if (isa_and_nonnull<CXXConstructorDecl>(Cand1.Function) &&
+      isa_and_nonnull<CXXConstructorDecl>(Cand2.Function) &&
+      llvm::equal(Cand1.Function->parameters().take_front(NumArgs),
+                  Cand2.Function->parameters().take_front(NumArgs),
+                  [&](ParmVarDecl *P1, ParmVarDecl *P2) {
+                    return S.Context.hasSameUnqualifiedType(P1->getType(), P2->getType());
+                  })) {
     auto *Cand1Class = cast<CXXRecordDecl>(Cand1.Function->getDeclContext());
     auto *Cand2Class = cast<CXXRecordDecl>(Cand2.Function->getDeclContext());
     if (Cand1Class->isDerivedFrom(Cand2Class))

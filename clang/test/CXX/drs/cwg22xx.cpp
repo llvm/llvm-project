@@ -169,6 +169,20 @@ B b;
 // since-cxx11-error@-1 {{call to implicitly-deleted default constructor of 'B'}}
 //   since-cxx11-note@#cwg2273-B {{default constructor of 'B' is implicitly deleted because base class 'A' has a deleted default constructor}}
 //   since-cxx11-note@#cwg2273-A {{'A' has been explicitly marked deleted here}}
+
+struct X {
+  X(float); // since-cxx11-note {{candidate inherited constructor}}
+  X(void*, int = 0) = delete;
+};
+
+struct Y : X {
+  using X::X; // since-cxx11-note {{constructor from base class 'X' inherited here}}
+  Y(double); // since-cxx11-note {{candidate constructor}}
+  Y(void* const, long = 1);
+};
+
+Y y = 1; // since-cxx11-error {{conversion from 'int' to 'Y' is ambiguous}}
+Y z = nullptr;
 #endif
 } // namespace cwg2273
 
