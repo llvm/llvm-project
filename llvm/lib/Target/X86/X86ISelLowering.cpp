@@ -37430,15 +37430,15 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
       if (!II.isCall())
         continue;
 
-      DenseMap<Register, bool> DefRegs;
+      DenseSet<Register> DefRegs;
       for (auto &MOp : II.operands())
         if (MOp.isReg())
-          DefRegs[MOp.getReg()] = true;
+          DefRegs.insert(MOp.getReg());
 
       MachineInstrBuilder MIB(*MF, &II);
       for (unsigned RegIdx = 0; SavedRegs[RegIdx]; ++RegIdx) {
         Register Reg = SavedRegs[RegIdx];
-        if (!DefRegs[Reg])
+        if (!DefRegs.contains(Reg))
           MIB.addReg(Reg, RegState::ImplicitDefine | RegState::Dead);
       }
 

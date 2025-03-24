@@ -9861,15 +9861,16 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // bc.merge.rdx phi nodes, hence it needs to be created unconditionally here
     // even for in-loop reductions, until the reduction resume value handling is
     // also modeled in VPlan.
-    auto *FinalReductionResult = new VPInstruction(
+    VPBuilder::InsertPointGuard Guard(Builder);
+    Builder.setInsertPoint(MiddleVPBB, IP);
+    auto *FinalReductionResult = Builder.createNaryOp(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
-        FinalReductionResult, [](VPUser &User, unsigned) {
+        FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
           auto *Parent = cast<VPRecipeBase>(&User)->getParent();
-          return Parent && !Parent->getParent();
+          return FinalReductionResult != &User && !Parent->getParent();
         });
-    FinalReductionResult->insertBefore(*MiddleVPBB, IP);
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
     // with a boolean reduction phi node to check if the condition is true in
@@ -9891,7 +9892,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           if (CmpR->getOperand(I) == PhiR)
             CmpR->setOperand(I, PhiR->getStartValue());
       }
-      VPBuilder::InsertPointGuard Guard(Builder);
       Builder.setInsertPoint(Select);
 
       // If the true value of the select is the reduction phi, the new value is
