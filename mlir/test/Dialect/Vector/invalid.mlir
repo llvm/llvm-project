@@ -1348,47 +1348,50 @@ func.func @store_memref_index_mismatch(%base : memref<?xf32>, %value : vector<16
 
 func.func @maskedload_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op base and result element type should match}}
-  %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf64>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  // expected-error@+1 {{'vector.maskedload' op failed to verify that all of {result, base} have same element type}}
+  %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf64>, vector<16xf32>
 }
 
 // -----
 
+  // expected-note@+1 {{prior use here}}
 func.func @maskedload_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %pass: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op expected result shape to match mask shape}}
-  %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<15xi1>, vector<16xf32> into vector<16xf32>
+  // expected-error@+1 {{use of value '%mask' expects different type than prior uses: 'vector<16xi1>' vs 'vector<15xi1>'}}
+  %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<16xf32>
 }
 
 // -----
 
+  // expected-note@+1 {{prior use here}}
 func.func @maskedload_pass_thru_type_mask_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass: vector<16xi32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedload' op expected pass_thru of same type as result type}}
-  %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<16xi1>, vector<16xi32> into vector<16xf32>
+  // expected-error@+1 {{use of value '%pass' expects different type than prior uses: 'vector<16xf32>' vs 'vector<16xi32>'}}
+  %0 = vector.maskedload %base[%c0], %mask, %pass : memref<?xf32>, vector<16xf32>
 }
 
 // -----
 
 func.func @maskedload_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %pass: vector<16xf32>) {
   // expected-error@+1 {{'vector.maskedload' op requires 1 indices}}
-  %0 = vector.maskedload %base[], %mask, %pass : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  %0 = vector.maskedload %base[], %mask, %pass : memref<?xf32>, vector<16xf32>
 }
 
 // -----
 
 func.func @maskedstore_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op base and valueToStore element type should match}}
-  vector.maskedstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
+  // expected-error@+1 {{vector.maskedstore' op failed to verify that all of {valueToStore, base} have same element type}}
+  vector.maskedstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xf32>
 }
 
 // -----
 
+// expected-note@+1 {{prior use here}}
 func.func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.maskedstore' op expected valueToStore shape to match mask shape}}
-  vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<15xi1>, vector<16xf32>
+  // expected-error@+1 {{use of value '%mask' expects different type than prior uses: 'vector<16xi1>' vs 'vector<15xi1>'}}
+  vector.maskedstore %base[%c0], %mask, %value : memref<?xf32>, vector<16xf32>
 }
 
 // -----
@@ -1396,7 +1399,7 @@ func.func @maskedstore_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<15x
 func.func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.maskedstore' op requires 1 indices}}
-  vector.maskedstore %base[%c0, %c0], %mask, %value : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  vector.maskedstore %base[%c0, %c0], %mask, %value : memref<?xf32>, vector<16xf32>
 }
 
 // -----

@@ -1277,7 +1277,7 @@ func.func @dead_load(%base: memref<?xf32>, %indices: vector<16xi32>,
                           %mask: vector<16xi1>, %passthru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
   %0 = vector.maskedload %base[%c0], %mask, %passthru :
-    memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    memref<?xf32>, vector<16xf32>
   %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
     memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   %2 = vector.expandload %base[%c0], %mask, %passthru :
@@ -3072,7 +3072,7 @@ func.func @contiguous_extract_strided_slices_to_extract_failure_non_full_inner_s
 // CHECK-LABEL: @contiguous_gather
 //  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[PASSTHRU:.*]]: vector<16xf32>)
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<?xf32>, vector<16xf32>
 //       CHECK:   return %[[R]]
 func.func @contiguous_gather(%base: memref<?xf32>,
                              %mask: vector<16xi1>, %passthru: vector<16xf32>) -> vector<16xf32> {
@@ -3136,7 +3136,7 @@ func.func @contiguous_gather_const_mask(%base: memref<?xf32>,
 // CHECK-LABEL: @contiguous_gather_step
 //  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[PASSTHRU:.*]]: vector<16xf32>)
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<?xf32>, vector<16xf32>
 //       CHECK:   return %[[R]]
 func.func @contiguous_gather_step(%base: memref<?xf32>,
                                   %mask: vector<16xi1>, %passthru: vector<16xf32>) -> vector<16xf32> {
@@ -3167,7 +3167,7 @@ func.func @gather_broadcast(%base: memref<?xf32>,
 // CHECK-LABEL: @contiguous_scatter
 //  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[VALUE:.*]]: vector<16xf32>)
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<?xf32>, vector<16xi1>, vector<16xf32>
+//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<?xf32>, vector<16xf32>
 func.func @contiguous_scatter(%base: memref<?xf32>,
                               %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
@@ -3198,7 +3198,7 @@ func.func @contiguous_scatter_const_mask(%base: memref<?xf32>,
 // CHECK-LABEL: @contiguous_scatter_step
 //  CHECK-SAME:   (%[[BASE:.*]]: memref<?xf32>, %[[MASK:.*]]: vector<16xi1>, %[[VALUE:.*]]: vector<16xf32>)
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<?xf32>, vector<16xi1>, vector<16xf32>
+//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<?xf32>, vector<16xf32>
 func.func @contiguous_scatter_step(%base: memref<?xf32>,
                                    %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
