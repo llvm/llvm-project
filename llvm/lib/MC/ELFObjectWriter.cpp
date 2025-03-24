@@ -1271,15 +1271,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
              TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
   }
 
-  // For memory-tagged symbols, ensure that the relocation uses the symbol. For
-  // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
-  // section (SHT_AARCH64_MEMTAG_GLOBALS_STATIC) to indicate to the linker that
-  // this global needs to be tagged. In addition, the linker needs to know
-  // whether to emit a special addend when relocating `end` symbols, and this
-  // can only be determined by the attributes of the symbol itself.
-  if (Sym->isMemtag())
-    return true;
-
   unsigned Binding = Sym->getBinding();
   switch(Binding) {
   default:
