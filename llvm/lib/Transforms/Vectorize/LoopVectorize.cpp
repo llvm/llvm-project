@@ -2430,8 +2430,7 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
 
   // Use original trip count as the vector trip count if use predicated EVL
   // instructions for tail-folding.
-  if (VF.isVector() &&
-      Cost->getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
+  if (VF.isVector() && Cost->foldTailWithEVL()) {
     assert(!Cost->requiresScalarEpilogue(true) &&
            "Use predicated EVL instructions for tail-folding does not allow "
            "scalar epilogue");
