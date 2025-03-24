@@ -984,9 +984,12 @@ def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
 }
 
 def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["source", "result"]>]> {
-    let summary = "Convert the sg layout of the input operand";
+    let summary = "Convert the layout of the input operand";
     let description = [{
-        convert_layout remaps the distribution of data across workitems by updating the LayoutAttr.
+      `convert_layout` adjusts the data distribution across subgroups and/or work-items by modifying
+      the `LayoutAttr`. Both `srcMap` and `resMap` must correspond to the same programming scope, such
+      as workgroup-level (wg) or subgroup-level (sg) code. This operation is not supported for
+      work-item-level code.
     }];
     let arguments = (ins XeGPU_Vector2DType: $source,
                          XeGPU_LayoutAttr: $srcMap,
