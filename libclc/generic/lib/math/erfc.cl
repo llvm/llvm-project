@@ -132,7 +132,7 @@ _CLC_OVERLOAD _CLC_DEF float erfc(float x) {
 
     float z = as_float(ix & 0xfffff000);
     float r = exp(-z * z) * exp(mad(z - absx, z + absx, q));
-    r *= 0x1.23ba94p-1; // exp(-0.5625)
+    r *= 0x1.23ba94p-1f; // exp(-0.5625)
     r = MATH_DIVIDE(r, absx);
     t = 2.0f - r;
     r = x < 0.0f ? t : r;
