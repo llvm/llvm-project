@@ -43,14 +43,59 @@ enum JSONStreamStyle {
   Delimited
 };
 
+/// An abstract class used by the JSONTransport to read JSON message.
+class JSONTransportInput {
+public:
+  explicit JSONTransportInput(JSONStreamStyle style = JSONStreamStyle::Standard)
+      : style(style) {}
+  virtual ~JSONTransportInput() = default;
+
+  virtual bool hasError() const = 0;
+  virtual bool isEndOfInput() const = 0;
+
+  /// Read in a message from the input stream.
+  LogicalResult readMessage(std::string &json) {
+    return style == JSONStreamStyle::Delimited ? readDelimitedMessage(json)
+                                               : readStandardMessage(json);
+  }
+  virtual LogicalResult readDelimitedMessage(std::string &json) = 0;
+  virtual LogicalResult readStandardMessage(std::string &json) = 0;
+
+private:
+  /// The JSON stream style to use.
+  JSONStreamStyle style;
+};
+
+/// Concrete implementation of the JSONTransportInput that reads from a file.
+class JSONTransportInputOverFile : public JSONTransportInput {
+public:
+  explicit JSONTransportInputOverFile(
+      std::FILE *in, JSONStreamStyle style = JSONStreamStyle::Standard)
+      : JSONTransportInput(style), in(in) {}
+
+  bool hasError() const final { return ferror(in); }
+  bool isEndOfInput() const final { return feof(in); }
+
+  LogicalResult readDelimitedMessage(std::string &json) final;
+  LogicalResult readStandardMessage(std::string &json) final;
+
+private:
+  std::FILE *in;
+};
+
 /// A transport class that performs the JSON-RPC communication with the LSP
 /// client.
 class JSONTransport {
 public:
+  JSONTransport(std::unique_ptr<JSONTransportInput> in, raw_ostream &out,
+                bool prettyOutput = false)
+      : in(std::move(in)), out(out), prettyOutput(prettyOutput) {}
+
   JSONTransport(std::FILE *in, raw_ostream &out,
                 JSONStreamStyle style = JSONStreamStyle::Standard,
                 bool prettyOutput = false)
-      : in(in), out(out), style(style), prettyOutput(prettyOutput) {}
+      : in(std::make_unique<JSONTransportInputOverFile>(in, style)), out(out),
+        prettyOutput(prettyOutput) {}
 
   /// The following methods are used to send a message to the LSP client.
   void notify(StringRef method, llvm::json::Value params);
@@ -66,22 +111,12 @@ private:
   /// Writes the given message to the output stream.
   void sendMessage(llvm::json::Value msg);
 
-  /// Read in a message from the input stream.
-  LogicalResult readMessage(std::string &json) {
-    return style == JSONStreamStyle::Delimited ? readDelimitedMessage(json)
-                                               : readStandardMessage(json);
-  }
-  LogicalResult readDelimitedMessage(std::string &json);
-  LogicalResult readStandardMessage(std::string &json);
-
-  /// An output buffer used when building output messages.
+private:
+  /// The input to read a message from.
+  std::unique_ptr<JSONTransportInput> in;
   SmallVector<char, 0> outputBuffer;
-  /// The input file stream.
-  std::FILE *in;
   /// The output file stream.
   raw_ostream &out;
-  /// The JSON stream style to use.
-  JSONStreamStyle style;
   /// If the output JSON should be formatted for easier readability.
   bool prettyOutput;
 };

@@ -687,10 +687,8 @@ void Liveness::computePhiInfo() {
 
         if (MidDefs.hasCoverOf(UR))
           continue;
-        if (Subs.find(MidDefs) == Subs.end()) {
-          Subs.insert({MidDefs, SubMap(1, RefHash(), RefEqual(PRI))});
-        }
-        SubMap &SM = Subs.at(MidDefs);
+        SubMap &SM = Subs.try_emplace(MidDefs, 1, RefHash(), RefEqual(PRI))
+                         .first->second;
 
         // General algorithm:
         //   for each (R,U) : U is use node of R, U is reached by PA
@@ -765,7 +763,7 @@ void Liveness::computeLiveIns() {
     for (unsigned i = 0; i < IDFB.size(); ++i) {
       auto F2 = MDF.find(IDFB[i]);
       if (F2 != MDF.end())
-        IDFB.insert(F2->second.begin(), F2->second.end());
+        IDFB.insert_range(F2->second);
     }
     // Add B to the IDF(B). This will put B in the IIDF(B).
     IDFB.insert(&B);

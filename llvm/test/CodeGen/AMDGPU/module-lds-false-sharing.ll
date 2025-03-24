@@ -7,9 +7,9 @@
 ; Test case looks at the allocated offset of @used_by_both. It's at zero when
 ; allocated by itself, but at 8 when allocated in combination with the double.
 ; Redundantly also checks LDSByteSize.
-@used_by_both = addrspace(3) global i32 undef
-@used_by_kernel = addrspace(3) global i32 undef
-@used_by_function = addrspace(3) global double undef
+@used_by_both = addrspace(3) global i32 poison
+@used_by_kernel = addrspace(3) global i32 poison
+@used_by_function = addrspace(3) global double poison
 
 ; kernel that calls no functions and uses an LDS variable allocates only that
 ; variable, so accesses at at offset 0 and LDSByteSize is 4

@@ -224,13 +224,8 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
     if (!llvm::hasSingleElement(op.getInput1().getDefiningOp()->getUsers()))
       return failure();
 
-    DenseIntElementsAttr permAttr;
-    if (!matchPattern(op.getPerms(), m_Constant(&permAttr)))
-      return failure();
     auto permValues = llvm::map_to_vector(
-        // TOSA allows both 32- and 64-bit integer tensors here.
-        permAttr.getValues<APInt>(),
-        [](const APInt &val) { return val.getSExtValue(); });
+        op.getPerms(), [](const int32_t v) { return static_cast<int64_t>(v); });
 
     auto inputType = cast<ShapedType>(op.getInput1().getType());
 
@@ -368,7 +363,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
       return rewriter.notifyMatchFailure(op, "result type shape is not static");
 
     auto reductionAxis = op.getAxis();
-    const auto denseElementsAttr = constOp.getValue();
+    const auto denseElementsAttr = constOp.getValues();
     const auto shapedOldElementsValues =
         cast<ShapedType>(denseElementsAttr.getType());
 
@@ -413,7 +408,7 @@ void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
       ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+  patterns.add<ReduceConstantOptimization<ReduceProductOp>>(
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
       ctx, aggressiveReduceConstant);

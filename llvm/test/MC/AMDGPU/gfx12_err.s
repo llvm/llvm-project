@@ -116,3 +116,12 @@ s_prefetch_inst s[14:15], 0xffffff, m0, 7
 
 s_endpgm_ordered_ps_done
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_alloc_vgpr v0
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_alloc_vgpr exec
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_alloc_vgpr vcc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

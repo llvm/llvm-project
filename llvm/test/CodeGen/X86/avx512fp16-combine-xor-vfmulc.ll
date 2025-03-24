@@ -83,6 +83,27 @@ entry:
   ret <32 x half> %3
 }
 
+define dso_local <32 x half> @test6(<16 x i32> %a, <16 x float> %b) local_unnamed_addr #0 {
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vfcmulcph %zmm0, %zmm1, %zmm3
+; CHECK-NEXT:    vfcmaddcph %zmm0, %zmm2, %zmm3
+; CHECK-NEXT:    vaddph %zmm1, %zmm3, %zmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = xor <16 x i32> %a, splat (i32 -2147483648)
+  %1 = bitcast <16 x i32> %0 to <16 x float>
+  %2 = tail call <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float> splat (float 1.000000e+00), <16 x float> %1, <16 x float> zeroinitializer, i16 -1, i32 4)
+  %3 = bitcast <16 x float> %2 to <32 x half>
+  %4 = tail call <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float> %1, <16 x float> %b, <16 x float> zeroinitializer, i16 -1, i32 4)
+  %5 = bitcast <16 x float> %4 to <32 x half>
+  %6 = fadd <32 x half> %3, %5
+  %7 = bitcast <16 x float> %b to <32 x half>
+  %8 = fadd <32 x half> %6, %7
+  ret <32 x half> %8
+}
+
 declare <16 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.512(<16 x float>, <16 x float>, <16 x float>, i16, i32 immarg)
 declare <8 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.256(<8 x float>, <8 x float>, <8 x float>, i8)
 declare <4 x float> @llvm.x86.avx512fp16.mask.vfmul.cph.128(<4 x float>, <4 x float>, <4 x float>, i8)

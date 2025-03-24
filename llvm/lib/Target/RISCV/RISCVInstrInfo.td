@@ -66,6 +66,8 @@ def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
                              [SDNPHasChain]>;
@@ -363,8 +365,8 @@ def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTPRelAddSymbol";
-  let DiagnosticString = "operand must be a symbol with %tprel_add modifier";
-  let ParserMethod = "parseOperandWithModifier";
+  let DiagnosticString = "operand must be a symbol with %tprel_add specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
 }
 
 // A bare symbol with the %tprel_add variant.
@@ -516,12 +518,13 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrFormats.td"
+include "RISCVInstrFormatsC.td"
+include "RISCVInstrFormatsV.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
               (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
@@ -529,6 +532,9 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
@@ -746,6 +752,7 @@ def ECALL : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ecall", "">, Sched<[Write
   let imm12 = 0;
 }
 
+let isTrap = 1 in
 def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
              Sched<[]> {
   let rs1 = 0;
@@ -756,6 +763,7 @@ def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
 // This is a de facto standard (as set by GNU binutils) 32-bit unimplemented
 // instruction (i.e., it should always trap, if your implementation has invalid
 // instruction traps).
+let isTrap = 1 in
 def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
             Sched<[]> {
   let rs1 = 0;
@@ -1784,8 +1792,8 @@ def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTLSDESCCallSymbol";
-  let DiagnosticString = "operand must be a symbol with %tlsdesc_call modifier";
-  let ParserMethod = "parseOperandWithModifier";
+  let DiagnosticString = "operand must be a symbol with %tlsdesc_call specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
 }
 
 // A bare symbol with the %tlsdesc_call variant.
@@ -2033,6 +2041,12 @@ def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
 def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
+// Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
+// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
+// more power to RISCVOptWInstrs.
+def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+          (ADDIW $rs1, simm12:$imm)>;
+
 /// Loads
 
 def : LdPat<sextloadi32, LW, i64>;
@@ -2124,17 +2138,20 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
-
-// Compressed
-include "RISCVInstrInfoC.td"
-include "RISCVInstrInfoZc.td"
-include "RISCVInstrInfoZcmop.td"
+include "RISCVInstrInfoZvqdotq.td"
 
 // Integer
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZicfiss.td"
+include "RISCVInstrInfoZilsd.td"
+
+// Compressed
+include "RISCVInstrInfoC.td"
+include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
+include "RISCVInstrInfoZclsd.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -2147,6 +2164,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 

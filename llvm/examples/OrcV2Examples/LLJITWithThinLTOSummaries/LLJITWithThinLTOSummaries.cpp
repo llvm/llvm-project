@@ -55,8 +55,8 @@ using namespace llvm;
 using namespace llvm::orc;
 
 // Path of the module summary index file.
-cl::opt<std::string> IndexFile{cl::desc("<module summary index>"),
-                               cl::Positional, cl::init("-")};
+static cl::opt<std::string> IndexFile{cl::desc("<module summary index>"),
+                                      cl::Positional, cl::init("-")};
 
 // Describe a fail state that is caused by the given ModuleSummaryIndex
 // providing multiple definitions of the given global value name. It will dump
@@ -207,7 +207,7 @@ int main(int Argc, char *Argv[]) {
           ExitOnErr(JITTargetMachineBuilder::detectHost()));
     } else {
       Builder.setJITTargetMachineBuilder(
-          JITTargetMachineBuilder(Triple(M.getTargetTriple())));
+          JITTargetMachineBuilder(M.getTargetTriple()));
     }
     if (!M.getDataLayout().getStringRepresentation().empty())
       Builder.setDataLayout(M.getDataLayout());

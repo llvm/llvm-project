@@ -18,14 +18,13 @@ add_llvm_component_library(LLVMOrcJIT
   EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
-  EPCEHFrameRegistrar.cpp
   EPCGenericDylibManager.cpp
   EPCGenericJITLinkMemoryManager.cpp
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ObjectFileInterface.cpp
-  GetTapiInterface.cpp
+  GetDylibInterface.cpp
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp

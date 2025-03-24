@@ -612,7 +612,7 @@ public:
 template <class _Rp>
 void __assoc_state<_Rp>::__on_zero_shared() _NOEXCEPT {
   if (this->__state_ & base::__constructed)
-    reinterpret_cast<_Rp*>(&__value_)->~_Rp();
+    reinterpret_cast<_Rp*>(std::addressof(__value_))->~_Rp();
   delete this;
 }
 
@@ -622,7 +622,7 @@ void __assoc_state<_Rp>::set_value(_Arg&& __arg) {
   unique_lock<mutex> __lk(this->__mut_);
   if (this->__has_value())
     std::__throw_future_error(future_errc::promise_already_satisfied);
-  ::new ((void*)&__value_) _Rp(std::forward<_Arg>(__arg));
+  ::new ((void*)std::addressof(__value_)) _Rp(std::forward<_Arg>(__arg));
   this->__state_ |= base::__constructed | base::ready;
   __cv_.notify_all();
 }
@@ -633,7 +633,7 @@ void __assoc_state<_Rp>::set_value_at_thread_exit(_Arg&& __arg) {
   unique_lock<mutex> __lk(this->__mut_);
   if (this->__has_value())
     std::__throw_future_error(future_errc::promise_already_satisfied);
-  ::new ((void*)&__value_) _Rp(std::forward<_Arg>(__arg));
+  ::new ((void*)std::addressof(__value_)) _Rp(std::forward<_Arg>(__arg));
   this->__state_ |= base::__constructed;
   __thread_local_data()->__make_ready_at_thread_exit(this);
 }
@@ -644,7 +644,7 @@ _Rp __assoc_state<_Rp>::move() {
   this->__sub_wait(__lk);
   if (this->__exception_ != nullptr)
     std::rethrow_exception(this->__exception_);
-  return std::move(*reinterpret_cast<_Rp*>(&__value_));
+  return std::move(*reinterpret_cast<_Rp*>(std::addressof(__value_)));
 }
 
 template <class _Rp>
@@ -653,7 +653,7 @@ _Rp& __assoc_state<_Rp>::copy() {
   this->__sub_wait(__lk);
   if (this->__exception_ != nullptr)
     std::rethrow_exception(this->__exception_);
-  return *reinterpret_cast<_Rp*>(&__value_);
+  return *reinterpret_cast<_Rp*>(std::addressof(__value_));
 }
 
 template <class _Rp>

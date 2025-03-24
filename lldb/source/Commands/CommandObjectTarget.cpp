@@ -3763,20 +3763,18 @@ protected:
 
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
-        UnwindPlan arch_default(lldb::eRegisterKindGeneric);
-        if (abi_sp->CreateDefaultUnwindPlan(arch_default)) {
+        if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
-          arch_default.Dump(result.GetOutputStream(), thread.get(),
-                            LLDB_INVALID_ADDRESS);
+          plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                        LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
 
-        UnwindPlan arch_entry(lldb::eRegisterKindGeneric);
-        if (abi_sp->CreateFunctionEntryUnwindPlan(arch_entry)) {
+        if (UnwindPlanSP plan_sp = abi_sp->CreateFunctionEntryUnwindPlan()) {
           result.GetOutputStream().Printf(
               "Arch default at entry point UnwindPlan:\n");
-          arch_entry.Dump(result.GetOutputStream(), thread.get(),
-                          LLDB_INVALID_ADDRESS);
+          plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                        LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
       }

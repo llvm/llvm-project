@@ -983,10 +983,10 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
     return selectExplicitSectionGlobal(
         &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
         Used.count(&F), /* ForceUnique = */true);
-  else
-    return selectELFSectionForGlobal(
-        getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
-        /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
+
+  return selectELFSectionForGlobal(
+      getContext(), &F, Kind, getMangler(), TM, Used.count(&F),
+      /*EmitUniqueSection=*/true, Flags, &NextUniqueID);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
@@ -1189,7 +1189,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
     return nullptr;
 
   return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeVariantKind,
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeSpecifier,
                               getContext()),
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
@@ -1204,7 +1204,7 @@ const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
   if (GV->isDSOLocal() || GV->isImplicitDSOLocal())
     return MCSymbolRefExpr::create(TM.getSymbol(GV), getContext());
 
-  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeVariantKind,
+  return MCSymbolRefExpr::create(TM.getSymbol(GV), PLTRelativeSpecifier,
                                  getContext());
 }
 
@@ -1564,7 +1564,7 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   // The offset must consider the original displacement from the base symbol
   // since 32-bit targets don't have a GOTPCREL to fold the PC displacement.
   Offset = -MV.getConstant();
-  const MCSymbol *BaseSym = &MV.getSymB()->getSymbol();
+  const MCSymbol *BaseSym = MV.getSubSym();
 
   // Access the final symbol via sym$non_lazy_ptr and generate the appropriated
   // non_lazy_ptr stubs.
@@ -1581,10 +1581,8 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
     StubSym = MachineModuleInfoImpl::StubValueTy(const_cast<MCSymbol *>(Sym),
                                                  !GV->hasLocalLinkage());
 
-  const MCExpr *BSymExpr =
-    MCSymbolRefExpr::create(BaseSym, MCSymbolRefExpr::VK_None, Ctx);
-  const MCExpr *LHS =
-    MCSymbolRefExpr::create(Stub, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *BSymExpr = MCSymbolRefExpr::create(BaseSym, Ctx);
+  const MCExpr *LHS = MCSymbolRefExpr::create(Stub, Ctx);
 
   if (!Offset)
     return MCBinaryExpr::createSub(LHS, BSymExpr, Ctx);
@@ -2291,26 +2289,6 @@ bool TargetLoweringObjectFileWasm::shouldPutJumpTableInFunctionSection(
   return false;
 }
 
-const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  // We may only use a PLT-relative relocation to refer to unnamed_addr
-  // functions.
-  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
-    return nullptr;
-
-  // Basic correctness checks.
-  if (LHS->getType()->getPointerAddressSpace() != 0 ||
-      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
-      RHS->isThreadLocal())
-    return nullptr;
-
-  return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), MCSymbolRefExpr::VK_None,
-                              getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
-}
-
 void TargetLoweringObjectFileWasm::InitializeWasm() {
   StaticCtorSection =
       getContext().getWasmSection(".init_array", SectionKind::getData());
@@ -2636,13 +2614,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getStaticCtorSection(
 MCSection *TargetLoweringObjectFileXCOFF::getStaticDtorSection(
 	unsigned Priority, const MCSymbol *KeySym) const {
   report_fatal_error("no static destructor section on AIX");
-}
-
-const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  /* Not implemented yet, but don't crash, return nullptr. */
-  return nullptr;
 }
 
 XCOFF::StorageClass

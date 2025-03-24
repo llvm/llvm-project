@@ -328,12 +328,12 @@ vfsqrt.v v8, v16
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      320
-# CHECK-NEXT: Total Cycles:      22358
+# CHECK-NEXT: Total Cycles:      19388
 # CHECK-NEXT: Total uOps:        320
 
 # CHECK:      Dispatch Width:    3
-# CHECK-NEXT: uOps Per Cycle:    0.01
-# CHECK-NEXT: IPC:               0.01
+# CHECK-NEXT: uOps Per Cycle:    0.02
+# CHECK-NEXT: IPC:               0.02
 # CHECK-NEXT: Block RThroughput: 14361.0
 
 # CHECK:      Instruction Info:

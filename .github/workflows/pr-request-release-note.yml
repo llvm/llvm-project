@@ -14,7 +14,7 @@ jobs:
       github.repository_owner == 'llvm' &&
       startsWith(github.ref, 'refs/heads/release')
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # We need to pull the script from the main branch, so that we ensure
       # we get the latest version of this script.

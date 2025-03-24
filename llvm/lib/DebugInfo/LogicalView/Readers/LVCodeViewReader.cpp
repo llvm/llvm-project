@@ -721,12 +721,11 @@ Error LVCodeViewReader::traverseSymbolSection(StringRef SectionName,
                                    getFileName());
 
         LLVM_DEBUG({ W.printString("Symbol Name", SymbolName); });
-        if (FunctionLineTables.count(SymbolName) != 0) {
+        if (!FunctionLineTables.try_emplace(SymbolName, Contents).second) {
           // Saw debug info for this function already?
           return createStringError(object_error::parse_failed, getFileName());
         }
 
-        FunctionLineTables[SymbolName] = Contents;
         SymbolNames.push_back(SymbolName);
       }
       break;

@@ -2533,6 +2533,15 @@ RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
 
   const MemRegion *R = MemRegVal->getRegion();
 
+  // Binding directly to a symbolic region should be treated as binding
+  // to element 0.
+  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
+    QualType Ty = SymReg->getPointeeStaticType();
+    if (Ty->isVoidType())
+      Ty = StateMgr.getContext().CharTy;
+    R = GetElementZeroRegion(SymReg, Ty);
+  }
+
   // Check if the region is a struct region.
   if (const TypedValueRegion* TR = dyn_cast<TypedValueRegion>(R)) {
     QualType Ty = TR->getValueType();
@@ -2544,15 +2553,6 @@ RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
       return bindVector(B, TR, V);
     if (Ty->isUnionType())
       return bindAggregate(B, TR, V);
-  }
-
-  // Binding directly to a symbolic region should be treated as binding
-  // to element 0.
-  if (const auto *SymReg = dyn_cast<SymbolicRegion>(R)) {
-    QualType Ty = SymReg->getPointeeStaticType();
-    if (Ty->isVoidType())
-      Ty = StateMgr.getContext().CharTy;
-    R = GetElementZeroRegion(SymReg, Ty);
   }
 
   assert((!isa<CXXThisRegion>(R) || !B.lookup(R)) &&
@@ -2570,6 +2570,9 @@ RegionStoreManager::bind(LimitedRegionBindingsConstRef B, Loc L, SVal V) {
 LimitedRegionBindingsRef
 RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
                                             const MemRegion *R, QualType T) {
+  if (B.hasExhaustedBindingLimit())
+    return B;
+
   SVal V;
 
   if (Loc::isLocType(T))
@@ -2596,6 +2599,8 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
 std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallArray(
     LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
     const ArrayType *AT, nonloc::LazyCompoundVal LCV) {
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(LCV);
 
   auto CAT = dyn_cast<ConstantArrayType>(AT);
 
@@ -2632,6 +2637,8 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
                               const TypedValueRegion *R, SVal Init) {
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindArray",
                                  [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(Init);
 
   const ArrayType *AT =cast<ArrayType>(Ctx.getCanonicalType(R->getValueType()));
   QualType ElementTy = AT->getElementType();
@@ -2698,6 +2705,9 @@ RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
                                const TypedValueRegion *R, SVal V) {
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindVector",
                                  [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(V);
+
   QualType T = R->getValueType();
   const VectorType *VT = T->castAs<VectorType>(); // Use castAs for typedefs.
 
@@ -2721,6 +2731,9 @@ RegionStoreManager::bindVector(LimitedRegionBindingsConstRef B,
   for ( ; index != numElements ; ++index) {
     if (VI == VE)
       break;
+
+    if (NewB.hasExhaustedBindingLimit())
+      return NewB.withValuesEscaped(VI, VE);
 
     NonLoc Idx = svalBuilder.makeArrayIndex(index);
     const ElementRegion *ER = MRMgr.getElementRegion(ElemType, Idx, R, Ctx);
@@ -2758,6 +2771,9 @@ RegionStoreManager::getUniqueDefaultBinding(nonloc::LazyCompoundVal LCV) const {
 std::optional<LimitedRegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
     LimitedRegionBindingsConstRef B, const TypedValueRegion *R,
     const RecordDecl *RD, nonloc::LazyCompoundVal LCV) {
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(LCV);
+
   // If we try to copy a Conjured value representing the value of the whole
   // struct, don't try to element-wise copy each field.
   // That would unnecessarily bind Derived symbols slicing off the subregion for
@@ -2822,6 +2838,9 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
                                const TypedValueRegion *R, SVal V) {
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindStruct",
                                  [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(V);
+
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
@@ -2931,6 +2950,9 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
     ++VI;
   }
 
+  if (NewB.hasExhaustedBindingLimit())
+    return NewB.withValuesEscaped(VI, VE);
+
   // There may be fewer values in the initialize list than the fields of struct.
   if (FI != FE) {
     NewB = NewB.addBinding(R, BindingKey::Default,
@@ -2945,6 +2967,9 @@ RegionStoreManager::bindAggregate(LimitedRegionBindingsConstRef B,
                                   const TypedRegion *R, SVal Val) {
   llvm::TimeTraceScope TimeScope("RegionStoreManager::bindAggregate",
                                  [R]() { return R->getDescriptiveName(); });
+  if (B.hasExhaustedBindingLimit())
+    return B.withValuesEscaped(Val);
+
   // Remove the old bindings, using 'R' as the root of all regions
   // we will invalidate. Then add the new binding.
   return removeSubRegionBindings(B, R).addBinding(R, BindingKey::Default, Val);

@@ -308,9 +308,10 @@ LegacyLegalizerInfo::findScalarLegalAction(const InstrAspect &Aspect) const {
   ArrayRef<SizeAndActionsVec> Actions;
   if (Aspect.Type.isPointer()) {
     auto &PA = AddrSpace2PointerActions[OpcodeIdx];
-    if (PA.find(Aspect.Type.getAddressSpace()) == PA.end())
+    auto It = PA.find(Aspect.Type.getAddressSpace());
+    if (It == PA.end())
       return {NotFound, LLT()};
-    Actions = PA.find(Aspect.Type.getAddressSpace())->second;
+    Actions = It->second;
   } else {
     Actions = ScalarActions[OpcodeIdx];
   }

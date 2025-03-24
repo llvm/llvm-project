@@ -256,6 +256,14 @@ define void @bar() {
 
 ; // -----
 
+; CHECK: llvm.mlir.global_ctors {ctors = [], priorities = []}
+@llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+
+; CHECK: llvm.mlir.global_dtors {dtors = [], priorities = []}
+@llvm.global_dtors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+
+; // -----
+
 ; Visibility attribute.
 
 ; CHECK: llvm.mlir.global external hidden constant @hidden("string")

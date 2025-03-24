@@ -33,7 +33,7 @@ def launch_target: S<"launch-target">,
 
 def comm_file: S<"comm-file">,
   MetaVarName<"<file>">,
-  HelpText<"The fifo file used to communicate the with the debug adaptor "
+  HelpText<"The fifo file used to communicate the with the debug adapter "
     "when using --launch-target.">;
 
 def debugger_pid: S<"debugger-pid">,

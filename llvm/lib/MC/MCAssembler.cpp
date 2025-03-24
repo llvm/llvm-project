@@ -119,10 +119,10 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   const MCExpr *Expr = Symbol->getVariableValue();
 
   MCValue V;
-  if (!Expr->evaluateAsRelocatable(V, nullptr, nullptr))
+  if (!Expr->evaluateAsRelocatable(V, nullptr))
     return false;
 
-  if (V.getSymB() || V.getRefKind() != MCSymbolRefExpr::VK_None)
+  if (V.getSubSym() || V.getRefKind() != MCSymbolRefExpr::VK_None)
     return false;
 
   const MCSymbolRefExpr *Ref = V.getSymA();
@@ -155,7 +155,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   MCContext &Ctx = getContext();
   Value = 0;
   WasForced = false;
-  if (!Expr->evaluateAsRelocatable(Target, this, &Fixup)) {
+  if (!Expr->evaluateAsRelocatable(Target, this)) {
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
@@ -220,16 +220,23 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     Value -= Offset;
   }
 
-  // Let the backend force a relocation if needed.
-  if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI)) {
-    IsResolved = false;
-    WasForced = true;
+  // .reloc directive and the backend might force the relocation.
+  // Backends that customize shouldForceRelocation generally just need the fixup
+  // kind. AVR needs the fixup value to bypass the assembly time overflow with a
+  // relocation.
+  if (IsResolved) {
+    auto TargetVal = MCValue::get(Target.getSymA(), Target.getSymB(), Value,
+                                  Target.getRefKind());
+    if (Fixup.getKind() >= FirstLiteralRelocationKind ||
+        getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI)) {
+      IsResolved = false;
+      WasForced = true;
+    }
   }
 
   // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
   // recordRelocation handle non-VK_None cases like A@plt-B+C.
-  if (!IsResolved && Target.getSymA() && Target.getSymB() &&
+  if (!IsResolved && Target.getSymA() && Target.getSubSym() &&
       Target.getSymA()->getKind() == MCSymbolRefExpr::VK_None &&
       getBackend().handleAddSubRelocations(*this, *DF, Fixup, Target, Value))
     return true;
@@ -481,10 +488,10 @@ static bool getSymbolOffsetImpl(const MCAssembler &Asm, const MCSymbol &S,
     Offset += ValA;
   }
 
-  const MCSymbolRefExpr *B = Target.getSymB();
+  const MCSymbol *B = Target.getSubSym();
   if (B) {
     uint64_t ValB;
-    if (!getSymbolOffsetImpl(Asm, B->getSymbol(), ReportError, ValB))
+    if (!getSymbolOffsetImpl(Asm, *B, ReportError, ValB))
       return false;
     Offset -= ValB;
   }
@@ -516,11 +523,11 @@ const MCSymbol *MCAssembler::getBaseSymbol(const MCSymbol &Symbol) const {
     return nullptr;
   }
 
-  const MCSymbolRefExpr *RefB = Value.getSymB();
-  if (RefB) {
+  const MCSymbol *SymB = Value.getSubSym();
+  if (SymB) {
     getContext().reportError(
         Expr->getLoc(),
-        Twine("symbol '") + RefB->getSymbol().getName() +
+        Twine("symbol '") + SymB->getName() +
             "' could not be evaluated in a subtraction expression");
     return nullptr;
   }
@@ -1043,10 +1050,6 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   bool WasForced;
   bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
                                 Value, WasForced);
-  if (Target.getSymA() &&
-      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_X86_ABS8 &&
-      Fixup.getKind() == FK_Data_1)
-    return false;
   return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Resolved,
                                                    Value, DF, WasForced);
 }
