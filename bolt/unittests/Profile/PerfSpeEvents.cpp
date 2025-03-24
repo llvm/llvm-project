@@ -172,14 +172,10 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
                          "  1234  0xe001/0xe002/P/-/-/14/RET/-\n"
                          "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n";
 
-  LBREntry Entry1 = {0xa001, 0xa002, false};
-  LBREntry Entry2 = {0xb001, 0xb002, false};
-  LBREntry Entry3 = {0xc001, 0xc002, false};
-  LBREntry Entry4 = {0xd001, 0xd002, true};
-  LBREntry Entry5 = {0xe001, 0xe002, false};
-  LBREntry Entry6 = {0xf001, 0xf002, true};
   std::vector<SmallVector<LBREntry, 2>> ExpectedSamples = {
-      {{Entry1}}, {{Entry2}}, {{Entry3}}, {{Entry4}}, {{Entry5}}, {{Entry6}},
+      {{{0xa001, 0xa002, false}}}, {{{0xb001, 0xb002, false}}},
+      {{{0xc001, 0xc002, false}}}, {{{0xd001, 0xd002, true}}},
+      {{{0xe001, 0xe002, false}}}, {{{0xf001, 0xf002, true}}},
   };
   parseAndCheckBrstackEvents(1234, ExpectedSamples);
 }
