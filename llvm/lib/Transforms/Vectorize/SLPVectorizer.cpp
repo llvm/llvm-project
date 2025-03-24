@@ -13623,12 +13623,13 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         !ExtractCostCalculated.insert(EU.Scalar).second)
       continue;
 
-    // No extract cost for vector "scalar"
-    if (isa<FixedVectorType>(EU.Scalar->getType()))
+    // No extract cost for vector "scalar" if REVEC is disabled
+    if (!SLPReVec && isa<FixedVectorType>(EU.Scalar->getType()))
       continue;
 
     // If found user is an insertelement, do not calculate extract cost but try
     // to detect it as a final shuffled/identity match.
+    // TODO: what if a user is insertvalue when REVEC is enabled?
     if (auto *VU = dyn_cast_or_null<InsertElementInst>(EU.User);
         VU && VU->getOperand(1) == EU.Scalar) {
       if (auto *FTy = dyn_cast<FixedVectorType>(VU->getType())) {
@@ -13702,7 +13703,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     // extend the extracted value back to the original type. Here, we account
     // for the extract and the added cost of the sign extend if needed.
     InstructionCost ExtraCost = TTI::TCC_Free;
-    auto *VecTy = getWidenedType(EU.Scalar->getType(), BundleWidth);
+    auto *ScalarTy = EU.Scalar->getType();
+    auto *VecTy = getWidenedType(ScalarTy, BundleWidth);
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
@@ -13714,9 +13716,16 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
       ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                 VecTy, EU.Lane);
     } else {
-      ExtraCost =
-          TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
-                                  EU.Lane, EU.Scalar, ScalarUserAndIdx);
+      if (auto *FixedVecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+        assert(SLPReVec && "Only supported by REVEC.");
+        ExtraCost =
+            getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VecTy, {}, CostKind,
+                           EU.Lane * FixedVecTy->getNumElements(), FixedVecTy);
+      } else {
+        ExtraCost = TTI->getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                            CostKind, EU.Lane, EU.Scalar,
+                                            ScalarUserAndIdx);
+      }
     }
     // Leave the scalar instructions as is if they are cheaper than extracts.
     if (Entry->Idx != 0 || Entry->getOpcode() == Instruction::GetElementPtr ||

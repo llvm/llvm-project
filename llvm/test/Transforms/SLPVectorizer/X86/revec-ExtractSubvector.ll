@@ -14,27 +14,24 @@
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '3'
 
-; YAML: --- !Passed
+; YAML: --- !Missed
 ; YAML: Pass:            slp-vectorizer
-; YAML: Name:            VectorizedList
+; YAML: Name:            NotBeneficial
 ; YAML: Function:        StructOfVectors
 ; YAML: Args:
-; YAML:   - String:          'SLP vectorized with cost '
-; YAML:   - Cost:            '-1'
-; YAML:   - String:          ' and with tree size '
-; YAML:   - TreeSize:        '3'
+; YAML:   - String:          'List vectorization was possible but not beneficial with cost '
+; YAML:   - Cost:            '0'
+; YAML:   - String:          ' >= '
+; YAML:   - Treshold:        '0'
 
 ; Checks that vector insertvalues into the struct become SLP seeds.
 define { <2 x float>, <2 x float> } @StructOfVectors(ptr %Ptr) {
 ; CHECK-LABEL: @StructOfVectors(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[TMP1]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[TMP2]], i64 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> [[TMP5]], i64 0)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP6]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> [[TMP5]], i64 2)
 ; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { <2 x float>, <2 x float> } [[RET0]], <2 x float> [[TMP7]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[RET1]]
 ;
