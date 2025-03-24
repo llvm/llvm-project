@@ -158,6 +158,8 @@ static QualType getElemType(const Pointer &P) {
     return T->getAs<PointerType>()->getPointeeType();
   if (Desc->isArray())
     return Desc->getElemQualType();
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return AT->getElementType();
   return T;
 }
 
