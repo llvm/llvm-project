@@ -25,30 +25,30 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-struct NonCopyable {
+struct MoveOnly {
   int i;
 
-  TEST_CONSTEXPR_CXX14 explicit NonCopyable(int i) : i(i) {}
+  TEST_CONSTEXPR_CXX14 explicit MoveOnly(int i) : i(i) {}
 
-  NonCopyable(NonCopyable const&)            = delete;
-  NonCopyable& operator=(NonCopyable const&) = delete;
+  MoveOnly(MoveOnly const&)            = delete;
+  MoveOnly& operator=(MoveOnly const&) = delete;
 
-  TEST_CONSTEXPR_CXX14 NonCopyable(NonCopyable&& other) : i(other.i) { other.i = -1; }
+  TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& other) noexcept : i(other.i) { other.i = -1; }
 
-  TEST_CONSTEXPR_CXX14 NonCopyable& operator=(NonCopyable&& other) {
+  TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& other) noexcept {
     i       = other.i;
     other.i = -1;
     return *this;
   }
 
-  TEST_CONSTEXPR_CXX14 friend bool operator==(NonCopyable const& lhs, NonCopyable const& rhs) { return lhs.i == rhs.i; }
+  TEST_CONSTEXPR_CXX14 friend bool operator==(MoveOnly const& lhs, MoveOnly const& rhs) { return lhs.i == rhs.i; }
 };
 
 template <class T>
 struct has_moved_from_sentinel : std::false_type {};
 
 template <>
-struct has_moved_from_sentinel<NonCopyable> : std::true_type {};
+struct has_moved_from_sentinel<MoveOnly> : std::true_type {};
 
 template <template <class...> class Allocator, class T>
 TEST_CONSTEXPR_CXX20 void test() {
@@ -331,9 +331,9 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   test<min_allocator, int>();
   test<safe_allocator, int>();
 
-  test<std::allocator, NonCopyable>();
-  test<min_allocator, NonCopyable>();
-  test<safe_allocator, NonCopyable>();
+  test<std::allocator, MoveOnly>();
+  test<min_allocator, MoveOnly>();
+  test<safe_allocator, MoveOnly>();
 
   test<std::allocator, NonTriviallyRelocatable>();
   test<min_allocator, NonTriviallyRelocatable>();
