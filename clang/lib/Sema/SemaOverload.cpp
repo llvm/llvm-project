@@ -10730,7 +10730,8 @@ bool clang::isBetterOverloadCandidate(
       llvm::equal(Cand1.Function->parameters().take_front(NumArgs),
                   Cand2.Function->parameters().take_front(NumArgs),
                   [&](ParmVarDecl *P1, ParmVarDecl *P2) {
-                    return S.Context.hasSameUnqualifiedType(P1->getType(), P2->getType());
+                    return S.Context.hasSameUnqualifiedType(P1->getType(),
+                                                            P2->getType());
                   })) {
     auto *Cand1Class = cast<CXXRecordDecl>(Cand1.Function->getDeclContext());
     auto *Cand2Class = cast<CXXRecordDecl>(Cand2.Function->getDeclContext());
