@@ -16,7 +16,6 @@ local:
 
 This document summarizes Fortran standards support in Flang. The information is only provided as a guideline. The
 TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
-Standards support is provided upto Fortran 2008 for now. It will be extended later for Fortran 2018 and Fortran 2023.
 
 The standards support information is provided as a table with three columns that are self explanatory. The Status column uses
 the letters **P**, **Y**, **N** for the implementation status:
