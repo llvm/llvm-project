@@ -69,6 +69,19 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = Fixup.getKind();
   M68kRelType Type = getType(Kind, Specifier, IsPCRel);
   switch (Specifier) {
+  case M68kMCExpr::VK_GOTTPOFF:
+  case M68kMCExpr::VK_TLSGD:
+  case M68kMCExpr::VK_TLSLD:
+  case M68kMCExpr::VK_TLSLDM:
+  case M68kMCExpr::VK_TPOFF:
+    if (auto *S = Target.getSymA())
+      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    break;
+  default:
+    break;
+  }
+
+  switch (Specifier) {
   default:
     llvm_unreachable("Unimplemented");
 
