@@ -5229,10 +5229,23 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
       S.CompareReferenceRelationship(DeclLoc, T1, T2, &RefConv);
 
   auto SetAsReferenceBinding = [&](bool BindsDirectly) {
+    // C++2c [over.ics.ref] p1:
+    //   When a parameter of type "reference to cv T" binds directly
+    //   to an argument expression:
+    //   * If the argument expression has a type that is a derived class
+    //     of the parameter type, the implicit conversion sequence is a
+    //     derived-to-base conversion.
+    //   * Otherwise, if the type of the argument is possibly cv-qualified T,
+    //     or if T is an array type of unknown bound with element type U
+    //     and the argument has an array type of known bound whose element
+    //     type is possibly cv-qualified U, the implicit conversion
+    //     sequence is the identity conversion.
+    //   * Otherwise, if T is a function type, the implicit conversion
+    //     sequence is a function pointer conversion.
+    //   * Otherwise, the implicit conversion sequence is a qualification
+    //     conversion.
     ICS.setStandard();
     ICS.Standard.First = ICK_Identity;
-    // FIXME: A reference binding can be a function conversion too. We should
-    // consider that when ordering reference-to-function bindings.
     ICS.Standard.Second = (RefConv & Sema::ReferenceConversions::DerivedToBase)
                               ? ICK_Derived_To_Base
                               : (RefConv & Sema::ReferenceConversions::ObjC)
@@ -5242,10 +5255,12 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
     // a reference binding that performs a non-top-level qualification
     // conversion as a qualification conversion, not as an identity conversion.
-    ICS.Standard.Third = (RefConv &
-                              Sema::ReferenceConversions::NestedQualification)
-                             ? ICK_Qualification
-                             : ICK_Identity;
+    ICS.Standard.Third =
+        (RefConv & Sema::ReferenceConversions::Function)
+            ? ICK_Function_Conversion
+        : (RefConv & Sema::ReferenceConversions::NestedQualification)
+            ? ICK_Qualification
+            : ICK_Identity;
     ICS.Standard.setFromType(T2);
     ICS.Standard.setToType(0, T2);
     ICS.Standard.setToType(1, T1);
@@ -5273,13 +5288,6 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     //
     // Per C++ [over.ics.ref]p4, we don't check the bit-field property here.
     if (InitCategory.isLValue() && RefRelationship == Sema::Ref_Compatible) {
-      // C++ [over.ics.ref]p1:
-      //   When a parameter of reference type binds directly (8.5.3)
-      //   to an argument expression, the implicit conversion sequence
-      //   is the identity conversion, unless the argument expression
-      //   has a type that is a derived class of the parameter type,
-      //   in which case the implicit conversion sequence is a
-      //   derived-to-base Conversion (13.3.3.1).
       SetAsReferenceBinding(/*BindsDirectly=*/true);
 
       // Nothing more to do: the inaccessibility/ambiguity check for

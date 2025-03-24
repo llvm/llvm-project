@@ -110,11 +110,15 @@ Resolutions to C++ Defect Reports
   two releases. The improvements to template template parameter matching implemented
   in the previous release, as described in P3310 and P3579, made this flag unnecessary.
 
+- Implemented |CWG2815|_
 - Implemented `CWG2918 Consideration of constraints for address of overloaded `
   `function <https://cplusplus.github.io/CWG/issues/2918.html>`_
 
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
+
+.. |CWG2815| replace:: CWG2815 Overload resolution for references/pointers to ``noexcept`` functions
+.. _CWG2815: https://cplusplus.github.io/CWG/issues/2815
 
 C Language Changes
 ------------------

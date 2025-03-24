@@ -47,6 +47,28 @@ void f() {
 #endif
 } // namespace cwg2813
 
+namespace cwg2815 { // cwg2815: 21
+#if __cpp_noexcept_function_type >= 201510
+int arg() noexcept;
+
+int f(int (&)() noexcept);
+void f(int (&)());
+int i = f(arg);
+
+int g(int (*)() noexcept);
+void g(int (&)());
+int j = g(arg);
+
+int h(int (&)() noexcept);
+void h(int (*)());
+int k = h(arg);
+
+int a(int (*)()); // expected-note {{candidate function}}
+int a(int (&)()); // expected-note {{candidate function}}
+int x = a(arg); // expected-error {{call to 'a' is ambiguous}}
+#endif
+} // namespace cwg2815
+
 namespace cwg2819 { // cwg2819: 19 c++26
 #if __cplusplus >= 201103L
   // CWG 2024-04-19: This issue is not a DR.
