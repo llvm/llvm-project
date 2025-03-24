@@ -161,6 +161,14 @@ void Flang::addCodegenOptions(const ArgList &Args,
                    options::OPT_fno_vectorize, enableVec))
     CmdArgs.push_back("-vectorize-loops");
 
+  // -fslp-vectorize is enabled based on the optimization level selected.
+  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
+  OptSpecifier SLPVectAliasOption =
+      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
+  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
+                   options::OPT_fno_slp_vectorize, EnableSLPVec))
+    CmdArgs.push_back("-vectorize-slp");
+
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
