@@ -9,21 +9,19 @@
 #if __CLC_FPSIZE == 32
 
 _CLC_OVERLOAD _CLC_DEF __CLC_FLOATN sin(__CLC_FLOATN x) {
-  __CLC_INTN ix = __CLC_AS_INTN(x);
-  __CLC_INTN ax = ix & 0x7fffffff;
-  __CLC_FLOATN dx = __CLC_AS_FLOATN(ax);
+  __CLC_FLOATN absx = __clc_fabs(x);
 
   __CLC_FLOATN r0, r1;
-  __CLC_INTN regn = __clc_argReductionS(&r0, &r1, dx);
+  __CLC_INTN regn = __clc_argReductionS(&r0, &r1, absx);
 
   __CLC_FLOATN ss = __clc_sinf_piby4(r0, r1);
   __CLC_FLOATN cc = __clc_cosf_piby4(r0, r1);
 
   __CLC_FLOATN s = (regn & 1) != 0 ? cc : ss;
-  s = __CLC_AS_FLOATN(__CLC_AS_INTN(s) ^ ((regn > 1) << 31) ^ (ix ^ ax));
+  s = __CLC_AS_FLOATN(__CLC_AS_INTN(s) ^ ((regn > 1) << 31) ^
+                      (__CLC_AS_INTN(x) ^ __CLC_AS_INTN(absx)));
 
-  s = ax >= PINFBITPATT_SP32 ? __CLC_AS_FLOATN((__CLC_UINTN)QNANBITPATT_SP32)
-                             : s;
+  s = __clc_select(s, __CLC_GENTYPE_NAN, __clc_isnan(x) || __clc_isinf(x));
 
   // Subnormals
   s = x == 0.0f ? x : s;

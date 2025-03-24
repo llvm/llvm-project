@@ -71,6 +71,7 @@
 #define __CLC_SCALAR_GENTYPE float
 #define __CLC_FPSIZE 32
 #define __CLC_FP_LIT(x) x##F
+#define __CLC_GENTYPE_NAN FLT_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(int, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(uint, __CLC_VECSIZE)
@@ -127,6 +128,7 @@
 
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
+#undef __CLC_GENTYPE_NAN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -138,6 +140,7 @@
 #define __CLC_SCALAR_GENTYPE double
 #define __CLC_FPSIZE 64
 #define __CLC_FP_LIT(x) (x)
+#define __CLC_GENTYPE_NAN DBL_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(long, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ulong, __CLC_VECSIZE)
@@ -194,6 +197,7 @@
 
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
+#undef __CLC_GENTYPE_NAN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
@@ -207,6 +211,7 @@
 #define __CLC_SCALAR_GENTYPE half
 #define __CLC_FPSIZE 16
 #define __CLC_FP_LIT(x) x##H
+#define __CLC_GENTYPE_NAN HALF_NAN
 
 #define __CLC_S_GENTYPE __CLC_XCONCAT(short, __CLC_VECSIZE)
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
@@ -263,6 +268,7 @@
 
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
+#undef __CLC_GENTYPE_NAN
 #undef __CLC_FP_LIT
 #undef __CLC_FPSIZE
 #undef __CLC_SCALAR_GENTYPE
