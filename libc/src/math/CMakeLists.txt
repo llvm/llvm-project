@@ -10,7 +10,6 @@ function(add_math_entrypoint_object name)
   if(NOT ARGN)
     set(alias_entrypoint ${name})
   else()
-    message(STATUS "Banananana ${name} ${ARGN}")
     set(alias_entrypoint ${ARGN})
   endif()
 
