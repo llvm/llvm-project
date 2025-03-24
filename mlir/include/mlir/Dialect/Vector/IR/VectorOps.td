@@ -1667,6 +1667,174 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
+// TODO: Tighten semantics so that masks and inbounds can't be used
+// simultaneously within the same transfer op.
+def Vector_TransferGatherOp :
+  Vector_Op<"transfer_gather", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+      AttrSizedOperandSegments,
+      DestinationStyleOpInterface
+    ]>,
+    Arguments<(ins AnyShaped:$source,
+                   Variadic<Index>:$indices,
+                   Variadic<VectorOfAnyRankOf<[Index]>>:$index_vecs,
+                   I64ArrayAttr:$gather_dims,
+                   AffineMapArrayAttr:$index_maps,
+                   AffineMapAttr:$permutation_map,
+                   AnyType:$padding,
+                   Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
+                   BoolArrayAttr:$in_bounds)>,
+    Results<(outs AnyVectorOfAnyRank:$vector)> {
+
+  let summary = "Gathers a supervector from memory into an SSA vector value.";
+
+  let description = [{
+    The `vector.transfer_gather` operation is a generalization of
+    `vector.transfer_read` op, where the slice from which the read is performed
+    is not guranteed to be contigious, and instead how the slice is gathered is
+    defined explicitly in the operation.
+
+    The operation can be thought of:
+      1. A contigious slice gathered from the source as described by the operation
+      2. A `vector.transfer_read` on the contigious slice
+
+    The operation defines `permutation_map`, `padding`, `mask`, `in_bounds` in
+    the same way as `vector.transfer_read` defines, but on the inferred
+    contigious slice.
+
+    The other parameters of the operation define how the contigious slice is
+    gathered from the source.
+
+    The `indices` contains a base to offset the source by. The dimensions of
+    the source which are gathered are specified as an array of indices in
+    `gather_dims`. Dimensions not specified in this array are contigious. For
+    example, for the following gather:
+
+    ```
+    slice[i, j, k] = source[i + i_offset][j][indices[i][j][k]]
+    ```
+
+    The operation would represent this as:
+
+    ```
+    indices = %i_offset, 0, 0
+    gather_dims = [2]
+    ```
+
+    For every dimension that is gathered, the operation defines how it is
+    gathered. For each gathered dimension, the operation expects a vector of
+    indices in `index_vecs` to act as a source of indices for that dimension
+    and an AffineMap in `index_maps` describing how this source of indices is
+    indexed. For example, for the following gather:
+
+    ```
+    slice[i, j, k] = source[i][indices0[i] + offset][indices1[j, k]]
+    ```
+
+    The indexing would be described by:
+
+    ```
+    indices      = 0, %offset, 0
+    gather_dims  = [1, 2]
+    index_vecs   = %index_vec1, %index_vec2
+    index_maps = [
+      affine_map<(i, j, k) -> (i),
+      affine_map<(i, j, k) -> (j, k)
+    ]
+    ```
+
+    With these additional parameters, the operation can define a supervector
+    read from a non-contigious slice. For example:
+
+    ```
+    source: memref<8192x8x16xf32>
+    indices0 : vector<2xindex>
+    indices1 : vector<4x8xindex>
+
+    slice[i, j, k] = source[indices0[k]][j][indices1[i, j]]
+    vector = read(slice) : memref<8192x8x16xf32> -> vector<2x8x16xf32>
+    ```
+
+    Can be represented by:
+
+    ```
+    %vector = vector.transfer_gather %source[0, 0, 0](%indices0, %indices1) {
+      gather_dims = [0, 2],
+      index_maps = [
+        affine_map<(i, j, k) -> (k)>,
+        affine_map<(i, j, k) -> (i, j)>
+      ],
+      in_bounds = [true, true, true],
+      permutation_map = affine_map<(i, j, k) -> (i, j, k)>
+    } : memref<8192x8x16xf32> -> vector<2x8x16xf32>
+    ```
+  }];
+
+  let builders = [
+    /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "ValueRange":$index_vecs,
+                   "ArrayAttr":$gather_dims,
+                   "ArrayAttr":$index_maps,
+                   "AffineMapAttr":$permutationMapAttr,
+                   "ArrayAttr":$inBoundsAttr)>,
+    /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "ValueRange":$index_vecs,
+                   "ArrayRef<int64_t>":$gather_dims,
+                   "ArrayRef<AffineMap>":$index_maps,
+                   "AffineMap":$permutationMap,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "ValueRange":$index_vecs,
+                   "ArrayRef<int64_t>":$gather_dims,
+                   "ArrayRef<AffineMap>":$index_maps,
+                   "Value":$padding,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+    /// 4. Builder that sets padding to zero and permutation map to
+    /// 'getMinorIdentityMap'.
+    OpBuilder<(ins "VectorType":$vectorType,
+                   "Value":$source,
+                   "ValueRange":$indices,
+                   "ValueRange":$index_vecs,
+                   "ArrayRef<int64_t>":$gather_dims,
+                   "ArrayRef<AffineMap>":$index_maps,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+  ];
+
+  let extraClassDeclaration = [{
+    // MaskableOpInterface methods.
+    bool supportsPassthru() { return true; }
+
+    MutableOperandRange getDpsInitsMutable() {
+      return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
+    }
+
+    SmallVector<int64_t> getGatherDimsArray() {
+      return llvm::map_to_vector(getGatherDims().getAsValueRange<IntegerAttr>(), 
+        [](APInt dim) { return dim.getSExtValue(); });
+    }
+
+    SmallVector<AffineMap> getIndexMapsArray() {
+      return llvm::to_vector(getIndexMaps().getAsValueRange<AffineMapAttr>());
+    }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
 def Vector_LoadOp : Vector_Op<"load"> {
   let summary = "reads an n-D slice of memory into an n-D vector";
   let description = [{

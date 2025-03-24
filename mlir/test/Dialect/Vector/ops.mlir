@@ -148,6 +148,24 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
     tensor<?x?xvector<4x3xindex>>
 }
 
+// CHECK-LABEL: @vector_transfer_gather_memref
+func.func @vector_transfer_gather_memref(%arg0 : memref<?x?xf32>,
+                                    %idx0 : vector<128xindex>,
+                                    %idx1 : vector<7xindex>,
+                                    %idx2 : vector<3x7xindex>) ->
+  (vector<128xf32>, vector<3x7xf32>, vector<3x7xf32>) {
+  %c3 = arith.constant 3 : index
+  %f0 = arith.constant 0.0 : f32
+
+  // CHECK: vector.transfer_gather
+  %0 = vector.transfer_gather %arg0[%c3, %c3](%idx0), %f0 {gather_dims = [0], index_maps = [affine_map<(d0, d1)->(d0)>], permutation_map = affine_map<(d0, d1)->(d0)>} : memref<?x?xf32>, vector<128xf32>, vector<128xindex>
+  // CHECK: vector.transfer_gather
+  %1 = vector.transfer_gather %arg0[%c3, %c3](%idx1), %f0 {gather_dims = [1], index_maps = [affine_map<(d0, d1)->(d0)>], permutation_map = affine_map<(d0, d1)->(d1, d0)>} : memref<?x?xf32>, vector<3x7xf32>, vector<7xindex>
+  // CHECK: vector.transfer_gather
+  %2 = vector.transfer_gather %arg0[%c3, %c3](%idx1, %idx2), %f0 {gather_dims = [0, 1], index_maps = [affine_map<(d0, d1)->(d0)>, affine_map<(d0, d1)->(d1, d0)>], permutation_map = affine_map<(d0, d1)->(d1, d0)>} : memref<?x?xf32>, vector<3x7xf32>, vector<7xindex>, vector<3x7xindex>
+  return %0, %1, %2 : vector<128xf32>, vector<3x7xf32>, vector<3x7xf32>
+}
+
 // CHECK-LABEL: @vector_broadcast
 func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>) -> vector<8x16xf32> {
   // CHECK: vector.broadcast %{{.*}} : f32 to vector<f32>
