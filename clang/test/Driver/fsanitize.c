@@ -149,7 +149,7 @@
 // CHECK-FSANITIZE-SHIFT-PARTIAL: "-fsanitize=shift-exponent"
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-trap=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-TRAP-UNDEF
-// CHECK-VPTR-TRAP-UNDEF: error: invalid argument '-fsanitize=vptr' not allowed with '-fsanitize-trap=undefined'
+// CHECK-VPTR-TRAP-UNDEF: error: unsupported argument 'vptr' to option '-fsanitize-trap='
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=vptr -fsanitize-undefined-trap-on-error %s -###
 
