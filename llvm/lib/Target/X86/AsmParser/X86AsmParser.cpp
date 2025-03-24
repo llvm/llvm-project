@@ -2604,7 +2604,6 @@ uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
   if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
     return 512;
   llvm_unreachable("Register without known register class");
-  return 0;
 }
 
 bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
