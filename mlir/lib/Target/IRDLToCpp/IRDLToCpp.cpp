@@ -68,15 +68,20 @@ static llvm::LogicalResult isSnakeCase(llvm::StringRef in,
     if (elem == '_') {
       if (!allowUnderscore)
         return loc->emitError(
-            "Error in dialect name: No leading or double underscores allowed.");
+            llvm::formatv("Error in symbol name `{}`: No leading or double "
+                          "underscores allowed.",
+                          in));
     } else {
       if (!isalnum(elem))
-        return loc->emitError("Error in dialect name: Only numbers and "
-                              "lower-case characters allowed");
+        return loc->emitError(
+            llvm::formatv("Error in symbol name `{}`: Only numbers and "
+                          "lower-case characters allowed.",
+                          in));
 
       if (llvm::isUpper(elem))
-        return loc->emitError(
-            "Error in dialect name: Upper-case characters are not allowed");
+        return loc->emitError(llvm::formatv(
+            "Error in symbol name `{}`: Upper-case characters are not allowed.",
+            in));
     }
 
     allowUnderscore = elem != '_';
@@ -500,29 +505,30 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   if (failed(isSnakeCase(dialect.getSymName(), dialect)))
     return failure();
 
-  llvm::SmallVector<Operation *> frontier;
-  for (auto &block : dialect.getBody()) {
-    for (auto &op : block) {
-      llvm::TypeSwitch<Operation *>(&op)
-          .Case<irdl::TypeOp>([&frontier](irdl::TypeOp type) {
-            for (auto &typeblocks : type.getBody())
-              for (auto &typeOps : typeblocks)
-                frontier.push_back(&typeOps);
-          })
-          .Case<irdl::OperationOp>([&frontier](irdl::OperationOp op) {
-            for (auto &opblocks : op.getBody())
-              for (auto &opOps : opblocks)
-                frontier.push_back(&opOps);
-          });
-    }
-  }
-
-  while (frontier.size()) {
-    auto *front = frontier.back();
-    frontier.pop_back();
-
-    auto res =
-        llvm::TypeSwitch<Operation *, LogicalResult>(front)
+  LogicalResult res = success();
+  dialect.walk([&](mlir::Operation *op) {
+    res =
+        llvm::TypeSwitch<Operation *, LogicalResult>(op)
+            .Case<irdl::TypeOp>([](irdl::TypeOp op) -> LogicalResult {
+              return isSnakeCase(op.getSymName(), op);
+            })
+            .Case<irdl::OperationOp>([](irdl::OperationOp op) -> LogicalResult {
+              return isSnakeCase(op.getSymName(), op);
+            })
+            .Case<irdl::OperandsOp>([](irdl::OperandsOp op) -> LogicalResult {
+              for (auto &elem : op.getNames())
+                if (failed(isSnakeCase(llvm::dyn_cast<mlir::StringAttr>(elem),
+                                       op)))
+                  return failure();
+              return success();
+            })
+            .Case<irdl::ResultsOp>([](irdl::ResultsOp op) -> LogicalResult {
+              for (auto &elem : op.getNames())
+                if (failed(isSnakeCase(llvm::dyn_cast<mlir::StringAttr>(elem),
+                                       op)))
+                  return failure();
+              return success();
+            })
             .Case<irdl::AnyOfOp>([](irdl::AnyOfOp op) -> LogicalResult {
               return op.emitError("IRDL C++ translation only supports irdl.any "
                                   "constraint for types");
@@ -544,10 +550,12 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
             .Default(success());
 
     if (failed(res))
-      return res;
-  }
+      return WalkResult::interrupt();
 
-  return success();
+    return WalkResult::advance();
+  });
+
+  return res;
 }
 
 LogicalResult
