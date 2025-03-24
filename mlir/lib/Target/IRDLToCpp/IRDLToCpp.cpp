@@ -529,6 +529,15 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
                   return failure();
               return success();
             })
+            .Case<irdl::AttributeOp>([](irdl::AttributeOp op) -> LogicalResult {
+              return op.emitError(
+                  "IRDL C++ translation does not yet support attributes.");
+            })
+            .Case<irdl::AttributesOp>(
+                [](irdl::AttributesOp op) -> LogicalResult {
+                  return op.emitError(
+                      "IRDL C++ translation does not yet support attributes.");
+                })
             .Case<irdl::AnyOfOp>([](irdl::AnyOfOp op) -> LogicalResult {
               return op.emitError("IRDL C++ translation only supports irdl.any "
                                   "constraint for types");
@@ -537,13 +546,29 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError("IRDL C++ translation only supports irdl.any "
                                   "constraint for types");
             })
+            .Case<irdl::ParametersOp>([](irdl::ParametersOp op)
+                                          -> LogicalResult {
+              return op.emitError(
+                  "IRDL C++ translation does not yet support type parameters.");
+            })
             .Case<irdl::ParametricOp>(
                 [](irdl::ParametricOp op) -> LogicalResult {
-                  return op.emitError(
-                      "IRDL C++ translation only supports irdl.any "
-                      "constraint for types");
+                  return op.emitError("IRDL C++ translation does not yet "
+                                      "support parametric operations.");
                 })
+            .Case<irdl::RegionOp>([](irdl::RegionOp op) -> LogicalResult {
+              return op.emitError(
+                  "IRDL C++ translation does not yet support regions.");
+            })
+            .Case<irdl::RegionsOp>([](irdl::RegionsOp op) -> LogicalResult {
+              return op.emitError(
+                  "IRDL C++ translation does not yet support regions.");
+            })
             .Case<irdl::IsOp>([](irdl::IsOp op) -> LogicalResult {
+              return op.emitError("IRDL C++ translation only supports irdl.any "
+                                  "constraint for types");
+            })
+            .Case<irdl::CPredOp>([](irdl::CPredOp op) -> LogicalResult {
               return op.emitError("IRDL C++ translation only supports irdl.any "
                                   "constraint for types");
             })
