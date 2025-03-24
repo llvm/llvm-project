@@ -6,8 +6,6 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
-// cxx98-no-diagnostics
-
 namespace cwg2913 { // cwg2913: 20
 
 #if __cplusplus >= 202002L
@@ -171,3 +169,25 @@ constexpr U _ = nondeterministic(true);
 //   since-cxx26-note@-3 {{in call to 'nondeterministic(true)'}}
 #endif
 } // namespace cwg2922
+
+namespace cwg2958 { // cwg2958: 21 open 2024-11-10
+
+int *ap[1];
+
+void f1(const volatile int*);
+int f1(const int* const&);
+int i1 = f1((int*)0);
+
+void f2(const volatile int* const&);
+int f2(const int*);
+int i2 = f2((int*)0);
+
+int f3(const int* const*);                // expected-note {{candidate function}}
+int f3(const volatile int* const (&)[1]); // expected-note {{candidate function}}
+int i3 = f3(ap); // expected-error {{ambiguous}}
+
+int f4(const volatile int* const*); // expected-note {{candidate function}}
+int f4(const int* const (&)[1]);    // expected-note {{candidate function}}
+int i4 = f4(ap); // expected-error {{ambiguous}}
+
+} // namespace cwg2958

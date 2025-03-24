@@ -6,6 +6,79 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
+namespace cwg2803 { // cwg2803: 21
+
+int a[1], *p, *ap[1];
+
+void f1(void*);
+int f1(const volatile int* const&);
+int i1 = f1((int*)0);
+
+void f2(const volatile void* const&);
+int f2(void*);
+int i2 = f2((int*)0);
+
+void f3(const volatile int*);
+int f3(const int*);
+int i3 = f3((int*)0);
+
+void f4(const volatile int* const&);
+int f4(const int* const volatile&);
+int i4 = f4(p);
+
+void f5(const int* const volatile&);
+int f5(const int* const&);
+int i5 = f5(p);
+
+void f6(const volatile int* const (&)[1]);
+int f6(const int* const volatile (&)[1]);
+int i6 = f6(ap);
+
+void f7(const int* const volatile (&)[1]);
+int f7(const int* const (&)[1]);
+int i7 = f7(ap);
+
+int f8(const int* const (&)[]);           // since-cxx20-note {{candidate function}}
+int f8(const volatile int* const (&)[1]); // since-cxx20-note {{candidate function}}
+int i8 = f8(ap); // since-cxx20-error {{ambiguous}}
+
+void f9(const volatile int* const (&)[]);
+int f9(const int* const volatile (&)[1]);
+int i9 = f9(ap);
+
+void f10(int (&)[]);
+int f10(int (&)[1]);
+int i10 = f10(a);
+
+int f11(int (&)[]);        // since-cxx20-note {{candidate function}}
+int f11(const int (&)[1]); // since-cxx20-note {{candidate function}}
+int i11 = f11(a); // since-cxx20-error {{ambiguous}}
+
+int f12(const int (&)[]);     // since-cxx20-note {{candidate function}}
+int f12(volatile int (&)[1]); // since-cxx20-note {{candidate function}}
+int i12 = f12(a); // since-cxx20-error {{ambiguous}}
+
+#if __cpp_rvalue_references >= 200610
+void f13(const int* const&&);
+int f13(int* const&);
+int i13 = f13((int*)0);
+
+void f14(const int* const&);
+int f14(const volatile int* const volatile&&);
+int i14 = f14((int*)0);
+
+constexpr int f15(const volatile int (&&)[]) {
+	return 1;
+}
+constexpr int f15(const int (&)[1]) {
+	return 2;
+}
+constexpr int i15 = f15(static_cast<int (&&)[1]>(a));
+static_assert(i15 == 2, ""); // since-cxx20-error {{static assertion failed}}
+// since-cxx20-note@-1 {{expression evaluates to '1 == 2'}}
+#endif
+
+} // namespace cwg2803
 
 int main() {} // required for cwg2811
 

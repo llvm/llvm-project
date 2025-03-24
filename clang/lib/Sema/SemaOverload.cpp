@@ -117,6 +117,11 @@ CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS2);
 
 static ImplicitConversionSequence::CompareKind
+CompareReferenceBindingConversions(Sema &S,
+                                   const StandardConversionSequence &SCS1,
+                                   const StandardConversionSequence &SCS2);
+
+static ImplicitConversionSequence::CompareKind
 CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2);
@@ -4408,19 +4413,15 @@ compareStandardConversionSubsets(ASTContext &Context,
 static bool
 isBetterReferenceBindingKind(const StandardConversionSequence &SCS1,
                              const StandardConversionSequence &SCS2) {
-  // C++0x [over.ics.rank]p3b4:
-  //   -- S1 and S2 are reference bindings (8.5.3) and neither refers to an
-  //      implicit object parameter of a non-static member function declared
-  //      without a ref-qualifier, and *either* S1 binds an rvalue reference
-  //      to an rvalue and S2 binds an lvalue reference *or S1 binds an
-  //      lvalue reference to a function lvalue and S2 binds an rvalue
-  //      reference*.
-  //
-  // FIXME: Rvalue references. We're going rogue with the above edits,
-  // because the semantics in the current C++0x working paper (N3225 at the
-  // time of this writing) break the standard definition of std::forward
-  // and std::reference_wrapper when dealing with references to functions.
-  // Proposed wording changes submitted to CWG for consideration.
+  // C++2c [over.ics.rank] p3.2.3 - 3.2.4:
+  //   * S1 and S2 include reference bindings and neither refers to an
+  //     implicit object parameter of a non-static member function
+  //     declared without a ref-qualifier, and S1 binds an rvalue
+  //     reference to an rvalue and S2 binds an lvalue reference
+  //     or, if not that,
+  //   * S1 and S2 include reference bindings and S1 binds an lvalue
+  //     reference to an lvalue of function type and S2 binds an rvalue
+  //     reference to an lvalue of function type
   if (SCS1.BindsImplicitObjectArgumentWithoutRefQualifier ||
       SCS2.BindsImplicitObjectArgumentWithoutRefQualifier)
     return false;
@@ -4580,52 +4581,19 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     // Check for a better reference binding based on the kind of bindings.
     if (isBetterReferenceBindingKind(SCS1, SCS2))
       return ImplicitConversionSequence::Better;
-    else if (isBetterReferenceBindingKind(SCS2, SCS1))
+    if (isBetterReferenceBindingKind(SCS2, SCS1))
       return ImplicitConversionSequence::Worse;
   }
 
-  // Compare based on qualification conversions (C++ 13.3.3.2p3,
-  // bullet 3).
-  if (ImplicitConversionSequence::CompareKind QualCK
-        = CompareQualificationConversions(S, SCS1, SCS2))
+  // Compare based on qualification conversions
+  // (C++2c [over.ics.rank] p3.2.5).
+  if (auto QualCK = CompareQualificationConversions(S, SCS1, SCS2))
     return QualCK;
 
-  if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
-    // C++ [over.ics.rank]p3b4:
-    //   -- S1 and S2 are reference bindings (8.5.3), and the types to
-    //      which the references refer are the same type except for
-    //      top-level cv-qualifiers, and the type to which the reference
-    //      initialized by S2 refers is more cv-qualified than the type
-    //      to which the reference initialized by S1 refers.
-    QualType T1 = SCS1.getToType(2);
-    QualType T2 = SCS2.getToType(2);
-    T1 = S.Context.getCanonicalType(T1);
-    T2 = S.Context.getCanonicalType(T2);
-    Qualifiers T1Quals, T2Quals;
-    QualType UnqualT1 = S.Context.getUnqualifiedArrayType(T1, T1Quals);
-    QualType UnqualT2 = S.Context.getUnqualifiedArrayType(T2, T2Quals);
-    if (UnqualT1 == UnqualT2) {
-      // Objective-C++ ARC: If the references refer to objects with different
-      // lifetimes, prefer bindings that don't change lifetime.
-      if (SCS1.ObjCLifetimeConversionBinding !=
-                                          SCS2.ObjCLifetimeConversionBinding) {
-        return SCS1.ObjCLifetimeConversionBinding
-                                           ? ImplicitConversionSequence::Worse
-                                           : ImplicitConversionSequence::Better;
-      }
-
-      // If the type is an array type, promote the element qualifiers to the
-      // type for comparison.
-      if (isa<ArrayType>(T1) && T1Quals)
-        T1 = S.Context.getQualifiedType(UnqualT1, T1Quals);
-      if (isa<ArrayType>(T2) && T2Quals)
-        T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
-      if (T2.isMoreQualifiedThan(T1, S.getASTContext()))
-        return ImplicitConversionSequence::Better;
-      if (T1.isMoreQualifiedThan(T2, S.getASTContext()))
-        return ImplicitConversionSequence::Worse;
-    }
-  }
+  // Compare based on target types of reference bindings
+  // (C++2c [over.ics.rank] p3.2.6).
+  if (auto RefCK = CompareReferenceBindingConversions(S, SCS1, SCS2))
+    return RefCK;
 
   // In Microsoft mode (below 19.28), prefer an integral conversion to a
   // floating-to-integral conversion if the integral conversion
@@ -4704,68 +4672,149 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
 
 /// CompareQualificationConversions - Compares two standard conversion
 /// sequences to determine whether they can be ranked based on their
-/// qualification conversions (C++ 13.3.3.2p3 bullet 3).
+/// qualification conversions (C++2c [over.ics.rank] p3.2.5).
 static ImplicitConversionSequence::CompareKind
 CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2) {
-  // C++ [over.ics.rank]p3:
-  //  -- S1 and S2 differ only in their qualification conversion and
-  //     yield similar types T1 and T2 (C++ 4.4), respectively, [...]
-  // [C++98]
-  //     [...] and the cv-qualification signature of type T1 is a proper subset
-  //     of the cv-qualification signature of type T2, and S1 is not the
-  //     deprecated string literal array-to-pointer conversion (4.2).
-  // [C++2a]
-  //     [...] where T1 can be converted to T2 by a qualification conversion.
-  if (SCS1.First != SCS2.First || SCS1.Second != SCS2.Second ||
-      SCS1.Third != SCS2.Third || SCS1.Third != ICK_Qualification)
+  // C++2c [over.ics.rank] p3.2.5:
+  //   * S1 and S2 differ only in their qualification conversion
+  //     [CWG2958: ignoring any Lvalue Transformation,] and yield
+  //     similar types T1 and T2, respectively (where a standard
+  //     conversion sequence that is a reference binding is considered to
+  //     yield the cv-unqualified referenced type), where T1 and T2 are
+  //     not the same type, and const T2 is reference-compatible with T1
+  if (SCS1.Second != SCS2.Second || SCS1.Third != SCS2.Third ||
+      SCS1.Third != ICK_Qualification)
     return ImplicitConversionSequence::Indistinguishable;
 
-  // FIXME: the example in the standard doesn't use a qualification
-  // conversion (!)
   QualType T1 = SCS1.getToType(2);
   QualType T2 = SCS2.getToType(2);
   T1 = S.Context.getCanonicalType(T1);
   T2 = S.Context.getCanonicalType(T2);
   assert(!T1->isReferenceType() && !T2->isReferenceType());
-  Qualifiers T1Quals, T2Quals;
-  QualType UnqualT1 = S.Context.getUnqualifiedArrayType(T1, T1Quals);
-  QualType UnqualT2 = S.Context.getUnqualifiedArrayType(T2, T2Quals);
+  T1 = S.Context.getUnqualifiedArrayType(T1);
+  T2 = S.Context.getUnqualifiedArrayType(T2);
 
   // If the types are the same, we won't learn anything by unwrapping
   // them.
-  if (UnqualT1 == UnqualT2)
+  if (T1 == T2)
     return ImplicitConversionSequence::Indistinguishable;
 
   // Don't ever prefer a standard conversion sequence that uses the deprecated
-  // string literal array to pointer conversion.
+  // string literal array to pointer conversion (C++03 [over.ics.rank] p3.1.3).
   bool CanPick1 = !SCS1.DeprecatedStringLiteralToCharPtr;
   bool CanPick2 = !SCS2.DeprecatedStringLiteralToCharPtr;
 
   // Objective-C++ ARC:
   //   Prefer qualification conversions not involving a change in lifetime
   //   to qualification conversions that do change lifetime.
-  if (SCS1.QualificationIncludesObjCLifetime &&
-      !SCS2.QualificationIncludesObjCLifetime)
-    CanPick1 = false;
-  if (SCS2.QualificationIncludesObjCLifetime &&
-      !SCS1.QualificationIncludesObjCLifetime)
-    CanPick2 = false;
+  if (SCS1.QualificationIncludesObjCLifetime !=
+      SCS2.QualificationIncludesObjCLifetime) {
+    CanPick1 &= SCS2.QualificationIncludesObjCLifetime;
+    CanPick2 &= SCS1.QualificationIncludesObjCLifetime;
+  }
 
+  // If exactly one of T1 and T2 is an array of unknown bound,
+  // the other type is not reference-compatible with it.
+  bool T1IsIncompleteArray = T1->isIncompleteArrayType();
+  bool T2IsIncompleteArray = T2->isIncompleteArrayType();
+  if (T1IsIncompleteArray != T2IsIncompleteArray) {
+    CanPick1 &= T2IsIncompleteArray;
+    CanPick2 &= T1IsIncompleteArray;
+  }
+
+  bool PrevT1QualsIncludeConst = true;
+  bool PrevT2QualsIncludeConst = true;
+  bool IsTopLevel = true;
   bool ObjCLifetimeConversion;
-  if (CanPick1 &&
-      !S.IsQualificationConversion(T1, T2, false, ObjCLifetimeConversion))
-    CanPick1 = false;
-  // FIXME: In Objective-C ARC, we can have qualification conversions in both
-  // directions, so we can't short-cut this second check in general.
-  if (CanPick2 &&
-      !S.IsQualificationConversion(T2, T1, false, ObjCLifetimeConversion))
-    CanPick2 = false;
+  while ((CanPick1 || CanPick2) && S.Context.UnwrapSimilarTypes(T1, T2) &&
+         (T1 != T2)) {
+    CanPick1 = CanPick1 &&
+               isQualificationConversionStep(
+                   T1, T2, /*CStyle=*/false, IsTopLevel,
+                   PrevT2QualsIncludeConst, ObjCLifetimeConversion, S.Context);
+    CanPick2 = CanPick2 &&
+               isQualificationConversionStep(
+                   T2, T1, /*CStyle=*/false, IsTopLevel,
+                   PrevT1QualsIncludeConst, ObjCLifetimeConversion, S.Context);
+    IsTopLevel = false;
+  }
+
+  if (!S.Context.hasSameUnqualifiedType(T1, T2))
+    // T1 and T2 are not similar.
+    return ImplicitConversionSequence::Indistinguishable;
 
   if (CanPick1 != CanPick2)
     return CanPick1 ? ImplicitConversionSequence::Better
                     : ImplicitConversionSequence::Worse;
+  return ImplicitConversionSequence::Indistinguishable;
+}
+
+/// CompareReferenceBindingConversions - Compare two standard conversion
+/// sequences involving reference bindings to determine whether they can
+/// be ranked based on the referenced types (C++2c [over.ics.rank] p3.2.6).
+static ImplicitConversionSequence::CompareKind
+CompareReferenceBindingConversions(Sema &S,
+                                   const StandardConversionSequence &SCS1,
+                                   const StandardConversionSequence &SCS2) {
+  // C++2c [over.ics.rank] p3.2.6:
+  //   * S1 and S2 bind "reference to T1" and "reference to T2",
+  //     respectively, where T1 and T2 are not the same type,
+  //     and T2 is reference-compatible with T1
+  // Derived-to-base and qualification conversions are handled by previous
+  // bullets; this bullet only applies when T1 and T2 differ solely in their
+  // top-level cv-qualifiers and/or the presence of a major array bound.
+  if (!SCS1.ReferenceBinding || !SCS2.ReferenceBinding)
+    return ImplicitConversionSequence::Indistinguishable;
+
+  QualType T1 = SCS1.getToType(2);
+  QualType T2 = SCS2.getToType(2);
+
+  Qualifiers T1Quals, T2Quals;
+  T1 = S.Context.getUnqualifiedArrayType(T1, T1Quals);
+  T2 = S.Context.getUnqualifiedArrayType(T2, T2Quals);
+  int Result = 0;
+
+  // Compare array bounds.
+  if (auto *T1Arr = S.Context.getAsArrayType(T1)) {
+    auto *T2Arr = S.Context.getAsArrayType(T2);
+    if (!T2Arr)
+      return ImplicitConversionSequence::Indistinguishable;
+
+    bool T1IsIncomplete = isa<IncompleteArrayType>(T1Arr);
+    bool T2IsIncomplete = isa<IncompleteArrayType>(T2Arr);
+    if (T1IsIncomplete || T2IsIncomplete) {
+      T1 = T1Arr->getElementType();
+      T2 = T2Arr->getElementType();
+      Result = T2IsIncomplete - T1IsIncomplete;
+    }
+  }
+
+  if (!S.Context.hasSameType(T1, T2))
+    return ImplicitConversionSequence::Indistinguishable;
+
+  // Objective-C++ ARC: If the references refer to objects with different
+  // lifetimes, prefer bindings that don't change lifetime.
+  if (SCS1.ObjCLifetimeConversionBinding !=
+      SCS2.ObjCLifetimeConversionBinding) {
+    return SCS1.ObjCLifetimeConversionBinding
+               ? ImplicitConversionSequence::Worse
+               : ImplicitConversionSequence::Better;
+  }
+
+  // Compare cv-qualifiers.
+  bool T1Compatible = T1Quals.compatiblyIncludes(T2Quals, S.Context);
+  bool T2Compatible = T2Quals.compatiblyIncludes(T1Quals, S.Context);
+  if (!T1Compatible && !T2Compatible)
+    return ImplicitConversionSequence::Indistinguishable;
+
+  Result += T2Compatible - T1Compatible;
+
+  if (Result > 0)
+    return ImplicitConversionSequence::Better;
+  if (Result < 0)
+    return ImplicitConversionSequence::Worse;
   return ImplicitConversionSequence::Indistinguishable;
 }
 
@@ -5239,9 +5288,6 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
                                     ? ICK_Compatible_Conversion
                                     : ICK_Identity;
     ICS.Standard.Dimension = ICK_Identity;
-    // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
-    // a reference binding that performs a non-top-level qualification
-    // conversion as a qualification conversion, not as an identity conversion.
     ICS.Standard.Third = (RefConv &
                               Sema::ReferenceConversions::NestedQualification)
                              ? ICK_Qualification
@@ -5250,6 +5296,9 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
     ICS.Standard.setToType(0, T2);
     ICS.Standard.setToType(1, T1);
     ICS.Standard.setToType(2, T1);
+    ICS.Standard.QualificationIncludesObjCLifetime =
+        RefConv & Sema::ReferenceConversions::NestedQualification &&
+        RefConv & Sema::ReferenceConversions::ObjCLifetime;
     ICS.Standard.ReferenceBinding = true;
     ICS.Standard.DirectBinding = BindsDirectly;
     ICS.Standard.IsLvalueReference = !isRValRef;
