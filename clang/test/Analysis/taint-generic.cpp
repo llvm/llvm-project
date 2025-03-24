@@ -186,10 +186,9 @@ struct Foo {
     int n;
     fscanf(stdin, "%d", &n); // Get a tainted value.
                              
-    // FIXME: The analyzer misinterprets the parameter indices in the format
+    // The analyzer used to misinterpret the parameter indices in the format
     // attribute when the format attribute is applied to a method.
-    log_method("This number is suspicious: %d\n", n);
-    // expected-warning@-1 {{Untrusted data is used as a format string}}
+    log_method("This number is suspicious: %d\n", n); // no-warning
   }
 
   __attribute__((__format__ (__printf__, 1, 2)))
