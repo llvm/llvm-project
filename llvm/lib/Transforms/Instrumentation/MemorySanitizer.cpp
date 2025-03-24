@@ -3289,7 +3289,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// This differs from handleSSEVectorConvertIntrinsic() because it
   /// propagates uninitialized shadow (instead of checking the shadow).
-  void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I, bool HasRoundingMode = false) {
+  void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I,
+                                             bool HasRoundingMode = false) {
     if (HasRoundingMode) {
       assert(I.arg_size() == 2);
       [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
@@ -4664,20 +4665,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleSSEVectorConvertIntrinsic(I, 2);
       break;
 
-    // TODO:
-    //   <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double>)
-    //   <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64>)
-    //   <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>)
+      // TODO:
+      //   <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double>)
+      //   <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64>)
+      //   <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>)
 
     case Intrinsic::x86_vcvtps2ph_128:
     case Intrinsic::x86_vcvtps2ph_256: {
-      handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/ true);
+      handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/true);
       break;
     }
 
     case Intrinsic::x86_sse2_cvtps2dq:
     case Intrinsic::x86_sse2_cvtpd2dq: {
-      handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/ false);
+      handleSSEVectorConvertIntrinsicByProp(I, /*HasRoundingMode=*/false);
       break;
     }
 
