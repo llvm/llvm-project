@@ -2584,29 +2584,28 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size,
   return false;
 }
 
-uint16_t RegSizeInBits(MCRegister RegNo, const MCRegisterInfo &MRI) {
+uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
   uint16_t Size = 0;
   if (X86MCRegisterClasses[X86::GR8RegClassID].contains(RegNo))
-    Size = 8;
-  else if (X86MCRegisterClasses[X86::GR16RegClassID].contains(RegNo))
-    Size = 16;
-  else if (X86MCRegisterClasses[X86::GR32RegClassID].contains(RegNo))
-    Size = 32;
-  else if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
-    Size = 64;
-  else if (X86MCRegisterClasses[X86::RFP80RegClassID].contains(RegNo))
-    Size = 80;
-  else if (X86MCRegisterClasses[X86::VR128RegClassID].contains(RegNo))
-    Size = 128;
-  else if (X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
-    Size = 128;
-  else if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
-    Size = 256;
-  else if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
-    Size = 512;
-  else
-    llvm_unreachable("Register without known register class");
-  return Size;
+    return 8;
+  if (X86MCRegisterClasses[X86::GR16RegClassID].contains(RegNo))
+    return 16;
+  if (X86MCRegisterClasses[X86::GR32RegClassID].contains(RegNo))
+    return 32;
+  if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
+    return 64;
+  if (X86MCRegisterClasses[X86::RFP80RegClassID].contains(RegNo))
+    return 80;
+  if (X86MCRegisterClasses[X86::VR128RegClassID].contains(RegNo))
+    return 128;
+  if (X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
+    return 128;
+  if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
+    return 256;
+  if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
+    return 512;
+  llvm_unreachable("Register without known register class");
+  return 0;
 }
 
 bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
@@ -2641,7 +2640,7 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
 
         // If we are parsing MASM, we are allowed to cast registers to their own
         // sizes, but not to other types.
-        if (RegSizeInBits(RegNo, *getContext().getRegisterInfo()) != Size)
+        if (RegSizeInBits(*getContext().getRegisterInfo(), RegNo) != Size)
           return Error(
               Start,
               "cannot cast register '" +
