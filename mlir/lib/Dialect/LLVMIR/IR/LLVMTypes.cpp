@@ -946,7 +946,8 @@ Type mlir::LLVM::getVectorType(Type elementType, unsigned numElements,
 
   // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
   // scalable/non-scalable.
-  return VectorType::get(numElements, elementType, {isScalable});
+  return VectorType::get(numElements, cast<ScalarTypeInterface>(elementType),
+                         {isScalable});
 }
 
 Type mlir::LLVM::getVectorType(Type elementType,
@@ -966,7 +967,7 @@ Type mlir::LLVM::getFixedVectorType(Type elementType, unsigned numElements) {
                                    "to be either builtin or LLVM dialect type");
   if (useLLVM)
     return LLVMFixedVectorType::get(elementType, numElements);
-  return VectorType::get(numElements, elementType);
+  return VectorType::get(numElements, cast<ScalarTypeInterface>(elementType));
 }
 
 Type mlir::LLVM::getScalableVectorType(Type elementType, unsigned numElements) {
@@ -981,7 +982,8 @@ Type mlir::LLVM::getScalableVectorType(Type elementType, unsigned numElements) {
 
   // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
   // scalable/non-scalable.
-  return VectorType::get(numElements, elementType, /*scalableDims=*/true);
+  return VectorType::get(numElements, cast<ScalarTypeInterface>(elementType),
+                         /*scalableDims=*/true);
 }
 
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {

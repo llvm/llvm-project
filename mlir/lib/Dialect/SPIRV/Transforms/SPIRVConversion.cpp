@@ -366,7 +366,8 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
       return nullptr;
     }
 
-    return VectorType::get(type.getShape(), elementType);
+    return VectorType::get(type.getShape(),
+                           cast<ScalarTypeInterface>(elementType));
   }
 
   if (type.getRank() <= 1 && type.getNumElements() == 1)
@@ -392,7 +393,8 @@ convertVectorType(const spirv::TargetEnv &targetEnv,
   auto elementType =
       convertScalarType(targetEnv, options, scalarType, storageClass);
   if (elementType)
-    return VectorType::get(type.getShape(), elementType);
+    return VectorType::get(type.getShape(),
+                           cast<ScalarTypeInterface>(elementType));
   return nullptr;
 }
 
@@ -417,7 +419,7 @@ convertComplexType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-  return VectorType::get(2, elementType);
+  return VectorType::get(2, cast<ScalarTypeInterface>(elementType));
 }
 
 /// Converts a tensor `type` to a suitable type under the given `targetEnv`.
@@ -770,8 +772,9 @@ getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
   case spirv::BuiltIn::WorkgroupId:
   case spirv::BuiltIn::LocalInvocationId:
   case spirv::BuiltIn::GlobalInvocationId: {
-    auto ptrType = spirv::PointerType::get(VectorType::get({3}, integerType),
-                                           spirv::StorageClass::Input);
+    auto ptrType = spirv::PointerType::get(
+        VectorType::get({3}, cast<ScalarTypeInterface>(integerType)),
+        spirv::StorageClass::Input);
     std::string name = getBuiltinVarName(builtin, prefix, suffix);
     newVarOp =
         builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);

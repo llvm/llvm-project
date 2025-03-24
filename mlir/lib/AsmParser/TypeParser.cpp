@@ -491,7 +491,14 @@ VectorType Parser::parseVectorType() {
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
 
-  return getChecked<VectorType>(loc, dimensions, elementType, scalableDims);
+  auto scalarElementType = dyn_cast<ScalarTypeInterface>(elementType);
+  if (!scalarElementType) {
+    emitWrongTokenError("vector type requires scalar element type");
+    return nullptr;
+  }
+
+  return getChecked<VectorType>(loc, dimensions, scalarElementType,
+                                scalableDims);
 }
 
 /// Parse a dimension list in a vector type. This populates the dimension list.

@@ -152,7 +152,8 @@ static Value optionallyTruncateOrExtend(Location loc, Value value,
 static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
                        const TypeConverter &typeConverter,
                        ConversionPatternRewriter &rewriter) {
-  auto vectorType = VectorType::get(numElements, toBroadcast.getType());
+  auto vectorType = VectorType::get(
+      numElements, cast<ScalarTypeInterface>(toBroadcast.getType()));
   auto llvmVectorType = typeConverter.convertType(vectorType);
   auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
   Value broadcasted = rewriter.create<LLVM::PoisonOp>(loc, llvmVectorType);

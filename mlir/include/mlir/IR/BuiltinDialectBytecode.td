@@ -295,6 +295,8 @@ def VectorType : DialectType<(type
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.isScalable()";
+  // Note: Element type must implement ScalarTypeInterface.
+  let cBuilder = "get<$_resultType>(context, shape, llvm::cast<ScalarTypeInterface>(elementType))";
 }
 
 def VectorTypeWithScalableDims : DialectType<(type
@@ -304,7 +306,7 @@ def VectorTypeWithScalableDims : DialectType<(type
 )> {
   let printerPredicate = "$_val.isScalable()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, scalableDims)";
+  let cBuilder = "get<$_resultType>(context, shape, llvm::cast<ScalarTypeInterface>(elementType), scalableDims)";
 }
 }
 

@@ -496,7 +496,8 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
 
       Type vectorType = srcElemType;
       if (!isa<VectorType>(srcElemType))
-        vectorType = VectorType::get({ratio}, dstElemType);
+        vectorType =
+            VectorType::get({ratio}, cast<ScalarTypeInterface>(dstElemType));
 
       // If both the source and destination are vector types, we need to make
       // sure the scalar type is the same for composite construction later.
@@ -511,7 +512,8 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
             // SPIR-V.
             Type castType = srcElemVecType.getElementType();
             if (count > 1)
-              castType = VectorType::get({count}, castType);
+              castType =
+                  VectorType::get({count}, cast<ScalarTypeInterface>(castType));
 
             for (Value &c : components)
               c = rewriter.create<spirv::BitcastOp>(loc, castType, c);

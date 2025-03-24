@@ -322,7 +322,8 @@ struct ConstantCompositeOpPattern final
         dstAttrType =
             RankedTensorType::get(dstAttrType.getShape(), dstElemType);
       else
-        dstAttrType = VectorType::get(dstAttrType.getShape(), dstElemType);
+        dstAttrType = VectorType::get(dstAttrType.getShape(),
+                                      cast<ScalarTypeInterface>(dstElemType));
 
       dstElementsAttr = DenseElementsAttr::get(dstAttrType, elements);
     }
@@ -908,7 +909,8 @@ public:
       // cases. Extend them to 32-bit and do comparision then.
       Type type = rewriter.getI32Type();
       if (auto vectorType = dyn_cast<VectorType>(dstType))
-        type = VectorType::get(vectorType.getShape(), type);
+        type = VectorType::get(vectorType.getShape(),
+                               cast<ScalarTypeInterface>(type));
       Value extLhs =
           rewriter.create<arith::ExtUIOp>(op.getLoc(), type, adaptor.getLhs());
       Value extRhs =

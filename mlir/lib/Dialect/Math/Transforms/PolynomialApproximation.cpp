@@ -64,7 +64,8 @@ static std::optional<VectorShape> vectorShape(Value value) {
 // Broadcasts scalar type into vector type (iff shape is non-scalar).
 static Type broadcast(Type type, std::optional<VectorShape> shape) {
   assert(!isa<VectorType>(type) && "must be scalar type");
-  return shape ? VectorType::get(shape->sizes, type, shape->scalableFlags)
+  return shape ? VectorType::get(shape->sizes, cast<ScalarTypeInterface>(type),
+                                 shape->scalableFlags)
                : type;
 }
 
@@ -156,7 +157,8 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // Stitch results together into one large vector.
   Type resultEltType = cast<VectorType>(results[0].getType()).getElementType();
-  Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
+  Type resultExpandedType =
+      VectorType::get(expandedShape, cast<ScalarTypeInterface>(resultEltType));
   Value result = builder.create<arith::ConstantOp>(
       resultExpandedType, builder.getZeroAttr(resultExpandedType));
 
@@ -166,7 +168,8 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // Reshape back to the original vector shape.
   return builder.create<vector::ShapeCastOp>(
-      VectorType::get(inputShape, resultEltType), result);
+      VectorType::get(inputShape, cast<ScalarTypeInterface>(resultEltType)),
+      result);
 }
 
 //----------------------------------------------------------------------------//

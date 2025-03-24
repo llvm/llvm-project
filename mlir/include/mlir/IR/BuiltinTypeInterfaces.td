@@ -16,7 +16,40 @@
 
 include "mlir/IR/OpBase.td"
 
-def FloatTypeInterface : TypeInterface<"FloatType"> {
+//===----------------------------------------------------------------------===//
+// ScalarTypeInterface
+//===----------------------------------------------------------------------===//
+
+def ScalarTypeInterface : TypeInterface<"ScalarTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    Indication that this type is a scalar type.
+
+    The bitwidth of a scalar type is a fixed constant but may be unknown in the
+    absence of data layout information.
+
+    Scalar types are POD (plain-old-data) entities that have an in-memory
+    representation: scalar values can be loaded/store from/to memory, so
+    abstract types like function types or async tokens cannot be scalar types.
+
+    Scalar types should be limited to types that can lower to something that
+    egress dialects would consider a valid vector element type.
+  }];
+
+  let methods = [
+    InterfaceMethod<[{
+      Return the bitwidth of this type, if it has an inherent bitwidth. I.e., a
+      bitwidth that is known in the absence of data layout information.
+    }],
+    "std::optional<uint64_t>", "getInherentBitwidth", (ins)>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// FloatTypeInterface
+//===----------------------------------------------------------------------===//
+
+def FloatTypeInterface : TypeInterface<"FloatType", [ScalarTypeInterface]> {
   let cppNamespace = "::mlir";
   let description = [{
     This type interface should be implemented by all floating-point types. It

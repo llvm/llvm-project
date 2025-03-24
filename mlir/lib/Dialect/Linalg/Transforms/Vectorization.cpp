@@ -249,7 +249,8 @@ struct VectorizationState {
       scalableDims.append(scalableVecDims.begin(), scalableVecDims.end());
     }
 
-    return VectorType::get(vectorShape, elementType, scalableDims);
+    return VectorType::get(vectorShape, cast<ScalarTypeInterface>(elementType),
+                           scalableDims);
   }
 
   /// Masks an operation with the canonical vector mask if the operation needs
@@ -1338,9 +1339,10 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
     assert(vecOperand && "Vector operand couldn't be found");
 
     if (firstMaxRankedType) {
-      auto vecType = VectorType::get(firstMaxRankedType.getShape(),
-                                     getElementTypeOrSelf(vecOperand.getType()),
-                                     firstMaxRankedType.getScalableDims());
+      auto vecType = VectorType::get(
+          firstMaxRankedType.getShape(),
+          cast<ScalarTypeInterface>(getElementTypeOrSelf(vecOperand.getType())),
+          firstMaxRankedType.getScalableDims());
       vecOperands.push_back(broadcastIfNeeded(rewriter, vecOperand, vecType));
     } else {
       vecOperands.push_back(vecOperand);
@@ -1351,7 +1353,8 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
   for (Type resultType : op->getResultTypes()) {
     resultTypes.push_back(
         firstMaxRankedType
-            ? VectorType::get(firstMaxRankedType.getShape(), resultType,
+            ? VectorType::get(firstMaxRankedType.getShape(),
+                              cast<ScalarTypeInterface>(resultType),
                               firstMaxRankedType.getScalableDims())
             : resultType);
   }
@@ -1632,8 +1635,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   // Create ShapeCastOp.
   SmallVector<int64_t> destShape(inputVectorSizes);
   destShape.append(innerTiles.begin(), innerTiles.end());
-  auto tiledPackType = VectorType::get(getTiledPackShape(packOp, destShape),
-                                       packOp.getDestType().getElementType());
+  auto tiledPackType = VectorType::get(
+      getTiledPackShape(packOp, destShape),
+      cast<ScalarTypeInterface>(packOp.getDestType().getElementType()));
   auto shapeCastOp =
       rewriter.create<vector::ShapeCastOp>(loc, tiledPackType, maskedRead);
 
@@ -1768,8 +1772,9 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   // Collapse the vector to the size required by result.
   RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
       stripMineTensorType, packMetadata.reassociations);
-  mlir::VectorType vecCollapsedType =
-      VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
+  mlir::VectorType vecCollapsedType = VectorType::get(
+      collapsedType.getShape(),
+      cast<ScalarTypeInterface>(collapsedType.getElementType()));
   vector::ShapeCastOp shapeCastOp = rewriter.create<vector::ShapeCastOp>(
       loc, vecCollapsedType, transposeOp->getResult(0));
 
@@ -2473,8 +2478,10 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
       !VectorType::isValidElementType(dstElementType))
     return failure();
 
-  auto readType = VectorType::get(srcType.getShape(), srcElementType);
-  auto writeType = VectorType::get(dstType.getShape(), dstElementType);
+  auto readType = VectorType::get(srcType.getShape(),
+                                  cast<ScalarTypeInterface>(srcElementType));
+  auto writeType = VectorType::get(dstType.getShape(),
+                                   cast<ScalarTypeInterface>(dstElementType));
 
   Location loc = copyOp->getLoc();
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
@@ -2839,7 +2846,8 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       return failure();
     }
   }
-  auto vecType = VectorType::get(vecShape, sourceType.getElementType());
+  auto vecType = VectorType::get(
+      vecShape, cast<ScalarTypeInterface>(sourceType.getElementType()));
 
   // 3. Generate TransferReadOp + TransferWriteOp
   ReifiedRankedShapedTypeDims reifiedSrcSizes;
@@ -2943,8 +2951,9 @@ struct PadOpVectorizationWithInsertSlicePattern
     if (insertOp.getDest() == padOp.getResult())
       return failure();
 
-    auto vecType = VectorType::get(padOp.getType().getShape(),
-                                   padOp.getType().getElementType());
+    auto vecType = VectorType::get(
+        padOp.getType().getShape(),
+        cast<ScalarTypeInterface>(padOp.getType().getElementType()));
     unsigned vecRank = vecType.getRank();
     unsigned tensorRank = insertOp.getType().getRank();
 
@@ -3366,9 +3375,12 @@ struct Conv1DGenerator
     Type lhsEltType = lhsShapedType.getElementType();
     Type rhsEltType = rhsShapedType.getElementType();
     Type resEltType = resShapedType.getElementType();
-    auto lhsType = VectorType::get(lhsShape, lhsEltType);
-    auto rhsType = VectorType::get(rhsShape, rhsEltType);
-    auto resType = VectorType::get(resShape, resEltType);
+    auto lhsType =
+        VectorType::get(lhsShape, cast<ScalarTypeInterface>(lhsEltType));
+    auto rhsType =
+        VectorType::get(rhsShape, cast<ScalarTypeInterface>(rhsEltType));
+    auto resType =
+        VectorType::get(resShape, cast<ScalarTypeInterface>(resEltType));
     // Zero padding with the corresponding dimensions for lhs, rhs and res.
     SmallVector<Value> lhsPadding(lhsShape.size(), zero);
     SmallVector<Value> rhsPadding(rhsShape.size(), zero);
@@ -3595,13 +3607,14 @@ struct Conv1DGenerator
          //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
          ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
          cSize},
-        lhsEltType, /*scalableDims=*/{false, false, scalableChDim});
+        cast<ScalarTypeInterface>(lhsEltType),
+        /*scalableDims=*/{false, false, scalableChDim});
     VectorType rhsType =
-        VectorType::get({kwSize, cSize}, rhsEltType,
+        VectorType::get({kwSize, cSize}, cast<ScalarTypeInterface>(rhsEltType),
                         /*scalableDims=*/{false, scalableChDim});
-    VectorType resType =
-        VectorType::get({nSize, wSize, cSize}, resEltType,
-                        /*scalableDims=*/{false, false, scalableChDim});
+    VectorType resType = VectorType::get(
+        {nSize, wSize, cSize}, cast<ScalarTypeInterface>(resEltType),
+        /*scalableDims=*/{false, false, scalableChDim});
 
     // Masks the input xfer Op along the channel dim, iff the corresponding
     // scalable flag is set.
@@ -3685,10 +3698,10 @@ struct Conv1DGenerator
     // Note - the scalable flags are ignored as flattening combined with
     // scalable vectorization is not supported.
     SmallVector<int64_t> inOutFlattenSliceSizes = {nSize, wSizeStep * cSize};
-    auto lhsTypeAfterFlattening =
-        VectorType::get(inOutFlattenSliceSizes, lhsEltType);
-    auto resTypeAfterFlattening =
-        VectorType::get(inOutFlattenSliceSizes, resEltType);
+    auto lhsTypeAfterFlattening = VectorType::get(
+        inOutFlattenSliceSizes, cast<ScalarTypeInterface>(lhsEltType));
+    auto resTypeAfterFlattening = VectorType::get(
+        inOutFlattenSliceSizes, cast<ScalarTypeInterface>(resEltType));
 
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
@@ -3708,7 +3721,10 @@ struct Conv1DGenerator
         if (flatten) {
           // Un-flatten the output vector (restore the channel dimension)
           resVals[w] = rewriter.create<vector::ShapeCastOp>(
-              loc, VectorType::get(inOutSliceSizes, resEltType), resVals[w]);
+              loc,
+              VectorType::get(inOutSliceSizes,
+                              cast<ScalarTypeInterface>(resEltType)),
+              resVals[w]);
         }
       }
     }

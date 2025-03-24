@@ -111,7 +111,7 @@ bool isMultipleOfSMETileVectorType(VectorType vType) {
          vectorRows % minNumElts == 0 && vectorCols % minNumElts == 0;
 }
 
-VectorType getSMETileTypeForElement(Type elementType) {
+VectorType getSMETileTypeForElement(ScalarTypeInterface elementType) {
   unsigned minNumElts = getSMETileSliceMinNumElts(elementType);
   return VectorType::get({minNumElts, minNumElts}, elementType, {true, true});
 }

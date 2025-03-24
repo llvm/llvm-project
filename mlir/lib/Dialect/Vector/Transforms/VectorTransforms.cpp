@@ -607,7 +607,8 @@ struct BubbleDownVectorBitCastForExtract
     Location loc = extractOp.getLoc();
     Value packedValue = rewriter.create<vector::ExtractOp>(
         loc, castOp.getSource(), index / expandRatio);
-    Type packedVecType = VectorType::get(/*shape=*/{1}, packedValue.getType());
+    Type packedVecType = VectorType::get(
+        /*shape=*/{1}, cast<ScalarTypeInterface>(packedValue.getType()));
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, packedVecType, rewriter.getZeroAttr(packedVecType));
     packedValue = rewriter.create<vector::InsertOp>(loc, packedValue, zero,
@@ -1059,7 +1060,7 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   // If we can assume all indices fit in 32-bit, we perform the vector
   // comparison in 32-bit to get a higher degree of SIMD parallelism.
   // Otherwise we perform the vector comparison using 64-bit indices.
-  Type idxType =
+  ScalarTypeInterface idxType =
       force32BitVectorIndices ? rewriter.getI32Type() : rewriter.getI64Type();
   DenseIntElementsAttr indicesAttr;
   if (dim == 0 && force32BitVectorIndices) {

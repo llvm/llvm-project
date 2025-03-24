@@ -2419,7 +2419,8 @@ Value BroadcastOp::createOrFoldBroadcastOp(
   Location loc = value.getLoc();
   Type elementType = getElementTypeOrSelf(value.getType());
   VectorType srcVectorType = llvm::dyn_cast<VectorType>(value.getType());
-  VectorType dstVectorType = VectorType::get(dstShape, elementType);
+  VectorType dstVectorType =
+      VectorType::get(dstShape, cast<ScalarTypeInterface>(elementType));
 
   // Step 2. If scalar -> dstShape broadcast, just do it.
   if (!srcVectorType) {
@@ -2481,7 +2482,8 @@ Value BroadcastOp::createOrFoldBroadcastOp(
              .empty() &&
          "unexpected \"dim-1\" broadcast");
 
-  VectorType broadcastType = VectorType::get(broadcastShape, elementType);
+  VectorType broadcastType =
+      VectorType::get(broadcastShape, cast<ScalarTypeInterface>(elementType));
   assert(vector::isBroadcastableTo(value.getType(), broadcastType) ==
              vector::BroadcastableToResult::Success &&
          "must be broadcastable");
@@ -5914,9 +5916,9 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
                        Value source) {
   result.addOperands(source);
   MemRefType memRefType = llvm::cast<MemRefType>(source.getType());
-  VectorType vectorType =
-      VectorType::get(extractShape(memRefType),
-                      getElementTypeOrSelf(getElementTypeOrSelf(memRefType)));
+  VectorType vectorType = VectorType::get(
+      extractShape(memRefType), cast<ScalarTypeInterface>(getElementTypeOrSelf(
+                                    getElementTypeOrSelf(memRefType))));
   result.addTypes(MemRefType::get({}, vectorType, MemRefLayoutAttrInterface(),
                                   memRefType.getMemorySpace()));
 }

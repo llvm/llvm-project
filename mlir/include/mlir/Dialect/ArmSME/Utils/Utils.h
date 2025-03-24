@@ -68,7 +68,7 @@ scf::ForOp createLoopOverTileSlices(
 bool isMultipleOfSMETileVectorType(VectorType vType);
 
 /// Creates a vector type for the SME tile of `elementType`.
-VectorType getSMETileTypeForElement(Type elementType);
+VectorType getSMETileTypeForElement(ScalarTypeInterface elementType);
 
 /// Erase trivially dead tile ops from a function.
 void eraseTriviallyDeadTileOps(IRRewriter &rewriter,

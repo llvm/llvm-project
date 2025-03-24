@@ -275,7 +275,7 @@ public:
         scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
-  Builder(ArrayRef<int64_t> shape, Type elementType,
+  Builder(ArrayRef<int64_t> shape, ScalarTypeInterface elementType,
           ArrayRef<bool> scalableDims = {})
       : elementType(elementType), shape(shape), scalableDims(scalableDims) {}
 
@@ -286,7 +286,7 @@ public:
     return *this;
   }
 
-  Builder &setElementType(Type newElementType) {
+  Builder &setElementType(ScalarTypeInterface newElementType) {
     elementType = newElementType;
     return *this;
   }
@@ -312,7 +312,7 @@ public:
   }
 
 private:
-  Type elementType;
+  ScalarTypeInterface elementType;
   CopyOnWriteArrayRef<int64_t> shape;
   CopyOnWriteArrayRef<bool> scalableDims;
 };

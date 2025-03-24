@@ -110,10 +110,10 @@ TEST(ShapedTypeTest, CloneTensor) {
 TEST(ShapedTypeTest, CloneVector) {
   MLIRContext context;
 
-  Type i32 = IntegerType::get(&context, 32);
-  Type f32 = Float32Type::get(&context);
+  auto i32 = IntegerType::get(&context, 32);
+  auto f32 = Float32Type::get(&context);
 
-  Type vectorOriginalType = i32;
+  auto vectorOriginalType = i32;
   llvm::SmallVector<int64_t> vectorOriginalShape({10, 20});
   ShapedType vectorType =
       VectorType::get(vectorOriginalShape, vectorOriginalType);
@@ -123,7 +123,7 @@ TEST(ShapedTypeTest, CloneVector) {
   ASSERT_EQ(vectorType.clone(vectorNewShape),
             VectorType::get(vectorNewShape, vectorOriginalType));
   // Update type.
-  Type vectorNewType = f32;
+  auto vectorNewType = f32;
   ASSERT_NE(vectorOriginalType, vectorNewType);
   ASSERT_EQ(vectorType.clone(vectorNewType),
             VectorType::get(vectorOriginalShape, vectorNewType));
@@ -134,7 +134,7 @@ TEST(ShapedTypeTest, CloneVector) {
 
 TEST(ShapedTypeTest, VectorTypeBuilder) {
   MLIRContext context;
-  Type f32 = Float32Type::get(&context);
+  auto f32 = Float32Type::get(&context);
 
   SmallVector<int64_t> shape{2, 4, 8, 9, 1};
   SmallVector<bool> scalableDims{true, false, true, false, false};

@@ -146,7 +146,7 @@ Type QuantizedType::castFromStorageType(Type candidateType) {
   if (llvm::isa<VectorType>(candidateType)) {
     // i.e. tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
     return VectorType::get(llvm::cast<VectorType>(candidateType).getShape(),
-                           getStorageType());
+                           llvm::cast<ScalarTypeInterface>(getStorageType()));
   }
 
   return nullptr;
@@ -172,7 +172,8 @@ Type QuantizedType::castToStorageType(Type quantizedType) {
       return UnrankedTensorType::get(storageType);
     }
     if (llvm::isa<VectorType>(quantizedType)) {
-      return VectorType::get(sType.getShape(), storageType);
+      return VectorType::get(sType.getShape(),
+                             llvm::cast<ScalarTypeInterface>(storageType));
     }
   }
 
@@ -200,7 +201,8 @@ Type QuantizedType::castFromExpressedType(Type candidateType) {
     }
     if (llvm::isa<VectorType>(candidateType)) {
       // i.e. tensor<4xf32> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
-      return VectorType::get(candidateShapedType.getShape(), *this);
+      return VectorType::get(candidateShapedType.getShape(),
+                             llvm::cast<ScalarTypeInterface>(*this));
     }
   }
 
@@ -227,7 +229,8 @@ Type QuantizedType::castToExpressedType(Type quantizedType) {
       return UnrankedTensorType::get(expressedType);
     }
     if (llvm::isa<VectorType>(quantizedType)) {
-      return VectorType::get(sType.getShape(), expressedType);
+      return VectorType::get(sType.getShape(),
+                             llvm::cast<ScalarTypeInterface>(expressedType));
     }
   }
 
