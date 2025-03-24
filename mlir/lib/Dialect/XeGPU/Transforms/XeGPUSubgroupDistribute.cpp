@@ -13,9 +13,11 @@
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1220,18 +1222,44 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     signalPassFailure();
   /// Move all operations inside a GPU functions inside
   /// gpu.warp_execute_on_lane0
-
-  RewritePatternSet patterns(&getContext());
-  patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
-  /// We want to avoid ops from hoisted out of the gpu.warp_execute_on_lane0
-  /// region.
-  // GreedyRewriteConfig config;
-  // config.cseConstants = false;
-  // config.fold = false;
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-
+  {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+    /// We want to avoid ops from hoisted out of the gpu.warp_execute_on_lane0
+    /// region.
+    GreedyRewriteConfig config;
+    config.cseConstants = false;
+    config.fold = false;
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
+  }
   /// Finally, do the SIMD to SIMT distribution.
-  patterns.clear();
+  RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  auto distributionFn = [](Value val) {
+    // Create an identity dim map of the same rank as the vector.
+    VectorType vecType = dyn_cast<VectorType>(val.getType());
+    int64_t vecRank = vecType ? vecType.getRank() : 0;
+    OpBuilder builder(val.getContext());
+    if (vecRank == 0)
+      return AffineMap::get(val.getContext());
+    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
+  };
+  auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
+                      int64_t warpSz) {
+    assert((val.getType().isF32() || val.getType().isInteger(32)) &&
+           "unsupported shuffle type");
+    Type i32Type = builder.getIntegerType(32);
+    Value srcIdxI32 = builder.create<arith::IndexCastOp>(loc, i32Type, srcIdx);
+    Value warpSzI32 = builder.create<arith::ConstantOp>(
+        loc, builder.getIntegerAttr(i32Type, warpSz));
+    Value result = builder
+                       .create<gpu::ShuffleOp>(loc, val, srcIdxI32, warpSzI32,
+                                               gpu::ShuffleMode::IDX)
+                       .getResult(0);
+    return result;
+  };
+  vector::populatePropagateWarpVectorDistributionPatterns(
+      patterns, distributionFn, shuffleFn);
+  llvm::errs() << AffineMap::getMultiDimIdentityMap(2, &getContext()) << "\n";
+  // (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
