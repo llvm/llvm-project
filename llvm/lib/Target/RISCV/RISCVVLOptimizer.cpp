@@ -1341,14 +1341,13 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       continue;
     }
 
-    if (UserMI.isPHI() && PHISeen.insert(&UserMI).second) {
+    if (UserMI.isPHI()) {
+      // Don't follow PHI cycles
+      if (!PHISeen.insert(&UserMI).second)
+        continue;
       LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
-      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg())) {
-        // If UserMI has a PHI cycle, don't analyze it.
-        if (PhiUse.getParent() == &UserMI)
-          continue;
+      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
         Worklist.insert(&PhiUse);
-      }
       continue;
     }
 
