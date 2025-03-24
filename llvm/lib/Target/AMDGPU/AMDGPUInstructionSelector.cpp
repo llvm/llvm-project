@@ -4318,12 +4318,16 @@ enum class SrcStatus {
   IS_SAME,
   IS_UPPER_HALF,
   IS_LOWER_HALF,
+  IS_UPPER_HALF_NEG,
+  IS_LOWER_HALF_NEG,
   IS_HI_NEG,
   IS_LO_NEG,
   IS_BOTH_NEG,
-  IS_UPPER_HALF_NEG,
-  IS_LOWER_HALF_NEG,
-  INVALID
+  INVALID,
+  NEG_START = IS_UPPER_HALF_NEG,
+  NEG_END = IS_BOTH_NEG,
+  HALF_START = IS_UPPER_HALF,
+  HALF_END = IS_LOWER_HALF_NEG
 };
 
 static bool isTruncHalf(const MachineInstr *MI,
@@ -4525,7 +4529,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
       // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
       // Src = -(-OpLower) = OpLower
-      return SrcStatus::IS_LOWER_HALF_NEG;
+      return SrcStatus::IS_LOWER_HALF;
     } else if (NegType == 1) {
       // Scalar:
       // Src = -CurrLower
@@ -4533,7 +4537,7 @@ SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
       // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
       // Src = -OpLower
-      return SrcStatus::IS_LOWER_HALF;
+      return SrcStatus::IS_LOWER_HALF_NEG;
     }
     break;
   }
@@ -4610,26 +4614,69 @@ static bool calcNextStatus(std::pair<const MachineOperand *, SrcStatus> &Curr,
   return false;
 }
 
+struct {
+  unsigned int HasNeg : 1;
+  unsigned int HasOpsel : 1;
+} StatOptions;
+
+static bool checkOptions(SrcStatus Stat) {
+  if (!StatOptions.HasNeg &&
+      (Stat >= SrcStatus::NEG_START || Stat <= SrcStatus::NEG_END)) {
+    return false;
+  }
+  if (!StatOptions.HasOpsel &&
+      (Stat >= SrcStatus::HALF_START || Stat >= SrcStatus::HALF_END)) {
+    return false;
+  }
+  return true;
+}
+
+void setUpOptions(const MachineOperand *RootOp,
+                  const MachineRegisterInfo &MRI) {
+  const MachineInstr *MI = RootOp->getParent();
+  unsigned Opc = MI->getOpcode();
+
+  if (Opc < TargetOpcode::GENERIC_OP_END) {
+    // Keep same for gerneric op
+    StatOptions.HasNeg = 1;
+  } else if (Opc == TargetOpcode::G_INTRINSIC) {
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
+    // Only float point intrinsic has neg & neg_hi bits
+    if (IntrinsicID == Intrinsic::amdgcn_fdot2)
+      StatOptions.HasNeg = 1;
+    else
+      StatOptions.HasNeg = 0;
+  } else
+    StatOptions.HasNeg = 0;
+
+  // Assume all complex pattern of VOP3P has opsel
+  StatOptions.HasOpsel = 1;
+}
+
 SmallVector<std::pair<const MachineOperand *, SrcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
             bool OnlyLastSameOrNeg = false, int MaxDepth = 6) {
   int Depth = 0;
   std::pair<const MachineOperand *, SrcStatus> Curr = {Op, SrcStatus::IS_SAME};
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist;
+  SmallVector<std::pair<const MachineOperand *, SrcStatus>, 4> Statlist;
+
+  if (OnlyLastSameOrNeg)
+    Statlist.push_back(Curr);
 
   while (Depth <= MaxDepth && calcNextStatus(Curr, MRI)) {
     Depth++;
-    if ((OnlyLastSameOrNeg && (Curr.second != SrcStatus::IS_SAME &&
-                               Curr.second != SrcStatus::IS_HI_NEG &&
-                               Curr.second != SrcStatus::IS_LO_NEG &&
-                               Curr.second != SrcStatus::IS_BOTH_NEG)))
-      break;
+    if (checkOptions(Curr.second)) {
+      if (OnlyLastSameOrNeg && (Curr.second == SrcStatus::IS_SAME ||
+                                Curr.second == SrcStatus::IS_HI_NEG ||
+                                Curr.second == SrcStatus::IS_LO_NEG ||
+                                Curr.second == SrcStatus::IS_BOTH_NEG))
+        Statlist[0] = Curr;
 
-    if (!OnlyLastSameOrNeg)
-      Statlist.push_back(Curr);
+      if (!OnlyLastSameOrNeg)
+        Statlist.push_back(Curr);
+    }
   }
-  if (OnlyLastSameOrNeg)
-    Statlist.push_back(Curr);
+
   return Statlist;
 }
 
@@ -4648,9 +4695,7 @@ static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
 static bool isSameOperand(const MachineOperand *Op1,
                           const MachineOperand *Op2) {
   if (Op1->isReg()) {
-    if (Op2->isReg())
-      return Op1->getReg() == Op2->getReg();
-    return false;
+    return Op2->isReg() && Op1->getReg() == Op2->getReg();
   }
   return Op1->isIdenticalTo(*Op2);
 }
@@ -4706,6 +4751,8 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
+
+  setUpOptions(Op, MRI);
 
   const MachineOperand *RootOp = Op;
   std::pair<const MachineOperand *, SrcStatus> Stat =
