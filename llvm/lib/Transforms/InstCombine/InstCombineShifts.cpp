@@ -428,10 +428,7 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
         return R;
 
   Constant *CUI;
-  if (match(Op1, m_Constant(CUI)) &&
-      (!isa<ConstantExpr>(CUI) ||
-       (Ty->isVectorTy() &&
-        isa_and_present<ConstantInt>(CUI->getSplatValue()))))
+  if (match(Op1, m_ImmConstant(CUI)))
     if (Instruction *Res = FoldShiftByConstant(Op0, CUI, I))
       return Res;
 
