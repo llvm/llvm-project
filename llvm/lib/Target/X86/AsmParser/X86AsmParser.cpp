@@ -14,6 +14,9 @@
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
+#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringRef.h"
+#include "third_party/llvm/llvm-project/llvm/include/llvm/MC/MCRegister.h"
+#include "third_party/llvm/llvm-project/llvm/lib/Target/X86/X86RegisterInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +41,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 
 using namespace llvm;
@@ -1150,7 +1154,7 @@ private:
 
   X86::CondCode ParseConditionCode(StringRef CCode);
 
-  bool ParseIntelMemoryOperandSize(unsigned &Size);
+  bool ParseIntelMemoryOperandSize(unsigned &Size, StringRef *SizeStr);
   bool CreateMemForMSInlineAsm(MCRegister SegReg, const MCExpr *Disp,
                                MCRegister BaseReg, MCRegister IndexReg,
                                unsigned Scale, bool NonAbsMem, SMLoc Start,
@@ -2551,7 +2555,8 @@ bool X86AsmParser::ParseMasmOperator(unsigned OpKind, int64_t &Val) {
   return false;
 }
 
-bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
+bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size,
+                                               StringRef *SizeStr) {
   Size = StringSwitch<unsigned>(getTok().getString())
     .Cases("BYTE", "byte", 8)
     .Cases("WORD", "word", 16)
@@ -2569,12 +2574,39 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
     .Cases("ZMMWORD", "zmmword", 512)
     .Default(0);
   if (Size) {
+    if (SizeStr)
+      *SizeStr = getTok().getString();
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
     if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
   return false;
+}
+
+uint16_t RegSizeInBits(MCRegister RegNo, const MCRegisterInfo &MRI) {
+  uint16_t Size = 0;
+  if (X86MCRegisterClasses[X86::GR8RegClassID].contains(RegNo))
+    Size = 8;
+  else if (X86MCRegisterClasses[X86::GR16RegClassID].contains(RegNo))
+    Size = 16;
+  else if (X86MCRegisterClasses[X86::GR32RegClassID].contains(RegNo))
+    Size = 32;
+  else if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
+    Size = 64;
+  else if (X86MCRegisterClasses[X86::RFP80RegClassID].contains(RegNo))
+    Size = 80;
+  else if (X86MCRegisterClasses[X86::VR128RegClassID].contains(RegNo))
+    Size = 128;
+  else if (X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
+    Size = 128;
+  else if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
+    Size = 256;
+  else if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
+    Size = 512;
+  else
+    llvm_unreachable("Register without known register class");
+  return Size;
 }
 
 bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
@@ -2584,7 +2616,8 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
 
   // Parse optional Size directive.
   unsigned Size;
-  if (ParseIntelMemoryOperandSize(Size))
+  StringRef SizeStr;
+  if (ParseIntelMemoryOperandSize(Size, &SizeStr))
     return true;
   bool PtrInOperand = bool(Size);
 
@@ -2601,9 +2634,20 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
       return Error(Start, "rip can only be used as a base register");
     // A Register followed by ':' is considered a segment override
     if (Tok.isNot(AsmToken::Colon)) {
-      if (PtrInOperand)
-        return Error(Start, "expected memory operand after 'ptr', "
-                            "found register operand instead");
+      if (PtrInOperand) {
+        if (!Parser.isParsingMasm())
+          return Error(Start, "expected memory operand after 'ptr', "
+                              "found register operand instead");
+
+        // If we are parsing MASM, we are allowed to cast registers to their own
+        // sizes, but not to other types.
+        if (RegSizeInBits(RegNo, *getContext().getRegisterInfo()) != Size)
+          return Error(
+              Start,
+              "cannot cast register '" +
+                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
+                  "' to '" + SizeStr + "'; size does not match");
+      }
       Operands.push_back(X86Operand::CreateReg(RegNo, Start, End));
       return false;
     }
