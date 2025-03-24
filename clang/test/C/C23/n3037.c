@@ -178,6 +178,48 @@ struct field_attr_test_5 { // c17-error {{redefinition of 'field_attr_test_5'}}
   int y;
 };
 
+// Show that attribute order does not matter.
+struct [[deprecated("testing"), gnu::packed]] field_attr_test_6 { // c17-note {{previous definition is here}}
+  int x;
+  int y;
+};
+
+struct [[gnu::packed, deprecated("testing")]] field_attr_test_6 { // c17-error {{redefinition of 'field_attr_test_6'}}
+  int x;
+  int y;
+};
+
+// Show that attribute syntax does matter.
+// FIXME: more clearly identify the syntax as the problem.
+struct [[gnu::packed]] field_attr_test_7 { // c17-note {{previous definition is here}} \
+                                              c23-note {{attribute 'packed' here}}
+  int x;
+  int y;
+};
+
+struct __attribute__((packed)) field_attr_test_7 { // c17-error {{redefinition of 'field_attr_test_7'}} \
+                                                      c23-error {{type 'field_attr_test_7' has incompatible definitions}} \
+                                                      c23-note {{attribute 'packed' here}}
+  int x;
+  int y;
+};
+
+// Show that attribute *spelling* matters. These two attributes share the same
+// implementation in the AST, but the spelling still matters.
+struct [[nodiscard]] field_attr_test_8 { // c17-note {{previous definition is here}} \
+                                            c23-note {{attribute 'nodiscard' here}}
+  int x;
+  int y;
+};
+
+struct [[gnu::warn_unused_result]] field_attr_test_8 { // c17-error {{redefinition of 'field_attr_test_8'}} \
+                                                          c23-error {{type 'field_attr_test_8' has incompatible definitions}} \
+                                                          c23-note {{attribute 'warn_unused_result' here}}
+  int x;
+  int y;
+};
+
+
 // Show that equivalent field types are not an issue.
 typedef int typedef_of_type_int;
 struct equivalent_field_types { // c17-note {{previous definition is here}}
