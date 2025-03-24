@@ -1754,8 +1754,7 @@ void BinaryFunction::postProcessEntryPoints() {
     // In non-relocation mode there's potentially an external undetectable
     // reference to the entry point and hence we cannot move this entry
     // point. Optimizing without moving could be difficult.
-    // In aggregation, register any known entry points for CFG construction.
-    if (!BC.HasRelocations && !opts::AggregateOnly)
+    if (!BC.HasRelocations)
       setSimple(false);
 
     const uint32_t Offset = KV.first;
@@ -2084,7 +2083,7 @@ void BinaryFunction::recomputeLandingPads() {
 Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   auto &MIB = BC.MIB;
 
-  if (!isSimple()) {
+  if (!isSimple() && !opts::AggregateOnly) {
     assert(!BC.HasRelocations &&
            "cannot process file with non-simple function in relocs mode");
     return createNonFatalBOLTError("");
