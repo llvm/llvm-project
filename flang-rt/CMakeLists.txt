@@ -221,6 +221,15 @@ endif()
 # System Introspection #
 ########################
 
+# The GPU targets require a few mandatory arguments to make the standard CMake
+# check flags happy.
+if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
+elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS
+      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+endif()
+
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
