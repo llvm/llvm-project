@@ -2970,7 +2970,7 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
       // may have failed to sink I's operands (recursively), which we try
       // (again) here.
       if (I->getParent() == PredBB) {
-        Worklist.insert(I->op_begin(), I->op_end());
+        Worklist.insert_range(I->operands());
         continue;
       }
 
@@ -2985,7 +2985,7 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
       // Move the instruction to the beginning of the predicated block, and add
       // it's operands to the worklist.
       I->moveBefore(PredBB->getFirstInsertionPt());
-      Worklist.insert(I->op_begin(), I->op_end());
+      Worklist.insert_range(I->operands());
 
       // The sinking may have enabled other instructions to be sunk, so we will
       // need to iterate.
