@@ -546,6 +546,10 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError("IRDL C++ translation only supports irdl.any "
                                   "constraint for types");
             })
+            .Case<irdl::BaseOp>([](irdl::BaseOp op) -> LogicalResult {
+              return op.emitError(
+                  "IRDL C++ translation does not yet support base types.");
+            })
             .Case<irdl::ParametersOp>([](irdl::ParametersOp op)
                                           -> LogicalResult {
               return op.emitError(

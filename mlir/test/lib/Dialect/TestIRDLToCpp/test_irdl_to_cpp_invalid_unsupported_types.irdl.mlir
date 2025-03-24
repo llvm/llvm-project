@@ -69,3 +69,15 @@ irdl.dialect @test_irdl_to_cpp_7 {
     
 }
 
+// -----
+
+irdl.dialect @test_irdl_to_cpp_8 {
+    irdl.type @test_base 
+
+    irdl.type @test_derived {
+        // expected-error@+1 {{IRDL C++ translation does not yet support base types.}}
+        %0 = irdl.base "!builtin.integer"
+    }
+    
+}
+
