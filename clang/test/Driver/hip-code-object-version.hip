@@ -22,11 +22,14 @@
 
 // Check bundle ID for code object version 6.
 
-// RUN: not %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -mcode-object-version=6 \
 // RUN:   --offload-arch=gfx906 --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=V6 %s
 
+// V6: "-mcode-object-version=6"
+// V6: "-mllvm" "--amdhsa-code-object-version=6"
+// V6: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version default
 
