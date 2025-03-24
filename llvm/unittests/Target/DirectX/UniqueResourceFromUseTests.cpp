@@ -308,9 +308,8 @@ entry:
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const auto Bindings = DBM.findByUse(CI);
-      ASSERT_EQ(Bindings.size(), 1u);
-      ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Decrement);
+      const auto *const Binding = DBM.find(CI);
+      ASSERT_EQ(DCDM[*Binding], ResourceCounterDirection::Decrement);
     }
   }
 }
@@ -345,9 +344,8 @@ entry:
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const auto Bindings = DBM.findByUse(CI);
-      ASSERT_EQ(Bindings.size(), 1u);
-      ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Increment);
+      const auto *const Binding = DBM.find(CI);
+      ASSERT_EQ(DCDM[*Binding], ResourceCounterDirection::Increment);
     }
   }
 }
@@ -379,9 +377,8 @@ entry:
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const auto Bindings = DBM.findByUse(CI);
-      ASSERT_EQ(Bindings.size(), 1u);
-      ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Unknown);
+      const auto *const Binding = DBM.find(CI);
+      ASSERT_EQ(DCDM[*Binding], ResourceCounterDirection::Unknown);
     }
   }
 }
@@ -420,9 +417,8 @@ entry:
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
-      const auto Bindings = DBM.findByUse(CI);
-      ASSERT_EQ(Bindings.size(), 1u);
-      ASSERT_EQ(DCDM[Bindings.front()], *Dir);
+      const auto *const Binding = DBM.find(CI);
+      ASSERT_EQ(DCDM[*Binding], *Dir);
       Dir++;
     }
   }
