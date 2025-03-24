@@ -124,13 +124,14 @@ func.func @mod_floordiv_nested() {
   return
 }
 
-// CHECK-LABEL: func @test_semi_affine_bailout
-func.func @test_semi_affine_bailout(%N : index) {
+// CHECK-LABEL: func @test_semi_affine_access
+func.func @test_semi_affine_access(%N : index) {
   %B = memref.alloc() : memref<10 x i32>
   affine.for %i = 0 to 10 {
     %idx = affine.apply affine_map<(d0)[s0] -> (d0 * s0)>(%i)[%N]
     %y = affine.load %B[%idx] : memref<10 x i32>
-    // expected-error@-1 {{getMemRefRegion: compose affine map failed}}
+    // expected-error@-1 {{'affine.load' op memref out of upper bound access along dimension #1}}
+    // expected-error@-2 {{'affine.load' op memref out of lower bound access along dimension #1}}
   }
   return
 }
