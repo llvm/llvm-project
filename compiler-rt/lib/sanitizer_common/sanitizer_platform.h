@@ -31,6 +31,12 @@
 #  define SANITIZER_LINUX 0
 #endif
 
+#if defined(_AIX)
+#  define SANITIZER_AIX 1
+#else
+#  define SANITIZER_AIX 0
+#endif
+
 #if defined(__GLIBC__)
 #  define SANITIZER_GLIBC 1
 #else
