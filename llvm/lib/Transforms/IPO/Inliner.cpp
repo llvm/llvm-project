@@ -391,7 +391,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       }
       // TODO: Shouldn't we be invalidating all analyses on F here?
       // The caller was modified, so invalidate Ephemeral Values.
-      FAM.getResult<EphemeralValuesAnalysis>(F).clear();
+      FAM.invalidate(
+          F, PreservedAnalyses::all().abandon(EphemeralValuesAnalysis::ID()));
 
       DidInline = true;
       InlinedCallees.insert(&Callee);
