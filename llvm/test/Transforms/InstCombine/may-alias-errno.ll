@@ -7,7 +7,7 @@ define float @does_not_alias_errno(ptr noundef %p, float noundef %f) {
 ; CHECK-LABEL: define float @does_not_alias_errno(
 ; CHECK-SAME: ptr noundef [[P:%.*]], float noundef [[F:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4, !tbaa [[TBAA3:![0-9]+]]
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @sinf(float noundef [[F]])
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
@@ -16,6 +16,42 @@ entry:
   %call = call float @sinf(float noundef %f)
   %0 = load float, ptr %p, align 4, !tbaa !4
   ret float %0
+}
+
+; sinf clobbering errno, but %p is alloca memory, wich can never aliases errno.
+; Hence, can do constant store-to-load forwarding.
+define float @does_not_alias_errno_2(float %f) {
+; CHECK-LABEL: define float @does_not_alias_errno_2(
+; CHECK-SAME: float [[F:%.*]]) {
+; CHECK-NEXT:    [[P:%.*]] = alloca float, align 4
+; CHECK-NEXT:    call void @escape(ptr nonnull [[P]])
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %p = alloca float
+  call void @escape(ptr %p)
+  store float 0.0, ptr %p
+  call float @sinf(float %f)
+  %v = load float, ptr %p
+  ret float %v
+}
+
+; sinf clobbering errno, but %p is memory accessed w/ size larger than errno.
+; Hence, can do constant store-to-load forwarding.
+define double @does_not_alias_errno_3(ptr %p, float %f) {
+; CHECK-LABEL: define double @does_not_alias_errno_3(
+; CHECK-SAME: ptr [[P:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    call void @escape(ptr [[P]])
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[F]])
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+  call void @escape(ptr %p)
+  store double 0.0, ptr %p
+  call float @sinf(float %f)
+  %v = load double, ptr %p
+  ret double %v
 }
 
 ; sinf clobbering errno, unknown TBAA info, %p may alias errno.
@@ -36,6 +72,7 @@ entry:
 }
 
 declare float @sinf(float noundef) memory(errnomem: write)
+declare void @escape(ptr %p)
 
 !llvm.errno.tbaa = !{!0}
 
@@ -45,3 +82,9 @@ declare float @sinf(float noundef) memory(errnomem: write)
 !3 = !{!"Simple C/C++ TBAA"}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"float", !2, i64 0}
+;.
+; CHECK: [[META2:![0-9]+]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
+; CHECK: [[META5]] = !{!"float", [[META2]], i64 0}
+;.
