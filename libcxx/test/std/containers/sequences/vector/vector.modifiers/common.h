@@ -42,7 +42,7 @@ bool Throws::sThrows = false;
 struct ThrowingMove {
   TEST_CONSTEXPR ThrowingMove() : value(0), do_throw(false) {}
   TEST_CONSTEXPR explicit ThrowingMove(int v) : value(v), do_throw(false) {}
-  TEST_CONSTEXPR explicit ThrowingMove(int v, bool do_throw) : value(v), do_throw(do_throw) {}
+  TEST_CONSTEXPR explicit ThrowingMove(int v, bool throw_) : value(v), do_throw(throw_) {}
 
   ThrowingMove(const ThrowingMove& rhs)        = default;
   ThrowingMove& operator=(const ThrowingMove&) = default;
