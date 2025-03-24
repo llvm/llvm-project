@@ -850,9 +850,9 @@ bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
     const MCExpr *AdjustExpr = nullptr;
     if (const CSKYMCExpr *CSKYExpr =
             dyn_cast<CSKYMCExpr>(Inst.getOperand(1).getExpr())) {
-      if (CSKYExpr->getKind() == CSKYMCExpr::VK_TLSGD ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_TLSIE ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_TLSLDM) {
+      if (CSKYExpr->getSpecifier() == CSKYMCExpr::VK_TLSGD ||
+          CSKYExpr->getSpecifier() == CSKYMCExpr::VK_TLSIE ||
+          CSKYExpr->getSpecifier() == CSKYMCExpr::VK_TLSLDM) {
         MCSymbol *Dot = getContext().createNamedTempSymbol();
         Out.emitLabel(Dot);
         AdjustExpr = MCSymbolRefExpr::create(Dot, getContext());

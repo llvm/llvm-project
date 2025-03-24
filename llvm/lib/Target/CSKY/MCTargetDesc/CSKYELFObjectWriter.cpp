@@ -38,7 +38,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
   unsigned Kind = Fixup.getTargetKind();
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
+  uint8_t Modifier = Target.getAccessVariant();
 
   if (IsPCRel) {
     switch (Kind) {
@@ -79,7 +79,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_CKCORE_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target) {
-      auto TK = cast<CSKYMCExpr>(Expr)->getKind();
+      auto TK = cast<CSKYMCExpr>(Expr)->getSpecifier();
       if (TK == CSKYMCExpr::VK_ADDR)
         return ELF::R_CKCORE_ADDR32;
       if (TK == CSKYMCExpr::VK_GOT)
@@ -111,19 +111,19 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
         Ctx.reportError(Fixup.getLoc(),
                         "invalid fixup for 4-byte data relocation");
         return ELF::R_CKCORE_NONE;
-      case MCSymbolRefExpr::VK_GOT:
+      case CSKYMCExpr::VK_GOT:
         return ELF::R_CKCORE_GOT32;
-      case MCSymbolRefExpr::VK_GOTOFF:
+      case CSKYMCExpr::VK_GOTOFF:
         return ELF::R_CKCORE_GOTOFF;
-      case MCSymbolRefExpr::VK_PLT:
+      case CSKYMCExpr::VK_PLT:
         return ELF::R_CKCORE_PLT32;
-      case MCSymbolRefExpr::VK_TLSGD:
+      case CSKYMCExpr::VK_TLSGD:
         return ELF::R_CKCORE_TLS_GD32;
-      case MCSymbolRefExpr::VK_TLSLDM:
+      case CSKYMCExpr::VK_TLSLDM:
         return ELF::R_CKCORE_TLS_LDM32;
-      case MCSymbolRefExpr::VK_TPOFF:
+      case CSKYMCExpr::VK_TPOFF:
         return ELF::R_CKCORE_TLS_LE32;
-      case MCSymbolRefExpr::VK_None:
+      case CSKYMCExpr::VK_None:
         return ELF::R_CKCORE_ADDR32;
       }
     }
