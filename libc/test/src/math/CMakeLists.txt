@@ -1710,7 +1710,6 @@ add_fp_unittest(
     hypotf16_test.cpp
   DEPENDS
     libc.src.math.hypotf16
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
