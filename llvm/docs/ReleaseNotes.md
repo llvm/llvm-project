@@ -141,6 +141,8 @@ Changes to the RISC-V Backend
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
   extension.
 * Adds experimental assembler support for Zvqdotq.
+* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
+  now be used to materialize immediates.
 
 Changes to the WebAssembly Backend
 ----------------------------------
