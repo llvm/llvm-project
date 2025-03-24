@@ -161,3 +161,46 @@ void top() {
   clang_analyzer_isTainted(A.data); // expected-warning {{YES}}
 }
 } // namespace gh114270
+
+
+namespace format_attribute {
+__attribute__((__format__ (__printf__, 1, 2)))
+void log_nonmethod(const char *fmt, ...);
+
+void test_format_attribute_nonmethod() {
+  int n;
+  fscanf(stdin, "%d", &n); // Get a tainted value.
+                           
+  log_nonmethod("This number is suspicious: %d\n", n); // no-warning
+}
+
+struct Foo {
+  // When the format attribute is applied to a method, argumet '1' is the
+  // implicit `this`, so e.g. in this case argument '2' specifies `fmt`.
+  // Specifying '1' instead of '2' would produce a compilation error:
+  // "format attribute cannot specify the implicit this argument as the format string"
+  __attribute__((__format__ (__printf__, 2, 3)))
+  void log_method(const char *fmt, ...);
+
+  void test_format_attribute_method() {
+    int n;
+    fscanf(stdin, "%d", &n); // Get a tainted value.
+                             
+    // FIXME: The analyzer misinterprets the parameter indices in the format
+    // attribute when the format attribute is applied to a method.
+    log_method("This number is suspicious: %d\n", n);
+    // expected-warning@-1 {{Untrusted data is used as a format string}}
+  }
+
+  __attribute__((__format__ (__printf__, 1, 2)))
+  static void log_static_method(const char *fmt, ...);
+
+  void test_format_attribute_static_method() {
+    int n;
+    fscanf(stdin, "%d", &n); // Get a tainted value.
+                             
+    log_static_method("This number is suspicious: %d\n", n); // no-warning
+  }
+};
+
+} // namespace format_attribute
