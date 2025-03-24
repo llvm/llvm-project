@@ -4143,6 +4143,7 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
             // We don't allow UTF literals to be implicitly converted
             break;
           case StringLiteralKind::Ordinary:
+          case StringLiteralKind::Binary:
             return (ToPointeeType->getKind() == BuiltinType::Char_U ||
                     ToPointeeType->getKind() == BuiltinType::Char_S);
           case StringLiteralKind::Wide:
@@ -7368,6 +7369,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
     Qualifiers Quals;
     /// The class for a pointer-to-member; a constant array type with a bound
     /// (if any) for an array.
+    /// FIXME: Store Qualifier for pointer-to-member.
     const Type *ClassOrBound;
 
     Step(Kind K, const Type *ClassOrBound = nullptr)
@@ -7378,7 +7380,8 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       case Pointer:
         return Ctx.getPointerType(T);
       case MemberPointer:
-        return Ctx.getMemberPointerType(T, ClassOrBound);
+        return Ctx.getMemberPointerType(T, /*Qualifier=*/nullptr,
+                                        ClassOrBound->getAsCXXRecordDecl());
       case ObjCPointer:
         return Ctx.getObjCObjectPointerType(T);
       case Array:

@@ -744,10 +744,10 @@ Error RISCVISAInfo::checkDependency() {
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},
-      {"xqcicli"}, {"xqcicm"},  {"xqcics"},  {"xqcicsr"},
-      {"xqciint"}, {"xqcilb"},  {"xqcili"},  {"xqcilia"},
-      {"xqcilo"},  {"xqcilsm"}, {"xqcisim"}, {"xqcisls"}};
+      {"xqcia"},   {"xqciac"},  {"xqcibi"},  {"xqcibm"},  {"xqcicli"},
+      {"xqcicm"},  {"xqcics"},  {"xqcicsr"}, {"xqciint"}, {"xqcilb"},
+      {"xqcili"},  {"xqcilia"}, {"xqcilo"},  {"xqcilsm"}, {"xqcisim"},
+      {"xqcisls"}, {"xqcisync"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
@@ -855,6 +855,18 @@ void RISCVISAInfo::updateImplication() {
                     It->second = *Version;
                     WorkList.push_back(ImpliedExt);
                   });
+  }
+
+  // Add Zcd if C and D are enabled.
+  if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd")) {
+    auto Version = findDefaultVersion("zcd");
+    Exts["zcd"] = *Version;
+  }
+
+  // Add Zcf if C and F are enabled on RV32.
+  if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf")) {
+    auto Version = findDefaultVersion("zcf");
+    Exts["zcf"] = *Version;
   }
 
   // Add Zcf if Zce and F are enabled on RV32.
