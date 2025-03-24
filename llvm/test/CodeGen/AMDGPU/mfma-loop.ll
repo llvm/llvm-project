@@ -264,7 +264,7 @@ define amdgpu_kernel void @test_mfma_loop_vgpr_init(ptr addrspace(1) %arg) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %init = bitcast i32 %tid to float
-  %tmp0 = insertelement <32 x float> undef, float %init, i32 0
+  %tmp0 = insertelement <32 x float> poison, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
   %tmp2 = insertelement <32 x float> %tmp1, float %init, i32 2
   %tmp3 = insertelement <32 x float> %tmp2, float %init, i32 3
@@ -332,7 +332,7 @@ exit:
 
 define amdgpu_kernel void @test_mfma_loop_sgpr_init(ptr addrspace(1) %arg, float %init) #0 {
 entry:
-  %tmp0 = insertelement <32 x float> undef, float %init, i32 0
+  %tmp0 = insertelement <32 x float> poison, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
   %tmp2 = insertelement <32 x float> %tmp1, float %init, i32 2
   %tmp3 = insertelement <32 x float> %tmp2, float %init, i32 3
@@ -527,7 +527,7 @@ define amdgpu_kernel void @test_mfma_loop_agpr_init(ptr addrspace(1) %arg) #0 {
 entry:
   %mai.0 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> zeroinitializer, i32 0, i32 0, i32 0)
   %init = extractelement <32 x float> %mai.0, i32 0
-  %tmp0 = insertelement <32 x float> undef, float %init, i32 0
+  %tmp0 = insertelement <32 x float> poison, float %init, i32 0
   %tmp1 = insertelement <32 x float> %tmp0, float %init, i32 1
   %tmp2 = insertelement <32 x float> %tmp1, float %init, i32 2
   %tmp3 = insertelement <32 x float> %tmp2, float %init, i32 3

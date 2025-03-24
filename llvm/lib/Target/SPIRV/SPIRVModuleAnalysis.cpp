@@ -361,11 +361,16 @@ void SPIRVModuleAnalysis::visitDecl(
   } else if (Opcode == SPIRV::OpFunction ||
              Opcode == SPIRV::OpFunctionParameter) {
     GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
-  } else if (Opcode == SPIRV::OpTypeStruct) {
+  } else if (Opcode == SPIRV::OpTypeStruct ||
+             Opcode == SPIRV::OpConstantComposite) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
     const MachineInstr *NextInstr = MI.getNextNode();
     while (NextInstr &&
-           NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) {
+           ((Opcode == SPIRV::OpTypeStruct &&
+             NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) ||
+            (Opcode == SPIRV::OpConstantComposite &&
+             NextInstr->getOpcode() ==
+                 SPIRV::OpConstantCompositeContinuedINTEL))) {
       MCRegister Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
       MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
       MAI.setSkipEmission(NextInstr);
@@ -888,6 +893,9 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   } else if (Dec == SPIRV::Decoration::NonUniformEXT) {
     Reqs.addRequirements(SPIRV::Capability::ShaderNonUniformEXT);
+  } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
   }
 }
 

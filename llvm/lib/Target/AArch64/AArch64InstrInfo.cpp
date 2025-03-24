@@ -1491,13 +1491,22 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     if ((Mask == Pred) && PTest->getOpcode() == AArch64::PTEST_PP_ANY)
       return PredOpcode;
 
+    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
+
+    // If the PTEST like instruction's general predicate is not `Mask`, attempt
+    // to look through a copy and try again. This is because some instructions
+    // take a predicate whose register class is a subset of its result class.
+    if (Mask != PTestLikeMask && PTestLikeMask->isFullCopy() &&
+        PTestLikeMask->getOperand(1).getReg().isVirtual())
+      PTestLikeMask =
+          MRI->getUniqueVRegDef(PTestLikeMask->getOperand(1).getReg());
+
     // For PTEST(PTRUE_ALL, PTEST_LIKE), the PTEST is redundant if the
     // the element size matches and either the PTEST_LIKE instruction uses
     // the same all active mask or the condition is "any".
     if (isPTrueOpcode(MaskOpcode) && Mask->getOperand(1).getImm() == 31 &&
         getElementSizeForOpcode(MaskOpcode) ==
             getElementSizeForOpcode(PredOpcode)) {
-      auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
       if (Mask == PTestLikeMask || PTest->getOpcode() == AArch64::PTEST_PP_ANY)
         return PredOpcode;
     }
@@ -1524,7 +1533,6 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
     // active flag, whereas the PTEST instruction with the same mask doesn't.
     // For PTEST_ANY this doesn't apply as the flags in this case would be
     // identical regardless of element size.
-    auto PTestLikeMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
     uint64_t PredElementSize = getElementSizeForOpcode(PredOpcode);
     if (Mask == PTestLikeMask && (PredElementSize == AArch64::ElementSizeB ||
                                   PTest->getOpcode() == AArch64::PTEST_PP_ANY))
@@ -7360,7 +7368,7 @@ static MachineInstr *genFusedMultiplyAcc(
 static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
                        const TargetInstrInfo *TII, MachineInstr &Root,
                        SmallVectorImpl<MachineInstr *> &InsInstrs,
-                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
+                       DenseMap<Register, unsigned> &InstrIdxForVirtReg,
                        unsigned MnegOpc, const TargetRegisterClass *RC) {
   Register NewVR = MRI.createVirtualRegister(RC);
   MachineInstrBuilder MIB =
@@ -7379,7 +7387,7 @@ static Register genNeg(MachineFunction &MF, MachineRegisterInfo &MRI,
 static MachineInstr *genFusedMultiplyAccNeg(
     MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
     MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
     unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1);
 
@@ -7406,7 +7414,7 @@ static MachineInstr *genFusedMultiplyIdx(
 static MachineInstr *genFusedMultiplyIdxNeg(
     MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
     MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg, unsigned IdxMulOpd,
     unsigned MaddOpc, unsigned MnegOpc, const TargetRegisterClass *RC) {
   assert(IdxMulOpd == 1);
 
@@ -7472,13 +7480,12 @@ static MachineInstr *genMaddR(MachineFunction &MF, MachineRegisterInfo &MRI,
 /// Do the following transformation
 /// A - (B + C)  ==>   (A - B) - C
 /// A - (B + C)  ==>   (A - C) - B
-static void
-genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
-                 const TargetInstrInfo *TII, MachineInstr &Root,
-                 SmallVectorImpl<MachineInstr *> &InsInstrs,
-                 SmallVectorImpl<MachineInstr *> &DelInstrs,
-                 unsigned IdxOpd1,
-                 DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+static void genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
+                             const TargetInstrInfo *TII, MachineInstr &Root,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             SmallVectorImpl<MachineInstr *> &DelInstrs,
+                             unsigned IdxOpd1,
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
   assert(IdxOpd1 == 1 || IdxOpd1 == 2);
   unsigned IdxOtherOpd = IdxOpd1 == 1 ? 2 : 1;
   MachineInstr *AddMI = MRI.getUniqueVRegDef(Root.getOperand(2).getReg());
@@ -7531,7 +7538,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineFunction &MF = *MBB.getParent();

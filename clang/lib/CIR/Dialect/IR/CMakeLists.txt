@@ -8,12 +8,15 @@ add_clang_library(MLIRCIR
   MLIRCIROpsIncGen
   MLIRCIREnumsGen
   MLIRCIROpInterfacesIncGen
+  MLIRCIRLoopOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRCIRInterfaces
   MLIRDLTIDialect
   MLIRDataLayoutInterfaces
   MLIRFuncDialect
+  MLIRLoopLikeInterface
   MLIRCIRInterfaces
   clangAST
   )

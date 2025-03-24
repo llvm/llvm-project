@@ -5,10 +5,15 @@
 ; It doesn't matter if an x86-64 target has specified "no-sse2"; we still can use mfence.
 
 define void @test() {
-; CHECK-LABEL: test:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    mfence
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test:
+; X86:       # %bb.0:
+; X86-NEXT:    mfence
+; X86-NEXT:    retl
+;
+; X64-LABEL: test:
+; X64:       # %bb.0:
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
   fence seq_cst
   ret void
 }
@@ -23,10 +28,20 @@ define i32 @fence(ptr %ptr) {
 ;
 ; X64-LABEL: fence:
 ; X64:       # %bb.0:
-; X64-NEXT:    mfence
+; X64-NEXT:    lock orl $0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    retq
   %atomic = atomicrmw add ptr %ptr, i32 0 seq_cst
   ret i32 %atomic
 }
+
+define void @mfence() nounwind {
+; CHECK-LABEL: mfence:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mfence
+; CHECK-NEXT:    ret{{[l|q]}}
+  call void @llvm.x86.sse2.mfence()
+  ret void
+}
+declare void @llvm.x86.sse2.mfence() nounwind readnone
 

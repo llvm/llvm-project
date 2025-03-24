@@ -1070,7 +1070,7 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
   // in different basic blocks.
   if (op->getBlock() != insertionPoint->getBlock()) {
     return rewriter.notifyMatchFailure(
-        op, "unsupported caes where operation and insertion point are not in "
+        op, "unsupported case where operation and insertion point are not in "
             "the same basic block");
   }
   // If `insertionPoint` does not dominate `op`, do nothing
@@ -1114,4 +1114,71 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
                                               Operation *insertionPoint) {
   DominanceInfo dominance(op);
   return moveOperationDependencies(rewriter, op, insertionPoint, dominance);
+}
+
+LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
+                                         ValueRange values,
+                                         Operation *insertionPoint,
+                                         DominanceInfo &dominance) {
+  // Remove the values that already dominate the insertion point.
+  SmallVector<Value> prunedValues;
+  for (auto value : values) {
+    if (dominance.properlyDominates(value, insertionPoint)) {
+      continue;
+    }
+    // Block arguments are not supported.
+    if (isa<BlockArgument>(value)) {
+      return rewriter.notifyMatchFailure(
+          insertionPoint,
+          "unsupported case of moving block argument before insertion point");
+    }
+    // Check for currently unsupported case if the insertion point is in a
+    // different block.
+    if (value.getDefiningOp()->getBlock() != insertionPoint->getBlock()) {
+      return rewriter.notifyMatchFailure(
+          insertionPoint,
+          "unsupported case of moving definition of value before an insertion "
+          "point in a different basic block");
+    }
+    prunedValues.push_back(value);
+  }
+
+  // Find the backward slice of operation for each `Value` the operation
+  // depends on. Prune the slice to only include operations not already
+  // dominated by the `insertionPoint`
+  BackwardSliceOptions options;
+  options.inclusive = true;
+  options.omitUsesFromAbove = false;
+  // Since current support is to only move within a same basic block,
+  // the slices dont need to look past block arguments.
+  options.omitBlockArguments = true;
+  options.filter = [&](Operation *sliceBoundaryOp) {
+    return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+  };
+  llvm::SetVector<Operation *> slice;
+  for (auto value : prunedValues) {
+    getBackwardSlice(value, &slice, options);
+  }
+
+  // If the slice contains `insertionPoint` cannot move the dependencies.
+  if (slice.contains(insertionPoint)) {
+    return rewriter.notifyMatchFailure(
+        insertionPoint,
+        "cannot move dependencies before operation in backward slice of op");
+  }
+
+  // Sort operations topologically before moving.
+  mlir::topologicalSort(slice);
+
+  for (Operation *op : slice) {
+    rewriter.moveOpBefore(op, insertionPoint);
+  }
+  return success();
+}
+
+LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
+                                         ValueRange values,
+                                         Operation *insertionPoint) {
+  DominanceInfo dominance(insertionPoint);
+  return moveValueDefinitions(rewriter, values, insertionPoint, dominance);
 }

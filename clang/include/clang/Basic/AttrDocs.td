@@ -2883,7 +2883,7 @@ https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html
 https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
-https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.6
+https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
   }];
 }
 

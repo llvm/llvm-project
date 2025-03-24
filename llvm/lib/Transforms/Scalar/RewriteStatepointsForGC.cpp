@@ -1138,13 +1138,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
     Value *BDV = findBaseOrBDV(Input, Cache, KnownBases);
     Value *Base = nullptr;
-    if (!States.count(BDV)) {
+    if (auto It = States.find(BDV); It == States.end()) {
       assert(areBothVectorOrScalar(BDV, Input));
       Base = BDV;
     } else {
       // Either conflict or base.
-      assert(States.count(BDV));
-      Base = States[BDV].getBaseValue();
+      Base = It->second.getBaseValue();
     }
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts
@@ -1183,11 +1182,12 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
       for (unsigned i = 0; i < NumPHIValues; i++) {
         Value *InVal = PN->getIncomingValue(i);
         BasicBlock *InBB = PN->getIncomingBlock(i);
-        if (!BlockToValue.count(InBB))
-          BlockToValue[InBB] = getBaseForInput(InVal, InBB->getTerminator());
+        auto [It, Inserted] = BlockToValue.try_emplace(InBB);
+        if (Inserted)
+          It->second = getBaseForInput(InVal, InBB->getTerminator());
         else {
 #ifndef NDEBUG
-          Value *OldBase = BlockToValue[InBB];
+          Value *OldBase = It->second;
           Value *Base = getBaseForInput(InVal, nullptr);
 
           // We can't use `stripPointerCasts` instead of this function because
@@ -1207,7 +1207,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
                  "findBaseOrBDV should be pure!");
 #endif
         }
-        Value *Base = BlockToValue[InBB];
+        Value *Base = It->second;
         BasePHI->setIncomingValue(i, Base);
       }
     } else if (SelectInst *BaseSI =
@@ -1546,9 +1546,10 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Value *LiveIdx = Builder.getInt32(i);
 
     Type *Ty = LiveVariables[i]->getType();
-    if (!TypeToDeclMap.count(Ty))
-      TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
-    Function *GCRelocateDecl = TypeToDeclMap[Ty];
+    auto [It, Inserted] = TypeToDeclMap.try_emplace(Ty);
+    if (Inserted)
+      It->second = getGCRelocateDecl(Ty);
+    Function *GCRelocateDecl = It->second;
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -2379,9 +2380,9 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
 
     // Handle the scenario where the RootOfChain is not equal to the
     // Base Value, but they are essentially the same phi values.
-    if (RootOfChain != PointerToBase[Derived]) {
+    if (Value *BaseVal = PointerToBase[Derived]; RootOfChain != BaseVal) {
       PHINode *OrigRootPhi = dyn_cast<PHINode>(RootOfChain);
-      PHINode *AlternateRootPhi = dyn_cast<PHINode>(PointerToBase[Derived]);
+      PHINode *AlternateRootPhi = dyn_cast<PHINode>(BaseVal);
       if (!OrigRootPhi || !AlternateRootPhi)
         continue;
       // PHI nodes that have the same incoming values, and belonging to the same
@@ -3301,7 +3302,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     Data.LiveIn[&BB].set_union(Data.LiveOut[&BB]);
     Data.LiveIn[&BB].set_subtract(Data.KillSet[&BB]);
     if (!Data.LiveIn[&BB].empty())
-      Worklist.insert(pred_begin(&BB), pred_end(&BB));
+      Worklist.insert_range(predecessors(&BB));
   }
 
   // Propagate that liveness until stable
@@ -3335,7 +3336,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     // assert: OldLiveIn is a subset of LiveTmp
     if (OldLiveIn.size() != LiveTmp.size()) {
       Data.LiveIn[BB] = LiveTmp;
-      Worklist.insert(pred_begin(BB), pred_end(BB));
+      Worklist.insert_range(predecessors(BB));
     }
   } // while (!Worklist.empty())
 
@@ -3362,7 +3363,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   computeLiveInValues(BB->rbegin(), ++Inst->getIterator().getReverse(), LiveOut,
                       GC);
   LiveOut.remove(Inst);
-  Out.insert(LiveOut.begin(), LiveOut.end());
+  Out.insert_range(LiveOut);
 }
 
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,

@@ -54,24 +54,27 @@ __equal_unaligned(__bit_iterator<_Cp, _IsConst1> __first1,
       unsigned __clz_f     = __bits_per_word - __first1.__ctz_;
       difference_type __dn = std::min(static_cast<difference_type>(__clz_f), __n);
       __n -= __dn;
-      __storage_type __m   = (~__storage_type(0) << __first1.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
+      __storage_type __m   = std::__middle_mask<__storage_type>(__clz_f - __dn, __first1.__ctz_);
       __storage_type __b   = *__first1.__seg_ & __m;
       unsigned __clz_r     = __bits_per_word - __first2.__ctz_;
       __storage_type __ddn = std::min<__storage_type>(__dn, __clz_r);
-      __m                  = (~__storage_type(0) << __first2.__ctz_) & (~__storage_type(0) >> (__clz_r - __ddn));
+      __m                  = std::__middle_mask<__storage_type>(__clz_r - __ddn, __first2.__ctz_);
       if (__first2.__ctz_ > __first1.__ctz_) {
-        if ((*__first2.__seg_ & __m) != (__b << (__first2.__ctz_ - __first1.__ctz_)))
+        if (static_cast<__storage_type>(*__first2.__seg_ & __m) !=
+            static_cast<__storage_type>(__b << (__first2.__ctz_ - __first1.__ctz_)))
           return false;
       } else {
-        if ((*__first2.__seg_ & __m) != (__b >> (__first1.__ctz_ - __first2.__ctz_)))
+        if (static_cast<__storage_type>(*__first2.__seg_ & __m) !=
+            static_cast<__storage_type>(__b >> (__first1.__ctz_ - __first2.__ctz_)))
           return false;
       }
       __first2.__seg_ += (__ddn + __first2.__ctz_) / __bits_per_word;
       __first2.__ctz_ = static_cast<unsigned>((__ddn + __first2.__ctz_) % __bits_per_word);
       __dn -= __ddn;
       if (__dn > 0) {
-        __m = ~__storage_type(0) >> (__bits_per_word - __dn);
-        if ((*__first2.__seg_ & __m) != (__b >> (__first1.__ctz_ + __ddn)))
+        __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
+        if (static_cast<__storage_type>(*__first2.__seg_ & __m) !=
+            static_cast<__storage_type>(__b >> (__first1.__ctz_ + __ddn)))
           return false;
         __first2.__ctz_ = static_cast<unsigned>(__dn);
       }
@@ -81,29 +84,30 @@ __equal_unaligned(__bit_iterator<_Cp, _IsConst1> __first1,
     // __first1.__ctz_ == 0;
     // do middle words
     unsigned __clz_r   = __bits_per_word - __first2.__ctz_;
-    __storage_type __m = ~__storage_type(0) << __first2.__ctz_;
+    __storage_type __m = std::__leading_mask<__storage_type>(__first2.__ctz_);
     for (; __n >= __bits_per_word; __n -= __bits_per_word, ++__first1.__seg_) {
       __storage_type __b = *__first1.__seg_;
-      if ((*__first2.__seg_ & __m) != (__b << __first2.__ctz_))
+      if (static_cast<__storage_type>(*__first2.__seg_ & __m) != static_cast<__storage_type>(__b << __first2.__ctz_))
         return false;
       ++__first2.__seg_;
-      if ((*__first2.__seg_ & ~__m) != (__b >> __clz_r))
+      if (static_cast<__storage_type>(*__first2.__seg_ & static_cast<__storage_type>(~__m)) !=
+          static_cast<__storage_type>(__b >> __clz_r))
         return false;
     }
     // do last word
     if (__n > 0) {
-      __m                 = ~__storage_type(0) >> (__bits_per_word - __n);
+      __m                 = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
       __storage_type __b  = *__first1.__seg_ & __m;
       __storage_type __dn = std::min(__n, static_cast<difference_type>(__clz_r));
-      __m                 = (~__storage_type(0) << __first2.__ctz_) & (~__storage_type(0) >> (__clz_r - __dn));
-      if ((*__first2.__seg_ & __m) != (__b << __first2.__ctz_))
+      __m                 = std::__middle_mask<__storage_type>(__clz_r - __dn, __first2.__ctz_);
+      if (static_cast<__storage_type>(*__first2.__seg_ & __m) != static_cast<__storage_type>(__b << __first2.__ctz_))
         return false;
       __first2.__seg_ += (__dn + __first2.__ctz_) / __bits_per_word;
       __first2.__ctz_ = static_cast<unsigned>((__dn + __first2.__ctz_) % __bits_per_word);
       __n -= __dn;
       if (__n > 0) {
-        __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        if ((*__first2.__seg_ & __m) != (__b >> __dn))
+        __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
+        if (static_cast<__storage_type>(*__first2.__seg_ & __m) != static_cast<__storage_type>(__b >> __dn))
           return false;
       }
     }
@@ -128,7 +132,7 @@ __equal_aligned(__bit_iterator<_Cp, _IsConst1> __first1,
       unsigned __clz       = __bits_per_word - __first1.__ctz_;
       difference_type __dn = std::min(static_cast<difference_type>(__clz), __n);
       __n -= __dn;
-      __storage_type __m = (~__storage_type(0) << __first1.__ctz_) & (~__storage_type(0) >> (__clz - __dn));
+      __storage_type __m = std::__middle_mask<__storage_type>(__clz - __dn, __first1.__ctz_);
       if ((*__first2.__seg_ & __m) != (*__first1.__seg_ & __m))
         return false;
       ++__first2.__seg_;
@@ -144,7 +148,7 @@ __equal_aligned(__bit_iterator<_Cp, _IsConst1> __first1,
         return false;
     // do last word
     if (__n > 0) {
-      __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
+      __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
       if ((*__first2.__seg_ & __m) != (*__first1.__seg_ & __m))
         return false;
     }
