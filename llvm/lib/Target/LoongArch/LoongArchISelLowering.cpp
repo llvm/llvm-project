@@ -560,6 +560,7 @@ static void computeZeroableShuffleElements(ArrayRef<int> Mask, SDValue V1,
   int VectorSizeInBits = V1.getValueSizeInBits();
   int ScalarSizeInBits = VectorSizeInBits / Size;
   assert(!(VectorSizeInBits % ScalarSizeInBits) && "Illegal shuffle mask size");
+  (void)ScalarSizeInBits;
 
   for (int i = 0; i < Size; ++i) {
     int M = Mask[i];
