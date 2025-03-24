@@ -2485,6 +2485,22 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
             VecTy->getElementType()->isHalfType());
       return true;
     };
+
+    auto CheckArgTypeIsCorrect = [](
+      Sema *S, Expr *Arg, QualType ExpectedType,
+      llvm::function_ref<bool(clang::QualType PassedType)> Check) -> bool {
+      QualType PassedType = Arg->getType();
+      if (Check(PassedType)) {
+        if (auto *VecTyA = PassedType->getAs<VectorType>())
+          ExpectedType = S->Context.getVectorType(
+              ExpectedType, VecTyA->getNumElements(), VecTyA->getVectorKind());
+        S->Diag(Arg->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+            << PassedType << ExpectedType << 1 << 0 << 0;
+        return true;
+      }
+      return false;
+    };
+
     if(CheckArgTypeIsCorrect(&SemaRef, TheCall->getArg(0),
                              SemaRef.getASTContext().HalfTy,
                              checkHalfVectorOfSize2))
@@ -2494,8 +2510,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                              checkHalfVectorOfSize2))
       return true;
 
-    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), SemaRef.getASTContext().FloatTy))
+    if (!SemaRef.getASTContext().hasSameUnqualifiedType(TheCall->getArg(2)->getType(), SemaRef.getASTContext().FloatTy)) {
+      SemaRef.Diag(TheCall->getArg(2)->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+          << TheCall->getArg(2)->getType() << SemaRef.getASTContext().FloatTy << 1 << 0 << 0;
       return true;
+    }
+
     TheCall->setType(SemaRef.getASTContext().FloatTy);
     break;
   }
