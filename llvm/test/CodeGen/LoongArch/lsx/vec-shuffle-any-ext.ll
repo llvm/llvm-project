@@ -5,10 +5,10 @@ define void @shuffle_any_ext_2i8_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_2i8_to_2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    vld $vr0, $a2, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr1, $vr0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <2 x i8>, ptr %ptr
@@ -22,10 +22,9 @@ define void @shuffle_any_ext_2i16_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_2i16_to_2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    vld $vr0, $a2, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; CHECK-NEXT:    vshuf.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <2 x i16>, ptr %ptr
@@ -54,10 +53,9 @@ define void @shuffle_any_ext_4i8_to_4i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_4i8_to_4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    vld $vr0, $a2, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr1, $vr0
+; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <4 x i8>, ptr %ptr
@@ -133,22 +131,16 @@ define void @shuffle_any_ext_8i16_to_8i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_8i16_to_8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_0)
-; CHECK-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI8_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_1)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI8_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_2)
-; CHECK-NEXT:    vld $vr3, $a0, %pc_lo12(.LCPI8_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_3)
-; CHECK-NEXT:    vld $vr4, $a0, %pc_lo12(.LCPI8_3)
-; CHECK-NEXT:    vshuf.h $vr1, $vr0, $vr0
-; CHECK-NEXT:    vshuf.h $vr2, $vr0, $vr0
-; CHECK-NEXT:    vshuf.h $vr3, $vr0, $vr0
-; CHECK-NEXT:    vshuf.h $vr4, $vr0, $vr0
-; CHECK-NEXT:    vst $vr4, $a1, 48
+; CHECK-NEXT:    vilvl.h $vr1, $vr0, $vr0
+; CHECK-NEXT:    vilvl.w $vr2, $vr1, $vr1
+; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvh.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.w $vr3, $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr0, $vr0, $vr0
+; CHECK-NEXT:    vst $vr0, $a1, 48
 ; CHECK-NEXT:    vst $vr3, $a1, 32
-; CHECK-NEXT:    vst $vr2, $a1, 16
-; CHECK-NEXT:    vst $vr1, $a1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 16
+; CHECK-NEXT:    vst $vr2, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <8 x i16>, ptr %ptr
   %y = shufflevector <8 x i16> %x, <8 x i16> poison, <32 x i32> <i32 0, i32 15, i32 15, i32 15, i32 1, i32 14, i32 14, i32 14, i32 2, i32 13, i32 13, i32 13, i32 3, i32 12, i32 12, i32 12, i32 4, i32 11, i32 11, i32 11, i32 5, i32 10, i32 10, i32 10, i32 6, i32 9, i32 9, i32 9, i32 7, i32 8, i32 8, i32 8>
@@ -177,22 +169,16 @@ define void @shuffle_any_ext_16i8_to_16i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_16i8_to_16i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI10_0)
-; CHECK-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI10_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI10_1)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI10_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI10_2)
-; CHECK-NEXT:    vld $vr3, $a0, %pc_lo12(.LCPI10_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI10_3)
-; CHECK-NEXT:    vld $vr4, $a0, %pc_lo12(.LCPI10_3)
-; CHECK-NEXT:    vshuf.b $vr1, $vr0, $vr0, $vr1
-; CHECK-NEXT:    vshuf.b $vr2, $vr0, $vr0, $vr2
-; CHECK-NEXT:    vshuf.b $vr3, $vr0, $vr0, $vr3
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr4
+; CHECK-NEXT:    vilvl.b $vr1, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr1
+; CHECK-NEXT:    vilvh.h $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvh.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr3, $vr0, $vr0
+; CHECK-NEXT:    vilvh.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 48
 ; CHECK-NEXT:    vst $vr3, $a1, 32
-; CHECK-NEXT:    vst $vr2, $a1, 16
-; CHECK-NEXT:    vst $vr1, $a1, 0
+; CHECK-NEXT:    vst $vr1, $a1, 16
+; CHECK-NEXT:    vst $vr2, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <16 x i8>, ptr %ptr
   %y = shufflevector <16 x i8> %x, <16 x i8> poison, <64 x i32> <i32 0, i32 31, i32 31, i32 31, i32 1, i32 30, i32 30, i32 30, i32 2, i32 29, i32 29, i32 29, i32 3, i32 28, i32 28, i32 28, i32 4, i32 27, i32 27, i32 27, i32 5, i32 26, i32 26, i32 26, i32 6, i32 25, i32 25, i32 25, i32 7, i32 24, i32 24, i32 24, i32 8, i32 23, i32 23, i32 23, i32 9, i32 22, i32 22, i32 22, i32 10, i32 21, i32 21, i32 21, i32 11, i32 20, i32 20, i32 20, i32 12, i32 19, i32 19, i32 19, i32 13, i32 18, i32 18, i32 18, i32 14, i32 17, i32 17, i32 17, i32 15, i32 16, i32 16, i32 16>
@@ -205,38 +191,28 @@ define void @shuffle_any_ext_16i8_to_16i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_16i8_to_16i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_0)
-; CHECK-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI11_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_1)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI11_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_2)
-; CHECK-NEXT:    vld $vr3, $a0, %pc_lo12(.LCPI11_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_3)
-; CHECK-NEXT:    vld $vr4, $a0, %pc_lo12(.LCPI11_3)
-; CHECK-NEXT:    vshuf.b $vr1, $vr0, $vr0, $vr1
-; CHECK-NEXT:    vshuf.b $vr2, $vr0, $vr0, $vr2
-; CHECK-NEXT:    vshuf.b $vr3, $vr0, $vr0, $vr3
-; CHECK-NEXT:    vshuf.b $vr4, $vr0, $vr0, $vr4
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_4)
-; CHECK-NEXT:    vld $vr5, $a0, %pc_lo12(.LCPI11_4)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_5)
-; CHECK-NEXT:    vld $vr6, $a0, %pc_lo12(.LCPI11_5)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_6)
-; CHECK-NEXT:    vld $vr7, $a0, %pc_lo12(.LCPI11_6)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_7)
-; CHECK-NEXT:    vld $vr8, $a0, %pc_lo12(.LCPI11_7)
-; CHECK-NEXT:    vshuf.b $vr5, $vr0, $vr0, $vr5
-; CHECK-NEXT:    vshuf.b $vr6, $vr0, $vr0, $vr6
-; CHECK-NEXT:    vshuf.b $vr7, $vr0, $vr0, $vr7
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr8
+; CHECK-NEXT:    vilvl.b $vr1, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr1
+; CHECK-NEXT:    vilvl.w $vr3, $vr2, $vr2
+; CHECK-NEXT:    vilvh.w $vr2, $vr2, $vr2
+; CHECK-NEXT:    vilvh.h $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvl.w $vr4, $vr1, $vr1
+; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvh.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr5, $vr0, $vr0
+; CHECK-NEXT:    vilvl.w $vr6, $vr5, $vr5
+; CHECK-NEXT:    vilvh.w $vr5, $vr5, $vr5
+; CHECK-NEXT:    vilvh.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.w $vr7, $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 112
 ; CHECK-NEXT:    vst $vr7, $a1, 96
-; CHECK-NEXT:    vst $vr6, $a1, 80
-; CHECK-NEXT:    vst $vr5, $a1, 64
-; CHECK-NEXT:    vst $vr4, $a1, 48
-; CHECK-NEXT:    vst $vr3, $a1, 32
+; CHECK-NEXT:    vst $vr5, $a1, 80
+; CHECK-NEXT:    vst $vr6, $a1, 64
+; CHECK-NEXT:    vst $vr1, $a1, 48
+; CHECK-NEXT:    vst $vr4, $a1, 32
 ; CHECK-NEXT:    vst $vr2, $a1, 16
-; CHECK-NEXT:    vst $vr1, $a1, 0
+; CHECK-NEXT:    vst $vr3, $a1, 0
 ; CHECK-NEXT:    ret
   %x = load <16 x i8>, ptr %ptr
   %y = shufflevector <16 x i8> %x, <16 x i8> poison, <128 x i32> <i32 0, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 1, i32 30, i32 30, i32 30, i32 30, i32 30, i32 30, i32 30, i32 2, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 3, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 28, i32 4, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 5, i32 26, i32 26, i32 26, i32 26, i32 26, i32 26, i32 26, i32 6, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 25, i32 7, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 8, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 23, i32 9, i32 22, i32 22, i32 22, i32 22, i32 22, i32 22, i32 22, i32 10, i32 21, i32 21, i32 21, i32 21, i32 21, i32 21, i32 21, i32 11, i32 20, i32 20, i32 20, i32 20, i32 20, i32 20, i32 20, i32 12, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 19, i32 13, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 18, i32 14, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 15, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
