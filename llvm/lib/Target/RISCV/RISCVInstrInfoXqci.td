@@ -700,38 +700,45 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 } // Predicates = [HasVendorXqcicm, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1 in {
-  let mayLoad = 0, mayStore = 0 in {
-  def QC_C_DIR : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd), (ins),
-                            "qc.c.dir", "$rd"> {
-    bits<5> rd;
 
-    let Inst{12} = 0b1;
-    let Inst{11-7} = rd;
-    let Inst{6-2} = 0b00000;
-  }
+let mayLoad = 0, mayStore = 0 in {
+def QC_C_DIR : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd), (ins),
+                          "qc.c.dir", "$rd"> {
+  bits<5> rd;
 
-  def QC_SETINTI : QCIInt_IMM<0b0, "qc.setinti">;
-  def QC_CLRINTI : QCIInt_IMM<0b1, "qc.clrinti">;
+  let Inst{12} = 0b1;
+  let Inst{11-7} = rd;
+  let Inst{6-2} = 0b00000;
+}
 
-  def QC_C_EIR    : QCIRVInst16CI_RS1<0b00001, "qc.c.eir">;
-  def QC_C_SETINT : QCIRVInst16CI_RS1<0b00010, "qc.c.setint">;
-  def QC_C_CLRINT : QCIRVInst16CI_RS1<0b00011, "qc.c.clrint">;
+def QC_SETINTI : QCIInt_IMM<0b0, "qc.setinti">;
+def QC_CLRINTI : QCIInt_IMM<0b1, "qc.clrinti">;
 
-  def QC_C_DI     : QCIRVInst16CI_NONE<0b10110, "qc.c.di">;
-  def QC_C_EI     : QCIRVInst16CI_NONE<0b10111, "qc.c.ei">;
-  } // mayLoad = 0, mayStore = 0
+def QC_C_EIR    : QCIRVInst16CI_RS1<0b00001, "qc.c.eir">;
+def QC_C_SETINT : QCIRVInst16CI_RS1<0b00010, "qc.c.setint">;
+def QC_C_CLRINT : QCIRVInst16CI_RS1<0b00011, "qc.c.clrint">;
 
-  let mayLoad = 0, mayStore = 1,
-    Uses = [X1, X2, X5, X6, X7, X8, X10, X11, X12, X13, X14, X15, X16, X17, X28, X29, X30, X31],
-    Defs = [X2, X8] in {
-  def QC_C_MIENTER      : QCIRVInst16CI_NONE<0b10000, "qc.c.mienter">;
-  def QC_C_MIENTER_NEST : QCIRVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
-  } // mayLoad = 1, mayStore = 1, Uses = [...], Defs = [...]
+def QC_C_DI     : QCIRVInst16CI_NONE<0b10110, "qc.c.di">;
+def QC_C_EI     : QCIRVInst16CI_NONE<0b10111, "qc.c.ei">;
 
-  let mayLoad = 1, mayStore = 0, isBarrier = 1, isReturn = 1, isTerminator = 1,
-    Uses = [X2],
-    Defs = [X1, X2, X5, X6, X7, X8, X10, X11, X12, X13, X14, X15, X16, X17, X28, X29, X30, X31] in
-  def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
+let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
+def QC_C_MRET   : QCIRVInst16CI_NONE<0b10010, "qc.c.mret">;
+def QC_C_MNRET  : QCIRVInst16CI_NONE<0b10011, "qc.c.mnret">;
+} // isBarrier = 1, isReturn = 1, isTerminator = 1
+} // mayLoad = 0, mayStore = 0
+
+let mayLoad = 0, mayStore = 1,
+  Uses = [X1, X2, X5, X6, X7, X8, X10, X11, X12, X13, X14, X15, X16, X17, X28, X29, X30, X31],
+  Defs = [X2, X8] in {
+def QC_C_MIENTER      : QCIRVInst16CI_NONE<0b10000, "qc.c.mienter">;
+def QC_C_MIENTER_NEST : QCIRVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
+} // mayLoad = 1, mayStore = 1, Uses = [...], Defs = [...]
+
+let mayLoad = 1, mayStore = 0, isBarrier = 1, isReturn = 1, isTerminator = 1,
+  Uses = [X2],
+  Defs = [X1, X2, X5, X6, X7, X8, X10, X11, X12, X13, X14, X15, X16, X17, X28, X29, X30, X31] in
+def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
+
 } // Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1
 
 let Predicates = [HasVendorXqcilo, IsRV32] in {
