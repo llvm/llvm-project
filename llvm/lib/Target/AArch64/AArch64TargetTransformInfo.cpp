@@ -2817,8 +2817,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // instead of multiple layers of [s|u]unpk[lo|hi].
   // We use the unpacks in cases where the destination type is illegal and
   // requires splitting of the input, even if the input type itself is legal.
-  // FIXME: Use tbl instructions for SVE as well, at least in cases where the
-  //        conversion is done in a loop.
   const unsigned int SVE_EXT_COST = 1;
   const unsigned int SVE_FCVT_COST = 1;
   const unsigned int SVE_UNPACK_ONCE = 4;
