@@ -2065,7 +2065,6 @@ void PreRARematStage::rematerialize() {
   // Collect regions whose RP changes in unpredictable way; we will have to
   // fully recompute their RP after all rematerailizations.
   DenseSet<unsigned> RecomputeRP;
-  SlotIndexes *Slots = DAG.LIS->getSlotIndexes();
 
   // Rematerialize all instructions.
   for (auto &[DefMI, Remat] : Rematerializations) {
@@ -2147,41 +2146,10 @@ void PreRARematStage::rematerialize() {
     ImpactedRegions.insert({DefRegion, DAG.Pressure[DefRegion]});
     RecomputeRP.insert(DefRegion);
 
-    // Update the register's live interval manually. This is aligned with the
-    // instruction collection phase in that it assumes a single def and use
-    // (possibly subreg).
-    SlotIndex NewDef = Slots->getInstructionIndex(*Remat.RematMI).getRegSlot();
-    SlotIndex NewKill = Slots->getInstructionIndex(*Remat.UseMI).getRegSlot();
-
-    // Update the live range to reflect the register's rematerialization. We
-    // will have a single segment (we only remat regs with one use) and at most
-    // a single value number (we only remat virtual regs with a single def).
-    auto UpdateLiveRange = [&](LiveRange &LR) -> void {
-      assert(LR.segments.size() && "expected at least one segment");
-      assert(LR.valnos.size() < 2 && "expected at most one value number");
-
-      // Fix up the first segment and remove the others which have become
-      // unnecessary by construction.
-      LR.segments.truncate(1);
-      LiveRange::Segment &Seg = LR.segments.front();
-      Seg.start = NewDef;
-      Seg.end = NewKill;
-      LR.valnos.clear();
-      if (Seg.valno) {
-        // If present, update the segment's value number as well.
-        Seg.valno->def = NewDef;
-        LR.valnos.push_back(Seg.valno);
-      }
-    };
-
+    // Recompute live interval to reflect the register's rematerialization.
     Register RematReg = Remat.RematMI->getOperand(0).getReg();
-    LiveInterval &RegLI = DAG.LIS->getInterval(RematReg);
-    UpdateLiveRange(RegLI);
-    if (RegLI.hasSubRanges()) {
-      LiveInterval::SubRange &SubRange = *RegLI.subrange_begin();
-      assert(!SubRange.Next && "expected at most one subrange");
-      UpdateLiveRange(SubRange);
-    }
+    DAG.LIS->removeInterval(RematReg);
+    DAG.LIS->createAndComputeVirtRegInterval(RematReg);
   }
 
   // All regions impacted by at least one rematerialization must be rescheduled.
@@ -2221,11 +2189,6 @@ bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   if (!DAG.TII->isTriviallyReMaterializable(MI))
     return false;
 
-  // Even though TargetInstrInfo::isReallyTriviallyReMaterializable already
-  // ensures that the instruction has no virtual register uses,
-  // SIInstrInfo::isReallyTriviallyReMaterializable may consider an instruction
-  // rematerializable and return before calling its parent's method, so we need
-  // to double-check here.
   for (const MachineOperand &MO : MI.all_uses()) {
     // We can't remat physreg uses, unless it is a constant or an ignorable
     // use (e.g. implicit exec use on VALU instructions)
