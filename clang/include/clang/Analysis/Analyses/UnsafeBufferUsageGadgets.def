@@ -24,6 +24,12 @@
 #define WARNING_OPTIONAL_GADGET(name) WARNING_GADGET(name)
 #endif
 
+/// A `WARNING_GADGET` subset, each of which corresponds to an unsafe
+/// interaction with bounds-attributed constructs
+#ifndef WARNING_BOUNDS_SAFETY_GADGET
+#define WARNING_BOUNDS_SAFETY_GADGET(name) WARNING_GADGET(name)
+#endif
+
 /// Safe gadgets correspond to code patterns that aren't unsafe but need to be
 /// properly recognized in order to emit correct warnings and fixes over unsafe
 /// gadgets.
@@ -39,8 +45,8 @@ WARNING_GADGET(UnsafeBufferUsageAttr)
 WARNING_GADGET(UnsafeBufferUsageCtorAttr)
 WARNING_GADGET(DataInvocation)
 // TO_UPSTREAM(BoundsSafety) ON
-WARNING_GADGET(CountAttributedPointerArgument)
-WARNING_GADGET(SinglePointerArgument)
+WARNING_BOUNDS_SAFETY_GADGET(CountAttributedPointerArgument)
+WARNING_BOUNDS_SAFETY_GADGET(SinglePointerArgument)
 // TO_UPSTREAM(BoundsSafety) OFF
 WARNING_OPTIONAL_GADGET(UnsafeLibcFunctionCall)
 WARNING_OPTIONAL_GADGET(SpanTwoParamConstructor) // Uses of `std::span(arg0, arg1)`
@@ -58,4 +64,5 @@ FIXABLE_GADGET(PointerInit)
 #undef FIXABLE_GADGET
 #undef WARNING_GADGET
 #undef WARNING_OPTIONAL_GADGET
+#undef WARNING_BOUNDS_SAFETY_GADGET
 #undef GADGET
