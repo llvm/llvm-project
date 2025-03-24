@@ -160,15 +160,11 @@ define <4 x i32> @test_x86_sse2_cvtpd2dq(<2 x double> %a0) #0 {
 ; CHECK-LABEL: @test_x86_sse2_cvtpd2dq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> [[A0:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> %a0) ; <<4 x i32>> [#uses=1]
@@ -181,18 +177,16 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext(<2 x double> %a0) nounwind #0 {
 ; CHECK-LABEL: @test_mm_cvtpd_epi32_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> [[A0:%.*]])
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[CVT]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[RES1:%.*]] = shufflevector <4 x i32> [[CVT]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
-; CHECK-NEXT:    ret <2 x i64> [[BC]]
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[RES1]] to <2 x i64>
+; CHECK-NEXT:    store <2 x i64> [[BC]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <2 x i64> [[BC1]]
 ;
   %cvt = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> %a0)
   %res = shufflevector <4 x i32> %cvt, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -206,9 +200,9 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
 ; CHECK-NEXT:    [[A0:%.*]] = load <2 x double>, ptr [[P0:%.*]], align 16
@@ -216,18 +210,16 @@ define <2 x i64> @test_mm_cvtpd_epi32_zext_load(ptr %p0) nounwind #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSLD]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
-; CHECK:       8:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       9:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i64> [[_MSLD]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <2 x i1> [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[CVT:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> [[A0]])
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[CVT]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[RES1:%.*]] = shufflevector <4 x i32> [[CVT]], <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[RES]] to <2 x i64>
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
-; CHECK-NEXT:    ret <2 x i64> [[BC]]
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[RES1]] to <2 x i64>
+; CHECK-NEXT:    store <2 x i64> [[BC]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <2 x i64> [[BC1]]
 ;
   %a0 = load <2 x double>, ptr %p0
   %cvt = call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> %a0)
@@ -315,15 +307,10 @@ define <4 x i32> @test_x86_sse2_cvtps2dq(<4 x float> %a0) #0 {
 ; CHECK-LABEL: @test_x86_sse2_cvtps2dq(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF1]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> [[A0:%.*]])
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %res = call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %a0) ; <<4 x i32>> [#uses=1]
