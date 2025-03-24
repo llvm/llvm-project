@@ -13,6 +13,12 @@
 // CHECK: %C = type <{ i32, target("dx.Layout", %A, 8, 0) }>
 // CHECK: %__cblayout_D = type <{ [2 x [3 x target("dx.Layout", %B, 14, 0, 8)]] }>
 
+// CHECK: %__cblayout_CBClasses = type <{ target("dx.Layout", %K, 4, 0), target("dx.Layout", %L, 8, 0, 4),
+// CHECK-SAME: target("dx.Layout", %M, 68, 0), [10 x target("dx.Layout", %K, 4, 0)] }>
+// CHECK: %K = type <{ float }>
+// CHECK: %L = type <{ float, float }>
+// CHECK: %M = type <{ [5 x target("dx.Layout", %K, 4, 0)] }>
+
 // CHECK: %__cblayout_CBMix = type <{ [2 x target("dx.Layout", %Test, 8, 0, 4)], float, [3 x [2 x <2 x float>]], float,
 // CHECK-SAME: target("dx.Layout", %anon, 4, 0), double, target("dx.Layout", %anon.0, 8, 0), float, <1 x double>, i16 }>
 
@@ -133,6 +139,33 @@ cbuffer CBStructs {
   uint16_t3 f;
 };
 
+
+class K {
+  float i;
+};
+
+class L : K {
+  float j;
+};
+
+class M {
+  K array[5];
+};
+
+cbuffer CBClasses {
+  K k;
+  L l;
+  M m;
+  K ka[10];
+};
+
+// CHECK: @CBClasses.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses,
+// CHECK-SAME: 260, 0, 16, 32, 112))
+// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 4
+// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 4
+// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 4
+// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 4
+
 struct Test {
     float a, b;
 };
@@ -237,7 +270,7 @@ RWBuffer<float> Buf;
 
 [numthreads(4,1,1)]
 void main() {
-  Buf[0] = a1 + b1.z + c1[2] + a.f1.y + f1 + B1[0].x + B10.z + D1.B2;
+  Buf[0] = a1 + b1.z + c1[2] + a.f1.y + f1 + B1[0].x + ka[2].i + B10.z + D1.B2;
 }
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
@@ -245,8 +278,8 @@ void main() {
 // CHECK-NEXT: call void @_init_resource_CBScalars.cb()
 // CHECK-NEXT: call void @_init_resource_CBArrays.cb()
 
-// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBMIX:[0-9]+]],
-// CHECK-SAME: ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}
+// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBCLASSES:[0-9]+]],
+// CHECK-SAME: ![[CBMIX:[0-9]+]], ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}
 
 // CHECK: ![[CBSCALARS]] = !{ptr @CBScalars.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4,
 // CHECK-SAME: ptr addrspace(2) @a5, ptr addrspace(2) @a6, ptr addrspace(2) @a7, ptr addrspace(2) @a8}
@@ -259,6 +292,8 @@ void main() {
 
 // CHECK: ![[CBSTRUCTS]] = !{ptr @CBStructs.cb, ptr addrspace(2) @a, ptr addrspace(2) @b, ptr addrspace(2) @c, ptr addrspace(2) @array_of_A,
 // CHECK-SAME: ptr addrspace(2) @d, ptr addrspace(2) @e, ptr addrspace(2) @f}
+
+// CHECK: ![[CBCLASSES]] = !{ptr @CBClasses.cb, ptr addrspace(2) @k, ptr addrspace(2) @l, ptr addrspace(2) @m, ptr addrspace(2) @ka}
 
 // CHECK: ![[CBMIX]] = !{ptr @CBMix.cb, ptr addrspace(2) @test, ptr addrspace(2) @f1, ptr addrspace(2) @f2, ptr addrspace(2) @f3,
 // CHECK-SAME: ptr addrspace(2) @f4, ptr addrspace(2) @f5, ptr addrspace(2) @f6, ptr addrspace(2) @f7, ptr addrspace(2) @f8, ptr addrspace(2) @f9}
