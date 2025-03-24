@@ -136,7 +136,7 @@ struct MissingFeatures {
   static bool ternaryOp() { return false; }
   static bool tryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool opPtrStride() { return false; }
+  static bool ptrStrideOp() { return false; }
   static bool opPtrDiff() { return false; }
 };
 
