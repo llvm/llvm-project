@@ -2434,7 +2434,7 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
     assert(!Cost->requiresScalarEpilogue(true) &&
            "Use predicated EVL instructions for tail-folding does not allow "
            "scalar epilogue");
-    return TC;
+    return VectorTripCount = TC;
   }
 
   // This is where we can make the step a runtime constant.
