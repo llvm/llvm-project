@@ -1035,10 +1035,10 @@ public:
     if (!isImm())
       return false;
     int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && isInt<10>(fixImmediateForRV32(Imm, isRV64Imm())) &&
-           VK == RISCVMCExpr::VK_RISCV_None;
+           VK == RISCVMCExpr::VK_None;
   }
 
   bool isSImm10Lsb0000NonZero() const {
