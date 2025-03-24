@@ -5243,7 +5243,8 @@ bool AsmParser::parseDirectiveIfeqs(SMLoc DirectiveLoc, bool ExpectEqual) {
       if (ExpectEqual)
         return TokError(
             "expected comma after first string for '.ifeqs' directive");
-      return TokError("expected comma after first string for '.ifnes' directive");
+      return TokError(
+          "expected comma after first string for '.ifnes' directive");
     }
 
     Lex();
