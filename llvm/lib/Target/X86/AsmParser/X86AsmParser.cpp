@@ -2637,12 +2637,15 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
 
         // If we are parsing MASM, we are allowed to cast registers to their own
         // sizes, but not to other types.
-        if (RegSizeInBits(*getContext().getRegisterInfo(), RegNo) != Size)
+        uint16_t RegSize =
+            RegSizeInBits(*getContext().getRegisterInfo(), RegNo);
+        if (RegSize != Size)
           return Error(
               Start,
-              "cannot cast register '" +
+              std::to_string(RegSize) + "-bit register '" +
                   StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
-                  "' to '" + SizeStr + "'; size does not match");
+                  "' cannot be used as a " + std::to_string(Size) + "-bit " +
+                  SizeStr.upper());
       }
       Operands.push_back(X86Operand::CreateReg(RegNo, Start, End));
       return false;
