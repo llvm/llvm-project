@@ -62,11 +62,6 @@ bool RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurKind Kind) {
   return (Kind != RecurKind::None) && !isIntegerRecurrenceKind(Kind);
 }
 
-bool RecurrenceDescriptor::isArithmeticRecurrenceKind(RecurKind Kind) {
-  return (Kind != RecurKind::None) && !isMinMaxRecurrenceKind(Kind) &&
-         !isAnyOfRecurrenceKind(Kind);
-}
-
 /// Determines if Phi may have been type-promoted. If Phi has a single user
 /// that ANDs the Phi with a type mask, return the user. RT is updated to
 /// account for the narrower bit width represented by the mask, and the AND
