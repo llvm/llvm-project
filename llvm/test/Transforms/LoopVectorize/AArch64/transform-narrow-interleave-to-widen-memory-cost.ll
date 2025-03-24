@@ -99,17 +99,31 @@ define void @test_complex_add_double(ptr %res, ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i64 [[TMP1]]
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = load <2 x double>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC10:%.*]] = load <2 x double>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x double>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x double>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x double> [[WIDE_VEC]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <4 x double>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x double> [[WIDE_VEC2]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <4 x double> [[WIDE_VEC2]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[WIDE_VEC5:%.*]] = load <4 x double>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <4 x double> [[WIDE_VEC5]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <4 x double> [[WIDE_VEC5]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[WIDE_VEC8:%.*]] = load <4 x double>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <4 x double> [[WIDE_VEC8]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC10:%.*]] = shufflevector <4 x double> [[WIDE_VEC8]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[STRIDED_VEC]], [[STRIDED_VEC6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[STRIDED_VEC3]], [[STRIDED_VEC9]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[STRIDED_VEC1]], [[STRIDED_VEC7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[STRIDED_VEC4]], [[STRIDED_VEC10]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[WIDE_LOAD1]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RES]], i64 [[TMP1]]
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[TMP10]], align 4
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC11:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC11]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

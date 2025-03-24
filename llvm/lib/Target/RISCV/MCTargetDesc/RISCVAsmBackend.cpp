@@ -551,7 +551,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSymB())
+  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSubSym())
     return false;
 
   const MCSymbolRefExpr *A = AUIPCTarget.getSymA();

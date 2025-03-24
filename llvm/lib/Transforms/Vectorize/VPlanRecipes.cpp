@@ -3444,23 +3444,10 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "cannot be used in per-lane");
-  if (State.ExpandedSCEVs.contains(Expr)) {
-    // SCEV Expr has already been expanded, result must already be set. At the
-    // moment we have to execute the entry block twice (once before skeleton
-    // creation to get expanded SCEVs used by the skeleton and once during
-    // regular VPlan execution).
-    State.Builder.SetInsertPoint(State.CFG.VPBB2IRBB[getParent()]);
-    assert(State.get(this, VPLane(0)) == State.ExpandedSCEVs[Expr] &&
-           "Results must match");
-    return;
-  }
-
   const DataLayout &DL = SE.getDataLayout();
   SCEVExpander Exp(SE, DL, "induction", /*PreserveLCSSA=*/true);
-
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());
-  State.ExpandedSCEVs[Expr] = Res;
   State.set(this, Res, VPLane(0));
 }
 
