@@ -318,12 +318,12 @@ end subroutine
 subroutine loop_teams_loop_reduction
   implicit none
   integer :: x, i
-  ! CHECK: omp.teams {
+  ! CHECK: omp.teams reduction(@add_reduction_i32 %{{.*}}#0 -> %[[TEAMS_RED_ARG:.*]] : !fir.ref<i32>) {
   ! CHECK:   omp.parallel
   ! CHECK-SAME: private(@{{[^[:space:]]+}} %{{[^[:space:]]+}}#0 -> %[[PRIV_ARG:[^[:space:]]+]] : !fir.ref<i32>) {
   ! CHECK:      omp.distribute {
   ! CHECK:        omp.wsloop
-  ! CHECK-SAME:     reduction(@add_reduction_i32 %{{.*}}#0 -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
+  ! CHECK-SAME:     reduction(@add_reduction_i32 %[[TEAMS_RED_ARG]] -> %[[RED_ARG:.*]] : !fir.ref<i32>) {
   ! CHECK-NEXT:     omp.loop_nest {{.*}} {
   ! CHECK-NEXT:       hlfir.declare %[[PRIV_ARG]] {uniq_name = "_QF{{.*}}Ei"}
   ! CHECK-NEXT:       hlfir.declare %[[RED_ARG]] {uniq_name = "_QF{{.*}}Ex"}
