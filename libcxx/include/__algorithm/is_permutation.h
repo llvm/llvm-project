@@ -102,12 +102,11 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
       if (__c2 == 0)
         return false;
 
-      // Count number of *__i in [__i, l1) (we can start with 1)
+      // Count number of *__i in [__i, l1)
       auto __predicate1 = [&](_Ref1 __x) -> bool {
         return std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj1, __x));
       };
-      auto __start = _IterOps<_AlgPolicy>::next(__i);
-      _D1 __c1     = 1 + std::__count_if<_AlgPolicy>(__start, __last1, __predicate1, __ident);
+      _D1 __c1 = std::__count_if<_AlgPolicy>(__i, __last1, __predicate1, __ident);
       if (__c1 != __c2)
         return false;
     }
