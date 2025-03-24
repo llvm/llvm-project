@@ -582,7 +582,7 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
     if (isa<VPHeaderPHIRecipe>(Cur))
       continue;
     for (VPValue *V : Cur->definedValues())
-      Users.insert(V->user_begin(), V->user_end());
+      Users.insert_range(V->users());
   }
   return Users.takeVector();
 }
@@ -2162,7 +2162,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn()) {
+    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");

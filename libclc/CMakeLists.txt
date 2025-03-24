@@ -413,7 +413,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
       # Link in the CLC builtins and internalize their symbols
-      INTERNAL_LINK_DEPENDENCIES $<TARGET_PROPERTY:builtins.link.clc-${arch_suffix},TARGET_FILE>
+      INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}
     )
   endforeach( d )
 endforeach( t )
