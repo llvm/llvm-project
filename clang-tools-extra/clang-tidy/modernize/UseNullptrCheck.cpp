@@ -505,7 +505,10 @@ void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(makeCastSequenceMatcher(IgnoredTypes), this);
+  // nullptr is supported starting from C++11 and C23.
+  if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+    Finder->addMatcher(makeCastSequenceMatcher(IgnoredTypes), this);
+  }
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {
