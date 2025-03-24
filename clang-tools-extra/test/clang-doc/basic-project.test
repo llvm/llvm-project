@@ -7,11 +7,12 @@
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+
 // RUN: clang-doc --format=html --output=%t/docs-with-prefix --executor=all-TUs %t/build/compile_commands.json --repository=https://repository.com --repository-line-prefix=L
-// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE-PREFIX
-// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC-PREFIX
-// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE-PREFIX
-// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Rectangle.html -check-prefixes=HTML-RECTANGLE,RECTANGLE-LINE-PREFIX
+// RUN: FileCheck %s -input-file=%t/docs-with-prefix/GlobalNamespace/Circle.html -check-prefixes=HTML-CIRCLE,CIRCLE-LINE-PREFIX
 
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefixes=HTML-SHAPE,SHAPE-NO-REPOSITORY
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefixes=HTML-CALC,CALC-NO-REPOSITORY
@@ -85,6 +86,7 @@
 //      SHAPE-REPOSITORY: <p>
 // SHAPE-REPOSITORY-NEXT: Defined at line
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h#8">8</a>
+//     SHAPE-LINE-PREFIX: <a href="https://repository.com/./include/Shape.h#L8">8</a>
 // SHAPE-REPOSITORY-NEXT: of file
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
 // SHAPE-REPOSITORY-NEXT: </p>
@@ -108,6 +110,7 @@
 //   SHAPE-NO-REPOSITORY: Defined at line 13 of file .{{.}}include{{.}}Shape.h
 //      SHAPE-REPOSITORY: Defined at line 
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h#13">13</a>
+//     SHAPE-LINE-PREFIX: <a href="https://repository.com/./include/Shape.h#L13">13</a>
 // SHAPE-REPOSITORY-NEXT: of file 
 // SHAPE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
 
@@ -119,6 +122,7 @@
 //      CALC-REPOSITORY: <p>
 // CALC-REPOSITORY-NEXT: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#8">8</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./include/Calculator.h#L8">8</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
 // CALC-REPOSITORY-NEXT: </p>
@@ -131,6 +135,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#3">3</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L3">3</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -143,6 +148,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 7 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#7">7</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L7">7</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -155,6 +161,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 11 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#11">11</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L11">11</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -167,6 +174,7 @@
 //   CALC-NO-REPOSITORY: Defined at line 15 of file .{{.}}src{{.}}Calculator.cpp
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#15">15</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L15">15</a>
 // CALC-REPOSITORY-NEXT: of file 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
 
@@ -182,6 +190,7 @@
 //      RECTANGLE-REPOSITORY: <p>
 // RECTANGLE-REPOSITORY-NEXT: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Rectangle.h#10">10</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./include/Rectangle.h#L10">10</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Rectangle.h">Rectangle.h</a>
 // RECTANGLE-REPOSITORY-NEXT: </p>
@@ -202,6 +211,7 @@
 //   RECTANGLE-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Rectangle.cpp
 //      RECTANGLE-REPOSITORY: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#3">3</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L3">3</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 
@@ -212,6 +222,7 @@
 //   RECTANGLE-NO-REPOSITORY: Defined at line 6 of file .{{.}}src{{.}}Rectangle.cpp
 //      RECTANGLE-REPOSITORY: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#6">6</a>
+//     RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L6">6</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 
@@ -224,6 +235,7 @@
 //   RECTANGLE-NO-REPOSITORY: Defined at line 10 of file .{{.}}src{{.}}Rectangle.cpp
 //      RECTANGLE-REPOSITORY: Defined at line
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#10">10</a>
+// RECTANGLE-LINE-PREFIX: <a href="https://repository.com/./src/Rectangle.cpp#L10">10</a>
 // RECTANGLE-REPOSITORY-NEXT: of file 
 // RECTANGLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
 //      HTML-RECTANGLE: <div>brief</div>
@@ -236,6 +248,7 @@
 //      CIRCLE-REPOSITORY: <p>
 // CIRCLE-REPOSITORY-NEXT: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Circle.h#10">10</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./include/Circle.h#L10">10</a>
 // CIRCLE-REPOSITORY-NEXT: of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./include/Circle.h">Circle.h</a>
 // CIRCLE-REPOSITORY-NEXT: </p>
@@ -256,6 +269,7 @@
 //   CIRCLE-NO-REPOSITORY: Defined at line 3 of file .{{.}}src{{.}}Circle.cpp
 //      CIRCLE-REPOSITORY: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#3">3</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L3">3</a>
 // CIRCLE-REPOSITORY-NEXT:  of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
@@ -266,6 +280,7 @@
 //   CIRCLE-NO-REPOSITORY: Defined at line 5 of file .{{.}}src{{.}}Circle.cpp
 //      CIRCLE-REPOSITORY: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#5">5</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L5">5</a>
 // CIRCLE-REPOSITORY-NEXT:  of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
@@ -278,6 +293,7 @@
 //   CIRCLE-NO-REPOSITORY: Defined at line  9 of file .{{.}}src{{.}}Circle.cpp
 //      CIRCLE-REPOSITORY: Defined at line 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp#9">9</a>
+//     CIRCLE-LINE-PREFIX: <a href="https://repository.com/./src/Circle.cpp#L9">9</a>
 // CIRCLE-REPOSITORY-NEXT:  of file 
 // CIRCLE-REPOSITORY-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
@@ -285,62 +301,6 @@
 //      HTML-CIRCLE: <p> Calculates the perimeter of the circle.</p>
 //      HTML-CIRCLE: <div>return</div>
 //      HTML-CIRCLE: <p> double The perimeter of the circle.</p>
-
-//      HTML-SHAPE-PREFIX: <h1>class Shape</h1>
-// HTML-SHAPE-PREFIX-NEXT: <p>
-// HTML-SHAPE-PREFIX-NEXT: Defined at line
-// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h#L8">8</a>
-// HTML-SHAPE-PREFIX-NEXT: of file
-// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
-// HTML-SHAPE-PREFIX-NEXT: </p>
-//      HTML-SHAPE-PREFIX: <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
-//      HTML-SHAPE-PREFIX: <p>public void ~Shape()</p>
-//      HTML-SHAPE-PREFIX: Defined at line 
-// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h#L13">13</a>
-// HTML-SHAPE-PREFIX-NEXT: of file 
-// HTML-SHAPE-PREFIX-NEXT: <a href="https://repository.com/./include/Shape.h">Shape.h</a>
-
-//      HTML-CALC-PREFIX: <h1>class Calculator</h1>
-// HTML-CALC-PREFIX-NEXT: <p>
-// HTML-CALC-PREFIX-NEXT: Defined at line 
-// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./include/Calculator.h#L8">8</a>
-// HTML-CALC-PREFIX-NEXT: of file 
-// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
-// HTML-CALC-PREFIX-NEXT: </p>
-//      HTML-CALC-PREFIX: <h3 id="{{([0-9A-F]{40})}}">add</h3>
-//      HTML-CALC-PREFIX: <p>public int add(int a, int b)</p>
-//      HTML-CALC-PREFIX: Defined at line 
-// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./src/Calculator.cpp#L3">3</a>
-// HTML-CALC-PREFIX-NEXT: of file 
-// HTML-CALC-PREFIX-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
-
-//      HTML-RECTANGLE-PREFIX: <h1>class Rectangle</h1>
-// HTML-RECTANGLE-PREFIX-NEXT: <p>
-// HTML-RECTANGLE-PREFIX-NEXT: Defined at line
-// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./include/Rectangle.h#L10">10</a>
-// HTML-RECTANGLE-PREFIX-NEXT: of file 
-// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./include/Rectangle.h">Rectangle.h</a>
-// HTML-RECTANGLE-PREFIX-NEXT: </p>
-//      HTML-RECTANGLE-PREFIX: <h3 id="{{([0-9A-F]{40})}}">area</h3>
-//      HTML-RECTANGLE-PREFIX: <p>public double area()</p>
-//      HTML-RECTANGLE-PREFIX: Defined at line
-// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./src/Rectangle.cpp#L6">6</a>
-// HTML-RECTANGLE-PREFIX-NEXT: of file 
-// HTML-RECTANGLE-PREFIX-NEXT: <a href="https://repository.com/./src/Rectangle.cpp">Rectangle.cpp</a>
-
-//      HTML-CIRCLE-PREFIX: <h1>class Circle</h1>
-// HTML-CIRCLE-PREFIX-NEXT: <p>
-// HTML-CIRCLE-PREFIX-NEXT: Defined at line 
-// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./include/Circle.h#L10">10</a>
-// HTML-CIRCLE-PREFIX-NEXT: of file 
-// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./include/Circle.h">Circle.h</a>
-// HTML-CIRCLE-PREFIX-NEXT: </p>
-//      HTML-CIRCLE-PREFIX: <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
-//      HTML-CIRCLE-PREFIX: <p>public double perimeter()</p>
-//      HTML-CIRCLE-PREFIX: Defined at line 
-// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./src/Circle.cpp#L9">9</a>
-// HTML-CIRCLE-PREFIX-NEXT:  of file 
-// HTML-CIRCLE-PREFIX-NEXT: <a href="https://repository.com/./src/Circle.cpp">Circle.cpp</a>
 
 // MD-CALC: # class Calculator
 // MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
@@ -450,3 +410,4 @@
 
 // MD-INDEX: #  C/C++ Reference
 // MD-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
+ 
