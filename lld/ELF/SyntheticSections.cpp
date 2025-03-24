@@ -669,10 +669,10 @@ void GotSection::addEntry(const Symbol &sym, bool authEntry) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   auto *d = dyn_cast<Defined>(&sym);
   std::optional<uint32_t> finalGotIdx;
-  if (d && !d->isPreemptible && ctx.arg.icf != ICFLevel::None) {
-    // There may be symbols that have been ICFed in which case d->section
-    // points to their canonical section and d->value is offset in to that
-    // section. We add only a single GOT entry for all such symbols.
+  if (d && d->isFoldable()) {
+    // Generate one GOT entry for all foldable symbols. This could be due to
+    // ICF where containing sections have now been folded into one, or aliases
+    // that all point to the same symbol.
     auto [it, inserted] = gotEntries.insert(std::make_pair(
         std::make_tuple(d->section, d->value, sym.type), numEntries));
     if (!inserted) {

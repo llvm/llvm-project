@@ -156,6 +156,8 @@ public:
   }
 
   uint8_t computeBinding(Ctx &) const;
+  // Preemptible and script defined symbols cannot ever be treated same
+  bool isFoldable() const { return !isPreemptible && !scriptDefined; }
   bool isGlobal() const { return binding == llvm::ELF::STB_GLOBAL; }
   bool isWeak() const { return binding == llvm::ELF::STB_WEAK; }
 
