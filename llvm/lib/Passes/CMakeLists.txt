@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMPasses
   PassBuilderPipelines.cpp
   PassPlugin.cpp
   StandardInstrumentations.cpp
+  TargetPassBuilder.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm
