@@ -134,14 +134,16 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
     if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
       if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
         return nullptr;
-    // Don't replace existing zeroes.
 
     if (auto *TET = dyn_cast<TargetExtType>(Op->getType())) {
+      if (isa<ConstantTargetNone, PoisonValue>(Op))
+        return nullptr;
       if (TET->hasProperty(TargetExtType::HasZeroInit))
         return ConstantTargetNone::get(TET);
       return PoisonValue::get(TET);
     }
 
+    // Don't replace existing zeroes.
     return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
   };
   runDeltaPass(
