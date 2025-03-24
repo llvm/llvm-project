@@ -131,7 +131,7 @@ private:
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
   bool foldBinopOfReductions(Instruction &I);
-  bool foldSingleElementStore(Instruction &I);
+  bool foldInsertElementsStore(Instruction &I);
   bool scalarizeLoad(Instruction &I);
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
@@ -1949,61 +1949,137 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
 //   %0 = bitcast <4 x i32>* %a to i32*
 //   %1 = getelementptr inbounds i32, i32* %0, i64 0, i64 1
 //   store i32 %b, i32* %1
-bool VectorCombine::foldSingleElementStore(Instruction &I) {
+bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   if (!TTI.allowVectorElementIndexingUsingGEP())
     return false;
+
   auto *SI = cast<StoreInst>(&I);
   if (!SI->isSimple() || !isa<VectorType>(SI->getValueOperand()->getType()))
     return false;
 
-  // TODO: Combine more complicated patterns (multiple insert) by referencing
-  // TargetTransformInfo.
-  Instruction *Source;
-  Value *NewElement;
-  Value *Idx;
-  if (!match(SI->getValueOperand(),
-             m_InsertElt(m_Instruction(Source), m_Value(NewElement),
-                         m_Value(Idx))))
+  Value *Source = SI->getValueOperand();
+  // Track back multiple inserts.
+  SmallVector<std::pair<Value *, Value *>, 4> InsertElements;
+  Value *Base = Source;
+  while (auto *Insert = dyn_cast<InsertElementInst>(Base)) {
+    if (!Insert->hasOneUse())
+      break;
+    Value *InsertVal = Insert->getOperand(1);
+    Value *Idx = Insert->getOperand(2);
+    InsertElements.push_back({InsertVal, Idx});
+    Base = Insert->getOperand(0);
+  }
+
+  if (InsertElements.empty())
     return false;
 
-  if (auto *Load = dyn_cast<LoadInst>(Source)) {
-    auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
-    Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
-    // Don't optimize for atomic/volatile load or store. Ensure memory is not
-    // modified between, vector type matches store size, and index is inbounds.
-    if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
-        !DL->typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
-        SrcAddr != SI->getPointerOperand()->stripPointerCasts())
+  // The chain is collected from the final insertelement back to the base load.
+  // Emit scalar stores in original program order to preserve semantics for
+  // duplicate or dynamically equal indices.
+  std::reverse(InsertElements.begin(), InsertElements.end());
+  auto *Load = dyn_cast<LoadInst>(Base);
+  if (!Load)
+    return false;
+  auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
+  if (auto *FVT = dyn_cast<FixedVectorType>(VecTy)) {
+    if (InsertElements.size() == FVT->getNumElements()) {
+      Value *FirstVal = InsertElements.front().first;
+      if (all_of(InsertElements,
+                 [FirstVal](const auto &Elt) { return Elt.first == FirstVal; }))
+        return false;
+    }
+  }
+  Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
+  // Don't optimize for atomic/volatile load or store. Ensure memory is not
+  // modified between, vector type matches store size, and index is inbounds.
+  if (!Load->isSimple() || Load->getParent() != SI->getParent() ||
+      !DL->typeSizeEqualsStoreSize(Load->getType()->getScalarType()) ||
+      SrcAddr != SI->getPointerOperand()->stripPointerCasts())
+    return false;
+  if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+                           MemoryLocation::get(SI), AA))
+    return false;
+
+  for (auto [InsertVal, Idx] : InsertElements) {
+    auto ScalarizableIdx =
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
+    if (ScalarizableIdx.isUnsafe())
       return false;
 
+    // We are only checking legality here. Do not mutate IR before the
+    // profitability check, but also do not leave a pending ToFreeze behind.
+    ScalarizableIdx.discard();
+  }
+  InstructionCost OldCost = TTI.getMemoryOpCost(
+      Instruction::Store, SI->getValueOperand()->getType(), SI->getAlign(),
+      SI->getPointerAddressSpace(), CostKind);
+
+  if (Load->hasOneUse())
+    OldCost += TTI.getMemoryOpCost(Instruction::Load, Load->getType(),
+                                   Load->getAlign(),
+                                   Load->getPointerAddressSpace(), CostKind);
+
+  for (auto [InsertVal, Idx] : InsertElements) {
+    int Index = -1;
+    if (auto *CIdx = dyn_cast<ConstantInt>(Idx))
+      Index = CIdx->getZExtValue();
+
+    OldCost += TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
+                                      CostKind, Index);
+  }
+
+  InstructionCost NewCost = 0;
+  for (auto [InsertVal, Idx] : InsertElements) {
+    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
+        std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
+        *DL);
+
+    NewCost += TTI.getMemoryOpCost(Instruction::Store, InsertVal->getType(),
+                                   ScalarOpAlignment,
+                                   SI->getPointerAddressSpace(), CostKind);
+  }
+
+  LLVM_DEBUG(dbgs() << "Found an insert-elements vector store scalarization "
+                       "candidate: "
+                    << I << "\n"
+                    << "  NumInserts: " << InsertElements.size() << "\n"
+                    << "  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (OldCost <= NewCost)
+    return false;
+
+  // Now we know the transform is profitable. It is safe to mutate IR.
+  for (auto [InsertVal, Idx] : InsertElements) {
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
-    if (ScalarizableIdx.isUnsafe() ||
-        isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
-                             MemoryLocation::get(SI), AA))
-      return false;
-
-    // Ensure we add the load back to the worklist BEFORE its users so they can
-    // erased in the correct order.
-    Worklist.push(Load);
+    assert(!ScalarizableIdx.isUnsafe() && "already checked above");
 
     if (ScalarizableIdx.isSafeWithFreeze())
       ScalarizableIdx.freeze(Builder, *cast<Instruction>(Idx));
+  }
+
+  // Ensure we add the load back to the worklist BEFORE its users so they can
+  // erased in the correct order.
+  Worklist.push(Load);
+  StoreInst *LastStore = nullptr;
+  for (auto [InsertVal, Idx] : InsertElements) {
     Value *GEP = Builder.CreateInBoundsGEP(
         SI->getValueOperand()->getType(), SI->getPointerOperand(),
         {ConstantInt::get(Idx->getType(), 0), Idx});
-    StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
-    NSI->copyMetadata(*SI);
+
+    LastStore = Builder.CreateStore(InsertVal, GEP);
+    LastStore->copyMetadata(*SI);
+
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
-        std::max(SI->getAlign(), Load->getAlign()), NewElement->getType(), Idx,
+        std::max(SI->getAlign(), Load->getAlign()), InsertVal->getType(), Idx,
         *DL);
-    NSI->setAlignment(ScalarOpAlignment);
-    replaceValue(I, *NSI);
-    eraseInstruction(I);
-    return true;
+    LastStore->setAlignment(ScalarOpAlignment);
   }
 
-  return false;
+  replaceValue(I, *LastStore);
+  eraseInstruction(I);
+  return true;
 }
 
 /// Try to scalarize vector loads feeding extractelement or bitcast
@@ -6111,7 +6187,7 @@ bool VectorCombine::run() {
       return true;
 
     if (Opcode == Instruction::Store)
-      if (foldSingleElementStore(I))
+      if (foldInsertElementsStore(I))
         return true;
 
     // If this is an early pipeline invocation of this pass, we are done.
