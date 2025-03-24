@@ -2080,8 +2080,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   EVLPhi->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
-  VPValue *AVL = Builder.createNaryOp(
-      Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
+  VPValue *AVL = Builder.createNaryOp(Instruction::Sub,
+                                      {&Plan.getVectorTripCount(), EVLPhi},
+                                      DebugLoc(), "avl");
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
     VPValue *AVLSafe = Plan.getOrAddLiveIn(
@@ -2114,7 +2115,9 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
+  CanonicalIVIncrement->replaceAllUsesWith(NextEVLIV);
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+  CanonicalIVPHI->setOperand(1, CanonicalIVIncrement);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
   return true;

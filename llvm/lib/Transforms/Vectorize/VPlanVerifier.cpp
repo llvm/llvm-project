@@ -156,14 +156,14 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;
           }
-          if (I->getNumUsers() != 1) {
-            errs() << "EVL is used in VPInstruction:Add with multiple "
-                      "users\n";
-            return false;
-          }
-          if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-            errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPEVLBasedIVPHIRecipe\n";
+          if (!all_of(I->users(), [](VPUser *U) {
+                if (auto *VPI = dyn_cast<VPInstruction>(U))
+                  return VPI->getOpcode() == VPInstruction::BranchOnCount;
+                return isa<VPEVLBasedIVPHIRecipe>(U);
+              })) {
+            errs()
+                << "Result of VPInstruction::Add with EVL operand is not used "
+                   "by VPEVLBasedIVPHIRecipe or VPInstruction::BranchOnCount\n";
             return false;
           }
           return true;
