@@ -360,9 +360,10 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
 }
 
 bool MachineInstr::jumpToIRBlockAddressTaken() const {
-  return llvm::all_of(getParent()->successors(), [](const auto *Succ) {
-    return Succ->isIRBlockAddressTaken();
-  });
+  return llvm::all_of(getParent()->successors(),
+                      [](const MachineBasicBlock *Succ) {
+                        return Succ->isIRBlockAddressTaken();
+                      });
 }
 
 void MachineInstr::dropMemRefs(MachineFunction &MF) {
