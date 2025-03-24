@@ -557,7 +557,7 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       Ctx->getGOFFSection(".ppa2list", SectionKind::getData(), nullptr);
 
   ADASection = Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr);
-  IDRLSection = Ctx->getGOFFSection("B_IDRL", SectionKind::getData(), nullptr);
+  IDRLSection = Ctx->getGOFFSection(".idrl", SectionKind::getData(), nullptr);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {

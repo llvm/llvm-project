@@ -19,7 +19,7 @@
 ; CHECK:    .quad   L#PPA2-CELQSTRT                 * A(PPA2-CELQSTRT)
 ; CHECK: L#PPA1_void_test_0:
 ; CHECK:    .long   L#PPA2-L#PPA1_void_test_0       * Offset to PPA2
-; CHECK:    .section    "B_IDRL"
+; CHECK:    .section    ".idrl"
 ; CHECK:    .byte   0
 ; CHECK:    .byte   3
 ; CHECK:    .short  30
