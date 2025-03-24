@@ -62,8 +62,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   }
 
   if (!IsRV64 && STI.hasFeature(RISCV::FeatureVendorXqcili)) {
-    bool FitsOneStandardInst =
-        ((Val & 0xFFF) == 0) || (((Val + 0x800) & 0xFFFFF000) == 0);
+    bool FitsOneStandardInst = ((Val & 0xFFF) == 0) || isInt<12>(Val);
 
     // 20-bit signed immediates that don't fit into `ADDI` or `LUI` should use
     // `QC.LI` (a single 32-bit instruction).
