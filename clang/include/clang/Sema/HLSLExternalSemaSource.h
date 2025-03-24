@@ -12,16 +12,14 @@
 #ifndef CLANG_SEMA_HLSLEXTERNALSEMASOURCE_H
 #define CLANG_SEMA_HLSLEXTERNALSEMASOURCE_H
 
-#include "llvm/ADT/DenseMap.h"
-
 #include "clang/Sema/ExternalSemaSource.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 class NamespaceDecl;
 class Sema;
 
 class HLSLExternalSemaSource : public ExternalSemaSource {
-private:
   Sema *SemaPtr = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
 
