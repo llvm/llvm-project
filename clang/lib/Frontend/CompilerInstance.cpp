@@ -675,10 +675,11 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
-    bool Preamble, bool UseGlobalModuleIndex,
-    cas::ObjectStore &CAS, cas::ActionCache &Cache, bool ignoreCAS,
+    bool Preamble, bool UseGlobalModuleIndex, cas::ObjectStore &CAS,
+    cas::ActionCache &Cache, bool ignoreCAS,
     std::unique_ptr<llvm::MemoryBuffer> PCHBuffer) {
-  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
       PP, ModCache, &Context, PCHContainerRdr, Extensions,
