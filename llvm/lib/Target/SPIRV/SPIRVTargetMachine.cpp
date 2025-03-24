@@ -26,11 +26,16 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Scalar/Reg2Mem.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -96,9 +101,64 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
   setRequiresStructuredCFG(false);
 }
 
+enum AddressSpace {
+  Function = storageClassToAddressSpace(SPIRV::StorageClass::Function),
+  CrossWorkgroup =
+      storageClassToAddressSpace(SPIRV::StorageClass::CrossWorkgroup),
+  UniformConstant =
+      storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant),
+  Workgroup = storageClassToAddressSpace(SPIRV::StorageClass::Workgroup),
+  Generic = storageClassToAddressSpace(SPIRV::StorageClass::Generic),
+  Invalid = UINT32_MAX
+};
+
+unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
+  // TODO: we only enable this for AMDGCN flavoured SPIR-V, where we know it to
+  //       be correct; this might be relaxed in the future.
+  if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return Invalid;
+
+  const auto *LD = dyn_cast<LoadInst>(V);
+  if (!LD)
+    return Invalid;
+
+  // It must be a load from a pointer to Generic.
+  assert(V->getType()->isPointerTy() &&
+         V->getType()->getPointerAddressSpace() == AddressSpace::Generic);
+
+  const auto *Ptr = LD->getPointerOperand();
+  if (Ptr->getType()->getPointerAddressSpace() != AddressSpace::UniformConstant)
+    return Invalid;
+  // For a load from a pointer to UniformConstant, we can infer CrossWorkgroup
+  // storage, as this could only have been legally initialised with a
+  // CrossWorkgroup (aka device) constant pointer.
+  return AddressSpace::CrossWorkgroup;
+}
+
+bool SPIRVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+                                             unsigned DestAS) const {
+  if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
+    return false;
+  if (SrcAS != AddressSpace::Generic && SrcAS != AddressSpace::CrossWorkgroup)
+    return false;
+  return DestAS == AddressSpace::Generic ||
+         DestAS == AddressSpace::CrossWorkgroup;
+}
+
 void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "SPIRVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
+  PB.registerCGSCCOptimizerLateEPCallback(
+      [](CGSCCPassManager &PM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+
+        FunctionPassManager FPM;
+
+        // Add infer address spaces pass to the opt pipeline after inlining
+        // but before SROA to increase SROA opportunities.
+        FPM.addPass(InferAddressSpacesPass(AddressSpace::Generic));
+
+        PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+      });
 }
 
 namespace {
@@ -201,6 +261,9 @@ void SPIRVPassConfig::addIRPasses() {
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
   }
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(createInferAddressSpacesPass(AddressSpace::Generic));
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
