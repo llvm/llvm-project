@@ -465,11 +465,9 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __emplace_back_assume_capacity(_Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL(
         size() < capacity(), "We assume that we have enough space to insert an element at the end of the vector");
-    __alloc_traits::construct(this->__alloc_, std::__to_address(this->__end_), std::forward<_Args>(__args)...);
-    ++this->__end_;
-#if _LIBCPP_HAS_ASAN
-    __annotate_increase(1);
-#endif
+    _ConstructTransaction __tx(*this, 1);
+    __alloc_traits::construct(this->__alloc_, std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
+    ++__tx.__pos_;
   }
 
 #if _LIBCPP_STD_VER >= 23
