@@ -180,6 +180,8 @@ define ptr @test_align32(i32 signext %0, ptr nocapture readnone %1) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    lea %s0, 15(, %s0)
+; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack_align@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __ve_grow_stack_align@hi(, %s1)
@@ -225,6 +227,8 @@ define ptr @test_align32(i32 signext %0, ptr nocapture readnone %1) {
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
 ; PIC-NEXT:    lea.sl %s15, _GLOBAL_OFFSET_TABLE_@pc_hi(%s16, %s15)
+; PIC-NEXT:    lea %s0, 15(, %s0)
+; PIC-NEXT:    and %s0, -16, %s0
 ; PIC-NEXT:    lea %s12, __ve_grow_stack_align@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0
 ; PIC-NEXT:    sic %s16
@@ -443,6 +447,8 @@ define ptr @test_align32_var(i32 signext %0, ptr nocapture readnone %1) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    lea %s0, 15(, %s0)
+; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack_align@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __ve_grow_stack_align@hi(, %s1)
@@ -493,6 +499,8 @@ define ptr @test_align32_var(i32 signext %0, ptr nocapture readnone %1) {
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16
 ; PIC-NEXT:    lea.sl %s15, _GLOBAL_OFFSET_TABLE_@pc_hi(%s16, %s15)
+; PIC-NEXT:    lea %s0, 15(, %s0)
+; PIC-NEXT:    and %s0, -16, %s0
 ; PIC-NEXT:    lea %s12, __ve_grow_stack_align@plt_lo(-24)
 ; PIC-NEXT:    and %s12, %s12, (32)0
 ; PIC-NEXT:    sic %s16

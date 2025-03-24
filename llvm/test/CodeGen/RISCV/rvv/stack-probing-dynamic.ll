@@ -180,6 +180,8 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    andi sp, sp, -64
 ; RV64I-NEXT:    mv s1, sp
+; RV64I-NEXT:    addi a0, a0, 15
+; RV64I-NEXT:    andi a0, a0, -16
 ; RV64I-NEXT:    sub a0, sp, a0
 ; RV64I-NEXT:    andi a0, a0, -64
 ; RV64I-NEXT:    lui a2, 1
@@ -217,6 +219,8 @@ define void @dynamic_align_64(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    andi sp, sp, -64
 ; RV32I-NEXT:    mv s1, sp
+; RV32I-NEXT:    addi a0, a0, 15
+; RV32I-NEXT:    andi a0, a0, -16
 ; RV32I-NEXT:    sub a0, sp, a0
 ; RV32I-NEXT:    andi a0, a0, -64
 ; RV32I-NEXT:    lui a1, 1
@@ -274,8 +278,10 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    srli a2, sp, 13
 ; RV64I-NEXT:    slli sp, a2, 13
 ; RV64I-NEXT:    mv s1, sp
-; RV64I-NEXT:    sub a0, sp, a0
+; RV64I-NEXT:    addi a0, a0, 15
 ; RV64I-NEXT:    lui a2, 1048574
+; RV64I-NEXT:    andi a0, a0, -16
+; RV64I-NEXT:    sub a0, sp, a0
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    lui a2, 1
 ; RV64I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
@@ -323,8 +329,10 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    srli a1, sp, 13
 ; RV32I-NEXT:    slli sp, a1, 13
 ; RV32I-NEXT:    mv s1, sp
-; RV32I-NEXT:    sub a0, sp, a0
+; RV32I-NEXT:    addi a0, a0, 15
 ; RV32I-NEXT:    lui a1, 1048574
+; RV32I-NEXT:    andi a0, a0, -16
+; RV32I-NEXT:    sub a0, sp, a0
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    lui a1, 1
 ; RV32I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1

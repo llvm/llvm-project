@@ -7,11 +7,12 @@ define void @test(i64 %n) {
 ; CHECK-LABEL: test:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s2, 0, %s0
-; CHECK-NEXT:    lea %s0, __ve_grow_stack_align@lo
-; CHECK-NEXT:    and %s0, %s0, (32)0
-; CHECK-NEXT:    lea.sl %s12, __ve_grow_stack_align@hi(, %s0)
+; CHECK-NEXT:    lea %s0, 15(, %s0)
+; CHECK-NEXT:    and %s0, -16, %s0
+; CHECK-NEXT:    lea %s1, __ve_grow_stack_align@lo
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    lea.sl %s12, __ve_grow_stack_align@hi(, %s1)
 ; CHECK-NEXT:    or %s1, -32, (0)1
-; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    lea %s0, 240(, %s11)
 ; CHECK-NEXT:    lea %s0, 31(, %s0)

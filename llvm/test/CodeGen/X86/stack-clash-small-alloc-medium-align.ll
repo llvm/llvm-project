@@ -99,7 +99,8 @@ define i32 @foo4(i64 %i) local_unnamed_addr #0 {
 ; CHECK-NEXT:    movl $1, (%rbx,%rdi,4)
 ; CHECK-NEXT:    movl (%rbx), %ecx
 ; CHECK-NEXT:    movq %rsp, %rax
-; CHECK-NEXT:    shlq $2, %rcx
+; CHECK-NEXT:    leaq 15(,%rcx,4), %rcx
+; CHECK-NEXT:    andq $-16, %rcx
 ; CHECK-NEXT:    subq %rcx, %rax
 ; CHECK-NEXT:    cmpq %rsp, %rax
 ; CHECK-NEXT:    jge .LBB3_3

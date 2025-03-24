@@ -160,7 +160,11 @@ define void @quux() #1 {
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    subs x9, x9, #16
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    rdvl x9, #2
+; CHECK-NEXT:    addvl x9, x8, #2
+; CHECK-NEXT:    mov w0, w9
+; CHECK-NEXT:    // implicit-def: $x9
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    and x9, x9, #0x7f0
 ; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    subs x10, x10, x9
 ; CHECK-NEXT:    and x10, x10, #0xffffffffffffffe0

@@ -33,6 +33,9 @@ define void @foo(i32 %vla_size) #0 {
 ; CHECK-LE-NEXT:    li r4, -2048
 ; CHECK-LE-NEXT:    li r6, -4096
 ; CHECK-LE-NEXT:    mr r31, r1
+; CHECK-LE-NEXT:    addi r3, r3, 15
+; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
+; CHECK-LE-NEXT:    rldicl r3, r3, 4, 31
 ; CHECK-LE-NEXT:    neg r5, r3
 ; CHECK-LE-NEXT:    ld r3, 0(r1)
 ; CHECK-LE-NEXT:    and r4, r5, r4

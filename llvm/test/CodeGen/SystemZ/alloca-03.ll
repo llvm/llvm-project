@@ -114,7 +114,7 @@ define void @f5() {
 ; CHECK-NEXT:    lgr %r11, %r15
 ; CHECK-NEXT:    .cfi_def_cfa_register %r11
 ; CHECK-NEXT:    lgr %r1, %r15
-; CHECK-NEXT:    aghi %r1, -124
+; CHECK-NEXT:    aghi %r1, -128
 ; CHECK-NEXT:    la %r2, 280(%r1)
 ; CHECK-NEXT:    nill %r2, 65408
 ; CHECK-NEXT:    lgr %r15, %r1

@@ -95,24 +95,28 @@ entry:
 
   %buf1 = alloca i8, i64 %n, align 128
 
-; M64: movq  %rcx, %rax
+; M64: leaq  15(%{{.*}}), %rax
+; M64: andq  $-16, %rax
 ; M64: callq ___chkstk_ms
 ; M64: subq  %rax, %rsp
 ; M64: movq  %rsp, [[R2:%r.*]]
 ; M64: andq  $-128, [[R2]]
 ; M64: movq  [[R2]], %rsp
 
-; W64: movq  %rcx, %rax
+; W64: leaq  15(%{{.*}}), %rax
+; W64: andq  $-16, %rax
 ; W64: callq __chkstk
 ; W64: subq  %rax, %rsp
 ; W64: movq  %rsp, [[R2:%r.*]]
 ; W64: andq  $-128, [[R2]]
 ; W64: movq  [[R2]], %rsp
 
-; EFI: movq  %rsp, %rax 
-; EFI: subq  %rcx, %rax
-; EFI: andq  $-128, %rax 
-; EFI: movq  %rax, %rsp
+; EFI: leaq  15(%{{.*}}), [[R1:%r.*]]
+; EFI: andq  $-16, [[R1]]
+; EFI: movq  %rsp, [[R64:%r.*]]
+; EFI: subq  [[R1]], [[R64]]
+; EFI: andq  $-128, [[R64]]
+; EFI: movq  [[R64]], %rsp
 
   %r = call i64 @bar(i64 %n, i64 %x, i64 %n, ptr undef, ptr %buf1) nounwind
 
@@ -125,7 +129,7 @@ entry:
 ; W64: callq bar
 
 ; EFI: subq  $48, %rsp
-; EFI: movq  %rax, 32(%rsp)
+; EFI: movq  [[R64]], 32(%rsp)
 ; EFI: callq _bar
 
   ret i64 %r

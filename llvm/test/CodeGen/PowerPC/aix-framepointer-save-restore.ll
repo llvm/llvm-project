@@ -82,8 +82,10 @@ define dso_local void @frameptr_realigned(i32 %n) {
 ; AIX32-NEXT:    slwi 3, 3, 2
 ; AIX32-NEXT:    lwz 4, 0(1)
 ; AIX32-NEXT:    li 5, -64
-; AIX32-NEXT:    neg 3, 3
+; AIX32-NEXT:    addi 3, 3, 15
 ; AIX32-NEXT:    mr 31, 1
+; AIX32-NEXT:    rlwinm 3, 3, 0, 0, 27
+; AIX32-NEXT:    neg 3, 3
 ; AIX32-NEXT:    and 5, 3, 5
 ; AIX32-NEXT:    stwux 4, 1, 5
 ; AIX32-NEXT:    addi 3, 1, 64
@@ -109,8 +111,11 @@ define dso_local void @frameptr_realigned(i32 %n) {
 ; AIX64-NEXT:    rldic 3, 3, 2, 30
 ; AIX64-NEXT:    ld 4, 0(1)
 ; AIX64-NEXT:    li 5, -64
-; AIX64-NEXT:    neg 3, 3
+; AIX64-NEXT:    addi 3, 3, 15
 ; AIX64-NEXT:    mr 31, 1
+; AIX64-NEXT:    rldicl 3, 3, 60, 4
+; AIX64-NEXT:    rldicl 3, 3, 4, 29
+; AIX64-NEXT:    neg 3, 3
 ; AIX64-NEXT:    and 5, 3, 5
 ; AIX64-NEXT:    stdux 4, 1, 5
 ; AIX64-NEXT:    addi 3, 1, 128

@@ -835,17 +835,20 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; CHECK-LE-NEXT:    .cfi_def_cfa_register r30
 ; CHECK-LE-NEXT:    .cfi_offset r31, -8
 ; CHECK-LE-NEXT:    .cfi_offset r30, -16
+; CHECK-LE-NEXT:    clrldi r3, r3, 32
 ; CHECK-LE-NEXT:    lis r5, 1
 ; CHECK-LE-NEXT:    mr r31, r1
-; CHECK-LE-NEXT:    sldi r4, r4, 2
 ; CHECK-LE-NEXT:    li r6, 1
-; CHECK-LE-NEXT:    clrldi r3, r3, 32
+; CHECK-LE-NEXT:    sldi r4, r4, 2
+; CHECK-LE-NEXT:    addi r3, r3, 15
 ; CHECK-LE-NEXT:    ori r5, r5, 0
+; CHECK-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-LE-NEXT:    add r5, r31, r5
+; CHECK-LE-NEXT:    rldicl r3, r3, 4, 31
 ; CHECK-LE-NEXT:    stwx r6, r5, r4
-; CHECK-LE-NEXT:    neg r5, r3
 ; CHECK-LE-NEXT:    li r4, -32768
 ; CHECK-LE-NEXT:    li r6, -4096
+; CHECK-LE-NEXT:    neg r5, r3
 ; CHECK-LE-NEXT:    ld r3, 0(r1)
 ; CHECK-LE-NEXT:    and r4, r5, r4
 ; CHECK-LE-NEXT:    mr r5, r4
@@ -893,13 +896,16 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; CHECK-BE-NEXT:    .cfi_def_cfa_register r30
 ; CHECK-BE-NEXT:    .cfi_offset r31, -8
 ; CHECK-BE-NEXT:    .cfi_offset r30, -16
+; CHECK-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-BE-NEXT:    lis r5, 1
+; CHECK-BE-NEXT:    addi r3, r3, 15
 ; CHECK-BE-NEXT:    mr r31, r1
 ; CHECK-BE-NEXT:    ori r5, r5, 0
+; CHECK-BE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-BE-NEXT:    add r5, r31, r5
 ; CHECK-BE-NEXT:    sldi r4, r4, 2
 ; CHECK-BE-NEXT:    li r6, 1
-; CHECK-BE-NEXT:    clrldi r3, r3, 32
+; CHECK-BE-NEXT:    rldicl r3, r3, 4, 31
 ; CHECK-BE-NEXT:    stwx r6, r5, r4
 ; CHECK-BE-NEXT:    neg r7, r3
 ; CHECK-BE-NEXT:    li r4, -32768
@@ -958,9 +964,11 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; CHECK-32-NEXT:    lis r4, 1
 ; CHECK-32-NEXT:    mr r31, r1
 ; CHECK-32-NEXT:    ori r4, r4, 0
+; CHECK-32-NEXT:    addi r3, r3, 15
 ; CHECK-32-NEXT:    add r4, r31, r4
 ; CHECK-32-NEXT:    li r5, 1
 ; CHECK-32-NEXT:    slwi r6, r6, 2
+; CHECK-32-NEXT:    rlwinm r3, r3, 0, 0, 27
 ; CHECK-32-NEXT:    neg r7, r3
 ; CHECK-32-NEXT:    stwx r5, r4, r6
 ; CHECK-32-NEXT:    li r4, -32768

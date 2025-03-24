@@ -13,7 +13,7 @@ define void @stack_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %
 ; CHECK32:       ! %bb.0: ! %entry
 ; CHECK32-NEXT:    save %sp, -96, %sp
 ; CHECK32-NEXT:    ld [%fp+92], %o0
-; CHECK32-NEXT:    add %sp, 84, %i0
+; CHECK32-NEXT:    add %sp, 80, %i0
 ; CHECK32-NEXT:    and %i0, -64, %o1
 ; CHECK32-NEXT:    call stack_realign_helper
 ; CHECK32-NEXT:    add %o1, -96, %sp
@@ -23,7 +23,7 @@ define void @stack_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %
 ; CHECK64-LABEL: stack_realign:
 ; CHECK64:       ! %bb.0: ! %entry
 ; CHECK64-NEXT:    save %sp, -128, %sp
-; CHECK64-NEXT:    add %sp, 2171, %i0
+; CHECK64-NEXT:    add %sp, 2159, %i0
 ; CHECK64-NEXT:    and %i0, -64, %o1
 ; CHECK64-NEXT:    add %o1, -2175, %sp
 ; CHECK64-NEXT:    add %sp, -48, %sp

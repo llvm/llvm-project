@@ -407,9 +407,10 @@ define ptr @test_frame16_align16_dynalign32(ptr %0, i64 %n) {
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    ld1b.zx %s2, (, %s0)
-; CHECK-NEXT:    or %s0, 0, %s1
-; CHECK-NEXT:    st1b %s2, 272(, %s17)
+; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECK-NEXT:    st1b %s0, 272(, %s17)
+; CHECK-NEXT:    lea %s0, 15(, %s1)
+; CHECK-NEXT:    and %s0, -16, %s0
 ; CHECK-NEXT:    lea %s1, __ve_grow_stack_align@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __ve_grow_stack_align@hi(, %s1)
@@ -446,9 +447,10 @@ define ptr @test_frame16_align16_dynalign32(ptr %0, i64 %n) {
 ; CHECKFP-NEXT:    monc
 ; CHECKFP-NEXT:    or %s0, 0, %s62
 ; CHECKFP-NEXT:  .LBB6_2:
-; CHECKFP-NEXT:    ld1b.zx %s2, (, %s0)
-; CHECKFP-NEXT:    or %s0, 0, %s1
-; CHECKFP-NEXT:    st1b %s2, 272(, %s17)
+; CHECKFP-NEXT:    ld1b.zx %s0, (, %s0)
+; CHECKFP-NEXT:    st1b %s0, 272(, %s17)
+; CHECKFP-NEXT:    lea %s0, 15(, %s1)
+; CHECKFP-NEXT:    and %s0, -16, %s0
 ; CHECKFP-NEXT:    lea %s1, __ve_grow_stack_align@lo
 ; CHECKFP-NEXT:    and %s1, %s1, (32)0
 ; CHECKFP-NEXT:    lea.sl %s12, __ve_grow_stack_align@hi(, %s1)

@@ -25,7 +25,8 @@ define void @h(float %i) {
 ; CHECK-NEXT:    .cfi_offset %esi, -12
 ; CHECK-NEXT:    flds 8(%ebp)
 ; CHECK-NEXT:    movl _a, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    leal 3(%ecx), %eax
+; CHECK-NEXT:    andl $-4, %eax
 ; CHECK-NEXT:    calll __alloca
 ; CHECK-NEXT:    movl %esp, %eax
 ; CHECK-NEXT:    andl $-16, %eax

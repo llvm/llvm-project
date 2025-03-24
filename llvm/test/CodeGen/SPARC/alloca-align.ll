@@ -6,7 +6,7 @@ define void @variable_alloca_with_overalignment(i32 %num) nounwind {
 ; CHECK32-LABEL: variable_alloca_with_overalignment:
 ; CHECK32:       ! %bb.0:
 ; CHECK32-NEXT:    save %sp, -96, %sp
-; CHECK32-NEXT:    add %sp, 84, %i1
+; CHECK32-NEXT:    add %sp, 80, %i1
 ; CHECK32-NEXT:    and %i1, -64, %o0
 ; CHECK32-NEXT:    add %o0, -96, %sp
 ; CHECK32-NEXT:    add %i0, 7, %i0
@@ -21,7 +21,7 @@ define void @variable_alloca_with_overalignment(i32 %num) nounwind {
 ; CHECK64-LABEL: variable_alloca_with_overalignment:
 ; CHECK64:       ! %bb.0:
 ; CHECK64-NEXT:    save %sp, -128, %sp
-; CHECK64-NEXT:    add %sp, 2171, %i1
+; CHECK64-NEXT:    add %sp, 2159, %i1
 ; CHECK64-NEXT:    and %i1, -64, %o0
 ; CHECK64-NEXT:    add %o0, -2175, %sp
 ; CHECK64-NEXT:    srl %i0, 0, %i0
@@ -52,6 +52,8 @@ define void @variable_alloca_with_overalignment_2(i32 %num) nounwind {
 ; CHECK32-LABEL: variable_alloca_with_overalignment_2:
 ; CHECK32:       ! %bb.0:
 ; CHECK32-NEXT:    save %sp, -96, %sp
+; CHECK32-NEXT:    add %i0, 7, %i0
+; CHECK32-NEXT:    and %i0, -8, %i0
 ; CHECK32-NEXT:    sub %sp, %i0, %i0
 ; CHECK32-NEXT:    add %i0, 88, %i0
 ; CHECK32-NEXT:    and %i0, -64, %o1
@@ -65,6 +67,14 @@ define void @variable_alloca_with_overalignment_2(i32 %num) nounwind {
 ; CHECK64:       ! %bb.0:
 ; CHECK64-NEXT:    save %sp, -128, %sp
 ; CHECK64-NEXT:    srl %i0, 0, %i0
+; CHECK64-NEXT:    add %i0, 15, %i0
+; CHECK64-NEXT:    sethi 4194303, %i1
+; CHECK64-NEXT:    or %i1, 1008, %i1
+; CHECK64-NEXT:    sethi 0, %i2
+; CHECK64-NEXT:    or %i2, 1, %i2
+; CHECK64-NEXT:    sllx %i2, 32, %i2
+; CHECK64-NEXT:    or %i2, %i1, %i1
+; CHECK64-NEXT:    and %i0, %i1, %i0
 ; CHECK64-NEXT:    sub %sp, %i0, %i0
 ; CHECK64-NEXT:    add %i0, 2175, %i0
 ; CHECK64-NEXT:    and %i0, -64, %o1

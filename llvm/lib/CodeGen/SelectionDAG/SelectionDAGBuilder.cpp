@@ -4447,35 +4447,24 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
                             DAG.getZExtOrTrunc(TySizeValue, dl, IntPtr));
   }
 
-  // Handle alignment. If the requested alignment is less than or equal to the
-  // stack alignment, ignore it since we will align the size. If the size is
-  // greater than or equal to the stack alignment, we note this in the
-  // DYNAMIC_STACKALLOC node.
-  const TargetFrameLowering *TFI = DAG.getSubtarget().getFrameLowering();
-  Align StackAlign = TFI->getStackAlign();
-  bool IsUnderAligned = *Alignment <= StackAlign;
-  if (IsUnderAligned)
+  // Handle alignment.  If the requested alignment is less than or equal to
+  // the stack alignment, ignore it.  If the size is greater than or equal to
+  // the stack alignment, we note this in the DYNAMIC_STACKALLOC node.
+  Align StackAlign = DAG.getSubtarget().getFrameLowering()->getStackAlign();
+  if (*Alignment <= StackAlign)
     Alignment = std::nullopt;
 
-  // If the stack grows up, adding the alloca's size to SP without padding may
-  // leave SP not aligned (to the stack alignment) after the alloca because we
-  // align SP (to the stack align or alloca align) *before* adding the alloca
-  // size. On the other hand, if the stack grows down, we will align SP *after*
-  // decrementing it, so there is no need to align the size.
-  if (TFI->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp ||
-      IsUnderAligned) {
-    const uint64_t StackAlignMask = StackAlign.value() - 1U;
-    // Round the size of the allocation up to the stack alignment size
-    // by add SA-1 to the size. This doesn't overflow because we're computing
-    // an address inside an alloca.
-    AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                            DAG.getConstant(StackAlignMask, dl, IntPtr),
-                            SDNodeFlags::NoUnsignedWrap);
+  const uint64_t StackAlignMask = StackAlign.value() - 1U;
+  // Round the size of the allocation up to the stack alignment size
+  // by add SA-1 to the size. This doesn't overflow because we're computing
+  // an address inside an alloca.
+  AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
+                          DAG.getConstant(StackAlignMask, dl, IntPtr),
+                          SDNodeFlags::NoUnsignedWrap);
 
-    // Mask out the low bits for alignment purposes.
-    AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
-                            DAG.getSignedConstant(~StackAlignMask, dl, IntPtr));
-  }
+  // Mask out the low bits for alignment purposes.
+  AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
+                          DAG.getSignedConstant(~StackAlignMask, dl, IntPtr));
 
   SDValue Ops[] = {
       getRoot(), AllocSize,
