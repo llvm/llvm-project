@@ -867,7 +867,7 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
   return e->getType()->isNullPtrType();
 }
 
-/// If \p E is a widened promoted integer, get its base (unpromoted) type.
+/// If \p e is a widened promoted integer, get its base (unpromoted) type.
 static std::optional<QualType>
 getUnwidenedIntegerType(const ASTContext &astContext, const Expr *e) {
   const Expr *base = e->IgnoreImpCasts();
