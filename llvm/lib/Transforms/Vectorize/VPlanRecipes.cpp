@@ -801,6 +801,21 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   cast<VectorType>(VectorTy), Mask,
                                   Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
+  case VPInstruction::ActiveLaneMask: {
+    Type *ArgTy = Ctx.Types.inferScalarType(getOperand(0));
+    Type *RetTy = toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
+                                  {ArgTy, ArgTy});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::ExplicitVectorLength: {
+    Type *Arg0Ty = Ctx.Types.inferScalarType(getOperand(0));
+    Type *I32Ty = Type::getInt32Ty(Ctx.LLVMCtx);
+    Type *I1Ty = Type::getInt1Ty(Ctx.LLVMCtx);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
+                                  I32Ty, {Arg0Ty, I32Ty, I1Ty});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -3429,23 +3444,10 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "cannot be used in per-lane");
-  if (State.ExpandedSCEVs.contains(Expr)) {
-    // SCEV Expr has already been expanded, result must already be set. At the
-    // moment we have to execute the entry block twice (once before skeleton
-    // creation to get expanded SCEVs used by the skeleton and once during
-    // regular VPlan execution).
-    State.Builder.SetInsertPoint(State.CFG.VPBB2IRBB[getParent()]);
-    assert(State.get(this, VPLane(0)) == State.ExpandedSCEVs[Expr] &&
-           "Results must match");
-    return;
-  }
-
-  const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
+  const DataLayout &DL = SE.getDataLayout();
   SCEVExpander Exp(SE, DL, "induction", /*PreserveLCSSA=*/true);
-
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());
-  State.ExpandedSCEVs[Expr] = Res;
   State.set(this, Res, VPLane(0));
 }
 
