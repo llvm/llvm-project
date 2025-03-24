@@ -18477,14 +18477,14 @@ static SDValue eliminateFPCastPair(SDNode *N) {
   }
 
   if (N0.getOpcode() == NarrowingOp && N0.getOperand(0).getValueType() == VT) {
-    const SDNodeFlags SrcFlags = N0->getFlags();
-    const SDNodeFlags DstFlags = N->getFlags();
+    const SDNodeFlags NarrowFlags = N0->getFlags();
+    const SDNodeFlags WidenFlags = N->getFlags();
     // Narrowing can introduce inf and change the encoding of a nan, so the
-    // destination must have the nnan and ninf flags to indicate that we don't
-    // need to care about that. We are also removing a rounding step, and that
-    // requires both the source and destination to allow contraction.
-    if (DstFlags.hasNoNaNs() && DstFlags.hasNoInfs() &&
-        SrcFlags.hasAllowContract() && DstFlags.hasAllowContract()) {
+    // widen must have the nnan and ninf flags to indicate that we don't need to
+    // care about that. We are also removing a rounding step, and that requires
+    // both the narrow and widen to allow contraction.
+    if (WidenFlags.hasNoNaNs() && WidenFlags.hasNoInfs() &&
+        NarrowFlags.hasAllowContract() && WidenFlags.hasAllowContract()) {
       return N0.getOperand(0);
     }
   }
