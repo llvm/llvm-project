@@ -4025,7 +4025,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto IsKnownModTripCountZero = [this, &UserIC](unsigned MaxVF) {
+  auto ScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
     unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
     ScalarEvolution *SE = PSE.getSE();
     // Currently only loops with countable exits are vectorized, but calling
@@ -4043,23 +4043,24 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return Rem->isZero();
   };
 
-  if (MaxPowerOf2RuntimeVF && *MaxPowerOf2RuntimeVF > 0) {
+  if (MaxPowerOf2RuntimeVF > 0) {
     assert((UserVF.isNonZero() || isPowerOf2_32(*MaxPowerOf2RuntimeVF)) &&
            "MaxFixedVF must be a power of 2");
-    if (IsKnownModTripCountZero(*MaxPowerOf2RuntimeVF)) {
+    if (ScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF)) {
       // Accept MaxFixedVF if we do not have a tail.
       LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
       return MaxFactors;
     }
   }
 
-  if (MaxTC && MaxTC <= TTI.getMinTripCountTailFoldingThreshold()) {
-    if (MaxPowerOf2RuntimeVF && *MaxPowerOf2RuntimeVF > 0) {
+  auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
+  if (ExpectedTC && ExpectedTC <= TTI.getMinTripCountTailFoldingThreshold()) {
+    if (MaxPowerOf2RuntimeVF > 0) {
       // If we have a low-trip-count, and the fixed-width VF is known to divide
       // the trip count but the scalable factor does not, use the fixed-width
       // factor in preference to allow the generation of a non-predicated loop.
       if (ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedLowTripLoop &&
-          IsKnownModTripCountZero(MaxFactors.FixedVF.getFixedValue())) {
+          ScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
         MaxFactors.ScalableVF = ElementCount::getScalable(0);
