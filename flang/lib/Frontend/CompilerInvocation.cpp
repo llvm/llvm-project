@@ -1144,9 +1144,8 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
     res.getLangOpts().OpenMPIsGPU = 1;
-    else {
-      res.getLangOpts().OpenMPIsGPU = 0;
-    }
+  } else {
+    res.getLangOpts().OpenMPIsGPU = 0;
   }
 
   // Get the OpenMP target triples if any.
