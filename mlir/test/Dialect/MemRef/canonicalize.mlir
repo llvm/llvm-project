@@ -704,6 +704,36 @@ func.func @self_copy(%m1: memref<?xf32>) {
 
 // -----
 
+func.func @self_copy_subview(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %s: index) {
+  %c3 = arith.constant 3: index
+  %0 = memref.subview %arg0[3] [4] [2] : memref<?xf32> to memref<4xf32, strided<[2], offset: 3>>
+  %1 = memref.subview %arg0[%c3] [4] [2] : memref<?xf32> to memref<4xf32, strided<[2], offset: ?>>
+  %2 = memref.subview %arg0[%c3] [4] [%s] : memref<?xf32> to memref<4xf32, strided<[?], offset: ?>>
+  %3 = memref.subview %arg0[3] [4] [%s] : memref<?xf32> to memref<4xf32, strided<[?], offset: 3>>
+  %4 = memref.subview %arg1[3] [4] [%s] : memref<?xf32> to memref<4xf32, strided<[?], offset: 3>>
+  // erase (source and destination subviews render the same)
+  memref.copy %0, %1 : memref<4xf32, strided<[2], offset: 3>> to memref<4xf32, strided<[2], offset: ?>>
+  // keep (strides differ)
+  memref.copy %2, %1 : memref<4xf32, strided<[?], offset: ?>> to memref<4xf32, strided<[2], offset: ?>>
+  // erase (source and destination subviews render the same)
+  memref.copy %2, %3 : memref<4xf32, strided<[?], offset: ?>> to memref<4xf32, strided<[?], offset: 3>>
+  // keep (source and destination differ)
+  memref.copy %3, %4 : memref<4xf32, strided<[?], offset: 3>> to memref<4xf32, strided<[?], offset: 3>>
+  return
+}
+
+// CHECK-LABEL: func.func @self_copy_subview(
+// CHECK-SAME: [[varg0:%.*]]: memref<?xf32>, [[varg1:%.*]]: memref<?xf32>, [[varg2:%.*]]: index) {
+  // CHECK: [[vsubview:%.*]] = memref.subview [[varg0]][3] [4] [2]
+  // CHECK: [[vsubview_0:%.*]] = memref.subview [[varg0]][3] [4] [[[varg2]]]
+  // CHECK: [[vsubview_1:%.*]] = memref.subview [[varg0]][3] [4] [[[varg2]]]
+  // CHECK: [[vsubview_2:%.*]] = memref.subview [[varg1]][3] [4] [[[varg2]]]
+  // CHECK-NEXT: memref.copy [[vsubview_0]], [[vsubview]]
+  // CHECK-NEXT: memref.copy [[vsubview_1]], [[vsubview_2]]
+  // CHECK-NEXT: return
+
+// -----
+
 // CHECK-LABEL: func @empty_copy
 //  CHECK-NEXT:   return
 func.func @empty_copy(%m1: memref<0x10xf32>, %m2: memref<?x10xf32>) {
