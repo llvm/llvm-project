@@ -11,6 +11,7 @@
 
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
+#include "src/math/acosf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
