@@ -28,9 +28,6 @@ LLVM_LIBC_FUNCTION(double, copysign, (double x, double y)) {
     defined(LIBC_ALIAS_LONG_DOUBLE)
 #include "src/math/copysignl.h"
 
-namespace LIBC_NAMESPACE_DECL {
-decltype(LIBC_NAMESPACE::copysignl) copysignl [[gnu::alias("copysignl")]];
-asm("copysignl = copysign");
-} // namespace LIBC_NAMESPACE_DECL
+LLVM_LIBC_ALIASING_FUNCTION(copysignl, copysign);
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64

@@ -10,11 +10,6 @@
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
-
-#if !(defined(LIBC_ALIAS_LONG_DOUBLE) &&                                       \
-      (defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) ||                           \
-       defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT128)))
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -23,5 +18,3 @@ LLVM_LIBC_FUNCTION(long double, copysignl, (long double x, long double y)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif
