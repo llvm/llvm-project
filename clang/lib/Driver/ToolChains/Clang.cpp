@@ -9338,7 +9338,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
       bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
-      if (HasCompilerRT)
+      if (HasFlangRT)
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lflang_rt.runtime"));
