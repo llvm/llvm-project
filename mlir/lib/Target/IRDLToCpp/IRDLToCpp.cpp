@@ -509,26 +509,6 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   dialect.walk([&](mlir::Operation *op) {
     res =
         llvm::TypeSwitch<Operation *, LogicalResult>(op)
-            .Case<irdl::TypeOp>([](irdl::TypeOp op) -> LogicalResult {
-              return isSnakeCase(op.getSymName(), op);
-            })
-            .Case<irdl::OperationOp>([](irdl::OperationOp op) -> LogicalResult {
-              return isSnakeCase(op.getSymName(), op);
-            })
-            .Case<irdl::OperandsOp>([](irdl::OperandsOp op) -> LogicalResult {
-              for (auto &elem : op.getNames())
-                if (failed(isSnakeCase(llvm::dyn_cast<mlir::StringAttr>(elem),
-                                       op)))
-                  return failure();
-              return success();
-            })
-            .Case<irdl::ResultsOp>([](irdl::ResultsOp op) -> LogicalResult {
-              for (auto &elem : op.getNames())
-                if (failed(isSnakeCase(llvm::dyn_cast<mlir::StringAttr>(elem),
-                                       op)))
-                  return failure();
-              return success();
-            })
             .Case<irdl::AttributeOp>([](irdl::AttributeOp op) -> LogicalResult {
               return op.emitError(
                   "IRDL C++ translation does not yet support attributes.");
