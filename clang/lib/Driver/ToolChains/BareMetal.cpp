@@ -545,9 +545,31 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
-                   options::OPT_r)) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+  bool NeedCRTs =
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
+
+  const char *CRTBegin, *CRTEnd;
+  if (NeedCRTs) {
+    if (!Args.hasArg(options::OPT_r))
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+    if (TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D)) {
+      auto RuntimeLib = TC.GetRuntimeLibType(Args);
+      switch (RuntimeLib) {
+      case (ToolChain::RLT_Libgcc): {
+        CRTBegin = "crtbegin.o";
+        CRTEnd = "crtend.o";
+        break;
+      }
+      case (ToolChain::RLT_CompilerRT): {
+        CRTBegin =
+            TC.getCompilerRTArgString(Args, "crtbegin", ToolChain::FT_Object);
+        CRTEnd =
+            TC.getCompilerRTArgString(Args, "crtend", ToolChain::FT_Object);
+        break;
+      }
+      }
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTBegin)));
+    }
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
@@ -570,9 +592,12 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    CmdArgs.push_back("--start-group");
     AddRunTimeLibs(TC, D, CmdArgs, Args);
-
     CmdArgs.push_back("-lc");
+    if (TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D))
+      CmdArgs.push_back("-lgloss");
+    CmdArgs.push_back("--end-group");
   }
 
   if (D.isUsingLTO()) {
@@ -588,6 +613,11 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     addLTOOptions(TC, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
+
+  if ((TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D)) &&
+      NeedCRTs)
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(CRTEnd)));
+
   if (TC.getTriple().isRISCV())
     CmdArgs.push_back("-X");
 
