@@ -576,10 +576,8 @@ BuiltinTypeDeclBuilder::addMemberVariable(StringRef Name, QualType Type,
   return *this;
 }
 
-BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC,
-                                        bool IsROV, bool RawBuffer,
-                                        AccessSpecifier Access) {
+BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
+    ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &Ctx = SemaRef.getASTContext();
