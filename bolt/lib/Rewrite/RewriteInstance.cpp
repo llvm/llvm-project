@@ -20,7 +20,7 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
-#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
+#include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -3544,8 +3544,7 @@ void RewriteInstance::runBinaryAnalyses() {
     opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
   for (GSK ScannerToRun : opts::GadgetScannersToRun) {
     if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(
-          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+      Manager.registerPass(std::make_unique<PAuthGadgetScanner::Analysis>());
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
