@@ -3698,7 +3698,7 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *InputShuffle = dyn_cast<ShuffleVectorInst>(&I);
   if (!InputShuffle)
-    return {};
+    return false;
 
   auto *OldLoad = dyn_cast<LoadInst>(InputShuffle->getOperand(0u));
   if (!OldLoad || !OldLoad->isSimple())
@@ -3708,34 +3708,31 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   if (!VecTy)
     return false;
 
-  auto IsPoisonOrUndef = [](Value *V) -> bool {
-    if (auto *C = dyn_cast<Constant>(V)) {
-      return isa<PoisonValue>(C) || isa<UndefValue>(C);
-    }
-    return false;
-  };
-
+  // Search all uses of `I`. If all uses are shufflevector ops, and the second
+  // operands are all poison values, find the minimum and maximum indices of
+  // the vector elements referenced by all shuffle masks.
+  // Otherwise return `std::nullopt`.
   using IndexRange = std::pair<int, int>;
   auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
-    auto OutputRange = IndexRange(VecTy->getNumElements(), -1);
+    IndexRange OutputRange = IndexRange(VecTy->getNumElements(), -1);
     for (auto &Use : I.uses()) {
       // All uses must be ShuffleVector instructions.
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(Use.getUser());
       if (!Shuffle)
-        return {};
+        return std::nullopt;
 
       // Get index range for value.
-      auto *Op0 = Shuffle->getOperand(0u);
-      auto *Op1 = Shuffle->getOperand(1u);
-      if (!IsPoisonOrUndef(Op1))
-        return {};
+      auto *Op0 = Shuffle->getOperand(0);
+      auto *Op1 = Shuffle->getOperand(1);
+      if (!isa<PoisonValue>(Op1) && !isa<UndefValue>(Op1))
+        return std::nullopt;
 
       // Find the min and max indices used by the ShuffleVector instruction.
-      auto Mask = Shuffle->getShuffleMask();
+      ArrayRef<int> Mask = Shuffle->getShuffleMask();
       auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
       auto NumElems = int(Op0Ty->getNumElements());
 
-      for (auto Index : Mask) {
+      for (int Index : Mask) {
         if (Index >= 0) {
           Index %= NumElems;
           OutputRange.first = std::min(Index, OutputRange.first);
@@ -3745,15 +3742,18 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
     }
 
     if (OutputRange.second < OutputRange.first)
-      return {};
+      return std::nullopt;
 
     return OutputRange;
   };
 
+  // Find the range of vector elements used by shufflevector ops, if possible.
   if (auto Indices = GetIndexRangeInShuffles()) {
-    auto OldSize = VecTy->getNumElements();
-    auto NewSize = Indices->second + 1u;
+    unsigned OldSize = VecTy->getNumElements();
+    unsigned NewSize = Indices->second + 1u;
 
+    // If the range of vector elements is smaller than the full load, attempt
+    // to create a smaller load.
     if (NewSize < OldSize) {
       auto Builder = IRBuilder(&I);
       Builder.SetCurrentDebugLocation(I.getDebugLoc());
