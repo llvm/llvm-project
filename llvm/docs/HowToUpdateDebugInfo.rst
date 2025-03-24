@@ -90,14 +90,14 @@ has a location with an accurate scope attached, and b) to prevent misleading
 single-stepping (or breakpoint) behavior. Often, merged instructions are memory
 accesses which can trap: having an accurate scope attached greatly assists in
 crash triage by identifying the (possibly inlined) function where the bad
-memory access occurred. 
+memory access occurred.
 
-For SamplePGO, it is often beneficial to retain an arbitrary but deterministic
-location instead of discarding line and column information as part of merging.
-In particular, loss of location information for calls inhibit optimizations 
-such as indirect call promotion. This behavior can be optionally enabled until
-support for accurately representing merged instructions in the line table is
-implemented. 
+To maintain distinct source locations for SamplePGO, it is often beneficial to
+retain an arbitrary but deterministic location instead of discarding line and
+column information as part of merging. In particular, loss of location
+information for calls inhibit optimizations such as indirect call promotion.
+This behavior can be optionally enabled until support for accurately
+representing merged instructions in the line table is implemented.
 
 Examples of transformations that should follow this rule include:
 
