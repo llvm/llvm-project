@@ -11,6 +11,11 @@ import pathlib
 import platform
 import sys
 
+# This mapping lists out the dependencies for each project. These should be
+# direct dependencies. The code will handle transitive dependencies. Some
+# projects might have optional dependencies depending upon how they are built.
+# The dependencies listed here should be the dependencies required for the
+# configuration built/tested in the premerge CI.
 PROJECT_DEPENDENCIES = {
     "llvm": set(),
     "clang": {"llvm"},
@@ -27,9 +32,14 @@ PROJECT_DEPENDENCIES = {
     "polly": {"llvm"},
 }
 
+# This mapping describes the additional projects that should be tested when a
+# specific project is touched. We enumerate them specifically rather than
+# just invert the dependencies list to give more control over what exactly is
+# tested.
 DEPENDENTS_TO_TEST = {
     "llvm": {"bolt", "clang", "clang-tools-extra", "lld", "lldb", "mlir", "polly"},
     "lld": {"bolt", "cross-project-tests"},
+    # TODO(issues/132795): LLDB should be enabled on clang changes.
     "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
     "clang-tools-extra": {"libc"},
     "mlir": {"flang"},
@@ -38,16 +48,16 @@ DEPENDENTS_TO_TEST = {
 DEPENDENT_RUNTIMES_TO_TEST = {"clang": {"libcxx", "libcxxabi", "libunwind"}}
 
 EXCLUDE_LINUX = {
-    "cross-project-tests",  # Tests are failing.
+    "cross-project-tests",  # TODO(issues/132796): Tests are failing.
     "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
 EXCLUDE_WINDOWS = {
-    "cross-project-tests",  # Tests are failing.
-    "compiler-rt",  # Tests are taking too long.
-    "openmp",  # Does not detect perl installation.
+    "cross-project-tests",  # TODO(issues/132797): Tests are failing.
+    "compiler-rt",  # TODO(issues/132798): Tests take excessive time.
+    "openmp",  # TODO(issues/132799): Does not detect perl installation.
     "libc",  # No Windows Support.
-    "lldb",  # Custom environment requirements.
+    "lldb",  # TODO(issues/132800): Needs environment setup.
     "bolt",  # No Windows Support.
 }
 
@@ -169,6 +179,10 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     projects_check_targets = _compute_project_check_targets(projects_to_test)
     runtimes_to_test = _compute_runtimes_to_test(projects_to_test)
     runtimes_check_targets = _compute_runtime_check_targets(runtimes_to_test)
+    # We use a semicolon to separate the projects/runtimes as they get passed
+    # to the CMake invocation and thus we need to use the CMake list separator
+    # (;). We use spaces to separate the check targets as they end up getting
+    # passed to ninja.
     return {
         "projects_to_build": ";".join(sorted(projects_to_build)),
         "project_check_targets": " ".join(sorted(projects_check_targets)),
@@ -183,4 +197,4 @@ if __name__ == "__main__":
         current_platform = sys.argv[1]
     env_variables = get_env_variables(sys.stdin.readlines(), current_platform)
     for env_variable in env_variables:
-        print(f"{env_variable}=\"{env_variables[env_variable]}\"")
+        print(f"{env_variable}='{env_variables[env_variable]}'")

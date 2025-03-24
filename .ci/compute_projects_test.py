@@ -48,7 +48,7 @@ class TestComputeProjects(unittest.TestCase):
             env_variables["runtimes_check_targets"],
             "check-cxx check-cxxabi check-unwind",
         )
-    
+
     def test_llvm_mac(self):
         env_variables = compute_projects.get_env_variables(
             ["llvm/CMakeLists.txt"], "Darwin"
