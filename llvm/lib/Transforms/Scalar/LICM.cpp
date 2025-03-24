@@ -688,9 +688,10 @@ public:
     // intersection of their successors is non-empty.
     // TODO: This could be expanded to allowing branches where both ends
     // eventually converge to a single block.
-    SmallPtrSet<BasicBlock *, 4> TrueDestSucc, FalseDestSucc;
-    TrueDestSucc.insert_range(successors(TrueDest));
-    FalseDestSucc.insert_range(successors(FalseDest));
+    SmallPtrSet<BasicBlock *, 4> TrueDestSucc(llvm::from_range,
+                                              successors(TrueDest));
+    SmallPtrSet<BasicBlock *, 4> FalseDestSucc(llvm::from_range,
+                                               successors(FalseDest));
     BasicBlock *CommonSucc = nullptr;
     if (TrueDestSucc.count(FalseDest)) {
       CommonSucc = FalseDest;
