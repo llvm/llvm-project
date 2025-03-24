@@ -1174,26 +1174,6 @@ MCSection *TargetLoweringObjectFileELF::getStaticDtorSection(
                                   KeySym);
 }
 
-const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
-    const GlobalValue *LHS, const GlobalValue *RHS,
-    const TargetMachine &TM) const {
-  // We may only use a PLT-relative relocation to refer to unnamed_addr
-  // functions.
-  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
-    return nullptr;
-
-  // Basic correctness checks.
-  if (LHS->getType()->getPointerAddressSpace() != 0 ||
-      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
-      RHS->isThreadLocal())
-    return nullptr;
-
-  return MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(TM.getSymbol(LHS), PLTRelativeSpecifier,
-                              getContext()),
-      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
-}
-
 const MCExpr *TargetLoweringObjectFileELF::lowerDSOLocalEquivalent(
     const DSOLocalEquivalent *Equiv, const TargetMachine &TM) const {
   assert(supportDSOLocalEquivalentLowering());

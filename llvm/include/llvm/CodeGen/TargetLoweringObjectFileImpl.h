@@ -112,10 +112,6 @@ public:
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
 
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
-
   const MCExpr *lowerDSOLocalEquivalent(const DSOLocalEquivalent *Equiv,
                                         const TargetMachine &TM) const override;
 
