@@ -1743,10 +1743,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         const Value *Ptr = Memop->getValue();
-        if (Memop->isStore() && SLoadAddresses.count(Ptr)) {
-          addWait(Wait, SmemAccessCounter, 0);
-          if (PDT->dominates(MI.getParent(), SLoadAddresses.find(Ptr)->second))
-            SLoadAddresses.erase(Ptr);
+        if (Memop->isStore()) {
+          if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
+            addWait(Wait, SmemAccessCounter, 0);
+            if (PDT->dominates(MI.getParent(), It->second))
+              SLoadAddresses.erase(It);
+          }
         }
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
