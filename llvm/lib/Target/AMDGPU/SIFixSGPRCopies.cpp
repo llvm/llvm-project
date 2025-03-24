@@ -899,6 +899,55 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
                                       MI, MI.getDebugLoc())) {
       I = std::next(I);
       MI.eraseFromParent();
+    } else {
+      // At this point, if we still have a VGPR → SGPR copy, it is completely
+      // illegal. We assume that it was intentionally introduced and should be
+      // replaced with the READFIRSTLANE to ensure correctness.
+      const TargetRegisterClass *SRC = MRI->getRegClass(SrcReg);
+      const TargetRegisterClass *DRC = TRI->getPhysRegBaseClass(DstReg);
+      ArrayRef<int16_t> SrcIndices = TRI->getRegSplitParts(SRC, 4);
+      ArrayRef<int16_t> DstIndices = TRI->getRegSplitParts(DRC, 4);
+      assert(SrcIndices.size() == DstIndices.size() &&
+             "Register triples should match");
+      MachineInstr *FirstMI = nullptr, *LastMI = nullptr;
+      // If SrcReg is virtual register can we get the sub reg? one way to handle
+      // this If def is copy fold the def src. This should not work in case of
+      // src is and AGPR. Since direct copy from agpr to sgpr is not allowed?
+      MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
+      // Get the def SrcReg
+      Register DefSrcReg = DefMI->getOperand(1).getReg();
+      // If not a register triple replace the opcode itself.
+      if (SrcIndices.size() == 1) {
+        MI.setDesc(TII->get(AMDGPU::V_READFIRSTLANE_B32));
+        MI.addOperand(*MI.getParent()->getParent(),
+                      MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+        return true;
+      }
+
+      if (!DefMI || !DefMI->isCopy() || TRI->isAGPR(*MRI, DefSrcReg))
+        return true;
+
+      for (unsigned Idx = 0; Idx < SrcIndices.size(); ++Idx) {
+        int16_t SubIdx = SrcIndices[Idx];
+        Register DefSrcSubReg = TRI->getSubReg(DefSrcReg, SubIdx);
+        Register DstSubReg = TRI->getSubReg(DstReg, SubIdx);
+        assert(DstSubReg && DefSrcSubReg && "Failed to find subregs!");
+        LastMI = BuildMI(*MI.getParent(), I, MI.getDebugLoc(),
+                         TII->get(AMDGPU::V_READFIRSTLANE_B32), DstSubReg)
+                     .addReg(DefSrcSubReg)
+                     .addReg(DefSrcReg, RegState::Implicit);
+        if (!FirstMI)
+          FirstMI = LastMI;
+      }
+      assert(FirstMI && LastMI);
+
+      FirstMI->addOperand(
+          MachineOperand::CreateReg(DstReg, true /*IsDef*/, true /*IsImp*/));
+
+      LastMI->addRegisterKilled(DefSrcReg, TRI);
+      I = std::next(I);
+      MI.eraseFromParent();
+      DefMI->eraseFromParent();
     }
     return true;
   }
