@@ -344,3 +344,10 @@ enum enum_attr_test_6 { // c17-error {{redefinition of 'enum_attr_test_6'}} \
   EAT6 [[deprecated]] // c17-error {{redefinition of enumerator 'EAT6'}} \
                          c23-note {{attribute 'deprecated' here}}
 };
+
+// You cannot declare one with a fixed underlying type and the other without a
+// fixed underlying type, or a different underlying type. However, it's worth
+// showing that the underlying type doesn't change the redefinition behavior.
+enum fixed_test_1 : int { FT1 }; // c17-note 2 {{previous definition is here}}
+enum fixed_test_1 : int { FT1 }; // c17-error {{redefinition of 'fixed_test_1'}} \
+                                    c17-error {{redefinition of enumerator 'FT1'}}
