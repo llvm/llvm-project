@@ -19,7 +19,9 @@
 #include <pwd.h>
 #include <spawn.h>
 #include <sys/stat.h>
+#ifndef _AIX
 #include <sys/syscall.h>
+#endif
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
