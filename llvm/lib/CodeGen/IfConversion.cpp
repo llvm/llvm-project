@@ -1948,7 +1948,7 @@ bool IfConverter::IfConvertDiamondCommon(
       }
 
       for (MCRegister Reg : Defs) {
-        if (!ExtUses.count(Reg))
+        if (!ExtUses.contains(Reg))
           RedefsByFalse.insert_range(TRI->subregs_inclusive(Reg));
       }
     }
