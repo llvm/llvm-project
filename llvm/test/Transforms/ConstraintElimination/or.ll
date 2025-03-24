@@ -812,125 +812,134 @@ end:                                           ; preds = %entry
 define void @test_decompose_bitwise_or(i4 %x, i4 %y) {
 ; CHECK-LABEL: @test_decompose_bitwise_or(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    ret void
-; CHECK:       exit:
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    ret void
-;
-entry:
-  %0 = or i4 %y, %x
-  %or = icmp slt i4 %0, 0
-  br i1 %or, label %bb1, label %exit
-
-bb1:
-  ret void
-
-exit:
-  %f.3 = icmp sge i4 %x, 0
-  %f.4 = icmp sge i4 %y, 0
-  call void @use(i1 %f.3)
-  call void @use(i1 %f.4)
-  ret void
-}
-
-define i1 @test_decompose_bitwise_or2(i4 %x, i4 %y) {
-; CHECK-LABEL: @test_decompose_bitwise_or2(
-; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OR_NOT:%.*]] = icmp sgt i4 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[OR_NOT]], label [[END:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
 ; CHECK:       end:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = or i4 %x, %y
-  %or.not = icmp sgt i4 %0, -1
-  br i1 %or.not, label %end, label %then
+  %or.1 = or i4 %x, %y
+  %c.1 = icmp sgt i4 %or.1, -1
+  br i1 %c.1, label %then, label %end
 
 then:
-  ret i1 false
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  ret void
 
 end:
-  %cmp = icmp sgt i4 %x, -1
-  ret i1 %cmp
+  ret void
 }
 
-define void @test_decompose_nested_bitwise_or(i4 %x, i4 %y, i4 %z, i4 %w) {
+define void @test_decompose_bitwise_or2(i4 %x, i4 %y) {
+; CHECK-LABEL: @test_decompose_bitwise_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %y, %x
+  %c.1 = icmp slt i4 %or.1, 0
+  br i1 %c.1, label %then, label %end
+
+then:
+  ; fact: %or.1 < 0
+  ret void
+
+end:
+  ; fact: %or.1 >= 0
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_or(i4 %x, i4 %y, i4 %z) {
 ; CHECK-LABEL: @test_decompose_nested_bitwise_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[TMP0]], [[Z:%.*]]
+; CHECK-NEXT:    [[OR_2_NOT:%.*]] = icmp sgt i4 [[TMP1]], -1
+; CHECK-NEXT:    br i1 [[OR_2_NOT]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %or.1 = or i4 %x, %y
+  %or.2 = or i4 %or.1, %z
+  %c.1 = icmp sgt i4 %or.2, -1
+  br i1 %c.1, label %then, label %end
+
+then:                                                ; preds = %entry
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  %t.3 = icmp sgt i4 %z, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  call void @use(i1 %t.3)
+  ret void
+
+end:                                                ; preds = %entry
+  ret void
+}
+
+define void @test_decompose_nested_bitwise_or2(i4 %x, i4 %y, i4 %z, i4 %w) {
+; CHECK-LABEL: @test_decompose_nested_bitwise_or2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[TMP0]], [[Z:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i4 [[TMP1]], [[W:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = icmp slt i4 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB1:%.*]], label [[EXIT:%.*]]
-; CHECK:       bb1:
+; CHECK:       then:
 ; CHECK-NEXT:    ret void
-; CHECK:       exit:
+; CHECK:       end:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    ret void
-;
-entry:
-  %1 = or i4 %y, %x
-  %2 = or i4 %1, %z
-  %3 = or i4 %2, %w
-  %or = icmp slt i4 %3, 0
-  br i1 %or, label %bb1, label %exit
-
-bb1:
-  ret void
-
-exit:
-  %f.4 = icmp sge i4 %x, 0
-  %f.5 = icmp sge i4 %y, 0
-  %f.6 = icmp sge i4 %z, 0
-  %f.7 = icmp sge i4 %w, 0
-  call void @use(i1 %f.4)
-  call void @use(i1 %f.5)
-  call void @use(i1 %f.6)
-  call void @use(i1 %f.7)
-  ret void
-}
-
-define void @test_decompose_nested_bitwise_or2(i4 %x, i4 %y, i4 %z) {
-; CHECK-LABEL: @test_decompose_nested_bitwise_or2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = or i4 [[TMP0]], [[Z:%.*]]
-; CHECK-NEXT:    [[OR_2_NOT:%.*]] = icmp sgt i4 [[TMP1]], -1
-; CHECK-NEXT:    br i1 [[OR_2_NOT]], label [[F:%.*]], label [[T:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    ret void
-; CHECK:       f:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = or i4 %x, %y
-  %1 = or i4 %0, %z
-  %or.2.not = icmp sgt i4 %1, -1
-  br i1 %or.2.not, label %f, label %t
+  %or.1 = or i4 %y, %x
+  %or.2 = or i4 %or.1, %z
+  %or.3 = or i4 %or.2, %w
+  %c.1 = icmp slt i4 %or.3, 0
+  br i1 %c.1, label %then, label %end
 
-t:                                                ; preds = %entry
+then:
+  ; fact: %or.3 < 0
   ret void
 
-f:                                                ; preds = %entry
-  %cmp.1 = icmp sgt i4 %x, -1
-  call void @use(i1 %cmp.1)
-  %cmp.2 = icmp sgt i4 %y, -1
-  call void @use(i1 %cmp.2)
-  %cmp.3 = icmp sgt i4 %z, -1
-  call void @use(i1 %cmp.3)
+end:
+  ; fact: %or.3 >= 0 same as %or.3 > -1
+  %t.1 = icmp sgt i4 %x, -1
+  %t.2 = icmp sgt i4 %y, -1
+  %t.3 = icmp sgt i4 %z, -1
+  %t.4 = icmp sgt i4 %w, -1
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  call void @use(i1 %t.3)
+  call void @use(i1 %t.4)
   ret void
 }

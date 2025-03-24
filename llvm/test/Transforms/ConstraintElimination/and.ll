@@ -610,51 +610,59 @@ define void @test_decompose_bitwise_and(i4 %x, i4 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
-; CHECK:       bb1:
+; CHECK:       then:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
-; CHECK:       exit:
+; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %1 = and i4 %y, %x
-  %and = icmp slt i4 %1, 0
-  br i1 %and, label %bb1, label %exit
+  %and.1 = and i4 %y, %x
+  %c.1= icmp slt i4 %and.1, 0
+  br i1 %c.1, label %then, label %end
 
-bb1:
-  %f.1 = icmp slt i4 %x, 0
-  %f.2 = icmp slt i4 %y, 0
-  call void @use(i1 %f.1)
-  call void @use(i1 %f.2)
+then:
+  ; fact: %and.1 < 0
+  %t.1 = icmp slt i4 %x, 0
+  %t.2 = icmp slt i4 %y, 0
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
   ret void
 
-exit:
+end:
   ret void
 }
 
-define i1 @test_decompose_bitwise_and2(i4 %x, i4 %y) {
+define void @test_decompose_bitwise_and2(i4 %x, i4 %y) {
 ; CHECK-LABEL: @test_decompose_bitwise_and2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND_NOT:%.*]] = icmp sgt i4 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[AND_NOT]], label [[END:%.*]], label [[THEN:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret void
 ; CHECK:       end:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = and i4 %x, %y
-  %and.not = icmp sgt i4 %0, -1
-  br i1 %and.not, label %end, label %then
+  %and.1 = and i4 %x, %y
+  %c.1 = icmp sgt i4 %and.1, -1
+  br i1 %c.1, label %then, label %end
 
 then:
-  %cmp = icmp slt i4 %x, 0
-  ret i1 %cmp
+  ; fact: %and.1 > -1
+  ret void
 
 end:
-  ret i1 false
+  ; fact: %and.1 <= -1
+  %t.1 = icmp slt i4 %x, 0
+  %t.2 = icmp slt i4 %y, 0
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  ret void
 }
 
 define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z, i4 %w) {
@@ -665,34 +673,35 @@ define void @test_decompose_nested_bitwise_and(i4 %x, i4 %y, i4 %z, i4 %w) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i4 [[TMP1]], [[W:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = icmp slt i4 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[AND]], label [[BB1:%.*]], label [[EXIT:%.*]]
-; CHECK:       bb1:
+; CHECK:       then:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
-; CHECK:       exit:
+; CHECK:       end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %1 = and i4 %y, %x
-  %2 = and i4 %1, %z
-  %3 = and i4 %2, %w
-  %and = icmp slt i4 %3, 0
-  br i1 %and, label %bb1, label %exit
+  %and.1 = and i4 %y, %x
+  %and.2 = and i4 %and.1, %z
+  %and.3 = and i4 %and.2, %w
+  %c.1= icmp slt i4 %and.3, 0
+  br i1 %c.1, label %then, label %end
 
-bb1:
-  %f.1 = icmp slt i4 %x, 0
-  %f.2 = icmp slt i4 %y, 0
-  %f.3 = icmp slt i4 %z, 0
-  %f.4 = icmp slt i4 %w, 0
-  call void @use(i1 %f.1)
-  call void @use(i1 %f.2)
-  call void @use(i1 %f.3)
-  call void @use(i1 %f.4)
+then:
+  ; fact: %and.3 < 0
+  %t.1 = icmp slt i4 %x, 0
+  %t.2 = icmp slt i4 %y, 0
+  %t.3 = icmp slt i4 %z, 0
+  %t.4 = icmp slt i4 %w, 0
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  call void @use(i1 %t.3)
+  call void @use(i1 %t.4)
   ret void
 
-exit:
+end:
   ret void
 }
 
@@ -703,29 +712,31 @@ define void @test_decompose_nested_bitwise_and2(i4 %x, i4 %y, i4 %z) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[TMP0]], [[Z:%.*]]
 ; CHECK-NEXT:    [[AND_2_NOT:%.*]] = icmp sgt i4 [[TMP1]], -1
 ; CHECK-NEXT:    br i1 [[AND_2_NOT]], label [[F:%.*]], label [[T:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    call void @use(i1 true)
+; CHECK:       then:
 ; CHECK-NEXT:    ret void
-; CHECK:       f:
+; CHECK:       end:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = and i4 %x, %y
-  %1 = and i4 %0, %z
-  %and.2.not = icmp sgt i4 %1, -1
-  br i1 %and.2.not, label %f, label %t
+  %and.1 = and i4 %x, %y
+  %and.2 = and i4 %and.1, %z
+  %c.1 = icmp sgt i4 %and.2, -1
+  br i1 %c.1, label %then, label %end
 
-t:
-  %cmp = icmp slt i4 %x, 0
-  call void @use(i1 %cmp)
-  %cmp.2 = icmp slt i4 %y, 0
-  call void @use(i1 %cmp.2)
-  %cmp.3 = icmp slt i4 %z, 0
-  call void @use(i1 %cmp.3)
+then:
+  ; fact: %and.2 > -1
   ret void
 
-f:
+end:
+  ; fact: %and.2 <= -1 same as %and.2 < 0
+  %t.1 = icmp slt i4 %x, 0
+  %t.2 = icmp slt i4 %y, 0
+  %t.3 = icmp slt i4 %z, 0
+  call void @use(i1 %t.1)
+  call void @use(i1 %t.2)
+  call void @use(i1 %t.3)
   ret void
 }
