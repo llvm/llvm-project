@@ -753,8 +753,8 @@ class _LIBCPP_TEMPLATE_VIS __dtor;
 
 #    define _LIBCPP_VARIANT_DESTRUCTOR(destructible_trait, destructor_definition, destroy)                             \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS                                                                                       \
-      __dtor<__traits<_Types...>, destructible_trait> : public __base<destructible_trait, _Types...> {                 \
+      class _LIBCPP_TEMPLATE_VIS __dtor<__traits<_Types...>, destructible_trait>                                       \
+          : public __base<destructible_trait, _Types...> {                                                             \
         using __base_type _LIBCPP_NODEBUG = __base<destructible_trait, _Types...>;                                     \
         using __index_t _LIBCPP_NODEBUG   = typename __base_type::__index_t;                                           \
                                                                                                                        \
@@ -831,8 +831,8 @@ class _LIBCPP_TEMPLATE_VIS __move_constructor;
 
 #    define _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(move_constructible_trait, move_constructor_definition)                    \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS                                                                                       \
-      __move_constructor<__traits<_Types...>, move_constructible_trait> : public __ctor<__traits<_Types...>> {         \
+      class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>, move_constructible_trait>                     \
+          : public __ctor<__traits<_Types...>> {                                                                       \
         using __base_type _LIBCPP_NODEBUG = __ctor<__traits<_Types...>>;                                               \
                                                                                                                        \
       public:                                                                                                          \
@@ -958,8 +958,8 @@ class _LIBCPP_TEMPLATE_VIS __move_assignment;
 
 #    define _LIBCPP_VARIANT_MOVE_ASSIGNMENT(move_assignable_trait, move_assignment_definition)                         \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS                                                                                       \
-      __move_assignment<__traits<_Types...>, move_assignable_trait> : public __assignment<__traits<_Types...>> {       \
+      class _LIBCPP_TEMPLATE_VIS __move_assignment<__traits<_Types...>, move_assignable_trait>                         \
+          : public __assignment<__traits<_Types...>> {                                                                 \
         using __base_type _LIBCPP_NODEBUG = __assignment<__traits<_Types...>>;                                         \
                                                                                                                        \
       public:                                                                                                          \
@@ -997,8 +997,8 @@ class _LIBCPP_TEMPLATE_VIS __copy_assignment;
 
 #    define _LIBCPP_VARIANT_COPY_ASSIGNMENT(copy_assignable_trait, copy_assignment_definition)                         \
       template <class... _Types>                                                                                       \
-      class _LIBCPP_TEMPLATE_VIS                                                                                       \
-      __copy_assignment<__traits<_Types...>, copy_assignable_trait> : public __move_assignment<__traits<_Types...>> {  \
+      class _LIBCPP_TEMPLATE_VIS __copy_assignment<__traits<_Types...>, copy_assignable_trait>                         \
+          : public __move_assignment<__traits<_Types...>> {                                                            \
         using __base_type _LIBCPP_NODEBUG = __move_assignment<__traits<_Types...>>;                                    \
                                                                                                                        \
       public:                                                                                                          \
