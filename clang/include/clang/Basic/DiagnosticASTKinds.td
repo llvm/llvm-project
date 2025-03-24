@@ -479,11 +479,11 @@ def warn_odr_function_type_inconsistent : Warning<
   "translation units (%1 vs. %2)">,
   InGroup<ODR>;
 def err_odr_tag_type_inconsistent
-    : Error<"type %0 has incompatible definitions in different translation "
-            "units">;
+    : Error<"type %0 has incompatible definitions%select{| in different "
+            "translation units}1">;
 def warn_odr_tag_type_inconsistent
-    : Warning<"type %0 has incompatible definitions in different translation "
-              "units">,
+    : Warning<"type %0 has incompatible definitions%select{| in different "
+              "translation units}1">,
       InGroup<ODR>;
 def note_odr_tag_kind_here: Note<
   "%0 is a %select{struct|interface|union|class|enum}1 here">;

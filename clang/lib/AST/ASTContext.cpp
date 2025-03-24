@@ -16,6 +16,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
@@ -11437,6 +11438,13 @@ QualType ASTContext::mergeRecordTypes(QualType LHS, QualType RHS) {
   // the same TU from being compatible.
   if (LangOpts.CPlusPlus || !LangOpts.C23)
     return {};
+
+  StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
+  StructuralEquivalenceContext Ctx(
+      getLangOpts(), *this, *this, NonEquivalentDecls,
+      StructuralEquivalenceKind::Default, false /*StrictTypeSpelling*/,
+      false /*Complain*/, true /*ErrorOnTagTypeMismatch*/);
+  return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
 
   // C23, on the other hand, requires the members to be "the same enough".
   // C23 6.2.7p1:

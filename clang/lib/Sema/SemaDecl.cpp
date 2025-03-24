@@ -17950,7 +17950,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
               // ensure the decl passes the structural compatibility check in
               // C11 6.2.7/1 (or 6.1.2.6/1 in C89).
               NamedDecl *Hidden = nullptr;
-              if (SkipBody && !hasVisibleDefinition(Def, &Hidden)) {
+              if (SkipBody &&
+                  (!hasVisibleDefinition(Def, &Hidden) || getLangOpts().C23)) {
                 // There is a definition of this tag, but it is not visible. We
                 // explicitly make use of C++'s one definition rule here, and
                 // assume that this definition is identical to the hidden one

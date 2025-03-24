@@ -4567,8 +4567,9 @@ namespace {
                             Reader.getOwningModuleFile(Cat)) {
           StructuralEquivalenceContext::NonEquivalentDeclSet NonEquivalentDecls;
           StructuralEquivalenceContext Ctx(
-              Cat->getASTContext(), Existing->getASTContext(),
-              NonEquivalentDecls, StructuralEquivalenceKind::Default,
+              Reader.getContext().getLangOpts(), Cat->getASTContext(),
+              Existing->getASTContext(), NonEquivalentDecls,
+              StructuralEquivalenceKind::Default,
               /*StrictTypeSpelling =*/false,
               /*Complain =*/false,
               /*ErrorOnTagTypeMismatch =*/true);
