@@ -630,8 +630,11 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
   if (C.getDriver().isUsingLTO()) {
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
-                  C.getDriver().getLTOMode() == LTOK_Thin);
+    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0], ThinLTO);
+
+    if (!ThinLTO)
+      addFullLTOPartitionOption(C.getDriver(), Args, CmdArgs);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -706,6 +709,33 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 
   handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_amdgpu_Features_Group);
+}
+
+static unsigned getFullLTOPartitions(const Driver &D, const ArgList &Args) {
+  const Arg *A = Args.getLastArg(options::OPT_flto_partitions_EQ);
+  // In the absence of an option, use 8 as the default.
+  if (!A)
+    return 8;
+  int Value = 0;
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || (Value < 1)) {
+    D.Diag(diag::err_drv_invalid_int_value)
+        << A->getAsString(Args) << A->getValue();
+    return 1;
+  }
+
+  return Value;
+}
+
+void amdgpu::addFullLTOPartitionOption(const Driver &D,
+                                       const llvm::opt::ArgList &Args,
+                                       llvm::opt::ArgStringList &CmdArgs) {
+  // TODO: Should this be restricted to fgpu-rdc only ? Currently we'll
+  //       also do it for non gpu-rdc LTO
+
+  if (unsigned NumParts = getFullLTOPartitions(D, Args); NumParts > 1) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--lto-partitions=" + Twine(NumParts)));
+  }
 }
 
 /// AMDGPU Toolchain
