@@ -3563,6 +3563,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaf16_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.fmaf16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   fma_test
   SUITE
     libc-math-smoke-tests
