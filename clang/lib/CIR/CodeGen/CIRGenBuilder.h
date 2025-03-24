@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "CIRGenTypeCache.h"
+#include "mlir/IR/Location.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -20,7 +21,6 @@ namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
-  bool isFPConstrained = false;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
@@ -161,38 +161,34 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
-  mlir::Value createFSub(mlir::Value lhs, mlir::Value rhs) {
+  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    if (isFPConstrained)
-      llvm_unreachable("Constrained FP NYI");
-
+    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::foldBinOpFMF());
-    return create<cir::BinOp>(lhs.getLoc(), cir::BinOpKind::Sub, lhs, rhs);
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Sub, lhs, rhs);
   }
 
-  mlir::Value createFAdd(mlir::Value lhs, mlir::Value rhs) {
+  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    if (isFPConstrained)
-      llvm_unreachable("Constrained FP NYI");
-
+    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::foldBinOpFMF());
-    return create<cir::BinOp>(lhs.getLoc(), cir::BinOpKind::Add, lhs, rhs);
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Add, lhs, rhs);
   }
-  mlir::Value createFMul(mlir::Value lhs, mlir::Value rhs) {
+  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    if (isFPConstrained)
-      llvm_unreachable("Constrained FP NYI");
-
+    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::foldBinOpFMF());
-    return create<cir::BinOp>(lhs.getLoc(), cir::BinOpKind::Mul, lhs, rhs);
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Mul, lhs, rhs);
   }
-  mlir::Value createFDiv(mlir::Value lhs, mlir::Value rhs) {
+  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
-    if (isFPConstrained)
-      llvm_unreachable("Constrained FP NYI");
-
+    assert(!cir::MissingFeatures::fpConstraints());
     assert(!cir::MissingFeatures::foldBinOpFMF());
-    return create<cir::BinOp>(lhs.getLoc(), cir::BinOpKind::Div, lhs, rhs);
+
+    return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }
 };
 

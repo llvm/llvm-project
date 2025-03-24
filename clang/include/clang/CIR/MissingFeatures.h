@@ -96,7 +96,6 @@ struct MissingFeatures {
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
   static bool generateDebugInfo() { return false; }
-  static bool getFPFeaturesInEffect() { return false; }
   static bool pointerOverflowSanitizer() { return false; }
   static bool fpConstraints() { return false; }
   static bool sanitizers() { return false; }
@@ -137,7 +136,7 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool zextOp() { return false; }
   static bool ptrStrideOp() { return false; }
-  static bool opPtrDiff() { return false; }
+  static bool ptrDiffOp() { return false; }
 };
 
 } // namespace cir

@@ -17,6 +17,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 
 namespace cir {
@@ -147,17 +148,6 @@ public:
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
   }
 
-  mlir::Value createBinOp(mlir::Value lhs, cir::BinOpKind kind,
-                          const llvm::APInt &rhs) {
-    return create<cir::BinOp>(lhs.getLoc(), lhs.getType(), kind, lhs,
-                              getConstAPInt(lhs.getLoc(), lhs.getType(), rhs));
-  }
-
-  mlir::Value createBinop(mlir::Value lhs, cir::BinOpKind kind,
-                          mlir::Value rhs) {
-    return create<cir::BinOp>(lhs.getLoc(), lhs.getType(), kind, lhs, rhs);
-  }
-
   mlir::Value createBinop(mlir::Location loc, mlir::Value lhs,
                           cir::BinOpKind kind, mlir::Value rhs) {
     return create<cir::BinOp>(loc, lhs.getType(), kind, lhs, rhs);
@@ -166,93 +156,74 @@ public:
   mlir::Value createLowBitsSet(mlir::Location loc, unsigned size,
                                unsigned bits) {
     llvm::APInt val = llvm::APInt::getLowBitsSet(size, bits);
-    auto type = cir::IntType::get(getContext(), size, false);
+    auto type = cir::IntType::get(getContext(), size, /*isSigned=*/false);
     return getConstAPInt(loc, type, val);
-  }
-
-  mlir::Value createAnd(mlir::Value lhs, const llvm::APInt &rhs) {
-    mlir::Value val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
-    return createBinop(lhs, cir::BinOpKind::And, val);
-  }
-
-  mlir::Value createAnd(mlir::Value lhs, mlir::Value rhs) {
-    return createBinop(lhs, cir::BinOpKind::And, rhs);
   }
 
   mlir::Value createAnd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return createBinop(loc, lhs, cir::BinOpKind::And, rhs);
   }
 
-  mlir::Value createOr(mlir::Value lhs, const llvm::APInt &rhs) {
-    mlir::Value val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
-    return createBinop(lhs, cir::BinOpKind::Or, val);
+  mlir::Value createOr(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
   }
 
-  mlir::Value createOr(mlir::Value lhs, mlir::Value rhs) {
-    return createBinop(lhs, cir::BinOpKind::Or, rhs);
-  }
-
-  mlir::Value createMul(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
-                        bool hasNSW = false) {
-    auto op = create<cir::BinOp>(lhs.getLoc(), lhs.getType(),
-                                 cir::BinOpKind::Mul, lhs, rhs);
-    if (hasNUW)
-      op.setNoUnsignedWrap(true);
-    if (hasNSW)
-      op.setNoSignedWrap(true);
+  mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+                        bool hasNUW = false, bool hasNSW = false) {
+    auto op =
+        create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Mul, lhs, rhs);
+    op.setNoUnsignedWrap(hasNUW);
+    op.setNoSignedWrap(hasNSW);
     return op;
   }
-  mlir::Value createNSWMul(mlir::Value lhs, mlir::Value rhs) {
-    return createMul(lhs, rhs, false, true);
+  mlir::Value createNSWMul(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return createMul(loc, lhs, rhs, false, true);
   }
-  mlir::Value createNUWAMul(mlir::Value lhs, mlir::Value rhs) {
-    return createMul(lhs, rhs, true, false);
-  }
-
-  mlir::Value createMul(mlir::Value lhs, const llvm::APInt &rhs) {
-    mlir::Value val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
-    return createBinop(lhs, cir::BinOpKind::Mul, val);
+  mlir::Value createNUWAMul(mlir::Location loc, mlir::Value lhs,
+                            mlir::Value rhs) {
+    return createMul(loc, lhs, rhs, true, false);
   }
 
-  mlir::Value createSub(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
-                        bool hasNSW = false, bool saturated = false) {
-    auto op = create<cir::BinOp>(lhs.getLoc(), lhs.getType(),
-                                 cir::BinOpKind::Sub, lhs, rhs);
-    if (hasNUW)
-      op.setNoUnsignedWrap(true);
-    if (hasNSW)
-      op.setNoSignedWrap(true);
-    if (saturated)
-      op.setSaturated(true);
+  mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+                        bool hasNUW = false, bool hasNSW = false,
+                        bool saturated = false) {
+    auto op =
+        create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Sub, lhs, rhs);
+    op.setNoUnsignedWrap(hasNUW);
+    op.setNoSignedWrap(hasNSW);
+    op.setSaturated(saturated);
     return op;
   }
 
-  mlir::Value createNSWSub(mlir::Value lhs, mlir::Value rhs) {
-    return createSub(lhs, rhs, false, true);
+  mlir::Value createNSWSub(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return createSub(loc, lhs, rhs, false, true);
   }
 
-  mlir::Value createNUWSub(mlir::Value lhs, mlir::Value rhs) {
-    return createSub(lhs, rhs, true, false);
+  mlir::Value createNUWSub(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return createSub(loc, lhs, rhs, true, false);
   }
 
-  mlir::Value createAdd(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
-                        bool hasNSW = false, bool saturated = false) {
-    auto op = create<cir::BinOp>(lhs.getLoc(), lhs.getType(),
-                                 cir::BinOpKind::Add, lhs, rhs);
-    if (hasNUW)
-      op.setNoUnsignedWrap(true);
-    if (hasNSW)
-      op.setNoSignedWrap(true);
-    if (saturated)
-      op.setSaturated(true);
+  mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+                        bool hasNUW = false, bool hasNSW = false,
+                        bool saturated = false) {
+    auto op =
+        create<cir::BinOp>(loc, lhs.getType(), cir::BinOpKind::Add, lhs, rhs);
+    op.setNoUnsignedWrap(hasNUW);
+    op.setNoSignedWrap(hasNSW);
+    op.setSaturated(saturated);
     return op;
   }
 
-  mlir::Value createNSWAdd(mlir::Value lhs, mlir::Value rhs) {
-    return createAdd(lhs, rhs, false, true);
+  mlir::Value createNSWAdd(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return createAdd(loc, lhs, rhs, false, true);
   }
-  mlir::Value createNUWAdd(mlir::Value lhs, mlir::Value rhs) {
-    return createAdd(lhs, rhs, true, false);
+  mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
+                           mlir::Value rhs) {
+    return createAdd(loc, lhs, rhs, true, false);
   }
 
   //

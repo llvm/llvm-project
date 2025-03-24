@@ -852,7 +852,6 @@ def BinOpKind : I32EnumAttr<
   let cppNamespace = "::cir";
 }
 
-// FIXME: Pure won't work when we add overloading.
 def BinOp : CIR_Op<"binop", [Pure,
   SameTypeOperands, SameOperandsAndResultType]> {
 

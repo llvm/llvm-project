@@ -168,24 +168,9 @@ static bool MustVisitNullValue(const Expr *E) {
   return E->getType()->isNullPtrType();
 }
 
-/// If \p E is a widened promoted integer, get its base (unpromoted) type.
-static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
-                                                       const Expr *E) {
-  const Expr *Base = E->IgnoreImpCasts();
-  if (E == Base)
-    return std::nullopt;
-
-  QualType BaseTy = Base->getType();
-  if (!Ctx.isPromotableIntegerType(BaseTy) ||
-      Ctx.getTypeSize(BaseTy) >= Ctx.getTypeSize(E->getType()))
-    return std::nullopt;
-
-  return BaseTy;
-}
-
 /// Check if \p E is a widened promoted integer.
 static bool IsWidenedIntegerOp(const ASTContext &Ctx, const Expr *E) {
-  return getUnwidenedIntegerType(Ctx, E).has_value();
+  return Ctx.getUnwidenedIntegerType(E).has_value();
 }
 
 /// Check if we can skip the overflow check for \p Op.
@@ -228,11 +213,11 @@ static bool CanElideOverflowCheck(const ASTContext &Ctx, const BinOpInfo &Op) {
   if (BO->hasExcludedOverflowPattern())
     return true;
 
-  auto OptionalLHSTy = getUnwidenedIntegerType(Ctx, BO->getLHS());
+  auto OptionalLHSTy = Ctx.getUnwidenedIntegerType(BO->getLHS());
   if (!OptionalLHSTy)
     return false;
 
-  auto OptionalRHSTy = getUnwidenedIntegerType(Ctx, BO->getRHS());
+  auto OptionalRHSTy = Ctx.getUnwidenedIntegerType(BO->getRHS());
   if (!OptionalRHSTy)
     return false;
 

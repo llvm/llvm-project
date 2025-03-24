@@ -210,9 +210,10 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
 
     if (e->getType()->isAnyComplexType()) {
       cgm.errorNYI(e->getSourceRange(), "UnaryOp complex inc/dec");
-      return LValue();
+      lv = LValue();
+    } else {
+      emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
     }
-    emitScalarPrePostIncDec(e, lv, isInc, /*isPre=*/true);
 
     return lv;
   }
@@ -250,6 +251,7 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
 
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar: {
+    assert(!cir::MissingFeatures::objCLifetime());
     if (e->getLHS()->getType().getObjCLifetime() !=
         clang::Qualifiers::ObjCLifetime::OCL_None) {
       cgm.errorNYI(e->getSourceRange(), "objc lifetimes");
