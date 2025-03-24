@@ -4,7 +4,7 @@ namespace std {
 template <class T>
 constexpr const T& as_const(T&) noexcept;
 
-// We need two declarations to see the error for some reason *shrug*
+// We need two declarations to see the error for some reason.
 template <class T> void as_const(const T&&) noexcept = delete;
 template <class T> void as_const(const T&&) noexcept;
 }

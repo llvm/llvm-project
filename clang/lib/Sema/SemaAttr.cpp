@@ -220,7 +220,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   if (FD->getNumParams() == 0)
     return;
-  // Skip void returning functions (except constructors).
+  // Skip void returning functions (except constructors). This can occur in
+  // cases like 'as_const'.
   if (!isa<CXXConstructorDecl>(FD) && FD->getReturnType()->isVoidType())
     return;
 
