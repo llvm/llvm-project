@@ -122,25 +122,47 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
   typeError();
 }
 
-fir::ShapeShiftOp Fortran::lower::omp::getShapeShift(fir::FirOpBuilder &builder,
-                                                     mlir::Location loc,
-                                                     mlir::Value box) {
+fir::ShapeShiftOp Fortran::lower::omp::getShapeShift(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value box,
+    bool cannotHaveNonDefaultLowerBounds, bool useDefaultLowerBounds) {
   fir::SequenceType sequenceType = mlir::cast<fir::SequenceType>(
       hlfir::getFortranElementOrSequenceType(box.getType()));
   const unsigned rank = sequenceType.getDimension();
   llvm::SmallVector<mlir::Value> lbAndExtents;
   lbAndExtents.reserve(rank * 2);
 
-  mlir::Type idxTy = builder.getIndexType();
-  for (unsigned i = 0; i < rank; ++i) {
-    // TODO: ideally we want to hoist box reads out of the critical section.
-    // We could do this by having box dimensions in block arguments like
-    // OpenACC does
-    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
-    auto dimInfo =
-        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
-    lbAndExtents.push_back(dimInfo.getLowerBound());
-    lbAndExtents.push_back(dimInfo.getExtent());
+  mlir::Value oneVal;
+  auto one = [&] {
+    if (!oneVal)
+      oneVal = builder.createIntegerConstant(loc, idxTy, 1);
+    return oneVal;
+  };
+
+  if ((cannotHaveNonDefaultLowerBounds || useDefaultLowerBounds) &&
+      !sequenceType.hasDynamicExtents()) {
+    // We don't need fir::BoxDimsOp if all of the extents are statically known
+    // and we can assume default lower bounds. This helps avoids reads from the
+    // mold arg.
+    // We may also want to use default lower bounds to iterate through array
+    // elements without having to adjust each index.
+    for (int64_t extent : sequenceType.getShape()) {
+      assert(extent != sequenceType.getUnknownExtent());
+      lbAndExtents.push_back(one());
+      mlir::Value extentVal = builder.createIntegerConstant(loc, idxTy, extent);
+      lbAndExtents.push_back(extentVal);
+    }
+  } else {
+    for (unsigned i = 0; i < rank; ++i) {
+      // TODO: ideally we want to hoist box reads out of the critical section.
+      // We could do this by having box dimensions in block arguments like
+      // OpenACC does
+      mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
+      auto dimInfo =
+          builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+      lbAndExtents.push_back(useDefaultLowerBounds ? one()
+                                                   : dimInfo.getLowerBound());
+      lbAndExtents.push_back(dimInfo.getExtent());
+    }
   }
 
   auto shapeShiftTy = fir::ShapeShiftType::get(builder.getContext(), rank);

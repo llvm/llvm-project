@@ -35,6 +35,7 @@ math/clc_nextafter.cl
 math/clc_rint.cl
 math/clc_round.cl
 math/clc_rsqrt.cl
+math/clc_sincos_helpers.cl
 math/clc_sqrt.cl
 math/clc_sw_fma.cl
 math/clc_trunc.cl
