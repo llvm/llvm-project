@@ -15,14 +15,21 @@
 // RUN: mkdir -p %t/aarch64-nogcc/bin
 // RUN: ln -s %clang %t/aarch64-nogcc/bin/clang
 // RUN: ln -s %S/Inputs/basic_aarch64_nogcc_tree/aarch64-none-elf %t/aarch64-nogcc/aarch64-none-elf
+// RUN: ln -s %S/Inputs/basic_aarch64_nogcc_tree/bin/aarch64-none-elf-ld %t/aarch64-nogcc/bin/aarch64-none-elf-ld
 // RUN: %t/aarch64-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%t/aarch64-nogcc/invalid \
 // RUN:    --target=aarch64-none-elf --rtlib=libgcc -fuse-ld=ld 2>&1 \
-// RUN:    | FileCheck -check-prefix=C-ARM-BAREMETAL-NOGCC %s
+// RUN:    | FileCheck -check-prefix=C-AARCH64-BAREMETAL-NOGCC %s
 
 // RUN: %t/aarch64-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --sysroot=%t/aarch64-nogcc/bin/../aarch64-none-elf \
 // RUN:    --target=aarch64-none-elf --rtlib=libgcc -fuse-ld=ld 2>&1 \
-// RUN:    | FileCheck -check-prefix=C-ARM-BAREMETAL-NOGCC %s
+// RUN:    | FileCheck -check-prefix=C-AARCH64-BAREMETAL-NOGCC %s
 
-// C-ARM-BAREMETAL-NOGCC: "-internal-isystem" "{{.*}}/aarch64-nogcc/bin/../aarch64-none-elf/include"
+// C-AARCH64-BAREMETAL-NOGCC: "-internal-isystem" "{{.*}}/aarch64-nogcc/bin/../aarch64-none-elf/include"
+// C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/bin/aarch64-none-elf-ld"
+// C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/bin/../aarch64-none-elf/lib/crt0.o"
+// C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/{{.*}}/aarch64-none-elf/lib/crtbegin.o"
+// C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/bin/../aarch64-none-elf/lib"
+// C-AARCH64-BAREMETAL-NOGCC: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-AARCH64-BAREMETAL-NOGCC: "{{.*}}/aarch64-nogcc/{{.*}}/aarch64-none-elf/lib/crtend.o"

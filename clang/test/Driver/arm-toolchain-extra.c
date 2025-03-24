@@ -15,6 +15,7 @@
 // RUN: mkdir -p %t/arm-nogcc/bin
 // RUN: ln -s %clang %t/arm-nogcc/bin/clang
 // RUN: ln -s %S/Inputs/basic_arm_nogcc_tree/armv6m-none-eabi %t/arm-nogcc/armv6m-none-eabi
+// RUN: ln -s %S/Inputs/basic_arm_nogcc_tree/bin/armv6m-none-eabi-ld %t/arm-nogcc/bin/armv6m-none-eabi-ld
 // RUN: %t/arm-nogcc/bin/clang %s -### -no-canonical-prefixes \
 // RUN:    --gcc-toolchain=%t/arm-nogcc/invalid \
 // RUN:    --target=armv6m-none-eabi --rtlib=libgcc -fuse-ld=ld 2>&1 \
@@ -26,4 +27,10 @@
 // RUN:    | FileCheck -check-prefix=C-ARM-BAREMETAL-NOGCC %s
 
 // C-ARM-BAREMETAL-NOGCC: "-internal-isystem" "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/include"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/armv6m-none-eabi-ld"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/lib/crt0.o"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/{{.*}}/armv6m-none-eabi/lib/crtbegin.o"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/bin/../armv6m-none-eabi/lib"
+// C-ARM-BAREMETAL-NOGCC: "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-ARM-BAREMETAL-NOGCC: "{{.*}}/arm-nogcc/{{.*}}/armv6m-none-eabi/lib/crtend.o"
 

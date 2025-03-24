@@ -545,9 +545,27 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
-                   options::OPT_r)) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+  bool WantCRTs =
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
+
+  const char *crtbegin, *crtend;
+  if (WantCRTs) {
+    if (!Args.hasArg(options::OPT_r))
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crt0.o")));
+    if (TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D)) {
+      auto RuntimeLib = TC.GetRuntimeLibType(Args);
+      if (RuntimeLib == ToolChain::RLT_Libgcc) {
+        crtbegin = "crtbegin.o";
+        crtend = "crtend.o";
+      } else {
+        assert(RuntimeLib == ToolChain::RLT_CompilerRT);
+        crtbegin =
+            TC.getCompilerRTArgString(Args, "crtbegin", ToolChain::FT_Object);
+        crtend =
+            TC.getCompilerRTArgString(Args, "crtend", ToolChain::FT_Object);
+      }
+      CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crtbegin)));
+    }
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
@@ -570,9 +588,12 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    CmdArgs.push_back("--start-group");
     AddRunTimeLibs(TC, D, CmdArgs, Args);
-
     CmdArgs.push_back("-lc");
+    if (TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D))
+      CmdArgs.push_back("-lgloss");
+    CmdArgs.push_back("--end-group");
   }
 
   if (D.isUsingLTO()) {
@@ -588,6 +609,11 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     addLTOOptions(TC, Args, CmdArgs, Output, *Input,
                   D.getLTOMode() == LTOK_Thin);
   }
+
+  if ((TC.hasValidGCCInstallation() || hasGCCToolChainAlongSideClang(D)) &&
+      WantCRTs)
+    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(crtend)));
+
   if (TC.getTriple().isRISCV())
     CmdArgs.push_back("-X");
 
