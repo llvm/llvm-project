@@ -9,6 +9,19 @@
 #ifndef MLIR_DIALECT_SPIRV_IMAGE_INTERFACES_H_
 #define MLIR_DIALECT_SPIRV_IMAGE_INTERFACES_H_
 
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Support/PointerLikeTypeTraits.h"
+
 #include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h.inc"
 
 #endif // MLIR_DIALECT_SPIRV_IMAGE_INTERFACES_H_
