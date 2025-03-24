@@ -103,7 +103,7 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
   for (; I != E; ++I) {
     if (!I->ReleaseAtCycle || I->ReleaseAtCycle == I->AcquireAtCycle)
       continue;
-    assert(I->ReleaseAtCycle > I->AcquireAtCycle);
+    assert(I->ReleaseAtCycle > I->AcquireAtCycle && "invalid resource segment");
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
     double Throughput =
         double(NumUnits) / double(I->ReleaseAtCycle - I->AcquireAtCycle);
