@@ -3550,6 +3550,10 @@ def err_conflicting_codeseg_attribute : Error<
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
 
+def err_attribute_patchable_function_entry_invalid_section
+    : Error<"section argument to 'patchable_function_entry' attribute is not "
+            "valid for this target: %0">;
+
 def err_anonymous_property: Error<
   "anonymous property is not supported">;
 def err_property_is_variably_modified : Error<
