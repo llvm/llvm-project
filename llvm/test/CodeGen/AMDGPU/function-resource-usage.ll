@@ -202,18 +202,18 @@ define void @indirect_use_50_vgpr() #0 {
 }
 
 ; GCN-LABEL: {{^}}use_80_sgpr:
-; GCN:	.set use_80_sgpr.num_vgpr, 1
+; GCN:	.set use_80_sgpr.num_vgpr, 0
 ; GCN:	.set use_80_sgpr.num_agpr, 0
 ; GCN:	.set use_80_sgpr.numbered_sgpr, 80
-; GCN:	.set use_80_sgpr.private_seg_size, 8
+; GCN:	.set use_80_sgpr.private_seg_size, 0
 ; GCN:	.set use_80_sgpr.uses_vcc, 0
 ; GCN:	.set use_80_sgpr.uses_flat_scratch, 0
 ; GCN:	.set use_80_sgpr.has_dyn_sized_stack, 0
 ; GCN:	.set use_80_sgpr.has_recursion, 0
 ; GCN:	.set use_80_sgpr.has_indirect_call, 0
 ; GCN: TotalNumSgprs: 84
-; GCN: NumVgprs: 1
-; GCN: ScratchSize: 8
+; GCN: NumVgprs: 0
+; GCN: ScratchSize: 0
 define void @use_80_sgpr() #1 {
   call void asm sideeffect "", "~{s79}"() #0
   ret void
@@ -231,7 +231,7 @@ define void @use_80_sgpr() #1 {
 ; GCN:	.set indirect_use_80_sgpr.has_indirect_call, or(0, use_80_sgpr.has_indirect_call)
 ; GCN: TotalNumSgprs: 84
 ; GCN: NumVgprs: 41
-; GCN: ScratchSize: 24
+; GCN: ScratchSize: 16
 define void @indirect_use_80_sgpr() #1 {
   call void @use_80_sgpr()
   ret void
@@ -249,7 +249,7 @@ define void @indirect_use_80_sgpr() #1 {
 ; GCN:	.set indirect_2_level_use_80_sgpr.has_indirect_call, or(0, indirect_use_80_sgpr.has_indirect_call)
 ; GCN: TotalNumSgprs: 86
 ; GCN: NumVgprs: 41
-; GCN: ScratchSize: 24
+; GCN: ScratchSize: 16
 define amdgpu_kernel void @indirect_2_level_use_80_sgpr() #0 {
   call void @indirect_use_80_sgpr()
   ret void
@@ -336,14 +336,14 @@ define amdgpu_kernel void @indirect_2_level_use_stack() #0 {
 ; GCN-LABEL: {{^}}multi_call_use_use_stack:
 ; GCN:	.set multi_call_use_use_stack.num_vgpr, max(41, use_stack0.num_vgpr, use_stack1.num_vgpr)
 ; GCN:	.set multi_call_use_use_stack.num_agpr, max(0, use_stack0.num_agpr, use_stack1.num_agpr)
-; GCN:	.set multi_call_use_use_stack.numbered_sgpr, max(44, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr)
+; GCN:	.set multi_call_use_use_stack.numbered_sgpr, max(52, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr)
 ; GCN:	.set multi_call_use_use_stack.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
 ; GCN:	.set multi_call_use_use_stack.uses_vcc, or(1, use_stack0.uses_vcc, use_stack1.uses_vcc)
 ; GCN:	.set multi_call_use_use_stack.uses_flat_scratch, or(1, use_stack0.uses_flat_scratch, use_stack1.uses_flat_scratch)
 ; GCN:	.set multi_call_use_use_stack.has_dyn_sized_stack, or(0, use_stack0.has_dyn_sized_stack, use_stack1.has_dyn_sized_stack)
 ; GCN:	.set multi_call_use_use_stack.has_recursion, or(0, use_stack0.has_recursion, use_stack1.has_recursion)
 ; GCN:	.set multi_call_use_use_stack.has_indirect_call, or(0, use_stack0.has_indirect_call, use_stack1.has_indirect_call)
-; GCN: TotalNumSgprs: 50
+; GCN: TotalNumSgprs: 58
 ; GCN: NumVgprs: 41
 ; GCN: ScratchSize: 2052
 define amdgpu_kernel void @multi_call_use_use_stack() #0 {
@@ -357,7 +357,7 @@ declare void @external() #0
 ; GCN-LABEL: {{^}}multi_call_with_external:
 ; GCN:	.set multi_call_with_external.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; GCN:	.set multi_call_with_external.num_agpr, max(0, amdgpu.max_num_agpr)
-; GCN:	.set multi_call_with_external.numbered_sgpr, max(44, amdgpu.max_num_sgpr)
+; GCN:	.set multi_call_with_external.numbered_sgpr, max(52, amdgpu.max_num_sgpr)
 ; GCN:	.set multi_call_with_external.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
 ; GCN:	.set multi_call_with_external.uses_vcc, 1
 ; GCN:	.set multi_call_with_external.uses_flat_scratch, 1
@@ -377,7 +377,7 @@ define amdgpu_kernel void @multi_call_with_external() #0 {
 ; GCN-LABEL: {{^}}multi_call_with_external_and_duplicates:
 ; GCN:	.set multi_call_with_external_and_duplicates.num_vgpr, max(41, amdgpu.max_num_vgpr)
 ; GCN:	.set multi_call_with_external_and_duplicates.num_agpr, max(0, amdgpu.max_num_agpr)
-; GCN:	.set multi_call_with_external_and_duplicates.numbered_sgpr, max(46, amdgpu.max_num_sgpr)
+; GCN:	.set multi_call_with_external_and_duplicates.numbered_sgpr, max(54, amdgpu.max_num_sgpr)
 ; GCN:	.set multi_call_with_external_and_duplicates.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size))
 ; GCN:	.set multi_call_with_external_and_duplicates.uses_vcc, 1
 ; GCN:	.set multi_call_with_external_and_duplicates.uses_flat_scratch, 1
@@ -594,7 +594,7 @@ define amdgpu_kernel void @usage_multi_stage_recurse_noattrs(i32 %n) #0 {
 ; GCN-LABEL: {{^}}multi_call_with_multi_stage_recurse:
 ; GCN:  .set multi_call_with_multi_stage_recurse.num_vgpr, max(41, use_stack0.num_vgpr, use_stack1.num_vgpr, multi_stage_recurse1.num_vgpr)
 ; GCN:  .set multi_call_with_multi_stage_recurse.num_agpr, max(0, use_stack0.num_agpr, use_stack1.num_agpr, multi_stage_recurse1.num_agpr)
-; GCN:  .set multi_call_with_multi_stage_recurse.numbered_sgpr, max(45, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr, multi_stage_recurse1.numbered_sgpr)
+; GCN:  .set multi_call_with_multi_stage_recurse.numbered_sgpr, max(53, use_stack0.numbered_sgpr, use_stack1.numbered_sgpr, multi_stage_recurse1.numbered_sgpr)
 ; GCN:  .set multi_call_with_multi_stage_recurse.private_seg_size, 0+(max(use_stack0.private_seg_size, use_stack1.private_seg_size, multi_stage_recurse1.private_seg_size))
 ; GCN:  .set multi_call_with_multi_stage_recurse.uses_vcc, or(1, use_stack0.uses_vcc, use_stack1.uses_vcc, multi_stage_recurse1.uses_vcc)
 ; GCN:  .set multi_call_with_multi_stage_recurse.uses_flat_scratch, or(1, use_stack0.uses_flat_scratch, use_stack1.uses_flat_scratch, multi_stage_recurse1.uses_flat_scratch)

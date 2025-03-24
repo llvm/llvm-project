@@ -4,6 +4,7 @@
 
 subroutine test
   use, intrinsic :: iso_fortran_env, only: team_type
+  save
   type(team_type) :: team
   integer, codimension[*] :: selector
   integer, codimension[2,*] :: selector2d

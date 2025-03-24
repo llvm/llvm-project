@@ -17,7 +17,7 @@ bb:
   %v3 = zext i32 %v1 to i64
   %v.t = and i64 %v3, 255
   %v4 = add i64 %v2, %v.t
-  store i64 %v4, ptr addrspace(1) undef
+  store i64 %v4, ptr addrspace(1) poison
   ret void
 }
 

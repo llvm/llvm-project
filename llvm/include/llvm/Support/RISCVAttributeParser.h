@@ -9,11 +9,11 @@
 #ifndef LLVM_SUPPORT_RISCVATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_RISCVATTRIBUTEPARSER_H
 
-#include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/RISCVAttributes.h"
 
 namespace llvm {
-class RISCVAttributeParser : public ELFAttributeParser {
+class RISCVAttributeParser : public ELFCompactAttrParser {
   struct DisplayHandler {
     RISCVAttrs::AttrType attribute;
     Error (RISCVAttributeParser::*routine)(unsigned);
@@ -28,9 +28,10 @@ class RISCVAttributeParser : public ELFAttributeParser {
 
 public:
   RISCVAttributeParser(ScopedPrinter *sw)
-      : ELFAttributeParser(sw, RISCVAttrs::getRISCVAttributeTags(), "riscv") {}
+      : ELFCompactAttrParser(sw, RISCVAttrs::getRISCVAttributeTags(), "riscv") {
+  }
   RISCVAttributeParser()
-      : ELFAttributeParser(RISCVAttrs::getRISCVAttributeTags(), "riscv") {}
+      : ELFCompactAttrParser(RISCVAttrs::getRISCVAttributeTags(), "riscv") {}
 };
 
 } // namespace llvm

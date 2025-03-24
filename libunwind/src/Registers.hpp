@@ -4126,7 +4126,7 @@ inline reg_t Registers_riscv::getRegister(int regNum) const {
     return _registers[regNum];
   if (regNum == UNW_RISCV_VLENB) {
     reg_t vlenb;
-    __asm__("csrr %0, 0xC22" : "=r"(vlenb));
+    __asm__ volatile("csrr %0, 0xC22" : "=r"(vlenb));
     return vlenb;
   }
   _LIBUNWIND_ABORT("unsupported riscv register");

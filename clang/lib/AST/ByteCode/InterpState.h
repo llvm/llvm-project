@@ -144,6 +144,9 @@ public:
   SourceLocation EvalLocation;
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
+  /// Things needed to do speculative execution.
+  SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+  unsigned SpeculationDepth = 0;
 
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>

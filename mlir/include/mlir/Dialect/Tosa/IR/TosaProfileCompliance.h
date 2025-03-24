@@ -29,11 +29,11 @@ typedef struct {
 } TypeInfo;
 
 enum CheckCondition {
+  invalid,
   // Valid when any of the profile (extension) requirement is meet.
   anyOf,
   // Valid when all of the profile (extension) requirement are meet.
-  allOf,
-  invalid
+  allOf
 };
 
 template <typename T>
@@ -76,20 +76,20 @@ private:
 
   LogicalResult populatationDispatch(Operation *op);
 
-  void populateProfileInfo(ValueRange operands, Value output);
+  LogicalResult populateProfileInfo(ValueRange operands, Value output);
 
   // Base
   template <typename T>
-  void populateProfileInfo(T op) {
+  LogicalResult populateProfileInfo(T op) {
     op->emitOpError() << "profile requirement for this op has not been defined";
   }
   // For conv2d, conv3d, transpose_conv2d, and depthwise_conv2d.
   template <typename T>
-  void populateProfileInfoConv(T op);
+  LogicalResult populateProfileInfoConv(T op);
 
-  // For pad, reshape, slice, tile, and transpose.
+  // For reshape, slice, tile, and transpose.
   template <typename T>
-  void populateProfileInfoDataLayout(T op);
+  LogicalResult populateProfileInfoDataLayout(T op);
 
 private:
   SmallVector<TypeInfo> tyInfo;
@@ -136,6 +136,8 @@ public:
     switch (ext) {
     case Extension::int16:
     case Extension::int4:
+    case Extension::doubleround:
+    case Extension::inexactround:
       return {Profile::pro_int};
     case Extension::bf16:
     case Extension::fp8e4m3:
@@ -144,10 +146,12 @@ public:
       return {Profile::pro_fp};
     case Extension::variable:
     case Extension::controlflow:
+    case Extension::dynamic:
       return {Profile::pro_fp, Profile::pro_int};
     case Extension::none:
       return {};
     };
+    llvm_unreachable("bad Extension type");
   }
 
   // Debug utilites.

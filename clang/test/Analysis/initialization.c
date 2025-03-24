@@ -49,13 +49,13 @@ void glob_array_index2(void) {
 
 void glob_invalid_index1(void) {
   int x = -42;
-  int res = glob_arr1[x]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr1[x]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index2(void) {
   const int *ptr = glob_arr1;
   int x = 42;
-  int res = ptr[x]; // expected-warning{{garbage or undefined}}
+  int res = ptr[x]; // expected-warning{{uninitialized}}
 }
 
 const int glob_arr2[3][3] = {[0][0] = 1, [1][1] = 5, [2][0] = 7};
@@ -81,12 +81,12 @@ void negative_index(void) {
 
 void glob_invalid_index3(void) {
   int x = -1, y = -1;
-  int res = glob_arr2[x][y]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr2[x][y]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index4(void) {
   int x = 3, y = 2;
-  int res = glob_arr2[x][y]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr2[x][y]; // expected-warning{{uninitialized}}
 }
 
 const int glob_arr_no_init[10];
@@ -106,12 +106,12 @@ void glob_arr_index5(void) {
 
 void glob_invalid_index5(void) {
   int x = 42;
-  int res = glob_arr3[x]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr3[x]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index6(void) {
   int x = -42;
-  int res = glob_arr3[x]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr3[x]; // expected-warning{{uninitialized}}
 }
 
 const int glob_arr4[];              // IncompleteArrayType
@@ -126,10 +126,10 @@ void glob_arr_index6(void) {
 
 void glob_invalid_index7(void) {
   int x = 42;
-  int res = glob_arr4[x]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr4[x]; // expected-warning{{uninitialized}}
 }
 
 void glob_invalid_index8(void) {
   int x = -42;
-  int res = glob_arr4[x]; // expected-warning{{garbage or undefined}}
+  int res = glob_arr4[x]; // expected-warning{{uninitialized}}
 }

@@ -248,7 +248,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       continue;
 
     // Add nodes on the Path into Candidates.
-    Candidates.insert(Path.begin(), Path.end());
+    Candidates.insert_range(Path);
   }
 
   // Sort the nodes in Candidates in top-down order and save the nodes
@@ -283,15 +283,14 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
           (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1))
         BBs.insert(Entry);
       else
-        BBs.insert(InsertPts.begin(), InsertPts.end());
+        BBs.insert_range(InsertPts);
       break;
     }
 
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &ParentInsertPts = InsertPtsMap[Parent].first;
-    BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
+    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.
@@ -305,7 +304,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       ParentInsertPts.insert(Node);
       ParentPtsFreq += BFI.getBlockFreq(Node);
     } else {
-      ParentInsertPts.insert(InsertPts.begin(), InsertPts.end());
+      ParentInsertPts.insert_range(InsertPts);
       ParentPtsFreq += InsertPtsFreq;
     }
   }

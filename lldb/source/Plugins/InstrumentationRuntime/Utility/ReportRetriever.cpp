@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReportRetriever.h"
+#include "Utility.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -81,6 +82,12 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
   options.SetPrefix(address_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
+
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
 
   ValueObjectSP return_value_sp;
   ExecutionContext exe_ctx;

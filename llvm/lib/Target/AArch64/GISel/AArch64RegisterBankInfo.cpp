@@ -466,6 +466,16 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_fminv:
   case Intrinsic::aarch64_neon_fmaxnmv:
   case Intrinsic::aarch64_neon_fminnmv:
+  case Intrinsic::aarch64_neon_fmulx:
+  case Intrinsic::aarch64_neon_frecpe:
+  case Intrinsic::aarch64_neon_frecps:
+  case Intrinsic::aarch64_neon_frecpx:
+  case Intrinsic::aarch64_neon_frsqrte:
+  case Intrinsic::aarch64_neon_frsqrts:
+  case Intrinsic::aarch64_neon_facge:
+  case Intrinsic::aarch64_neon_facgt:
+  case Intrinsic::aarch64_neon_fabd:
+  case Intrinsic::aarch64_sisd_fabd:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -540,6 +550,25 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
     return true;
+  case TargetOpcode::G_INTRINSIC:
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_fcvtas:
+    case Intrinsic::aarch64_neon_fcvtau:
+    case Intrinsic::aarch64_neon_fcvtzs:
+    case Intrinsic::aarch64_neon_fcvtzu:
+    case Intrinsic::aarch64_neon_fcvtms:
+    case Intrinsic::aarch64_neon_fcvtmu:
+    case Intrinsic::aarch64_neon_fcvtns:
+    case Intrinsic::aarch64_neon_fcvtnu:
+    case Intrinsic::aarch64_neon_fcvtps:
+    case Intrinsic::aarch64_neon_fcvtpu:
+      // Force FPR register bank for half types, as those types otherwise
+      // don't get legalized correctly resulting in fp16 <-> gpr32 COPY's.
+      return MRI.getType(MI.getOperand(2).getReg()) == LLT::float16();
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -1082,24 +1111,41 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
-    // Check if we know that the intrinsic has any constraints on its register
-    // banks. If it does, then update the mapping accordingly.
-    unsigned Idx = 0;
-    if (onlyDefinesFP(MI, MRI, TRI))
-      for (const auto &Op : MI.defs()) {
-        if (Op.isReg())
-          OpRegBankIdx[Idx] = PMI_FirstFPR;
-        ++Idx;
-      }
-    else
-      Idx += MI.getNumExplicitDefs();
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_vcvtfxs2fp:
+    case Intrinsic::aarch64_neon_vcvtfxu2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu:
+      // Override these intrinsics, because they would have a partial
+      // mapping. This is needed for 'half' types, which otherwise don't
+      // get legalised correctly.
+      OpRegBankIdx[0] = PMI_FirstFPR;
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      // OpRegBankIdx[1] is the intrinsic ID.
+      // OpRegBankIdx[3] is an integer immediate.
+      break;
+    default: {
+      // Check if we know that the intrinsic has any constraints on its register
+      // banks. If it does, then update the mapping accordingly.
+      unsigned Idx = 0;
+      if (onlyDefinesFP(MI, MRI, TRI))
+        for (const auto &Op : MI.defs()) {
+          if (Op.isReg())
+            OpRegBankIdx[Idx] = PMI_FirstFPR;
+          ++Idx;
+        }
+      else
+        Idx += MI.getNumExplicitDefs();
 
-    if (onlyUsesFP(MI, MRI, TRI))
-      for (const auto &Op : MI.explicit_uses()) {
-        if (Op.isReg())
-          OpRegBankIdx[Idx] = PMI_FirstFPR;
-        ++Idx;
-      }
+      if (onlyUsesFP(MI, MRI, TRI))
+        for (const auto &Op : MI.explicit_uses()) {
+          if (Op.isReg())
+            OpRegBankIdx[Idx] = PMI_FirstFPR;
+          ++Idx;
+        }
+      break;
+    }
+    }
     break;
   }
   case TargetOpcode::G_LROUND:

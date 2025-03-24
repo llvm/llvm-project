@@ -12,13 +12,15 @@ define <4 x i32> @udot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ;
 ; CHECK-NODOT-LABEL: udot:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    umull v3.8h, v2.8b, v1.8b
-; CHECK-NODOT-NEXT:    umull2 v1.8h, v2.16b, v1.16b
-; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v3.4h
-; CHECK-NODOT-NEXT:    uaddw2 v2.4s, v2.4s, v3.8h
-; CHECK-NODOT-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
-; CHECK-NODOT-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NODOT-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    ushll v4.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    umlal v0.4s, v4.4h, v3.4h
+; CHECK-NODOT-NEXT:    umull v5.4s, v2.4h, v1.4h
+; CHECK-NODOT-NEXT:    umlal2 v0.4s, v2.8h, v1.8h
+; CHECK-NODOT-NEXT:    umlal2 v5.4s, v4.8h, v3.8h
+; CHECK-NODOT-NEXT:    add v0.4s, v5.4s, v0.4s
 ; CHECK-NODOT-NEXT:    ret
   %u.wide = zext <16 x i8> %u to <16 x i32>
   %s.wide = zext <16 x i8> %s to <16 x i32>
@@ -50,18 +52,20 @@ define <4 x i32> @udot_in_loop(ptr %p1, ptr %p2){
 ; CHECK-NODOT-NEXT:    mov x8, xzr
 ; CHECK-NODOT-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NODOT-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NODOT-NEXT:    ldr q0, [x0, x8]
-; CHECK-NODOT-NEXT:    ldr q2, [x1, x8]
+; CHECK-NODOT-NEXT:    ldr q0, [x1, x8]
+; CHECK-NODOT-NEXT:    ldr q2, [x0, x8]
 ; CHECK-NODOT-NEXT:    add x8, x8, #16
 ; CHECK-NODOT-NEXT:    cmp x8, #16
-; CHECK-NODOT-NEXT:    umull v3.8h, v0.8b, v2.8b
-; CHECK-NODOT-NEXT:    umull2 v2.8h, v0.16b, v2.16b
+; CHECK-NODOT-NEXT:    ushll2 v3.8h, v0.16b, #0
+; CHECK-NODOT-NEXT:    ushll2 v4.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    ushll v5.8h, v0.8b, #0
+; CHECK-NODOT-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NODOT-NEXT:    mov v0.16b, v1.16b
-; CHECK-NODOT-NEXT:    ushll v1.4s, v2.4h, #0
-; CHECK-NODOT-NEXT:    uaddw v4.4s, v0.4s, v3.4h
-; CHECK-NODOT-NEXT:    uaddw2 v1.4s, v1.4s, v3.8h
-; CHECK-NODOT-NEXT:    uaddw2 v2.4s, v4.4s, v2.8h
-; CHECK-NODOT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NODOT-NEXT:    umull v6.4s, v4.4h, v3.4h
+; CHECK-NODOT-NEXT:    umlal v1.4s, v2.4h, v5.4h
+; CHECK-NODOT-NEXT:    umlal2 v6.4s, v2.8h, v5.8h
+; CHECK-NODOT-NEXT:    umlal2 v1.4s, v4.8h, v3.8h
+; CHECK-NODOT-NEXT:    add v1.4s, v6.4s, v1.4s
 ; CHECK-NODOT-NEXT:    b.ne .LBB1_1
 ; CHECK-NODOT-NEXT:  // %bb.2: // %end
 ; CHECK-NODOT-NEXT:    ret
@@ -95,17 +99,19 @@ define <2 x i32> @udot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ;
 ; CHECK-NODOT-LABEL: udot_narrow:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    umull v1.8h, v2.8b, v1.8b
+; CHECK-NODOT-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NODOT-NEXT:    ushll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    ushll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    umull v3.4s, v2.4h, v1.4h
+; CHECK-NODOT-NEXT:    umull2 v4.4s, v2.8h, v1.8h
+; CHECK-NODOT-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    ext v6.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    umlal v0.4s, v2.4h, v1.4h
 ; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-NODOT-NEXT:    uaddw v1.4s, v2.4s, v4.4h
+; CHECK-NODOT-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-NODOT-NEXT:    umlal v3.4s, v6.4h, v5.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
@@ -122,13 +128,15 @@ define <4 x i32> @sdot(<4 x i32> %acc, <16 x i8> %u, <16 x i8> %s) {
 ;
 ; CHECK-NODOT-LABEL: sdot:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    smull v3.8h, v2.8b, v1.8b
-; CHECK-NODOT-NEXT:    smull2 v1.8h, v2.16b, v1.16b
-; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v3.4h
-; CHECK-NODOT-NEXT:    saddw2 v2.4s, v2.4s, v3.8h
-; CHECK-NODOT-NEXT:    saddw2 v0.4s, v0.4s, v1.8h
-; CHECK-NODOT-NEXT:    add v0.4s, v2.4s, v0.4s
+; CHECK-NODOT-NEXT:    sshll v3.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    sshll v4.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    sshll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    smlal v0.4s, v4.4h, v3.4h
+; CHECK-NODOT-NEXT:    smull v5.4s, v2.4h, v1.4h
+; CHECK-NODOT-NEXT:    smlal2 v0.4s, v2.8h, v1.8h
+; CHECK-NODOT-NEXT:    smlal2 v5.4s, v4.8h, v3.8h
+; CHECK-NODOT-NEXT:    add v0.4s, v5.4s, v0.4s
 ; CHECK-NODOT-NEXT:    ret
   %u.wide = sext <16 x i8> %u to <16 x i32>
   %s.wide = sext <16 x i8> %s to <16 x i32>
@@ -145,17 +153,19 @@ define <2 x i32> @sdot_narrow(<2 x i32> %acc, <8 x i8> %u, <8 x i8> %s) {
 ;
 ; CHECK-NODOT-LABEL: sdot_narrow:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    smull v1.8h, v2.8b, v1.8b
+; CHECK-NODOT-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    sshll v2.8h, v2.8b, #0
 ; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NODOT-NEXT:    sshll v2.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    sshll2 v3.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NODOT-NEXT:    saddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    smull v3.4s, v2.4h, v1.4h
+; CHECK-NODOT-NEXT:    smull2 v4.4s, v2.8h, v1.8h
+; CHECK-NODOT-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
+; CHECK-NODOT-NEXT:    ext v6.16b, v2.16b, v2.16b, #8
+; CHECK-NODOT-NEXT:    smlal v0.4s, v2.4h, v1.4h
 ; CHECK-NODOT-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-NODOT-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
-; CHECK-NODOT-NEXT:    saddw v1.4s, v2.4s, v4.4h
+; CHECK-NODOT-NEXT:    ext v1.16b, v4.16b, v4.16b, #8
+; CHECK-NODOT-NEXT:    smlal v3.4s, v6.4h, v5.4h
 ; CHECK-NODOT-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NODOT-NEXT:    add v0.2s, v3.2s, v0.2s
 ; CHECK-NODOT-NEXT:    ret
   %u.wide = sext <8 x i8> %u to <8 x i32>
   %s.wide = sext <8 x i8> %s to <8 x i32>
@@ -407,19 +417,27 @@ define <4 x i64> @udot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-NODOT-LABEL: udot_8to64:
 ; CHECK-NODOT:       // %bb.0: // %entry
-; CHECK-NODOT-NEXT:    umull v4.8h, v2.8b, v3.8b
-; CHECK-NODOT-NEXT:    umull2 v2.8h, v2.16b, v3.16b
-; CHECK-NODOT-NEXT:    ushll v3.4s, v4.4h, #0
-; CHECK-NODOT-NEXT:    ushll v5.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    ushll v4.8h, v3.8b, #0
+; CHECK-NODOT-NEXT:    ushll v5.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v3.8h, v3.16b, #0
+; CHECK-NODOT-NEXT:    ushll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    ushll v6.4s, v4.4h, #0
+; CHECK-NODOT-NEXT:    ushll v7.4s, v5.4h, #0
 ; CHECK-NODOT-NEXT:    ushll2 v4.4s, v4.8h, #0
-; CHECK-NODOT-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-NODOT-NEXT:    uaddw2 v1.2d, v1.2d, v3.4s
-; CHECK-NODOT-NEXT:    uaddw v0.2d, v0.2d, v3.2s
-; CHECK-NODOT-NEXT:    uaddl2 v3.2d, v4.4s, v5.4s
-; CHECK-NODOT-NEXT:    uaddl v4.2d, v4.2s, v5.2s
-; CHECK-NODOT-NEXT:    uaddw2 v1.2d, v1.2d, v2.4s
-; CHECK-NODOT-NEXT:    uaddw v0.2d, v0.2d, v2.2s
-; CHECK-NODOT-NEXT:    add v1.2d, v3.2d, v1.2d
+; CHECK-NODOT-NEXT:    ushll2 v5.4s, v5.8h, #0
+; CHECK-NODOT-NEXT:    ushll2 v16.4s, v3.8h, #0
+; CHECK-NODOT-NEXT:    ushll2 v17.4s, v2.8h, #0
+; CHECK-NODOT-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-NODOT-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    umlal2 v1.2d, v7.4s, v6.4s
+; CHECK-NODOT-NEXT:    umlal v0.2d, v7.2s, v6.2s
+; CHECK-NODOT-NEXT:    umull2 v18.2d, v5.4s, v4.4s
+; CHECK-NODOT-NEXT:    umull v4.2d, v5.2s, v4.2s
+; CHECK-NODOT-NEXT:    umlal2 v1.2d, v17.4s, v16.4s
+; CHECK-NODOT-NEXT:    umlal v0.2d, v17.2s, v16.2s
+; CHECK-NODOT-NEXT:    umlal2 v18.2d, v2.4s, v3.4s
+; CHECK-NODOT-NEXT:    umlal v4.2d, v2.2s, v3.2s
+; CHECK-NODOT-NEXT:    add v1.2d, v18.2d, v1.2d
 ; CHECK-NODOT-NEXT:    add v0.2d, v4.2d, v0.2d
 ; CHECK-NODOT-NEXT:    ret
 entry:
@@ -442,19 +460,27 @@ define <4 x i64> @sdot_8to64(<4 x i64> %acc, <16 x i8> %a, <16 x i8> %b){
 ;
 ; CHECK-NODOT-LABEL: sdot_8to64:
 ; CHECK-NODOT:       // %bb.0: // %entry
-; CHECK-NODOT-NEXT:    smull v4.8h, v2.8b, v3.8b
-; CHECK-NODOT-NEXT:    smull2 v2.8h, v2.16b, v3.16b
-; CHECK-NODOT-NEXT:    sshll v3.4s, v4.4h, #0
-; CHECK-NODOT-NEXT:    sshll v5.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    sshll v4.8h, v3.8b, #0
+; CHECK-NODOT-NEXT:    sshll v5.8h, v2.8b, #0
+; CHECK-NODOT-NEXT:    sshll2 v3.8h, v3.16b, #0
+; CHECK-NODOT-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NODOT-NEXT:    sshll v6.4s, v4.4h, #0
+; CHECK-NODOT-NEXT:    sshll v7.4s, v5.4h, #0
 ; CHECK-NODOT-NEXT:    sshll2 v4.4s, v4.8h, #0
-; CHECK-NODOT-NEXT:    sshll2 v2.4s, v2.8h, #0
-; CHECK-NODOT-NEXT:    saddw2 v1.2d, v1.2d, v3.4s
-; CHECK-NODOT-NEXT:    saddw v0.2d, v0.2d, v3.2s
-; CHECK-NODOT-NEXT:    saddl2 v3.2d, v4.4s, v5.4s
-; CHECK-NODOT-NEXT:    saddl v4.2d, v4.2s, v5.2s
-; CHECK-NODOT-NEXT:    saddw2 v1.2d, v1.2d, v2.4s
-; CHECK-NODOT-NEXT:    saddw v0.2d, v0.2d, v2.2s
-; CHECK-NODOT-NEXT:    add v1.2d, v3.2d, v1.2d
+; CHECK-NODOT-NEXT:    sshll2 v5.4s, v5.8h, #0
+; CHECK-NODOT-NEXT:    sshll2 v16.4s, v3.8h, #0
+; CHECK-NODOT-NEXT:    sshll2 v17.4s, v2.8h, #0
+; CHECK-NODOT-NEXT:    sshll v3.4s, v3.4h, #0
+; CHECK-NODOT-NEXT:    sshll v2.4s, v2.4h, #0
+; CHECK-NODOT-NEXT:    smlal2 v1.2d, v7.4s, v6.4s
+; CHECK-NODOT-NEXT:    smlal v0.2d, v7.2s, v6.2s
+; CHECK-NODOT-NEXT:    smull2 v18.2d, v5.4s, v4.4s
+; CHECK-NODOT-NEXT:    smull v4.2d, v5.2s, v4.2s
+; CHECK-NODOT-NEXT:    smlal2 v1.2d, v17.4s, v16.4s
+; CHECK-NODOT-NEXT:    smlal v0.2d, v17.2s, v16.2s
+; CHECK-NODOT-NEXT:    smlal2 v18.2d, v2.4s, v3.4s
+; CHECK-NODOT-NEXT:    smlal v4.2d, v2.2s, v3.2s
+; CHECK-NODOT-NEXT:    add v1.2d, v18.2d, v1.2d
 ; CHECK-NODOT-NEXT:    add v0.2d, v4.2d, v0.2d
 ; CHECK-NODOT-NEXT:    ret
 entry:
@@ -771,9 +797,10 @@ define <4 x i64> @sdot_no_bin_op_8to64(<4 x i64> %acc, <16 x i8> %a){
 define <4 x i32> @not_udot(<4 x i32> %acc, <8 x i8> %u, <8 x i8> %s) #0{
 ; CHECK-LABEL: not_udot:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v1.8h, v2.8b, v1.8b
-; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    umlal v0.4s, v2.4h, v1.4h
+; CHECK-NEXT:    umlal2 v0.4s, v2.8h, v1.8h
 ; CHECK-NEXT:    ret
   %u.wide = zext <8 x i8> %u to <8 x i32>
   %s.wide = zext <8 x i8> %s to <8 x i32>
@@ -886,4 +913,85 @@ entry:
   %mult = mul nuw nsw <8 x i64> %a.wide, %b.wide
   %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add.v2i64.v8i64(<2 x i64> %acc, <8 x i64> %mult)
   ret <2 x i64> %partial.reduce
+}
+
+define <4 x i32> @usdot_multiple_zext_users(ptr %p1, ptr %p2, ptr %p3) {
+; CHECK-NOI8MM-LABEL: usdot_multiple_zext_users:
+; CHECK-NOI8MM:       // %bb.0: // %entry
+; CHECK-NOI8MM-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NOI8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NOI8MM-NEXT:    mov x8, xzr
+; CHECK-NOI8MM-NEXT:  .LBB28_1: // %vector.body
+; CHECK-NOI8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NOI8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-NOI8MM-NEXT:    ldr q3, [x2, x8]
+; CHECK-NOI8MM-NEXT:    ldr q4, [x1, x8]
+; CHECK-NOI8MM-NEXT:    add x8, x8, #16
+; CHECK-NOI8MM-NEXT:    sshll v5.8h, v2.8b, #0
+; CHECK-NOI8MM-NEXT:    sshll2 v2.8h, v2.16b, #0
+; CHECK-NOI8MM-NEXT:    ushll2 v6.8h, v3.16b, #0
+; CHECK-NOI8MM-NEXT:    ushll v3.8h, v3.8b, #0
+; CHECK-NOI8MM-NEXT:    sshll v7.8h, v4.8b, #0
+; CHECK-NOI8MM-NEXT:    sshll2 v4.8h, v4.16b, #0
+; CHECK-NOI8MM-NEXT:    cmp x8, #1024
+; CHECK-NOI8MM-NEXT:    smull v16.4s, v2.4h, v6.4h
+; CHECK-NOI8MM-NEXT:    smlal v0.4s, v5.4h, v3.4h
+; CHECK-NOI8MM-NEXT:    smull v17.4s, v4.4h, v6.4h
+; CHECK-NOI8MM-NEXT:    smlal v1.4s, v7.4h, v3.4h
+; CHECK-NOI8MM-NEXT:    smlal2 v16.4s, v5.8h, v3.8h
+; CHECK-NOI8MM-NEXT:    smlal2 v0.4s, v2.8h, v6.8h
+; CHECK-NOI8MM-NEXT:    smlal2 v17.4s, v7.8h, v3.8h
+; CHECK-NOI8MM-NEXT:    smlal2 v1.4s, v4.8h, v6.8h
+; CHECK-NOI8MM-NEXT:    add v0.4s, v16.4s, v0.4s
+; CHECK-NOI8MM-NEXT:    add v1.4s, v17.4s, v1.4s
+; CHECK-NOI8MM-NEXT:    b.ne .LBB28_1
+; CHECK-NOI8MM-NEXT:  // %bb.2: // %end
+; CHECK-NOI8MM-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-NOI8MM-NEXT:    ret
+;
+; CHECK-I8MM-LABEL: usdot_multiple_zext_users:
+; CHECK-I8MM:       // %bb.0: // %entry
+; CHECK-I8MM-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-I8MM-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-I8MM-NEXT:    mov x8, xzr
+; CHECK-I8MM-NEXT:  .LBB28_1: // %vector.body
+; CHECK-I8MM-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-I8MM-NEXT:    ldr q2, [x0, x8]
+; CHECK-I8MM-NEXT:    ldr q3, [x1, x8]
+; CHECK-I8MM-NEXT:    ldr q4, [x2, x8]
+; CHECK-I8MM-NEXT:    add x8, x8, #16
+; CHECK-I8MM-NEXT:    usdot v0.4s, v4.16b, v2.16b
+; CHECK-I8MM-NEXT:    usdot v1.4s, v4.16b, v3.16b
+; CHECK-I8MM-NEXT:    cmp x8, #1024
+; CHECK-I8MM-NEXT:    b.ne .LBB28_1
+; CHECK-I8MM-NEXT:  // %bb.2: // %end
+; CHECK-I8MM-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-I8MM-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %vector.body ]
+  %acc1 = phi <4 x i32> [ zeroinitializer, %entry], [ %psum1, %vector.body]
+  %acc2 = phi <4 x i32> [ zeroinitializer, %entry], [ %psum2, %vector.body]
+  %ptr1 = getelementptr i8, ptr %p1, i64 %iv
+  %ptr2 = getelementptr i8, ptr %p2, i64 %iv
+  %ptr3 = getelementptr i8, ptr %p3, i64 %iv
+  %load1 = load <16 x i8>, ptr %ptr1
+  %load2 = load <16 x i8>, ptr %ptr2
+  %load3 = load <16 x i8>, ptr %ptr3
+  %sext1 = sext <16 x i8> %load1 to <16 x i32>
+  %zext = zext <16 x i8> %load3 to <16 x i32>
+  %mul1 = mul <16 x i32> %sext1, %zext
+  %psum1 = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc1, <16 x i32> %mul1)
+  %sext2 = sext <16 x i8> %load2 to <16 x i32>
+  %mul2 = mul <16 x i32> %sext2, %zext
+  %psum2 = tail call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> %acc2, <16 x i32> %mul2)
+  %iv.next = add i64 %iv, 16
+  %1 = icmp eq i64 %iv.next, 1024
+  br i1 %1, label %end, label %vector.body
+
+end:
+  %2 = add <4 x i32> %psum2, %psum1
+  ret <4 x i32> %2
 }

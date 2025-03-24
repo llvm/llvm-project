@@ -66,6 +66,8 @@ public:
 
   bool hasDensity() const { return HasDensity; }
 
+  bool hasMAC16() const { return HasMAC16; }
+
   bool hasWindowed() const { return HasWindowed; }
 
   bool hasBoolean() const { return HasBoolean; }
