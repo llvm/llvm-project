@@ -158,7 +158,7 @@ function (add_flangrt_library name)
     # Use --as-needed to avoid unnecessary dependencies.
     if (LINKER_AS_NEEDED_OPT)
       target_link_options(${name_shared} BEFORE PRIVATE
-        "${LINKER_AS_NEEDED_OPT}"
+          "${LINKER_AS_NEEDED_OPT}"
         )
     endif()
   endif ()
@@ -261,8 +261,8 @@ function (add_flangrt_library name)
     target_include_directories(${tgtname} PUBLIC "${FLANG_RT_SOURCE_DIR}/include")
 
     # For ISO_Fortran_binding.h to be found by the runtime itself (Accessed as #include "flang/ISO_Fortran_binding.h")
-      # User applications can use #include <ISO_Fortran_binding.h>
-  target_include_directories(${tgtname} PUBLIC "${FLANG_SOURCE_DIR}/include")
+    # User applications can use #include <ISO_Fortran_binding.h>
+    target_include_directories(${tgtname} PUBLIC "${FLANG_SOURCE_DIR}/include")
 
     # For Flang-RT's configured config.h to be found
     target_include_directories(${tgtname} PRIVATE "${FLANG_RT_BINARY_DIR}")
@@ -281,12 +281,12 @@ function (add_flangrt_library name)
     # dependency to Compiler-RT's builtin library where these are implemented.
     if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
       if (FLANG_RT_BUILTINS_LIBRARY)
-      target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
+        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
       endif ()
     endif ()
     if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
       if (FLANG_RT_BUILTINS_LIBRARY)
-      target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
+        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
       else ()
         message(WARNING "Did not find libclang_rt.builtins.lib.
           LLVM may emit builtins that are not implemented in msvcrt/ucrt and
