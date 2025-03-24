@@ -7,7 +7,7 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
 
-define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) #0 {
+define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; SI-LABEL: is_private_vgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -30,9 +30,12 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) #0 {
 ; CI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x32
 ; CI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CI-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
+; CI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-SDAG-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
 ; CI-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -59,10 +62,13 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) #0 {
 ; CI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-GISEL-NEXT:    s_load_dword s2, s[8:9], 0x32
 ; CI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; CI-GISEL-NEXT:    s_add_i32 s12, s12, s17
+; CI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-GISEL-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; CI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
 ; CI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -110,7 +116,7 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) #0 {
 
 ; FIXME: setcc (zero_extend (setcc)), 1) not folded out, resulting in
 ; select and vcc branch.
-define amdgpu_kernel void @is_private_sgpr(ptr %ptr) #0 {
+define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; SI-LABEL: is_private_sgpr:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s0, s[8:9], 0x1
@@ -133,6 +139,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) #0 {
 ; CI-SDAG:       ; %bb.0:
 ; CI-SDAG-NEXT:    s_load_dword s0, s[8:9], 0x1
 ; CI-SDAG-NEXT:    s_load_dword s1, s[8:9], 0x32
+; CI-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
 ; CI-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
@@ -166,6 +175,9 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) #0 {
 ; CI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    s_load_dword s0, s[8:9], 0x32
+; CI-GISEL-NEXT:    s_add_i32 s12, s12, s17
+; CI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    s_cmp_lg_u32 s1, s0
 ; CI-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
@@ -227,8 +239,6 @@ bb0:
 bb1:
   ret void
 }
-
-attributes #0 = { "amdgpu-no-flat-scratch-init" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

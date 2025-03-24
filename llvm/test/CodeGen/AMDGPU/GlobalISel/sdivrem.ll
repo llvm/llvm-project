@@ -3,10 +3,13 @@
 ; RUN: llc -global-isel -amdgpu-codegenprepare-disable-idiv-expansion=1 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -amdgpu-codegenprepare-disable-idiv-expansion=1 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 
-define amdgpu_kernel void @sdivrem_i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i32 %x, i32 %y) #0 {
+define amdgpu_kernel void @sdivrem_i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i32 %x, i32 %y) {
 ; GFX8-LABEL: sdivrem_i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_ashr_i32 s6, s5, 31
 ; GFX8-NEXT:    s_add_i32 s0, s5, s6
@@ -142,10 +145,13 @@ define amdgpu_kernel void @sdivrem_i32(ptr addrspace(1) %out0, ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i64 %x, i64 %y) #0 {
+define amdgpu_kernel void @sdivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i64 %x, i64 %y) {
 ; GFX8-LABEL: sdivrem_i64:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx8 s[4:11], s[8:9], 0x0
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_ashr_i32 s2, s9, 31
 ; GFX8-NEXT:    s_ashr_i32 s12, s11, 31
@@ -613,10 +619,13 @@ define amdgpu_kernel void @sdivrem_i64(ptr addrspace(1) %out0, ptr addrspace(1) 
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_v2i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i32> %x, <2 x i32> %y) #0 {
+define amdgpu_kernel void @sdivrem_v2i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i32> %x, <2 x i32> %y) {
 ; GFX8-LABEL: sdivrem_v2i32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx8 s[4:11], s[8:9], 0x0
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_ashr_i32 s2, s10, 31
 ; GFX8-NEXT:    s_add_i32 s0, s10, s2
@@ -842,9 +851,12 @@ define amdgpu_kernel void @sdivrem_v2i32(ptr addrspace(1) %out0, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_v4i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <4 x i32> %x, <4 x i32> %y) #0 {
+define amdgpu_kernel void @sdivrem_v4i32(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <4 x i32> %x, <4 x i32> %y) {
 ; GFX8-LABEL: sdivrem_v4i32:
 ; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_load_dwordx8 s[12:19], s[8:9], 0x10
 ; GFX8-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1268,9 +1280,12 @@ define amdgpu_kernel void @sdivrem_v4i32(ptr addrspace(1) %out0, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i64> %x, <2 x i64> %y) #0 {
+define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i64> %x, <2 x i64> %y) {
 ; GFX8-LABEL: sdivrem_v2i64:
 ; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_load_dwordx8 s[12:19], s[8:9], 0x0
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x20
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2183,10 +2198,13 @@ define amdgpu_kernel void @sdivrem_v2i64(ptr addrspace(1) %out0, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @sdiv_i8(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i8 %x, i8 %y) #0 {
+define amdgpu_kernel void @sdiv_i8(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i8 %x, i8 %y) {
 ; GFX8-LABEL: sdiv_i8:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s4, s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_bfe_i32 s0, s4, 0x80008
 ; GFX8-NEXT:    s_ashr_i32 s5, s0, 31
@@ -2328,10 +2346,13 @@ define amdgpu_kernel void @sdiv_i8(ptr addrspace(1) %out0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_v2i8(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i8> %x, <2 x i8> %y) #0 {
+define amdgpu_kernel void @sdivrem_v2i8(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i8> %x, <2 x i8> %y) {
 ; GFX8-LABEL: sdivrem_v2i8:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s2, s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_bfe_i32 s0, s2, 0x80010
 ; GFX8-NEXT:    s_ashr_i32 s3, s0, 31
@@ -2592,10 +2613,13 @@ define amdgpu_kernel void @sdivrem_v2i8(ptr addrspace(1) %out0, ptr addrspace(1)
   ret void
 }
 
-define amdgpu_kernel void @sdiv_i16(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i16 %x, i16 %y) #0 {
+define amdgpu_kernel void @sdiv_i16(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i16 %x, i16 %y) {
 ; GFX8-LABEL: sdiv_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s4, s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_bfe_i32 s0, s4, 0x100010
 ; GFX8-NEXT:    s_ashr_i32 s5, s0, 31
@@ -2737,10 +2761,13 @@ define amdgpu_kernel void @sdiv_i16(ptr addrspace(1) %out0, ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_v2i16(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i16> %x, <2 x i16> %y) #0 {
+define amdgpu_kernel void @sdivrem_v2i16(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <2 x i16> %x, <2 x i16> %y) {
 ; GFX8-LABEL: sdivrem_v2i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_sext_i32_i16 s0, s3
 ; GFX8-NEXT:    s_ashr_i32 s10, s0, 31
@@ -2998,10 +3025,13 @@ define amdgpu_kernel void @sdivrem_v2i16(ptr addrspace(1) %out0, ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_i3(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i3 %x, i3 %y) #0 {
+define amdgpu_kernel void @sdivrem_i3(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i3 %x, i3 %y) {
 ; GFX8-LABEL: sdivrem_i3:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dword s4, s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_bfe_i32 s0, s4, 0x30008
 ; GFX8-NEXT:    s_ashr_i32 s5, s0, 31
@@ -3149,10 +3179,13 @@ define amdgpu_kernel void @sdivrem_i3(ptr addrspace(1) %out0, ptr addrspace(1) %
   ret void
 }
 
-define amdgpu_kernel void @sdivrem_i27(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i27 %x, i27 %y) #0 {
+define amdgpu_kernel void @sdivrem_i27(ptr addrspace(1) %out0, ptr addrspace(1) %out1, i27 %x, i27 %y) {
 ; GFX8-LABEL: sdivrem_i27:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
+; GFX8-NEXT:    s_add_i32 s12, s12, s17
+; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_bfe_i32 s0, s5, 0x1b0000
 ; GFX8-NEXT:    s_ashr_i32 s5, s0, 31
@@ -3299,5 +3332,3 @@ define amdgpu_kernel void @sdivrem_i27(ptr addrspace(1) %out0, ptr addrspace(1) 
   store i27 %rem, ptr addrspace(1) %out1
   ret void
 }
-
-attributes #0 = { "amdgpu-no-flat-scratch-init" }
