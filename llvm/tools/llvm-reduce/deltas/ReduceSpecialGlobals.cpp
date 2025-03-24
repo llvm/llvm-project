@@ -43,5 +43,5 @@ static void extractSpecialGlobalsFromModule(Oracle &O,
 
 void llvm::reduceSpecialGlobalsDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractSpecialGlobalsFromModule,
-               "Reducing Special Globals");
+               "Reducing Special Globals (special-globals)");
 }

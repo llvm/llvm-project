@@ -29,5 +29,5 @@ static void extractGVsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceGlobalsInitializersDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractGVsFromModule, "Reducing GV Initializers");
+  runDeltaPass(Test, extractGVsFromModule, "Reducing GV Initializers (global-initializers)");
 }

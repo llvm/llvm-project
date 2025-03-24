@@ -98,5 +98,5 @@ static void extractDIMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceDIMetadataDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDIMetadataFromModule, "Reducing DIMetadata");
+  runDeltaPass(Test, extractDIMetadataFromModule, "Reducing DIMetadata (di-metadata)");
 }

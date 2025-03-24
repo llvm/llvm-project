@@ -189,7 +189,7 @@ static void extractBasicBlocksFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
+  runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks (basic-blocks)");
 }
 
 static void removeUnreachableBasicBlocksFromModule(Oracle &O,
@@ -222,5 +222,5 @@ static void removeUnreachableBasicBlocksFromModule(Oracle &O,
 
 void llvm::reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, removeUnreachableBasicBlocksFromModule,
-               "Removing Unreachable Basic Blocks");
+               "Removing Unreachable Basic Blocks (unreachable-basic-blocks)");
 }

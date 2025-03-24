@@ -32,7 +32,7 @@ static void reduceUsingSimplifyCFG(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceUsingSimplifyCFGDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceUsingSimplifyCFG, "Reducing using SimplifyCFG");
+  runDeltaPass(Test, reduceUsingSimplifyCFG, "Reducing using SimplifyCFG (simplify-cfg)");
 }
 static void reduceConditionals(Oracle &O, ReducerWorkItem &WorkItem,
                                bool Direction) {
@@ -65,7 +65,7 @@ void llvm::reduceConditionalsTrueDeltaPass(TestRunner &Test) {
       [](Oracle &O, ReducerWorkItem &WorkItem) {
         reduceConditionals(O, WorkItem, true);
       },
-      "Reducing conditional branches to true");
+      "Reducing conditional branches to true (simplify-conditionals-true)");
 }
 
 void llvm::reduceConditionalsFalseDeltaPass(TestRunner &Test) {
@@ -74,5 +74,5 @@ void llvm::reduceConditionalsFalseDeltaPass(TestRunner &Test) {
       [](Oracle &O, ReducerWorkItem &WorkItem) {
         reduceConditionals(O, WorkItem, false);
       },
-      "Reducing conditional branches to false");
+      "Reducing conditional branches to false (simplify-conditionals-false)");
 }

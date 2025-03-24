@@ -25,5 +25,5 @@ static void stripDebugInfoImpl(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::stripDebugInfoDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, stripDebugInfoImpl, "Stripping Debug Info");
+  runDeltaPass(Test, stripDebugInfoImpl, "Stripping Debug Info (strip-debug-info)");
 }

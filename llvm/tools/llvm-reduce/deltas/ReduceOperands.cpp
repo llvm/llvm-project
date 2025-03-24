@@ -123,7 +123,7 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
       [ReduceValue](Oracle &O, ReducerWorkItem &WorkItem) {
         extractOperandsFromModule(O, WorkItem, ReduceValue);
       },
-      "Reducing Operands to one");
+      "Reducing Operands to one (operands-one)");
 }
 
 void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
@@ -142,7 +142,7 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
       [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
-      "Reducing Operands to zero");
+      "Reducing Operands to zero (operands-zero)");
 }
 
 void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
@@ -170,5 +170,5 @@ void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
       [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
         extractOperandsFromModule(O, Program, ReduceValue);
       },
-      "Reducing Operands to NaN");
+      "Reducing Operands to NaN (operands-nan)");
 }

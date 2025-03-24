@@ -37,5 +37,5 @@ static void reduceInvokesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceInvokesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceInvokesInModule, "Reducing Invokes");
+  runDeltaPass(Test, reduceInvokesInModule, "Reducing Invokes (invokes)");
 }

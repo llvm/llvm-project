@@ -51,5 +51,5 @@ static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::runIRPassesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, runPasses, "Running passes");
+  runDeltaPass(Test, runPasses, "Running passes (ir-passes)");
 }

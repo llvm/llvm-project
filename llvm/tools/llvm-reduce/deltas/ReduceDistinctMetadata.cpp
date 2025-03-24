@@ -138,5 +138,5 @@ static void extractDistinctMetadataFromModule(Oracle &O,
 
 void llvm::reduceDistinctMetadataDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, extractDistinctMetadataFromModule,
-               "Reducing Distinct Metadata");
+               "Reducing Distinct Metadata (distinct-metadata)");
 }

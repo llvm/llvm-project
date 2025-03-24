@@ -45,9 +45,9 @@ static void extractIFuncsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceAliasesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractAliasesFromModule, "Reducing Aliases");
+  runDeltaPass(Test, extractAliasesFromModule, "Reducing Aliases (aliases)");
 }
 
 void llvm::reduceIFuncsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractIFuncsFromModule, "Reducing Ifuncs");
+  runDeltaPass(Test, extractIFuncsFromModule, "Reducing Ifuncs (ifuncs)");
 }

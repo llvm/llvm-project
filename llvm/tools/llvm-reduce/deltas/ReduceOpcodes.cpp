@@ -263,5 +263,5 @@ static void replaceOpcodesInModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceOpcodesDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, replaceOpcodesInModule, "Reducing Opcodes");
+  runDeltaPass(Test, replaceOpcodesInModule, "Reducing Opcodes (opcodes)");
 }

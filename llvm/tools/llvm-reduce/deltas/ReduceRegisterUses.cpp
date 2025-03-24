@@ -63,5 +63,5 @@ static void removeUsesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceRegisterUsesMIRDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, removeUsesFromModule, "Reducing register uses");
+  runDeltaPass(Test, removeUsesFromModule, "Reducing register uses (register-uses)");
 }

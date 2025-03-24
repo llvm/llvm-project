@@ -35,5 +35,5 @@ static void extractDbgRecordsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceDbgRecordDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDbgRecordsFromModule, "Reducing DbgRecords");
+  runDeltaPass(Test, extractDbgRecordsFromModule, "Reducing DbgRecords (dbg-records)");
 }

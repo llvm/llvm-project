@@ -31,5 +31,5 @@ static void reduceGOs(Oracle &O, ReducerWorkItem &Program) {
 }
 
 void llvm::reduceGlobalObjectsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceGOs, "Reducing GlobalObjects");
+  runDeltaPass(Test, reduceGOs, "Reducing GlobalObjects (global-objects)");
 }

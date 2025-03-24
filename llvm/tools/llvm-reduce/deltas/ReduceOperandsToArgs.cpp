@@ -216,5 +216,5 @@ static void reduceOperandsToArgs(Oracle &O, ReducerWorkItem &WorkItem) {
 
 void llvm::reduceOperandsToArgsDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, reduceOperandsToArgs,
-               "Converting operands to function arguments");
+               "Converting operands to function arguments (operands-to-args)");
 }
