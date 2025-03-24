@@ -375,6 +375,28 @@ namespace alloc_class {
   }
 }
 
+namespace ptr_conversion {
+
+SomeObj *provide_obj();
+
+void dobjc(SomeObj* obj) {
+  [dynamic_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+void cobjc(SomeObj* obj) {
+  [checked_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+unsigned dcf(CFTypeRef obj) {
+  return CFArrayGetCount(dynamic_cf_cast<CFArrayRef>(obj));
+}
+
+unsigned ccf(CFTypeRef obj) {
+  return CFArrayGetCount(checked_cf_cast<CFArrayRef>(obj));
+}
+
+} // ptr_conversion
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
