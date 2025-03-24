@@ -13,14 +13,14 @@ define internal fastcc void @widget() {
 ; GFX90A-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[18:19]
-; GFX90A-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-NEXT:    v_writelane_b32 v40, s16, 2
+; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX90A-NEXT:    s_addk_i32 s32, 0x400
+; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-NEXT:    s_add_u32 s16, s16, wobble@gotpcrel32@lo+4
 ; GFX90A-NEXT:    s_addc_u32 s17, s17, wobble@gotpcrel32@hi+12
 ; GFX90A-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 bb:

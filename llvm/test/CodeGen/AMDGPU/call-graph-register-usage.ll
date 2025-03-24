@@ -20,8 +20,8 @@ define void @use_vcc() #1 {
 ; GCN: v_writelane_b32 v40, s30, 0
 ; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s30, v40, 0
+; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s4, v40, 2
 ; GCN: s_mov_b32 s33, s4
 ; GCN: s_setpc_b64 s[30:31]

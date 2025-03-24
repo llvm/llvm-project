@@ -22,9 +22,9 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    v_writelane_b32 v40, s28, 2
 ; GFX90A-NEXT:    v_writelane_b32 v40, s29, 3
 ; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX90A-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX90A-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s20
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -41,12 +41,12 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; GFX90A-NEXT:    v_accvgpr_read_b32 v39, a32
 ; GFX90A-NEXT:    s_mov_b64 exec, s[28:29]
+; GFX90A-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX90A-NEXT:    v_readlane_b32 s20, v39, 0
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s20
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX90A-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX90A-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-NEXT:    v_readlane_b32 s4, v40, 4
 ; GFX90A-NEXT:    v_readlane_b32 s28, v40, 2

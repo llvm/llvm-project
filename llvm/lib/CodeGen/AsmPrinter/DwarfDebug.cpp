@@ -356,6 +356,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   UseARangesSection = GenerateARangeSection || tuneForSCE();
 
   HasAppleExtensionAttributes = tuneForLLDB();
+  HasHeterogeneousExtensionAttributes =
+      Asm->MAI->supportsHeterogeneousDebuggingExtensions();
 
   // Handle split DWARF.
   HasSplitDwarf = !Asm->TM.Options.MCOptions.SplitDwarfFile.empty();

@@ -7,6 +7,8 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr17, $sgpr12_sgpr13
   ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX90A-NEXT:   $sgpr32 = S_MOV_B32 0
   ; GFX90A-NEXT:   $flat_scr_lo = S_ADD_U32 $sgpr12, $sgpr17, implicit-def $scc
   ; GFX90A-NEXT:   $flat_scr_hi = S_ADDC_U32 $sgpr13, 0, implicit-def dead $scc, implicit $scc

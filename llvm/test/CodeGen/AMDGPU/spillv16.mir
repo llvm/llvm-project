@@ -32,6 +32,9 @@ body: |
   ; EXPANDED: bb.0:
   ; EXPANDED-NEXT:   successors: %bb.1(0x80000000)
   ; EXPANDED-NEXT: {{  $}}
+  ; EXPANDED-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; EXPANDED-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; EXPANDED-NEXT:   frame-setup CFI_INSTRUCTION undefined $vgpr0
   ; EXPANDED-NEXT:   S_NOP 0, implicit-def renamable $vgpr0_lo16, implicit-def renamable $vgpr0_hi16
   ; EXPANDED-NEXT:   SCRATCH_STORE_SHORT_SADDR_t16 killed $vgpr0_hi16, $sgpr32, 2, 0, implicit $exec, implicit $flat_scr :: (store (s16) into %stack.1, addrspace 5)
   ; EXPANDED-NEXT:   SCRATCH_STORE_SHORT_SADDR_t16 killed $vgpr0_lo16, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s16) into %stack.0, addrspace 5)

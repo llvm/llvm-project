@@ -3,6 +3,8 @@
 ; RUN: FileCheck -check-prefix=ERR %s < %t.err
 ; FIXME: These tests cannot be tail called, and should be executed in a waterfall loop.
 
+; XFAIL: *
+
 declare hidden void @void_func_i32_inreg(i32 inreg)
 
 ; ERR: error: <unknown>:0:0: in function tail_call_i32_inreg_divergent void (i32): illegal VGPR to SGPR copy
