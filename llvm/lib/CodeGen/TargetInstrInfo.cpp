@@ -1514,6 +1514,18 @@ unsigned TargetInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   return ItinData->getStageLatency(MI.getDesc().getSchedClass());
 }
 
+unsigned
+TargetInstrInfo::getInstrLatency(const TargetSchedModel &TargetSchedModel,
+                                 const MachineInstr &MI) const {
+  if (TargetSchedModel.hasInstrSchedModel()) {
+    const MCSchedClassDesc *SCDesc = TargetSchedModel.resolveSchedClass(&MI);
+    if (SCDesc->isValid())
+      return TargetSchedModel.computeInstrLatency(*SCDesc);
+  }
+
+  return defaultDefLatency(*TargetSchedModel.getMCSchedModel(), MI);
+}
+
 bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
                                        const MachineInstr &DefMI,
                                        unsigned DefIdx) const {
